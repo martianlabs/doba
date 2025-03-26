@@ -18,16 +18,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "buffer.h"
 #include "server/server_tcpip.h"
 
 struct request {
-public:
-	std::stringstream ss;
+	martianlabs::doba::buffer buf;
 };
 
 struct response {
-public:
-	std::stringstream ss;
+  std::string content;
+  martianlabs::doba::buffer serialize() const {
+    martianlabs::doba::buffer out;
+    out.append(content);
+    return out;
+  };
 };
 
 template<typename RQty, typename RSty>
@@ -36,24 +40,24 @@ public:
 	using req = RQty;
 	using res = RSty;
 	bool add(const void* buffer, const std::size_t& length) {
-		printf("%.*s\n", int(length), (const char*)buffer);
+		buf.append(buffer, length);
 		return true;
 	}
+private:
+	martianlabs::doba::buffer buf;
 };
 
 class my_processor : public processor_base<request, response> {
-public:
-	std::optional<request> decode() {
-		return request();
-	}
-	std::optional<response> encode(const request& request) {
-		return {};
-	}
+ public:
+  std::optional<request> decode() { return request(); }
+  std::optional<response> encode(const request& request) {
+    return response{.content = "HTTP/1.1 200\nContent-Length: 0\n\n"};
+  }
 };
 
 int
 main(int argc, char* argv[]) {
-	martianlabs::doba::server_tcpip<my_processor> my_server;
+	martianlabs::doba::server::server_tcpip<my_processor> my_server;
 	my_server.start("10001", 16);
 	return getchar();
 }

@@ -18,12 +18,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_serverwindows_h
-#define martianlabs_doba_serverwindows_h
+#ifndef martianlabs_doba_server_serverwindows_h
+#define martianlabs_doba_server_serverwindows_h
 
-namespace martianlabs::doba {
+namespace martianlabs::doba::server {
 // =============================================================================
-// server_tcpip                                                    ( interface )
+// server_tcpip_windows                                            ( interface )
 // -----------------------------------------------------------------------------
 // This specification holds for the WindowsTM server implementation.
 // -----------------------------------------------------------------------------
@@ -32,16 +32,14 @@ namespace martianlabs::doba {
 // =============================================================================
 template <typename PRty>
 class server_tcpip {
-public:
+ public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   server_tcpip() = default;
   server_tcpip(const server_tcpip&) = delete;
   server_tcpip(server_tcpip&&) noexcept = delete;
-  ~server_tcpip() {
-    stop(); 
-  }
+  virtual ~server_tcpip() { stop(); }
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
@@ -107,7 +105,8 @@ public:
     }
     if (accept_socket_ != INVALID_SOCKET) {
       if (closesocket(accept_socket_) == SOCKET_ERROR) {
-        throw std::logic_error("There were errors while closing accept socket!");
+        throw std::logic_error(
+            "There were errors while closing accept socket!");
       }
     }
     keep_running_ = false;
@@ -115,7 +114,8 @@ public:
       manager_->join();
     }
   }
-private:
+
+ private:
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
@@ -137,9 +137,7 @@ private:
       data.len = kChunkSizeInBytes;
       socket = in;
     }
-    ~Context() { 
-      delete[] data.buf; 
-    }
+    ~Context() { delete[] data.buf; }
   };
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
@@ -155,20 +153,21 @@ private:
       ~WsaInitializer_() { WSACleanup(); }
       WSADATA wsa_data;
     };
-    static std::shared_ptr<WsaInitializer_> wsa_initializer_ptr_ = 
-      std::make_shared<WsaInitializer_>();
+    static std::shared_ptr<WsaInitializer_> wsa_initializer_ptr_ =
+        std::make_shared<WsaInitializer_>();
   }
-  void setupListener(const std::string& port, const uint8_t& number_of_workers) {
+  void setupListener(const std::string& port,
+                     const uint8_t& number_of_workers) {
     // let's create our main i/o completion port!
-    auto io_port = CreateIoCompletionPort(
-      INVALID_HANDLE_VALUE, NULL, NULL, number_of_workers);
+    auto io_port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL,
+                                          number_of_workers);
     if (io_port == nullptr) {
       // ((Error)) -> while setting up the i/o completion port!
       throw std::runtime_error("could not setup i/o completion port!");
     }
     // let's setup our main listening socket (server)!
-    SOCKET sock = WSASocketW(
-      AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
+    SOCKET sock = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0,
+                             WSA_FLAG_OVERLAPPED);
     if (sock == INVALID_SOCKET) {
       // ((Error)) -> could not create socket!
       CloseHandle(io_port);
@@ -192,7 +191,7 @@ private:
       closesocket(sock);
       throw std::runtime_error("could not set listening socket i/o mode!");
     }
-    sockaddr_in address = { 0 };
+    sockaddr_in address = {0};
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_family = PF_INET;
     address.sin_port = htons(atoi(port.c_str()));
@@ -219,22 +218,23 @@ private:
         LPOVERLAPPED overlapped = NULL;
         DWORD bytes_returned = 0;
         while (true) {
-          if (!GetQueuedCompletionStatus(io_port_, &bytes_returned, 
-                (PULONG_PTR)&completion_key, &overlapped, INFINITE)) {
-            // ok, this is fine, we're shutting down our completion port..
-            // at this point, we need to perform a controlled shutdown.
-            break;
+          BOOL status = GetQueuedCompletionStatus(io_port_, &bytes_returned,
+                                                  (PULONG_PTR)&completion_key,
+                                                  &overlapped, INFINITE);
+          if (!status)
+          {
+            if (!overlapped) {
+              if (GetLastError() == ERROR_INVALID_HANDLE) {
+                break;
+              }
+            }
+            continue;
+          } 
+          if (!completion_key) {
+            continue;
           }
           Context* context = (Context*)completion_key;
-          if (overlapped) {
-            if (!bytes_returned) {
-              // connection closed! let's free the associated resources!
-              closesocket(context->socket);
-              delete context;
-              continue;
-            }
-          }
-          else if (bytes_returned) {
+          if (overlapped && !bytes_returned) {
             // connection closed! let's free the associated resources!
             closesocket(context->socket);
             delete context;
@@ -246,15 +246,13 @@ private:
               if (context->req.has_value()) {
                 context->res = context->processor->encode(context->req.value());
                 if (context->res.has_value()) {
-
-                  /*
-                  pepe
-                  */
-
-                  /*
-                  pepe fin
-                  */
-
+                  if (!send_response(context->socket,
+                                     context->res.value().serialize())) {
+                    // connection closed! let's free the associated resources!
+                    closesocket(context->socket);
+                    delete context;
+                    continue;
+                  }
                 }
               } else {
                 // connection closed! let's free the associated resources!
@@ -267,10 +265,11 @@ private:
           DWORD recv_flags = 0;
           DWORD bytes_transmitted = 0;
           int wsarecv_result = WSARecv(
-            context->socket, &context->data, 0x1, &bytes_transmitted,
-            &recv_flags, (LPWSAOVERLAPPED)&context->overlapped, nullptr);
+              context->socket, &context->data, 0x1, &bytes_transmitted,
+              &recv_flags, (LPWSAOVERLAPPED)&context->overlapped, nullptr);
           if (wsarecv_result == SOCKET_ERROR) {
-            if (WSAGetLastError() != WSA_IO_PENDING) {
+            int wsaLastError = WSAGetLastError();
+            if (wsaLastError != WSA_IO_PENDING) {
               // connection closed! let's free the associated resources!
               closesocket(context->socket);
               delete context;
@@ -280,6 +279,22 @@ private:
       }));
     }
   }
+  bool send_response(const SOCKET& socket, const buffer& data) {
+    const char* const buf = (const char* const)data.data();
+    std::size_t len = data.used();
+    std::size_t off = 0;
+    while (off < len) {
+      std::size_t cur = std::min<std::size_t>(INT_MAX, len - off);
+      auto res = send(socket, &buf[off], (int)cur, 0);
+      if (res == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK) {
+        // ((Error)) -> while trying to send information to socket!
+        return false;
+      }
+      off += res;
+    }
+    return true;
+  }
+
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
@@ -289,6 +304,6 @@ private:
   std::vector<std::shared_ptr<std::thread>> workers_;
   std::shared_ptr<std::thread> manager_;
 };
-} // namespace martianlabs::doba
+}  // namespace martianlabs::doba::server
 
 #endif

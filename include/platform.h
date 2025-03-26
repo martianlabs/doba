@@ -18,6 +18,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef martianlabs_doba_platform_h
+#define martianlabs_doba_platform_h
+
+// ___________________________________________________________________________
+// INCLUDES                                                         ( common )
+//
 #include <limits>
 #include <mutex>
 #include <optional>
@@ -25,10 +31,15 @@
 #include <system_error>
 #include <thread>
 #include <vector>
-
-#ifndef martianlabs_doba_platform_h
-#define martianlabs_doba_platform_h
-
+#include <memory>
+#include <cstring>
+#include <sstream>
+#include <string>
+#include <variant>
+#include <inttypes.h>
+// ___________________________________________________________________________
+// INCLUDES                                                          ( win32 )
+//
 #ifdef _WIN32
 #define _WIN32_DCOM
 #define NOMINMAX
@@ -42,6 +53,9 @@
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "wbemuuid.lib")
 #pragma comment(lib, "Mswsock.lib")
+// ___________________________________________________________________________
+// INCLUDES                                                          ( linux )
+//
 #elif __linux__
 #include <fcntl.h>
 #include <netdb.h>
@@ -56,15 +70,5 @@
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1
 #endif
-
-#include <memory>
-#include <cstring>
-#include <iostream>
-#include <mutex>
-#include <sstream>
-#include <string>
-#include <variant>
-#include <optional>
-#include <inttypes.h>
 
 #endif
