@@ -127,11 +127,8 @@ class server_tcpip {
     WSAOVERLAPPED overlapped;
     WSABUF data;
     SOCKET socket;
-    std::shared_ptr<PRty> processor;
-    std::optional<typename PRty::req> req;
-    std::optional<typename PRty::res> res;
+    martianlabs::doba::buffer buf;
     Context(const SOCKET& in = INVALID_SOCKET) {
-      processor = std::make_shared<PRty>();
       ZeroMemory(&overlapped, sizeof(WSAOVERLAPPED));
       data.buf = new CHAR[kChunkSizeInBytes];
       data.len = kChunkSizeInBytes;
@@ -241,24 +238,27 @@ class server_tcpip {
             continue;
           }
           if (bytes_returned) {
-            if (context->processor->add(context->data.buf, bytes_returned)) {
-              context->req = context->processor->decode();
-              if (context->req.has_value()) {
-                context->res = context->processor->encode(context->req.value());
-                if (context->res.has_value()) {
-                  if (!send_response(context->socket,
-                                     context->res.value().serialize())) {
-                    // connection closed! let's free the associated resources!
-                    closesocket(context->socket);
-                    delete context;
-                    continue;
-                  }
+            context->buf.append(context->data.buf, bytes_returned);
+            std::optional<typename PRty::req> req;
+            try {
+              req = PRty::req::deserialize(context->buf);
+            } catch (const std::exception&) {
+              // connection closed! let's free the associated resources!
+              closesocket(context->socket);
+              delete context;
+              continue;
+            }
+            if (req.has_value()) {
+              std::optional<typename PRty::res> res =
+                  PRty::process(req.value());
+              if (res.has_value()) {
+                if (!send_response(context->socket,
+                                   PRty::res::serialize(res.value()))) {
+                  // connection closed! let's free the associated resources!
+                  closesocket(context->socket);
+                  delete context;
+                  continue;
                 }
-              } else {
-                // connection closed! let's free the associated resources!
-                closesocket(context->socket);
-                delete context;
-                continue;
               }
             }
           }
@@ -303,6 +303,7 @@ class server_tcpip {
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::vector<std::shared_ptr<std::thread>> workers_;
   std::shared_ptr<std::thread> manager_;
+  PRty protocol_;
 };
 }  // namespace martianlabs::doba::server
 

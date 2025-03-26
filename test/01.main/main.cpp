@@ -22,42 +22,37 @@
 #include "server/server_tcpip.h"
 
 struct request {
-	martianlabs::doba::buffer buf;
+  std::string content;
+  static std::optional<request> deserialize(const martianlabs::doba::buffer& buf) {
+    request out;
+    out.content.assign((const char* const)buf.data(), buf.used());
+    return out;
+  };
 };
 
 struct response {
-  std::string content;
-  martianlabs::doba::buffer serialize() const {
+  static martianlabs::doba::buffer serialize(const response& res) {
     martianlabs::doba::buffer out;
-    out.append(content);
+    out.append("HTTP/1.1 200 OK\nContent-Length: 0\n\n");
     return out;
   };
 };
 
 template<typename RQty, typename RSty>
-class processor_base {
+class protocol_base {
 public:
 	using req = RQty;
 	using res = RSty;
-	bool add(const void* buffer, const std::size_t& length) {
-		buf.append(buffer, length);
-		return true;
-	}
-private:
-	martianlabs::doba::buffer buf;
 };
 
-class my_processor : public processor_base<request, response> {
- public:
-  std::optional<request> decode() { return request(); }
-  std::optional<response> encode(const request& request) {
-    return response{.content = "HTTP/1.1 200\nContent-Length: 0\n\n"};
-  }
+class my_protocol : public protocol_base<request, response> {
+public:
+  static std::optional<response> process(const request&) { return response(); }
 };
 
 int
 main(int argc, char* argv[]) {
-	martianlabs::doba::server::server_tcpip<my_processor> my_server;
-	my_server.start("10001", 16);
+  martianlabs::doba::server::server_tcpip<my_protocol> my_server;
+	my_server.start("10001", 8);
 	return getchar();
 }
