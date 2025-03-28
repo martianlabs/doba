@@ -100,7 +100,7 @@ class buffer {
     }
     return *this;
   }
-  buffer& append(const void* data, const std::size_t& size) {
+  buffer& append(const char* data, const std::size_t& size) {
     check_and_fix();
     if (buffer_ && (used_ + size) < kDefaultMaxSizeOnMemoryInBytes) {
       if (!memcpy(&((char*)buffer_)[used_], data, size)) {
@@ -116,7 +116,7 @@ class buffer {
   buffer& append(const std::string& data) { return append(data.c_str()); }
   std::size_t size() const { return size_; }
   std::size_t used() const { return used_; }
-  const void* const data() const { return buffer_; }
+  const char* const data() const { return buffer_; }
 
  private:
   // ___________________________________________________________________________
@@ -136,13 +136,13 @@ class buffer {
     if (!buffer_) {
       used_ = 0;
       size_ = kDefaultMaxSizeOnMemoryInBytes;
-      buffer_ = malloc(size_);
+      buffer_ = (char*)malloc(size_);
     }
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  void* buffer_;
+  char* buffer_;
   std::size_t used_;
   std::size_t size_;
 };

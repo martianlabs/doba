@@ -75,13 +75,21 @@ class server_tcpip {
           // ((To-Do)) -> raise an exception?
         }
         // let's associate the accept socket with the i/o port!
-        ULONG_PTR key = (ULONG_PTR) new Context(client);
-        if (!CreateIoCompletionPort((HANDLE)client, io_port_, key, 0)) {
+        Context* ovl = new Context();
+        ZeroMemory(ovl, sizeof(Context));
+        ovl->recv_len = kRecvBufferSize;
+        ovl->send_len = kSendBufferSize;
+        ovl->wsaBuffer.buf = ovl->recv_buf;
+        ovl->wsaBuffer.len = ovl->recv_len;
+        ovl->socket = client;
+        ovl->reading = true;
+        if (!CreateIoCompletionPort((HANDLE)client, io_port_, (ULONG_PTR)ovl,
+                                    0)) {
           // ((Error)) -> trying to associate socket to the i/o port!
           // ((To-Do)) -> raise an exception?
         }
         // let's notify waiting thread for the new connection!
-        if (!PostQueuedCompletionStatus(io_port_, 0, key, NULL)) {
+        if (!PostQueuedCompletionStatus(io_port_, 0, (ULONG_PTR)ovl, NULL)) {
           // ((Error)) -> trying to notify waiting thread!
           // ((To-Do)) -> raise an exception?
         }
@@ -119,22 +127,21 @@ class server_tcpip {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr std::size_t kChunkSizeInBytes = 1024;
+  static constexpr std::size_t kRecvBufferSize = 1024;
+  static constexpr std::size_t kSendBufferSize = 1024;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
   struct Context {
     WSAOVERLAPPED overlapped;
-    WSABUF data;
+    WSABUF wsaBuffer;
     SOCKET socket;
-    martianlabs::doba::buffer buf;
-    Context(const SOCKET& in = INVALID_SOCKET) {
-      ZeroMemory(&overlapped, sizeof(WSAOVERLAPPED));
-      data.buf = new CHAR[kChunkSizeInBytes];
-      data.len = kChunkSizeInBytes;
-      socket = in;
-    }
-    ~Context() { delete[] data.buf; }
+    CHAR recv_buf[kRecvBufferSize];
+    CHAR send_buf[kSendBufferSize];
+    ULONG recv_len;
+    ULONG send_len;
+    BOOL reading;
+    buffer res;
   };
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
@@ -218,15 +225,14 @@ class server_tcpip {
           BOOL status = GetQueuedCompletionStatus(io_port_, &bytes_returned,
                                                   (PULONG_PTR)&completion_key,
                                                   &overlapped, INFINITE);
-          if (!status)
-          {
+          if (!status) {
             if (!overlapped) {
               if (GetLastError() == ERROR_INVALID_HANDLE) {
                 break;
               }
             }
             continue;
-          } 
+          }
           if (!completion_key) {
             continue;
           }
@@ -238,34 +244,84 @@ class server_tcpip {
             continue;
           }
           if (bytes_returned) {
-            context->buf.append(context->data.buf, bytes_returned);
-            std::optional<typename PRty::req> req;
-            try {
-              req = PRty::req::deserialize(context->buf);
-            } catch (const std::exception&) {
-              // connection closed! let's free the associated resources!
-              closesocket(context->socket);
-              delete context;
+            if (context->reading) {
+              // we're in <receiving> state..
+              try {
+                std::optional<typename PRty::req> req = PRty::req::deserialize(
+                    context->wsaBuffer.buf, bytes_returned);
+                if (req.has_value()) {
+                  std::optional<typename PRty::res> res =
+                      PRty::process(req.value());
+                  if (res.has_value()) {
+                    context->res = PRty::res::serialize(res.value());
+                    context->wsaBuffer.buf = (CHAR*)context->res.data();
+                    context->wsaBuffer.len = (ULONG)context->res.used();
+                    context->reading = false;
+                    DWORD bytesSent;
+                    DWORD flags = 0;
+                    int wsasend_result =
+                        WSASend(
+                        context->socket, &context->wsaBuffer, 1, &bytesSent,
+                        flags, &context->overlapped, NULL);
+                    if (wsasend_result == SOCKET_ERROR &&
+                        WSAGetLastError() != WSA_IO_PENDING) {
+                      closesocket(context->socket);
+                      delete context;
+                      continue;
+                    }
+                    context->wsaBuffer.len -= bytesSent;
+                    if (context->reading = !context->wsaBuffer.len) {
+                      context->wsaBuffer.buf = context->recv_buf;
+                      context->wsaBuffer.len = kRecvBufferSize;
+                    }
+                    continue;
+                  }
+                } else {
+                  // we need more bytes to complete de-serialization..
+                  context->wsaBuffer.buf = &context->recv_buf[bytes_returned];
+                  context->wsaBuffer.len = kRecvBufferSize - bytes_returned;
+                }
+              } catch (const std::exception&) {
+                // connection closed! let's free the associated resources!
+                closesocket(context->socket);
+                delete context;
+                continue;
+              }
+            } else {
+              // we're in <sending> state..
+              DWORD bytesSent;
+              DWORD flags = 0;
+              int wsasend_result =
+                  WSASend(context->socket, &context->wsaBuffer, 1, &bytesSent,
+                          flags, &context->overlapped, NULL);
+              if (wsasend_result == SOCKET_ERROR &&
+                  WSAGetLastError() != WSA_IO_PENDING) {
+                closesocket(context->socket);
+                delete context;
+                continue;
+              }
+              context->wsaBuffer.len -= bytesSent;
+              if (context->reading = !context->wsaBuffer.len) {
+                context->wsaBuffer.buf = context->recv_buf;
+                context->wsaBuffer.len = kRecvBufferSize;
+              }
               continue;
             }
-            if (req.has_value()) {
-              std::optional<typename PRty::res> res =
-                  PRty::process(req.value());
-              if (res.has_value()) {
-                if (!send_response(context->socket,
-                                   PRty::res::serialize(res.value()))) {
-                  // connection closed! let's free the associated resources!
-                  closesocket(context->socket);
-                  delete context;
-                  continue;
-                }
-              }
-            }
+          } else {
+            // new connection..
+
+            /*
+            pepe
+            */
+
+            /*
+            pepe fin
+            */
           }
           DWORD recv_flags = 0;
           DWORD bytes_transmitted = 0;
           int wsarecv_result = WSARecv(
-              context->socket, &context->data, 0x1, &bytes_transmitted,
+              context->socket, &context->wsaBuffer, 0x1, &bytes_transmitted,
               &recv_flags, (LPWSAOVERLAPPED)&context->overlapped, nullptr);
           if (wsarecv_result == SOCKET_ERROR) {
             int wsaLastError = WSAGetLastError();
@@ -279,22 +335,6 @@ class server_tcpip {
       }));
     }
   }
-  bool send_response(const SOCKET& socket, const buffer& data) {
-    const char* const buf = (const char* const)data.data();
-    std::size_t len = data.used();
-    std::size_t off = 0;
-    while (off < len) {
-      std::size_t cur = std::min<std::size_t>(INT_MAX, len - off);
-      auto res = send(socket, &buf[off], (int)cur, 0);
-      if (res == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK) {
-        // ((Error)) -> while trying to send information to socket!
-        return false;
-      }
-      off += res;
-    }
-    return true;
-  }
-
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //

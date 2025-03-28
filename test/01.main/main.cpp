@@ -23,9 +23,9 @@
 
 struct request {
   std::string content;
-  static std::optional<request> deserialize(const martianlabs::doba::buffer& buf) {
+  static std::optional<request> deserialize(const char* buf, const uint32_t& len) {
     request out;
-    out.content.assign((const char* const)buf.data(), buf.used());
+    out.content.assign((const char* const)buf, len);
     return out;
   };
 };
