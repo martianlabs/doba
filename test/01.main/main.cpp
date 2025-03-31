@@ -18,7 +18,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "buffer.h"
+#include "buffex.h"
 #include "server/server_tcpip.h"
 
 struct request {
@@ -31,10 +31,8 @@ struct request {
 };
 
 struct response {
-  static martianlabs::doba::buffer serialize(const response& res) {
-    martianlabs::doba::buffer out;
-    out.append("HTTP/1.1 200 OK\nContent-Length: 0\n\n");
-    return out;
+  static void serialize(const response& input, martianlabs::doba::buffex& output) {
+    output.append("HTTP/1.1 200 OK\nContent-Length: 0\n\n");
   };
 };
 
@@ -52,7 +50,23 @@ public:
 
 int
 main(int argc, char* argv[]) {
+  std::string my_str =
+      "Hello World! This is just a simple, and silly, example about using "
+      "buffex!";
+  martianlabs::doba::buffex buf;
+  buf.append(my_str.data(), my_str.size());
+  constexpr std::size_t kSize = 1024;
+  char bf[kSize] = {0};
+  std::size_t sz = 0;
+  if (!buf.read(64, bf, sz)) {
+    printf(">>>>> ERROR!!!!!!\n");
+  }
+  if (!buf.read(64, bf, sz)) {
+    printf(">>>>> ERROR!!!!!!\n");
+  }
+
   martianlabs::doba::server::server_tcpip<my_protocol> my_server;
 	my_server.start("10001", 8);
+
 	return getchar();
 }

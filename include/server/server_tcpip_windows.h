@@ -21,6 +21,8 @@
 #ifndef martianlabs_doba_server_serverwindows_h
 #define martianlabs_doba_server_serverwindows_h
 
+#include "buffex.h"
+
 namespace martianlabs::doba::server {
 // =============================================================================
 // server_tcpip_windows                                            ( interface )
@@ -77,10 +79,9 @@ class server_tcpip {
         // let's associate the accept socket with the i/o port!
         Context* ovl = new Context();
         ZeroMemory(ovl, sizeof(Context));
-        ovl->recv_len = kRecvBufferSize;
-        ovl->send_len = kSendBufferSize;
-        ovl->wsaBuffer.buf = ovl->recv_buf;
-        ovl->wsaBuffer.len = ovl->recv_len;
+        ovl->req_len = kRecvBufSz;
+        ovl->wsaBuffer.buf = ovl->req_buf;
+        ovl->wsaBuffer.len = ovl->req_len;
         ovl->socket = client;
         ovl->reading = true;
         if (!CreateIoCompletionPort((HANDLE)client, io_port_, (ULONG_PTR)ovl,
@@ -127,8 +128,8 @@ class server_tcpip {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr std::size_t kRecvBufferSize = 1024;
-  static constexpr std::size_t kSendBufferSize = 1024;
+  static constexpr std::size_t kRecvBufSz = 1024;
+  static constexpr std::size_t kSendBufSz = 1024;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
@@ -136,12 +137,12 @@ class server_tcpip {
     WSAOVERLAPPED overlapped;
     WSABUF wsaBuffer;
     SOCKET socket;
-    CHAR recv_buf[kRecvBufferSize];
-    CHAR send_buf[kSendBufferSize];
-    ULONG recv_len;
-    ULONG send_len;
+    CHAR req_buf[kRecvBufSz];
+    ULONG req_len;
+    CHAR res_buf[kSendBufSz];
+    ULONG res_len;
     BOOL reading;
-    buffer res;
+    martianlabs::doba::buffex res;
   };
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
@@ -243,93 +244,89 @@ class server_tcpip {
             delete context;
             continue;
           }
-          if (bytes_returned) {
-            if (context->reading) {
-              // we're in <receiving> state..
-              try {
+          if (context->reading) {
+            // we're in <receiving> state..
+            try {
+              if (bytes_returned) {
                 std::optional<typename PRty::req> req = PRty::req::deserialize(
                     context->wsaBuffer.buf, bytes_returned);
                 if (req.has_value()) {
                   std::optional<typename PRty::res> res =
                       PRty::process(req.value());
                   if (res.has_value()) {
-                    context->res = PRty::res::serialize(res.value());
-                    context->wsaBuffer.buf = (CHAR*)context->res.data();
-                    context->wsaBuffer.len = (ULONG)context->res.used();
-                    context->reading = false;
-                    DWORD bytesSent;
-                    DWORD flags = 0;
-                    int wsasend_result =
-                        WSASend(
-                        context->socket, &context->wsaBuffer, 1, &bytesSent,
-                        flags, &context->overlapped, NULL);
-                    if (wsasend_result == SOCKET_ERROR &&
-                        WSAGetLastError() != WSA_IO_PENDING) {
-                      closesocket(context->socket);
-                      delete context;
+                    PRty::res::serialize(res.value(), context->res);
+                    std::size_t sz = 0;
+                    if (context->res.read(kSendBufSz, context->res_buf, sz)) {
+                      context->res_len = (ULONG)sz;
+                      context->wsaBuffer.buf = context->res_buf;
+                      context->wsaBuffer.len = context->res_len;
+                      context->reading = false;
+                      DWORD bytesSent = 0;
+                      DWORD flags = 0;
+                      int res = WSASend(context->socket, &context->wsaBuffer, 1,
+                                        &bytesSent, flags, &context->overlapped,
+                                        NULL);
+                      if (res == SOCKET_ERROR &&
+                          WSAGetLastError() != WSA_IO_PENDING) {
+                        closesocket(context->socket);
+                        delete context;
+                        continue;
+                      }
+                      context->wsaBuffer.len -= bytesSent;
                       continue;
                     }
-                    context->wsaBuffer.len -= bytesSent;
-                    if (context->reading = !context->wsaBuffer.len) {
-                      context->wsaBuffer.buf = context->recv_buf;
-                      context->wsaBuffer.len = kRecvBufferSize;
-                    }
-                    continue;
                   }
                 } else {
                   // we need more bytes to complete de-serialization..
-                  context->wsaBuffer.buf = &context->recv_buf[bytes_returned];
-                  context->wsaBuffer.len = kRecvBufferSize - bytes_returned;
+                  context->wsaBuffer.buf = &context->req_buf[bytes_returned];
+                  context->wsaBuffer.len = kRecvBufSz - bytes_returned;
                 }
-              } catch (const std::exception&) {
-                // connection closed! let's free the associated resources!
-                closesocket(context->socket);
-                delete context;
-                continue;
               }
-            } else {
-              // we're in <sending> state..
-              DWORD bytesSent;
+              DWORD recv_flags = 0;
+              DWORD bytes_transmitted = 0;
+              int wsarecv_result =
+                  WSARecv(context->socket, &context->wsaBuffer, 0x1,
+                          &bytes_transmitted, &recv_flags,
+                          (LPWSAOVERLAPPED)&context->overlapped, nullptr);
+              if (wsarecv_result == SOCKET_ERROR) {
+                int wsaLastError = WSAGetLastError();
+                if (wsaLastError != WSA_IO_PENDING) {
+                  // connection closed! let's free the associated resources!
+                  closesocket(context->socket);
+                  delete context;
+                }
+              }
+            } catch (const std::exception&) {
+              // connection closed! let's free the associated resources!
+              closesocket(context->socket);
+              delete context;
+              continue;
+            }
+          } else {
+            // we're in <sending> state..
+            if (!context->wsaBuffer.len) {
+            }
+            std::size_t sz = 0;
+            if (context->res.read(kSendBufSz, context->res_buf, sz)) {
+              context->res_len = (ULONG)sz;
+              context->wsaBuffer.buf = context->res_buf;
+              context->wsaBuffer.len = context->res_len;
+              context->reading = false;
+              DWORD bytesSent = 0;
               DWORD flags = 0;
-              int wsasend_result =
-                  WSASend(context->socket, &context->wsaBuffer, 1, &bytesSent,
-                          flags, &context->overlapped, NULL);
-              if (wsasend_result == SOCKET_ERROR &&
+              int res =
+                  WSASend(context->socket, &context->wsaBuffer, 1,
+                          &bytesSent, flags, &context->overlapped, NULL);
+              if (res == SOCKET_ERROR &&
                   WSAGetLastError() != WSA_IO_PENDING) {
                 closesocket(context->socket);
                 delete context;
                 continue;
               }
               context->wsaBuffer.len -= bytesSent;
-              if (context->reading = !context->wsaBuffer.len) {
-                context->wsaBuffer.buf = context->recv_buf;
-                context->wsaBuffer.len = kRecvBufferSize;
-              }
-              continue;
+            } else {
             }
-          } else {
-            // new connection..
-
-            /*
-            pepe
-            */
-
-            /*
-            pepe fin
-            */
-          }
-          DWORD recv_flags = 0;
-          DWORD bytes_transmitted = 0;
-          int wsarecv_result = WSARecv(
-              context->socket, &context->wsaBuffer, 0x1, &bytes_transmitted,
-              &recv_flags, (LPWSAOVERLAPPED)&context->overlapped, nullptr);
-          if (wsarecv_result == SOCKET_ERROR) {
-            int wsaLastError = WSAGetLastError();
-            if (wsaLastError != WSA_IO_PENDING) {
-              // connection closed! let's free the associated resources!
-              closesocket(context->socket);
-              delete context;
-            }
+            continue;
           }
         }
       }));
