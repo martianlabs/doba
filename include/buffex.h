@@ -44,11 +44,13 @@ class buffex {
   }
   buffex(const buffex& in) : buffex(in.mp_) {
     switch (mp_) {
-      case mapping::kMemory:
+      case mapping::kMemory: {
         m_sz_ = in.m_sz_;
         m_rd_ = in.m_rd_;
         m_wr_ = in.m_wr_;
-        if (m_bf_ = (char*)malloc(m_sz_)) {
+        void* new_buffer = malloc(m_sz_);
+        if (new_buffer) {
+          m_bf_ = (char*)new_buffer;
           if (!memcpy(m_bf_, in.m_bf_, m_wr_)) {
             // ((Error)) -> out of memory!
             throw std::runtime_error("out of memory!");
@@ -58,6 +60,7 @@ class buffex {
           throw std::runtime_error("out of memory!");
         }
         break;
+      }
       case mapping::kFile:
         break;
     }
@@ -79,8 +82,20 @@ class buffex {
       // ((Error)) -> source object is not compatible for copy!
       throw std::logic_error("source object is not compatible for copy");
     }
+
+    /*
+    pepe
+    */
+
+    /*
     cleanup();
     initialize(in.mp_);
+    */
+
+    /*
+    pepe fin
+    */
+
     switch (mp_) {
       case mapping::kMemory:
         m_sz_ = in.m_sz_;
@@ -117,6 +132,16 @@ class buffex {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
+  void reset() {
+    switch (mp_) {
+      case mapping::kMemory:
+        m_rd_ = 0;
+        m_wr_ = 0;
+        break;
+      case mapping::kFile:
+        break;
+    }
+  }
   bool read(const std::size_t& bytes, void* o_ptr, std::size_t& o_len) {
     bool result = false;
     switch (mp_) {
@@ -180,7 +205,7 @@ class buffex {
   void cleanup() {
     switch (mp_) {
       case mapping::kMemory:
-        delete[] m_bf_;
+        free(m_bf_);
         break;
       case mapping::kFile:
         break;
@@ -193,8 +218,9 @@ class buffex {
         multiplier += multiplier % kMemoryChunkSize;
         std::size_t bytes_to_allocate = kMemoryChunkSize * multiplier;
         if ((m_sz_ - m_wr_) < needed_bytes) {
-          if (void* rbuffer = realloc(m_bf_, m_sz_ + bytes_to_allocate)) {
-            m_bf_ = (char*)rbuffer;
+          void* new_buffer = realloc(m_bf_, m_sz_ + bytes_to_allocate);
+          if (new_buffer) {
+            m_bf_ = (char*)new_buffer;
             m_sz_ += bytes_to_allocate;
           } else {
             // ((Error)) -> out of memory!
