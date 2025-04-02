@@ -227,6 +227,7 @@ class server_tcpip {
               continue;
             }
             Context* context = (Context*)key;
+            std::shared_ptr<Context> context_shr = get_context(context->socket);
             std::lock_guard<std::mutex> guard(context->lock);
             switch (context->reading) {
               case true:
@@ -245,36 +246,11 @@ class server_tcpip {
             if (ovl) {
               if (!sz) {
                 // connection closed! let's free the associated resources!
-
-                /*
-                pepe
-                */
-
-                /*
-                printf(">>>>>>>>> %lld disconnected!!!\n", context->socket);
-                */
-
-                /*
-                pepe fin
-                */
-
-                continue;
+                unregister_context(context);
               }
             } else if (!sz) {
               // connection created! let's inform user!
-
-              /*
-              pepe
-              */
-
-              /*
-              printf(">>>>>>>>> %lld connected!!!\n", context->socket);
-              */
-
-              /*
-              pepe fin
-              */
-
+              register_context(context);
             }
           } else {
             if (!ovl) {
@@ -355,35 +331,35 @@ class server_tcpip {
     receive(ctx);
 
     /*
-    bool res = true, can_send = true;
-    if (!ctx->wsaBuffer.len) {
-      std::size_t sz = 0;
-      if (ctx->res.read(kSendBufSz, ctx->res_buf, sz)) {
-        ctx->wsaBuffer.buf = ctx->res_buf;
-        ctx->wsaBuffer.len = (ULONG)sz;
-      } else {
-        switch_to_receive_mode(ctx);
-        ctx->res.reset();
-        can_send = false;
-      }
-    }
-    if (can_send) {
-      DWORD bytesSent = 0;
-      DWORD flags = 0;
-      int wsa = WSASend(ctx->socket, &ctx->wsaBuffer, 1, &bytesSent, flags,
-                        &ctx->overlapped, NULL);
-      if (!wsa) {
-        ctx->wsaBuffer.buf += bytesSent;
-        ctx->wsaBuffer.len -= bytesSent;
-      } else {
-        res = !((wsa == SOCKET_ERROR) && (WSAGetLastError() != WSA_IO_PENDING));
-      }
-    }
-    */
-
-    /*
     pepe fin
     */
+  }
+  void register_context(Context* context) {
+    std::lock_guard<std::mutex> guard(map_mutex_);
+    map_.insert(std::make_pair(
+        context->socket,
+        std::shared_ptr<Context>(
+            context, [this](Context* ctx) { delete_context(ctx); })));
+  }
+  void unregister_context(Context* context) {
+    std::lock_guard<std::mutex> guard(map_mutex_);
+    map_.erase(context->socket);
+  }
+  std::shared_ptr<Context> get_context(SOCKET s) {
+    std::lock_guard<std::mutex> guard(map_mutex_);
+    std::shared_ptr<Context> result;
+    auto itr = map_.find(s);
+    if (itr != map_.end()) {
+      result = itr->second;
+    }
+    return result;
+  }
+  void delete_context(Context* context) {
+    std::lock_guard<std::mutex> guard(garbage_mutex_);
+    closesocket(context->socket);
+    free(context->req_buf);
+    free(context->res_buf);
+    garbage_.push(context);
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
@@ -394,6 +370,10 @@ class server_tcpip {
   std::vector<std::shared_ptr<std::thread>> workers_;
   std::shared_ptr<std::thread> manager_;
   PRty protocol_;
+  std::unordered_map<SOCKET, std::shared_ptr<Context>> map_;
+  std::mutex map_mutex_;
+  std::queue<Context*> garbage_;
+  std::mutex garbage_mutex_;
 };
 }  // namespace martianlabs::doba::server
 
