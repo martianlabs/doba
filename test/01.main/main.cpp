@@ -23,11 +23,14 @@
 
 struct request {
   std::string content;
-  static std::optional<request> deserialize(const char* buf, const uint32_t& len) {
+  static std::optional<request> deserialize(const char* buf,
+                                            const std::size_t& len,
+                                            std::size_t& used) {
     request out;
     out.content.assign((const char* const)buf, len);
+    used = len;
     return out;
-  };
+  }
 };
 
 struct response {

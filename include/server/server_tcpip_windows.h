@@ -21,7 +21,8 @@
 #ifndef martianlabs_doba_server_serverwindows_h
 #define martianlabs_doba_server_serverwindows_h
 
-#include <atomic>
+#include <mutex>
+#include <unordered_map>
 
 #include "buffex.h"
 
@@ -64,8 +65,8 @@ class server_tcpip {
     // let's start incoming connections loop!
     manager_ = std::make_shared<std::thread>([this]() {
       while (keep_running_) {
-        SOCKET client = WSAAccept(accept_socket_, NULL, NULL, NULL, NULL);
-        if (client == INVALID_SOCKET) {
+        SOCKET s = WSAAccept(accept_socket_, NULL, NULL, NULL, NULL);
+        if (s == INVALID_SOCKET) {
           // ((Error)) -> trying to accept a new connection: shutting down?
           break;
         }
@@ -73,24 +74,28 @@ class server_tcpip {
         // blocking mode for the socket based on the numerical value of iMode.
         // iMode = 0, blocking mode; iMode != 0, non-blocking mode.
         ULONG i_mode = 1;
-        auto ioctl_socket_res = ioctlsocket(client, FIONBIO, &i_mode);
-        if (ioctl_socket_res != NO_ERROR) {
+        auto ioctl_socket_res = ioctlsocket(s, FIONBIO, &i_mode);
+        if (ioctl_socket_res == NO_ERROR) {
+          // let's associate the accept socket with the i/o port!
+          Context* ovl = new Context();
+          ZeroMemory(ovl, sizeof(Context));
+          ovl->socket = s;
+          ovl->req_buf = (CHAR*)malloc(kRecvBufSz);
+          ovl->res_buf = (CHAR*)malloc(kSendBufSz);
+          switch_to_receive_mode(ovl);
+          ULONG_PTR ptr_ovl = (ULONG_PTR)ovl;
+          if (CreateIoCompletionPort((HANDLE)s, io_port_, ptr_ovl, 0)) {
+            // let's notify waiting thread for the new connection!
+            if (!PostQueuedCompletionStatus(io_port_, 0, ptr_ovl, NULL)) {
+              // ((Error)) -> trying to notify waiting thread!
+              // ((To-Do)) -> raise an exception?
+            }
+          } else {
+            // ((Error)) -> trying to associate socket to the i/o port!
+            // ((To-Do)) -> raise an exception?
+          }
+        } else {
           // ((Error)) -> could not change blocking mode on socket!
-          // ((To-Do)) -> raise an exception?
-        }
-        // let's associate the accept socket with the i/o port!
-        Context* ovl = new Context();
-        ZeroMemory(ovl, sizeof(Context));
-        ovl->socket = client;
-        switch_to_receive_mode(ovl);
-        if (!CreateIoCompletionPort((HANDLE)client, io_port_, (ULONG_PTR)ovl,
-                                    0)) {
-          // ((Error)) -> trying to associate socket to the i/o port!
-          // ((To-Do)) -> raise an exception?
-        }
-        // let's notify waiting thread for the new connection!
-        if (!PostQueuedCompletionStatus(io_port_, 0, (ULONG_PTR)ovl, NULL)) {
-          // ((Error)) -> trying to notify waiting thread!
           // ((To-Do)) -> raise an exception?
         }
       }
@@ -113,8 +118,7 @@ class server_tcpip {
     }
     if (accept_socket_ != INVALID_SOCKET) {
       if (closesocket(accept_socket_) == SOCKET_ERROR) {
-        throw std::logic_error(
-            "There were errors while closing accept socket!");
+        throw std::logic_error("Could not close accept socket!");
       }
     }
     keep_running_ = false;
@@ -136,11 +140,11 @@ class server_tcpip {
     WSAOVERLAPPED overlapped;
     WSABUF wsaBuffer;
     SOCKET socket;
-    CHAR req_buf[kRecvBufSz];
-    CHAR res_buf[kSendBufSz];
+    CHAR* req_buf;
+    CHAR* res_buf;
     ULONG req_len;
     BOOL reading;
-    std::atomic<bool> deleted{false};
+    std::mutex lock;
   };
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
@@ -156,15 +160,12 @@ class server_tcpip {
       ~WsaInitializer_() { WSACleanup(); }
       WSADATA wsa_data;
     };
-    static std::shared_ptr<WsaInitializer_> wsa_initializer_ptr_ =
-        std::make_shared<WsaInitializer_>();
+    static auto wsa_initializer_ptr_ = std::make_shared<WsaInitializer_>();
   }
-  void setupListener(const std::string& port,
-                     const uint8_t& number_of_workers) {
+  void setupListener(const std::string& port, const uint8_t& workers) {
     // let's create our main i/o completion port!
-    auto io_port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL,
-                                          number_of_workers);
-    if (io_port == nullptr) {
+    auto io = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, workers);
+    if (!io) {
       // ((Error)) -> while setting up the i/o completion port!
       throw std::runtime_error("could not setup i/o completion port!");
     }
@@ -173,13 +174,13 @@ class server_tcpip {
                              WSA_FLAG_OVERLAPPED);
     if (sock == INVALID_SOCKET) {
       // ((Error)) -> could not create socket!
-      CloseHandle(io_port);
+      CloseHandle(io);
       throw std::runtime_error("could not create listening socket!");
     }
     // let's associate the listening port to the i/o completion port!
-    if (CreateIoCompletionPort((HANDLE)sock, io_port, 0UL, 0) == nullptr) {
+    if (CreateIoCompletionPort((HANDLE)sock, io, 0UL, 0) == nullptr) {
       // ((Error)) -> while setting up the i/o completion port!
-      CloseHandle(io_port);
+      CloseHandle(io);
       closesocket(sock);
       throw std::runtime_error("could not setup i/o completion port!");
     }
@@ -190,7 +191,7 @@ class server_tcpip {
     auto ioctl_socket_res = ioctlsocket(sock, FIONBIO, &i_mode);
     if (ioctl_socket_res != NO_ERROR) {
       // ((Error)) -> could not change blocking mode on socket!
-      CloseHandle(io_port);
+      CloseHandle(io);
       closesocket(sock);
       throw std::runtime_error("could not set listening socket i/o mode!");
     }
@@ -201,85 +202,86 @@ class server_tcpip {
     auto bind_res = bind(sock, (const sockaddr*)&address, sizeof(address));
     if (bind_res == SOCKET_ERROR) {
       // ((Error)) -> could not bind socket!
-      CloseHandle(io_port);
+      CloseHandle(io);
       closesocket(sock);
       throw std::runtime_error("could not bind to listening socket!");
     }
     if (listen(sock, SOMAXCONN) == SOCKET_ERROR) {
       // ((Error)) -> could not listen socket!
-      CloseHandle(io_port);
+      CloseHandle(io);
       closesocket(sock);
       throw std::runtime_error("could not bind to listening socket!");
     }
     accept_socket_ = sock;
-    io_port_ = io_port;
+    io_port_ = io;
   }
   void setupWorkers(const uint8_t& number_of_workers) {
     for (int i = 0; i < number_of_workers; i++) {
       workers_.push_back(std::make_shared<std::thread>([this]() {
-        ULONG_PTR completion_key = NULL;
-        LPOVERLAPPED overlapped = NULL;
-        DWORD bytes_returned = 0;
+        ULONG_PTR key = NULL;
+        LPOVERLAPPED ovl = NULL;
+        DWORD sz = 0;
         while (true) {
-          BOOL status = GetQueuedCompletionStatus(io_port_, &bytes_returned,
-                                                  (PULONG_PTR)&completion_key,
-                                                  &overlapped, INFINITE);
-          if (!status) {
-            if (!overlapped) {
-              if (GetLastError() == ERROR_INVALID_HANDLE) {
+          if (GetQueuedCompletionStatus(io_port_, &sz, &key, &ovl, INFINITE)) {
+            if (!key) {
+              continue;
+            }
+            Context* context = (Context*)key;
+            std::lock_guard<std::mutex> guard(context->lock);
+            switch (context->reading) {
+              case true:
+                receive(context);
+                try {
+                  try_to_process_request(context, sz);
+                } catch (const std::exception&) {
+                  // connection closed! let's free the associated resources!
+                  continue;
+                }
                 break;
-              }
+              case false:
+                send(context);
+                break;
             }
-            continue;
-          }
-          if (!completion_key) {
-            continue;
-          }
-          Context* context = (Context*)completion_key;
-          if (overlapped && !bytes_returned) {
-            // connection closed! let's free the associated resources!
-            if (!context->deleted.exchange(true)) {
-              closesocket(context->socket);
-              printf(
-                  "About to delete '%p' (%ld bytes returned) [%d] "
-                  "context...\n",
-                  context, bytes_returned, std::this_thread::get_id());
-              delete context;
-            }
-            continue;
-          }
-          if (context->reading) {
-            if (bytes_returned) {
-              try {
-                try_to_process_request(context, bytes_returned);
-              } catch (const std::exception&) {
+            if (ovl) {
+              if (!sz) {
                 // connection closed! let's free the associated resources!
-                // closesocket(context->socket);
-                // delete context;
+
+                /*
+                pepe
+                */
+
+                /*
+                printf(">>>>>>>>> %lld disconnected!!!\n", context->socket);
+                */
+
+                /*
+                pepe fin
+                */
+
                 continue;
               }
-            } else {
-              // +++ new connection!
+            } else if (!sz) {
+              // connection created! let's inform user!
 
               /*
               pepe
               */
 
-              printf("new connection!!!\n");
+              /*
+              printf(">>>>>>>>> %lld connected!!!\n", context->socket);
+              */
 
               /*
               pepe fin
               */
 
             }
-          } 
-          switch (context->reading) {
-            case true:
-              receive(context);
-              break;
-            case false:
-              send(context);
-              break;
+          } else {
+            if (!ovl) {
+              if (GetLastError() == ERROR_INVALID_HANDLE) {
+                break;
+              }
+            }
           }
         }
       }));
@@ -300,11 +302,22 @@ class server_tcpip {
     ctx->wsaBuffer.buf += bytes_received;
     ctx->wsaBuffer.len -= bytes_received;
     ctx->req_len += bytes_received;
-    auto req = PRty::req::deserialize(ctx->req_buf, ctx->req_len);
+    std::size_t consumed = 0;
+    auto req = PRty::req::deserialize(ctx->req_buf, ctx->req_len, consumed);
+    if (consumed) {
+      if (memmove(ctx->req_buf, &ctx->req_buf[consumed],
+                  ctx->req_len - consumed)) {
+        ctx->req_len -= (ULONG)consumed;
+        ctx->wsaBuffer.buf = ctx->req_buf;
+        ctx->wsaBuffer.len += (ULONG)consumed;
+      } else {
+        // ((Error)) -> out of memory!
+        throw std::runtime_error("out of memory!");
+      }
+    }
     if (req.has_value()) {
       auto res = PRty::process(req.value());
       if (res.has_value()) {
-
         /*
         pepe
         */
@@ -320,24 +333,24 @@ class server_tcpip {
         switch_to_send_mode(ctx);
         send(ctx);
       }
+    } else if (ctx->req_len == kRecvBufSz) {
+      switch_to_receive_mode(ctx);
     }
   }
-  void receive(Context* ctx) {
+  bool receive(Context* ctx) {
     DWORD recv_flags = 0;
     int res = WSARecv(ctx->socket, &ctx->wsaBuffer, 0x1, NULL, &recv_flags,
                       &ctx->overlapped, nullptr);
-    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-    }
+    return !(res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING);
   }
   void send(Context* ctx) {
-
     /*
     pepe
     */
 
     int res = ::send(ctx->socket, "HTTP/1.1 200 OK\nContent-Length: 0\n\n",
-                      (int)strlen("HTTP/1.1 200 OK\nContent-Length: 0\n\n"),
-                      0) != SOCKET_ERROR;
+                     (int)strlen("HTTP/1.1 200 OK\nContent-Length: 0\n\n"),
+                     0) != SOCKET_ERROR;
     switch_to_receive_mode(ctx);
     receive(ctx);
 
@@ -371,7 +384,6 @@ class server_tcpip {
     /*
     pepe fin
     */
-  
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
