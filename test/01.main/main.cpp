@@ -21,38 +21,41 @@
 #include "buffex.h"
 #include "server/server_tcpip.h"
 
-struct request {
-  std::string content;
-  static std::optional<request> deserialize(const char* buf,
-                                            const std::size_t& len,
-                                            std::size_t& used) {
-    request out;
-    out.content.assign((const char* const)buf, len);
-    used = len;
-    return out;
+template<typename RQty, typename RSty>
+class processor_base {
+public:
+  using req = RQty;
+  using res = RSty;
+};
+
+class my_request {
+};
+
+class my_response {
+};
+
+class my_processor : public processor_base<my_request, my_response> {
+ public:
+  std::optional<my_request> decode(void* buffer, uint32_t length) {
+    printf(">>>>>> %.*s", int(length), (char*)buffer);
+    return {};
+  }
+  std::optional<my_response> decode(const my_request& req) {
+    return {};
   }
 };
 
-struct response {
-  static void serialize(const response& input, martianlabs::doba::buffex& output) {
-    output.append("HTTP/1.1 200 OK\nContent-Length: 0\n\n");
-  };
-};
+int main(int argc, char* argv[]) {
+  martianlabs::doba::server::server_tcpip<my_processor> my_server;
+  my_server.start("10001", 8);
 
-template<typename RQty, typename RSty>
-class protocol_base {
-public:
-	using req = RQty;
-	using res = RSty;
-};
+  /*
+  martianlabs::doba::buffex my_buffer;
+  martianlabs::doba::buffex my_copied_buffer = my_buffer;
+  martianlabs::doba::buffex my_moved_buffer = std::move(my_buffer);
+  */
 
-class my_protocol : public protocol_base<request, response> {
-public:
-  static std::optional<response> process(const request&) { return response(); }
-};
-
-int
-main(int argc, char* argv[]) {
+  /*
   std::string my_str =
       "Hello World! This is just a simple, and silly, example about using "
       "buffex!";
@@ -68,8 +71,7 @@ main(int argc, char* argv[]) {
     printf(">>>>> ERROR!!!!!!\n");
   }
 
-  martianlabs::doba::server::server_tcpip<my_protocol> my_server;
-	my_server.start("10001", 8);
+  */
 
-	return getchar();
+  return getchar();
 }
