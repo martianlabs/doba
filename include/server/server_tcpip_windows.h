@@ -18,8 +18,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_server_serverwindows_h
-#define martianlabs_doba_server_serverwindows_h
+#ifndef martianlabs_doba_server_servertcpipwindows_h
+#define martianlabs_doba_server_servertcpipwindows_h
 
 #include <mutex>
 #include <unordered_map>
@@ -33,9 +33,9 @@ namespace martianlabs::doba::server {
 // This specification holds for the WindowsTM server implementation.
 // -----------------------------------------------------------------------------
 // Template parameters:
-//    PRty - processor type being used.
+//    PBty - protocol builder (request/reponse) being used.
 // =============================================================================
-template <typename PRty>
+template <typename PBty>
 class server_tcpip {
  public:
   // ___________________________________________________________________________
@@ -77,10 +77,12 @@ class server_tcpip {
         auto ioctl_socket_res = ioctlsocket(s, FIONBIO, &i_mode);
         if (ioctl_socket_res == NO_ERROR) {
           // let's associate the accept socket with the i/o port!
-          Context* ovl = new Context();
-          ZeroMemory(ovl, sizeof(Context));
-          ovl->rbuf = new CHAR[kRecvBufSz];
+          context* ovl = new context();
+          ZeroMemory(ovl, sizeof(context));
+          ovl->buf = new CHAR[kContextBufferSize];
           ovl->soc = s;
+          ovl->request = PBty::build_request();
+          ovl->response = PBty::build_response();
           switch_to_receive_mode(ovl);
           if (CreateIoCompletionPort((HANDLE)s, io_, (ULONG_PTR)ovl, 0)) {
             // let's notify waiting thread for the new connection!
@@ -129,19 +131,20 @@ class server_tcpip {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr std::size_t kRecvBufSz = 1024;
-  static constexpr std::size_t kSendBufSz = 1024;
+  static constexpr std::size_t kContextBufferSize = 1024;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
-  struct Context {
+  struct context {
     WSAOVERLAPPED ovl;
     WSABUF wsa;
     SOCKET soc;
     std::mutex lock;
-    CHAR FAR* rbuf;
+    CHAR FAR* buf;
     bool receiving;
-    PRty processor;
+    std::shared_ptr<typename PBty::req> request;
+    std::shared_ptr<typename PBty::res> response;
+    std::shared_ptr<std::istream> response_stream;
   };
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
@@ -223,7 +226,7 @@ class server_tcpip {
             if (!key) {
               continue;
             }
-            Context* ctx = (Context*)key;
+            context* ctx = (context*)key;
             std::lock_guard<std::mutex> guard(ctx->lock);
             // let's check if there's a completed operation..
             if (ovl) {
@@ -239,13 +242,24 @@ class server_tcpip {
             }
             // let's start a new asynchronous operation..
             if (ctx->receiving) {
+              // receiving..
               DWORD f = 0, r = 0;
               int res = WSARecv(ctx->soc, &ctx->wsa, 1, &r, &f, &ctx->ovl, 0);
-              if (!res) {
-                decode(ctx, r);
-              } else if (res == SOCKET_ERROR) {
+              if (res == SOCKET_ERROR) {
                 if (WSAGetLastError() != WSA_IO_PENDING) {
                   unregister_context(ctx);
+                }
+              }
+            } else {
+              // sending..
+              if (ctx->response_stream->read(ctx->buf, kContextBufferSize) ||
+                  (ctx->wsa.len = (ULONG)ctx->response_stream->gcount())) {
+                DWORD f = 0, s = 0;
+                int res = WSASend(ctx->soc, &ctx->wsa, 1, &s, f, &ctx->ovl, 0);
+                if (res == SOCKET_ERROR) {
+                  if (WSAGetLastError() != WSA_IO_PENDING) {
+                    unregister_context(ctx);
+                  }
                 }
               }
             }
@@ -257,28 +271,52 @@ class server_tcpip {
       }));
     }
   }
-  void decode(Context* ctx, DWORD length) {
-    std::optional<typename PRty::req> request =
-        ctx->processor.decode(ctx->wsa.buf, length);
+  void decode(context* ctx, DWORD length) {
+    if (ctx->request) {
+      switch (ctx->request->deserialize(ctx->wsa.buf, length)) {
+        case protocol::result::kCompleted:
+          switch (PBty::process(ctx->request, ctx->response)) {
+            case protocol::result::kCompleted: {
+              switch_to_send_mode(ctx, ctx->response->serialize());
+              break;
+            }
+            case protocol::result::kCompletedAndClose:
+              break;
+            case protocol::result::kError:
+              unregister_context(ctx);
+              break;
+          }
+          ctx->request->reset();
+          break;
+        case protocol::result::kMoreBytesNeeded:
+          break;
+        case protocol::result::kError:
+          unregister_context(ctx);
+          break;
+      }
+    }
   }
-  void register_context(Context* context) {
+  void register_context(context* ctx) {
     std::lock_guard<std::mutex> guard(map_mutex_);
     map_.insert(std::make_pair(
-        context->soc, std::shared_ptr<Context>(context, [this](Context* ctx) {
-          delete_context(ctx);
-        })));
+        ctx->soc, std::shared_ptr<context>(
+                      ctx, [this](context* ctx) { delete_context(ctx); })));
   }
-  void unregister_context(Context* context) {
+  void unregister_context(context* context) {
     std::lock_guard<std::mutex> guard(map_mutex_);
     map_.erase(context->soc);
   }
-  void delete_context(Context* context) {
-    closesocket(context->soc);
-  }
-  void switch_to_receive_mode(Context* ctx) {
-    ctx->wsa.buf = ctx->rbuf;
-    ctx->wsa.len = kRecvBufSz;
+  void delete_context(context* context) { closesocket(context->soc); }
+  void switch_to_receive_mode(context* ctx) {
+    ctx->wsa.buf = ctx->buf;
+    ctx->wsa.len = kContextBufferSize;
     ctx->receiving = true;
+  }
+  void switch_to_send_mode(context* ctx, std::shared_ptr<std::istream> stream) {
+    ctx->wsa.buf = ctx->buf;
+    ctx->wsa.len = 0;
+    ctx->receiving = false;
+    ctx->response_stream = stream;
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
@@ -288,8 +326,7 @@ class server_tcpip {
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::vector<std::shared_ptr<std::thread>> workers_;
   std::shared_ptr<std::thread> manager_;
-  PRty protocol_;
-  std::unordered_map<SOCKET, std::shared_ptr<Context>> map_;
+  std::unordered_map<SOCKET, std::shared_ptr<context>> map_;
   std::mutex map_mutex_;
 };
 }  // namespace martianlabs::doba::server

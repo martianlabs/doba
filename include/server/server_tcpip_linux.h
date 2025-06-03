@@ -26,8 +26,8 @@
 #include <thread>
 #include <vector>
 
-#ifndef martianlabs_doba_server_serverilinux_h
-#define martianlabs_doba_server_serverlinux_h
+#ifndef martianlabs_doba_server_servertcpiplinux_h
+#define martianlabs_doba_server_servertcpiplinux_h
 
 namespace martianlabs::doba {
 

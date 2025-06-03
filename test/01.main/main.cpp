@@ -19,59 +19,78 @@
 // limitations under the License.
 
 #include "buffex.h"
+#include "string/utils.h"
 #include "server/server_tcpip.h"
 
-template<typename RQty, typename RSty>
-class processor_base {
-public:
+using namespace martianlabs::doba;
+
+template <typename RQty, typename RSty>
+class protocol_base {
+ public:
   using req = RQty;
   using res = RSty;
 };
 
-class my_request {
-};
+class test_request {
+  static constexpr uint32_t kMaxHeaderLength = 1024;
+  static constexpr char kEndOfHeaders[] = "\r\n\r\n";
+  static constexpr uint32_t kEndOfHeadersLen = sizeof(kEndOfHeaders) - 1;
+  char buffer_[kMaxHeaderLength] = {0};
+  uint32_t buffer_cur_ = 0;
+  std::optional<uint32_t> end_of_headers_;
 
-class my_response {
-};
-
-class my_processor : public processor_base<my_request, my_response> {
  public:
-  std::optional<my_request> decode(void* buffer, uint32_t length) {
-    printf(">>>>>> %.*s", int(length), (char*)buffer);
-    return {};
+  void reset() {
+    buffer_cur_ = 0;
+    end_of_headers_.reset();
   }
-  std::optional<my_response> decode(const my_request& req) {
-    return {};
+  protocol::result deserialize(void* buffer, uint32_t length) {
+    if ((kMaxHeaderLength - buffer_cur_) >= length) {
+      memcpy(&buffer_[buffer_cur_], buffer, length);
+      buffer_cur_ += length;
+    } else {
+      return protocol::result::kError;
+    }
+    end_of_headers_ = string::utils::find_exact_match(
+        buffer_, buffer_cur_, kEndOfHeaders, kEndOfHeadersLen);
+    if (!end_of_headers_.has_value()) {
+      return protocol::result::kMoreBytesNeeded;
+    }
+    printf("%.*s", int(buffer_cur_), buffer_);
+    return protocol::result::kCompleted;
+  }
+};
+
+class test_response {
+ public:
+  void reset() {}
+  std::shared_ptr<std::istream> serialize() {
+    return std::make_shared<std::istringstream>(
+        "HTTP/1.1 200 OK\r\n"
+        "Date: Tue, 03 Jun 2025 15:45:00 GMT\r\n"
+        "Server: MyServer/1.0\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n");
+  }
+};
+
+class test_protocol : public protocol_base<test_request, test_response> {
+ public:
+  static std::shared_ptr<test_request> build_request() {
+    return std::make_shared<test_request>();
+  }
+  static std::shared_ptr<test_response> build_response() {
+    return std::make_shared<test_response>();
+  }
+  static protocol::result process(std::shared_ptr<const test_request> req,
+                                  std::shared_ptr<test_response> res) {
+    return protocol::result::kCompleted;
   }
 };
 
 int main(int argc, char* argv[]) {
-  martianlabs::doba::server::server_tcpip<my_processor> my_server;
-  my_server.start("10001", 8);
-
-  /*
-  martianlabs::doba::buffex my_buffer;
-  martianlabs::doba::buffex my_copied_buffer = my_buffer;
-  martianlabs::doba::buffex my_moved_buffer = std::move(my_buffer);
-  */
-
-  /*
-  std::string my_str =
-      "Hello World! This is just a simple, and silly, example about using "
-      "buffex!";
-  martianlabs::doba::buffex buf;
-  buf.append(my_str.data(), my_str.size());
-  constexpr std::size_t kSize = 1024;
-  char bf[kSize] = {0};
-  std::size_t sz = 0;
-  if (!buf.read(64, bf, sz)) {
-    printf(">>>>> ERROR!!!!!!\n");
-  }
-  if (!buf.read(64, bf, sz)) {
-    printf(">>>>> ERROR!!!!!!\n");
-  }
-
-  */
-
+  server::server_tcpip<test_protocol> test_server;
+  test_server.start("10001", 8);
   return getchar();
 }
