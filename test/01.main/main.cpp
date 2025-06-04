@@ -18,7 +18,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "buffex.h"
 #include "string/utils.h"
 #include "server/server_tcpip.h"
 
@@ -56,7 +55,9 @@ class test_request {
     if (!end_of_headers_.has_value()) {
       return protocol::result::kMoreBytesNeeded;
     }
-    printf("%.*s", int(buffer_cur_), buffer_);
+    
+    // printf("%.*s", int(buffer_cur_), buffer_);
+    
     return protocol::result::kCompleted;
   }
 };
@@ -67,11 +68,11 @@ class test_response {
   std::shared_ptr<std::istream> serialize() {
     return std::make_shared<std::istringstream>(
         "HTTP/1.1 200 OK\r\n"
-        "Date: Tue, 03 Jun 2025 15:45:00 GMT\r\n"
-        "Server: MyServer/1.0\r\n"
-        "Content-Length: 0\r\n"
-        "Connection: close\r\n"
-        "\r\n");
+        "Content-Type: text/plain\r\n"
+        "Content-Length: 13\r\n"
+        "Connection: keep-alive\r\n"
+        "\r\n"
+        "Hello, World!");
   }
 };
 

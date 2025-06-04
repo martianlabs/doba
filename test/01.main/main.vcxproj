@@ -158,7 +158,6 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\buffex.h" />
     <ClInclude Include="..\..\include\platform.h" />
     <ClInclude Include="..\..\include\protocol\result.h" />
     <ClInclude Include="..\..\include\server\server_tcpip.h" />

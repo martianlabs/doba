@@ -24,8 +24,6 @@
 #include <mutex>
 #include <unordered_map>
 
-#include "buffex.h"
-
 namespace martianlabs::doba::server {
 // =============================================================================
 // server_tcpip_windows                                            ( interface )
@@ -79,11 +77,15 @@ class server_tcpip {
           // let's associate the accept socket with the i/o port!
           context* ovl = new context();
           ZeroMemory(ovl, sizeof(context));
-          ovl->buf = new CHAR[kContextBufferSize];
+          ovl->buf_recv = new CHAR[kRecvBufferSize];
+          ovl->buf_send = new CHAR[kSendBufferSize];
           ovl->soc = s;
           ovl->request = PBty::build_request();
           ovl->response = PBty::build_response();
-          switch_to_receive_mode(ovl);
+          ovl->wsa_recv.buf = ovl->buf_recv;
+          ovl->wsa_recv.len = kRecvBufferSize;
+          ovl->wsa_send.buf = ovl->buf_send;
+          ovl->wsa_send.len = 0;
           if (CreateIoCompletionPort((HANDLE)s, io_, (ULONG_PTR)ovl, 0)) {
             // let's notify waiting thread for the new connection!
             if (!PostQueuedCompletionStatus(io_, 0, (ULONG_PTR)ovl, NULL)) {
@@ -131,16 +133,19 @@ class server_tcpip {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr std::size_t kContextBufferSize = 1024;
+  static constexpr std::size_t kSendBufferSize = 1024;
+  static constexpr std::size_t kRecvBufferSize = 1024;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
   struct context {
     WSAOVERLAPPED ovl;
-    WSABUF wsa;
+    WSABUF wsa_recv;
+    WSABUF wsa_send;
     SOCKET soc;
     std::mutex lock;
-    CHAR FAR* buf;
+    CHAR FAR* buf_recv;
+    CHAR FAR* buf_send;
     bool receiving;
     std::shared_ptr<typename PBty::req> request;
     std::shared_ptr<typename PBty::res> response;
@@ -232,36 +237,44 @@ class server_tcpip {
             if (ovl) {
               if (sz) {
                 if (ctx->receiving) {
-                  decode(ctx, sz);
+                  switch (ctx->request->deserialize(ctx->wsa_recv.buf, sz)) {
+                    case protocol::result::kCompleted:
+                      switch (PBty::process(ctx->request, ctx->response)) {
+                        case protocol::result::kCompleted: {
+                          switch_to_send_mode(ctx, ctx->response->serialize());
+                          continue;
+                          break;
+                        }
+                        case protocol::result::kCompletedAndClose:
+                          break;
+                        case protocol::result::kError:
+                          unregister_context(ctx);
+                          continue;
+                          break;
+                      }
+                      break;
+                    case protocol::result::kMoreBytesNeeded:
+                      break;
+                    case protocol::result::kError:
+                      unregister_context(ctx);
+                      continue;
+                      break;
+                  }
                 }
               } else {
                 unregister_context(ctx);
+                continue;
               }
             } else if (!sz) {
               register_context(ctx);
+              switch_to_receive_mode(ctx);
+              continue;
             }
             // let's start a new asynchronous operation..
             if (ctx->receiving) {
-              // receiving..
-              DWORD f = 0, r = 0;
-              int res = WSARecv(ctx->soc, &ctx->wsa, 1, &r, &f, &ctx->ovl, 0);
-              if (res == SOCKET_ERROR) {
-                if (WSAGetLastError() != WSA_IO_PENDING) {
-                  unregister_context(ctx);
-                }
-              }
+              receive(ctx);
             } else {
-              // sending..
-              if (ctx->response_stream->read(ctx->buf, kContextBufferSize) ||
-                  (ctx->wsa.len = (ULONG)ctx->response_stream->gcount())) {
-                DWORD f = 0, s = 0;
-                int res = WSASend(ctx->soc, &ctx->wsa, 1, &s, f, &ctx->ovl, 0);
-                if (res == SOCKET_ERROR) {
-                  if (WSAGetLastError() != WSA_IO_PENDING) {
-                    unregister_context(ctx);
-                  }
-                }
-              }
+              send(ctx);
             }
           } else if (!ovl && GetLastError() == ERROR_INVALID_HANDLE) {
             // io port closed! let's exit from loop!
@@ -269,31 +282,6 @@ class server_tcpip {
           }
         }
       }));
-    }
-  }
-  void decode(context* ctx, DWORD length) {
-    if (ctx->request) {
-      switch (ctx->request->deserialize(ctx->wsa.buf, length)) {
-        case protocol::result::kCompleted:
-          switch (PBty::process(ctx->request, ctx->response)) {
-            case protocol::result::kCompleted: {
-              switch_to_send_mode(ctx, ctx->response->serialize());
-              break;
-            }
-            case protocol::result::kCompletedAndClose:
-              break;
-            case protocol::result::kError:
-              unregister_context(ctx);
-              break;
-          }
-          ctx->request->reset();
-          break;
-        case protocol::result::kMoreBytesNeeded:
-          break;
-        case protocol::result::kError:
-          unregister_context(ctx);
-          break;
-      }
     }
   }
   void register_context(context* ctx) {
@@ -306,17 +294,54 @@ class server_tcpip {
     std::lock_guard<std::mutex> guard(map_mutex_);
     map_.erase(context->soc);
   }
-  void delete_context(context* context) { closesocket(context->soc); }
+  void delete_context(context* context) { 
+    closesocket(context->soc); 
+  }
+  void receive(context* ctx) {
+    DWORD f = 0, r = 0;
+    int res = WSARecv(ctx->soc, &ctx->wsa_recv, 1, &r, &f, &ctx->ovl, 0);
+    if (res == SOCKET_ERROR) {
+      if (WSAGetLastError() != WSA_IO_PENDING) {
+        unregister_context(ctx);
+      }
+    }
+  }
+  void send(context* ctx) {
+    auto n =
+        ctx->response_stream->read(ctx->buf_send, kSendBufferSize).gcount();
+    if (ctx->response_stream->bad()) {
+      unregister_context(ctx);
+      return;
+    }
+    if (ctx->response_stream->fail()) {
+      if (!ctx->response_stream->eof()) {
+        unregister_context(ctx);
+        return;
+      }
+    }
+    if (!n) {
+      switch_to_receive_mode(ctx);
+      return;
+    }
+    ctx->wsa_send.len = (ULONG)n;
+    DWORD f = 0, s = 0;
+    int res = WSASend(ctx->soc, &ctx->wsa_send, 1, &s, f, &ctx->ovl, 0);
+    if (res == SOCKET_ERROR) {
+      if (WSAGetLastError() != WSA_IO_PENDING) {
+        unregister_context(ctx);
+      }
+    }
+  }
   void switch_to_receive_mode(context* ctx) {
-    ctx->wsa.buf = ctx->buf;
-    ctx->wsa.len = kContextBufferSize;
+    ctx->request->reset();
+    ctx->response->reset();
     ctx->receiving = true;
+    receive(ctx);
   }
   void switch_to_send_mode(context* ctx, std::shared_ptr<std::istream> stream) {
-    ctx->wsa.buf = ctx->buf;
-    ctx->wsa.len = 0;
-    ctx->receiving = false;
     ctx->response_stream = stream;
+    ctx->receiving = false;
+    send(ctx);
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
