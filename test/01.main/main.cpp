@@ -78,14 +78,7 @@ class test_response {
 
 class test_protocol : public protocol_base<test_request, test_response> {
  public:
-  static std::shared_ptr<test_request> build_request() {
-    return std::make_shared<test_request>();
-  }
-  static std::shared_ptr<test_response> build_response() {
-    return std::make_shared<test_response>();
-  }
-  static protocol::result process(std::shared_ptr<const test_request> req,
-                                  std::shared_ptr<test_response> res) {
+  static protocol::result process(const test_request& req, test_response& res) {
     return protocol::result::kCompleted;
   }
 };
