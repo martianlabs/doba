@@ -18,16 +18,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_server_servertcpip_h
-#define martianlabs_doba_server_servertcpip_h
+#ifndef martianlabs_doba_server_transport_tcpip_h
+#define martianlabs_doba_server_transport_tcpip_h
 
 #include "platform.h"
 #include "protocol/result.h"
 
 #ifdef _WIN32
-#include "server_tcpip_windows.h"
+#include "server/transport/tcpip_windows.h"
 #elif __linux__
-#include "server_tcpip_linux.h"
+#include "server/transport/tcpip_linux.h"
 #endif
 
 #endif

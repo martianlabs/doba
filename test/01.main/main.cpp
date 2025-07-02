@@ -19,7 +19,7 @@
 // limitations under the License.
 
 #include "string/utils.h"
-#include "server/server_tcpip.h"
+#include "server/transport/tcpip.h"
 
 using namespace martianlabs::doba;
 
@@ -78,13 +78,13 @@ class test_response {
 
 class test_protocol : public protocol_base<test_request, test_response> {
  public:
-  static protocol::result process(const test_request& req, test_response& res) {
+  protocol::result process(const test_request& req, test_response& res) {
     return protocol::result::kCompleted;
   }
 };
 
 int main(int argc, char* argv[]) {
-  server::server_tcpip<test_protocol> test_server;
+  server::transport::tcpip<test_protocol> test_server;
   test_server.start("10001", 8);
   return getchar();
 }

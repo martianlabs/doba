@@ -160,9 +160,9 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\platform.h" />
     <ClInclude Include="..\..\include\protocol\result.h" />
-    <ClInclude Include="..\..\include\server\server_tcpip.h" />
-    <ClInclude Include="..\..\include\server\server_tcpip_linux.h" />
-    <ClInclude Include="..\..\include\server\server_tcpip_windows.h" />
+    <ClInclude Include="..\..\include\server\transport\tcpip.h" />
+    <ClInclude Include="..\..\include\server\transport\tcpip_linux.h" />
+    <ClInclude Include="..\..\include\server\transport\tcpip_windows.h" />
     <ClInclude Include="..\..\include\string\utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

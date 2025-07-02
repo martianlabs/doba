@@ -18,36 +18,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_server_servertcpipwindows_h
-#define martianlabs_doba_server_servertcpipwindows_h
+#ifndef martianlabs_doba_server_transport_tcpipwindows_h
+#define martianlabs_doba_server_transport_tcpipwindows_h
 
-#include <mutex>
-#include <unordered_map>
-
-namespace martianlabs::doba::server {
+namespace martianlabs::doba::server::transport {
 // =============================================================================
-// server_tcpip_windows                                            ( interface )
+// tcpip [windows]                                                     ( class )
 // -----------------------------------------------------------------------------
-// This specification holds for the WindowsTM server implementation.
+// This specification holds for the WindowsTM server transport implementation.
 // -----------------------------------------------------------------------------
 // Template parameters:
 //    PRty - protocol (request/reponse) being used.
 // =============================================================================
 template <typename PRty>
-class server_tcpip {
+class tcpip {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  server_tcpip() = default;
-  server_tcpip(const server_tcpip&) = delete;
-  server_tcpip(server_tcpip&&) noexcept = delete;
-  virtual ~server_tcpip() { stop(); }
+  tcpip() = default;
+  tcpip(const tcpip&) = delete;
+  tcpip(tcpip&&) noexcept = delete;
+  virtual ~tcpip() { stop(); }
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
-  server_tcpip& operator=(const server_tcpip&) = delete;
-  server_tcpip& operator=(server_tcpip&&) noexcept = delete;
+  tcpip& operator=(const tcpip&) = delete;
+  tcpip& operator=(tcpip&&) noexcept = delete;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
@@ -61,7 +58,7 @@ class server_tcpip {
     setupListener(port, number_of_workers);
     setupWorkers(number_of_workers);
     // let's start incoming connections loop!
-    manager_ = std::make_shared<std::thread>([this]() {
+    manager_ = std::make_unique<std::thread>([this]() {
       while (keep_running_) {
         SOCKET s = WSAAccept(accept_socket_, NULL, NULL, NULL, NULL);
         if (s == INVALID_SOCKET) {
@@ -74,16 +71,22 @@ class server_tcpip {
         ULONG i_mode = 1;
         auto ioctl_socket_res = ioctlsocket(s, FIONBIO, &i_mode);
         if (ioctl_socket_res == NO_ERROR) {
-          // let's associate the accept socket with the i/o port!
-          context* ctx = new context(s);
-          if (CreateIoCompletionPort((HANDLE)s, io_, (ULONG_PTR)ctx, 0)) {
-            // let's notify waiting thread for the new connection!
-            if (!PostQueuedCompletionStatus(io_, 0, (ULONG_PTR)ctx, NULL)) {
-              // ((error)) -> trying to notify waiting thread!
+          int f = 1;
+          if (!setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char*)&f, sizeof(f))) {
+            // let's associate the accept socket with the i/o port!
+            context* ctx = new context(s);
+            if (CreateIoCompletionPort((HANDLE)s, io_, (ULONG_PTR)ctx, 0)) {
+              // let's notify waiting thread for the new connection!
+              if (!PostQueuedCompletionStatus(io_, 0, (ULONG_PTR)ctx, NULL)) {
+                // ((error)) -> trying to notify waiting thread!
+                // ((to-do)) -> raise an exception?
+              }
+            } else {
+              // ((error)) -> trying to associate socket to the i/o port!
               // ((to-do)) -> raise an exception?
             }
           } else {
-            // ((error)) -> trying to associate socket to the i/o port!
+            // ((error)) -> trying to disable nagle's algorithm!
             // ((to-do)) -> raise an exception?
           }
         } else {
@@ -123,8 +126,7 @@ class server_tcpip {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr std::size_t kSendBufferSize = 1024;
-  static constexpr std::size_t kRecvBufferSize = 1024;
+  static constexpr std::size_t kBufferSize = 4096;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
@@ -132,28 +134,22 @@ class server_tcpip {
     context(SOCKET socket) {
       ZeroMemory(&ovl, sizeof(WSAOVERLAPPED));
       soc = socket;
-      buf_recv = new CHAR[kRecvBufferSize];
-      buf_send = new CHAR[kSendBufferSize];
-      wsa_recv.buf = buf_recv;
-      wsa_recv.len = kRecvBufferSize;
-      wsa_send.buf = buf_send;
-      wsa_send.len = 0;
+      buf = new CHAR[kBufferSize];
+      wsa.buf = buf;
+      wsa.len = kBufferSize;
       receiving = true;
       close_after_response = false;
-      closing = false;
     }
     WSAOVERLAPPED ovl;
-    WSABUF wsa_recv;
-    WSABUF wsa_send;
     SOCKET soc;
-    std::mutex lock;
-    CHAR FAR* buf_recv;
-    CHAR FAR* buf_send;
+    CHAR FAR* buf;
+    WSABUF wsa;
     bool receiving;
-    bool closing;
     bool close_after_response;
-    typename PRty::req request;
-    typename PRty::res response;
+    PRty protocol;
+    std::mutex mutex;
+    typename PRty::req req;
+    typename PRty::res res;
     std::shared_ptr<std::istream> stream;
     std::atomic<int> ref_count{1};
   };
@@ -228,7 +224,7 @@ class server_tcpip {
   }
   void setupWorkers(const uint8_t& number_of_workers) {
     for (int i = 0; i < number_of_workers; i++) {
-      workers_.push_back(std::make_shared<std::thread>([this]() {
+      workers_.push_back(std::make_unique<std::thread>([this]() {
         ULONG_PTR key = NULL;
         LPOVERLAPPED ovl = NULL;
         DWORD sz = 0;
@@ -238,125 +234,130 @@ class server_tcpip {
               continue;
             }
             context* ctx = (context*)key;
-            // let's check if there's a completed operation..
-            bool destroy_context = false;
+            bool destroy_ctx = false;
             {
-              std::lock_guard<std::mutex> guard(ctx->lock);
+              std::lock_guard<std::mutex> lock(ctx->mutex);
               ctx->ref_count--;
+              // let's check if there's a completed operation..
               if (ovl) {
                 if (sz) {
                   if (ctx->receiving) {
-                    switch (ctx->request.deserialize(ctx->wsa_recv.buf, sz)) {
+                    switch (ctx->req.deserialize(ctx->wsa.buf, sz)) {
                       case protocol::result::kCompleted:
-                        switch (PRty::process(ctx->request, ctx->response)) {
-                          case protocol::result::kCompleted: {
-                            sending(ctx, ctx->response.serialize(), false);
-                            continue;
+                        switch (ctx->protocol.process(ctx->req, ctx->res)) {
+                          case protocol::result::kCompleted:
+                            sending(ctx, ctx->res.serialize(), false);
                             break;
-                          }
                           case protocol::result::kCompletedAndClose:
-                            sending(ctx, ctx->response.serialize(), true);
+                            sending(ctx, ctx->res.serialize(), true);
                             break;
                           case protocol::result::kError:
-                            unregister_context(ctx);
-                            continue;
                             break;
                         }
                         break;
                       case protocol::result::kMoreBytesNeeded:
                         break;
                       case protocol::result::kError:
-                        unregister_context(ctx);
-                        continue;
                         break;
                     }
                   }
                 } else {
-                  unregister_context(ctx);
-                  continue;
+                  destroy_ctx = !ctx->ref_count.load();
                 }
               } else if (!sz) {
                 receiving(ctx);
-                continue;
               }
-              if (!(destroy_context =
-                        (ctx->closing && !ctx->ref_count.load()))) {
-                // let's start a new asynchronous operation..
-                if (ctx->receiving) {
-                  receive(ctx);
-                } else {
-                  send(ctx);
-                }
+              if (!destroy_ctx) {
+                destroy_ctx = !perform(ctx) && !ctx->ref_count.load();
               }
             }
-            if (destroy_context) {
-              closesocket(ctx->soc);
-              delete[] ctx->buf_recv;
-              delete[] ctx->buf_send;
-              delete ctx;
-              continue;
+            if (destroy_ctx) {
+              printf(">>> DESTROYING %d...\n", int(ctx->soc));
+              delete_context(ctx);
             }
-          } else if (!ovl && GetLastError() == ERROR_INVALID_HANDLE) {
-            // io port closed! let's exit from loop!
-            break;
+          } else {
+            if (ovl && key) {
+              printf(">>> DESTROYING %d...\n", int(((context*)key)->soc));
+              delete_context(((context*)key));
+            } else {
+              if (!ovl && GetLastError() == ERROR_INVALID_HANDLE) {
+                // io port closed! let's exit from loop!
+                break;
+              }
+            }
           }
         }
       }));
     }
   }
-  void unregister_context(context* ctx) { ctx->closing = true; }
-  void delete_context(context* ctx) { closesocket(ctx->soc); }
-  void receive(context* ctx) {
+  void delete_context(context* ctx) {
+    closesocket(ctx->soc);
+    delete[] ctx->buf;
+    delete ctx;
+  }
+  bool perform(context* ctx) {
+    return ctx->receiving ? receive(ctx) : send(ctx); 
+  }
+  bool receive(context* ctx) {
     DWORD f = 0, r = 0;
-    bool success = true;
-    int res = WSARecv(ctx->soc, &ctx->wsa_recv, 1, &r, &f, &ctx->ovl, 0);
+    int res = WSARecv(ctx->soc, &ctx->wsa, 1, &r, &f, &ctx->ovl, 0);
     if (res == SOCKET_ERROR) {
       if (WSAGetLastError() != WSA_IO_PENDING) {
-        unregister_context(ctx);
-        success = false;
+        return false;
       }
     }
-    if (success) ctx->ref_count++;
+    ctx->ref_count++;
+    return true;
   }
-  void send(context* ctx) {
+  bool send(context* ctx) {
     bool success = true;
-    auto n = ctx->stream->read(ctx->buf_send, kSendBufferSize).gcount();
+    auto n = ctx->stream->read(ctx->buf, kBufferSize).gcount();
     if (ctx->stream->bad()) {
-      unregister_context(ctx);
-      return;
+      return false;
     }
     if (ctx->stream->fail()) {
       if (!ctx->stream->eof()) {
-        unregister_context(ctx);
-        return;
+        return false;
       }
     }
     if (!n) {
       receiving(ctx);
-      return;
+      return receive(ctx);
     }
-    ctx->wsa_send.len = (ULONG)n;
+    ctx->wsa.len = (ULONG)n;
     DWORD f = 0, s = 0;
-    int res = WSASend(ctx->soc, &ctx->wsa_send, 1, &s, f, &ctx->ovl, 0);
+    int res = WSASend(ctx->soc, &ctx->wsa, 1, &s, f, &ctx->ovl, 0);
     if (res == SOCKET_ERROR) {
       if (WSAGetLastError() != WSA_IO_PENDING) {
-        unregister_context(ctx);
-        success = false;
+        return false;
       }
     }
-    if (success) ctx->ref_count++;
+    ctx->ref_count++;
+    return true;
   }
   void receiving(context* ctx) {
-    ctx->request.reset();
-    ctx->response.reset();
+    ctx->req.reset();
+    ctx->res.reset();
     ctx->receiving = true;
-    ctx->close_after_response ? unregister_context(ctx) : receive(ctx);
+    ctx->wsa.len = kBufferSize;
+
+    /*
+    pepe
+    */
+
+    /*
+    if (ctx->close_after_response) unregister_context(ctx);
+    */
+
+    /*
+    pepe fin
+    */
+
   }
   void sending(context* ctx, std::shared_ptr<std::istream> stream, bool car) {
     ctx->stream = stream;
     ctx->receiving = false;
     ctx->close_after_response = car;
-    send(ctx);
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
@@ -364,9 +365,9 @@ class server_tcpip {
   bool keep_running_ = true;
   HANDLE io_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
-  std::vector<std::shared_ptr<std::thread>> workers_;
-  std::shared_ptr<std::thread> manager_;
+  std::vector<std::unique_ptr<std::thread>> workers_;
+  std::unique_ptr<std::thread> manager_;
 };
-}  // namespace martianlabs::doba::server
+}  // namespace martianlabs::doba::server::transport
 
 #endif
