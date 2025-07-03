@@ -66,7 +66,7 @@ class test_response {
  public:
   void reset() {}
   std::shared_ptr<std::istream> serialize() {
-    return std::make_shared<std::istringstream>(
+    return std::make_shared<std::stringstream>(
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: text/plain\r\n"
         "Content-Length: 13\r\n"

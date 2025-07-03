@@ -126,7 +126,7 @@ class tcpip {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr std::size_t kBufferSize = 4096;
+  static constexpr std::size_t kBufferSize = 2048;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
@@ -151,7 +151,7 @@ class tcpip {
     typename PRty::req req;
     typename PRty::res res;
     std::shared_ptr<std::istream> stream;
-    std::atomic<int> ref_count{1};
+    uint16_t ref_count{1};
   };
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
@@ -230,9 +230,7 @@ class tcpip {
         DWORD sz = 0;
         while (true) {
           if (GetQueuedCompletionStatus(io_, &sz, &key, &ovl, INFINITE)) {
-            if (!key) {
-              continue;
-            }
+            if (!key) continue;
             context* ctx = (context*)key;
             bool destroy_ctx = false;
             {
@@ -261,30 +259,16 @@ class tcpip {
                         break;
                     }
                   }
-                } else {
-                  destroy_ctx = !ctx->ref_count.load();
-                }
-              } else if (!sz) {
-                receiving(ctx);
-              }
-              if (!destroy_ctx) {
-                destroy_ctx = !perform(ctx) && !ctx->ref_count.load();
-              }
+                } else destroy_ctx = !ctx->ref_count;
+              } else if (!sz) receiving(ctx);
+              if (!destroy_ctx) destroy_ctx = !perform(ctx) && !ctx->ref_count;
             }
-            if (destroy_ctx) {
-              printf(">>> DESTROYING %d...\n", int(ctx->soc));
-              delete_context(ctx);
-            }
-          } else {
-            if (ovl && key) {
-              printf(">>> DESTROYING %d...\n", int(((context*)key)->soc));
-              delete_context(((context*)key));
-            } else {
-              if (!ovl && GetLastError() == ERROR_INVALID_HANDLE) {
-                // io port closed! let's exit from loop!
-                break;
-              }
-            }
+            if (destroy_ctx) delete_context(ctx);
+          } else if (ovl && key) {
+            delete_context(((context*)key));
+          } else if (!ovl && GetLastError() == ERROR_INVALID_HANDLE) {
+            // io port closed! let's exit from loop!
+            break;
           }
         }
       }));
