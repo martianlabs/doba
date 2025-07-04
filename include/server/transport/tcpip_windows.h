@@ -49,84 +49,85 @@ class tcpip {
   // METHODs                                                          ( public )
   //
   void start(const std::string& port, const uint8_t& number_of_workers) {
-    if (io_ != INVALID_HANDLE_VALUE) {
+    if (io_handle_ != INVALID_HANDLE_VALUE) {
       // ((error)) -> server already initialized!
-      throw std::logic_error("Already initialized server!");
+      return;
     }
     // let's setup all the required resources..
-    setupWinsock();
-    setupListener(port, number_of_workers);
+    if (!setupWinsock()) {
+      // ((error)) -> could not initialize winsock resources!
+      return;
+    }
+    if (!setupListener(port, number_of_workers)) {
+      // ((error)) -> could not initialize socket resources!
+      return;
+    }
     setupWorkers(number_of_workers);
     // let's start incoming connections loop!
     manager_ = std::make_unique<std::thread>([this]() {
       while (keep_running_) {
         SOCKET s = WSAAccept(accept_socket_, NULL, NULL, NULL, NULL);
         if (s == INVALID_SOCKET) {
-          // ((error)) -> trying to accept a new connection: shutting down?
+          // ((error)) -> could not accept incoming connection!
           break;
         }
         // set the socket i/o mode: In this case FIONBIO enables or disables the
         // blocking mode for the socket based on the numerical value of iMode.
         // iMode = 0, blocking mode; iMode != 0, non-blocking mode.
         ULONG i_mode = 1;
-        auto ioctl_socket_res = ioctlsocket(s, FIONBIO, &i_mode);
-        if (ioctl_socket_res == NO_ERROR) {
-          int f = 1;
-          if (!setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char*)&f, sizeof(f))) {
-            // let's associate the accept socket with the i/o port!
-            context* ctx = new context(s);
-            if (CreateIoCompletionPort((HANDLE)s, io_, (ULONG_PTR)ctx, 0)) {
-              // let's notify waiting thread for the new connection!
-              if (!PostQueuedCompletionStatus(io_, 0, (ULONG_PTR)ctx, NULL)) {
-                // ((error)) -> trying to notify waiting thread!
-                // ((to-do)) -> raise an exception?
-              }
-            } else {
-              // ((error)) -> trying to associate socket to the i/o port!
-              // ((to-do)) -> raise an exception?
-            }
-          } else {
-            // ((error)) -> trying to disable nagle's algorithm!
-            // ((to-do)) -> raise an exception?
-          }
-        } else {
-          // ((error)) -> could not change blocking mode on socket!
-          // ((to-do)) -> raise an exception?
+        int ioctl_socket_res = ioctlsocket(s, FIONBIO, &i_mode);
+        if (ioctl_socket_res != NO_ERROR) {
+          // ((error)) -> trying to set 'blocking' mode!
+          continue;
         }
-      }
-      if (io_ != INVALID_HANDLE_VALUE) {
-        for (auto& worker : workers_) {
-          if (worker->joinable()) {
-            worker->join();
-          }
+        int f = 1;
+        if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char*)&f, sizeof(f))) {
+          // ((error)) -> trying to disable nagle's algorithm!
+          continue;
         }
-        io_ = INVALID_HANDLE_VALUE;
-        accept_socket_ = INVALID_SOCKET;
+        // let's associate the accept socket with the i/o port!
+        context* ctx = new context(s);
+        if (!CreateIoCompletionPort((HANDLE)s, io_handle_, (ULONG_PTR)ctx, 0)) {
+          // ((error)) -> trying to associate socket to the i/o port!
+          delete ctx;
+          continue;
+        }
+        // let's notify waiting thread for the new connection!
+        if (!PostQueuedCompletionStatus(io_handle_, 0, (ULONG_PTR)ctx, NULL)) {
+          // ((error)) -> trying to notify waiting thread!
+          delete ctx;
+        }
       }
     });
   }
-  void stop() {
-    if (io_ != INVALID_HANDLE_VALUE) {
-      if (CloseHandle(io_) == FALSE) {
-        throw std::logic_error("There were errors while closing i/o port!");
+  bool stop() {
+    if (io_handle_ != INVALID_HANDLE_VALUE) {
+      if (!CloseHandle(io_handle_)) {
+        return false;
       }
+      io_handle_ = INVALID_HANDLE_VALUE;
     }
     if (accept_socket_ != INVALID_SOCKET) {
       if (closesocket(accept_socket_) == SOCKET_ERROR) {
-        throw std::logic_error("Could not close accept socket!");
+        return false;
       }
+      accept_socket_ = INVALID_SOCKET;
     }
     keep_running_ = false;
-    if (manager_->joinable()) {
-      manager_->join();
+    if (manager_->joinable()) manager_->join();
+    while (!workers_.empty()) {
+      if (workers_.front()->joinable()) workers_.front()->join();
+      workers_.pop();
     }
+    keep_running_ = true;
+    return true;
   }
 
  private:
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr std::size_t kBufferSize = 2048;
+  static constexpr std::size_t kBufferSize = 4096;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
@@ -156,83 +157,82 @@ class tcpip {
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //
-  void setupWinsock() {
-    struct WsaInitializer_ {
-      WsaInitializer_() {
-        if (WSAStartup(MAKEWORD(2, 2), &wsa_data)) {
-          // ((error)) -> winsock could not be initialized!
-          throw std::runtime_error("could not initialize winsock!");
-        }
-      }
-      ~WsaInitializer_() { WSACleanup(); }
+  bool setupWinsock() {
+    struct WsaInitializer {
+      bool initialized = false;
+      WsaInitializer() { initialized = !WSAStartup(MAKEWORD(2, 2), &wsa_data); }
+      ~WsaInitializer() { WSACleanup(); }
       WSADATA wsa_data;
     };
-    static auto wsa_initializer_ptr_ = std::make_shared<WsaInitializer_>();
+    static WsaInitializer wsa_initializer;
+    return wsa_initializer.initialized;
   }
-  void setupListener(const std::string& port, const uint8_t& workers) {
+  bool setupListener(const std::string& port, const uint8_t& workers) {
     // let's create our main i/o completion port!
-    auto io = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, workers);
-    if (!io) {
+    HANDLE handle =
+        CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, workers);
+    if (!handle) {
       // ((error)) -> while setting up the i/o completion port!
-      throw std::runtime_error("could not setup i/o completion port!");
+      return false;
     }
     // let's setup our main listening socket (server)!
     SOCKET sock = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0,
                              WSA_FLAG_OVERLAPPED);
     if (sock == INVALID_SOCKET) {
       // ((error)) -> could not create socket!
-      CloseHandle(io);
-      throw std::runtime_error("could not create listening socket!");
+      CloseHandle(handle);
+      return false;
     }
     // let's associate the listening port to the i/o completion port!
-    if (CreateIoCompletionPort((HANDLE)sock, io, 0UL, 0) == nullptr) {
+    if (CreateIoCompletionPort((HANDLE)sock, handle, 0UL, 0) == nullptr) {
       // ((error)) -> while setting up the i/o completion port!
-      CloseHandle(io);
+      CloseHandle(handle);
       closesocket(sock);
-      throw std::runtime_error("could not setup i/o completion port!");
+      return false;
     }
     // set the socket i/o mode: In this case FIONBIO enables or disables the
     // blocking mode for the socket based on the numerical value of iMode.
     // iMode = 0, blocking mode; iMode != 0, non-blocking mode.
     ULONG i_mode = 0;
-    auto ioctl_socket_res = ioctlsocket(sock, FIONBIO, &i_mode);
-    if (ioctl_socket_res != NO_ERROR) {
+    if (ioctlsocket(sock, FIONBIO, &i_mode) != NO_ERROR) {
       // ((error)) -> could not change blocking mode on socket!
-      CloseHandle(io);
+      CloseHandle(handle);
       closesocket(sock);
-      throw std::runtime_error("could not set listening socket i/o mode!");
+      return false;
     }
     sockaddr_in address = {0};
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_family = PF_INET;
     address.sin_port = htons(atoi(port.c_str()));
-    auto bind_res = bind(sock, (const sockaddr*)&address, sizeof(address));
-    if (bind_res == SOCKET_ERROR) {
+    if (bind(sock, (const sockaddr*)&address, sizeof(address)) ==
+        SOCKET_ERROR) {
       // ((error)) -> could not bind socket!
-      CloseHandle(io);
+      CloseHandle(handle);
       closesocket(sock);
-      throw std::runtime_error("could not bind to listening socket!");
+      return false;
     }
     if (listen(sock, SOMAXCONN) == SOCKET_ERROR) {
       // ((error)) -> could not listen socket!
-      CloseHandle(io);
+      CloseHandle(handle);
       closesocket(sock);
-      throw std::runtime_error("could not bind to listening socket!");
+      return false;
     }
+    io_handle_ = handle;
     accept_socket_ = sock;
-    io_ = io;
+    return true;
   }
   void setupWorkers(const uint8_t& number_of_workers) {
     for (int i = 0; i < number_of_workers; i++) {
-      workers_.push_back(std::make_unique<std::thread>([this]() {
+      workers_.push(std::make_unique<std::thread>([this]() {
         ULONG_PTR key = NULL;
         LPOVERLAPPED ovl = NULL;
         DWORD sz = 0;
         while (true) {
-          if (GetQueuedCompletionStatus(io_, &sz, &key, &ovl, INFINITE)) {
+          if (GetQueuedCompletionStatus(io_handle_, &sz, &key, &ovl,
+                                        INFINITE)) {
             if (!key) continue;
+            bool free_ctx = false;
             context* ctx = (context*)key;
-            bool destroy_ctx = false;
             {
               std::lock_guard<std::mutex> lock(ctx->mutex);
               ctx->ref_count--;
@@ -253,19 +253,28 @@ class tcpip {
                             break;
                         }
                         break;
+                      case protocol::result::kCompletedAndClose:
+                        ctx->close_after_response = true;
+                        break;
                       case protocol::result::kMoreBytesNeeded:
                         break;
                       case protocol::result::kError:
                         break;
                     }
                   }
-                } else destroy_ctx = !ctx->ref_count;
-              } else if (!sz) receiving(ctx);
-              if (!destroy_ctx) destroy_ctx = !perform(ctx) && !ctx->ref_count;
+                } else {
+                  free_ctx = !ctx->ref_count;
+                }
+              } else if (!sz) {
+                receiving(ctx);
+              }
+              free_ctx = free_ctx || (!perform(ctx) && !ctx->ref_count);
             }
-            if (destroy_ctx) delete_context(ctx);
+            if (free_ctx) delete_context(ctx);
           } else if (ovl && key) {
+            // abrupt connection close!
             delete_context(((context*)key));
+            continue;
           } else if (!ovl && GetLastError() == ERROR_INVALID_HANDLE) {
             // io port closed! let's exit from loop!
             break;
@@ -274,13 +283,19 @@ class tcpip {
       }));
     }
   }
-  void delete_context(context* ctx) {
-    closesocket(ctx->soc);
-    delete[] ctx->buf;
-    delete ctx;
+  void receiving(context* ctx) {
+    ctx->req.reset();
+    ctx->res.reset();
+    ctx->receiving = true;
+    ctx->wsa.len = kBufferSize;
+  }
+  void sending(context* ctx, std::shared_ptr<std::istream> stream, bool car) {
+    ctx->stream = stream;
+    ctx->receiving = false;
+    ctx->close_after_response = car;
   }
   bool perform(context* ctx) {
-    return ctx->receiving ? receive(ctx) : send(ctx); 
+    return ctx->receiving ? receive(ctx) : send(ctx);
   }
   bool receive(context* ctx) {
     DWORD f = 0, r = 0;
@@ -305,6 +320,7 @@ class tcpip {
       }
     }
     if (!n) {
+      if (ctx->close_after_response) return false;
       receiving(ctx);
       return receive(ctx);
     }
@@ -319,37 +335,18 @@ class tcpip {
     ctx->ref_count++;
     return true;
   }
-  void receiving(context* ctx) {
-    ctx->req.reset();
-    ctx->res.reset();
-    ctx->receiving = true;
-    ctx->wsa.len = kBufferSize;
-
-    /*
-    pepe
-    */
-
-    /*
-    if (ctx->close_after_response) unregister_context(ctx);
-    */
-
-    /*
-    pepe fin
-    */
-
-  }
-  void sending(context* ctx, std::shared_ptr<std::istream> stream, bool car) {
-    ctx->stream = stream;
-    ctx->receiving = false;
-    ctx->close_after_response = car;
+  void delete_context(context* ctx) {
+    closesocket(ctx->soc);
+    delete[] ctx->buf;
+    delete ctx;
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
   bool keep_running_ = true;
-  HANDLE io_ = INVALID_HANDLE_VALUE;
+  HANDLE io_handle_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
-  std::vector<std::unique_ptr<std::thread>> workers_;
+  std::queue<std::unique_ptr<std::thread>> workers_;
   std::unique_ptr<std::thread> manager_;
 };
 }  // namespace martianlabs::doba::server::transport
