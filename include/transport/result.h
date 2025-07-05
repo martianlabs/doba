@@ -21,7 +21,7 @@
 #ifndef martianlabs_doba_transport_result_h
 #define martianlabs_doba_transport_result_h
 
-namespace martianlabs::doba::server::transport {
+namespace martianlabs::doba::transport {
 // =============================================================================
 // result                                                         ( enum-class )
 // -----------------------------------------------------------------------------
@@ -29,7 +29,10 @@ namespace martianlabs::doba::server::transport {
 // -----------------------------------------------------------------------------
 // =============================================================================
 enum class result {
-  kSucceeded,  // Everything went fine.
+  kSucceeded,                        // everything went fine.
+  kAlreadyInitialized,               // resource already initialized.
+  kCouldNotSetupPlaformResources,    // platform resources could not be created.
+  kCouldNotCleanupPlaformResources,  // platform resources could not be deleted.
 };
 }  // namespace martianlabs::doba::transport
 

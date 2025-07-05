@@ -19,7 +19,7 @@
 // limitations under the License.
 
 #include "string/utils.h"
-#include "server/transport/tcpip.h"
+#include "transport/server/tcpip.h"
 
 using namespace martianlabs::doba;
 
@@ -84,7 +84,7 @@ class test_protocol : public protocol_base<test_request, test_response> {
 };
 
 int main(int argc, char* argv[]) {
-  server::transport::tcpip<test_protocol> test_server;
+  transport::server::tcpip<test_protocol> test_server;
   test_server.start("10001", 8);
   return getchar();
 }

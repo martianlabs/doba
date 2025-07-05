@@ -160,11 +160,15 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\platform.h" />
     <ClInclude Include="..\..\include\protocol\result.h" />
-    <ClInclude Include="..\..\include\server\transport\result.h" />
-    <ClInclude Include="..\..\include\server\transport\tcpip.h" />
-    <ClInclude Include="..\..\include\server\transport\tcpip_linux.h" />
-    <ClInclude Include="..\..\include\server\transport\tcpip_windows.h" />
-    <ClInclude Include="..\..\include\string\utils.h" />
+    <ClInclude Include="..\..\include\transport\result.h" />
+    <ClInclude Include="..\..\include\transport\server\tcpip.h" />
+    <ClInclude Include="..\..\include\transport\server\tcpip_linux.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="..\..\include\transport\server\tcpip_windows.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

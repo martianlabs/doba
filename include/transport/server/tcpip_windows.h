@@ -18,10 +18,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_server_transport_tcpipwindows_h
-#define martianlabs_doba_server_transport_tcpipwindows_h
+#ifndef martianlabs_doba_transport_server_tcpipwindows_h
+#define martianlabs_doba_transport_server_tcpipwindows_h
 
-namespace martianlabs::doba::server::transport {
+namespace martianlabs::doba::transport::server {
 // =============================================================================
 // tcpip [windows]                                                     ( class )
 // -----------------------------------------------------------------------------
@@ -48,19 +48,20 @@ class tcpip {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  server::transport::result start(const std::string& port, const uint8_t& number_of_workers) {
+  transport::result start(const std::string& port,
+                          const uint8_t& number_of_workers) {
     if (io_handle_ != INVALID_HANDLE_VALUE) {
       // ((error)) -> server already initialized!
-      return;
+      return transport::result::kAlreadyInitialized;
     }
     // let's setup all the required resources..
     if (!setupWinsock()) {
       // ((error)) -> could not initialize winsock resources!
-      return;
+      return transport::result::kCouldNotSetupPlaformResources;
     }
     if (!setupListener(port, number_of_workers)) {
       // ((error)) -> could not initialize socket resources!
-      return;
+      return transport::result::kCouldNotSetupPlaformResources;
     }
     setupWorkers(number_of_workers);
     // let's start incoming connections loop!
@@ -69,7 +70,7 @@ class tcpip {
         SOCKET socket = WSAAccept(accept_socket_, NULL, NULL, NULL, NULL);
         if (socket == INVALID_SOCKET) {
           // ((error)) -> could not accept incoming connection!
-          break;
+          continue;
         }
         // set the socket i/o mode: In this case FIONBIO enables or disables the
         // blocking mode for the socket based on the numerical value of iMode.
@@ -103,17 +104,18 @@ class tcpip {
         }
       }
     });
+    return transport::result::kSucceeded;
   }
-  bool stop() {
+  transport::result stop() {
     if (io_handle_ != INVALID_HANDLE_VALUE) {
       if (!CloseHandle(io_handle_)) {
-        return false;
+        return transport::result::kCouldNotCleanupPlaformResources;
       }
       io_handle_ = INVALID_HANDLE_VALUE;
     }
     if (accept_socket_ != INVALID_SOCKET) {
       if (closesocket(accept_socket_) == SOCKET_ERROR) {
-        return false;
+        return transport::result::kCouldNotCleanupPlaformResources;
       }
       accept_socket_ = INVALID_SOCKET;
     }
@@ -124,7 +126,7 @@ class tcpip {
       workers_.pop();
     }
     keep_running_ = true;
-    return true;
+    return transport::result::kSucceeded;
   }
 
  private:
@@ -347,6 +349,6 @@ class tcpip {
   std::queue<std::unique_ptr<std::thread>> workers_;
   std::unique_ptr<std::thread> manager_;
 };
-}  // namespace martianlabs::doba::server::transport
+}  // namespace martianlabs::doba::transport::server
 
 #endif

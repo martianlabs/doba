@@ -29,10 +29,10 @@ namespace martianlabs::doba::protocol {
 // -----------------------------------------------------------------------------
 // =============================================================================
 enum class result {
-  kMoreBytesNeeded,    // This value is returned in case of more data needed.
-  kCompleted,          // This value is returned on completion.
-  kCompletedAndClose,  // This value is returned on completion (with close).
-  kError               // This value is returned on errors.
+  kMoreBytesNeeded,    // more data needed.
+  kCompleted,          // operation completed.
+  kCompletedAndClose,  // operation completed (close connection requested).
+  kError               // unknown error.
 };
 }  // namespace martianlabs::doba::protocol
 
