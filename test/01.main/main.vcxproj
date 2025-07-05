@@ -158,6 +158,8 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\builder\builder.h" />
+    <ClInclude Include="..\..\include\builder\property.h" />
     <ClInclude Include="..\..\include\platform.h" />
     <ClInclude Include="..\..\include\protocol\result.h" />
     <ClInclude Include="..\..\include\transport\result.h" />

@@ -19,10 +19,12 @@
 // limitations under the License.
 
 #include "string/utils.h"
+#include "builder/builder.h"
 #include "transport/server/tcpip.h"
 
 using namespace martianlabs::doba;
 
+/*
 template <typename RQty, typename RSty>
 class protocol_base {
  public:
@@ -87,4 +89,25 @@ int main(int argc, char* argv[]) {
   transport::server::tcpip<test_protocol> test_server;
   test_server.start("10001", 8);
   return getchar();
+}
+*/
+
+
+
+class my_class {
+ public:
+  my_class(const int&) {}
+};
+class my_builder : public builder::base_builder<my_builder, my_class> {
+ public:
+  std::shared_ptr<my_class> build() {
+    return std::make_shared<my_class>(number_of_connections());
+  }
+  builder::property<my_builder, int> number_of_connections{this};
+};
+
+int main(int argc, char* argv[]) {
+  my_builder builder;
+  auto pepe = builder.number_of_connections(12).build();
+  return 0;
 }

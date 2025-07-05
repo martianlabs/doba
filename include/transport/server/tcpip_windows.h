@@ -36,10 +36,11 @@ class tcpip {
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  tcpip() = default;
+  tcpip(const std::string& port, const uint8_t& number_of_workers)
+      : port_(port), number_of_workers_(number_of_workers) {}
   tcpip(const tcpip&) = delete;
   tcpip(tcpip&&) noexcept = delete;
-  virtual ~tcpip() { stop(); }
+  ~tcpip() { stop(); }
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
@@ -48,8 +49,7 @@ class tcpip {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  transport::result start(const std::string& port,
-                          const uint8_t& number_of_workers) {
+  transport::result start() {
     if (io_handle_ != INVALID_HANDLE_VALUE) {
       // ((error)) -> server already initialized!
       return transport::result::kAlreadyInitialized;
@@ -59,11 +59,11 @@ class tcpip {
       // ((error)) -> could not initialize winsock resources!
       return transport::result::kCouldNotSetupPlaformResources;
     }
-    if (!setupListener(port, number_of_workers)) {
+    if (!setupListener()) {
       // ((error)) -> could not initialize socket resources!
       return transport::result::kCouldNotSetupPlaformResources;
     }
-    setupWorkers(number_of_workers);
+    setupWorkers();
     // let's start incoming connections loop!
     manager_ = std::make_unique<std::thread>([this]() {
       while (keep_running_) {
@@ -133,6 +133,7 @@ class tcpip {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
+  static constexpr uint8_t kDefaultNumberOfWorkers = 1;
   static constexpr std::size_t kBufferSize = 2048;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
@@ -173,10 +174,10 @@ class tcpip {
     static WsaInitializer wsa_initializer;
     return wsa_initializer.initialized;
   }
-  bool setupListener(const std::string& port, const uint8_t& workers) {
+  bool setupListener() {
     // let's create our main i/o completion port!
-    HANDLE handle =
-        CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, workers);
+    HANDLE handle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL,
+                                           number_of_workers_);
     if (!handle) {
       // ((error)) -> while setting up the i/o completion port!
       return false;
@@ -209,7 +210,7 @@ class tcpip {
     sockaddr_in address = {0};
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_family = PF_INET;
-    address.sin_port = htons(atoi(port.c_str()));
+    address.sin_port = htons(atoi(port_.c_str()));
     if (bind(sock, (const sockaddr*)&address, sizeof(address)) ==
         SOCKET_ERROR) {
       // ((error)) -> could not bind socket!
@@ -227,8 +228,8 @@ class tcpip {
     accept_socket_ = sock;
     return true;
   }
-  void setupWorkers(const uint8_t& number_of_workers) {
-    for (int i = 0; i < number_of_workers; i++) {
+  void setupWorkers() {
+    for (int i = 0; i < number_of_workers_; i++) {
       workers_.push(std::make_unique<std::thread>([this]() {
         while (true) {
           ULONG_PTR key = NULL;
@@ -343,7 +344,9 @@ class tcpip {
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
+  std::string port_;
   bool keep_running_ = true;
+  uint8_t number_of_workers_ = kDefaultNumberOfWorkers;
   HANDLE io_handle_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::queue<std::unique_ptr<std::thread>> workers_;

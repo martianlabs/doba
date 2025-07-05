@@ -1,0 +1,66 @@
+﻿//      _       _           
+//   __| | ___ | |__   __ _ 
+//  / _` |/ _ \| '_ \ / _` |
+// | (_| | (_) | |_) | (_| |
+//  \__,_|\___/|_.__/ \__,_|
+// 
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http ://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef martianlabs_doba_builder_property_h
+#define martianlabs_doba_builder_property_h
+
+namespace martianlabs::doba::builder {
+// =============================================================================
+// property                                                            ( class )
+// -----------------------------------------------------------------------------
+// This specification holds for the basic builder property.
+// -----------------------------------------------------------------------------
+// Template parameters:
+//    CNty - parent container type (the builer itself) being used.
+//    VAty - target type being holded by the property.
+// =============================================================================
+template <typename CNty, typename VAty>
+class property {
+ public:
+  // ___________________________________________________________________________
+  // CONSTRUCTORs/DESTRUCTORs                                         ( public )
+  //
+  property(CNty* const parent, const VAty& value = VAty())
+      : parent_(parent), value_(value) {}
+  property(const property&) = default;
+  property(property&&) noexcept = default;
+  ~property() = default;
+  // ___________________________________________________________________________
+  // OPERATORs                                                        ( public )
+  //
+  property& operator=(const property&) = default;
+  property& operator=(property&&) noexcept = default;
+  VAty operator()() const { return value_; }
+  CNty& operator()(const VAty& in) {
+    value_ = in;
+    return *parent_;
+  }
+  CNty& operator()(VAty&& in) {
+    value_ = in;
+    return *parent_;
+  }
+
+ private:
+  CNty* const parent_;
+  VAty value_ = VAty();
+};
+}  // namespace martianlabs::doba::builder
+
+#endif
