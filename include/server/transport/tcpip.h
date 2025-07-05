@@ -23,6 +23,7 @@
 
 #include "platform.h"
 #include "protocol/result.h"
+#include "server/transport/result.h"
 
 #ifdef _WIN32
 #include "server/transport/tcpip_windows.h"

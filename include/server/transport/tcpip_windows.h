@@ -48,7 +48,7 @@ class tcpip {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  void start(const std::string& port, const uint8_t& number_of_workers) {
+  server::transport::result start(const std::string& port, const uint8_t& number_of_workers) {
     if (io_handle_ != INVALID_HANDLE_VALUE) {
       // ((error)) -> server already initialized!
       return;
@@ -66,36 +66,40 @@ class tcpip {
     // let's start incoming connections loop!
     manager_ = std::make_unique<std::thread>([this]() {
       while (keep_running_) {
-        SOCKET s = WSAAccept(accept_socket_, NULL, NULL, NULL, NULL);
-        if (s == INVALID_SOCKET) {
+        SOCKET socket = WSAAccept(accept_socket_, NULL, NULL, NULL, NULL);
+        if (socket == INVALID_SOCKET) {
           // ((error)) -> could not accept incoming connection!
           break;
         }
         // set the socket i/o mode: In this case FIONBIO enables or disables the
         // blocking mode for the socket based on the numerical value of iMode.
         // iMode = 0, blocking mode; iMode != 0, non-blocking mode.
-        ULONG i_mode = 1;
-        int ioctl_socket_res = ioctlsocket(s, FIONBIO, &i_mode);
+        ULONG i_mode_flag = 1;
+        int ioctl_socket_res = ioctlsocket(socket, FIONBIO, &i_mode_flag);
         if (ioctl_socket_res != NO_ERROR) {
           // ((error)) -> trying to set 'blocking' mode!
           continue;
         }
-        int f = 1;
-        if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char*)&f, sizeof(f))) {
+        int tcp_no_delay_flag = 1;
+        if (setsockopt(socket, IPPROTO_TCP, TCP_NODELAY,
+                       (char*)&tcp_no_delay_flag, sizeof(tcp_no_delay_flag))) {
           // ((error)) -> trying to disable nagle's algorithm!
           continue;
         }
         // let's associate the accept socket with the i/o port!
-        context* ctx = new context(s);
-        if (!CreateIoCompletionPort((HANDLE)s, io_handle_, (ULONG_PTR)ctx, 0)) {
+        context* per_socket_context = new context(socket);
+        if (!CreateIoCompletionPort((HANDLE)socket, io_handle_,
+                                    (ULONG_PTR)per_socket_context, 0)) {
           // ((error)) -> trying to associate socket to the i/o port!
-          delete ctx;
+          delete per_socket_context;
           continue;
         }
         // let's notify waiting thread for the new connection!
-        if (!PostQueuedCompletionStatus(io_handle_, 0, (ULONG_PTR)ctx, NULL)) {
+        if (!PostQueuedCompletionStatus(io_handle_, 0,
+                                        (ULONG_PTR)per_socket_context, NULL)) {
           // ((error)) -> trying to notify waiting thread!
-          delete ctx;
+          delete per_socket_context;
+          continue;
         }
       }
     });
@@ -127,7 +131,7 @@ class tcpip {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr std::size_t kBufferSize = 4096;
+  static constexpr std::size_t kBufferSize = 2048;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
@@ -224,10 +228,10 @@ class tcpip {
   void setupWorkers(const uint8_t& number_of_workers) {
     for (int i = 0; i < number_of_workers; i++) {
       workers_.push(std::make_unique<std::thread>([this]() {
-        ULONG_PTR key = NULL;
-        LPOVERLAPPED ovl = NULL;
-        DWORD sz = 0;
         while (true) {
+          ULONG_PTR key = NULL;
+          LPOVERLAPPED ovl = NULL;
+          DWORD sz = 0;
           if (GetQueuedCompletionStatus(io_handle_, &sz, &key, &ovl,
                                         INFINITE)) {
             if (!key) continue;
@@ -309,28 +313,22 @@ class tcpip {
     return true;
   }
   bool send(context* ctx) {
-    bool success = true;
     auto n = ctx->stream->read(ctx->buf, kBufferSize).gcount();
-    if (ctx->stream->bad()) {
+    if (ctx->stream->bad() || (ctx->stream->fail() && !ctx->stream->eof())) {
       return false;
     }
-    if (ctx->stream->fail()) {
-      if (!ctx->stream->eof()) {
+    if (!n) {
+      if (ctx->close_after_response) {
         return false;
       }
-    }
-    if (!n) {
-      if (ctx->close_after_response) return false;
       receiving(ctx);
       return receive(ctx);
     }
     ctx->wsa.len = (ULONG)n;
     DWORD f = 0, s = 0;
     int res = WSASend(ctx->soc, &ctx->wsa, 1, &s, f, &ctx->ovl, 0);
-    if (res == SOCKET_ERROR) {
-      if (WSAGetLastError() != WSA_IO_PENDING) {
-        return false;
-      }
+    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      return false;
     }
     ctx->ref_count++;
     return true;
