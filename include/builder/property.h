@@ -58,6 +58,9 @@ class property {
   }
 
  private:
+  // ___________________________________________________________________________
+  // ATTRIBUTEs                                                      ( private )
+  //
   CNty* const parent_;
   VAty value_ = VAty();
 };
