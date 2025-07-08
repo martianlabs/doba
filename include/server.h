@@ -18,52 +18,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_builder_property_h
-#define martianlabs_doba_builder_property_h
+#ifndef martianlabs_doba_server_h
+#define martianlabs_doba_server_h
 
-namespace martianlabs::doba::builder {
+#include <optional>
+#include <functional>
+
+namespace martianlabs::doba {
 // =============================================================================
-// property                                                            ( class )
+// server                                                              ( class )
 // -----------------------------------------------------------------------------
-// This specification holds for the basic builder property.
+// This class holds for the base server implementation.
 // -----------------------------------------------------------------------------
 // Template parameters:
-//    CNty - parent container type (the builer itself) being used.
-//    VAty - target type being holded by the property.
+//    TRty - transport being used.
+//    PRty - protocol being used.
 // =============================================================================
-template <typename CNty, typename VAty>
-class property {
+template <template <typename> class TRty, typename PRty>
+class server : public TRty<PRty> {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  property(CNty* const parent, const VAty& value = VAty())
-      : parent_(parent), value_(value) {}
-  property(const property&) = delete;
-  property(property&&) noexcept = delete;
-  ~property() = default;
+  server() = default;
+  server(const server&) = delete;
+  server(server&&) noexcept = delete;
+  ~server() = default;
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
-  property& operator=(const property&) = delete;
-  property& operator=(property&&) noexcept = delete;
-  VAty operator()() const { return value_; }
-  CNty& operator()(const VAty& in) {
-    value_ = in;
-    return *parent_;
-  }
-  CNty& operator()(VAty&& in) {
-    value_ = in;
-    return *parent_;
-  }
-
- private:
-  // ___________________________________________________________________________
-  // ATTRIBUTEs                                                      ( private )
-  //
-  CNty* const parent_;
-  VAty value_ = VAty();
+  server& operator=(const server&) = delete;
+  server& operator=(server&&) noexcept = delete;
 };
-}  // namespace martianlabs::doba::builder
+}  // namespace martianlabs::doba
 
 #endif

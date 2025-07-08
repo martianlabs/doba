@@ -21,6 +21,9 @@
 #ifndef martianlabs_doba_transport_server_tcpipwindows_h
 #define martianlabs_doba_transport_server_tcpipwindows_h
 
+#include <optional>
+#include <functional>
+
 namespace martianlabs::doba::transport::server {
 // =============================================================================
 // tcpip [windows]                                                     ( class )
@@ -36,8 +39,7 @@ class tcpip {
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  tcpip(const std::string& port, const uint8_t& number_of_workers)
-      : port_(port), number_of_workers_(number_of_workers) {}
+  tcpip() = default;
   tcpip(const tcpip&) = delete;
   tcpip(tcpip&&) noexcept = delete;
   ~tcpip() { stop(); }
@@ -88,7 +90,7 @@ class tcpip {
           continue;
         }
         // let's associate the accept socket with the i/o port!
-        context* per_socket_context = new context(socket);
+        context* per_socket_context = new context(socket, buffer_size_);
         if (!CreateIoCompletionPort((HANDLE)socket, io_handle_,
                                     (ULONG_PTR)per_socket_context, 0)) {
           // ((error)) -> trying to associate socket to the i/o port!
@@ -128,23 +130,41 @@ class tcpip {
     keep_running_ = true;
     return transport::result::kSucceeded;
   }
+  void set_port(const std::string& port) { port_ = port; }
+  void set_number_of_workers(uint8_t number_of_workers) {
+    number_of_workers_ = number_of_workers;
+  }
+  void set_buffer_size(uint32_t buffer_size) { buffer_size_ = buffer_size; }
+  void set_on_connection_delegate(const on_connection& on_connection) {
+    on_connection_ = on_connection;
+  }
+  void set_on_disconnection_delegate(const on_disconnection& on_disconnection) {
+    on_disconnection_ = on_disconnection;
+  }
+  void set_on_bytes_received_delegate(const on_bytes_received& on_bytes_received) {
+    on_bytes_received_ = on_bytes_received;
+  }
+  void set_on_bytes_sent_delegate(const on_bytes_sent& on_bytes_sent) {
+    on_bytes_sent_ = on_bytes_sent;
+  }
 
  private:
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr uint8_t kDefaultNumberOfWorkers = 1;
-  static constexpr std::size_t kBufferSize = 2048;
+  static constexpr uint8_t kDefaultNumberOfWorkers = 4;
+  static constexpr const char kDefaultPortNumber[] = "80";
+  static constexpr uint32_t kDefaultBufferSize = 2048;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
   struct context {
-    context(SOCKET socket) {
+    context(SOCKET socket, ULONG buffer_size) {
       ZeroMemory(&ovl, sizeof(WSAOVERLAPPED));
       soc = socket;
-      buf = new CHAR[kBufferSize];
+      buf = new CHAR[buffer_size];
       wsa.buf = buf;
-      wsa.len = kBufferSize;
+      wsa.len = buffer_size;
       receiving = true;
       close_after_response = false;
     }
@@ -247,6 +267,9 @@ class tcpip {
               if (ovl) {
                 if (sz) {
                   if (ctx->receiving) {
+                    if (on_bytes_received_.has_value()) {
+                      on_bytes_received_.value()(ctx->soc, sz);
+                    }
                     switch (ctx->req.deserialize(ctx->wsa.buf, sz)) {
                       case protocol::result::kCompleted:
                         switch (ctx->protocol.process(ctx->req, ctx->res)) {
@@ -268,18 +291,33 @@ class tcpip {
                       case protocol::result::kError:
                         break;
                     }
+                  } else {
+                    if (on_bytes_sent_.has_value()) {
+                      on_bytes_sent_.value()(ctx->soc, sz);
+                    }
                   }
                 } else {
                   free_ctx = !ctx->ref_count;
                 }
               } else if (!sz) {
+                if (on_connection_.has_value()) {
+                  on_connection_.value()(ctx->soc);
+                }
                 receiving(ctx);
               }
               free_ctx = free_ctx || (!perform(ctx) && !ctx->ref_count);
             }
-            if (free_ctx) delete_context(ctx);
+            if (free_ctx) {
+              if (on_disconnection_.has_value()) {
+                on_disconnection_.value()(ctx->soc);
+              }
+              delete_context(ctx);
+            }
           } else if (ovl && key) {
             // abrupt connection close!
+            if (on_disconnection_.has_value()) {
+              on_disconnection_.value()(((context*)key)->soc);
+            }
             delete_context(((context*)key));
             continue;
           } else if (!ovl && GetLastError() == ERROR_INVALID_HANDLE) {
@@ -294,7 +332,7 @@ class tcpip {
     ctx->req.reset();
     ctx->res.reset();
     ctx->receiving = true;
-    ctx->wsa.len = kBufferSize;
+    ctx->wsa.len = buffer_size_;
   }
   void sending(context* ctx, std::shared_ptr<std::istream> stream, bool car) {
     ctx->stream = stream;
@@ -316,7 +354,7 @@ class tcpip {
     return true;
   }
   bool send(context* ctx) {
-    auto n = ctx->stream->read(ctx->buf, kBufferSize).gcount();
+    auto n = ctx->stream->read(ctx->buf, buffer_size_).gcount();
     if (ctx->stream->bad() || (ctx->stream->fail() && !ctx->stream->eof())) {
       return false;
     }
@@ -344,13 +382,18 @@ class tcpip {
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  std::string port_;
   bool keep_running_ = true;
+  std::string port_ = kDefaultPortNumber;
   uint8_t number_of_workers_ = kDefaultNumberOfWorkers;
+  uint32_t buffer_size_ = kDefaultBufferSize;
   HANDLE io_handle_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::queue<std::unique_ptr<std::thread>> workers_;
   std::unique_ptr<std::thread> manager_;
+  std::optional<on_connection> on_connection_;
+  std::optional<on_disconnection> on_disconnection_;
+  std::optional<on_bytes_received> on_bytes_received_;
+  std::optional<on_bytes_sent> on_bytes_sent_;
 };
 }  // namespace martianlabs::doba::transport::server
 

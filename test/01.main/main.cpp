@@ -19,12 +19,11 @@
 // limitations under the License.
 
 #include "string/utils.h"
-#include "builder/builder.h"
+#include "server.h"
 #include "transport/server/tcpip.h"
 
 using namespace martianlabs::doba;
 
-/*
 template <typename RQty, typename RSty>
 class protocol_base {
  public:
@@ -86,14 +85,22 @@ class test_protocol : public protocol_base<test_request, test_response> {
 };
 
 int main(int argc, char* argv[]) {
-  transport::server::tcpip<test_protocol> test_server;
-  test_server.start("10001", 8);
+  server<transport::server::tcpip, test_protocol> test_server;
+  test_server.set_buffer_size(1024);
+  test_server.set_port("10001");
+  test_server.set_number_of_workers(8);
+  test_server.set_on_connection_delegate([](socket_type id) {});
+  test_server.set_on_disconnection_delegate([](socket_type id) {});
+  test_server.set_on_bytes_received_delegate(
+      [](socket_type id, unsigned long bytes) {});
+  test_server.set_on_bytes_sent_delegate(
+      [](socket_type id, unsigned long bytes) {});
+  test_server.start();
   return getchar();
 }
-*/
 
 
-
+/*
 class my_class {
  public:
   my_class(const int&) {}
@@ -111,3 +118,4 @@ int main(int argc, char* argv[]) {
   auto pepe = builder.number_of_connections(12).build();
   return 0;
 }
+*/
