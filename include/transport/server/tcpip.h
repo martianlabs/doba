@@ -22,8 +22,8 @@
 #define martianlabs_doba_transport_server_tcpip_h
 
 #include "platform.h"
-#include "protocol/result.h"
 #include "transport/result.h"
+#include "transport/process_result.h"
 
 // =============================================================================
 // platform-dependent includes

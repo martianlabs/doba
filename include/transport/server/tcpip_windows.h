@@ -56,23 +56,23 @@ class tcpip {
   using on_disconnection_fn = std::function<void(socket_type)>;
   using on_bytes_received_fn = std::function<void(socket_type, unsigned long)>;
   using on_bytes_sent_fn = std::function<void(socket_type, unsigned long)>;
-  using on_process_fn = std::function<void(const RQty&, RSty&)>;
+  using on_process_fn = std::function<process_result(const RQty&, RSty&)>;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  transport::result start() {
-    if (io_handle_ != INVALID_HANDLE_VALUE) {
+  result start() {
+    if (io_h_ != INVALID_HANDLE_VALUE) {
       // ((error)) -> server already initialized!
-      return transport::result::kAlreadyInitialized;
+      return result::kAlreadyInitialized;
     }
     // let's setup all the required resources..
     if (!setupWinsock()) {
       // ((error)) -> could not initialize winsock resources!
-      return transport::result::kCouldNotSetupPlaformResources;
+      return result::kCouldNotSetupPlaformResources;
     }
     if (!setupListener()) {
       // ((error)) -> could not initialize socket resources!
-      return transport::result::kCouldNotSetupPlaformResources;
+      return result::kCouldNotSetupPlaformResources;
     }
     setupWorkers();
     // let's start incoming connections loop!
@@ -100,33 +100,33 @@ class tcpip {
         }
         // let's associate the accept socket with the i/o port!
         context* per_socket_context = new context(socket, buffer_size_);
-        if (!CreateIoCompletionPort((HANDLE)socket, io_handle_,
+        if (!CreateIoCompletionPort((HANDLE)socket, io_h_,
                                     (ULONG_PTR)per_socket_context, 0)) {
           // ((error)) -> trying to associate socket to the i/o port!
           delete per_socket_context;
           continue;
         }
         // let's notify waiting thread for the new connection!
-        if (!PostQueuedCompletionStatus(io_handle_, 0,
-                                        (ULONG_PTR)per_socket_context, NULL)) {
+        if (!PostQueuedCompletionStatus(io_h_, 0, (ULONG_PTR)per_socket_context,
+                                        NULL)) {
           // ((error)) -> trying to notify waiting thread!
           delete per_socket_context;
           continue;
         }
       }
     });
-    return transport::result::kSucceeded;
+    return result::kSucceeded;
   }
-  transport::result stop() {
-    if (io_handle_ != INVALID_HANDLE_VALUE) {
-      if (!CloseHandle(io_handle_)) {
-        return transport::result::kCouldNotCleanupPlaformResources;
+  result stop() {
+    if (io_h_ != INVALID_HANDLE_VALUE) {
+      if (!CloseHandle(io_h_)) {
+        return result::kCouldNotCleanupPlaformResources;
       }
-      io_handle_ = INVALID_HANDLE_VALUE;
+      io_h_ = INVALID_HANDLE_VALUE;
     }
     if (accept_socket_ != INVALID_SOCKET) {
       if (closesocket(accept_socket_) == SOCKET_ERROR) {
-        return transport::result::kCouldNotCleanupPlaformResources;
+        return result::kCouldNotCleanupPlaformResources;
       }
       accept_socket_ = INVALID_SOCKET;
     }
@@ -137,7 +137,7 @@ class tcpip {
       workers_.pop();
     }
     keep_running_ = true;
-    return transport::result::kSucceeded;
+    return result::kSucceeded;
   }
   void set_port(const std::string_view& port) { port_.assign(port); }
   void set_number_of_workers(uint8_t number_of_workers) {
@@ -152,6 +152,7 @@ class tcpip {
     on_bytes_received_ = fn;
   }
   void set_on_bytes_sent(const on_bytes_sent_fn& fn) { on_bytes_sent_ = fn; }
+  void set_on_process(const on_process_fn& fn) { on_process_ = fn; }
 
  private:
   // ___________________________________________________________________________
@@ -248,7 +249,7 @@ class tcpip {
       closesocket(sock);
       return false;
     }
-    io_handle_ = handle;
+    io_h_ = handle;
     accept_socket_ = sock;
     return true;
   }
@@ -259,8 +260,7 @@ class tcpip {
           ULONG_PTR key = NULL;
           LPOVERLAPPED ovl = NULL;
           DWORD sz = 0;
-          if (GetQueuedCompletionStatus(io_handle_, &sz, &key, &ovl,
-                                        INFINITE)) {
+          if (GetQueuedCompletionStatus(io_h_, &sz, &key, &ovl, INFINITE)) {
             if (!key) continue;
             bool free_ctx = false;
             context* ctx = (context*)key;
@@ -275,26 +275,30 @@ class tcpip {
                       on_bytes_received_.value()(ctx->soc, sz);
                     }
                     switch (ctx->req.deserialize(ctx->wsa.buf, sz)) {
-                      case protocol::result::kCompleted:
+                      case process_result::kCompleted:
                         if (on_process_.has_value()) {
                           switch (on_process_.value()(ctx->req, ctx->res)) {
-                            case protocol::result::kCompleted:
+                            case process_result::kCompleted:
                               sending(ctx, ctx->res.serialize(), false);
                               break;
-                            case protocol::result::kCompletedAndClose:
+                            case process_result::kCompletedAndClose:
                               sending(ctx, ctx->res.serialize(), true);
                               break;
-                            case protocol::result::kError:
+                            case process_result::kMoreBytesNeeded:
+                              break;
+                            case process_result::kError:
+                              closesocket(ctx->soc);
                               break;
                           }
                         }
                         break;
-                      case protocol::result::kCompletedAndClose:
+                      case process_result::kCompletedAndClose:
                         ctx->close_after_response = true;
                         break;
-                      case protocol::result::kMoreBytesNeeded:
+                      case process_result::kMoreBytesNeeded:
                         break;
-                      case protocol::result::kError:
+                      case process_result::kError:
+                        closesocket(ctx->soc);
                         break;
                     }
                   } else {
@@ -325,7 +329,6 @@ class tcpip {
               on_disconnection_.value()(((context*)key)->soc);
             }
             delete_context(((context*)key));
-            continue;
           } else if (!ovl && GetLastError() == ERROR_INVALID_HANDLE) {
             // io port closed! let's exit from loop!
             break;
@@ -392,7 +395,7 @@ class tcpip {
   std::string port_ = kDefaultPortNumber;
   uint8_t number_of_workers_ = kDefaultNumberOfWorkers;
   uint32_t buffer_size_ = kDefaultBufferSize;
-  HANDLE io_handle_ = INVALID_HANDLE_VALUE;
+  HANDLE io_h_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::queue<std::unique_ptr<std::thread>> workers_;
   std::unique_ptr<std::thread> manager_;

@@ -18,36 +18,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_string_utils_h
-#define martianlabs_doba_string_utils_h
+#ifndef martianlabs_doba_transport_process_result_h
+#define martianlabs_doba_transport_process_result_h
 
-#include "platform.h"
-
-namespace martianlabs::doba::string {
+namespace martianlabs::doba::transport {
 // =============================================================================
-// utils                                                           ( interface )
+// deserialization_result                                         ( enum-class )
 // -----------------------------------------------------------------------------
-// This class will hold for all string related utility functions being provided.
+// This enum class will hold for all processing states being handled.
 // -----------------------------------------------------------------------------
 // =============================================================================
-class utils {
- public:
-  static std::optional<uint32_t> find_exact_match(const char* const str,
-                                                  uint32_t str_len,
-                                                  const char* const pattern,
-                                                  uint32_t pattern_len) {
-    for (uint32_t i = 0; i < str_len; ++i) {
-      uint32_t j = 0;
-      while (j < pattern_len) {
-        if (i + j == str_len) return {};
-        if (str[i + j] != pattern[j]) break;
-        j++;
-      }
-      if (j == pattern_len) return i;
-    }
-    return {};
-  }
+enum class process_result {
+  kMoreBytesNeeded,    // more data needed.
+  kCompleted,          // operation completed.
+  kCompletedAndClose,  // operation completed (connection close brequested).
+  kError               // unknown error.
 };
-}  // namespace martianlabs::doba::string
+}  // namespace martianlabs::doba::transport
 
 #endif

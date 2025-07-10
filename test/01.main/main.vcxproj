@@ -160,9 +160,13 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\builder\builder.h" />
     <ClInclude Include="..\..\include\builder\property.h" />
+    <ClInclude Include="..\..\include\http_server.h" />
     <ClInclude Include="..\..\include\platform.h" />
+    <ClInclude Include="..\..\include\protocol\http11\request.h" />
+    <ClInclude Include="..\..\include\protocol\http11\response.h" />
     <ClInclude Include="..\..\include\protocol\result.h" />
     <ClInclude Include="..\..\include\server.h" />
+    <ClInclude Include="..\..\include\transport\process_result.h" />
     <ClInclude Include="..\..\include\transport\result.h" />
     <ClInclude Include="..\..\include\transport\server\tcpip.h" />
     <ClInclude Include="..\..\include\transport\server\tcpip_linux.h">
