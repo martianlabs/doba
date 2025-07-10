@@ -26,27 +26,10 @@
 #include "transport/result.h"
 
 // =============================================================================
-// platform-dependent-types
-// =============================================================================
-#ifdef _WIN32
-using socket_type = SOCKET;
-#elif __linux__
-#endif
-
-// =============================================================================
-// platform-independent-types
-// =============================================================================
-namespace martianlabs::doba::transport::server {
-using on_connection = std::function<void(socket_type)>;
-using on_disconnection = std::function<void(socket_type)>;
-using on_bytes_received = std::function<void(socket_type, unsigned long)>;
-using on_bytes_sent = std::function<void(socket_type, unsigned long)>;
-}  // namespace martianlabs::doba::transport::server
-
-// =============================================================================
 // platform-dependent includes
 // =============================================================================
 #ifdef _WIN32
+using socket_type = SOCKET;
 #include "transport/server/tcpip_windows.h"
 #elif __linux__
 #include "transport/server/tcpip_linux.h"

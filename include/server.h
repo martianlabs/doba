@@ -21,9 +21,6 @@
 #ifndef martianlabs_doba_server_h
 #define martianlabs_doba_server_h
 
-#include <optional>
-#include <functional>
-
 namespace martianlabs::doba {
 // =============================================================================
 // server                                                              ( class )
@@ -32,10 +29,12 @@ namespace martianlabs::doba {
 // -----------------------------------------------------------------------------
 // Template parameters:
 //    TRty - transport being used.
-//    PRty - protocol being used.
+//    RQty - request being used.
+//    RSty - response being used.
 // =============================================================================
-template <template <typename> class TRty, typename PRty>
-class server : public TRty<PRty> {
+template <template <typename, typename> class TRty, typename RQty,
+          typename RSty>
+class server : public TRty<RQty, RSty> {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )

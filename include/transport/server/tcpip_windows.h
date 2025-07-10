@@ -31,9 +31,10 @@ namespace martianlabs::doba::transport::server {
 // This specification holds for the WindowsTM server transport implementation.
 // -----------------------------------------------------------------------------
 // Template parameters:
-//    PRty - protocol (request/reponse) being used.
+//    RQty - request being used.
+//    RSty - request being used.
 // =============================================================================
-template <typename PRty>
+template <typename RQty, typename RSty>
 class tcpip {
  public:
   // ___________________________________________________________________________
@@ -48,6 +49,14 @@ class tcpip {
   //
   tcpip& operator=(const tcpip&) = delete;
   tcpip& operator=(tcpip&&) noexcept = delete;
+  // ___________________________________________________________________________
+  // USINGs                                                           ( public )
+  //
+  using on_connection_fn = std::function<void(socket_type)>;
+  using on_disconnection_fn = std::function<void(socket_type)>;
+  using on_bytes_received_fn = std::function<void(socket_type, unsigned long)>;
+  using on_bytes_sent_fn = std::function<void(socket_type, unsigned long)>;
+  using on_process_fn = std::function<void(const RQty&, RSty&)>;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
@@ -130,23 +139,19 @@ class tcpip {
     keep_running_ = true;
     return transport::result::kSucceeded;
   }
-  void set_port(const std::string& port) { port_ = port; }
+  void set_port(const std::string_view& port) { port_.assign(port); }
   void set_number_of_workers(uint8_t number_of_workers) {
     number_of_workers_ = number_of_workers;
   }
   void set_buffer_size(uint32_t buffer_size) { buffer_size_ = buffer_size; }
-  void set_on_connection_delegate(const on_connection& on_connection) {
-    on_connection_ = on_connection;
+  void set_on_connection(const on_connection_fn& fn) { on_connection_ = fn; }
+  void set_on_disconnection(const on_disconnection_fn& fn) {
+    on_disconnection_ = fn;
   }
-  void set_on_disconnection_delegate(const on_disconnection& on_disconnection) {
-    on_disconnection_ = on_disconnection;
+  void set_on_bytes_received(const on_bytes_received_fn& fn) {
+    on_bytes_received_ = fn;
   }
-  void set_on_bytes_received_delegate(const on_bytes_received& on_bytes_received) {
-    on_bytes_received_ = on_bytes_received;
-  }
-  void set_on_bytes_sent_delegate(const on_bytes_sent& on_bytes_sent) {
-    on_bytes_sent_ = on_bytes_sent;
-  }
+  void set_on_bytes_sent(const on_bytes_sent_fn& fn) { on_bytes_sent_ = fn; }
 
  private:
   // ___________________________________________________________________________
@@ -174,10 +179,9 @@ class tcpip {
     WSABUF wsa;
     bool receiving;
     bool close_after_response;
-    PRty protocol;
     std::mutex mutex;
-    typename PRty::req req;
-    typename PRty::res res;
+    RQty req;
+    RSty res;
     std::shared_ptr<std::istream> stream;
     uint16_t ref_count{1};
   };
@@ -272,15 +276,17 @@ class tcpip {
                     }
                     switch (ctx->req.deserialize(ctx->wsa.buf, sz)) {
                       case protocol::result::kCompleted:
-                        switch (ctx->protocol.process(ctx->req, ctx->res)) {
-                          case protocol::result::kCompleted:
-                            sending(ctx, ctx->res.serialize(), false);
-                            break;
-                          case protocol::result::kCompletedAndClose:
-                            sending(ctx, ctx->res.serialize(), true);
-                            break;
-                          case protocol::result::kError:
-                            break;
+                        if (on_process_.has_value()) {
+                          switch (on_process_.value()(ctx->req, ctx->res)) {
+                            case protocol::result::kCompleted:
+                              sending(ctx, ctx->res.serialize(), false);
+                              break;
+                            case protocol::result::kCompletedAndClose:
+                              sending(ctx, ctx->res.serialize(), true);
+                              break;
+                            case protocol::result::kError:
+                              break;
+                          }
                         }
                         break;
                       case protocol::result::kCompletedAndClose:
@@ -390,10 +396,11 @@ class tcpip {
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::queue<std::unique_ptr<std::thread>> workers_;
   std::unique_ptr<std::thread> manager_;
-  std::optional<on_connection> on_connection_;
-  std::optional<on_disconnection> on_disconnection_;
-  std::optional<on_bytes_received> on_bytes_received_;
-  std::optional<on_bytes_sent> on_bytes_sent_;
+  std::optional<on_connection_fn> on_connection_;
+  std::optional<on_disconnection_fn> on_disconnection_;
+  std::optional<on_bytes_received_fn> on_bytes_received_;
+  std::optional<on_bytes_sent_fn> on_bytes_sent_;
+  std::optional<on_process_fn> on_process_;
 };
 }  // namespace martianlabs::doba::transport::server
 

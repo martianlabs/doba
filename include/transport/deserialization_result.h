@@ -18,22 +18,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_protocol_result_h
-#define martianlabs_doba_protocol_result_h
+#ifndef martianlabs_doba_transport_deserialization_result_h
+#define martianlabs_doba_transport_deserialization_result_h
 
-namespace martianlabs::doba::protocol {
+namespace martianlabs::doba::transport {
 // =============================================================================
-// result                                                         ( enum-class )
+// deserialization_result                                         ( enum-class )
 // -----------------------------------------------------------------------------
-// This enum class will hold for all operational states being handled.
+// This enum class will hold for all deserialization states being handled.
 // -----------------------------------------------------------------------------
 // =============================================================================
-enum class result {
+enum class deserialization_result {
   kMoreBytesNeeded,    // more data needed.
   kCompleted,          // operation completed.
   kCompletedAndClose,  // operation completed (close connection requested).
   kError               // unknown error.
 };
-}  // namespace martianlabs::doba::protocol
+}  // namespace martianlabs::doba::transport
 
 #endif
