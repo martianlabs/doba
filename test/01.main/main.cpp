@@ -23,7 +23,7 @@
 using namespace martianlabs::doba;
 
 int main(int argc, char* argv[]) {
-  http_server my_server;
+  http_server my_server("10001");
   my_server.start();
   return getchar();
 }

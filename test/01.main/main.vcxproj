@@ -162,6 +162,8 @@
     <ClInclude Include="..\..\include\builder\property.h" />
     <ClInclude Include="..\..\include\http_server.h" />
     <ClInclude Include="..\..\include\platform.h" />
+    <ClInclude Include="..\..\include\protocol\http11\constants.h" />
+    <ClInclude Include="..\..\include\protocol\http11\helpers.h" />
     <ClInclude Include="..\..\include\protocol\http11\request.h" />
     <ClInclude Include="..\..\include\protocol\http11\response.h" />
     <ClInclude Include="..\..\include\protocol\result.h" />
