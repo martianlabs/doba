@@ -30,6 +30,10 @@ namespace martianlabs::doba::protocol::http11 {
 // Useful macros.
 // -----------------------------------------------------------------------------
 // =============================================================================
+#define IS_SLASH(c) (c == 0x2F)
+#define IS_PERCENT(c) (c == 0x25)
+#define IS_QUESTION_MARK(c) (c == 0x3F)
+#define IS_DOT(c) (c == 0x2E)
 #define IS_GET_METHOD                           \
   (buffer_[0] == constants::methods::kGet[0] && \
    buffer_[1] == constants::methods::kGet[1] && \
@@ -148,49 +152,87 @@ class request {
   }
 
  private:
-  // ___________________________________________________________________________
-  // METHODs                                                         ( private )
-  //
+   // ___________________________________________________________________________
+   // METHODs                                                         ( private )
+   //
   bool check_request_line() {
     uint32_t i = 0;
     // check [method]..
     while (i < request_line_end_.value()) {
-      if (IS_SP(buffer_[i])) break;
-      if (!IS_TOKEN(buffer_[i])) return false;
+      if (IS_SP(buffer_[i])) {
+        break;
+      }
+      if (!IS_TOKEN(buffer_[i])) {
+        return false;
+      }
       i++;
     }
     switch (i) {
       case 3:
-        if (!IS_GET_METHOD && !IS_PUT_METHOD) return false;
+        if (!IS_GET_METHOD && !IS_PUT_METHOD) {
+          return false;
+        }
         break;
       case 4:
-        if (!IS_HEAD_METHOD && !IS_POST_METHOD) return false;
+        if (!IS_HEAD_METHOD && !IS_POST_METHOD) {
+          return false;
+        }
         break;
       case 5:
-        if (!IS_TRACE_METHOD) return false;
+        if (!IS_TRACE_METHOD) {
+          return false;
+        }
         break;
       case 6:
-        if (!IS_DELETE_METHOD) return false;
+        if (!IS_DELETE_METHOD) {
+          return false;
+        }
         break;
       case 7:
-        if (!IS_CONNECT_METHOD && !IS_OPTIONS_METHOD) return false;
+        if (!IS_CONNECT_METHOD && !IS_OPTIONS_METHOD) {
+          return false;
+        }
         break;
       default:
         return false;
     }
     method_end_ = i++;
     // check [path]..
+    if (!IS_SLASH(buffer_[i++])) {
+      return false;
+    }
     while (i < request_line_end_.value()) {
-      if (IS_SP(buffer_[i])) break;
-      i++;
+      if (IS_SP(buffer_[i])) {
+        break;
+      }
+      if (IS_PERCENT(buffer_[i])) {
+        if (i + 2 >= request_line_end_.value()) {
+          return false;
+        }
+        if (!IS_HEX_DIGIT(buffer_[i + 1]) || !IS_HEX_DIGIT(buffer_[i + 2])) {
+          return false;
+        }
+        i += 3;
+        continue;
+      } else if (IS_PCHAR(buffer_[i]) || IS_SLASH(buffer_[i]) ||
+                 IS_QUESTION_MARK(buffer_[i])) {
+        i++;
+      } else {
+        return false;
+      }
     }
     path_end_ = i++;
     // check [http-version]..
-    while (i < request_line_end_.value()) {
-      if (IS_CR(buffer_[i])) break;
-      i++;
+    if ((request_line_end_.value() - i) < kHttpVersionLen) {
+      return false;
     }
-    http_version_end_ = i;
+    if (buffer_[i] != 0x48 || buffer_[i + 1] != 0x54 ||
+        buffer_[i + 2] != 0x54 || buffer_[i + 3] != 0x50 ||
+        !IS_SLASH(buffer_[i + 4]) || !IS_DIGIT(buffer_[i + 5]) ||
+        !IS_DOT(buffer_[i + 6]) || !IS_DIGIT(buffer_[i + 7])) {
+      return false;
+    }
+    http_version_end_ = i + 8;
     return true;
   }
   bool check_headers() const { return true; }
@@ -199,11 +241,17 @@ class request {
     for (uint32_t i = 0; i < str_len; ++i) {
       uint32_t j = 0;
       while (j < pattern_len) {
-        if (i + j == str_len) return {};
-        if (str[i + j] != pattern[j]) break;
+        if (i + j == str_len) {
+          return {};
+        }
+        if (str[i + j] != pattern[j]) {
+          break;
+        }
         j++;
       }
-      if (j == pattern_len) return i;
+      if (j == pattern_len) {
+        return i;
+      }
     }
     return {};
   }
@@ -215,6 +263,7 @@ class request {
   static constexpr uint32_t kCrLfLen = sizeof(kCrLf) - 1;
   static constexpr char kEndOfHeaders[] = "\r\n\r\n";
   static constexpr uint32_t kEndOfHeadersLen = sizeof(kEndOfHeaders) - 1;
+  static constexpr uint32_t kHttpVersionLen = 8;
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //

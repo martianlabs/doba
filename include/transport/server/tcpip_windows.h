@@ -184,7 +184,7 @@ class tcpip {
     RQty req;
     RSty res;
     std::shared_ptr<std::istream> stream;
-    uint16_t ref_count{1};
+    uint32_t ref_count{1};
   };
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
@@ -256,82 +256,94 @@ class tcpip {
   void setupWorkers() {
     for (int i = 0; i < number_of_workers_; i++) {
       workers_.push(std::make_unique<std::thread>([this]() {
+        std::queue<context*> removal_queue;
         while (true) {
           ULONG_PTR key = NULL;
           LPOVERLAPPED ovl = NULL;
           DWORD sz = 0;
-          if (GetQueuedCompletionStatus(io_h_, &sz, &key, &ovl, INFINITE)) {
-            if (!key) continue;
-            bool free_ctx = false;
-            context* ctx = (context*)key;
-            {
-              std::lock_guard<std::mutex> lock(ctx->mutex);
-              ctx->ref_count--;
-              // let's check if there's a completed operation..
-              if (ovl) {
-                if (sz) {
-                  if (ctx->receiving) {
-                    if (on_bytes_received_.has_value()) {
-                      on_bytes_received_.value()(ctx->soc, sz);
-                    }
-                    switch (ctx->req.deserialize(ctx->wsa.buf, sz)) {
-                      case process_result::kCompleted:
-                        if (on_process_.has_value()) {
-                          switch (on_process_.value()(ctx->req, ctx->res)) {
-                            case process_result::kCompleted:
-                              sending(ctx, ctx->res.serialize(), false);
-                              break;
-                            case process_result::kCompletedAndClose:
-                              sending(ctx, ctx->res.serialize(), true);
-                              break;
-                            case process_result::kMoreBytesNeeded:
-                              break;
-                            case process_result::kError:
-                              closesocket(ctx->soc);
-                              break;
-                          }
-                        }
-                        break;
-                      case process_result::kCompletedAndClose:
-                        ctx->close_after_response = true;
-                        break;
-                      case process_result::kMoreBytesNeeded:
-                        break;
-                      case process_result::kError:
-                        closesocket(ctx->soc);
-                        break;
-                    }
-                  } else {
-                    if (on_bytes_sent_.has_value()) {
-                      on_bytes_sent_.value()(ctx->soc, sz);
-                    }
-                  }
-                } else {
-                  free_ctx = !ctx->ref_count;
-                }
-              } else if (!sz) {
-                if (on_connection_.has_value()) {
-                  on_connection_.value()(ctx->soc);
-                }
-                receiving(ctx);
+          // here we act like a garbage collector and delete any non needed
+          // context!
+          while (!removal_queue.empty()) {
+            closesocket(removal_queue.front()->soc);
+            delete[] removal_queue.front()->buf;
+            delete removal_queue.front();
+            removal_queue.pop();
+          }
+          if (!GetQueuedCompletionStatus(io_h_, &sz, &key, &ovl, INFINITE)) {
+            if (!ovl && WSAGetLastError() == ERROR_INVALID_HANDLE) {
+              // io port closed! let's exit from loop!
+              break;
+            }
+            if (ovl && key) {
+              // abrupt connection close!
+              std::lock_guard<std::mutex> lock(((context*)key)->mutex);
+              if (!((context*)key)->ref_count) {
+                removal_queue.push((context*)key);
               }
-              free_ctx = free_ctx || (!perform(ctx) && !ctx->ref_count);
             }
-            if (free_ctx) {
-              if (on_disconnection_.has_value()) {
-                on_disconnection_.value()(ctx->soc);
+            continue;
+          }
+          if (!key) continue;
+          context* ctx = (context*)key;
+          std::lock_guard<std::mutex> lock(ctx->mutex);
+          ctx->ref_count--;
+          // let's check if there's a completed operation..
+          if (ovl) {
+            if (sz) {
+              if (ctx->receiving) {
+                if (on_bytes_received_.has_value()) {
+                  on_bytes_received_.value()(ctx->soc, sz);
+                }
+                switch (ctx->req.deserialize(ctx->wsa.buf, sz)) {
+                  case process_result::kCompleted:
+                    if (on_process_.has_value()) {
+                      switch (on_process_.value()(ctx->req, ctx->res)) {
+                        case process_result::kCompleted:
+                          sending(ctx, ctx->res.serialize(), false);
+                          break;
+                        case process_result::kCompletedAndClose:
+                          sending(ctx, ctx->res.serialize(), true);
+                          break;
+                        case process_result::kMoreBytesNeeded:
+                          break;
+                        case process_result::kError:
+                          closesocket(ctx->soc);
+                          ctx->soc = INVALID_SOCKET;
+                          break;
+                      }
+                    }
+                    break;
+                  case process_result::kCompletedAndClose:
+                    ctx->close_after_response = true;
+                    break;
+                  case process_result::kMoreBytesNeeded:
+                    break;
+                  case process_result::kError:
+                    closesocket(ctx->soc);
+                    ctx->soc = INVALID_SOCKET;
+                    break;
+                }
+              } else {
+                if (on_bytes_sent_.has_value()) {
+                  on_bytes_sent_.value()(ctx->soc, sz);
+                }
               }
-              delete_context(ctx);
+            } else {
+              if (!ctx->ref_count) {
+                removal_queue.push(ctx);
+                continue;
+              }
             }
-          } else if (ovl && key) {
-            // abrupt connection close!
-            if (on_disconnection_.has_value()) {
-              on_disconnection_.value()(((context*)key)->soc);
+          } else if (!sz) {
+            if (on_connection_.has_value()) {
+              on_connection_.value()(ctx->soc);
             }
-            delete_context(((context*)key));
-          } else if (!ovl && GetLastError() == ERROR_INVALID_HANDLE) {
-            // io port closed! let's exit from loop!
-            break;
+            receiving(ctx);
+          }
+          if (!perform(ctx)) {
+            if (!ctx->ref_count) {
+              removal_queue.push(ctx);
+            }
           }
         }
       }));
@@ -354,10 +366,8 @@ class tcpip {
   bool receive(context* ctx) {
     DWORD f = 0, r = 0;
     int res = WSARecv(ctx->soc, &ctx->wsa, 1, &r, &f, &ctx->ovl, 0);
-    if (res == SOCKET_ERROR) {
-      if (WSAGetLastError() != WSA_IO_PENDING) {
-        return false;
-      }
+    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      return false;
     }
     ctx->ref_count++;
     return true;
@@ -382,11 +392,6 @@ class tcpip {
     }
     ctx->ref_count++;
     return true;
-  }
-  void delete_context(context* ctx) {
-    closesocket(ctx->soc);
-    delete[] ctx->buf;
-    delete ctx;
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
