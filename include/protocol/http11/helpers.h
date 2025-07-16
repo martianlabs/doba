@@ -25,31 +25,75 @@
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
-//                                                                    ( macros )
+// helpers                                                            ( struct )
 // -----------------------------------------------------------------------------
-// Set of helpful macros.
+// This struct holds for the http 1.1 helper functions.
 // -----------------------------------------------------------------------------
 // =============================================================================
-#define IS_SP(c) (c == 0x20)
-#define IS_CR(c) (c == 0x0D)
-#define IS_LF(c) (c == 0x0A)
-#define IS_DIGIT(c) (c >= 0x30 && c <= 0x39)
-#define IS_HEX_DIGIT(c) \
-  (IS_DIGIT(c) || (c >= 0x41 && c <= 0x46) || (c >= 0x61 && c <= 0x66))
-#define IS_ALPHA(c) ((c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A))
-#define IS_TOKEN(c)                                                 \
-  (c == 0x21 || c == 0x23 || c == 0x24 || c == 0x25 || c == 0x26 || \
-   c == 0x27 || c == 0x2A || c == 0x2B || c == 0x2D || c == 0x2E || \
-   c == 0x5E || c == 0x5F || c == 0x60 || c == 0x7C || c == 0x7E || \
-   IS_DIGIT(c) || IS_ALPHA(c))
-#define IS_UNRESERVED(c)                                              \
-  (c == 0x2D || c == 0x2E || c == 0x5F || c == 0x7E || IS_DIGIT(c) || \
-   IS_ALPHA(c))
-#define IS_SUB_DELIM(c)                                             \
-  (c == 0x21 || c == 0x24 || c == 0x26 || c == 0x27 || c == 0x28 || \
-   c == 0x29 || c == 0x2A || c == 0x2B || c == 0x2C || c == 0x3B || c == 0x3D)
-#define IS_PCHAR(c) \
-  (c == 0x3A || c == 0x40 || IS_UNRESERVED(c) || IS_SUB_DELIM(c))
+struct helpers {
+  static inline bool is_space(char val) {
+    return val == constants::characters::kSpace;
+  }
+  static inline bool is_digit(char val) {
+    return val >= constants::characters::k0 && val <= constants::characters::k9;
+  }
+  static inline bool is_hex_digit(char val) {
+    return is_digit(val) ||
+           (val >= constants::characters::kAUpperCase &&
+            val <= constants::characters::kFUpperCase) ||
+           (val >= constants::characters::kALowerCase &&
+            val <= constants::characters::kFLowerCase);
+  }
+  static inline bool is_alpha(char val) {
+    return (val >= constants::characters::kAUpperCase &&
+            val <= constants::characters::kZUpperCase) ||
+           (val >= constants::characters::kALowerCase &&
+            val <= constants::characters::kZLowerCase);
+  }
+  static inline bool is_token(char val) {
+    return is_digit(val) || is_alpha(val) ||
+           val == constants::characters::kExclamation ||
+           val == constants::characters::kHash ||
+           val == constants::characters::kDollar ||
+           val == constants::characters::kPercent ||
+           val == constants::characters::kAmpersand ||
+           val == constants::characters::kApostrophe ||
+           val == constants::characters::kAsterisk ||
+           val == constants::characters::kPlus ||
+           val == constants::characters::kHyphen ||
+           val == constants::characters::kDot ||
+           val == constants::characters::kCircumflex ||
+           val == constants::characters::kUnderscore ||
+           val == constants::characters::kBackTick ||
+           val == constants::characters::kVerticalBar ||
+           val == constants::characters::kTilde;
+  }
+  static inline bool is_unreserved(char val) {
+    return is_digit(val) || is_alpha(val) ||
+           val == constants::characters::kHyphen ||
+           val == constants::characters::kDot ||
+           val == constants::characters::kUnderscore ||
+           val == constants::characters::kTilde;
+  }
+  static inline bool is_sub_delim(char val) {
+    return val == constants::characters::kExclamation ||
+           val == constants::characters::kDollar ||
+           val == constants::characters::kAmpersand ||
+           val == constants::characters::kApostrophe ||
+           val == constants::characters::kLParenthesis ||
+           val == constants::characters::kRParenthesis ||
+           val == constants::characters::kAsterisk ||
+           val == constants::characters::kPlus ||
+           val == constants::characters::kComma ||
+           val == constants::characters::kSemiColon ||
+           val == constants::characters::kEquals;
+  }
+  static inline bool is_pchar(char val) {
+    return is_unreserved(val) || is_sub_delim(val) ||
+           val == constants::characters::kColon ||
+           val == constants::characters::kAt;
+  }
+};
 }  // namespace martianlabs::doba::protocol::http11
 
 #endif

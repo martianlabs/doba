@@ -61,43 +61,26 @@ class tcpip {
   // METHODs                                                          ( public )
   //
   result start() {
-    if (io_h_ != INVALID_HANDLE_VALUE) {
-      // ((error)) -> server already initialized!
-      return result::kAlreadyInitialized;
-    }
+    if (io_h_ != INVALID_HANDLE_VALUE) return result::kAlreadyInitialized;
     // let's setup all the required resources..
-    if (!setupWinsock()) {
-      // ((error)) -> could not initialize winsock resources!
-      return result::kCouldNotSetupPlaformResources;
-    }
-    if (!setupListener()) {
-      // ((error)) -> could not initialize socket resources!
-      return result::kCouldNotSetupPlaformResources;
-    }
+    if (!setupWinsock()) return result::kCouldNotSetupPlaformResources;
+    if (!setupListener()) return result::kCouldNotSetupPlaformResources;
     setupWorkers();
     // let's start incoming connections loop!
     manager_ = std::make_unique<std::thread>([this]() {
       while (keep_running_) {
         SOCKET socket = WSAAccept(accept_socket_, NULL, NULL, NULL, NULL);
-        if (socket == INVALID_SOCKET) {
-          // ((error)) -> could not accept incoming connection!
-          continue;
-        }
+        if (socket == INVALID_SOCKET) continue;
         // set the socket i/o mode: In this case FIONBIO enables or disables the
         // blocking mode for the socket based on the numerical value of iMode.
         // iMode = 0, blocking mode; iMode != 0, non-blocking mode.
         ULONG i_mode_flag = 1;
         int ioctl_socket_res = ioctlsocket(socket, FIONBIO, &i_mode_flag);
-        if (ioctl_socket_res != NO_ERROR) {
-          // ((error)) -> trying to set 'blocking' mode!
-          continue;
-        }
+        if (ioctl_socket_res != NO_ERROR) continue;
         int tcp_no_delay_flag = 1;
         if (setsockopt(socket, IPPROTO_TCP, TCP_NODELAY,
-                       (char*)&tcp_no_delay_flag, sizeof(tcp_no_delay_flag))) {
-          // ((error)) -> trying to disable nagle's algorithm!
+                       (char*)&tcp_no_delay_flag, sizeof(tcp_no_delay_flag)))
           continue;
-        }
         // let's associate the accept socket with the i/o port!
         context* per_socket_context = new context(socket, buffer_size_);
         if (!CreateIoCompletionPort((HANDLE)socket, io_h_,
@@ -119,40 +102,31 @@ class tcpip {
   }
   result stop() {
     if (io_h_ != INVALID_HANDLE_VALUE) {
-      if (!CloseHandle(io_h_)) {
-        return result::kCouldNotCleanupPlaformResources;
-      }
+      if (!CloseHandle(io_h_)) return result::kCouldNotCleanupPlaformResources;
       io_h_ = INVALID_HANDLE_VALUE;
     }
     if (accept_socket_ != INVALID_SOCKET) {
-      if (closesocket(accept_socket_) == SOCKET_ERROR) {
+      if (closesocket(accept_socket_) == SOCKET_ERROR)
         return result::kCouldNotCleanupPlaformResources;
-      }
       accept_socket_ = INVALID_SOCKET;
     }
     keep_running_ = false;
     if (manager_->joinable()) manager_->join();
-    while (!workers_.empty()) {
-      if (workers_.front()->joinable()) workers_.front()->join();
-      workers_.pop();
+    while (!threads_.empty()) {
+      if (threads_.front()->joinable()) threads_.front()->join();
+      threads_.pop();
     }
     keep_running_ = true;
     return result::kSucceeded;
   }
   void set_port(const std::string_view& port) { port_.assign(port); }
-  void set_number_of_workers(uint8_t number_of_workers) {
-    number_of_workers_ = number_of_workers;
-  }
+  void set_number_of_workers(uint8_t workers) { workers_ = workers; }
   void set_buffer_size(uint32_t buffer_size) { buffer_size_ = buffer_size; }
-  void set_on_connection(const on_connection_fn& fn) { on_connection_ = fn; }
-  void set_on_disconnection(const on_disconnection_fn& fn) {
-    on_disconnection_ = fn;
-  }
-  void set_on_bytes_received(const on_bytes_received_fn& fn) {
-    on_bytes_received_ = fn;
-  }
-  void set_on_bytes_sent(const on_bytes_sent_fn& fn) { on_bytes_sent_ = fn; }
-  void set_on_process(const on_process_fn& fn) { on_process_ = fn; }
+  void set_on_connection(const on_connection_fn& fn) { on_cnn_ = fn; }
+  void set_on_disconnection(const on_disconnection_fn& fn) { on_dis_ = fn; }
+  void set_on_bytes_received(const on_bytes_received_fn& fn) { on_rcv_ = fn; }
+  void set_on_bytes_sent(const on_bytes_sent_fn& fn) { on_snd_ = fn; }
+  void set_on_process(const on_process_fn& fn) { on_prc_ = fn; }
 
  private:
   // ___________________________________________________________________________
@@ -201,8 +175,8 @@ class tcpip {
   }
   bool setupListener() {
     // let's create our main i/o completion port!
-    HANDLE handle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL,
-                                           number_of_workers_);
+    HANDLE handle =
+        CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, workers_);
     if (!handle) {
       // ((error)) -> while setting up the i/o completion port!
       return false;
@@ -254,8 +228,8 @@ class tcpip {
     return true;
   }
   void setupWorkers() {
-    for (int i = 0; i < number_of_workers_; i++) {
-      workers_.push(std::make_unique<std::thread>([this]() {
+    for (int i = 0; i < workers_; i++) {
+      threads_.push(std::make_unique<std::thread>([this]() {
         std::queue<context*> removal_queue;
         while (true) {
           ULONG_PTR key = NULL;
@@ -270,16 +244,12 @@ class tcpip {
             removal_queue.pop();
           }
           if (!GetQueuedCompletionStatus(io_h_, &sz, &key, &ovl, INFINITE)) {
-            if (!ovl && WSAGetLastError() == ERROR_INVALID_HANDLE) {
-              // io port closed! let's exit from loop!
-              break;
-            }
+            if (!ovl && WSAGetLastError() == ERROR_INVALID_HANDLE) break;
             if (ovl && key) {
               // abrupt connection close!
               std::lock_guard<std::mutex> lock(((context*)key)->mutex);
-              if (!((context*)key)->ref_count) {
+              if (!((context*)key)->ref_count)
                 removal_queue.push((context*)key);
-              }
             }
             continue;
           }
@@ -291,20 +261,18 @@ class tcpip {
           if (ovl) {
             if (sz) {
               if (ctx->receiving) {
-                if (on_bytes_received_.has_value()) {
-                  on_bytes_received_.value()(ctx->soc, sz);
-                }
+                if (on_rcv_.has_value()) on_rcv_.value()(ctx->soc, sz);
                 switch (ctx->req.deserialize(ctx->wsa.buf, sz)) {
                   case process_result::kCompleted:
-                    if (on_process_.has_value()) {
-                      switch (on_process_.value()(ctx->req, ctx->res)) {
+                    if (on_prc_.has_value()) {
+                      switch (on_prc_.value()(ctx->req, ctx->res)) {
                         case process_result::kCompleted:
                           sending(ctx, ctx->res.serialize(), false);
                           break;
                         case process_result::kCompletedAndClose:
                           sending(ctx, ctx->res.serialize(), true);
                           break;
-                        case process_result::kMoreBytesNeeded:
+                        case process_result::kNeedMoreBytes:
                           break;
                         case process_result::kError:
                           closesocket(ctx->soc);
@@ -316,7 +284,7 @@ class tcpip {
                   case process_result::kCompletedAndClose:
                     ctx->close_after_response = true;
                     break;
-                  case process_result::kMoreBytesNeeded:
+                  case process_result::kNeedMoreBytes:
                     break;
                   case process_result::kError:
                     closesocket(ctx->soc);
@@ -324,9 +292,7 @@ class tcpip {
                     break;
                 }
               } else {
-                if (on_bytes_sent_.has_value()) {
-                  on_bytes_sent_.value()(ctx->soc, sz);
-                }
+                if (on_snd_.has_value()) on_snd_.value()(ctx->soc, sz);
               }
             } else {
               if (!ctx->ref_count) {
@@ -335,16 +301,10 @@ class tcpip {
               }
             }
           } else if (!sz) {
-            if (on_connection_.has_value()) {
-              on_connection_.value()(ctx->soc);
-            }
+            if (on_cnn_.has_value()) on_cnn_.value()(ctx->soc);
             receiving(ctx);
           }
-          if (!perform(ctx)) {
-            if (!ctx->ref_count) {
-              removal_queue.push(ctx);
-            }
-          }
+          if (!perform(ctx) && !ctx->ref_count) removal_queue.push(ctx);
         }
       }));
     }
@@ -366,30 +326,25 @@ class tcpip {
   bool receive(context* ctx) {
     DWORD f = 0, r = 0;
     int res = WSARecv(ctx->soc, &ctx->wsa, 1, &r, &f, &ctx->ovl, 0);
-    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING)
       return false;
-    }
     ctx->ref_count++;
     return true;
   }
   bool send(context* ctx) {
     auto n = ctx->stream->read(ctx->buf, buffer_size_).gcount();
-    if (ctx->stream->bad() || (ctx->stream->fail() && !ctx->stream->eof())) {
+    if (ctx->stream->bad() || (ctx->stream->fail() && !ctx->stream->eof()))
       return false;
-    }
     if (!n) {
-      if (ctx->close_after_response) {
-        return false;
-      }
+      if (ctx->close_after_response) return false;
       receiving(ctx);
       return receive(ctx);
     }
     ctx->wsa.len = (ULONG)n;
     DWORD f = 0, s = 0;
     int res = WSASend(ctx->soc, &ctx->wsa, 1, &s, f, &ctx->ovl, 0);
-    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING)
       return false;
-    }
     ctx->ref_count++;
     return true;
   }
@@ -398,17 +353,17 @@ class tcpip {
   //
   bool keep_running_ = true;
   std::string port_ = kDefaultPortNumber;
-  uint8_t number_of_workers_ = kDefaultNumberOfWorkers;
+  uint8_t workers_ = kDefaultNumberOfWorkers;
   uint32_t buffer_size_ = kDefaultBufferSize;
   HANDLE io_h_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
-  std::queue<std::unique_ptr<std::thread>> workers_;
+  std::queue<std::unique_ptr<std::thread>> threads_;
   std::unique_ptr<std::thread> manager_;
-  std::optional<on_connection_fn> on_connection_;
-  std::optional<on_disconnection_fn> on_disconnection_;
-  std::optional<on_bytes_received_fn> on_bytes_received_;
-  std::optional<on_bytes_sent_fn> on_bytes_sent_;
-  std::optional<on_process_fn> on_process_;
+  std::optional<on_connection_fn> on_cnn_;
+  std::optional<on_disconnection_fn> on_dis_;
+  std::optional<on_bytes_received_fn> on_rcv_;
+  std::optional<on_bytes_sent_fn> on_snd_;
+  std::optional<on_process_fn> on_prc_;
 };
 }  // namespace martianlabs::doba::transport::server
 

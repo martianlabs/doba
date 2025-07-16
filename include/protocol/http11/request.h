@@ -25,63 +25,6 @@
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
-//                                                                    ( macros )
-// -----------------------------------------------------------------------------
-// Useful macros.
-// -----------------------------------------------------------------------------
-// =============================================================================
-#define IS_SLASH(c) (c == 0x2F)
-#define IS_PERCENT(c) (c == 0x25)
-#define IS_QUESTION_MARK(c) (c == 0x3F)
-#define IS_DOT(c) (c == 0x2E)
-#define IS_GET_METHOD                           \
-  (buffer_[0] == constants::methods::kGet[0] && \
-   buffer_[1] == constants::methods::kGet[1] && \
-   buffer_[2] == constants::methods::kGet[2])
-#define IS_PUT_METHOD                           \
-  (buffer_[0] == constants::methods::kPut[0] && \
-   buffer_[1] == constants::methods::kPut[1] && \
-   buffer_[2] == constants::methods::kPut[2])
-#define IS_HEAD_METHOD                           \
-  (buffer_[0] == constants::methods::kHead[0] && \
-   buffer_[1] == constants::methods::kHead[1] && \
-   buffer_[2] == constants::methods::kHead[2] && \
-   buffer_[3] == constants::methods::kHead[3])
-#define IS_POST_METHOD                           \
-  (buffer_[0] == constants::methods::kPost[0] && \
-   buffer_[1] == constants::methods::kPost[1] && \
-   buffer_[2] == constants::methods::kPost[2] && \
-   buffer_[3] == constants::methods::kPost[3])
-#define IS_TRACE_METHOD                           \
-  (buffer_[0] == constants::methods::kTrace[0] && \
-   buffer_[1] == constants::methods::kTrace[1] && \
-   buffer_[2] == constants::methods::kTrace[2] && \
-   buffer_[3] == constants::methods::kTrace[3] && \
-   buffer_[4] == constants::methods::kTrace[4])
-#define IS_DELETE_METHOD                           \
-  (buffer_[0] == constants::methods::kDelete[0] && \
-   buffer_[1] == constants::methods::kDelete[1] && \
-   buffer_[2] == constants::methods::kDelete[2] && \
-   buffer_[3] == constants::methods::kDelete[3] && \
-   buffer_[4] == constants::methods::kDelete[4] && \
-   buffer_[5] == constants::methods::kDelete[5])
-#define IS_CONNECT_METHOD                           \
-  (buffer_[0] == constants::methods::kConnect[0] && \
-   buffer_[1] == constants::methods::kConnect[1] && \
-   buffer_[2] == constants::methods::kConnect[2] && \
-   buffer_[3] == constants::methods::kConnect[3] && \
-   buffer_[4] == constants::methods::kConnect[4] && \
-   buffer_[5] == constants::methods::kConnect[5] && \
-   buffer_[6] == constants::methods::kConnect[6])
-#define IS_OPTIONS_METHOD                           \
-  (buffer_[0] == constants::methods::kOptions[0] && \
-   buffer_[1] == constants::methods::kOptions[1] && \
-   buffer_[2] == constants::methods::kOptions[2] && \
-   buffer_[3] == constants::methods::kOptions[3] && \
-   buffer_[4] == constants::methods::kOptions[4] && \
-   buffer_[5] == constants::methods::kOptions[5] && \
-   buffer_[6] == constants::methods::kOptions[6])
-// =============================================================================
 // request                                                             ( class )
 // -----------------------------------------------------------------------------
 // This class holds for the http 1.1 request implementation.
@@ -106,29 +49,23 @@ class request {
   //
   transport::process_result deserialize(void* buffer, uint32_t length) {
     // first of all, let's check if we're under limits..
-    if ((kMaxRequestLength - cursor_) < length) {
+    if ((kMaxRequestLength - cursor_) < length)
       return transport::process_result::kError;
-    }
     memcpy(&buffer_[cursor_], buffer, length);
     cursor_ += length;
     // let's detect the [end-of-headers] position..
-    headers_end_ = get(buffer_, cursor_, kEndOfHeaders, kEndOfHeadersLen);
-    if (!headers_end_.has_value()) {
-      return transport::process_result::kMoreBytesNeeded;
-    }
+    hdr_end_ = get(buffer_, cursor_, constants::strings::kEndOfHeaders,
+                   sizeof(constants::strings::kEndOfHeaders) - 1);
+    if (!hdr_end_.has_value()) return transport::process_result::kNeedMoreBytes;
     // let's detect the [end-of-request-line] position..
-    request_line_end_ = get(buffer_, headers_end_.value(), kCrLf, kCrLfLen);
-    if (!(headers_end_.value() - request_line_end_.value())) {
+    rln_end_ = get(buffer_, hdr_end_.value(), constants::strings::kCrLf,
+                   sizeof(constants::strings::kCrLf) - 1);
+    if (!(hdr_end_.value() - rln_end_.value()))
       return transport::process_result::kError;
-    }
     // let's check [request-line] section..
-    if (!check_request_line()) {
-      return transport::process_result::kError;
-    }
+    if (!check_request_line()) return transport::process_result::kError;
     // let's check [headers] section..
-    if (!check_headers()) {
-      return transport::process_result::kError;
-    }
+    if (!check_headers()) return transport::process_result::kError;
 
     /*
     pepe
@@ -144,95 +81,115 @@ class request {
   }
   void reset() {
     cursor_ = 0;
-    headers_end_.reset();
-    request_line_end_.reset();
-    method_end_.reset();
-    path_end_.reset();
-    http_version_end_.reset();
+    hdr_end_.reset();
+    rln_end_.reset();
+    mtd_end_.reset();
+    pth_end_.reset();
+    ver_end_.reset();
   }
 
  private:
-   // ___________________________________________________________________________
-   // METHODs                                                         ( private )
-   //
+  // ___________________________________________________________________________
+  // METHODs                                                         ( private )
+  //
   bool check_request_line() {
     uint32_t i = 0;
     // check [method]..
-    while (i < request_line_end_.value()) {
-      if (IS_SP(buffer_[i])) {
-        break;
-      }
-      if (!IS_TOKEN(buffer_[i])) {
-        return false;
-      }
+    while (i < rln_end_.value()) {
+      if (helpers::is_space(buffer_[i])) break;
+      if (!helpers::is_token(buffer_[i])) return false;
       i++;
     }
     switch (i) {
       case 3:
-        if (!IS_GET_METHOD && !IS_PUT_METHOD) {
+        if (!(buffer_[0] == constants::methods::kGet[0] &&
+              buffer_[1] == constants::methods::kGet[1] &&
+              buffer_[2] == constants::methods::kGet[2]) &&
+            !(buffer_[0] == constants::methods::kPut[0] &&
+              buffer_[1] == constants::methods::kPut[1] &&
+              buffer_[2] == constants::methods::kPut[2]))
           return false;
-        }
         break;
       case 4:
-        if (!IS_HEAD_METHOD && !IS_POST_METHOD) {
+        if (!(buffer_[0] == constants::methods::kHead[0] &&
+              buffer_[1] == constants::methods::kHead[1] &&
+              buffer_[2] == constants::methods::kHead[2] &&
+              buffer_[3] == constants::methods::kHead[3]) &&
+            !(buffer_[0] == constants::methods::kPost[0] &&
+              buffer_[1] == constants::methods::kPost[1] &&
+              buffer_[2] == constants::methods::kPost[2] &&
+              buffer_[3] == constants::methods::kPost[3]))
           return false;
-        }
         break;
       case 5:
-        if (!IS_TRACE_METHOD) {
+        if (!(buffer_[0] == constants::methods::kTrace[0] &&
+              buffer_[1] == constants::methods::kTrace[1] &&
+              buffer_[2] == constants::methods::kTrace[2] &&
+              buffer_[3] == constants::methods::kTrace[3] &&
+              buffer_[4] == constants::methods::kTrace[4]))
           return false;
-        }
         break;
       case 6:
-        if (!IS_DELETE_METHOD) {
+        if (!(buffer_[0] == constants::methods::kDelete[0] &&
+              buffer_[1] == constants::methods::kDelete[1] &&
+              buffer_[2] == constants::methods::kDelete[2] &&
+              buffer_[3] == constants::methods::kDelete[3] &&
+              buffer_[4] == constants::methods::kDelete[4] &&
+              buffer_[5] == constants::methods::kDelete[5]))
           return false;
-        }
         break;
       case 7:
-        if (!IS_CONNECT_METHOD && !IS_OPTIONS_METHOD) {
+        if (!(buffer_[0] == constants::methods::kConnect[0] &&
+              buffer_[1] == constants::methods::kConnect[1] &&
+              buffer_[2] == constants::methods::kConnect[2] &&
+              buffer_[3] == constants::methods::kConnect[3] &&
+              buffer_[4] == constants::methods::kConnect[4] &&
+              buffer_[5] == constants::methods::kConnect[5] &&
+              buffer_[6] == constants::methods::kConnect[6]) &&
+            !(buffer_[0] == constants::methods::kOptions[0] &&
+              buffer_[1] == constants::methods::kOptions[1] &&
+              buffer_[2] == constants::methods::kOptions[2] &&
+              buffer_[3] == constants::methods::kOptions[3] &&
+              buffer_[4] == constants::methods::kOptions[4] &&
+              buffer_[5] == constants::methods::kOptions[5] &&
+              buffer_[6] == constants::methods::kOptions[6]))
           return false;
-        }
         break;
       default:
         return false;
     }
-    method_end_ = i++;
+    mtd_end_ = i++;
     // check [path]..
-    if (!IS_SLASH(buffer_[i++])) {
-      return false;
-    }
-    while (i < request_line_end_.value()) {
-      if (IS_SP(buffer_[i])) {
-        break;
-      }
-      if (IS_PERCENT(buffer_[i])) {
-        if (i + 2 >= request_line_end_.value()) {
+    if (buffer_[i++] != constants::characters::kSlash) return false;
+    while (i < rln_end_.value()) {
+      if (helpers::is_space(buffer_[i])) break;
+      if (buffer_[i] == constants::characters::kPercent) {
+        if (i + 2 >= rln_end_.value()) return false;
+        if (!helpers::is_hex_digit(buffer_[i + 1]) ||
+            !helpers::is_hex_digit(buffer_[i + 2]))
           return false;
-        }
-        if (!IS_HEX_DIGIT(buffer_[i + 1]) || !IS_HEX_DIGIT(buffer_[i + 2])) {
-          return false;
-        }
         i += 3;
         continue;
-      } else if (IS_PCHAR(buffer_[i]) || IS_SLASH(buffer_[i]) ||
-                 IS_QUESTION_MARK(buffer_[i])) {
+      } else if (helpers::is_pchar(buffer_[i]) ||
+                 buffer_[i] == constants::characters::kSlash ||
+                 buffer_[i] == constants::characters::kQuestion)
         i++;
-      } else {
+      else
         return false;
-      }
     }
-    path_end_ = i++;
+    pth_end_ = i++;
     // check [http-version]..
-    if ((request_line_end_.value() - i) < kHttpVersionLen) {
+    if ((rln_end_.value() - i) < kHttpVersionLen) return false;
+    if (buffer_[i] != constants::characters::kHUpperCase ||
+        buffer_[i + 1] != constants::characters::kTUpperCase ||
+        buffer_[i + 2] != constants::characters::kTUpperCase ||
+        buffer_[i + 3] != constants::characters::kPUpperCase ||
+        buffer_[i + 4] != constants::characters::kSlash ||
+        !helpers::is_digit(buffer_[i + 5]) ||
+        buffer_[i + 6] != constants::characters::kDot ||
+        !helpers::is_digit(buffer_[i + 7]))
       return false;
-    }
-    if (buffer_[i] != 0x48 || buffer_[i + 1] != 0x54 ||
-        buffer_[i + 2] != 0x54 || buffer_[i + 3] != 0x50 ||
-        !IS_SLASH(buffer_[i + 4]) || !IS_DIGIT(buffer_[i + 5]) ||
-        !IS_DOT(buffer_[i + 6]) || !IS_DIGIT(buffer_[i + 7])) {
-      return false;
-    }
-    http_version_end_ = i + 8;
+    ver_end_ = i + 8;
     return true;
   }
   bool check_headers() const { return true; }
@@ -241,17 +198,11 @@ class request {
     for (uint32_t i = 0; i < str_len; ++i) {
       uint32_t j = 0;
       while (j < pattern_len) {
-        if (i + j == str_len) {
-          return {};
-        }
-        if (str[i + j] != pattern[j]) {
-          break;
-        }
+        if (i + j == str_len) return {};
+        if (str[i + j] != pattern[j]) break;
         j++;
       }
-      if (j == pattern_len) {
-        return i;
-      }
+      if (j == pattern_len) return i;
     }
     return {};
   }
@@ -259,21 +210,17 @@ class request {
   // CONSTANTs                                                       ( private )
   //
   static constexpr uint32_t kMaxRequestLength = 8192;
-  static constexpr char kCrLf[] = "\r\n";
-  static constexpr uint32_t kCrLfLen = sizeof(kCrLf) - 1;
-  static constexpr char kEndOfHeaders[] = "\r\n\r\n";
-  static constexpr uint32_t kEndOfHeadersLen = sizeof(kEndOfHeaders) - 1;
   static constexpr uint32_t kHttpVersionLen = 8;
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
   char* buffer_ = nullptr;
   uint32_t cursor_ = 0;
-  std::optional<uint32_t> headers_end_;
-  std::optional<uint32_t> request_line_end_;
-  std::optional<uint32_t> method_end_;
-  std::optional<uint32_t> path_end_;
-  std::optional<uint32_t> http_version_end_;
+  std::optional<uint32_t> hdr_end_;  // headers section end.
+  std::optional<uint32_t> rln_end_;  // request line end.
+  std::optional<uint32_t> mtd_end_;  // method end.
+  std::optional<uint32_t> pth_end_;  // path end.
+  std::optional<uint32_t> ver_end_;  // http version end.
 };
 }  // namespace martianlabs::doba::protocol::http11
 

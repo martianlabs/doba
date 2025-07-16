@@ -29,7 +29,7 @@ namespace martianlabs::doba::transport {
 // -----------------------------------------------------------------------------
 // =============================================================================
 enum class process_result {
-  kMoreBytesNeeded,    // more data needed.
+  kNeedMoreBytes,      // more data needed.
   kCompleted,          // operation completed.
   kCompletedAndClose,  // operation completed (connection close brequested).
   kError               // unknown error.
