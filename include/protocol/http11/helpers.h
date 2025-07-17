@@ -31,26 +31,23 @@ namespace martianlabs::doba::protocol::http11 {
 // -----------------------------------------------------------------------------
 // =============================================================================
 struct helpers {
-  static inline bool is_space(char val) {
-    return val == constants::characters::kSpace;
-  }
-  static inline bool is_digit(char val) {
+  static inline bool is_digit(uint8_t val) {
     return val >= constants::characters::k0 && val <= constants::characters::k9;
   }
-  static inline bool is_hex_digit(char val) {
+  static inline bool is_hex_digit(uint8_t val) {
     return is_digit(val) ||
            (val >= constants::characters::kAUpperCase &&
             val <= constants::characters::kFUpperCase) ||
            (val >= constants::characters::kALowerCase &&
             val <= constants::characters::kFLowerCase);
   }
-  static inline bool is_alpha(char val) {
+  static inline bool is_alpha(uint8_t val) {
     return (val >= constants::characters::kAUpperCase &&
             val <= constants::characters::kZUpperCase) ||
            (val >= constants::characters::kALowerCase &&
             val <= constants::characters::kZLowerCase);
   }
-  static inline bool is_token(char val) {
+  static inline bool is_token(uint8_t val) {
     return is_digit(val) || is_alpha(val) ||
            val == constants::characters::kExclamation ||
            val == constants::characters::kHash ||
@@ -68,14 +65,14 @@ struct helpers {
            val == constants::characters::kVerticalBar ||
            val == constants::characters::kTilde;
   }
-  static inline bool is_unreserved(char val) {
+  static inline bool is_unreserved(uint8_t val) {
     return is_digit(val) || is_alpha(val) ||
            val == constants::characters::kHyphen ||
            val == constants::characters::kDot ||
            val == constants::characters::kUnderscore ||
            val == constants::characters::kTilde;
   }
-  static inline bool is_sub_delim(char val) {
+  static inline bool is_sub_delim(uint8_t val) {
     return val == constants::characters::kExclamation ||
            val == constants::characters::kDollar ||
            val == constants::characters::kAmpersand ||
@@ -88,10 +85,18 @@ struct helpers {
            val == constants::characters::kSemiColon ||
            val == constants::characters::kEquals;
   }
-  static inline bool is_pchar(char val) {
+  static inline bool is_pchar(uint8_t val) {
     return is_unreserved(val) || is_sub_delim(val) ||
            val == constants::characters::kColon ||
            val == constants::characters::kAt;
+  }
+  static inline bool is_vchar(uint8_t val) {
+    return (val >= constants::characters::kExclamation &&
+            val <= constants::characters::kTilde);
+  }
+  static inline bool is_obs_text(uint8_t val) {
+    return (val >= constants::characters::kObsTextStart &&
+            val <= constants::characters::kObsTextEnd);
   }
 };
 }  // namespace martianlabs::doba::protocol::http11

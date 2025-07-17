@@ -35,7 +35,7 @@ class request {
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  request() { buffer_ = (char*)malloc(kMaxRequestLength); }
+  request() { buffer_ = (uint8_t*)malloc(kMaxRequestLength); }
   request(const request&) = delete;
   request(request&&) noexcept = delete;
   ~request() { free(buffer_); }
@@ -66,17 +66,6 @@ class request {
     if (!check_request_line()) return transport::process_result::kError;
     // let's check [headers] section..
     if (!check_headers()) return transport::process_result::kError;
-
-    /*
-    pepe
-    */
-
-    // printf("%.*s", int(buffer_cur_), buffer_);
-
-    /*
-    pepe fin
-    */
-
     return transport::process_result::kCompleted;
   }
   void reset() {
@@ -86,6 +75,7 @@ class request {
     mtd_end_.reset();
     pth_end_.reset();
     ver_end_.reset();
+    headers_.clear();
   }
 
  private:
@@ -96,8 +86,10 @@ class request {
     uint32_t i = 0;
     // check [method]..
     while (i < rln_end_.value()) {
-      if (helpers::is_space(buffer_[i])) break;
-      if (!helpers::is_token(buffer_[i])) return false;
+      if (buffer_[i] == constants::characters::kSpace)
+        break;
+      else if (!helpers::is_token(buffer_[i]))
+        return false;
       i++;
     }
     switch (i) {
@@ -162,7 +154,7 @@ class request {
     // check [path]..
     if (buffer_[i++] != constants::characters::kSlash) return false;
     while (i < rln_end_.value()) {
-      if (helpers::is_space(buffer_[i])) break;
+      if (buffer_[i] == constants::characters::kSpace) break;
       if (buffer_[i] == constants::characters::kPercent) {
         if (i + 2 >= rln_end_.value()) return false;
         if (!helpers::is_hex_digit(buffer_[i + 1]) ||
@@ -192,9 +184,53 @@ class request {
     ver_end_ = i + 8;
     return true;
   }
-  bool check_headers() const { return true; }
-  std::optional<uint32_t> get(const char* const str, uint32_t str_len,
-                              const char* const pattern, uint32_t pattern_len) {
+  // +-----------------+-------------------------------------------------------+
+  // | Rule            | Definition                                            |
+  // +-----------------+-------------------------------------------------------+
+  // | header-field    | field-name ":" OWS field-value OWS                    |
+  // | field-name      | token                                                 |
+  // | token           | 1*tchar                                               |
+  // | tchar           | ALPHA / DIGIT / "!" / "#" / "$" / "%" / "&" / "'" /   |
+  // |                 | "*" / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"   |
+  // | field-value     | *( field-content )                                    |
+  // | field-content   | field-vchar [ *( SP / HTAB ) field-vchar ]            |
+  // | field-vchar     | VCHAR / obs-text                                      |
+  // | OWS             | *( SP / HTAB )                                        |
+  // | obs-fold        | CRLF 1*( SP / HTAB ) ; obsolete, not supported        |
+  // +-----------------+-------------------------------------------------------+
+  bool check_headers() {
+    bool fname_opt = true;  // true ? searching for field-name else field-value.
+    uint32_t i = ver_end_.value() + sizeof(constants::strings::kCrLf) - 1;
+    uint32_t fn_beg = i, fn_end = i;
+    uint32_t fv_beg = i, fv_end = i;
+    uint32_t end = hdr_end_.value() + 2;
+    while (i < end) {
+      if (fname_opt) {
+        if (buffer_[i] == constants::characters::kColon) {
+          fname_opt = false;
+          fn_end = i;
+          fv_beg = fv_end = i + 1;
+        } else if (!helpers::is_token(buffer_[i]))
+          return false;
+      } else if (buffer_[i] == constants::characters::kCr) {
+        if (++i >= end) return false;
+        if (buffer_[i] != constants::characters::kLf) return false;
+        fname_opt = true;
+        fv_end = i - 1;
+        headers_.push_back(std::make_tuple(fn_beg, fn_end, fv_beg, fv_end));
+        fn_beg = fn_end = i + 1;
+      } else if (!(helpers::is_vchar(buffer_[i]) ||
+                   helpers::is_obs_text(buffer_[i]) ||
+                   buffer_[i] == constants::characters::kSpace ||
+                   buffer_[i] == constants::characters::kTab))
+        return false;
+      i++;
+    }
+    return true;
+  }
+  std::optional<uint32_t> get(const uint8_t* const str, uint32_t str_len,
+                              const uint8_t* const pattern,
+                              uint32_t pattern_len) {
     for (uint32_t i = 0; i < str_len; ++i) {
       uint32_t j = 0;
       while (j < pattern_len) {
@@ -209,18 +245,19 @@ class request {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr uint32_t kMaxRequestLength = 8192;
+  static constexpr uint32_t kMaxRequestLength = 16384; // 16kb.
   static constexpr uint32_t kHttpVersionLen = 8;
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* buffer_ = nullptr;
+  uint8_t* buffer_ = nullptr;
   uint32_t cursor_ = 0;
   std::optional<uint32_t> hdr_end_;  // headers section end.
   std::optional<uint32_t> rln_end_;  // request line end.
   std::optional<uint32_t> mtd_end_;  // method end.
   std::optional<uint32_t> pth_end_;  // path end.
   std::optional<uint32_t> ver_end_;  // http version end.
+  std::vector<std::tuple<uint32_t, uint32_t, uint32_t, uint32_t>> headers_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 
