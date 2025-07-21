@@ -21,6 +21,8 @@
 #ifndef martianlabs_doba_protocol_http11_response_h
 #define martianlabs_doba_protocol_http11_response_h
 
+#include <unordered_map>
+
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
 // response                                                            ( class )
@@ -54,7 +56,17 @@ class response {
         "\r\n"
         "Hello, World!");
   }
-  void reset() {}
+  void reset() { headers_.clear(); }
+  response& set_header(const std::string_view& k, const std::string_view& v) {
+    headers_[std::string(k)] = std::string(v);
+    return *this;
+  }
+
+ private:
+  // ___________________________________________________________________________
+  // ATTRIBUTEs                                                      ( private )
+  //
+  std::unordered_map<std::string, std::string> headers_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

@@ -54,18 +54,19 @@ class request {
     memcpy(&buffer_[cursor_], buffer, length);
     cursor_ += length;
     // let's detect the [end-of-headers] position..
-    hdr_end_ = get(buffer_, cursor_, constants::strings::kEndOfHeaders,
-                   sizeof(constants::strings::kEndOfHeaders) - 1);
+    hdr_end_ = get(buffer_, cursor_, constants::string::kEndOfHeaders,
+                   sizeof(constants::string::kEndOfHeaders) - 1);
     if (!hdr_end_.has_value()) return transport::process_result::kNeedMoreBytes;
     // let's detect the [end-of-request-line] position..
-    rln_end_ = get(buffer_, hdr_end_.value(), constants::strings::kCrLf,
-                   sizeof(constants::strings::kCrLf) - 1);
+    rln_end_ = get(buffer_, hdr_end_.value(), constants::string::kCrLf,
+                   sizeof(constants::string::kCrLf) - 1);
     if (!(hdr_end_.value() - rln_end_.value()))
       return transport::process_result::kError;
     // let's check [request-line] section..
     if (!check_request_line()) return transport::process_result::kError;
     // let's check [headers] section..
     if (!check_headers()) return transport::process_result::kError;
+    // let's return result..
     return transport::process_result::kCompleted;
   }
   void reset() {
@@ -77,85 +78,48 @@ class request {
     ver_end_.reset();
     headers_.clear();
   }
+  const auto& get_headers() const { return headers_; }
 
  private:
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //
-  bool check_request_line() {
+  inline bool check_request_line() {
     uint32_t i = 0;
-    // check [method]..
+    // +---------+-------------------------------------------------------------+
+    // | Campo   | Definición                                                  |
+    // +---------+-------------------------------------------------------------+
+    // | method  | token                                                       |
+    // | token   | 1*tchar                                                     |
+    // | tchar   | "!" / "#" / "$" / "%" / "&" / "'" / "*" /                   |
+    // |         | "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"               |
+    // |         | / DIGIT / ALPHA                                             |
+    // +---------+-------------------------------------------------------------+
+    // | source: https://datatracker.ietf.org/doc/html/rfc9110                 |
+    // +----------------+------------------------------------------------------+
     while (i < rln_end_.value()) {
-      if (buffer_[i] == constants::characters::kSpace)
-        break;
-      else if (!helpers::is_token(buffer_[i]))
-        return false;
-      i++;
-    }
-    switch (i) {
-      case 3:
-        if (!(buffer_[0] == constants::methods::kGet[0] &&
-              buffer_[1] == constants::methods::kGet[1] &&
-              buffer_[2] == constants::methods::kGet[2]) &&
-            !(buffer_[0] == constants::methods::kPut[0] &&
-              buffer_[1] == constants::methods::kPut[1] &&
-              buffer_[2] == constants::methods::kPut[2]))
-          return false;
-        break;
-      case 4:
-        if (!(buffer_[0] == constants::methods::kHead[0] &&
-              buffer_[1] == constants::methods::kHead[1] &&
-              buffer_[2] == constants::methods::kHead[2] &&
-              buffer_[3] == constants::methods::kHead[3]) &&
-            !(buffer_[0] == constants::methods::kPost[0] &&
-              buffer_[1] == constants::methods::kPost[1] &&
-              buffer_[2] == constants::methods::kPost[2] &&
-              buffer_[3] == constants::methods::kPost[3]))
-          return false;
-        break;
-      case 5:
-        if (!(buffer_[0] == constants::methods::kTrace[0] &&
-              buffer_[1] == constants::methods::kTrace[1] &&
-              buffer_[2] == constants::methods::kTrace[2] &&
-              buffer_[3] == constants::methods::kTrace[3] &&
-              buffer_[4] == constants::methods::kTrace[4]))
-          return false;
-        break;
-      case 6:
-        if (!(buffer_[0] == constants::methods::kDelete[0] &&
-              buffer_[1] == constants::methods::kDelete[1] &&
-              buffer_[2] == constants::methods::kDelete[2] &&
-              buffer_[3] == constants::methods::kDelete[3] &&
-              buffer_[4] == constants::methods::kDelete[4] &&
-              buffer_[5] == constants::methods::kDelete[5]))
-          return false;
-        break;
-      case 7:
-        if (!(buffer_[0] == constants::methods::kConnect[0] &&
-              buffer_[1] == constants::methods::kConnect[1] &&
-              buffer_[2] == constants::methods::kConnect[2] &&
-              buffer_[3] == constants::methods::kConnect[3] &&
-              buffer_[4] == constants::methods::kConnect[4] &&
-              buffer_[5] == constants::methods::kConnect[5] &&
-              buffer_[6] == constants::methods::kConnect[6]) &&
-            !(buffer_[0] == constants::methods::kOptions[0] &&
-              buffer_[1] == constants::methods::kOptions[1] &&
-              buffer_[2] == constants::methods::kOptions[2] &&
-              buffer_[3] == constants::methods::kOptions[3] &&
-              buffer_[4] == constants::methods::kOptions[4] &&
-              buffer_[5] == constants::methods::kOptions[5] &&
-              buffer_[6] == constants::methods::kOptions[6]))
-          return false;
-        break;
-      default:
-        return false;
+      if (buffer_[i] == constants::character::kSpace) break;
+      if (!helpers::is_token(buffer_[i])) return false;
+      buffer_[i++] = std::tolower(buffer_[i]);
     }
     mtd_end_ = i++;
-    // check [path]..
-    if (buffer_[i++] != constants::characters::kSlash) return false;
+    // +----------------+------------------------------------------------------+
+    // | Campo          | Definición                                           |
+    // +----------------+------------------------------------------------------+
+    // | path           | segment *( "/" segment )                             |
+    // | segment        | *pchar                                               |
+    // | pchar          | unreserved / pct-encoded / sub-delims / ":" / "@"    |
+    // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"                |
+    // | pct-encoded    | "%" HEXDIG HEXDIG                                    |
+    // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" /      |
+    // |                | "," / ";" / "="                                      |
+    // +----------------+------------------------------------------------------+
+    // | source: https://datatracker.ietf.org/doc/html/rfc9110                 |
+    // +----------------+------------------------------------------------------+
+    if (buffer_[i++] != constants::character::kSlash) return false;
     while (i < rln_end_.value()) {
-      if (buffer_[i] == constants::characters::kSpace) break;
-      if (buffer_[i] == constants::characters::kPercent) {
+      if (buffer_[i] == constants::character::kSpace) break;
+      if (buffer_[i] == constants::character::kPercent) {
         if (i + 2 >= rln_end_.value()) return false;
         if (!helpers::is_hex_digit(buffer_[i + 1]) ||
             !helpers::is_hex_digit(buffer_[i + 2]))
@@ -163,22 +127,27 @@ class request {
         i += 3;
         continue;
       } else if (helpers::is_pchar(buffer_[i]) ||
-                 buffer_[i] == constants::characters::kSlash ||
-                 buffer_[i] == constants::characters::kQuestion)
+                 buffer_[i] == constants::character::kSlash ||
+                 buffer_[i] == constants::character::kQuestion)
         i++;
       else
         return false;
     }
     pth_end_ = i++;
-    // check [http-version]..
+    // +----------------+------------------------------------------------------+
+    // | HTTP-version   | HTTP-name "/" DIGIT "." DIGIT                        |
+    // | HTTP-name      | %s"HTTP"                                             |
+    // +----------------+------------------------------------------------------+
+    // | source: https://datatracker.ietf.org/doc/html/rfc9110                 |
+    // +-----------------------------------------------------------------------+
     if ((rln_end_.value() - i) < kHttpVersionLen) return false;
-    if (buffer_[i] != constants::characters::kHUpperCase ||
-        buffer_[i + 1] != constants::characters::kTUpperCase ||
-        buffer_[i + 2] != constants::characters::kTUpperCase ||
-        buffer_[i + 3] != constants::characters::kPUpperCase ||
-        buffer_[i + 4] != constants::characters::kSlash ||
+    if (buffer_[i] != constants::character::kHUpperCase ||
+        buffer_[i + 1] != constants::character::kTUpperCase ||
+        buffer_[i + 2] != constants::character::kTUpperCase ||
+        buffer_[i + 3] != constants::character::kPUpperCase ||
+        buffer_[i + 4] != constants::character::kSlash ||
         !helpers::is_digit(buffer_[i + 5]) ||
-        buffer_[i + 6] != constants::characters::kDot ||
+        buffer_[i + 6] != constants::character::kDot ||
         !helpers::is_digit(buffer_[i + 7]))
       return false;
     ver_end_ = i + 8;
@@ -198,39 +167,45 @@ class request {
   // | OWS             | *( SP / HTAB )                                        |
   // | obs-fold        | CRLF 1*( SP / HTAB ) ; obsolete, not supported        |
   // +-----------------+-------------------------------------------------------+
-  bool check_headers() {
-    bool fname_opt = true;  // true ? searching for field-name else field-value.
-    uint32_t i = ver_end_.value() + sizeof(constants::strings::kCrLf) - 1;
-    uint32_t fn_beg = i, fn_end = i;
-    uint32_t fv_beg = i, fv_end = i;
+  // | source: https://datatracker.ietf.org/doc/html/rfc9110                   |
+  // +-------------------------------------------------------------------------+
+  inline bool check_headers() {
+    uint32_t i = ver_end_.value() + sizeof(constants::string::kCrLf) - 1;
     uint32_t end = hdr_end_.value() + 2;
     while (i < end) {
-      if (fname_opt) {
-        if (buffer_[i] == constants::characters::kColon) {
-          fname_opt = false;
-          fn_end = i;
-          fv_beg = fv_end = i + 1;
-        } else if (!helpers::is_token(buffer_[i]))
+      uint32_t beg = i;
+      while (i < end && buffer_[i] != constants::character::kColon) {
+        buffer_[i] = std::tolower(buffer_[i]);
+        i++;
+      }
+      if (i >= end) return false;
+      uint32_t colon = i;
+      while (i < end && buffer_[i] != constants::character::kCr) i++;
+      if (i >= end) return false;
+      if (++i >= end || buffer_[i] != constants::character::kLf) return false;
+      std::string_view name((const char*)&buffer_[beg], colon - beg);
+      std::string_view value((const char*)&buffer_[colon + 1], (i - 2) - colon);
+      // [field-name] validation..
+      if (!name.length()) return false;
+      for (auto j = 0; j < name.length(); j++) {
+        if (!helpers::is_token(name[j])) return false;
+      }
+      // [field-value] validation..
+      for (auto k = 0; k < value.length(); k++) {
+        if (!(helpers::is_vchar(value[k]) || helpers::is_obs_text(value[k]) ||
+              value[k] == constants::character::kSpace ||
+              value[k] == constants::character::kHTab)) {
           return false;
-      } else if (buffer_[i] == constants::characters::kCr) {
-        if (++i >= end) return false;
-        if (buffer_[i] != constants::characters::kLf) return false;
-        fname_opt = true;
-        fv_end = i - 1;
-        headers_.push_back(std::make_tuple(fn_beg, fn_end, fv_beg, fv_end));
-        fn_beg = fn_end = i + 1;
-      } else if (!(helpers::is_vchar(buffer_[i]) ||
-                   helpers::is_obs_text(buffer_[i]) ||
-                   buffer_[i] == constants::characters::kSpace ||
-                   buffer_[i] == constants::characters::kTab))
-        return false;
+        }
+      }
+      headers_[name] = helpers::ows_ltrim(helpers::ows_rtrim(value));
       i++;
     }
     return true;
   }
-  std::optional<uint32_t> get(const uint8_t* const str, uint32_t str_len,
-                              const uint8_t* const pattern,
-                              uint32_t pattern_len) {
+  inline std::optional<uint32_t> get(const uint8_t* const str, uint32_t str_len,
+                                     const uint8_t* const pattern,
+                                     uint32_t pattern_len) {
     for (uint32_t i = 0; i < str_len; ++i) {
       uint32_t j = 0;
       while (j < pattern_len) {
@@ -245,7 +220,7 @@ class request {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr uint32_t kMaxRequestLength = 16384; // 16kb.
+  static constexpr uint32_t kMaxRequestLength = 16384;  // 16kb.
   static constexpr uint32_t kHttpVersionLen = 8;
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
@@ -257,7 +232,7 @@ class request {
   std::optional<uint32_t> mtd_end_;  // method end.
   std::optional<uint32_t> pth_end_;  // path end.
   std::optional<uint32_t> ver_end_;  // http version end.
-  std::vector<std::tuple<uint32_t, uint32_t, uint32_t, uint32_t>> headers_;
+  std::unordered_map<std::string_view, std::string_view> headers_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

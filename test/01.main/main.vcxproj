@@ -160,7 +160,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\builder\builder.h" />
     <ClInclude Include="..\..\include\builder\property.h" />
-    <ClInclude Include="..\..\include\http_server.h" />
+    <ClInclude Include="..\..\include\http11_server.h" />
     <ClInclude Include="..\..\include\platform.h" />
     <ClInclude Include="..\..\include\protocol\http11\constants.h" />
     <ClInclude Include="..\..\include\protocol\http11\helpers.h" />

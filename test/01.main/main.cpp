@@ -18,12 +18,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "http_server.h"
+#include "http11_server.h"
 
 using namespace martianlabs::doba;
 
 int main(int argc, char* argv[]) {
-  http_server my_server("10001");
+  http11_server my_server("10001");
   my_server.start();
   return getchar();
 }

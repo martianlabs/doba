@@ -32,71 +32,90 @@ namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
 struct helpers {
   static inline bool is_digit(uint8_t val) {
-    return val >= constants::characters::k0 && val <= constants::characters::k9;
+    return val >= constants::character::k0 && val <= constants::character::k9;
   }
   static inline bool is_hex_digit(uint8_t val) {
     return is_digit(val) ||
-           (val >= constants::characters::kAUpperCase &&
-            val <= constants::characters::kFUpperCase) ||
-           (val >= constants::characters::kALowerCase &&
-            val <= constants::characters::kFLowerCase);
+           (val >= constants::character::kAUpperCase &&
+            val <= constants::character::kFUpperCase) ||
+           (val >= constants::character::kALowerCase &&
+            val <= constants::character::kFLowerCase);
   }
   static inline bool is_alpha(uint8_t val) {
-    return (val >= constants::characters::kAUpperCase &&
-            val <= constants::characters::kZUpperCase) ||
-           (val >= constants::characters::kALowerCase &&
-            val <= constants::characters::kZLowerCase);
+    return (val >= constants::character::kAUpperCase &&
+            val <= constants::character::kZUpperCase) ||
+           (val >= constants::character::kALowerCase &&
+            val <= constants::character::kZLowerCase);
   }
   static inline bool is_token(uint8_t val) {
     return is_digit(val) || is_alpha(val) ||
-           val == constants::characters::kExclamation ||
-           val == constants::characters::kHash ||
-           val == constants::characters::kDollar ||
-           val == constants::characters::kPercent ||
-           val == constants::characters::kAmpersand ||
-           val == constants::characters::kApostrophe ||
-           val == constants::characters::kAsterisk ||
-           val == constants::characters::kPlus ||
-           val == constants::characters::kHyphen ||
-           val == constants::characters::kDot ||
-           val == constants::characters::kCircumflex ||
-           val == constants::characters::kUnderscore ||
-           val == constants::characters::kBackTick ||
-           val == constants::characters::kVerticalBar ||
-           val == constants::characters::kTilde;
+           val == constants::character::kExclamation ||
+           val == constants::character::kHash ||
+           val == constants::character::kDollar ||
+           val == constants::character::kPercent ||
+           val == constants::character::kAmpersand ||
+           val == constants::character::kApostrophe ||
+           val == constants::character::kAsterisk ||
+           val == constants::character::kPlus ||
+           val == constants::character::kHyphen ||
+           val == constants::character::kDot ||
+           val == constants::character::kCircumflex ||
+           val == constants::character::kUnderscore ||
+           val == constants::character::kBackTick ||
+           val == constants::character::kVerticalBar ||
+           val == constants::character::kTilde;
+  }
+  static inline bool is_token(const std::string_view& s) {
+    for (auto c : s)
+      if (!is_token(c)) return false;
+    return true;
   }
   static inline bool is_unreserved(uint8_t val) {
     return is_digit(val) || is_alpha(val) ||
-           val == constants::characters::kHyphen ||
-           val == constants::characters::kDot ||
-           val == constants::characters::kUnderscore ||
-           val == constants::characters::kTilde;
+           val == constants::character::kHyphen ||
+           val == constants::character::kDot ||
+           val == constants::character::kUnderscore ||
+           val == constants::character::kTilde;
   }
   static inline bool is_sub_delim(uint8_t val) {
-    return val == constants::characters::kExclamation ||
-           val == constants::characters::kDollar ||
-           val == constants::characters::kAmpersand ||
-           val == constants::characters::kApostrophe ||
-           val == constants::characters::kLParenthesis ||
-           val == constants::characters::kRParenthesis ||
-           val == constants::characters::kAsterisk ||
-           val == constants::characters::kPlus ||
-           val == constants::characters::kComma ||
-           val == constants::characters::kSemiColon ||
-           val == constants::characters::kEquals;
+    return val == constants::character::kExclamation ||
+           val == constants::character::kDollar ||
+           val == constants::character::kAmpersand ||
+           val == constants::character::kApostrophe ||
+           val == constants::character::kLParenthesis ||
+           val == constants::character::kRParenthesis ||
+           val == constants::character::kAsterisk ||
+           val == constants::character::kPlus ||
+           val == constants::character::kComma ||
+           val == constants::character::kSemiColon ||
+           val == constants::character::kEquals;
   }
   static inline bool is_pchar(uint8_t val) {
     return is_unreserved(val) || is_sub_delim(val) ||
-           val == constants::characters::kColon ||
-           val == constants::characters::kAt;
+           val == constants::character::kColon ||
+           val == constants::character::kAt;
   }
   static inline bool is_vchar(uint8_t val) {
-    return (val >= constants::characters::kExclamation &&
-            val <= constants::characters::kTilde);
+    return val >= constants::character::kExclamation &&
+           val <= constants::character::kTilde;
   }
   static inline bool is_obs_text(uint8_t val) {
-    return (val >= constants::characters::kObsTextStart &&
-            val <= constants::characters::kObsTextEnd);
+    return val >= constants::character::kObsTextStart &&
+           val <= constants::character::kObsTextEnd;
+  }
+  static inline bool is_ows(uint8_t val) {
+    return val == constants::character::kSpace ||
+           val == constants::character::kHTab;
+  }
+  static inline std::string_view ows_ltrim(std::string_view s) {
+    while (!s.empty() && helpers::is_ows(static_cast<unsigned char>(s.front())))
+      s.remove_prefix(1);
+    return s;
+  }
+  static inline std::string_view ows_rtrim(std::string_view s) {
+    while (!s.empty() && helpers::is_ows(static_cast<unsigned char>(s.back())))
+      s.remove_suffix(1);
+    return s;
   }
 };
 }  // namespace martianlabs::doba::protocol::http11

@@ -56,7 +56,8 @@ class tcpip {
   using on_disconnection_fn = std::function<void(socket_type)>;
   using on_bytes_received_fn = std::function<void(socket_type, unsigned long)>;
   using on_bytes_sent_fn = std::function<void(socket_type, unsigned long)>;
-  using on_process_fn = std::function<process_result(const RQty&, RSty&)>;
+  using on_req_ok_fn = std::function<process_result(const RQty&, RSty&)>;
+  using on_req_err_fn = std::function<void(RSty&)>;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
@@ -126,7 +127,8 @@ class tcpip {
   void set_on_disconnection(const on_disconnection_fn& fn) { on_dis_ = fn; }
   void set_on_bytes_received(const on_bytes_received_fn& fn) { on_rcv_ = fn; }
   void set_on_bytes_sent(const on_bytes_sent_fn& fn) { on_snd_ = fn; }
-  void set_on_process(const on_process_fn& fn) { on_prc_ = fn; }
+  void set_on_request_ok(const on_req_ok_fn& fn) { on_rok_ = fn; }
+  void set_on_request_error(const on_req_err_fn& fn) { on_rer_ = fn; }
 
  private:
   // ___________________________________________________________________________
@@ -264,8 +266,8 @@ class tcpip {
                 if (on_rcv_.has_value()) on_rcv_.value()(ctx->soc, sz);
                 switch (ctx->req.deserialize(ctx->wsa.buf, sz)) {
                   case process_result::kCompleted:
-                    if (on_prc_.has_value()) {
-                      switch (on_prc_.value()(ctx->req, ctx->res)) {
+                    if (on_rok_.has_value()) {
+                      switch (on_rok_.value()(ctx->req, ctx->res)) {
                         case process_result::kCompleted:
                           sending(ctx, ctx->res.serialize(), false);
                           break;
@@ -275,8 +277,8 @@ class tcpip {
                         case process_result::kNeedMoreBytes:
                           break;
                         case process_result::kError:
-                          closesocket(ctx->soc);
-                          ctx->soc = INVALID_SOCKET;
+                          if (on_rer_.has_value()) on_rer_.value()(ctx->res);
+                          sending(ctx, ctx->res.serialize(), true);
                           break;
                       }
                     }
@@ -287,8 +289,8 @@ class tcpip {
                   case process_result::kNeedMoreBytes:
                     break;
                   case process_result::kError:
-                    closesocket(ctx->soc);
-                    ctx->soc = INVALID_SOCKET;
+                    if (on_rer_.has_value()) on_rer_.value()(ctx->res);
+                    sending(ctx, ctx->res.serialize(), true);
                     break;
                 }
               } else {
@@ -363,7 +365,8 @@ class tcpip {
   std::optional<on_disconnection_fn> on_dis_;
   std::optional<on_bytes_received_fn> on_rcv_;
   std::optional<on_bytes_sent_fn> on_snd_;
-  std::optional<on_process_fn> on_prc_;
+  std::optional<on_req_ok_fn> on_rok_;
+  std::optional<on_req_err_fn> on_rer_;
 };
 }  // namespace martianlabs::doba::transport::server
 
