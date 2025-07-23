@@ -67,5 +67,11 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #endif
+// ___________________________________________________________________________
+// TYPEs                                                            ( common )
+//
+using u8p = const uint8_t*;
+using u8 = uint8_t;
+using u16 = uint16_t;
 
 #endif

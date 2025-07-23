@@ -40,7 +40,7 @@ namespace martianlabs::doba {
 // =============================================================================
 class http11_server
     : public server<transport::server::tcpip, protocol::http11::request,
-                    protocol::http11::response> {
+                    protocol::http11::response<transport::server::tcpip>> {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
@@ -55,15 +55,32 @@ class http11_server
     set_on_bytes_sent([](socket_type id, unsigned long bytes) {});
     set_on_request_ok(
         [this](const protocol::http11::request& req,
-               protocol::http11::response& res) -> transport::process_result {
-          if (!process_headers(req, res)) {
-            return transport::process_result::kError;
-          }
+               protocol::http11::response<transport::server::tcpip>& res)
+            -> transport::process_result {
+          auto process_headers_result = process_headers(req, res);
+          if (process_headers_result != transport::process_result::kCompleted)
+            return process_headers_result;
+
+          /*
+          pepe
+          */
+
+          res.ok_200()
+              .set_header("Content-Type", "text/plain")
+              .set_header("Connection", "keep-alive")
+              .set_header("Content-Length", "13")
+              .set_body("Hello, World!");
+
+          /*
+          pepe fin
+          */
+
           return transport::process_result::kCompleted;
         });
-    set_on_request_error([this](protocol::http11::response& res) {
-      // here we have to generate a BAD REQUEST response!
-    });
+    set_on_request_error(
+        [this](protocol::http11::response<transport::server::tcpip>& res) {
+          // here we have to generate a BAD REQUEST response!
+        });
     setup_headers_functions();
   }
   http11_server(const http11_server&) = delete;
@@ -79,8 +96,9 @@ class http11_server
   // ___________________________________________________________________________
   // USINGs                                                          ( private )
   //
-  using on_header_fn =
-      std::function<bool(const std::string_view&, protocol::http11::response&)>;
+  using on_header_fn = std::function<transport::process_result(
+      const std::string_view&,
+      protocol::http11::response<transport::server::tcpip>&)>;
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
@@ -98,32 +116,33 @@ class http11_server
     // | Connection          | 1#connection-option    |
     // | connection-option   | token                  |
     // +---------------------+------------------------+
-    headers_fns_[kConnection] = [this](
-                                    const std::string_view& v,
-                                    protocol::http11::response& res) -> bool {
-      std::vector<std::string_view> values;
+    headers_fns_[kConnection] =
+        [this](const std::string_view& v,
+               protocol::http11::response<transport::server::tcpip>& res)
+        -> transport::process_result {
       for (auto token :
            v | std::views::split(
                    protocol::http11::constants::character::kComma)) {
         std::string_view value(&*token.begin(), std::ranges::distance(token));
         value = protocol::http11::helpers::ows_ltrim(
             protocol::http11::helpers::ows_rtrim(value));
-        if (!protocol::http11::helpers::is_token(value)) return false;
-        values.emplace_back(value);
+        if (!protocol::http11::helpers::is_token(value))
+          return transport::process_result::kError;
       }
-      if (!values.size()) return false;
-      for (auto& value : values) res.set_header(kConnection, value);
-      return true;
+      return transport::process_result::kCompleted;
     };
   }
-  bool process_headers(const protocol::http11::request& req,
-                       protocol::http11::response& res) const {
+  transport::process_result process_headers(
+      const protocol::http11::request& req,
+      protocol::http11::response<transport::server::tcpip>& res) const {
     for (auto const& hdr : req.get_headers()) {
       auto itr = headers_fns_.find(hdr.first);
       if (itr != headers_fns_.end())
-        if (!itr->second(hdr.second, res)) return false;
+        if (auto result = itr->second(hdr.second, res);
+            result != transport::process_result::kCompleted)
+          return result;
     }
-    return true;
+    return transport::process_result::kCompleted;
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )

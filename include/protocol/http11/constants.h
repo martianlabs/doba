@@ -46,14 +46,14 @@ struct constants {
   // |         | target resource.                                              |
   // +---------+---------------------------------------------------------------+
   struct method {
-    static constexpr uint8_t kGet[] = "GET";
-    static constexpr uint8_t kHead[] = "HEAD";
-    static constexpr uint8_t kPost[] = "POST";
-    static constexpr uint8_t kPut[] = "PUT";
-    static constexpr uint8_t kDelete[] = "DELETE";
-    static constexpr uint8_t kConnect[] = "CONNECT";
-    static constexpr uint8_t kOptions[] = "OPTIONS";
-    static constexpr uint8_t kTrace[] = "TRACE";
+    static constexpr char kGet[] = "GET";
+    static constexpr char kHead[] = "HEAD";
+    static constexpr char kPost[] = "POST";
+    static constexpr char kPut[] = "PUT";
+    static constexpr char kDelete[] = "DELETE";
+    static constexpr char kConnect[] = "CONNECT";
+    static constexpr char kOptions[] = "OPTIONS";
+    static constexpr char kTrace[] = "TRACE";
   };
   // +------------------------+--------------------+---------------------------+
   // |        Header          |       Sección      |          Tipo             |
@@ -99,45 +99,45 @@ struct constants {
   // | Last-Modified          | RFC 9110 §8.8.2    | Response                  |
   // +------------------------+--------------------+---------------------------+
   struct header {
-    static constexpr uint8_t kConnection[] = "connection";
-    static constexpr uint8_t kDate[] = "date";
-    static constexpr uint8_t kVia[] = "via";
-    static constexpr uint8_t kCacheControl[] = "cache-control";
-    static constexpr uint8_t kPragma[] = "pragma";
-    static constexpr uint8_t kWarning[] = "warning";
-    static constexpr uint8_t kHost[] = "host";
-    static constexpr uint8_t kUserAgent[] = "user-agent";
-    static constexpr uint8_t kAccept[] = "accept";
-    static constexpr uint8_t kAcceptEncoding[] = "accept-encoding";
-    static constexpr uint8_t kAcceptLanguage[] = "accept-language";
-    static constexpr uint8_t kAuthorization[] = "authorization";
-    static constexpr uint8_t kExpect[] = "expect";
-    static constexpr uint8_t kFrom[] = "from";
-    static constexpr uint8_t kIfMatch[] = "if-match";
-    static constexpr uint8_t kIfNoneMatch[] = "if-none-match";
-    static constexpr uint8_t kIfModifiedSince[] = "if-modified-since";
-    static constexpr uint8_t kIfUnmodifiedSince[] = "if-unmodified-since";
-    static constexpr uint8_t kRange[] = "range";
-    static constexpr uint8_t kReferer[] = "referer";
-    static constexpr uint8_t kTe[] = "te";
-    static constexpr uint8_t kUpgrade[] = "upgrade";
-    static constexpr uint8_t kCookie[] = "cookie";
-    static constexpr uint8_t kLocation[] = "location";
-    static constexpr uint8_t kServer[] = "server";
-    static constexpr uint8_t kVary[] = "vary";
-    static constexpr uint8_t kWwwAuthenticate[] = "www-authenticate";
-    static constexpr uint8_t kContentLength[] = "content-length";
-    static constexpr uint8_t kContentType[] = "content-type";
-    static constexpr uint8_t kContentEncoding[] = "content-encoding";
-    static constexpr uint8_t kContentLanguage[] = "content-language";
-    static constexpr uint8_t kContentRange[] = "content-range";
-    static constexpr uint8_t kTrailer[] = "trailer";
-    static constexpr uint8_t kTransferEncoding[] = "transfer-encoding";
-    static constexpr uint8_t kAllow[] = "allow";
-    static constexpr uint8_t kRetryAfter[] = "retry-after";
-    static constexpr uint8_t kAcceptRanges[] = "accept-ranges";
-    static constexpr uint8_t kETag[] = "etag";
-    static constexpr uint8_t kLastModified[] = "last-modified";
+    static constexpr char kConnection[] = "connection";
+    static constexpr char kDate[] = "date";
+    static constexpr char kVia[] = "via";
+    static constexpr char kCacheControl[] = "cache-control";
+    static constexpr char kPragma[] = "pragma";
+    static constexpr char kWarning[] = "warning";
+    static constexpr char kHost[] = "host";
+    static constexpr char kUserAgent[] = "user-agent";
+    static constexpr char kAccept[] = "accept";
+    static constexpr char kAcceptEncoding[] = "accept-encoding";
+    static constexpr char kAcceptLanguage[] = "accept-language";
+    static constexpr char kAuthorization[] = "authorization";
+    static constexpr char kExpect[] = "expect";
+    static constexpr char kFrom[] = "from";
+    static constexpr char kIfMatch[] = "if-match";
+    static constexpr char kIfNoneMatch[] = "if-none-match";
+    static constexpr char kIfModifiedSince[] = "if-modified-since";
+    static constexpr char kIfUnmodifiedSince[] = "if-unmodified-since";
+    static constexpr char kRange[] = "range";
+    static constexpr char kReferer[] = "referer";
+    static constexpr char kTe[] = "te";
+    static constexpr char kUpgrade[] = "upgrade";
+    static constexpr char kCookie[] = "cookie";
+    static constexpr char kLocation[] = "location";
+    static constexpr char kServer[] = "server";
+    static constexpr char kVary[] = "vary";
+    static constexpr char kWwwAuthenticate[] = "www-authenticate";
+    static constexpr char kContentLength[] = "content-length";
+    static constexpr char kContentType[] = "content-type";
+    static constexpr char kContentEncoding[] = "content-encoding";
+    static constexpr char kContentLanguage[] = "content-language";
+    static constexpr char kContentRange[] = "content-range";
+    static constexpr char kTrailer[] = "trailer";
+    static constexpr char kTransferEncoding[] = "transfer-encoding";
+    static constexpr char kAllow[] = "allow";
+    static constexpr char kRetryAfter[] = "retry-after";
+    static constexpr char kAcceptRanges[] = "accept-ranges";
+    static constexpr char kETag[] = "etag";
+    static constexpr char kLastModified[] = "last-modified";
   };
   // +------+-------------------------------+
   // | Code | Reason Phrase                 |
@@ -191,56 +191,112 @@ struct constants {
   // +------+-------------------------------+
   struct status_code {
     // informational (1xx)
-    static constexpr uint16_t kContinue = 100;
-    static constexpr uint16_t kSwitchingProtocols = 101;
+    static constexpr const char kContinue[] = "100";
+    static constexpr const char kSwitchingProtocols[] = "101";
     // successful (2xx)
-    static constexpr uint16_t kOK = 200;
-    static constexpr uint16_t kCreated = 201;
-    static constexpr uint16_t kAccepted = 202;
-    static constexpr uint16_t kNonAuthoritativeInformation = 203;
-    static constexpr uint16_t kNoContent = 204;
-    static constexpr uint16_t kResetContent = 205;
-    static constexpr uint16_t kPartialContent = 206;
+    static constexpr const char kOK[] = "200";
+    static constexpr const char kCreated[] = "201";
+    static constexpr const char kAccepted[] = "202";
+    static constexpr const char kNonAuthoritativeInformation[] = "203";
+    static constexpr const char kNoContent[] = "204";
+    static constexpr const char kResetContent[] = "205";
+    static constexpr const char kPartialContent[] = "206";
     // redirection (3xx)
-    static constexpr uint16_t kMultipleChoices = 300;
-    static constexpr uint16_t kMovedPermanently = 301;
-    static constexpr uint16_t kFound = 302;
-    static constexpr uint16_t kSeeOther = 303;
-    static constexpr uint16_t kNotModified = 304;
-    static constexpr uint16_t kUseProxy = 305;
-    static constexpr uint16_t kUnused = 306;
-    static constexpr uint16_t kTemporaryRedirect = 307;
-    static constexpr uint16_t kPermanentRedirect = 308;
+    static constexpr const char kMultipleChoices[] = "300";
+    static constexpr const char kMovedPermanently[] = "301";
+    static constexpr const char kFound[] = "302";
+    static constexpr const char kSeeOther[] = "303";
+    static constexpr const char kNotModified[] = "304";
+    static constexpr const char kUseProxy[] = "305";
+    static constexpr const char kTemporaryRedirect[] = "307";
+    static constexpr const char kPermanentRedirect[] = "308";
     // client errors (4xx)
-    static constexpr uint16_t kBadRequest = 400;
-    static constexpr uint16_t kUnauthorized = 401;
-    static constexpr uint16_t kPaymentRequired = 402;
-    static constexpr uint16_t kForbidden = 403;
-    static constexpr uint16_t kNotFound = 404;
-    static constexpr uint16_t kMethodNotAllowed = 405;
-    static constexpr uint16_t kNotAcceptable = 406;
-    static constexpr uint16_t kProxyAuthRequired = 407;
-    static constexpr uint16_t kRequestTimeout = 408;
-    static constexpr uint16_t kConflict = 409;
-    static constexpr uint16_t kGone = 410;
-    static constexpr uint16_t kLengthRequired = 411;
-    static constexpr uint16_t kPreconditionFailed = 412;
-    static constexpr uint16_t kContentTooLarge = 413;
-    static constexpr uint16_t kURITooLong = 414;
-    static constexpr uint16_t kUnsupportedMediaType = 415;
-    static constexpr uint16_t kRangeNotSatisfiable = 416;
-    static constexpr uint16_t kExpectationFailed = 417;
-    static constexpr uint16_t kUnused418 = 418;
-    static constexpr uint16_t kMisdirectedRequest = 421;
-    static constexpr uint16_t kUnprocessableContent = 422;
-    static constexpr uint16_t kUpgradeRequired = 426;
+    static constexpr const char kBadRequest[] = "400";
+    static constexpr const char kUnauthorized[] = "401";
+    static constexpr const char kPaymentRequired[] = "402";
+    static constexpr const char kForbidden[] = "403";
+    static constexpr const char kNotFound[] = "404";
+    static constexpr const char kMethodNotAllowed[] = "405";
+    static constexpr const char kNotAcceptable[] = "406";
+    static constexpr const char kProxyAuthenticationRequired[] = "407";
+    static constexpr const char kRequestTimeout[] = "408";
+    static constexpr const char kConflict[] = "409";
+    static constexpr const char kGone[] = "410";
+    static constexpr const char kLengthRequired[] = "411";
+    static constexpr const char kPreconditionFailed[] = "412";
+    static constexpr const char kContentTooLarge[] = "413";
+    static constexpr const char kURITooLong[] = "414";
+    static constexpr const char kUnsupportedMediaType[] = "415";
+    static constexpr const char kRangeNotSatisfiable[] = "416";
+    static constexpr const char kExpectationFailed[] = "417";
+    static constexpr const char kMisdirectedRequest[] = "421";
+    static constexpr const char kUnprocessableContent[] = "422";
+    static constexpr const char kUpgradeRequired[] = "426";
     // server errors (5xx)
-    static constexpr uint16_t kInternalServerError = 500;
-    static constexpr uint16_t kNotImplemented = 501;
-    static constexpr uint16_t kBadGateway = 502;
-    static constexpr uint16_t kServiceUnavailable = 503;
-    static constexpr uint16_t kGatewayTimeout = 504;
-    static constexpr uint16_t kHTTPVersionNotSupported = 505;
+    static constexpr const char kInternalServerError[] = "500";
+    static constexpr const char kNotImplemented[] = "501";
+    static constexpr const char kBadGateway[] = "502";
+    static constexpr const char kServiceUnavailable[] = "503";
+    static constexpr const char kGatewayTimeout[] = "504";
+    static constexpr const char kHTTPVersionNotSupported[] = "505";
+  };
+  struct reason_phrase {
+    // informational (1xx)
+    static constexpr const char kContinue[] = "Continue";
+    static constexpr const char kSwitchingProtocols[] = "Switching Protocols";
+    // successful (2xx)
+    static constexpr const char kOK[] = "OK";
+    static constexpr const char kCreated[] = "Created";
+    static constexpr const char kAccepted[] = "Accepted";
+    static constexpr const char kNonAuthoritativeInformation[] =
+        "Non-Authoritative Information";
+    static constexpr const char kNoContent[] = "No Content";
+    static constexpr const char kResetContent[] = "Reset Content";
+    static constexpr const char kPartialContent[] = "Partial Content";
+    // redirection (3xx)
+    static constexpr const char kMultipleChoices[] = "Multiple Choices";
+    static constexpr const char kMovedPermanently[] = "Moved Permanently";
+    static constexpr const char kFound[] = "Found";
+    static constexpr const char kSeeOther[] = "See Other";
+    static constexpr const char kNotModified[] = "Not Modified";
+    static constexpr const char kUseProxy[] = "Use Proxy";
+    static constexpr const char kTemporaryRedirect[] = "Temporary Redirect";
+    static constexpr const char kPermanentRedirect[] = "Permanent Redirect";
+    // client errors (4xx)
+    static constexpr const char kBadRequest[] = "Bad Request";
+    static constexpr const char kUnauthorized[] = "Unauthorized";
+    static constexpr const char kPaymentRequired[] = "Payment Required";
+    static constexpr const char kForbidden[] = "Forbidden";
+    static constexpr const char kNotFound[] = "Not Found";
+    static constexpr const char kMethodNotAllowed[] = "Method Not Allowed";
+    static constexpr const char kNotAcceptable[] = "Not Acceptable";
+    static constexpr const char kProxyAuthenticationRequired[] =
+        "Proxy Authentication Required";
+    static constexpr const char kRequestTimeout[] = "Request Timeout";
+    static constexpr const char kConflict[] = "Conflict";
+    static constexpr const char kGone[] = "Gone";
+    static constexpr const char kLengthRequired[] = "Length Required";
+    static constexpr const char kPreconditionFailed[] = "Precondition Failed";
+    static constexpr const char kContentTooLarge[] = "Content Too Large";
+    static constexpr const char kURITooLong[] = "URI Too Long";
+    static constexpr const char kUnsupportedMediaType[] =
+        "Unsupported Media Type";
+    static constexpr const char kRangeNotSatisfiable[] =
+        "Range Not Satisfiable";
+    static constexpr const char kExpectationFailed[] = "Expectation Failed";
+    static constexpr const char kMisdirectedRequest[] = "Misdirected Request";
+    static constexpr const char kUnprocessableContent[] =
+        "Unprocessable Content";
+    static constexpr const char kUpgradeRequired[] = "Upgrade Required";
+    // server errors (5xx)
+    static constexpr const char kInternalServerError[] =
+        "Internal Server Error";
+    static constexpr const char kNotImplemented[] = "Not Implemented";
+    static constexpr const char kBadGateway[] = "Bad Gateway";
+    static constexpr const char kServiceUnavailable[] = "Service Unavailable";
+    static constexpr const char kGatewayTimeout[] = "Gateway Timeout";
+    static constexpr const char kHTTPVersionNotSupported[] =
+        "HTTP Version Not Supported";
   };
   struct character {
     static constexpr uint8_t kHTab = 0x09;
@@ -288,6 +344,15 @@ struct constants {
   struct string {
     static constexpr uint8_t kCrLf[] = "\r\n";
     static constexpr uint8_t kEndOfHeaders[] = "\r\n\r\n";
+    static constexpr uint8_t kHttpVersion[] = "HTTP/1.1";
+  };
+  struct limits {
+    static constexpr std::size_t kDefaultStatusLineSectionSz = 512;
+    static constexpr std::size_t kDefaultHeadersSectionSz = 4096;
+    static constexpr std::size_t kDefaultBodySectionSz = 4096;
+    static constexpr std::size_t kDefaultResponseSz =
+        kDefaultStatusLineSectionSz + kDefaultHeadersSectionSz +
+        kDefaultBodySectionSz;
   };
 };
 }  // namespace martianlabs::doba::protocol::http11
