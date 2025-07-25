@@ -136,7 +136,7 @@ class tcpip {
   //
   static constexpr uint8_t kDefaultNumberOfWorkers = 4;
   static constexpr const char kDefaultPortNumber[] = "80";
-  static constexpr uint32_t kDefaultBufferSize = 2048;
+  static constexpr uint32_t kDefaultBufferSize = 1024;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //

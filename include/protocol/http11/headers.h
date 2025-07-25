@@ -18,8 +18,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_protocol_http11_response_handler_h
-#define martianlabs_doba_protocol_http11_response_handler_h
+#ifndef martianlabs_doba_protocol_http11_headers_h
+#define martianlabs_doba_protocol_http11_headers_h
 
 #include <string_view>
 
@@ -27,75 +27,66 @@
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
-// response_handler                                                    ( class )
+// headers                                                             ( class )
 // -----------------------------------------------------------------------------
-// This class holds for the http 1.1 response handler implementation.
+// This class holds for the http 1.1 headers implementation.
 // -----------------------------------------------------------------------------
 // =============================================================================
-template <typename RSty>
-class response_handler {
+template <typename PAty>
+class headers {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  response_handler() {
-    headers_ = (char*)malloc(constants::limits::kDefaultHeadersSectionSz);
-    body_ = (char*)malloc(constants::limits::kDefaultBodySectionSz);
-  }
-  response_handler(const response_handler&) = delete;
-  response_handler(response_handler&&) noexcept = delete;
-  ~response_handler() {
-    free(headers_);
-    free(body_);
-  }
+  headers() = default;
+  headers(const headers&) = delete;
+  headers(headers&&) noexcept = delete;
+  ~headers() = default;
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
-  response_handler& operator=(const response_handler&) = delete;
-  response_handler& operator=(response_handler&&) noexcept = delete;
+  headers& operator=(const headers&) = delete;
+  headers& operator=(headers&&) noexcept = delete;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  response_handler& set_header(const std::string_view& k,
-                               const std::string_view& v) {
-    memcpy(&headers_[headers_cur_], k.data(), k.length());
-    headers_cur_ += k.length();
-    headers_[headers_cur_++] = constants::character::kColon;
-    memcpy(&headers_[headers_cur_], v.data(), v.length());
-    headers_cur_ += v.length();
-    headers_[headers_cur_++] = constants::character::kCr;
-    headers_[headers_cur_++] = constants::character::kLf;
-    return *this;
+  void add(const std::string_view& k, const std::string_view& v) {
+    std::size_t entry_length = k.length() + v.length() + 3;
+    if ((size_ - length_) > (entry_length + 2)) {
+      memcpy(&buffer_[length_], k.data(), k.length());
+      length_ += k.length();
+      buffer_[length_++] = constants::character::kColon;
+      memcpy(&buffer_[length_], v.data(), v.length());
+      length_ += v.length();
+      buffer_[length_++] = constants::character::kCr;
+      buffer_[length_++] = constants::character::kLf;
+    }
   }
-  response_handler& set_body(const std::string_view& body) {
-    body_cur_ = body.length();
-    memcpy(body_, body.data(), body_cur_);
-    return *this;
-  }
+  inline std::size_t length() const { return length_; }
 
  private:
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //
   inline void reset() {
-    headers_cur_ = 0;
-    body_cur_ = 0;
+    buffer_ = nullptr;
+    size_ = 0;
+    length_ = 0;
   }
-  inline const char* headers() const { return headers_; }
-  inline std::size_t headers_length() const { return headers_cur_; }
-  inline const char* body() const { return body_; }
-  inline std::size_t body_length() const { return body_cur_; }
-  // ___________________________________________________________________________
-  // FRIEND-CLASSEs                                                  ( private )
-  //
-  friend typename RSty;
+  inline void prepare(char* buffer, const std::size_t& size) {
+    buffer_ = buffer;
+    size_ = size;
+  }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* headers_ = nullptr;
-  char* body_ = nullptr;
-  std::size_t headers_cur_ = 0;
-  std::size_t body_cur_ = 0;
+  char* buffer_ = nullptr;
+  std::size_t size_ = 0;
+  std::size_t length_ = 0;
+  // ___________________________________________________________________________
+  // FRIEND-CLASSEs                                                  ( private )
+  //
+  friend typename PAty;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

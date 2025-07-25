@@ -162,12 +162,14 @@
     <ClInclude Include="..\..\include\builder\property.h" />
     <ClInclude Include="..\..\include\http11_server.h" />
     <ClInclude Include="..\..\include\platform.h" />
+    <ClInclude Include="..\..\include\protocol\http11\body.h" />
     <ClInclude Include="..\..\include\protocol\http11\constants.h" />
+    <ClInclude Include="..\..\include\protocol\http11\headers.h" />
     <ClInclude Include="..\..\include\protocol\http11\helpers.h" />
+    <ClInclude Include="..\..\include\protocol\http11\message.h" />
     <ClInclude Include="..\..\include\protocol\http11\reason_phrase.h" />
     <ClInclude Include="..\..\include\protocol\http11\request.h" />
     <ClInclude Include="..\..\include\protocol\http11\response.h" />
-    <ClInclude Include="..\..\include\protocol\http11\response_handler.h" />
     <ClInclude Include="..\..\include\protocol\http11\status_code.h" />
     <ClInclude Include="..\..\include\protocol\http11\status_line.h" />
     <ClInclude Include="..\..\include\protocol\result.h" />

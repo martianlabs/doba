@@ -347,12 +347,7 @@ struct constants {
     static constexpr uint8_t kHttpVersion[] = "HTTP/1.1";
   };
   struct limits {
-    static constexpr std::size_t kDefaultStatusLineSectionSz = 512;
-    static constexpr std::size_t kDefaultHeadersSectionSz = 4096;
-    static constexpr std::size_t kDefaultBodySectionSz = 4096;
-    static constexpr std::size_t kDefaultResponseSz =
-        kDefaultStatusLineSectionSz + kDefaultHeadersSectionSz +
-        kDefaultBodySectionSz;
+    static constexpr std::size_t kDefaultResponseMemoryBufferSize = 4096;
   };
 };
 }  // namespace martianlabs::doba::protocol::http11

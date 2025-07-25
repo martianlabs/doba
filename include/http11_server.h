@@ -66,10 +66,11 @@ class http11_server
           */
 
           res.ok_200()
-              .set_header("Content-Type", "text/plain")
-              .set_header("Connection", "keep-alive")
-              .set_header("Content-Length", "13")
-              .set_body("Hello, World!");
+              .add_header("Content-Type", "text/plain")
+              .add_header("Connection", "keep-alive")
+              .add_header("Content-Length", "13")
+              .add_body("Hello, World!");
+          
 
           /*
           pepe fin
