@@ -31,7 +31,6 @@ namespace martianlabs::doba::protocol::http11 {
 // This class holds for the http 1.1 response implementation.
 // -----------------------------------------------------------------------------
 // =============================================================================
-template <template <typename, typename> typename TRty>
 class response {
  public:
   // ___________________________________________________________________________
@@ -283,11 +282,6 @@ class response {
     sln_cur_ = sizeof(EAS(SL(505_HTTP_VERSION_NOT_SUPPORTED))) - 1;
     return prepare();
   }
-
- private:
-  // ___________________________________________________________________________
-  // METHODs                                                         ( private )
-  //
   inline std::shared_ptr<std::istream> serialize() {
     std::size_t cur = 0;
     std::size_t hdr_off = message_.headers_length();
@@ -303,13 +297,14 @@ class response {
     sln_cur_ = 0;
     message_.reset();
   }
+
+ private:
+  // ___________________________________________________________________________
+  // METHODs                                                         ( private )
+  //
   inline message<response>& prepare() {
     return message_.prepare(&buf_[sln_cur_], buf_size_ - sln_cur_, bod_size_);
   }
-  // ___________________________________________________________________________
-  // FRIEND-CLASSEs                                                  ( private )
-  //
-  friend typename TRty<request, response>;
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //

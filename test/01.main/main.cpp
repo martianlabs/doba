@@ -18,12 +18,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "http11_server.h"
+#include "protocol/http11/server.h"
 
-using namespace martianlabs::doba;
+using namespace martianlabs::doba::protocol::http11;
 
 int main(int argc, char* argv[]) {
-  http11_server my_server("10001");
+  server my_server("10001");
+  my_server.routes().add_get("/route",
+                             [](const request& req, response& res) {});
   my_server.start();
   return getchar();
 }

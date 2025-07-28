@@ -18,88 +18,86 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_http11_server_h
-#define martianlabs_doba_http11_server_h
+#ifndef martianlabs_doba_protocol_http11_server_h
+#define martianlabs_doba_protocol_http11_server_h
 
 #include <ranges>
 #include <string_view>
 
-#include "server.h"
+#include "server_base.h"
 #include "transport/server/tcpip.h"
 #include "protocol/http11/constants.h"
 #include "protocol/http11/helpers.h"
 #include "protocol/http11/request.h"
 #include "protocol/http11/response.h"
+#include "protocol/http11/router.h"
 
-namespace martianlabs::doba {
+namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
-// http11_server                                                       ( class )
+// server                                                              ( class )
 // -----------------------------------------------------------------------------
 // This class holds for the http 1.1 server implementation.
 // -----------------------------------------------------------------------------
+// Template parameters:
+//    RQty - request being used.
+//    RSty - response being used.
+//    ROty - router being used.
+//    TRty - transport being used.
 // =============================================================================
-class http11_server
-    : public server<transport::server::tcpip, protocol::http11::request,
-                    protocol::http11::response<transport::server::tcpip>> {
+template <typename RQty = request, typename RSty = response,
+          template <typename, typename> class ROty = router,
+          template <typename, typename> class TRty = transport::server::tcpip>
+class server : public server_base<TRty, RQty, RSty> {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  http11_server(const char port[]) {
-    set_port(port);
-    set_buffer_size(kDefaultBufferSize);
-    set_number_of_workers(kDefaultNumberOfWorkers);
-    set_on_connection([](socket_type id) {});
-    set_on_disconnection([](socket_type id) {});
-    set_on_bytes_received([](socket_type id, unsigned long bytes) {});
-    set_on_bytes_sent([](socket_type id, unsigned long bytes) {});
-    set_on_request_ok(
-        [this](const protocol::http11::request& req,
-               protocol::http11::response<transport::server::tcpip>& res)
-            -> transport::process_result {
+  server(const char port[]) {
+    TRty<RQty, RSty>::set_port(port);
+    TRty<RQty, RSty>::set_buffer_size(kDefaultBufferSize);
+    TRty<RQty, RSty>::set_number_of_workers(kDefaultNumberOfWorkers);
+    TRty<RQty, RSty>::set_on_connection([](socket_type id) {});
+    TRty<RQty, RSty>::set_on_disconnection([](socket_type id) {});
+    TRty<RQty, RSty>::set_on_bytes_received(
+        [](socket_type id, unsigned long bytes) {});
+    TRty<RQty, RSty>::set_on_bytes_sent(
+        [](socket_type id, unsigned long bytes) {});
+    TRty<RQty, RSty>::set_on_request_ok(
+        [this](const RQty& req, RSty& res) -> transport::process_result {
           auto process_headers_result = process_headers(req, res);
           if (process_headers_result != transport::process_result::kCompleted)
             return process_headers_result;
-
-          /*
-          pepe
-          */
-
           res.ok_200()
               .add_header("Content-Type", "text/plain")
               .add_header("Connection", "keep-alive")
               .add_header("Content-Length", "13")
               .add_body("Hello, World!");
-          
-
-          /*
-          pepe fin
-          */
-
           return transport::process_result::kCompleted;
         });
-    set_on_request_error(
-        [this](protocol::http11::response<transport::server::tcpip>& res) {
-          // here we have to generate a BAD REQUEST response!
-        });
+    TRty<RQty, RSty>::set_on_request_error([this](RSty& res) {
+      // here we have to generate a BAD REQUEST response!
+    });
     setup_headers_functions();
   }
-  http11_server(const http11_server&) = delete;
-  http11_server(http11_server&&) noexcept = delete;
-  ~http11_server() = default;
+  server(const server&) = delete;
+  server(server&&) noexcept = delete;
+  ~server() = default;
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
-  http11_server& operator=(const http11_server&) = delete;
-  http11_server& operator=(http11_server&&) noexcept = delete;
+  server& operator=(const server&) = delete;
+  server& operator=(server&&) noexcept = delete;
+  // ___________________________________________________________________________
+  // METHODs                                                          ( public )
+  //
+  ROty<RQty, RSty>& routes() { return router_; }
 
  private:
   // ___________________________________________________________________________
   // USINGs                                                          ( private )
   //
-  using on_header_fn = std::function<transport::process_result(
-      const std::string_view&,
-      protocol::http11::response<transport::server::tcpip>&)>;
+  using on_header_fn =
+      std::function<transport::process_result(const std::string_view&, RSty&)>;
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
@@ -110,32 +108,24 @@ class http11_server
   //
   void setup_headers_functions() {
     static std::string_view kConnection =
-        (const char*)protocol::http11::constants::header::kConnection;
+        (const char*)constants::header::kConnection;
     // +---------------------+------------------------+
     // | Field               | Definition             |
     // +---------------------+------------------------+
     // | Connection          | 1#connection-option    |
     // | connection-option   | token                  |
     // +---------------------+------------------------+
-    headers_fns_[kConnection] =
-        [this](const std::string_view& v,
-               protocol::http11::response<transport::server::tcpip>& res)
-        -> transport::process_result {
-      for (auto token :
-           v | std::views::split(
-                   protocol::http11::constants::character::kComma)) {
+    headers_fns_[kConnection] = [this](const std::string_view& v,
+                                       RSty& res) -> transport::process_result {
+      for (auto token : v | std::views::split(constants::character::kComma)) {
         std::string_view value(&*token.begin(), std::ranges::distance(token));
-        value = protocol::http11::helpers::ows_ltrim(
-            protocol::http11::helpers::ows_rtrim(value));
-        if (!protocol::http11::helpers::is_token(value))
-          return transport::process_result::kError;
+        value = helpers::ows_ltrim(helpers::ows_rtrim(value));
+        if (!helpers::is_token(value)) return transport::process_result::kError;
       }
       return transport::process_result::kCompleted;
     };
   }
-  transport::process_result process_headers(
-      const protocol::http11::request& req,
-      protocol::http11::response<transport::server::tcpip>& res) const {
+  transport::process_result process_headers(const RQty& req, RSty& res) const {
     for (auto const& hdr : req.get_headers()) {
       auto itr = headers_fns_.find(hdr.first);
       if (itr != headers_fns_.end())
@@ -149,7 +139,8 @@ class http11_server
   // ATTRIBUTEs                                                      ( private )
   //
   std::unordered_map<std::string_view, on_header_fn> headers_fns_;
+  ROty<RQty, RSty> router_;
 };
-}  // namespace martianlabs::doba
+}  // namespace martianlabs::doba::protocol::http11
 
 #endif

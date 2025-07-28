@@ -18,8 +18,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_server_h
-#define martianlabs_doba_server_h
+#ifndef martianlabs_doba_server_base_h
+#define martianlabs_doba_server_base_h
 
 namespace martianlabs::doba {
 // =============================================================================
@@ -32,23 +32,23 @@ namespace martianlabs::doba {
 //    RQty - request being used.
 //    RSty - response being used.
 // =============================================================================
-template <template <typename, typename> class TRty, typename RQty,
+template <template <typename, typename> typename TRty, typename RQty,
           typename RSty>
-class server : public TRty<RQty, RSty> {
+class server_base : public TRty<RQty, RSty> {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  server() = default;
-  server(const server&) = delete;
-  server(server&&) noexcept = delete;
-  ~server() = default;
+  server_base() = default;
+  server_base(const server_base&) = delete;
+  server_base(server_base&&) noexcept = delete;
+  ~server_base() = default;
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
-  server& operator=(const server&) = delete;
-  server& operator=(server&&) noexcept = delete;
+  server_base& operator=(const server_base&) = delete;
+  server_base& operator=(server_base&&) noexcept = delete;
 };
-}  // namespace martianlabs::doba::server
+}  // namespace martianlabs::doba
 
 #endif
