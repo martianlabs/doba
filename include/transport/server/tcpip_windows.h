@@ -66,6 +66,7 @@ class tcpip {
     // let's setup all the required resources..
     if (!setupWinsock()) return result::kCouldNotSetupPlaformResources;
     if (!setupListener()) return result::kCouldNotSetupPlaformResources;
+    if (!setupContexts()) return result::kCouldNotSetupPlaformResources;
     setupWorkers();
     // let's start incoming connections loop!
     manager_ = std::make_unique<std::thread>([this]() {
@@ -83,7 +84,12 @@ class tcpip {
                        (char*)&tcp_no_delay_flag, sizeof(tcp_no_delay_flag)))
           continue;
         // let's associate the accept socket with the i/o port!
-        context* per_socket_context = new context(socket, buffer_size_);
+        std::scoped_lock<std::mutex> contexts_lock(contexts_mutex_);
+        context* per_socket_context = nullptr;
+        if (contexts_.empty()) contexts_.push(new context(buffer_size_));
+        per_socket_context = contexts_.front();
+        per_socket_context->soc = socket;
+        contexts_.pop();
         if (!CreateIoCompletionPort((HANDLE)socket, io_h_,
                                     (ULONG_PTR)per_socket_context, 0)) {
           // ((error)) -> trying to associate socket to the i/o port!
@@ -137,13 +143,14 @@ class tcpip {
   static constexpr uint8_t kDefaultNumberOfWorkers = 4;
   static constexpr const char kDefaultPortNumber[] = "80";
   static constexpr uint32_t kDefaultBufferSize = 1024;
+  static constexpr uint32_t kDefaultMinimalContextsPoolSize = 512;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
   struct context {
-    context(SOCKET socket, ULONG buffer_size) {
+    context(ULONG buffer_size) {
       ZeroMemory(&ovl, sizeof(WSAOVERLAPPED));
-      soc = socket;
+      soc = INVALID_SOCKET;
       buf = new CHAR[buffer_size];
       wsa.buf = buf;
       wsa.len = buffer_size;
@@ -232,26 +239,19 @@ class tcpip {
   void setupWorkers() {
     for (int i = 0; i < workers_; i++) {
       threads_.push(std::make_unique<std::thread>([this]() {
-        std::queue<context*> removal_queue;
         while (true) {
           ULONG_PTR key = NULL;
           LPOVERLAPPED ovl = NULL;
           DWORD sz = 0;
-          // here we act like a garbage collector and delete any non needed
-          // context!
-          while (!removal_queue.empty()) {
-            closesocket(removal_queue.front()->soc);
-            delete[] removal_queue.front()->buf;
-            delete removal_queue.front();
-            removal_queue.pop();
-          }
           if (!GetQueuedCompletionStatus(io_h_, &sz, &key, &ovl, INFINITE)) {
             if (!ovl && WSAGetLastError() == ERROR_INVALID_HANDLE) break;
             if (ovl && key) {
               // abrupt connection close!
               std::lock_guard<std::mutex> lock(((context*)key)->mutex);
-              if (!((context*)key)->ref_count)
-                removal_queue.push((context*)key);
+              if (!((context*)key)->ref_count) {
+                std::scoped_lock<std::mutex> contexts_lock(contexts_mutex_);
+                contexts_.push((context*)key);
+              }
             }
             continue;
           }
@@ -298,7 +298,8 @@ class tcpip {
               }
             } else {
               if (!ctx->ref_count) {
-                removal_queue.push(ctx);
+                std::scoped_lock<std::mutex> contexts_lock(contexts_mutex_);
+                contexts_.push(ctx);
                 continue;
               }
             }
@@ -306,10 +307,21 @@ class tcpip {
             if (on_cnn_.has_value()) on_cnn_.value()(ctx->soc);
             receiving(ctx);
           }
-          if (!perform(ctx) && !ctx->ref_count) removal_queue.push(ctx);
+          if (!perform(ctx) && !ctx->ref_count) {
+            std::scoped_lock<std::mutex> contexts_lock(contexts_mutex_);
+            contexts_.push(ctx);
+          }
         }
       }));
     }
+  }
+  bool setupContexts() {
+    std::scoped_lock<std::mutex> lock(contexts_mutex_);
+    for (auto i = 0; i < kDefaultMinimalContextsPoolSize; i++) {
+      if (context* ctx = new context(buffer_size_); !ctx) return false;
+      contexts_.push(new context(buffer_size_));
+    }
+    return true;
   }
   void receiving(context* ctx) {
     ctx->req.reset();
@@ -360,6 +372,8 @@ class tcpip {
   HANDLE io_h_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::queue<std::unique_ptr<std::thread>> threads_;
+  std::queue<context*> contexts_;
+  std::mutex contexts_mutex_;
   std::unique_ptr<std::thread> manager_;
   std::optional<on_connection_fn> on_cnn_;
   std::optional<on_disconnection_fn> on_dis_;
