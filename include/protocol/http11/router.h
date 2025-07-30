@@ -21,6 +21,8 @@
 #ifndef martianlabs_doba_protocol_http11_router_h
 #define martianlabs_doba_protocol_http11_router_h
 
+#include "method.h"
+
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
 // router                                                              ( class )
@@ -35,6 +37,33 @@ template <typename RQty, typename RSty>
 class router {
  public:
   // ___________________________________________________________________________
+  // USINGs                                                           ( public )
+  //
+  using handler_fn = std::function<void(const RQty&, RSty&)>;
+
+ private:
+  // ___________________________________________________________________________
+  // STRUCTs                                                         ( private )
+  //
+  struct hash {
+    using is_transparent = void;
+    size_t operator()(std::string_view s) const noexcept {
+      return std::hash<std::string_view>{}(s);
+    }
+  };
+  struct equal {
+    using is_transparent = void;
+    bool operator()(std::string_view lhs, std::string_view rhs) const noexcept {
+      return lhs == rhs;
+    }
+  };
+  // ___________________________________________________________________________
+  // USINGs                                                          ( private )
+  //
+  using router_map = std::unordered_map<std::string, handler_fn, hash, equal>;
+
+ public:
+  // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   router() = default;
@@ -47,24 +76,26 @@ class router {
   router& operator=(const router&) = delete;
   router& operator=(router&&) noexcept = delete;
   // ___________________________________________________________________________
-  // USINGs                                                          ( private )
-  //
-  using handler_fn = std::function<void(const RQty&, RSty&)>;
-  // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  void add_get(const std::string_view& route, handler_fn) {}
+  void add(method mtd, const std::string_view& route, handler_fn fn) {
+    auto& map = rts_.try_emplace(mtd).first->second;
+    map.emplace(route, std::move(fn));
+  }
+  std::optional<handler_fn> match(method method, const std::string_view& path) {
+    if (auto it_m = rts_.find(method); it_m != rts_.end()) {
+      if (auto it_h = it_m->second.find(path); it_h != it_m->second.end()) {
+        return it_h->second;
+      }
+    }
+    return std::nullopt;
+  }
 
  private:
   // ___________________________________________________________________________
-  // METHODs                                                         ( private )
-  //
-  // ___________________________________________________________________________
-  // CONSTANTs                                                       ( private )
-  //
-  // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
+  std::unordered_map<method, router_map> rts_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

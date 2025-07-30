@@ -1,9 +1,9 @@
-﻿//      _       _
-//   __| | ___ | |__   __ _
+﻿//      _       _           
+//   __| | ___ | |__   __ _ 
 //  / _` |/ _ \| '_ \ / _` |
 // | (_| | (_) | |_) | (_| |
 //  \__,_|\___/|_.__/ \__,_|
-//
+// 
 // Copyright 2025 martianLabs
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,69 +18,69 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_protocol_http11_body_h
-#define martianlabs_doba_protocol_http11_body_h
+#ifndef martianlabs_doba_reference_buffer_h
+#define martianlabs_doba_reference_buffer_h
 
-#include <string_view>
+#include <memory>
+#include <istream>
 
-#include "constants.h"
-
-namespace martianlabs::doba::protocol::http11 {
+namespace martianlabs::doba {
 // =============================================================================
-// body                                                                ( class )
+// reference_buffer                                                    ( class )
 // -----------------------------------------------------------------------------
-// This class holds for the http 1.1 body implementation.
+// This class holds for a generic buffer holding memory/stream references.
 // -----------------------------------------------------------------------------
 // =============================================================================
-template <typename PAty>
-class body {
+class reference_buffer {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  body() = default;
-  body(const body&) = delete;
-  body(body&&) noexcept = delete;
-  ~body() = default;
+  reference_buffer() = default;
+  reference_buffer(const reference_buffer&) = default;
+  reference_buffer(reference_buffer&&) noexcept = default;
+  ~reference_buffer() = default;
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
-  body& operator=(const body&) = delete;
-  body& operator=(body&&) noexcept = delete;
+  reference_buffer& operator=(const reference_buffer&) = default;
+  reference_buffer& operator=(reference_buffer&&) noexcept = default;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  void add(const std::string_view& s) {
-    if ((size_ - length_) > s.length()) {
-      memcpy(&buffer_[length_], s.data(), s.length());
-      length_ += s.length();
-    }
+  inline void set(std::shared_ptr<std::stringstream> ss) {
+    stream_ = ss;
+    memory_buffer_ = nullptr;
+    memory_buffer_size_ = 0;
   }
-  inline std::size_t length() const { return length_; }
+  inline void set(const char* buffer, const std::size_t& size) {
+    memory_buffer_ = buffer;
+    memory_buffer_size_ = size;
+    stream_ = nullptr;
+  }
+  inline std::optional<std::size_t> read(char* dst, const std::size_t& len) { 
+    if (memory_buffer_ != nullptr) {
+      auto n = len < memory_buffer_size_ ? len : memory_buffer_size_;
+      memcpy(dst, memory_buffer_, n);
+      memory_buffer_size_ -= n;
+      memory_buffer_ += n;
+      return n;
+    } else {
+      auto n = stream_->read(dst, len).gcount();
+      if (!(stream_->bad() || (stream_->fail() && !stream_->eof()))) {
+        return n;
+      }
+    }
+    return std::nullopt;
+  }
 
  private:
   // ___________________________________________________________________________
-  // METHODs                                                         ( private )
-  //
-  inline void reset() {
-    buffer_ = nullptr;
-    size_ = 0;
-    length_ = 0;
-  }
-  inline void prepare(char* buffer, const std::size_t& size) {
-    buffer_ = buffer;
-    size_ = size;
-  }
-  // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* buffer_ = nullptr;
-  std::size_t size_ = 0;
-  std::size_t length_ = 0;
-  // ___________________________________________________________________________
-  // FRIEND-CLASSEs                                                  ( private )
-  //
-  friend typename PAty;
+  const char* memory_buffer_ = nullptr;
+  std::size_t memory_buffer_size_ = 0;
+  std::shared_ptr<std::istream> stream_ = nullptr;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

@@ -21,6 +21,7 @@
 #ifndef martianlabs_doba_protocol_http11_request_h
 #define martianlabs_doba_protocol_http11_request_h
 
+#include "method.h"
 #include "helpers.h"
 
 namespace martianlabs::doba::protocol::http11 {
@@ -35,7 +36,10 @@ class request {
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  request() { buffer_ = (uint8_t*)malloc(kMaxRequestLength); }
+  request() {
+    buffer_ = (uint8_t*)malloc(kMaxSizeInMemory);
+    method_ = method::kUnknown;
+  }
   request(const request&) = delete;
   request(request&&) noexcept = delete;
   ~request() { free(buffer_); }
@@ -47,47 +51,58 @@ class request {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  transport::process_result deserialize(void* buffer, uint32_t length) {
+  inline transport::process_result deserialize(void* buffer, uint32_t length) {
+    std::optional<uint32_t> hdr_end;  // headers section end.
+    std::optional<uint32_t> rln_end;  // request line end.
+    std::optional<uint32_t> mtd_end;  // method end.
+    std::optional<uint32_t> pth_end;  // path end.
+    std::optional<uint32_t> ver_end;  // http version end.
     // first of all, let's check if we're under limits..
-    if ((kMaxRequestLength - cursor_) < length)
+    if ((kMaxSizeInMemory - cursor_) < length) {
       return transport::process_result::kError;
+    }
     memcpy(&buffer_[cursor_], buffer, length);
     cursor_ += length;
     // let's detect the [end-of-headers] position..
-    hdr_end_ = get(buffer_, cursor_, constants::string::kEndOfHeaders,
-                   sizeof(constants::string::kEndOfHeaders) - 1);
-    if (!hdr_end_.has_value()) return transport::process_result::kNeedMoreBytes;
+    hdr_end = get(buffer_, cursor_, constants::string::kEndOfHeaders,
+                  sizeof(constants::string::kEndOfHeaders) - 1);
+    if (!hdr_end.has_value()) return transport::process_result::kNeedMoreBytes;
     // let's detect the [end-of-request-line] position..
-    rln_end_ = get(buffer_, hdr_end_.value(), constants::string::kCrLf,
-                   sizeof(constants::string::kCrLf) - 1);
-    if (!(hdr_end_.value() - rln_end_.value()))
+    rln_end = get(buffer_, hdr_end.value(), constants::string::kCrLf,
+                  sizeof(constants::string::kCrLf) - 1);
+    if (!(hdr_end.value() - rln_end.value())) {
       return transport::process_result::kError;
+    }
     // let's check [request-line] section..
-    if (!check_request_line()) return transport::process_result::kError;
+    if (!check_request_line(rln_end, mtd_end, pth_end, ver_end)) {
+      return transport::process_result::kError;
+    }
     // let's check [headers] section..
-    if (!check_headers()) return transport::process_result::kError;
+    if (!check_headers(ver_end, hdr_end)) {
+      return transport::process_result::kError;
+    }
     // let's return result..
     return transport::process_result::kCompleted;
   }
-  void reset() {
+  inline void reset() {
     cursor_ = 0;
-    hdr_end_.reset();
-    rln_end_.reset();
-    mtd_end_.reset();
-    pth_end_.reset();
-    ver_end_.reset();
     headers_.clear();
   }
-  const auto& get_headers() const { return headers_; }
+  inline auto get_path() const { return path_; }
+  inline auto get_method() const { return method_; }
+  inline auto get_headers() const { return headers_; }
 
  private:
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //
-  inline bool check_request_line() {
+  inline bool check_request_line(std::optional<uint32_t>& rln_end,
+                                 std::optional<uint32_t>& mtd_end,
+                                 std::optional<uint32_t>& pth_end,
+                                 std::optional<uint32_t>& ver_end) {
     uint32_t i = 0;
     // +---------+-------------------------------------------------------------+
-    // | Campo   | Definición                                                  |
+    // | Field   | Definition                                                  |
     // +---------+-------------------------------------------------------------+
     // | method  | token                                                       |
     // | token   | 1*tchar                                                     |
@@ -97,14 +112,61 @@ class request {
     // +---------+-------------------------------------------------------------+
     // | source: https://datatracker.ietf.org/doc/html/rfc9110                 |
     // +----------------+------------------------------------------------------+
-    while (i < rln_end_.value()) {
+    while (i < rln_end.value()) {
       if (buffer_[i] == constants::character::kSpace) break;
       if (!helpers::is_token(buffer_[i])) return false;
-      buffer_[i++] = std::tolower(buffer_[i]);
+      buffer_[i++] = buffer_[i];
     }
-    mtd_end_ = i++;
+    mtd_end = i++;
+    std::string_view method_str((const char*)buffer_, mtd_end.value());
+    switch (method_str.length()) {
+      case 3:
+        if (!method_str.compare(constants::method::kGet)) {
+          method_ = method::kGet;
+        } else if (!method_str.compare(constants::method::kPut)) {
+          method_ = method::kPut;
+        } else {
+          return false;
+        }
+        break;
+      case 4:
+        if (!method_str.compare(constants::method::kHead)) {
+          method_ = method::kHead;
+        } else if (!method_str.compare(constants::method::kPost)) {
+          method_ = method::kPost;
+        } else {
+          return false;
+        }
+        break;
+      case 5:
+        if (!method_str.compare(constants::method::kTrace)) {
+          method_ = method::kTrace;
+        } else {
+          return false;
+        }
+        break;
+      case 6:
+        if (!method_str.compare(constants::method::kDelete)) {
+          method_ = method::kDelete;
+        } else {
+          return false;
+        }
+        break;
+      case 7:
+        if (!method_str.compare(constants::method::kConnect)) {
+          method_ = method::kConnect;
+        } else if (!method_str.compare(constants::method::kOptions)) {
+          method_ = method::kOptions;
+        } else {
+          return false;
+        }
+        break;
+      default:
+        return false;
+        break;
+    }
     // +----------------+------------------------------------------------------+
-    // | Campo          | Definición                                           |
+    // | Field          | Definition                                           |
     // +----------------+------------------------------------------------------+
     // | path           | segment *( "/" segment )                             |
     // | segment        | *pchar                                               |
@@ -117,10 +179,10 @@ class request {
     // | source: https://datatracker.ietf.org/doc/html/rfc9110                 |
     // +----------------+------------------------------------------------------+
     if (buffer_[i++] != constants::character::kSlash) return false;
-    while (i < rln_end_.value()) {
+    while (i < rln_end.value()) {
       if (buffer_[i] == constants::character::kSpace) break;
       if (buffer_[i] == constants::character::kPercent) {
-        if (i + 2 >= rln_end_.value()) return false;
+        if (i + 2 >= rln_end.value()) return false;
         if (!helpers::is_hex_digit(buffer_[i + 1]) ||
             !helpers::is_hex_digit(buffer_[i + 2]))
           return false;
@@ -133,14 +195,16 @@ class request {
       else
         return false;
     }
-    pth_end_ = i++;
+    pth_end = i++;
+    path_ = std::string_view((const char*)&buffer_[mtd_end.value() + 1],
+                             pth_end.value() - mtd_end.value() - 1);
     // +----------------+------------------------------------------------------+
     // | HTTP-version   | HTTP-name "/" DIGIT "." DIGIT                        |
     // | HTTP-name      | %s"HTTP"                                             |
     // +----------------+------------------------------------------------------+
     // | source: https://datatracker.ietf.org/doc/html/rfc9110                 |
     // +-----------------------------------------------------------------------+
-    if ((rln_end_.value() - i) < kHttpVersionLen) return false;
+    if ((rln_end.value() - i) < kHttpVersionLen) return false;
     if (buffer_[i] != constants::character::kHUpperCase ||
         buffer_[i + 1] != constants::character::kTUpperCase ||
         buffer_[i + 2] != constants::character::kTUpperCase ||
@@ -150,7 +214,9 @@ class request {
         buffer_[i + 6] != constants::character::kDot ||
         !helpers::is_digit(buffer_[i + 7]))
       return false;
-    ver_end_ = i + 8;
+    ver_end = i + 8;
+    version_ = std::string_view((const char*)&buffer_[pth_end.value() + 1],
+                                ver_end.value() - pth_end.value() - 1);
     return true;
   }
   // +-----------------+-------------------------------------------------------+
@@ -169,9 +235,10 @@ class request {
   // +-----------------+-------------------------------------------------------+
   // | source: https://datatracker.ietf.org/doc/html/rfc9110                   |
   // +-------------------------------------------------------------------------+
-  inline bool check_headers() {
-    uint32_t i = ver_end_.value() + sizeof(constants::string::kCrLf) - 1;
-    uint32_t end = hdr_end_.value() + 2;
+  inline bool check_headers(std::optional<uint32_t>& ver_end,
+                            std::optional<uint32_t>& hdr_end) {
+    uint32_t i = ver_end.value() + sizeof(constants::string::kCrLf) - 1;
+    uint32_t end = hdr_end.value() + 2;
     while (i < end) {
       uint32_t beg = i;
       while (i < end && buffer_[i] != constants::character::kColon) {
@@ -220,18 +287,16 @@ class request {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr uint32_t kMaxRequestLength = 16384;  // 16kb.
+  static constexpr uint32_t kMaxSizeInMemory = 16384;  // 16kb.
   static constexpr uint32_t kHttpVersionLen = 8;
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
   uint8_t* buffer_ = nullptr;
   uint32_t cursor_ = 0;
-  std::optional<uint32_t> hdr_end_;  // headers section end.
-  std::optional<uint32_t> rln_end_;  // request line end.
-  std::optional<uint32_t> mtd_end_;  // method end.
-  std::optional<uint32_t> pth_end_;  // path end.
-  std::optional<uint32_t> ver_end_;  // http version end.
+  std::string_view path_;
+  method method_;
+  std::string_view version_;
   std::unordered_map<std::string_view, std::string_view> headers_;
 };
 }  // namespace martianlabs::doba::protocol::http11

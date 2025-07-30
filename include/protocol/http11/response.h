@@ -21,6 +21,7 @@
 #ifndef martianlabs_doba_protocol_http11_response_h
 #define martianlabs_doba_protocol_http11_response_h
 
+#include "reference_buffer.h"
 #include "status_line.h"
 #include "message.h"
 
@@ -37,9 +38,10 @@ class response {
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   response() {
-    buf_size_ = constants::limits::kDefaultResponseMemoryBufferSize;
+    buf_size_ = kMaxSizeInMemory;
     bod_size_ = buf_size_ / 2;
     buf_ = (char*)malloc(buf_size_);
+    reference_ = std::make_shared<reference_buffer>();
   }
   response(const response&) = delete;
   response(response&&) noexcept = delete;
@@ -282,7 +284,7 @@ class response {
     sln_cur_ = sizeof(EAS(SL(505_HTTP_VERSION_NOT_SUPPORTED))) - 1;
     return prepare();
   }
-  inline std::shared_ptr<std::istream> serialize() {
+  inline std::shared_ptr<reference_buffer> serialize() {
     std::size_t cur = 0;
     std::size_t hdr_off = message_.headers_length();
     std::size_t bod_off = message_.body_length();
@@ -290,7 +292,8 @@ class response {
     buf_[sln_cur_ + hdr_off] = constants::character::kCr;
     buf_[sln_cur_ + hdr_off + 1] = constants::character::kLf;
     memcpy(&buf_[sln_cur_ + hdr_off + 2], &buf_[bod_size_], bod_off);
-    return std::make_shared<std::stringstream>(buf_);
+    reference_->set(buf_, sln_cur_ + hdr_off + bod_off + 2);
+    return reference_;
   }
   inline void reset() {
     sln_ = nullptr;
@@ -299,6 +302,10 @@ class response {
   }
 
  private:
+  // ___________________________________________________________________________
+  // CONSTANTs                                                       ( private )
+  //
+  static constexpr uint32_t kMaxSizeInMemory = 16384;  // 16kb.
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //
@@ -314,6 +321,7 @@ class response {
   const char* sln_ = nullptr;
   std::size_t sln_cur_ = 0;
   message<response> message_;
+  std::shared_ptr<reference_buffer> reference_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

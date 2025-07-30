@@ -24,6 +24,8 @@
 #include <optional>
 #include <functional>
 
+#include "reference_buffer.h"
+
 namespace martianlabs::doba::transport::server {
 // =============================================================================
 // tcpip [windows]                                                     ( class )
@@ -86,7 +88,7 @@ class tcpip {
         // let's associate the accept socket with the i/o port!
         std::scoped_lock<std::mutex> contexts_lock(contexts_mutex_);
         context* per_socket_context = nullptr;
-        if (contexts_.empty()) contexts_.push(new context(buffer_size_));
+        if (contexts_.empty()) contexts_.push(new context());
         per_socket_context = contexts_.front();
         per_socket_context->soc = socket;
         contexts_.pop();
@@ -128,7 +130,6 @@ class tcpip {
   }
   void set_port(const std::string_view& port) { port_.assign(port); }
   void set_number_of_workers(uint8_t workers) { workers_ = workers; }
-  void set_buffer_size(uint32_t buffer_size) { buffer_size_ = buffer_size; }
   void set_on_connection(const on_connection_fn& fn) { on_cnn_ = fn; }
   void set_on_disconnection(const on_disconnection_fn& fn) { on_dis_ = fn; }
   void set_on_bytes_received(const on_bytes_received_fn& fn) { on_rcv_ = fn; }
@@ -148,25 +149,24 @@ class tcpip {
   // TYPEs                                                           ( private )
   //
   struct context {
-    context(ULONG buffer_size) {
+    context() {
       ZeroMemory(&ovl, sizeof(WSAOVERLAPPED));
       soc = INVALID_SOCKET;
-      buf = new CHAR[buffer_size];
       wsa.buf = buf;
-      wsa.len = buffer_size;
+      wsa.len = kDefaultBufferSize;
       receiving = true;
       close_after_response = false;
     }
     WSAOVERLAPPED ovl;
     SOCKET soc;
-    CHAR FAR* buf;
+    CHAR FAR buf[kDefaultBufferSize];
     WSABUF wsa;
     bool receiving;
     bool close_after_response;
     std::mutex mutex;
     RQty req;
     RSty res;
-    std::shared_ptr<std::istream> stream;
+    std::shared_ptr<reference_buffer> reference;
     uint32_t ref_count{1};
   };
   // ___________________________________________________________________________
@@ -318,26 +318,28 @@ class tcpip {
   bool setupContexts() {
     std::scoped_lock<std::mutex> lock(contexts_mutex_);
     for (auto i = 0; i < kDefaultMinimalContextsPoolSize; i++) {
-      if (context* ctx = new context(buffer_size_); !ctx) return false;
-      contexts_.push(new context(buffer_size_));
+      if (context* ctx = new context(); !ctx) return false;
+      contexts_.push(new context());
     }
     return true;
   }
-  void receiving(context* ctx) {
+  inline void receiving(context* ctx) {
     ctx->req.reset();
     ctx->res.reset();
     ctx->receiving = true;
-    ctx->wsa.len = buffer_size_;
+    ctx->wsa.len = kDefaultBufferSize;
   }
-  void sending(context* ctx, std::shared_ptr<std::istream> stream, bool car) {
-    ctx->stream = stream;
+  inline void sending(context* ctx,
+                      const std::shared_ptr<reference_buffer>& reference,
+                      bool car) {
+    ctx->reference = reference;
     ctx->receiving = false;
     ctx->close_after_response = car;
   }
-  bool perform(context* ctx) {
+  inline bool perform(context* ctx) {
     return ctx->receiving ? receive(ctx) : send(ctx);
   }
-  bool receive(context* ctx) {
+  inline bool receive(context* ctx) {
     DWORD f = 0, r = 0;
     int res = WSARecv(ctx->soc, &ctx->wsa, 1, &r, &f, &ctx->ovl, 0);
     if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING)
@@ -345,16 +347,15 @@ class tcpip {
     ctx->ref_count++;
     return true;
   }
-  bool send(context* ctx) {
-    auto n = ctx->stream->read(ctx->buf, buffer_size_).gcount();
-    if (ctx->stream->bad() || (ctx->stream->fail() && !ctx->stream->eof()))
-      return false;
-    if (!n) {
+  inline bool send(context* ctx) {
+    auto result = ctx->reference->read(ctx->buf, kDefaultBufferSize);
+    if (!result.has_value()) return false;
+    if (!result.value()) {
       if (ctx->close_after_response) return false;
       receiving(ctx);
       return receive(ctx);
     }
-    ctx->wsa.len = (ULONG)n;
+    ctx->wsa.len = (ULONG)result.value();
     DWORD f = 0, s = 0;
     int res = WSASend(ctx->soc, &ctx->wsa, 1, &s, f, &ctx->ovl, 0);
     if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING)
@@ -368,7 +369,6 @@ class tcpip {
   bool keep_running_ = true;
   std::string port_ = kDefaultPortNumber;
   uint8_t workers_ = kDefaultNumberOfWorkers;
-  uint32_t buffer_size_ = kDefaultBufferSize;
   HANDLE io_h_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::queue<std::unique_ptr<std::thread>> threads_;

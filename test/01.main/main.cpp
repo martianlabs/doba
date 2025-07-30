@@ -24,8 +24,9 @@ using namespace martianlabs::doba::protocol::http11;
 
 int main(int argc, char* argv[]) {
   server my_server("10001");
-  my_server.routes().add_get("/route",
-                             [](const request& req, response& res) {});
-  my_server.start();
+  my_server
+      .add_route(method::kGet, "/plaintext",
+                 [](const request& req, response& res) {})
+      .start();
   return getchar();
 }

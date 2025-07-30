@@ -31,6 +31,7 @@
 #include "protocol/http11/request.h"
 #include "protocol/http11/response.h"
 #include "protocol/http11/router.h"
+#include "protocol/http11/headers.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -54,7 +55,6 @@ class server : public server_base<TRty, RQty, RSty> {
   //
   server(const char port[]) {
     TRty<RQty, RSty>::set_port(port);
-    TRty<RQty, RSty>::set_buffer_size(kDefaultBufferSize);
     TRty<RQty, RSty>::set_number_of_workers(kDefaultNumberOfWorkers);
     TRty<RQty, RSty>::set_on_connection([](socket_type id) {});
     TRty<RQty, RSty>::set_on_disconnection([](socket_type id) {});
@@ -65,13 +65,29 @@ class server : public server_base<TRty, RQty, RSty> {
     TRty<RQty, RSty>::set_on_request_ok(
         [this](const RQty& req, RSty& res) -> transport::process_result {
           auto process_headers_result = process_headers(req, res);
-          if (process_headers_result != transport::process_result::kCompleted)
+          if (process_headers_result != transport::process_result::kCompleted) {
             return process_headers_result;
-          res.ok_200()
-              .add_header("Content-Type", "text/plain")
-              .add_header("Connection", "keep-alive")
-              .add_header("Content-Length", "13")
-              .add_body("Hello, World!");
+          }
+
+          /*
+          pepe
+          */
+
+          auto fn = router_.match(req.get_method(), req.get_path());
+          if (fn.has_value()) {
+            res.ok_200()
+                .add_header("Content-Type", "text/plain")
+                .add_header("Connection", "keep-alive")
+                .add_header("Content-Length", "13")
+                .add_body("Hello, World!");
+          } else {
+            res.not_found_404().add_header(headers::kContentLength, 0);
+          }
+
+          /*
+          pepe fin
+          */
+
           return transport::process_result::kCompleted;
         });
     TRty<RQty, RSty>::set_on_request_error([this](RSty& res) {
@@ -90,7 +106,11 @@ class server : public server_base<TRty, RQty, RSty> {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  ROty<RQty, RSty>& routes() { return router_; }
+  server& add_route(method method, const std::string_view& route,
+                    ROty<RQty, RSty>::handler_fn fn) {
+    router_.add(method, route, fn);
+    return *this;
+  }
 
  private:
   // ___________________________________________________________________________
@@ -101,14 +121,12 @@ class server : public server_base<TRty, RQty, RSty> {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr uint32_t kDefaultBufferSize = 2048;
   static constexpr uint8_t kDefaultNumberOfWorkers = 8;
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //
   void setup_headers_functions() {
-    static std::string_view kConnection =
-        (const char*)constants::header::kConnection;
+    static std::string_view kConnection = headers::kConnection;
     // +---------------------+------------------------+
     // | Field               | Definition             |
     // +---------------------+------------------------+
@@ -120,7 +138,9 @@ class server : public server_base<TRty, RQty, RSty> {
       for (auto token : v | std::views::split(constants::character::kComma)) {
         std::string_view value(&*token.begin(), std::ranges::distance(token));
         value = helpers::ows_ltrim(helpers::ows_rtrim(value));
-        if (!helpers::is_token(value)) return transport::process_result::kError;
+        if (!helpers::is_token(value)) {
+          return transport::process_result::kError;
+        }
       }
       return transport::process_result::kCompleted;
     };
@@ -128,10 +148,12 @@ class server : public server_base<TRty, RQty, RSty> {
   transport::process_result process_headers(const RQty& req, RSty& res) const {
     for (auto const& hdr : req.get_headers()) {
       auto itr = headers_fns_.find(hdr.first);
-      if (itr != headers_fns_.end())
+      if (itr != headers_fns_.end()) {
         if (auto result = itr->second(hdr.second, res);
-            result != transport::process_result::kCompleted)
+            result != transport::process_result::kCompleted) {
           return result;
+        }
+      }
     }
     return transport::process_result::kCompleted;
   }

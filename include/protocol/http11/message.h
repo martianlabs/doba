@@ -53,11 +53,17 @@ class message {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  message& add_header(const std::string_view& k, const std::string_view& v) {
+  inline message& add_header(const std::string_view& k,
+                             const std::string_view& v) {
     headers_.add(k, v);
     return *this;
   }
-  message& add_body(const std::string_view& s) {
+  template <typename T>
+    requires std::is_arithmetic_v<T>
+  inline message& add_header(const std::string_view& k, const T& v) {
+    return add_header(k, std::to_string(v));
+  }
+  inline message& add_body(const std::string_view& s) {
     body_.add(s);
     return *this;
   }
@@ -87,7 +93,7 @@ class message {
   //
   char* buffer_ = nullptr;
   std::size_t size_ = 0;
-  headers<message> headers_;
+  headers headers_;
   body<message> body_;
   // ___________________________________________________________________________
   // FRIEND-CLASSEs                                                  ( private )
