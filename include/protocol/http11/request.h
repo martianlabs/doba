@@ -167,19 +167,28 @@ class request {
         return false;
         break;
     }
-    // +----------------+------------------------------------------------------+
-    // | Field          | Definition                                           |
-    // +----------------+------------------------------------------------------+
-    // | path           | segment *( "/" segment )                             |
-    // | segment        | *pchar                                               |
-    // | pchar          | unreserved / pct-encoded / sub-delims / ":" / "@"    |
-    // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"                |
-    // | pct-encoded    | "%" HEXDIG HEXDIG                                    |
-    // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" /      |
-    // |                | "," / ";" / "="                                      |
-    // +----------------+------------------------------------------------------+
-    // | source: https://datatracker.ietf.org/doc/html/rfc9110                 |
-    // +----------------+------------------------------------------------------+
+    // +=======================================================================+
+    // | HTTP/1.1: request-target (RFC 9112 §2.2) – Valid Forms                |
+    // +=======================================================================+
+    // |                                                                       |
+    // | request-target = origin-form                                          |
+    // |                / absolute-form                                        |
+    // |                / authority-form                                       |
+    // |                / asterisk-form                                        |
+    // |                                                                       |
+    // |-----------------------------------------------------------------------|
+    // | FORM 1: origin-form (most common)                                     |
+    // |    origin-form = absolute-path [ "?" query ]                          |
+    // |-----------------------------------------------------------------------|
+    // | FORM 2: absolute-form (used via HTTP proxy)                           |
+    // |    URI = scheme ":" hier-part [ "?" query ] [ "#" fragment ]          |
+    // |-----------------------------------------------------------------------|
+    // | FORM 3: authority-form (used with CONNECT)                            |
+    // |    authority-form = host ":" port                                     |
+    // |-----------------------------------------------------------------------|
+    // | FORM 4: asterisk-form (used with OPTIONS)                             |
+    // |    asterisk-form = "*"                                                |
+    // +=======================================================================+
     char character = buffer_[i++];
     if (method_ == method::kConnect) {
       // [to-do] -> add support for this!
@@ -189,7 +198,21 @@ class request {
       // [to-do] -> add support for this!
       // asterisk-form
     } else if (character == constants::character::kSlash) {
-      // origin-form
+      // +---------------------------------------------------------------------+
+      // |                                                         origin-form |
+      // +----------------+----------------------------------------------------+
+      // | Field          | Definition                                         |
+      // +----------------+----------------------------------------------------+
+      // | path           | segment *( "/" segment )                           |
+      // | segment        | *pchar                                             |
+      // | pchar          | unreserved / pct-encoded / sub-delims / ":" / "@"  |
+      // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"              |
+      // | pct-encoded    | "%" HEXDIG HEXDIG                                  |
+      // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" /    |
+      // |                | "," / ";" / "="                                    |
+      // +----------------+----------------------------------------------------+
+      // | source: https://datatracker.ietf.org/doc/html/rfc9110               |
+      // +----------------+----------------------------------------------------+
       path_.push_back(character);
       while (i < rln_end.value()) {
         if (buffer_[i] == constants::character::kPercent) {
