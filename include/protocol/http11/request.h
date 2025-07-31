@@ -87,6 +87,8 @@ class request {
   inline void reset() {
     cursor_ = 0;
     headers_.clear();
+    path_.clear();
+    method_ = method::kUnknown;
   }
   inline auto get_path() const { return path_; }
   inline auto get_method() const { return method_; }
@@ -178,26 +180,43 @@ class request {
     // +----------------+------------------------------------------------------+
     // | source: https://datatracker.ietf.org/doc/html/rfc9110                 |
     // +----------------+------------------------------------------------------+
-    if (buffer_[i++] != constants::character::kSlash) return false;
-    while (i < rln_end.value()) {
-      if (buffer_[i] == constants::character::kSpace) break;
-      if (buffer_[i] == constants::character::kPercent) {
-        if (i + 2 >= rln_end.value()) return false;
-        if (!helpers::is_hex_digit(buffer_[i + 1]) ||
-            !helpers::is_hex_digit(buffer_[i + 2]))
-          return false;
-        i += 3;
-        continue;
-      } else if (helpers::is_pchar(buffer_[i]) ||
-                 buffer_[i] == constants::character::kSlash ||
-                 buffer_[i] == constants::character::kQuestion)
+    char character = buffer_[i++];
+    if (method_ == method::kConnect) {
+      // [to-do] -> add support for this!
+      // authority-form
+      // wait for: host:port
+    } else if (method_ == method::kOptions) {
+      // [to-do] -> add support for this!
+      // asterisk-form
+    } else if (character == constants::character::kSlash) {
+      // origin-form
+      path_.push_back(character);
+      while (i < rln_end.value()) {
+        if (buffer_[i] == constants::character::kPercent) {
+          if (i + 2 >= rln_end.value()) return false;
+          if (!helpers::is_hex_digit(buffer_[i + 1]) ||
+              !helpers::is_hex_digit(buffer_[i + 2]))
+            return false;
+          character = static_cast<char>(std::stoi(
+              std::string((const char*)&buffer_[i + 1], 2), nullptr, 16));
+          i += 3;
+        } else if ((character = buffer_[i]) == constants::character::kSpace) {
+          break;
+        }
         i++;
-      else
-        return false;
+        if (!helpers::is_pchar(character) &&
+            character == constants::character::kSlash &&
+            character == constants::character::kQuestion) {
+          return false;
+        }
+        path_.push_back(character);
+      }
+    } else {
+      // [to-do] -> add support for this!
+      // absolute-form
+      // parse it as URI..
     }
     pth_end = i++;
-    path_ = std::string_view((const char*)&buffer_[mtd_end.value() + 1],
-                             pth_end.value() - mtd_end.value() - 1);
     // +----------------+------------------------------------------------------+
     // | HTTP-version   | HTTP-name "/" DIGIT "." DIGIT                        |
     // | HTTP-name      | %s"HTTP"                                             |
@@ -212,8 +231,9 @@ class request {
         buffer_[i + 4] != constants::character::kSlash ||
         !helpers::is_digit(buffer_[i + 5]) ||
         buffer_[i + 6] != constants::character::kDot ||
-        !helpers::is_digit(buffer_[i + 7]))
+        !helpers::is_digit(buffer_[i + 7])) {
       return false;
+    }
     ver_end = i + 8;
     version_ = std::string_view((const char*)&buffer_[pth_end.value() + 1],
                                 ver_end.value() - pth_end.value() - 1);
@@ -294,7 +314,7 @@ class request {
   //
   uint8_t* buffer_ = nullptr;
   uint32_t cursor_ = 0;
-  std::string_view path_;
+  std::string path_;
   method method_;
   std::string_view version_;
   std::unordered_map<std::string_view, std::string_view> headers_;
