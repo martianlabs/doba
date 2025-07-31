@@ -174,6 +174,8 @@
     <ClInclude Include="..\..\include\protocol\http11\server.h" />
     <ClInclude Include="..\..\include\protocol\http11\status_code.h" />
     <ClInclude Include="..\..\include\protocol\http11\status_line.h" />
+    <ClInclude Include="..\..\include\protocol\http11\target.h" />
+    <ClInclude Include="..\..\include\protocol\http11\target_type.h" />
     <ClInclude Include="..\..\include\protocol\result.h" />
     <ClInclude Include="..\..\include\reference_buffer.h" />
     <ClInclude Include="..\..\include\server_base.h" />

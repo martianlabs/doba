@@ -49,6 +49,15 @@ class headers {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
+  inline void prepare(char* buffer, const std::size_t& size) {
+    buffer_ = buffer;
+    size_ = size;
+  }
+  inline void reset() {
+    buffer_ = nullptr;
+    size_ = 0;
+    length_ = 0;
+  }
   inline void add(const std::string_view& k, const std::string_view& v) {
     std::size_t entry_length = k.length() + v.length() + 3;
     if ((size_ - length_) > (entry_length + 2)) {
@@ -67,15 +76,6 @@ class headers {
     add(k, std::to_string(v));
   }
   inline std::size_t length() const { return length_; }
-  inline void reset() {
-    buffer_ = nullptr;
-    size_ = 0;
-    length_ = 0;
-  }
-  inline void prepare(char* buffer, const std::size_t& size) {
-    buffer_ = buffer;
-    size_ = size;
-  }
   // ___________________________________________________________________________
   // CONSTANTs                                                        ( public )
   //

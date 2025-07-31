@@ -73,6 +73,13 @@ class server : public server_base<TRty, RQty, RSty> {
           pepe
           */
 
+          res.ok_200()
+              .add_header("Content-Type", "text/plain")
+              .add_header("Connection", "keep-alive")
+              .add_header("Content-Length", "13")
+              .add_body("Hello, World!");
+
+          /*
           auto fn = router_.match(req.get_method(), req.get_path());
           if (fn.has_value()) {
             res.ok_200()
@@ -83,6 +90,7 @@ class server : public server_base<TRty, RQty, RSty> {
           } else {
             res.not_found_404().add_header(headers::kContentLength, 0);
           }
+          */
 
           /*
           pepe fin
@@ -146,6 +154,12 @@ class server : public server_base<TRty, RQty, RSty> {
     };
   }
   transport::process_result process_headers(const RQty& req, RSty& res) const {
+
+    /*
+    pepe
+    */
+
+    /*
     for (auto const& hdr : req.get_headers()) {
       auto itr = headers_fns_.find(hdr.first);
       if (itr != headers_fns_.end()) {
@@ -155,6 +169,12 @@ class server : public server_base<TRty, RQty, RSty> {
         }
       }
     }
+    */
+
+    /*
+    pepe fin
+    */
+
     return transport::process_result::kCompleted;
   }
   // ___________________________________________________________________________

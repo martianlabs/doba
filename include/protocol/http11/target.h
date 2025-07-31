@@ -18,77 +18,49 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_protocol_http11_message_h
-#define martianlabs_doba_protocol_http11_message_h
+#ifndef martianlabs_doba_protocol_http11_target_h
+#define martianlabs_doba_protocol_http11_target_h
 
 #include <string_view>
 
-#include "headers.h"
-#include "body.h"
+#include "target_type.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
-// message                                                             ( class )
+// target                                                              ( class )
 // -----------------------------------------------------------------------------
-// This class holds for the http 1.1 request/response base class.
+// This class holds for the http 1.1 request-target implementation.
 // -----------------------------------------------------------------------------
 // =============================================================================
-class message {
+class target {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  message() = default;
-  message(const message&) = delete;
-  message(message&&) noexcept = delete;
-  ~message() = default;
+  target() = default;
+  target(const target&) = default;
+  target(target&&) noexcept = default;
+  ~target() = default;
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
-  message& operator=(const message&) = delete;
-  message& operator=(message&&) noexcept = delete;
+  target& operator=(const target&) = default;
+  target& operator=(target&&) noexcept = default;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  inline message& prepare(char* buffer, const std::size_t& size,
-                          const std::size_t& size_for_body) {
-    buffer_ = buffer;
-    size_ = size;
-    headers_.prepare(buffer, size - size_for_body);
-    body_.prepare(&buffer[size - size_for_body], size_for_body);
-    return *this;
+  inline void set_as_origin_form(const std::string_view& path) {
+    type_ = target_type::kOriginForm;
+    path_ = path;
   }
-  inline void reset() {
-    buffer_ = nullptr;
-    size_ = 0;
-    headers_.reset();
-    body_.reset();
-  }
-  inline message& add_header(const std::string_view& k,
-                             const std::string_view& v) {
-    headers_.add(k, v);
-    return *this;
-  }
-  template <typename T>
-    requires std::is_arithmetic_v<T>
-  inline message& add_header(const std::string_view& k, const T& v) {
-    return add_header(k, std::to_string(v));
-  }
-  inline message& add_body(const std::string_view& s) {
-    body_.add(s);
-    return *this;
-  }
-  inline std::size_t headers_length() const { return headers_.length(); }
-  inline std::size_t body_length() const { return body_.length(); }
+  inline void clear() { type_.reset(); }
 
  private:
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* buffer_ = nullptr;
-  std::size_t size_ = 0;
-  headers headers_;
-  body body_;
+  std::optional<target_type> type_;
+  std::string path_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

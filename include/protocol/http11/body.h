@@ -32,7 +32,6 @@ namespace martianlabs::doba::protocol::http11 {
 // This class holds for the http 1.1 body implementation.
 // -----------------------------------------------------------------------------
 // =============================================================================
-template <typename PAty>
 class body {
  public:
   // ___________________________________________________________________________
@@ -50,6 +49,15 @@ class body {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
+  inline void prepare(char* buffer, const std::size_t& size) {
+    buffer_ = buffer;
+    size_ = size;
+  }
+  inline void reset() {
+    buffer_ = nullptr;
+    size_ = 0;
+    length_ = 0;
+  }
   void add(const std::string_view& s) {
     if ((size_ - length_) > s.length()) {
       memcpy(&buffer_[length_], s.data(), s.length());
@@ -60,27 +68,11 @@ class body {
 
  private:
   // ___________________________________________________________________________
-  // METHODs                                                         ( private )
-  //
-  inline void reset() {
-    buffer_ = nullptr;
-    size_ = 0;
-    length_ = 0;
-  }
-  inline void prepare(char* buffer, const std::size_t& size) {
-    buffer_ = buffer;
-    size_ = size;
-  }
-  // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
   char* buffer_ = nullptr;
   std::size_t size_ = 0;
   std::size_t length_ = 0;
-  // ___________________________________________________________________________
-  // FRIEND-CLASSEs                                                  ( private )
-  //
-  friend typename PAty;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

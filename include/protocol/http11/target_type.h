@@ -18,25 +18,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_protocol_http11_method_h
-#define martianlabs_doba_protocol_http11_method_h
+#ifndef martianlabs_doba_protocol_http11_target_type_h
+#define martianlabs_doba_protocol_http11_target_type_h
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
-// method                                                         ( enum-class )
+// target_type                                                    ( enum-class )
 // -----------------------------------------------------------------------------
-// This enum class holds for the http 1.1 method implementation.
+// This enum class holds for the http 1.1 request-target types implementation.
+// -----------------------------------------------------------------------------
+// request-target = origin-form / absolute-form / authority-form / asterisk-form
 // -----------------------------------------------------------------------------
 // =============================================================================
-enum class method {
-  kGet,
-  kHead,
-  kPost,
-  kPut,
-  kDelete,
-  kConnect,
-  kOptions,
-  kTrace
+enum class target_type {
+  kOriginForm,
+  kAbsoluteForm,
+  kAuthorityForm,
+  kAsteriskForm
 };
 }  // namespace martianlabs::doba::protocol::http11
 

@@ -36,10 +36,7 @@ class request {
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  request() {
-    buffer_ = (uint8_t*)malloc(kMaxSizeInMemory);
-    method_ = method::kUnknown;
-  }
+  request() { buffer_ = (uint8_t*)malloc(kFullSectionMemory); }
   request(const request&) = delete;
   request(request&&) noexcept = delete;
   ~request() { free(buffer_); }
@@ -58,7 +55,7 @@ class request {
     std::optional<uint32_t> pth_end;  // path end.
     std::optional<uint32_t> ver_end;  // http version end.
     // first of all, let's check if we're under limits..
-    if ((kMaxSizeInMemory - cursor_) < length) {
+    if ((kFullSectionMemory - cursor_) < length) {
       return transport::process_result::kError;
     }
     memcpy(&buffer_[cursor_], buffer, length);
@@ -88,11 +85,11 @@ class request {
     cursor_ = 0;
     headers_.clear();
     path_.clear();
-    method_ = method::kUnknown;
+    method_.reset();
   }
-  inline auto get_path() const { return path_; }
-  inline auto get_method() const { return method_; }
-  inline auto get_headers() const { return headers_; }
+  inline auto const& get_path() const { return path_; }
+  inline auto const& get_method() const { return method_; }
+  inline auto const& get_headers() const { return headers_; }
 
  private:
   // ___________________________________________________________________________
@@ -330,7 +327,7 @@ class request {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr uint32_t kMaxSizeInMemory = 16384;  // 16kb.
+  static constexpr uint32_t kFullSectionMemory = 8192;  // 8kb.
   static constexpr uint32_t kHttpVersionLen = 8;
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
@@ -338,7 +335,7 @@ class request {
   uint8_t* buffer_ = nullptr;
   uint32_t cursor_ = 0;
   std::string path_;
-  method method_;
+  std::optional<method> method_;
   std::string_view version_;
   std::unordered_map<std::string_view, std::string_view> headers_;
 };

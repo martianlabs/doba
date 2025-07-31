@@ -1,0 +1,106 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="include">
+      <UniqueIdentifier>{720e8b4b-5b9b-4207-ae62-2a8848fe4260}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\protocol">
+      <UniqueIdentifier>{cdc64ccc-e108-4d6c-b0fd-43a238d3c81d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="transport">
+      <UniqueIdentifier>{c3c6e144-62fe-4e1a-9083-7c74eb2d5127}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="transport\server">
+      <UniqueIdentifier>{c017878a-e830-41e0-bcc6-2a0a7b528e3c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\builder">
+      <UniqueIdentifier>{78b33e46-3deb-4392-aa8a-573b00844c2b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\protocol\http11">
+      <UniqueIdentifier>{35660661-3472-4c16-ac70-05a58948d2d4}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\platform.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\result.h">
+      <Filter>include\protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\transport\result.h">
+      <Filter>transport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\transport\server\tcpip.h">
+      <Filter>transport\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\transport\server\tcpip_linux.h">
+      <Filter>transport\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\transport\server\tcpip_windows.h">
+      <Filter>transport\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\builder\builder.h">
+      <Filter>include\builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\builder\property.h">
+      <Filter>include\builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\transport\process_result.h">
+      <Filter>transport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\request.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\response.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\helpers.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\constants.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\status_line.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\reason_phrase.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\status_code.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\message.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\headers.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\body.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\server.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\server_base.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\router.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\reference_buffer.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\method.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\target.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\target_type.h">
+      <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
