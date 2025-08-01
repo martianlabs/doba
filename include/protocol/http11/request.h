@@ -22,6 +22,7 @@
 #define martianlabs_doba_protocol_http11_request_h
 
 #include "method.h"
+#include "target.h"
 #include "helpers.h"
 
 namespace martianlabs::doba::protocol::http11 {
@@ -84,11 +85,11 @@ class request {
   inline void reset() {
     cursor_ = 0;
     headers_.clear();
-    path_.clear();
+    target_.reset();
     method_.reset();
   }
-  inline auto const& get_path() const { return path_; }
-  inline auto const& get_method() const { return method_; }
+  inline auto const& get_target() const { return target_.value(); }
+  inline auto const& get_method() const { return method_.value(); }
   inline auto const& get_headers() const { return headers_; }
 
  private:
@@ -186,14 +187,22 @@ class request {
     // | FORM 4: asterisk-form (used with OPTIONS)                             |
     // |    asterisk-form = "*"                                                |
     // +=======================================================================+
+    if (i >= rln_end.value()) return false;
     char character = buffer_[i++];
     if (method_ == method::kConnect) {
       // [to-do] -> add support for this!
       // authority-form
       // wait for: host:port
     } else if (method_ == method::kOptions) {
-      // [to-do] -> add support for this!
-      // asterisk-form
+      // +---------------------------------------------------------------------+
+      // |                                                       asterisk-form |
+      // +----------------+----------------------------------------------------+
+      // | Field          | Definition                                         |
+      // +----------------+----------------------------------------------------+
+      // | asterisk-form  | "*"                                                |
+      // +----------------+----------------------------------------------------+
+      if (character != constants::character::kSpace) return false;
+      target_ = target::create_as_asterisk_form();
     } else if (character == constants::character::kSlash) {
       // +---------------------------------------------------------------------+
       // |                                                         origin-form |
@@ -210,7 +219,8 @@ class request {
       // +----------------+----------------------------------------------------+
       // | source: https://datatracker.ietf.org/doc/html/rfc9110               |
       // +----------------+----------------------------------------------------+
-      path_.push_back(character);
+      std::string path;
+      path.push_back(character);
       while (i < rln_end.value()) {
         if (buffer_[i] == constants::character::kPercent) {
           if (i + 2 >= rln_end.value()) return false;
@@ -229,8 +239,9 @@ class request {
             character == constants::character::kQuestion) {
           return false;
         }
-        path_.push_back(character);
+        path.push_back(character);
       }
+      target_ = target::create_as_origin_form(path);
     } else {
       // [to-do] -> add support for this!
       // absolute-form
@@ -334,8 +345,8 @@ class request {
   //
   uint8_t* buffer_ = nullptr;
   uint32_t cursor_ = 0;
-  std::string path_;
   std::optional<method> method_;
+  std::optional<target> target_;
   std::string_view version_;
   std::unordered_map<std::string_view, std::string_view> headers_;
 };

@@ -149,13 +149,18 @@ class tcpip {
   // TYPEs                                                           ( private )
   //
   struct context {
-    context() {
+    context() { reset(); }
+    inline void reset() {
       ZeroMemory(&ovl, sizeof(WSAOVERLAPPED));
       soc = INVALID_SOCKET;
       wsa.buf = buf;
       wsa.len = kDefaultBufferSize;
       receiving = true;
       close_after_response = false;
+      req.reset();
+      res.reset();
+      reference.reset();
+      ref_count = 1;
     }
     WSAOVERLAPPED ovl;
     SOCKET soc;
@@ -247,11 +252,12 @@ class tcpip {
             if (!ovl && WSAGetLastError() == ERROR_INVALID_HANDLE) break;
             if (ovl && key) {
               // abrupt connection close!
-              std::lock_guard<std::mutex> lock(((context*)key)->mutex);
-              if (!((context*)key)->ref_count) {
-                std::scoped_lock<std::mutex> contexts_lock(contexts_mutex_);
-                contexts_.push((context*)key);
+              {
+                std::lock_guard<std::mutex> lock(((context*)key)->mutex);
+                closesocket(((context*)key)->soc);
               }
+              std::scoped_lock<std::mutex> contexts_lock(contexts_mutex_);
+              contexts_.push((context*)key);
             }
             continue;
           }
@@ -299,6 +305,8 @@ class tcpip {
             } else {
               if (!ctx->ref_count) {
                 std::scoped_lock<std::mutex> contexts_lock(contexts_mutex_);
+                closesocket(ctx->soc);
+                ctx->reset();
                 contexts_.push(ctx);
                 continue;
               }
@@ -309,6 +317,8 @@ class tcpip {
           }
           if (!perform(ctx) && !ctx->ref_count) {
             std::scoped_lock<std::mutex> contexts_lock(contexts_mutex_);
+            closesocket(ctx->soc);
+            ctx->reset();
             contexts_.push(ctx);
           }
         }

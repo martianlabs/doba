@@ -68,38 +68,30 @@ class server : public server_base<TRty, RQty, RSty> {
           if (process_headers_result != transport::process_result::kCompleted) {
             return process_headers_result;
           }
-
-          /*
-          pepe
-          */
-
-          res.ok_200()
-              .add_header("Content-Type", "text/plain")
-              .add_header("Connection", "keep-alive")
-              .add_header("Content-Length", "13")
-              .add_body("Hello, World!");
-
-          /*
-          auto fn = router_.match(req.get_method(), req.get_path());
-          if (fn.has_value()) {
-            res.ok_200()
-                .add_header("Content-Type", "text/plain")
-                .add_header("Connection", "keep-alive")
-                .add_header("Content-Length", "13")
-                .add_body("Hello, World!");
-          } else {
-            res.not_found_404().add_header(headers::kContentLength, 0);
+          switch (req.get_target().get_type()) {
+            case target_type::kOriginForm: {
+              auto fn = router_.match(req.get_method(),
+                                      req.get_target().get_path().value());
+              if (fn.has_value()) {
+                fn.value()(req, res);
+              } else {
+                res.not_found_404().add_header(headers::kContentLength, 0);
+              }
+            } break;
+            case target_type::kAbsoluteForm:
+              // [to-do] -> add support for this!
+              break;
+            case target_type::kAuthorityForm:
+              // [to-do] -> add support for this!
+              break;
+            case target_type::kAsteriskForm:
+              // [to-do] -> add support for this!
+              break;
           }
-          */
-
-          /*
-          pepe fin
-          */
-
           return transport::process_result::kCompleted;
         });
     TRty<RQty, RSty>::set_on_request_error([this](RSty& res) {
-      // here we have to generate a BAD REQUEST response!
+      res.bad_request_400().add_header(headers::kContentLength, 0);
     });
     setup_headers_functions();
   }
@@ -154,12 +146,6 @@ class server : public server_base<TRty, RQty, RSty> {
     };
   }
   transport::process_result process_headers(const RQty& req, RSty& res) const {
-
-    /*
-    pepe
-    */
-
-    /*
     for (auto const& hdr : req.get_headers()) {
       auto itr = headers_fns_.find(hdr.first);
       if (itr != headers_fns_.end()) {
@@ -169,12 +155,6 @@ class server : public server_base<TRty, RQty, RSty> {
         }
       }
     }
-    */
-
-    /*
-    pepe fin
-    */
-
     return transport::process_result::kCompleted;
   }
   // ___________________________________________________________________________
