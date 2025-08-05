@@ -160,6 +160,9 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\builder\builder.h" />
     <ClInclude Include="..\..\include\builder\property.h" />
+    <ClInclude Include="..\..\include\hash_base.h" />
+    <ClInclude Include="..\..\include\hash_map.h" />
+    <ClInclude Include="..\..\include\hash_set.h" />
     <ClInclude Include="..\..\include\platform.h" />
     <ClInclude Include="..\..\include\protocol\http11\body.h" />
     <ClInclude Include="..\..\include\protocol\http11\constants.h" />

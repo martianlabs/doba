@@ -58,7 +58,7 @@ class headers {
     size_ = 0;
     length_ = 0;
   }
-  inline void add(const std::string_view& k, const std::string_view& v) {
+  inline void add(std::string_view k, std::string_view v) {
     std::size_t entry_length = k.length() + v.length() + 3;
     if ((size_ - length_) > (entry_length + 2)) {
       memcpy(&buffer_[length_], k.data(), k.length());
@@ -72,7 +72,7 @@ class headers {
   }
   template <typename T>
     requires std::is_arithmetic_v<T>
-  inline void add(const std::string_view& k, const T& v) {
+  inline void add(std::string_view k, const T& v) {
     add(k, std::to_string(v));
   }
   inline std::size_t length() const { return length_; }

@@ -102,5 +102,14 @@
     <ClInclude Include="..\..\include\protocol\http11\target_type.h">
       <Filter>include\protocol\http11</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\hash_map.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\hash_set.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\hash_base.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

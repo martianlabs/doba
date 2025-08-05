@@ -286,8 +286,8 @@ class response {
   }
   inline std::shared_ptr<reference_buffer> serialize() {
     std::size_t cur = 0;
-    std::size_t hdr_off = message_.headers_length();
-    std::size_t bod_off = message_.body_length();
+    std::size_t hdr_off = message_.get_headers_length();
+    std::size_t bod_off = message_.get_body_length();
     memcpy(buf_, sln_, sln_cur_);
     buf_[sln_cur_ + hdr_off] = constants::character::kCr;
     buf_[sln_cur_ + hdr_off + 1] = constants::character::kLf;
@@ -299,6 +299,14 @@ class response {
     sln_ = nullptr;
     sln_cur_ = 0;
     message_.reset();
+  }
+  inline response& add_hop_by_hop_header(std::string_view hop) {
+    message_.add_hop_by_hop_header(hop);
+    return *this;
+  }
+  inline response& clear_hop_by_hop_headers() {
+    message_.clear_hop_by_hop_headers();
+    return *this;
   }
 
  private:

@@ -58,7 +58,7 @@ class body {
     size_ = 0;
     length_ = 0;
   }
-  void add(const std::string_view& s) {
+  void add(std::string_view s) {
     if ((size_ - length_) > s.length()) {
       memcpy(&buffer_[length_], s.data(), s.length());
       length_ += s.length();

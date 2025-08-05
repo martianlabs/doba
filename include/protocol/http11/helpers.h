@@ -65,7 +65,7 @@ struct helpers {
            val == constants::character::kVerticalBar ||
            val == constants::character::kTilde;
   }
-  static inline bool is_token(const std::string_view& s) {
+  static inline bool is_token(std::string_view s) {
     for (auto c : s)
       if (!is_token(c)) return false;
     return true;
@@ -116,6 +116,13 @@ struct helpers {
     while (!s.empty() && helpers::is_ows(static_cast<unsigned char>(s.back())))
       s.remove_suffix(1);
     return s;
+  }
+  static inline bool are_equal(std::string_view a, std::string_view b) {
+    return a.size() == b.size() &&
+           std::equal(a.begin(), a.end(), b.begin(), [](char ac, char bc) {
+             return std::tolower(static_cast<unsigned char>(ac)) ==
+                    std::tolower(static_cast<unsigned char>(bc));
+           });
   }
 };
 }  // namespace martianlabs::doba::protocol::http11

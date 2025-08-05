@@ -165,6 +165,7 @@ class request {
         return false;
         break;
     }
+    if (i >= rln_end.value()) return false;
     // +=======================================================================+
     // | HTTP/1.1: request-target (RFC 9112 §2.2) – Valid Forms                |
     // +=======================================================================+
@@ -187,12 +188,46 @@ class request {
     // | FORM 4: asterisk-form (used with OPTIONS)                             |
     // |    asterisk-form = "*"                                                |
     // +=======================================================================+
-    if (i >= rln_end.value()) return false;
-    char character = buffer_[i++];
     if (method_ == method::kConnect) {
+      // +---------------------------------------------------------------------+
+      // |                                                      authority-form |
+      // +----------------+----------------------------------------------------+
+      // | Rule           | Definition                                         |
+      // +----------------+----------------------------------------------------+
+      // | authority-form | authority                                          |
+      // |                | (RFC 9112 §2.2)                                    |
+      // | authority      | [ userinfo "@" ] host [ ":" port ]                 |
+      // |                | (RFC 3986 §3.2)                                    |
+      // |                |  userinfo is forbidden in HTTP `authority-form`    |
+      // | host           | IP-literal / IPv4address / reg-name                |
+      // |                | (RFC 3986 §3.2.2)                                  |
+      // | port           | *DIGIT                                             |
+      // |                | (RFC 3986 §3.2.3)                                  |
+      // | userinfo       | *( unreserved / pct-encoded / sub-delims / ":" )   |
+      // |                | (RFC 3986 §3.2.1) : forbidden in HTTP              |
+      // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"              |
+      // |                | (RFC 3986 §2.3)                                    |
+      // | pct-encoded    | "%" HEXDIG HEXDIG                                  |
+      // |                | (RFC 3986 §2.1)                                    |
+      // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")"                  |
+      // |                | "*" / "+" / "," / ";" / "="                        |
+      // |                | (RFC 3986 §2.2)                                    |
+      // | IP-literal     | "[" ( IPv6address / IPvFuture ) "]"                |
+      // |                | (RFC 3986 §3.2.2)                                  |
+      // | IPv4address    | dec-octet "." dec-octet "." dec-octet "." dec-octet|
+      // |                | (RFC 3986 §3.2.2)                                  |
+      // | dec-octet      | DIGIT                 ; 0-9                        |
+      // |                | / %x31-39 DIGIT       ; 10-99                      |
+      // |                | / "1" 2DIGIT          ; 100-199                    |
+      // |                | / "2" %x30-34 DIGIT   ; 200-249                    |
+      // |                | / "25" %x30-35        ; 250-255                    |
+      // |                | (RFC 3986 §3.2.2)                                  |
+      // | reg-name       | *( unreserved / pct-encoded / sub-delims )         |
+      // |                | (RFC 3986 §3.2.2)                                  |
+      // +----------------+----------------------------------------------------+
+      // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       // [to-do] -> add support for this!
-      // authority-form
-      // wait for: host:port
+      // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     } else if (method_ == method::kOptions) {
       // +---------------------------------------------------------------------+
       // |                                                       asterisk-form |
@@ -201,58 +236,43 @@ class request {
       // +----------------+----------------------------------------------------+
       // | asterisk-form  | "*"                                                |
       // +----------------+----------------------------------------------------+
-      if (character != constants::character::kSpace) return false;
-      target_ = target::create_as_asterisk_form();
-    } else if (character == constants::character::kSlash) {
-      // +---------------------------------------------------------------------+
-      // |                                                         origin-form |
-      // +----------------+----------------------------------------------------+
-      // | Field          | Definition                                         |
-      // +----------------+----------------------------------------------------+
-      // | path           | segment *( "/" segment )                           |
-      // | segment        | *pchar                                             |
-      // | pchar          | unreserved / pct-encoded / sub-delims / ":" / "@"  |
-      // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"              |
-      // | pct-encoded    | "%" HEXDIG HEXDIG                                  |
-      // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" /    |
-      // |                | "," / ";" / "="                                    |
-      // +----------------+----------------------------------------------------+
-      // | source: https://datatracker.ietf.org/doc/html/rfc9110               |
-      // +----------------+----------------------------------------------------+
-      std::string path;
-      path.push_back(character);
-      while (i < rln_end.value()) {
-        if (buffer_[i] == constants::character::kPercent) {
-          if (i + 2 >= rln_end.value()) return false;
-          if (!helpers::is_hex_digit(buffer_[i + 1]) ||
-              !helpers::is_hex_digit(buffer_[i + 2]))
-            return false;
-          character = static_cast<char>(std::stoi(
-              std::string((const char*)&buffer_[i + 1], 2), nullptr, 16));
-          i += 3;
-        } else if ((character = buffer_[i]) == constants::character::kSpace) {
-          break;
-        }
-        i++;
-        if (!helpers::is_pchar(character) &&
-            character == constants::character::kSlash &&
-            character == constants::character::kQuestion) {
-          return false;
-        }
-        path.push_back(character);
-      }
-      target_ = target::create_as_origin_form(path);
-    } else {
+      // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       // [to-do] -> add support for this!
-      // absolute-form
-      // parse it as URI..
+      // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    } else {
+      auto absolute_path = try_get_absolute_path(i, rln_end.value());
+      if (absolute_path) {
+        // +-------------------------------------------------------------------+
+        // |                                                       origin-form |
+        // +----------------+--------------------------------------------------+
+        // | Field          | Definition                                       |
+        // +----------------+--------------------------------------------------+
+        // | path           | segment *( "/" segment )                         |
+        // | segment        | *pchar                                           |
+        // | pchar          | unreserved / pct-encoded / sub-delims / ":" / "@"|
+        // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"            |
+        // | pct-encoded    | "%" HEXDIG HEXDIG                                |
+        // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" /  |
+        // |                | "," / ";" / "="                                  |
+        // +----------------+--------------------------------------------------+
+        // | source: https://datatracker.ietf.org/doc/html/rfc9110             |
+        // +----------------+--------------------------------------------------+
+        target_ = target::create_as_origin_form(
+            absolute_path.value(), try_get_query_part(i, rln_end.value()));
+      } else {
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        // [to-do] -> add support for this!
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        // absolute-form
+        // parse it as URI..
+      }
     }
     pth_end = i++;
     // +----------------+------------------------------------------------------+
     // | HTTP-version   | HTTP-name "/" DIGIT "." DIGIT                        |
     // | HTTP-name      | %s"HTTP"                                             |
     // +----------------+------------------------------------------------------+
-    // | source: https://datatracker.ietf.org/doc/html/rfc9110                 |
+    // | source: https://datatracker.ietf.org/doc/html/rfc9110 |               |
     // +-----------------------------------------------------------------------+
     if ((rln_end.value() - i) < kHttpVersionLen) return false;
     if (buffer_[i] != constants::character::kHUpperCase ||
@@ -320,6 +340,64 @@ class request {
       i++;
     }
     return true;
+  }
+  inline std::optional<std::string> try_get_absolute_path(uint32_t& i,
+                                                          uint32_t len) {
+    std::string path;
+    char current_character;
+    if (buffer_[i] != constants::character::kSlash) return std::nullopt;
+    while (i < len) {
+      if (buffer_[i] == constants::character::kPercent) {
+        if (i + 2 >= len) return std::nullopt;
+        if (!helpers::is_hex_digit(buffer_[i + 1]) ||
+            !helpers::is_hex_digit(buffer_[i + 2]))
+          return std::nullopt;
+        current_character = static_cast<char>(std::stoi(
+            std::string((const char*)&buffer_[i + 1], 2), nullptr, 16));
+        i += 3;
+      } else {
+        current_character = buffer_[i];
+        if (current_character == constants::character::kSpace ||
+            current_character == constants::character::kQuestion) {
+          break;
+        }
+      }
+      if (!helpers::is_pchar(current_character) &&
+          current_character != constants::character::kSlash) {
+        return std::nullopt;
+      }
+      path.push_back(current_character);
+      i++;
+    }
+    return path;
+  }
+  inline std::optional<std::string> try_get_query_part(uint32_t& i,
+                                                       uint32_t len) {
+    std::string query;
+    char current_character;
+    if (buffer_[i] != constants::character::kQuestion) return std::nullopt;
+    while (i < len) {
+      if (buffer_[i] == constants::character::kPercent) {
+        if (i + 2 >= len) return std::nullopt;
+        if (!helpers::is_hex_digit(buffer_[i + 1]) ||
+            !helpers::is_hex_digit(buffer_[i + 2]))
+          return std::nullopt;
+        current_character = static_cast<char>(std::stoi(
+            std::string((const char*)&buffer_[i + 1], 2), nullptr, 16));
+        i += 3;
+      } else {
+        current_character = buffer_[i];
+        if (current_character == constants::character::kSpace) break;
+      }
+      if (!helpers::is_pchar(current_character) &&
+          current_character != constants::character::kSlash &&
+          current_character != constants::character::kQuestion) {
+        return std::nullopt;
+      }
+      query.push_back(current_character);
+      i++;
+    }
+    return query;
   }
   inline std::optional<uint32_t> get(const uint8_t* const str, uint32_t str_len,
                                      const uint8_t* const pattern,

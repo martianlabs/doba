@@ -69,23 +69,21 @@ class server : public server_base<TRty, RQty, RSty> {
             return process_headers_result;
           }
           switch (req.get_target().get_type()) {
-            case target_type::kOriginForm: {
-              auto fn = router_.match(req.get_method(),
-                                      req.get_target().get_path().value());
-              if (fn.has_value()) {
-                fn.value()(req, res);
+            case target_type::kOriginForm:
+            case target_type::kAbsoluteForm: {
+              if (auto router_function = router_.match(
+                      req.get_method(), req.get_target().get_path().value());
+                  router_function) {
+                router_function.value()(req, res);
               } else {
                 res.not_found_404().add_header(headers::kContentLength, 0);
               }
             } break;
-            case target_type::kAbsoluteForm:
-              // [to-do] -> add support for this!
-              break;
             case target_type::kAuthorityForm:
-              // [to-do] -> add support for this!
-              break;
             case target_type::kAsteriskForm:
+              // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
               // [to-do] -> add support for this!
+              // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
               break;
           }
           return transport::process_result::kCompleted;
@@ -106,7 +104,7 @@ class server : public server_base<TRty, RQty, RSty> {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  server& add_route(method method, const std::string_view& route,
+  server& add_route(method method, std::string_view route,
                     ROty<RQty, RSty>::handler_fn fn) {
     router_.add(method, route, fn);
     return *this;
@@ -116,8 +114,8 @@ class server : public server_base<TRty, RQty, RSty> {
   // ___________________________________________________________________________
   // USINGs                                                          ( private )
   //
-  using on_header_fn =
-      std::function<transport::process_result(const std::string_view&, RSty&)>;
+  using on_header_fn = std::function<transport::process_result(
+      std::string_view, const RQty&, RSty&)>;
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
@@ -127,20 +125,19 @@ class server : public server_base<TRty, RQty, RSty> {
   //
   void setup_headers_functions() {
     static std::string_view kConnection = headers::kConnection;
-    // +---------------------+------------------------+
-    // | Field               | Definition             |
-    // +---------------------+------------------------+
-    // | Connection          | 1#connection-option    |
-    // | connection-option   | token                  |
-    // +---------------------+------------------------+
-    headers_fns_[kConnection] = [this](const std::string_view& v,
+    // +---------------------+-------------------------------------------------+
+    // | Field               | Definition                                      |
+    // +---------------------+-------------------------------------------------+
+    // | Connection          | 1#connection-option                             |
+    // | connection-option   | token                                           |
+    // +---------------------+-------------------------------------------------+
+    headers_fns_[kConnection] = [this](std::string_view v, const RQty& req,
                                        RSty& res) -> transport::process_result {
       for (auto token : v | std::views::split(constants::character::kComma)) {
         std::string_view value(&*token.begin(), std::ranges::distance(token));
         value = helpers::ows_ltrim(helpers::ows_rtrim(value));
-        if (!helpers::is_token(value)) {
-          return transport::process_result::kError;
-        }
+        if (!helpers::is_token(value)) return transport::process_result::kError;
+        res.add_hop_by_hop_header(value);
       }
       return transport::process_result::kCompleted;
     };
@@ -149,7 +146,7 @@ class server : public server_base<TRty, RQty, RSty> {
     for (auto const& hdr : req.get_headers()) {
       auto itr = headers_fns_.find(hdr.first);
       if (itr != headers_fns_.end()) {
-        if (auto result = itr->second(hdr.second, res);
+        if (auto result = itr->second(hdr.second, req, res);
             result != transport::process_result::kCompleted) {
           return result;
         }

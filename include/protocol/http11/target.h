@@ -63,11 +63,12 @@ class target {
   // STATIC-METHODs                                                   ( public )
   //
   inline static auto create_as_asterisk_form() { return target(); }
-  inline static auto create_as_origin_form(const std::string_view& path) {
-    return target(path);
+  inline static auto create_as_origin_form(
+      std::string_view path, std::optional<std::string_view> query) {
+    return target(path, query);
   }
-  inline static auto create_as_authority_form(const std::string_view& host,
-                                              const std::string_view& port) {
+  inline static auto create_as_authority_form(std::string_view host,
+                                              std::string_view port) {
     return target(host, port);
   }
 
@@ -76,11 +77,12 @@ class target {
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   target() { type_ = target_type::kAsteriskForm; }
-  target(const std::string_view& path) {
+  target(std::string_view path, std::optional<std::string_view> query) {
     type_ = target_type::kOriginForm;
     path_ = path;
+    query_ = query;
   }
-  target(const std::string_view& host, const std::string_view& port) {
+  target(std::string_view host, std::string_view port) {
     type_ = target_type::kAuthorityForm;
     host_ = host;
     port_ = port;
@@ -90,6 +92,7 @@ class target {
   //
   std::optional<target_type> type_;
   std::optional<std::string> path_;
+  std::optional<std::string> query_;
   std::optional<std::string> host_;
   std::optional<std::string> port_;
 };

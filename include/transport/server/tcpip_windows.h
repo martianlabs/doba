@@ -128,7 +128,7 @@ class tcpip {
     keep_running_ = true;
     return result::kSucceeded;
   }
-  void set_port(const std::string_view& port) { port_.assign(port); }
+  void set_port(std::string_view port) { port_.assign(port); }
   void set_number_of_workers(uint8_t workers) { workers_ = workers; }
   void set_on_connection(const on_connection_fn& fn) { on_cnn_ = fn; }
   void set_on_disconnection(const on_disconnection_fn& fn) { on_dis_ = fn; }

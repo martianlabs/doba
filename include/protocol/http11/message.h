@@ -21,8 +21,7 @@
 #ifndef martianlabs_doba_protocol_http11_message_h
 #define martianlabs_doba_protocol_http11_message_h
 
-#include <string_view>
-
+#include "hash_set.h"
 #include "headers.h"
 #include "body.h"
 
@@ -64,22 +63,29 @@ class message {
     headers_.reset();
     body_.reset();
   }
-  inline message& add_header(const std::string_view& k,
-                             const std::string_view& v) {
+  inline message& add_header(std::string_view k, std::string_view v) {
     headers_.add(k, v);
     return *this;
   }
   template <typename T>
     requires std::is_arithmetic_v<T>
-  inline message& add_header(const std::string_view& k, const T& v) {
+  inline message& add_header(std::string_view k, const T& v) {
     return add_header(k, std::to_string(v));
   }
-  inline message& add_body(const std::string_view& s) {
+  inline message& add_body(std::string_view s) {
     body_.add(s);
     return *this;
   }
-  inline std::size_t headers_length() const { return headers_.length(); }
-  inline std::size_t body_length() const { return body_.length(); }
+  inline message& add_hop_by_hop_header(std::string_view hop) {
+    hop_by_hop_headers_.insert(std::string(hop));
+    return *this;
+  }
+  inline message& clear_hop_by_hop_headers() {
+    hop_by_hop_headers_.clear();
+    return *this;
+  }
+  inline std::size_t get_headers_length() const { return headers_.length(); }
+  inline std::size_t get_body_length() const { return body_.length(); }
 
  private:
   // ___________________________________________________________________________
@@ -89,6 +95,7 @@ class message {
   std::size_t size_ = 0;
   headers headers_;
   body body_;
+  hash_set<std::string> hop_by_hop_headers_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 
