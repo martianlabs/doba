@@ -75,6 +75,22 @@ class server : public server_base<TRty, RQty, RSty> {
                       req.get_method(), req.get_target().get_path().value());
                   router_function) {
                 router_function.value()(req, res);
+                // we're doing this to remove any hop-by-hop added element..
+                for (auto const& hop_by_hop : res.get_hop_by_hop_headers()) {
+
+                  /*
+                  pepe
+                  */
+
+                  /*
+                  res.remove_header(hop_by_hop);
+                  */
+
+                  /*
+                  pepe fin
+                  */
+
+                }
               } else {
                 res.not_found_404().add_header(headers::kContentLength, 0);
               }
@@ -125,6 +141,40 @@ class server : public server_base<TRty, RQty, RSty> {
   //
   void setup_headers_functions() {
     static std::string_view kConnection = headers::kConnection;
+    // +-----------------------------------------------------------------------+
+    // | ESSENTIAL HEADERS (MANDATORY)                                         |
+    // +-----------------------------------------------------------------------+
+    // | [ ] Host                                                              |
+    // | [ ] Content-Length                                                    |
+    // | [x] Connection                                                        |
+    // | [ ] Date                                                              |
+    // | [ ] Transfer-Encoding                                                 |
+    // | [ ] TE                                                                |
+    // +-----------------------------------------------------------------------+
+    // | STRONGLY RECOMMENDED HEADERS                                          |
+    // +-----------------------------------------------------------------------+
+    // | [ ] Content-Type                                                      |
+    // | [ ] Accept                                                            |
+    // | [ ] Allow                                                             |
+    // | [ ] Server                                                            |
+    // | [ ] User-Agent                                                        |
+    // | [ ] Expect                                                            |
+    // | [ ] Upgrade                                                           |
+    // +-----------------------------------------------------------------------+
+    // | OPTIONAL / ADVANCED HEADERS                                           |
+    // +-----------------------------------------------------------------------+
+    // | [ ] Range                                                             |
+    // | [ ] If-Modified-Since                                                 |
+    // | [ ] Cache-Control                                                     |
+    // | [ ] ETag                                                              |
+    // | [ ] Location                                                          |
+    // | [ ] Access-Control-*                                                  |
+    // | [ ] Trailer                                                           |
+    // | [ ] Vary                                                              |
+    // +-----------------------------------------------------------------------+
+
+    // +-----------------------------------------------------------------------+
+    // |                                                        [ connection ] |
     // +---------------------+-------------------------------------------------+
     // | Field               | Definition                                      |
     // +---------------------+-------------------------------------------------+
@@ -141,6 +191,14 @@ class server : public server_base<TRty, RQty, RSty> {
       }
       return transport::process_result::kCompleted;
     };
+    // +-----------------------------------------------------------------------+
+    // |                                                    [ content-length ] |
+    // +---------------------+-------------------------------------------------+
+    // | Field               | Definition                                      |
+    // +---------------------+-------------------------------------------------+
+    // | Content-Length      | 1*DIGIT                                         |
+    // | DIGIT               | %x30-39  ; ASCII characters "0" to "9"          |
+    // +---------------------+-------------------------------------------------+
   }
   transport::process_result process_headers(const RQty& req, RSty& res) const {
     for (auto const& hdr : req.get_headers()) {

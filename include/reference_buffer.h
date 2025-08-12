@@ -53,12 +53,12 @@ class reference_buffer {
     memory_buffer_ = nullptr;
     memory_buffer_size_ = 0;
   }
-  inline void set(const char* buffer, const std::size_t& size) {
+  inline void set(const char* buffer, std::size_t size) {
     memory_buffer_ = buffer;
     memory_buffer_size_ = size;
     stream_ = nullptr;
   }
-  inline std::optional<std::size_t> read(char* dst, const std::size_t& len) { 
+  inline std::optional<std::size_t> read(char* dst, std::size_t len) { 
     if (memory_buffer_ != nullptr) {
       auto n = len < memory_buffer_size_ ? len : memory_buffer_size_;
       memcpy(dst, memory_buffer_, n);

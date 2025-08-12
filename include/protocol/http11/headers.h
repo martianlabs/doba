@@ -21,9 +21,11 @@
 #ifndef martianlabs_doba_protocol_http11_headers_h
 #define martianlabs_doba_protocol_http11_headers_h
 
+#include <algorithm>
 #include <string_view>
 
 #include "constants.h"
+#include "hash_map.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -49,25 +51,41 @@ class headers {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  inline void prepare(char* buffer, const std::size_t& size) {
-    buffer_ = buffer;
-    size_ = size;
+  inline void prepare(char* buffer, std::size_t size, std::size_t used) {
+    buf_ = buffer;
+    buf_sz_ = size;
+    cur_ = used;
   }
   inline void reset() {
-    buffer_ = nullptr;
-    size_ = 0;
-    length_ = 0;
+    buf_ = nullptr;
+    buf_sz_ = 0;
+    cur_ = 0;
   }
   inline void add(std::string_view k, std::string_view v) {
-    std::size_t entry_length = k.length() + v.length() + 3;
-    if ((size_ - length_) > (entry_length + 2)) {
-      memcpy(&buffer_[length_], k.data(), k.length());
-      length_ += k.length();
-      buffer_[length_++] = constants::character::kColon;
-      memcpy(&buffer_[length_], v.data(), v.length());
-      length_ += v.length();
-      buffer_[length_++] = constants::character::kCr;
-      buffer_[length_++] = constants::character::kLf;
+    std::size_t k_sz = k.size(), v_sz = v.size();
+    std::size_t entry_length = k_sz + v_sz + 3;
+    if ((buf_sz_ - cur_) > (entry_length + 2)) {
+      if (!k.size()) return;
+      auto initial_cur = cur_;
+      for (const char& c : k) {
+        if (!helpers::is_token(c)) {
+          cur_ = initial_cur;
+          return;
+        }
+        buf_[cur_++] = helpers::tolower_ascii(c);
+      }
+      buf_[cur_++] = constants::character::kColon;
+      for (const char& c : v) {
+        if (!(helpers::is_vchar(c) || helpers::is_obs_text(c) ||
+              c == constants::character::kSpace ||
+              c == constants::character::kHTab)) {
+          return;
+        }
+      }
+      memcpy(&buf_[cur_], v.data(), v_sz);
+      cur_ += v_sz;
+      buf_[cur_++] = constants::character::kCr;
+      buf_[cur_++] = constants::character::kLf;
     }
   }
   template <typename T>
@@ -75,7 +93,114 @@ class headers {
   inline void add(std::string_view k, const T& v) {
     add(k, std::to_string(v));
   }
-  inline std::size_t length() const { return length_; }
+  inline hash_map<std::string_view, std::string_view> get_all() const {
+    bool searching_for_key = true;
+    std::size_t i = 0, j = 0, k_start = i, v_start = i;
+    hash_map<std::string_view, std::string_view> out;
+    while (i < cur_) {
+      switch (buf_[i]) {
+        case constants::character::kColon:
+          if (searching_for_key) {
+            searching_for_key = false;
+            v_start = i + 1;
+          }
+          break;
+        case constants::character::kCr:
+          out.insert(std::make_pair(
+              std::string_view(&buf_[k_start], (v_start - 1) - k_start),
+              helpers::ows_ltrim(helpers::ows_rtrim(
+                  std::string_view(&buf_[v_start], i - v_start)))));
+          searching_for_key = true;
+          k_start = i + 2;
+          j = 0;
+          i++;
+          break;
+        default:
+          break;
+      }
+      i++;
+    }
+    return out;
+  }
+  inline std::optional<std::string_view> get(std::string_view k) const {
+    bool matched = true;
+    bool searching_for_key = true;
+    std::size_t i = 0, j = 0, v_start = i, k_sz = k.size();
+    while (i < cur_) {
+      switch (buf_[i]) {
+        case constants::character::kColon:
+          if (searching_for_key) {
+            searching_for_key = false;
+            v_start = i + 1;
+          }
+          break;
+        case constants::character::kCr:
+          if (matched && j == k_sz) {
+            return helpers::ows_ltrim(helpers::ows_rtrim(
+                std::string_view(&buf_[v_start], i - v_start)));
+          }
+          searching_for_key = true;
+          matched = true;
+          j = 0;
+          i++;
+          break;
+        default:
+          if (searching_for_key) {
+            if (matched) {
+              if (j < k_sz) {
+                matched = buf_[i] == helpers::tolower_ascii(k[j++]);
+              } else {
+                matched = false;
+              }
+            }
+          }
+          break;
+      }
+      i++;
+    }
+    return std::nullopt;
+  }
+  inline void remove(std::string_view k) {
+    bool matched = true;
+    bool searching_for_key = true;
+    std::size_t i = 0, j = 0, k_start = i, k_sz = k.size();
+    while (i < cur_) {
+      switch (buf_[i]) {
+        case constants::character::kColon:
+          if (searching_for_key) {
+            searching_for_key = false;
+          }
+          break;
+        case constants::character::kCr:
+          if (matched && j == k_sz) {
+            auto const off = i + 2;
+            std::memmove(&buf_[k_start], &buf_[off], cur_ - off);
+            cur_ -= (off - k_start);
+            std::memset(&buf_[cur_], 0, buf_sz_ - cur_);
+            return;
+          }
+          searching_for_key = true;
+          matched = true;
+          k_start = i + 2;
+          j = 0;
+          i++;
+          break;
+        default:
+          if (searching_for_key) {
+            if (matched) {
+              if (j < k_sz) {
+                matched = buf_[i] == helpers::tolower_ascii(k[j++]);
+              } else {
+                matched = false;
+              }
+            }
+          }
+          break;
+      }
+      i++;
+    }
+  }
+  inline std::size_t length() const { return cur_; }
   // ___________________________________________________________________________
   // CONSTANTs                                                        ( public )
   //
@@ -166,9 +291,9 @@ class headers {
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* buffer_ = nullptr;
-  std::size_t size_ = 0;
-  std::size_t length_ = 0;
+  char* buf_ = nullptr;
+  std::size_t buf_sz_ = 0;
+  std::size_t cur_ = 0;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

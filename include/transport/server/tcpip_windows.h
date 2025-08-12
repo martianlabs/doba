@@ -81,10 +81,17 @@ class tcpip {
         ULONG i_mode_flag = 1;
         int ioctl_socket_res = ioctlsocket(socket, FIONBIO, &i_mode_flag);
         if (ioctl_socket_res != NO_ERROR) continue;
+        // TCP_NODELAY is a socket option in TCP that disables Nagle's algorithm. 
+        // Nagle's algorithm is a mechanism that delays sending small packets to 
+        // improve network efficiency by combining them into larger packets. 
+        // By disabling this algorithm, TCP_NODELAY allows for immediate sending 
+        // of packets, which can reduce latency but may also lead to more 
+        // network overhead
         int tcp_no_delay_flag = 1;
         if (setsockopt(socket, IPPROTO_TCP, TCP_NODELAY,
-                       (char*)&tcp_no_delay_flag, sizeof(tcp_no_delay_flag)))
+                       (char*)&tcp_no_delay_flag, sizeof(tcp_no_delay_flag))) {
           continue;
+        }
         // let's associate the accept socket with the i/o port!
         std::scoped_lock<std::mutex> contexts_lock(contexts_mutex_);
         context* per_socket_context = nullptr;
@@ -141,10 +148,10 @@ class tcpip {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr uint8_t kDefaultNumberOfWorkers = 4;
+  static constexpr uint8_t kDefaultNumberOfWorkers = 8;
   static constexpr const char kDefaultPortNumber[] = "80";
-  static constexpr uint32_t kDefaultBufferSize = 1024;
-  static constexpr uint32_t kDefaultMinimalContextsPoolSize = 512;
+  static constexpr std::size_t kDefaultBufferSize = 1024;
+  static constexpr std::size_t kDefaultMinimalContextsPoolSize = 512;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
@@ -172,7 +179,7 @@ class tcpip {
     RQty req;
     RSty res;
     std::shared_ptr<reference_buffer> reference;
-    uint32_t ref_count{1};
+    std::size_t ref_count{1};
   };
   // ___________________________________________________________________________
   // METHODs                                                         ( private )

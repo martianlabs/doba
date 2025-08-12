@@ -49,30 +49,31 @@ class body {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  inline void prepare(char* buffer, const std::size_t& size) {
-    buffer_ = buffer;
-    size_ = size;
+  inline void prepare(char* buffer, std::size_t size) {
+    buf_ = buffer;
+    buf_sz_ = size;
+    cur_ = 0;
   }
   inline void reset() {
-    buffer_ = nullptr;
-    size_ = 0;
-    length_ = 0;
+    buf_ = nullptr;
+    buf_sz_ = 0;
+    cur_ = 0;
   }
-  void add(std::string_view s) {
-    if ((size_ - length_) > s.length()) {
-      memcpy(&buffer_[length_], s.data(), s.length());
-      length_ += s.length();
+  void add(const char* buffer, std::size_t size) {
+    if ((buf_sz_ - cur_) > size) {
+      memcpy(&buf_[cur_], buffer, size);
+      cur_ += size;
     }
   }
-  inline std::size_t length() const { return length_; }
+  inline std::size_t length() const { return cur_; }
 
  private:
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* buffer_ = nullptr;
-  std::size_t size_ = 0;
-  std::size_t length_ = 0;
+  char* buf_ = nullptr;
+  std::size_t buf_sz_ = 0;
+  std::size_t cur_ = 0;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

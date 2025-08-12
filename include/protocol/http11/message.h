@@ -49,17 +49,14 @@ class message {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  inline message& prepare(char* buffer, const std::size_t& size,
-                          const std::size_t& size_for_body) {
-    buffer_ = buffer;
-    size_ = size;
-    headers_.prepare(buffer, size - size_for_body);
-    body_.prepare(&buffer[size - size_for_body], size_for_body);
+  inline message& prepare(char* headers_buffer, std::size_t headers_buffer_size,
+                          char* body_buffer, std::size_t body_buffer_size,
+                          std::size_t headers_buffer_used) {
+    headers_.prepare(headers_buffer, headers_buffer_size, headers_buffer_used);
+    body_.prepare(body_buffer, body_buffer_size);
     return *this;
   }
   inline void reset() {
-    buffer_ = nullptr;
-    size_ = 0;
     headers_.reset();
     body_.reset();
   }
@@ -72,13 +69,30 @@ class message {
   inline message& add_header(std::string_view k, const T& v) {
     return add_header(k, std::to_string(v));
   }
-  inline message& add_body(std::string_view s) {
-    body_.add(s);
+  inline hash_map<std::string_view, std::string_view> get_headers() const {
+    return headers_.get_all();
+  }
+  inline std::optional<std::string_view> get_header(std::string_view k) const {
+    return headers_.get(k);
+  }
+  inline message& remove_header(std::string_view key) {
+    headers_.remove(key);
+    return *this;
+  }
+  inline message& add_body(const char* buffer, std::size_t size) {
+    body_.add(buffer, size);
+    return *this;
+  }
+  inline message& add_body(std::string_view sv) {
+    body_.add(sv.data(), sv.size());
     return *this;
   }
   inline message& add_hop_by_hop_header(std::string_view hop) {
     hop_by_hop_headers_.insert(std::string(hop));
     return *this;
+  }
+  inline hash_set<std::string> get_hop_by_hop_headers() const {
+    return hop_by_hop_headers_;
   }
   inline message& clear_hop_by_hop_headers() {
     hop_by_hop_headers_.clear();
@@ -91,8 +105,6 @@ class message {
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* buffer_ = nullptr;
-  std::size_t size_ = 0;
   headers headers_;
   body body_;
   hash_set<std::string> hop_by_hop_headers_;

@@ -21,8 +21,11 @@
 #ifndef martianlabs_doba_protocol_http11_request_h
 #define martianlabs_doba_protocol_http11_request_h
 
+#include <charconv>
+
 #include "method.h"
 #include "target.h"
+#include "message.h"
 #include "helpers.h"
 
 namespace martianlabs::doba::protocol::http11 {
@@ -37,10 +40,15 @@ class request {
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  request() { buffer_ = (uint8_t*)malloc(kFullSectionMemory); }
+  request() {
+    buf_sz_ = kDefaultResponseFullSizeInMemory;
+    bod_sz_ = kDefaultResponseBodySizeInMemory;
+    slh_sz_ = buf_sz_ - bod_sz_;
+    buf_ = (uint8_t*)malloc(buf_sz_);
+  }
   request(const request&) = delete;
   request(request&&) noexcept = delete;
-  ~request() { free(buffer_); }
+  ~request() { free(buf_); }
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
@@ -49,58 +57,106 @@ class request {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  inline transport::process_result deserialize(void* buffer, uint32_t length) {
-    std::optional<uint32_t> hdr_end;  // headers section end.
-    std::optional<uint32_t> rln_end;  // request line end.
-    std::optional<uint32_t> mtd_end;  // method end.
-    std::optional<uint32_t> pth_end;  // path end.
-    std::optional<uint32_t> ver_end;  // http version end.
-    // first of all, let's check if we're under limits..
-    if ((kFullSectionMemory - cursor_) < length) {
-      return transport::process_result::kError;
-    }
-    memcpy(&buffer_[cursor_], buffer, length);
-    cursor_ += length;
-    // let's detect the [end-of-headers] position..
-    hdr_end = get(buffer_, cursor_, constants::string::kEndOfHeaders,
-                  sizeof(constants::string::kEndOfHeaders) - 1);
-    if (!hdr_end.has_value()) return transport::process_result::kNeedMoreBytes;
-    // let's detect the [end-of-request-line] position..
-    rln_end = get(buffer_, hdr_end.value(), constants::string::kCrLf,
-                  sizeof(constants::string::kCrLf) - 1);
-    if (!(hdr_end.value() - rln_end.value())) {
-      return transport::process_result::kError;
-    }
-    // let's check [request-line] section..
-    if (!check_request_line(rln_end, mtd_end, pth_end, ver_end)) {
-      return transport::process_result::kError;
-    }
-    // let's check [headers] section..
-    if (!check_headers(ver_end, hdr_end)) {
-      return transport::process_result::kError;
+  inline transport::process_result deserialize(void* buf, std::size_t len) {
+    static const auto eoh_len = sizeof(constants::string::kEndOfHeaders) - 1;
+    static const auto crlf_len = sizeof(constants::string::kCrLf) - 1;
+    const char* body_data = nullptr;
+    std::size_t body_data_start = 0, body_bytes = 0;
+    if (!body_expected_) {
+      std::optional<std::size_t> hdr_end;  // headers section end.
+      std::optional<std::size_t> rln_end;  // request line end.
+      std::optional<std::size_t> mtd_end;  // method end.
+      std::optional<std::size_t> pth_end;  // path end.
+      std::optional<std::size_t> ver_end;  // http version end.
+      // first of all, let's check if we're under limits..
+      if ((slh_sz_ - cur_) < len) return transport::process_result::kError;
+      memcpy(&buf_[cur_], buf, len);
+      cur_ += len;
+      // let's detect the [end-of-headers] position..
+      hdr_end = get(buf_, cur_, constants::string::kEndOfHeaders, eoh_len);
+      if (!hdr_end.has_value()) {
+        return transport::process_result::kNeedMoreBytes;
+      }
+      // let's detect the [end-of-request-line] position..
+      rln_end = get(buf_, hdr_end.value(), constants::string::kCrLf, crlf_len);
+      if (!(hdr_end.value() - rln_end.value())) {
+        return transport::process_result::kError;
+      }
+      // let's check [request-line] section..
+      if (!check_request_line(rln_end, mtd_end, pth_end, ver_end)) {
+        return transport::process_result::kError;
+      }
+      // let's check [headers] section..
+      if (!check_headers(ver_end, hdr_end)) {
+        return transport::process_result::kError;
+      }
+      // let's check now for body bytes..
+      body_data_start = hdr_end.value() + eoh_len;
+      if (body_expected_) {
+        if (body_size_expected_) {
+          body_data = (const char*)&buf_[body_data_start];
+          body_bytes = cur_ - body_data_start;
+        }
+      }
+      // let's prepare internal structures..
+      auto const off = rln_end.value() + 2;
+      auto hdr_buf_size = buf_sz_ - off - bod_sz_;
+      auto hdr_buf = &buf_[off];
+      auto bod_buf = &buf_[off + hdr_buf_size];
+      message_.prepare((char*)hdr_buf, hdr_buf_size, (char*)bod_buf, bod_sz_,
+                       hdr_end.value() - rln_end.value());
+      // let's add body bytes (if any)..
+      if (body_bytes) {
+        message_.add_body(body_data, body_bytes);
+        body_size_received_ += body_bytes;
+        body_expected_ = body_size_received_ < body_size_expected_;
+      }
     }
     // let's return result..
-    return transport::process_result::kCompleted;
+    return !body_expected_ ? transport::process_result::kCompleted
+                           : transport::process_result::kNeedMoreBytes;
   }
   inline void reset() {
-    cursor_ = 0;
-    headers_.clear();
+    cur_ = 0;
+    body_expected_ = false;
+    body_size_expected_ = 0;
+    body_size_received_ = 0;
+    slh_decoding_ = true;
+    message_.reset();
     target_.reset();
     method_.reset();
   }
   inline auto const& get_target() const { return target_.value(); }
   inline auto const& get_method() const { return method_.value(); }
-  inline auto const& get_headers() const { return headers_; }
+  inline hash_map<std::string_view, std::string_view> get_headers() const {
+    return message_.get_headers();
+  }
+  inline std::optional<std::string_view> get_header(std::string_view k) const {
+    return message_.get_header(k);
+  }
+  inline request& add_header(std::string_view k, std::string_view v) {
+    message_.add_header(k, v);
+    return *this;
+  }
+  template <typename T>
+    requires std::is_arithmetic_v<T>
+  inline request& add_header(std::string_view k, const T& v) {
+    return add_header(k, std::to_string(v));
+  }
+  inline request& remove_header(std::string_view key) {
+    message_.remove_header(key);
+    return *this;
+  }
 
  private:
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //
-  inline bool check_request_line(std::optional<uint32_t>& rln_end,
-                                 std::optional<uint32_t>& mtd_end,
-                                 std::optional<uint32_t>& pth_end,
-                                 std::optional<uint32_t>& ver_end) {
-    uint32_t i = 0;
+  inline bool check_request_line(std::optional<std::size_t>& rln_end,
+                                 std::optional<std::size_t>& mtd_end,
+                                 std::optional<std::size_t>& pth_end,
+                                 std::optional<std::size_t>& ver_end) {
+    std::size_t i = 0;
     // +---------+-------------------------------------------------------------+
     // | Field   | Definition                                                  |
     // +---------+-------------------------------------------------------------+
@@ -113,12 +169,12 @@ class request {
     // | source: https://datatracker.ietf.org/doc/html/rfc9110                 |
     // +----------------+------------------------------------------------------+
     while (i < rln_end.value()) {
-      if (buffer_[i] == constants::character::kSpace) break;
-      if (!helpers::is_token(buffer_[i])) return false;
-      buffer_[i++] = buffer_[i];
+      if (buf_[i] == constants::character::kSpace) break;
+      if (!helpers::is_token(buf_[i])) return false;
+      buf_[i++] = buf_[i];
     }
     mtd_end = i++;
-    std::string_view method_str((const char*)buffer_, mtd_end.value());
+    std::string_view method_str((const char*)buf_, mtd_end.value());
     switch (method_str.length()) {
       case 3:
         if (!method_str.compare(constants::method::kGet)) {
@@ -239,33 +295,32 @@ class request {
       // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       // [to-do] -> add support for this!
       // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    } else {
-      auto absolute_path = try_get_absolute_path(i, rln_end.value());
-      if (absolute_path) {
-        // +-------------------------------------------------------------------+
-        // |                                                       origin-form |
-        // +----------------+--------------------------------------------------+
-        // | Field          | Definition                                       |
-        // +----------------+--------------------------------------------------+
-        // | path           | segment *( "/" segment )                         |
-        // | segment        | *pchar                                           |
-        // | pchar          | unreserved / pct-encoded / sub-delims / ":" / "@"|
-        // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"            |
-        // | pct-encoded    | "%" HEXDIG HEXDIG                                |
-        // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" /  |
-        // |                | "," / ";" / "="                                  |
-        // +----------------+--------------------------------------------------+
-        // | source: https://datatracker.ietf.org/doc/html/rfc9110             |
-        // +----------------+--------------------------------------------------+
-        target_ = target::create_as_origin_form(
-            absolute_path.value(), try_get_query_part(i, rln_end.value()));
-      } else {
-        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        // [to-do] -> add support for this!
-        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        // absolute-form
-        // parse it as URI..
-      }
+    }
+ else if (auto abs = try_get_absolute_path(i, rln_end.value()); abs) {
+   // +-------------------------------------------------------------------+
+   // |                                                       origin-form |
+   // +----------------+--------------------------------------------------+
+   // | Field          | Definition                                       |
+   // +----------------+--------------------------------------------------+
+   // | path           | segment *( "/" segment )                         |
+   // | segment        | *pchar                                           |
+   // | pchar          | unreserved / pct-encoded / sub-delims / ":" / "@"|
+   // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"            |
+   // | pct-encoded    | "%" HEXDIG HEXDIG                                |
+   // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" /  |
+   // |                | "," / ";" / "="                                  |
+   // +----------------+--------------------------------------------------+
+   // | source: https://datatracker.ietf.org/doc/html/rfc9110             |
+   // +----------------+--------------------------------------------------+
+   target_ = target::create_as_origin_form(
+     abs.value(), try_get_query_part(i, rln_end.value()));
+    }
+ else {
+   // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+   // [to-do] -> add support for this!
+   // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+   // absolute-form
+   // parse it as URI..
     }
     pth_end = i++;
     // +----------------+------------------------------------------------------+
@@ -275,19 +330,19 @@ class request {
     // | source: https://datatracker.ietf.org/doc/html/rfc9110 |               |
     // +-----------------------------------------------------------------------+
     if ((rln_end.value() - i) < kHttpVersionLen) return false;
-    if (buffer_[i] != constants::character::kHUpperCase ||
-        buffer_[i + 1] != constants::character::kTUpperCase ||
-        buffer_[i + 2] != constants::character::kTUpperCase ||
-        buffer_[i + 3] != constants::character::kPUpperCase ||
-        buffer_[i + 4] != constants::character::kSlash ||
-        !helpers::is_digit(buffer_[i + 5]) ||
-        buffer_[i + 6] != constants::character::kDot ||
-        !helpers::is_digit(buffer_[i + 7])) {
+    if (buf_[i] != constants::character::kHUpperCase ||
+      buf_[i + 1] != constants::character::kTUpperCase ||
+      buf_[i + 2] != constants::character::kTUpperCase ||
+      buf_[i + 3] != constants::character::kPUpperCase ||
+      buf_[i + 4] != constants::character::kSlash ||
+      !helpers::is_digit(buf_[i + 5]) ||
+      buf_[i + 6] != constants::character::kDot ||
+      !helpers::is_digit(buf_[i + 7])) {
       return false;
     }
     ver_end = i + 8;
-    version_ = std::string_view((const char*)&buffer_[pth_end.value() + 1],
-                                ver_end.value() - pth_end.value() - 1);
+    version_ = std::string_view((const char*)&buf_[pth_end.value() + 1],
+      ver_end.value() - pth_end.value() - 1);
     return true;
   }
   // +-----------------+-------------------------------------------------------+
@@ -306,23 +361,24 @@ class request {
   // +-----------------+-------------------------------------------------------+
   // | source: https://datatracker.ietf.org/doc/html/rfc9110                   |
   // +-------------------------------------------------------------------------+
-  inline bool check_headers(std::optional<uint32_t>& ver_end,
-                            std::optional<uint32_t>& hdr_end) {
-    uint32_t i = ver_end.value() + sizeof(constants::string::kCrLf) - 1;
-    uint32_t end = hdr_end.value() + 2;
+  inline bool check_headers(std::optional<std::size_t>& ver_end,
+                            std::optional<std::size_t>& hdr_end) {
+    std::size_t clength_count = 0;
+    std::size_t tencoding_count = 0;
+    std::size_t i = ver_end.value() + sizeof(constants::string::kCrLf) - 1;
+    std::size_t end = hdr_end.value() + 2;
     while (i < end) {
-      uint32_t beg = i;
-      while (i < end && buffer_[i] != constants::character::kColon) {
-        buffer_[i] = std::tolower(buffer_[i]);
-        i++;
+      std::size_t beg = i;
+      while (i < end && buf_[i] != constants::character::kColon) {
+        buf_[i++] = helpers::tolower_ascii(buf_[i]);
       }
       if (i >= end) return false;
-      uint32_t colon = i;
-      while (i < end && buffer_[i] != constants::character::kCr) i++;
+      std::size_t colon = i;
+      while (i < end && buf_[i] != constants::character::kCr) i++;
       if (i >= end) return false;
-      if (++i >= end || buffer_[i] != constants::character::kLf) return false;
-      std::string_view name((const char*)&buffer_[beg], colon - beg);
-      std::string_view value((const char*)&buffer_[colon + 1], (i - 2) - colon);
+      if (++i >= end || buf_[i] != constants::character::kLf) return false;
+      std::string_view name((const char*)&buf_[beg], colon - beg);
+      std::string_view value((const char*)&buf_[colon + 1], (i - 2) - colon);
       // [field-name] validation..
       if (!name.length()) return false;
       for (auto j = 0; j < name.length(); j++) {
@@ -336,27 +392,39 @@ class request {
           return false;
         }
       }
-      headers_[name] = helpers::ows_ltrim(helpers::ows_rtrim(value));
+      // [checks] needed by protocol..
+      if (!name.compare(headers::kContentLength)) {
+        if ((++clength_count > 1) || (tencoding_count > 0)) return false;
+        auto ows_value = helpers::ows_ltrim(helpers::ows_rtrim(value));
+        if (!helpers::is_digit(ows_value)) return false;
+        auto first = ows_value.data();
+        auto last = ows_value.data() + ows_value.size();
+        auto [p, e] = std::from_chars(first, last, body_size_expected_);
+        if (e != std::errc{}) return false;
+        body_expected_ = true;
+      } else if (!name.compare(headers::kTransferEncoding)) {
+        if ((++tencoding_count > 1) || (clength_count > 0)) return false;
+      }
       i++;
     }
     return true;
   }
-  inline std::optional<std::string> try_get_absolute_path(uint32_t& i,
-                                                          uint32_t len) {
+  inline std::optional<std::string> try_get_absolute_path(std::size_t& i,
+                                                          std::size_t len) {
     std::string path;
     char current_character;
-    if (buffer_[i] != constants::character::kSlash) return std::nullopt;
+    if (buf_[i] != constants::character::kSlash) return std::nullopt;
     while (i < len) {
-      if (buffer_[i] == constants::character::kPercent) {
+      if (buf_[i] == constants::character::kPercent) {
         if (i + 2 >= len) return std::nullopt;
-        if (!helpers::is_hex_digit(buffer_[i + 1]) ||
-            !helpers::is_hex_digit(buffer_[i + 2]))
+        if (!helpers::is_hex_digit(buf_[i + 1]) ||
+            !helpers::is_hex_digit(buf_[i + 2]))
           return std::nullopt;
-        current_character = static_cast<char>(std::stoi(
-            std::string((const char*)&buffer_[i + 1], 2), nullptr, 16));
+        current_character = static_cast<char>(
+            std::stoi(std::string((const char*)&buf_[i + 1], 2), nullptr, 16));
         i += 3;
       } else {
-        current_character = buffer_[i];
+        current_character = buf_[i];
         if (current_character == constants::character::kSpace ||
             current_character == constants::character::kQuestion) {
           break;
@@ -371,22 +439,22 @@ class request {
     }
     return path;
   }
-  inline std::optional<std::string> try_get_query_part(uint32_t& i,
-                                                       uint32_t len) {
+  inline std::optional<std::string> try_get_query_part(std::size_t& i,
+                                                       std::size_t len) {
     std::string query;
     char current_character;
-    if (buffer_[i] != constants::character::kQuestion) return std::nullopt;
+    if (buf_[i] != constants::character::kQuestion) return std::nullopt;
     while (i < len) {
-      if (buffer_[i] == constants::character::kPercent) {
+      if (buf_[i] == constants::character::kPercent) {
         if (i + 2 >= len) return std::nullopt;
-        if (!helpers::is_hex_digit(buffer_[i + 1]) ||
-            !helpers::is_hex_digit(buffer_[i + 2]))
+        if (!helpers::is_hex_digit(buf_[i + 1]) ||
+            !helpers::is_hex_digit(buf_[i + 2]))
           return std::nullopt;
-        current_character = static_cast<char>(std::stoi(
-            std::string((const char*)&buffer_[i + 1], 2), nullptr, 16));
+        current_character = static_cast<char>(
+            std::stoi(std::string((const char*)&buf_[i + 1], 2), nullptr, 16));
         i += 3;
       } else {
-        current_character = buffer_[i];
+        current_character = buf_[i];
         if (current_character == constants::character::kSpace) break;
       }
       if (!helpers::is_pchar(current_character) &&
@@ -399,11 +467,12 @@ class request {
     }
     return query;
   }
-  inline std::optional<uint32_t> get(const uint8_t* const str, uint32_t str_len,
-                                     const uint8_t* const pattern,
-                                     uint32_t pattern_len) {
-    for (uint32_t i = 0; i < str_len; ++i) {
-      uint32_t j = 0;
+  inline std::optional<std::size_t> get(const uint8_t* const str,
+                                        std::size_t str_len,
+                                        const uint8_t* const pattern,
+                                        std::size_t pattern_len) {
+    for (std::size_t i = 0; i < str_len; ++i) {
+      std::size_t j = 0;
       while (j < pattern_len) {
         if (i + j == str_len) return {};
         if (str[i + j] != pattern[j]) break;
@@ -416,17 +485,25 @@ class request {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr uint32_t kFullSectionMemory = 8192;  // 8kb.
-  static constexpr uint32_t kHttpVersionLen = 8;
+  static constexpr std::size_t kDefaultResponseFullSizeInMemory = 8192;  // 8kb.
+  static constexpr std::size_t kDefaultResponseBodySizeInMemory = 4096;  // 4kb.
+  static constexpr std::size_t kHttpVersionLen = 8;
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  uint8_t* buffer_ = nullptr;
-  uint32_t cursor_ = 0;
+  bool body_expected_ = false;
+  std::size_t body_size_expected_ = 0;
+  std::size_t body_size_received_ = 0;
+  bool slh_decoding_ = true;
+  uint8_t* buf_ = nullptr;
+  std::size_t buf_sz_ = 0;
+  std::size_t slh_sz_ = 0;
+  std::size_t bod_sz_ = 0;
+  std::size_t cur_ = 0;
   std::optional<method> method_;
   std::optional<target> target_;
   std::string_view version_;
-  std::unordered_map<std::string_view, std::string_view> headers_;
+  message message_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 
