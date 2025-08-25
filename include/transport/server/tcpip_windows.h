@@ -34,9 +34,11 @@ namespace martianlabs::doba::transport::server {
 // -----------------------------------------------------------------------------
 // Template parameters:
 //    RQty - request being used.
-//    RSty - request being used.
+//    RSty - response being used.
+//    DEty - decoder being used.
 // =============================================================================
-template <typename RQty, typename RSty>
+template <typename RQty, typename RSty,
+          template <typename, typename> typename DEty>
 class tcpip {
  public:
   // ___________________________________________________________________________
@@ -58,8 +60,8 @@ class tcpip {
   using on_disconnection_fn = std::function<void(socket_type)>;
   using on_bytes_received_fn = std::function<void(socket_type, unsigned long)>;
   using on_bytes_sent_fn = std::function<void(socket_type, unsigned long)>;
-  using on_req_ok_fn = std::function<process_result(const RQty&, RSty&)>;
-  using on_req_err_fn = std::function<void(RSty&)>;
+  using on_req_ok_fn = std::function<std::shared_ptr<RSty>(const RQty&)>;
+  using on_req_err_fn = std::function<std::shared_ptr<RSty>()>;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
@@ -81,12 +83,12 @@ class tcpip {
         ULONG i_mode_flag = 1;
         int ioctl_socket_res = ioctlsocket(socket, FIONBIO, &i_mode_flag);
         if (ioctl_socket_res != NO_ERROR) continue;
-        // TCP_NODELAY is a socket option in TCP that disables Nagle's algorithm. 
-        // Nagle's algorithm is a mechanism that delays sending small packets to 
-        // improve network efficiency by combining them into larger packets. 
-        // By disabling this algorithm, TCP_NODELAY allows for immediate sending 
-        // of packets, which can reduce latency but may also lead to more 
-        // network overhead
+        // TCP_NODELAY is a socket option in TCP that disables Nagle's
+        // algorithm. Nagle's algorithm is a mechanism that delays sending small
+        // packets to improve network efficiency by combining them into larger
+        // packets. By disabling this algorithm, TCP_NODELAY allows for
+        // immediate sending of packets, which can reduce latency but may also
+        // lead to more network overhead
         int tcp_no_delay_flag = 1;
         if (setsockopt(socket, IPPROTO_TCP, TCP_NODELAY,
                        (char*)&tcp_no_delay_flag, sizeof(tcp_no_delay_flag))) {
@@ -164,8 +166,8 @@ class tcpip {
       wsa.len = kDefaultBufferSize;
       receiving = true;
       close_after_response = false;
-      req.reset();
-      res.reset();
+      decoder.reset();
+      responses = {};
       reference.reset();
       ref_count = 1;
     }
@@ -176,8 +178,8 @@ class tcpip {
     bool receiving;
     bool close_after_response;
     std::mutex mutex;
-    RQty req;
-    RSty res;
+    DEty<RQty, RSty> decoder;
+    std::queue<std::shared_ptr<RSty>> responses;
     std::shared_ptr<reference_buffer> reference;
     std::size_t ref_count{1};
   };
@@ -276,38 +278,16 @@ class tcpip {
           if (ovl) {
             if (sz) {
               if (ctx->receiving) {
-                if (on_rcv_.has_value()) on_rcv_.value()(ctx->soc, sz);
-                switch (ctx->req.deserialize(ctx->wsa.buf, sz)) {
-                  case process_result::kCompleted:
+                if (ctx->decoder.add(ctx->wsa.buf, sz)) {
+                  while (std::shared_ptr<RQty> req = ctx->decoder.perform()) {
                     if (on_rok_.has_value()) {
-                      switch (on_rok_.value()(ctx->req, ctx->res)) {
-                        case process_result::kCompleted:
-                          sending(ctx, ctx->res.serialize(), false);
-                          break;
-                        case process_result::kCompletedAndClose:
-                          sending(ctx, ctx->res.serialize(), true);
-                          break;
-                        case process_result::kNeedMoreBytes:
-                          break;
-                        case process_result::kError:
-                          if (on_rer_.has_value()) on_rer_.value()(ctx->res);
-                          sending(ctx, ctx->res.serialize(), true);
-                          break;
-                      }
+                      enqueue_for_sending(ctx, on_rok_.value()(*req));
                     }
-                    break;
-                  case process_result::kCompletedAndClose:
-                    ctx->close_after_response = true;
-                    break;
-                  case process_result::kNeedMoreBytes:
-                    break;
-                  case process_result::kError:
-                    if (on_rer_.has_value()) on_rer_.value()(ctx->res);
-                    sending(ctx, ctx->res.serialize(), true);
-                    break;
+                  }
+                  sending(ctx, false);
                 }
-              } else {
-                if (on_snd_.has_value()) on_snd_.value()(ctx->soc, sz);
+              } else if (on_snd_.has_value()) {
+                on_snd_.value()(ctx->soc, sz);
               }
             } else {
               if (!ctx->ref_count) {
@@ -319,7 +299,9 @@ class tcpip {
               }
             }
           } else if (!sz) {
-            if (on_cnn_.has_value()) on_cnn_.value()(ctx->soc);
+            if (on_cnn_.has_value()) {
+              on_cnn_.value()(ctx->soc);
+            }
             receiving(ctx);
           }
           if (!perform(ctx) && !ctx->ref_count) {
@@ -341,17 +323,18 @@ class tcpip {
     return true;
   }
   inline void receiving(context* ctx) {
-    ctx->req.reset();
-    ctx->res.reset();
+    ctx->reference = nullptr;
     ctx->receiving = true;
     ctx->wsa.len = kDefaultBufferSize;
   }
-  inline void sending(context* ctx,
-                      const std::shared_ptr<reference_buffer>& reference,
-                      bool car) {
-    ctx->reference = reference;
-    ctx->receiving = false;
-    ctx->close_after_response = car;
+  inline void enqueue_for_sending(context* ctx, auto response) {
+    if (response) ctx->responses.push(response);
+  }
+  inline void sending(context* ctx, bool car) {
+    if (!ctx->responses.empty()) {
+      ctx->receiving = false;
+      ctx->close_after_response = car;
+    }
   }
   inline bool perform(context* ctx) {
     return ctx->receiving ? receive(ctx) : send(ctx);
@@ -365,12 +348,20 @@ class tcpip {
     return true;
   }
   inline bool send(context* ctx) {
-    auto result = ctx->reference->read(ctx->buf, kDefaultBufferSize);
-    if (!result.has_value()) return false;
-    if (!result.value()) {
-      if (ctx->close_after_response) return false;
+    if (!ctx->reference) {
+      if (!ctx->responses.empty()) {
+        ctx->reference = ctx->responses.front()->serialize();
+      }
+    }
+    if (!ctx->reference) {
       receiving(ctx);
       return receive(ctx);
+    }
+    auto result = ctx->reference->read(ctx->buf, kDefaultBufferSize);
+    if (!result.has_value() || !result.value()) {
+      ctx->responses.pop();
+      ctx->reference = nullptr;
+      return send(ctx);
     }
     ctx->wsa.len = (ULONG)result.value();
     DWORD f = 0, s = 0;

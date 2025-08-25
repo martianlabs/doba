@@ -32,6 +32,7 @@
 #include "protocol/http11/response.h"
 #include "protocol/http11/router.h"
 #include "protocol/http11/headers.h"
+#include "protocol/http11/decoder.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -46,67 +47,69 @@ namespace martianlabs::doba::protocol::http11 {
 //    TRty - transport being used.
 // =============================================================================
 template <typename RQty = request, typename RSty = response,
+          template <typename, typename> class DEty = decoder,
           template <typename, typename> class ROty = router,
-          template <typename, typename> class TRty = transport::server::tcpip>
-class server : public server_base<TRty, RQty, RSty> {
+          template <typename, typename,
+                    template <typename, typename> typename> class TRty =
+              transport::server::tcpip>
+class server : public server_base<RQty, RSty, DEty, TRty> {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   server(const char port[]) {
-    TRty<RQty, RSty>::set_port(port);
-    TRty<RQty, RSty>::set_number_of_workers(kDefaultNumberOfWorkers);
-    TRty<RQty, RSty>::set_on_connection([](socket_type id) {});
-    TRty<RQty, RSty>::set_on_disconnection([](socket_type id) {});
-    TRty<RQty, RSty>::set_on_bytes_received(
+    TRty<RQty, RSty, DEty>::set_port(port);
+    TRty<RQty, RSty, DEty>::set_number_of_workers(kDefaultNumberOfWorkers);
+    TRty<RQty, RSty, DEty>::set_on_connection([](socket_type id) {});
+    TRty<RQty, RSty, DEty>::set_on_disconnection([](socket_type id) {});
+    TRty<RQty, RSty, DEty>::set_on_bytes_received(
         [](socket_type id, unsigned long bytes) {});
-    TRty<RQty, RSty>::set_on_bytes_sent(
+    TRty<RQty, RSty, DEty>::set_on_bytes_sent(
         [](socket_type id, unsigned long bytes) {});
-    TRty<RQty, RSty>::set_on_request_ok(
-        [this](const RQty& req, RSty& res) -> transport::process_result {
-          auto process_headers_result = process_headers(req, res);
-          if (process_headers_result != transport::process_result::kCompleted) {
-            return process_headers_result;
-          }
-          switch (req.get_target().get_type()) {
-            case target_type::kOriginForm:
-            case target_type::kAbsoluteForm: {
-              if (auto router_function = router_.match(
-                      req.get_method(), req.get_target().get_path().value());
+    TRty<RQty, RSty, DEty>::set_on_request_ok(
+        [this](const RQty& req) -> std::shared_ptr<RSty> {
+          auto res = std::make_shared<RSty>();
+          if (!process_headers(req, *res)) return nullptr;
+          switch (req.get_target()) {
+            case target::kOriginForm:
+            case target::kAbsoluteForm: {
+              if (auto router_function =
+                      router_.match(req.get_method(), "/plaintext");
                   router_function) {
-                router_function.value()(req, res);
+                router_function.value()(req, *res);
                 // we're doing this to remove any hop-by-hop added element..
-                for (auto const& hop_by_hop : res.get_hop_by_hop_headers()) {
-
+                for (auto const& hop_by_hop : res->get_hop_by_hop_headers()) {
                   /*
                   pepe
                   */
 
                   /*
-                  res.remove_header(hop_by_hop);
+                  res->remove_header(hop_by_hop);
                   */
 
                   /*
                   pepe fin
                   */
-
                 }
               } else {
-                res.not_found_404().add_header(headers::kContentLength, 0);
+                res->not_found_404().add_header(headers::kContentLength, 0);
               }
             } break;
-            case target_type::kAuthorityForm:
-            case target_type::kAsteriskForm:
+            case target::kAuthorityForm:
+            case target::kAsteriskForm:
               // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
               // [to-do] -> add support for this!
               // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
               break;
           }
-          return transport::process_result::kCompleted;
+          return res;
         });
-    TRty<RQty, RSty>::set_on_request_error([this](RSty& res) {
-      res.bad_request_400().add_header(headers::kContentLength, 0);
-    });
+    TRty<RQty, RSty, DEty>::set_on_request_error(
+        [this]() -> std::shared_ptr<RSty> {
+          std::shared_ptr<RSty> response = std::make_shared<RSty>();
+          response->bad_request_400().add_header(headers::kContentLength, 0);
+          return response;
+        });
     setup_headers_functions();
   }
   server(const server&) = delete;
@@ -130,8 +133,8 @@ class server : public server_base<TRty, RQty, RSty> {
   // ___________________________________________________________________________
   // USINGs                                                          ( private )
   //
-  using on_header_fn = std::function<transport::process_result(
-      std::string_view, const RQty&, RSty&)>;
+  using on_header_fn =
+      std::function<bool(std::string_view, const RQty&, RSty&)>;
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
@@ -182,14 +185,14 @@ class server : public server_base<TRty, RQty, RSty> {
     // | connection-option   | token                                           |
     // +---------------------+-------------------------------------------------+
     headers_fns_[kConnection] = [this](std::string_view v, const RQty& req,
-                                       RSty& res) -> transport::process_result {
+                                       RSty& res) -> bool {
       for (auto token : v | std::views::split(constants::character::kComma)) {
         std::string_view value(&*token.begin(), std::ranges::distance(token));
         value = helpers::ows_ltrim(helpers::ows_rtrim(value));
-        if (!helpers::is_token(value)) return transport::process_result::kError;
+        if (!helpers::is_token(value)) return false;
         res.add_hop_by_hop_header(value);
       }
-      return transport::process_result::kCompleted;
+      return true;
     };
     // +-----------------------------------------------------------------------+
     // |                                                    [ content-length ] |
@@ -200,17 +203,13 @@ class server : public server_base<TRty, RQty, RSty> {
     // | DIGIT               | %x30-39  ; ASCII characters "0" to "9"          |
     // +---------------------+-------------------------------------------------+
   }
-  transport::process_result process_headers(const RQty& req, RSty& res) const {
+  bool process_headers(const RQty& req, RSty& res) const {
     for (auto const& hdr : req.get_headers()) {
-      auto itr = headers_fns_.find(hdr.first);
-      if (itr != headers_fns_.end()) {
-        if (auto result = itr->second(hdr.second, req, res);
-            result != transport::process_result::kCompleted) {
-          return result;
-        }
+      if (auto itr = headers_fns_.find(hdr.first); itr != headers_fns_.end()) {
+        if (!itr->second(hdr.second, req, res)) return false;
       }
     }
-    return transport::process_result::kCompleted;
+    return true;
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )

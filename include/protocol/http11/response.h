@@ -285,7 +285,6 @@ class response {
     return prepare();
   }
   inline std::shared_ptr<reference_buffer> serialize() {
-    std::size_t cur = 0;
     std::size_t hdr_len = message_.get_headers_length();
     std::size_t bod_len = message_.get_body_length();
     std::size_t slh_off = sln_sz_ + hdr_len;

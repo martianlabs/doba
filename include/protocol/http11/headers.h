@@ -106,6 +106,7 @@ class headers {
           }
           break;
         case constants::character::kCr:
+          if (searching_for_key) return out;
           out.insert(std::make_pair(
               std::string_view(&buf_[k_start], (v_start - 1) - k_start),
               helpers::ows_ltrim(helpers::ows_rtrim(
@@ -135,6 +136,7 @@ class headers {
           }
           break;
         case constants::character::kCr:
+          if (searching_for_key) return std::nullopt;
           if (matched && j == k_sz) {
             return helpers::ows_ltrim(helpers::ows_rtrim(
                 std::string_view(&buf_[v_start], i - v_start)));
@@ -172,6 +174,7 @@ class headers {
           }
           break;
         case constants::character::kCr:
+          if (searching_for_key) return;
           if (matched && j == k_sz) {
             auto const off = i + 2;
             std::memmove(&buf_[k_start], &buf_[off], cur_ - off);

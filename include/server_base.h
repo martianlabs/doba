@@ -28,13 +28,16 @@ namespace martianlabs::doba {
 // This class holds for the base server implementation.
 // -----------------------------------------------------------------------------
 // Template parameters:
-//    TRty - transport being used.
 //    RQty - request being used.
 //    RSty - response being used.
+//    DEty - decoder being used.
+//    TRty - transport being used.
 // =============================================================================
-template <template <typename, typename> typename TRty, typename RQty,
-          typename RSty>
-class server_base : public TRty<RQty, RSty> {
+template <typename RQty, typename RSty,
+          template <typename, typename> class DEty,
+          template <typename, typename,
+                    template <typename, typename> typename> typename TRty>
+class server_base : public TRty<RQty, RSty, DEty> {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )

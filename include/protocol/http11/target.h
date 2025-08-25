@@ -1,9 +1,9 @@
-﻿//      _       _
-//   __| | ___ | |__   __ _
+﻿//      _       _           
+//   __| | ___ | |__   __ _ 
 //  / _` |/ _ \| '_ \ / _` |
 // | (_| | (_) | |_) | (_| |
 //  \__,_|\___/|_.__/ \__,_|
-//
+// 
 // Copyright 2025 martianLabs
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,80 +21,20 @@
 #ifndef martianlabs_doba_protocol_http11_target_h
 #define martianlabs_doba_protocol_http11_target_h
 
-#include <string_view>
-
-#include "target_type.h"
-
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
-// target                                                              ( class )
+// target                                                         ( enum-class )
 // -----------------------------------------------------------------------------
-// This class holds for the http 1.1 request-target implementation.
+// This enum class holds for the http 1.1 request-target types implementation.
+// -----------------------------------------------------------------------------
+// request-target = origin-form / absolute-form / authority-form / asterisk-form
 // -----------------------------------------------------------------------------
 // =============================================================================
-class target {
- public:
-  // ___________________________________________________________________________
-  // CONSTRUCTORs/DESTRUCTORs                                         ( public )
-  //
-  target(const target&) = default;
-  target(target&&) noexcept = default;
-  ~target() = default;
-  // ___________________________________________________________________________
-  // OPERATORs                                                        ( public )
-  //
-  target& operator=(const target&) = default;
-  target& operator=(target&&) noexcept = default;
-  // ___________________________________________________________________________
-  // METHODs                                                          ( public )
-  //
-  inline auto get_type() const { return type_.value(); }
-  inline auto get_path() const { return path_; }
-  inline auto get_host() const { return host_; }
-  inline auto get_port() const { return port_; }
-  inline auto get_asterisk() const { return constants::character::kAsterisk; }
-  inline void clear() {
-    type_.reset();
-    path_.reset();
-    host_.reset();
-    port_.reset();
-  }
-  // ___________________________________________________________________________
-  // STATIC-METHODs                                                   ( public )
-  //
-  inline static auto create_as_asterisk_form() { return target(); }
-  inline static auto create_as_origin_form(
-      std::string_view path, std::optional<std::string_view> query) {
-    return target(path, query);
-  }
-  inline static auto create_as_authority_form(std::string_view host,
-                                              std::string_view port) {
-    return target(host, port);
-  }
-
- private:
-  // ___________________________________________________________________________
-  // CONSTRUCTORs/DESTRUCTORs                                         ( public )
-  //
-  target() { type_ = target_type::kAsteriskForm; }
-  target(std::string_view path, std::optional<std::string_view> query) {
-    type_ = target_type::kOriginForm;
-    path_ = path;
-    query_ = query;
-  }
-  target(std::string_view host, std::string_view port) {
-    type_ = target_type::kAuthorityForm;
-    host_ = host;
-    port_ = port;
-  }
-  // ___________________________________________________________________________
-  // ATTRIBUTEs                                                      ( private )
-  //
-  std::optional<target_type> type_;
-  std::optional<std::string> path_;
-  std::optional<std::string> query_;
-  std::optional<std::string> host_;
-  std::optional<std::string> port_;
+enum class target {
+  kOriginForm,
+  kAbsoluteForm,
+  kAuthorityForm,
+  kAsteriskForm
 };
 }  // namespace martianlabs::doba::protocol::http11
 
