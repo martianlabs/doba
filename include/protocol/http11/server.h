@@ -67,8 +67,8 @@ class server : public server_base<RQty, RSty, DEty, TRty> {
     TRty<RQty, RSty, DEty>::set_on_bytes_sent(
         [](socket_type id, unsigned long bytes) {});
     TRty<RQty, RSty, DEty>::set_on_request_ok(
-        [this](const RQty& req) -> std::shared_ptr<RSty> {
-          auto res = std::make_shared<RSty>();
+        [this](const RQty& req, auto new_response) -> std::shared_ptr<RSty> {
+          std::shared_ptr<RSty> res = new_response();
           if (!process_headers(req, *res)) return nullptr;
           switch (req.get_target()) {
             case target::kOriginForm:
@@ -105,8 +105,8 @@ class server : public server_base<RQty, RSty, DEty, TRty> {
           return res;
         });
     TRty<RQty, RSty, DEty>::set_on_request_error(
-        [this]() -> std::shared_ptr<RSty> {
-          std::shared_ptr<RSty> response = std::make_shared<RSty>();
+        [this](auto new_response) -> std::shared_ptr<RSty> {
+          std::shared_ptr<RSty> response = new_response();
           response->bad_request_400().add_header(headers::kContentLength, 0);
           return response;
         });

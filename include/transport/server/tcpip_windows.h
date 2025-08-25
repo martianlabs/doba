@@ -60,8 +60,10 @@ class tcpip {
   using on_disconnection_fn = std::function<void(socket_type)>;
   using on_bytes_received_fn = std::function<void(socket_type, unsigned long)>;
   using on_bytes_sent_fn = std::function<void(socket_type, unsigned long)>;
-  using on_req_ok_fn = std::function<std::shared_ptr<RSty>(const RQty&)>;
-  using on_req_err_fn = std::function<std::shared_ptr<RSty>()>;
+  using on_req_ok_fn = std::function<std::shared_ptr<RSty>(
+      const RQty&, std::function<std::shared_ptr<RSty>()>)>;
+  using on_req_err_fn = std::function<std::shared_ptr<RSty>(
+      std::function<std::shared_ptr<RSty>()>)>;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
@@ -70,7 +72,6 @@ class tcpip {
     // let's setup all the required resources..
     if (!setupWinsock()) return result::kCouldNotSetupPlaformResources;
     if (!setupListener()) return result::kCouldNotSetupPlaformResources;
-    if (!setupContexts()) return result::kCouldNotSetupPlaformResources;
     setupWorkers();
     // let's start incoming connections loop!
     manager_ = std::make_unique<std::thread>([this]() {
@@ -95,23 +96,14 @@ class tcpip {
           continue;
         }
         // let's associate the accept socket with the i/o port!
-        std::scoped_lock<std::mutex> contexts_lock(contexts_mutex_);
-        context* per_socket_context = nullptr;
-        if (contexts_.empty()) contexts_.push(new context());
-        per_socket_context = contexts_.front();
-        per_socket_context->soc = socket;
-        contexts_.pop();
-        if (!CreateIoCompletionPort((HANDLE)socket, io_h_,
-                                    (ULONG_PTR)per_socket_context, 0)) {
+        auto ctx = pop_context(socket);
+        if (!CreateIoCompletionPort((HANDLE)socket, io_h_, (ULONG_PTR)ctx, 0)) {
           // ((error)) -> trying to associate socket to the i/o port!
-          delete per_socket_context;
           continue;
         }
         // let's notify waiting thread for the new connection!
-        if (!PostQueuedCompletionStatus(io_h_, 0, (ULONG_PTR)per_socket_context,
-                                        NULL)) {
+        if (!PostQueuedCompletionStatus(io_h_, 0, (ULONG_PTR)ctx, NULL)) {
           // ((error)) -> trying to notify waiting thread!
-          delete per_socket_context;
           continue;
         }
       }
@@ -158,9 +150,20 @@ class tcpip {
   // TYPEs                                                           ( private )
   //
   struct context {
-    context() { reset(); }
-    inline void reset() {
+    context() {
       ZeroMemory(&ovl, sizeof(WSAOVERLAPPED));
+      soc = INVALID_SOCKET;
+      wsa.buf = buf;
+      wsa.len = kDefaultBufferSize;
+      receiving = true;
+      close_after_response = false;
+      decoder.reset();
+      responses = {};
+      reference.reset();
+      ref_count = 1;
+    }
+    void reset() {
+      closesocket(soc);
       soc = INVALID_SOCKET;
       wsa.buf = buf;
       wsa.len = kDefaultBufferSize;
@@ -181,7 +184,7 @@ class tcpip {
     DEty<RQty, RSty> decoder;
     std::queue<std::shared_ptr<RSty>> responses;
     std::shared_ptr<reference_buffer> reference;
-    std::size_t ref_count{1};
+    std::size_t ref_count;
   };
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
@@ -258,15 +261,12 @@ class tcpip {
           LPOVERLAPPED ovl = NULL;
           DWORD sz = 0;
           if (!GetQueuedCompletionStatus(io_h_, &sz, &key, &ovl, INFINITE)) {
-            if (!ovl && WSAGetLastError() == ERROR_INVALID_HANDLE) break;
-            if (ovl && key) {
-              // abrupt connection close!
-              {
-                std::lock_guard<std::mutex> lock(((context*)key)->mutex);
-                closesocket(((context*)key)->soc);
+            if (!ovl) {
+              if (WSAGetLastError() == ERROR_INVALID_HANDLE) {
+                break;
               }
-              std::scoped_lock<std::mutex> contexts_lock(contexts_mutex_);
-              contexts_.push((context*)key);
+            } else if (key) {
+              push_context((context*)key);
             }
             continue;
           }
@@ -279,10 +279,18 @@ class tcpip {
             if (sz) {
               if (ctx->receiving) {
                 if (ctx->decoder.add(ctx->wsa.buf, sz)) {
-                  while (std::shared_ptr<RQty> req = ctx->decoder.perform()) {
+                  while (auto req = ctx->decoder.perform(
+                             [this]() -> std::shared_ptr<RQty> {
+                               return pop_request();
+                             })) {
                     if (on_rok_.has_value()) {
-                      enqueue_for_sending(ctx, on_rok_.value()(*req));
+                      enqueue_for_sending(
+                          ctx, on_rok_.value()(
+                                   *req, [this]() -> std::shared_ptr<RSty> {
+                                     return pop_response();
+                                   }));
                     }
+                    push_request(req);
                   }
                   sending(ctx, false);
                 }
@@ -291,10 +299,7 @@ class tcpip {
               }
             } else {
               if (!ctx->ref_count) {
-                std::scoped_lock<std::mutex> contexts_lock(contexts_mutex_);
-                closesocket(ctx->soc);
-                ctx->reset();
-                contexts_.push(ctx);
+                push_context(ctx);
                 continue;
               }
             }
@@ -305,22 +310,11 @@ class tcpip {
             receiving(ctx);
           }
           if (!perform(ctx) && !ctx->ref_count) {
-            std::scoped_lock<std::mutex> contexts_lock(contexts_mutex_);
-            closesocket(ctx->soc);
-            ctx->reset();
-            contexts_.push(ctx);
+            push_context(ctx);
           }
         }
       }));
     }
-  }
-  bool setupContexts() {
-    std::scoped_lock<std::mutex> lock(contexts_mutex_);
-    for (auto i = 0; i < kDefaultMinimalContextsPoolSize; i++) {
-      if (context* ctx = new context(); !ctx) return false;
-      contexts_.push(new context());
-    }
-    return true;
   }
   inline void receiving(context* ctx) {
     ctx->reference = nullptr;
@@ -359,6 +353,7 @@ class tcpip {
     }
     auto result = ctx->reference->read(ctx->buf, kDefaultBufferSize);
     if (!result.has_value() || !result.value()) {
+      push_response(ctx->responses.front());
       ctx->responses.pop();
       ctx->reference = nullptr;
       return send(ctx);
@@ -371,6 +366,43 @@ class tcpip {
     ctx->ref_count++;
     return true;
   }
+  inline void push_context(context* ctx) {
+    std::lock_guard<std::mutex> lock(contexts_queue_mutex_);
+    contexts_queue_.push(ctx);
+  }
+  inline context* pop_context(SOCKET soc) {
+    std::lock_guard<std::mutex> lock(contexts_queue_mutex_);
+    if (contexts_queue_.empty()) contexts_queue_.push(new context());
+    context* ctx = contexts_queue_.front();
+    ctx->reset();
+    ctx->soc = soc;
+    contexts_queue_.pop();
+    return ctx;
+  }
+  inline void push_request(std::shared_ptr<RQty> req) {
+    std::lock_guard<std::mutex> lock(reqs_queue_mutex_);
+    reqs_queue_.push(req);
+  }
+  inline std::shared_ptr<RQty> pop_request() {
+    std::lock_guard<std::mutex> lock(reqs_queue_mutex_);
+    if (reqs_queue_.empty()) reqs_queue_.push(std::make_shared<RQty>());
+    std::shared_ptr<RQty> req = reqs_queue_.front();
+    req->reset();
+    reqs_queue_.pop();
+    return req;
+  }
+  inline void push_response(std::shared_ptr<RSty> res) {
+    std::lock_guard<std::mutex> lock(ress_queue_mutex_);
+    ress_queue_.push(res);
+  }
+  inline std::shared_ptr<RSty> pop_response() {
+    std::lock_guard<std::mutex> lock(ress_queue_mutex_);
+    if (ress_queue_.empty()) ress_queue_.push(std::make_shared<RSty>());
+    std::shared_ptr<RSty> res = ress_queue_.front();
+    res->reset();
+    ress_queue_.pop();
+    return res;
+  }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
@@ -380,8 +412,12 @@ class tcpip {
   HANDLE io_h_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::queue<std::unique_ptr<std::thread>> threads_;
-  std::queue<context*> contexts_;
-  std::mutex contexts_mutex_;
+  std::queue<context*> contexts_queue_;
+  std::mutex contexts_queue_mutex_;
+  std::queue<std::shared_ptr<RQty>> reqs_queue_;
+  std::mutex reqs_queue_mutex_;
+  std::queue<std::shared_ptr<RSty>> ress_queue_;
+  std::mutex ress_queue_mutex_;
   std::unique_ptr<std::thread> manager_;
   std::optional<on_connection_fn> on_cnn_;
   std::optional<on_disconnection_fn> on_dis_;
