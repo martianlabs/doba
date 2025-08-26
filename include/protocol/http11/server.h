@@ -69,27 +69,19 @@ class server : public server_base<RQty, RSty, DEty, TRty> {
     TRty<RQty, RSty, DEty>::set_on_request_ok(
         [this](const RQty& req, auto new_response) -> std::shared_ptr<RSty> {
           std::shared_ptr<RSty> res = new_response();
-          if (!process_headers(req, *res)) return nullptr;
+          if (!process_headers(req, *res)) {
+            res->bad_request_400().add_header(headers::kContentLength, 0);
+            return res;
+          }
           switch (req.get_target()) {
             case target::kOriginForm:
             case target::kAbsoluteForm: {
-              if (auto router_function =
-                      router_.match(req.get_method(), "/plaintext");
-                  router_function) {
-                router_function.value()(req, *res);
+              if (auto fn = router_.match(req.get_method(),
+                                          req.get_absolute_path())) {
+                fn->operator()(req, *res);
                 // we're doing this to remove any hop-by-hop added element..
                 for (auto const& hop_by_hop : res->get_hop_by_hop_headers()) {
-                  /*
-                  pepe
-                  */
-
-                  /*
                   res->remove_header(hop_by_hop);
-                  */
-
-                  /*
-                  pepe fin
-                  */
                 }
               } else {
                 res->not_found_404().add_header(headers::kContentLength, 0);
@@ -100,6 +92,9 @@ class server : public server_base<RQty, RSty, DEty, TRty> {
               // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
               // [to-do] -> add support for this!
               // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+              break;
+            default:
+              res->bad_request_400().add_header(headers::kContentLength, 0);
               break;
           }
           return res;

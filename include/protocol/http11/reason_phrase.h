@@ -83,7 +83,7 @@ namespace martianlabs::doba::protocol::http11 {
 #define RP_200_OK OK
 #define RP_201_CREATED Created
 #define RP_202_ACCEPTED Accepted
-#define RP_203_NON_AUTHORITATIVE_INFORMATION Non-Authoritative Information
+#define RP_203_NON_AUTHORITATIVE_INFORMATION Non - Authoritative Information
 #define RP_204_NO_CONTENT No Content
 #define RP_205_RESET_CONTENT Reset Content
 #define RP_206_PARTIAL_CONTENT Partial Content

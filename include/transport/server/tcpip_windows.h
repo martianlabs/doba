@@ -142,15 +142,15 @@ class tcpip {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr uint8_t kDefaultNumberOfWorkers = 8;
+  static constexpr uint8_t kDefaultNumberOfWorkers = 2;
   static constexpr const char kDefaultPortNumber[] = "80";
   static constexpr std::size_t kDefaultBufferSize = 1024;
-  static constexpr std::size_t kDefaultMinimalContextsPoolSize = 512;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
   struct context {
     context() {
+      ZeroMemory(buf, kDefaultBufferSize);
       ZeroMemory(&ovl, sizeof(WSAOVERLAPPED));
       soc = INVALID_SOCKET;
       wsa.buf = buf;
@@ -232,12 +232,11 @@ class tcpip {
       closesocket(sock);
       return false;
     }
-    sockaddr_in address = {0};
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_family = PF_INET;
-    address.sin_port = htons(atoi(port_.c_str()));
-    if (bind(sock, (const sockaddr*)&address, sizeof(address)) ==
-        SOCKET_ERROR) {
+    sockaddr_in addr = {0};
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_family = PF_INET;
+    addr.sin_port = htons(atoi(port_.c_str()));
+    if (bind(sock, (const sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
       // ((error)) -> could not bind socket!
       CloseHandle(handle);
       closesocket(sock);
@@ -279,20 +278,20 @@ class tcpip {
             if (sz) {
               if (ctx->receiving) {
                 if (ctx->decoder.add(ctx->wsa.buf, sz)) {
-                  while (auto req = ctx->decoder.perform(
-                             [this]() -> std::shared_ptr<RQty> {
-                               return pop_request();
-                             })) {
+                  while (auto req = ctx->decoder.process(
+                             [this]() -> auto { return pop_request(); })) {
                     if (on_rok_.has_value()) {
                       enqueue_for_sending(
-                          ctx, on_rok_.value()(
-                                   *req, [this]() -> std::shared_ptr<RSty> {
-                                     return pop_response();
-                                   }));
+                          ctx, on_rok_.value()(*req, [this]() -> auto {
+                            return pop_response();
+                          }));
                     }
                     push_request(req);
                   }
                   sending(ctx, false);
+                } else {
+                  push_context(ctx);
+                  continue;
                 }
               } else if (on_snd_.has_value()) {
                 on_snd_.value()(ctx->soc, sz);
@@ -316,24 +315,24 @@ class tcpip {
       }));
     }
   }
-  inline void receiving(context* ctx) {
+  void receiving(context* ctx) {
     ctx->reference = nullptr;
     ctx->receiving = true;
     ctx->wsa.len = kDefaultBufferSize;
   }
-  inline void enqueue_for_sending(context* ctx, auto response) {
+  void enqueue_for_sending(context* ctx, auto response) {
     if (response) ctx->responses.push(response);
   }
-  inline void sending(context* ctx, bool car) {
+  void sending(context* ctx, bool car) {
     if (!ctx->responses.empty()) {
       ctx->receiving = false;
       ctx->close_after_response = car;
     }
   }
-  inline bool perform(context* ctx) {
+  bool perform(context* ctx) {
     return ctx->receiving ? receive(ctx) : send(ctx);
   }
-  inline bool receive(context* ctx) {
+  bool receive(context* ctx) {
     DWORD f = 0, r = 0;
     int res = WSARecv(ctx->soc, &ctx->wsa, 1, &r, &f, &ctx->ovl, 0);
     if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING)
@@ -341,7 +340,7 @@ class tcpip {
     ctx->ref_count++;
     return true;
   }
-  inline bool send(context* ctx) {
+  bool send(context* ctx) {
     if (!ctx->reference) {
       if (!ctx->responses.empty()) {
         ctx->reference = ctx->responses.front()->serialize();
@@ -366,40 +365,40 @@ class tcpip {
     ctx->ref_count++;
     return true;
   }
-  inline void push_context(context* ctx) {
+  void push_context(context* ctx) {
     std::lock_guard<std::mutex> lock(contexts_queue_mutex_);
+    ctx->reset();
     contexts_queue_.push(ctx);
   }
-  inline context* pop_context(SOCKET soc) {
+  context* pop_context(SOCKET soc) {
     std::lock_guard<std::mutex> lock(contexts_queue_mutex_);
     if (contexts_queue_.empty()) contexts_queue_.push(new context());
     context* ctx = contexts_queue_.front();
-    ctx->reset();
     ctx->soc = soc;
     contexts_queue_.pop();
     return ctx;
   }
-  inline void push_request(std::shared_ptr<RQty> req) {
+  void push_request(std::shared_ptr<RQty> req) {
     std::lock_guard<std::mutex> lock(reqs_queue_mutex_);
+    req->reset();
     reqs_queue_.push(req);
   }
-  inline std::shared_ptr<RQty> pop_request() {
+  std::shared_ptr<RQty> pop_request() {
     std::lock_guard<std::mutex> lock(reqs_queue_mutex_);
     if (reqs_queue_.empty()) reqs_queue_.push(std::make_shared<RQty>());
     std::shared_ptr<RQty> req = reqs_queue_.front();
-    req->reset();
     reqs_queue_.pop();
     return req;
   }
-  inline void push_response(std::shared_ptr<RSty> res) {
+  void push_response(std::shared_ptr<RSty> res) {
     std::lock_guard<std::mutex> lock(ress_queue_mutex_);
+    res->reset();
     ress_queue_.push(res);
   }
-  inline std::shared_ptr<RSty> pop_response() {
+  std::shared_ptr<RSty> pop_response() {
     std::lock_guard<std::mutex> lock(ress_queue_mutex_);
     if (ress_queue_.empty()) ress_queue_.push(std::make_shared<RSty>());
     std::shared_ptr<RSty> res = ress_queue_.front();
-    res->reset();
     ress_queue_.pop();
     return res;
   }

@@ -49,57 +49,57 @@ class message {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  inline message& prepare(char* headers_buffer, std::size_t headers_buffer_size,
-                          char* body_buffer, std::size_t body_buffer_size,
-                          std::size_t headers_buffer_used) {
-    headers_.prepare(headers_buffer, headers_buffer_size, headers_buffer_used);
-    body_.prepare(body_buffer, body_buffer_size);
+  message& set(char* headers_buffer, std::size_t headers_buffer_size,
+                   char* body_buffer, std::size_t body_buffer_size,
+                   std::size_t headers_buffer_used) {
+    headers_.set(headers_buffer, headers_buffer_size, headers_buffer_used);
+    body_.set(body_buffer, body_buffer_size);
     return *this;
   }
-  inline void reset() {
+  void reset() {
     headers_.reset();
     body_.reset();
   }
-  inline message& add_header(std::string_view k, std::string_view v) {
+  message& add_header(std::string_view k, std::string_view v) {
     headers_.add(k, v);
     return *this;
   }
   template <typename T>
     requires std::is_arithmetic_v<T>
-  inline message& add_header(std::string_view k, const T& v) {
+  message& add_header(std::string_view k, const T& v) {
     return add_header(k, std::to_string(v));
   }
-  inline hash_map<std::string_view, std::string_view> get_headers() const {
+  hash_map<std::string_view, std::string_view> get_headers() const {
     return headers_.get_all();
   }
-  inline std::optional<std::string_view> get_header(std::string_view k) const {
+  std::optional<std::string_view> get_header(std::string_view k) const {
     return headers_.get(k);
   }
-  inline message& remove_header(std::string_view key) {
+  message& remove_header(std::string_view key) {
     headers_.remove(key);
     return *this;
   }
-  inline message& add_body(const char* buffer, std::size_t size) {
+  message& add_body(const char* buffer, std::size_t size) {
     body_.add(buffer, size);
     return *this;
   }
-  inline message& add_body(std::string_view sv) {
+  message& add_body(std::string_view sv) {
     body_.add(sv.data(), sv.size());
     return *this;
   }
-  inline message& add_hop_by_hop_header(std::string_view hop) {
+  message& add_hop_by_hop_header(std::string_view hop) {
     hop_by_hop_headers_.insert(std::string(hop));
     return *this;
   }
-  inline hash_set<std::string> get_hop_by_hop_headers() const {
+  hash_set<std::string> get_hop_by_hop_headers() const {
     return hop_by_hop_headers_;
   }
-  inline message& clear_hop_by_hop_headers() {
+  message& clear_hop_by_hop_headers() {
     hop_by_hop_headers_.clear();
     return *this;
   }
-  inline std::size_t get_headers_length() const { return headers_.length(); }
-  inline std::size_t get_body_length() const { return body_.length(); }
+  std::size_t get_headers_length() const { return headers_.length(); }
+  std::size_t get_body_length() const { return body_.length(); }
 
  private:
   // ___________________________________________________________________________

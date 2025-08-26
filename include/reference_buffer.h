@@ -48,17 +48,17 @@ class reference_buffer {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  inline void set(std::shared_ptr<std::stringstream> ss) {
+  void set(std::shared_ptr<std::stringstream> ss) {
     stream_ = ss;
     memory_buffer_ = nullptr;
     memory_buffer_size_ = 0;
   }
-  inline void set(const char* buffer, std::size_t size) {
+  void set(const char* buffer, std::size_t size) {
     memory_buffer_ = buffer;
     memory_buffer_size_ = size;
     stream_ = nullptr;
   }
-  inline std::optional<std::size_t> read(char* dst, std::size_t len) { 
+  std::optional<std::size_t> read(char* dst, std::size_t len) { 
     if (memory_buffer_ != nullptr) {
       auto n = len < memory_buffer_size_ ? len : memory_buffer_size_;
       memcpy(dst, memory_buffer_, n);

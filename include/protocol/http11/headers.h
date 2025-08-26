@@ -51,17 +51,17 @@ class headers {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  inline void prepare(char* buffer, std::size_t size, std::size_t used) {
+  void set(char* buffer, std::size_t size, std::size_t used) {
     buf_ = buffer;
     buf_sz_ = size;
     cur_ = used;
   }
-  inline void reset() {
+  void reset() {
     buf_ = nullptr;
     buf_sz_ = 0;
     cur_ = 0;
   }
-  inline void add(std::string_view k, std::string_view v) {
+  void add(std::string_view k, std::string_view v) {
     std::size_t k_sz = k.size(), v_sz = v.size();
     std::size_t entry_length = k_sz + v_sz + 3;
     if ((buf_sz_ - cur_) > (entry_length + 2)) {
@@ -90,10 +90,10 @@ class headers {
   }
   template <typename T>
     requires std::is_arithmetic_v<T>
-  inline void add(std::string_view k, const T& v) {
+  void add(std::string_view k, const T& v) {
     add(k, std::to_string(v));
   }
-  inline hash_map<std::string_view, std::string_view> get_all() const {
+  hash_map<std::string_view, std::string_view> get_all() const {
     bool searching_for_key = true;
     std::size_t i = 0, j = 0, k_start = i, v_start = i;
     hash_map<std::string_view, std::string_view> out;
@@ -123,7 +123,7 @@ class headers {
     }
     return out;
   }
-  inline std::optional<std::string_view> get(std::string_view k) const {
+  std::optional<std::string_view> get(std::string_view k) const {
     bool matched = true;
     bool searching_for_key = true;
     std::size_t i = 0, j = 0, v_start = i, k_sz = k.size();
@@ -162,7 +162,7 @@ class headers {
     }
     return std::nullopt;
   }
-  inline void remove(std::string_view k) {
+  void remove(std::string_view k) {
     bool matched = true;
     bool searching_for_key = true;
     std::size_t i = 0, j = 0, k_start = i, k_sz = k.size();
@@ -203,7 +203,7 @@ class headers {
       i++;
     }
   }
-  inline std::size_t length() const { return cur_; }
+  std::size_t length() const { return cur_; }
   // ___________________________________________________________________________
   // CONSTANTs                                                        ( public )
   //

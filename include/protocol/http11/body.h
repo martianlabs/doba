@@ -49,12 +49,12 @@ class body {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  inline void prepare(char* buffer, std::size_t size) {
+  void set(char* buffer, std::size_t size) {
     buf_ = buffer;
     buf_sz_ = size;
     cur_ = 0;
   }
-  inline void reset() {
+  void reset() {
     buf_ = nullptr;
     buf_sz_ = 0;
     cur_ = 0;
@@ -65,7 +65,7 @@ class body {
       cur_ += size;
     }
   }
-  inline std::size_t length() const { return cur_; }
+  std::size_t length() const { return cur_; }
 
  private:
   // ___________________________________________________________________________

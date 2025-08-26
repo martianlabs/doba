@@ -31,6 +31,7 @@ namespace martianlabs::doba::protocol::http11 {
 // -----------------------------------------------------------------------------
 // =============================================================================
 enum class target {
+  kUnknown,
   kOriginForm,
   kAbsoluteForm,
   kAuthorityForm,

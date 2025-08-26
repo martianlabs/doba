@@ -54,237 +54,237 @@ class response {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  inline message& continue_100() {
+  message& continue_100() {
     sln_ = EAS(SL(100_CONTINUE));
     sln_sz_ = sizeof(EAS(SL(100_CONTINUE))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& switching_protocols_101() {
+  message& switching_protocols_101() {
     sln_ = EAS(SL(101_SWITCHING_PROTOCOLS));
     sln_sz_ = sizeof(EAS(SL(101_SWITCHING_PROTOCOLS))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& ok_200() {
+  message& ok_200() {
     sln_ = EAS(SL(200_OK));
     sln_sz_ = sizeof(EAS(SL(200_OK))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& created_201() {
+  message& created_201() {
     sln_ = EAS(SL(201_CREATED));
     sln_sz_ = sizeof(EAS(SL(201_CREATED))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& accepted_202() {
+  message& accepted_202() {
     sln_ = EAS(SL(202_ACCEPTED));
     sln_sz_ = sizeof(EAS(SL(202_ACCEPTED))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& non_authoritative_information_203() {
+  message& non_authoritative_information_203() {
     sln_ = EAS(SL(203_NON_AUTHORITATIVE_INFORMATION));
     sln_sz_ = sizeof(EAS(SL(203_NON_AUTHORITATIVE_INFORMATION))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& no_content_204() {
+  message& no_content_204() {
     sln_ = EAS(SL(204_NO_CONTENT));
     sln_sz_ = sizeof(EAS(SL(204_NO_CONTENT))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& reset_content_205() {
+  message& reset_content_205() {
     sln_ = EAS(SL(205_RESET_CONTENT));
     sln_sz_ = sizeof(EAS(SL(205_RESET_CONTENT))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& partial_content_206() {
+  message& partial_content_206() {
     sln_ = EAS(SL(206_PARTIAL_CONTENT));
     sln_sz_ = sizeof(EAS(SL(206_PARTIAL_CONTENT))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& multiple_choices_300() {
+  message& multiple_choices_300() {
     sln_ = EAS(SL(300_MULTIPLE_CHOICES));
     sln_sz_ = sizeof(EAS(SL(300_MULTIPLE_CHOICES))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& moved_permanently_301() {
+  message& moved_permanently_301() {
     sln_ = EAS(SL(301_MOVED_PERMANENTLY));
     sln_sz_ = sizeof(EAS(SL(301_MOVED_PERMANENTLY))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& found_302() {
+  message& found_302() {
     sln_ = EAS(SL(302_FOUND));
     sln_sz_ = sizeof(EAS(SL(302_FOUND))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& see_other_303() {
+  message& see_other_303() {
     sln_ = EAS(SL(303_SEE_OTHER));
     sln_sz_ = sizeof(EAS(SL(303_SEE_OTHER))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& not_modified_304() {
+  message& not_modified_304() {
     sln_ = EAS(SL(304_NOT_MODIFIED));
     sln_sz_ = sizeof(EAS(SL(304_NOT_MODIFIED))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& use_proxy_305() {
+  message& use_proxy_305() {
     sln_ = EAS(SL(305_USE_PROXY));
     sln_sz_ = sizeof(EAS(SL(305_USE_PROXY))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& unused_306() {
+  message& unused_306() {
     sln_ = EAS(SL(306_UNUSED));
     sln_sz_ = sizeof(EAS(SL(306_UNUSED))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& temporary_redirect_307() {
+  message& temporary_redirect_307() {
     sln_ = EAS(SL(307_TEMPORARY_REDIRECT));
     sln_sz_ = sizeof(EAS(SL(307_TEMPORARY_REDIRECT))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& permanent_redirect_308() {
+  message& permanent_redirect_308() {
     sln_ = EAS(SL(308_PERMANENT_REDIRECT));
     sln_sz_ = sizeof(EAS(SL(308_PERMANENT_REDIRECT))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& bad_request_400() {
+  message& bad_request_400() {
     sln_ = EAS(SL(400_BAD_REQUEST));
     sln_sz_ = sizeof(EAS(SL(400_BAD_REQUEST))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& unauthorized_401() {
+  message& unauthorized_401() {
     sln_ = EAS(SL(401_UNAUTHORIZED));
     sln_sz_ = sizeof(EAS(SL(401_UNAUTHORIZED))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& payment_required_402() {
+  message& payment_required_402() {
     sln_ = EAS(SL(402_PAYMENT_REQUIRED));
     sln_sz_ = sizeof(EAS(SL(402_PAYMENT_REQUIRED))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& forbidden_403() {
+  message& forbidden_403() {
     sln_ = EAS(SL(403_FORBIDDEN));
     sln_sz_ = sizeof(EAS(SL(403_FORBIDDEN))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& not_found_404() {
+  message& not_found_404() {
     sln_ = EAS(SL(404_NOT_FOUND));
     sln_sz_ = sizeof(EAS(SL(404_NOT_FOUND))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& method_not_allowed_405() {
+  message& method_not_allowed_405() {
     sln_ = EAS(SL(405_METHOD_NOT_ALLOWED));
     sln_sz_ = sizeof(EAS(SL(405_METHOD_NOT_ALLOWED))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& not_acceptable_406() {
+  message& not_acceptable_406() {
     sln_ = EAS(SL(406_NOT_ACCEPTABLE));
     sln_sz_ = sizeof(EAS(SL(406_NOT_ACCEPTABLE))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& proxy_authentication_required_407() {
+  message& proxy_authentication_required_407() {
     sln_ = EAS(SL(407_PROXY_AUTHENTICATION_REQUIRED));
     sln_sz_ = sizeof(EAS(SL(407_PROXY_AUTHENTICATION_REQUIRED))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& request_timeout_408() {
+  message& request_timeout_408() {
     sln_ = EAS(SL(408_REQUEST_TIMEOUT));
     sln_sz_ = sizeof(EAS(SL(408_REQUEST_TIMEOUT))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& conflict_409() {
+  message& conflict_409() {
     sln_ = EAS(SL(409_CONFLICT));
     sln_sz_ = sizeof(EAS(SL(409_CONFLICT))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& gone_410() {
+  message& gone_410() {
     sln_ = EAS(SL(410_GONE));
     sln_sz_ = sizeof(EAS(SL(410_GONE))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& length_required_411() {
+  message& length_required_411() {
     sln_ = EAS(SL(411_LENGTH_REQUIRED));
     sln_sz_ = sizeof(EAS(SL(411_LENGTH_REQUIRED))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& precondition_failed_412() {
+  message& precondition_failed_412() {
     sln_ = EAS(SL(412_PRECONDITION_FAILED));
     sln_sz_ = sizeof(EAS(SL(412_PRECONDITION_FAILED))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& content_too_large_413() {
+  message& content_too_large_413() {
     sln_ = EAS(SL(413_CONTENT_TOO_LARGE));
     sln_sz_ = sizeof(EAS(SL(413_CONTENT_TOO_LARGE))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& uri_too_long_414() {
+  message& uri_too_long_414() {
     sln_ = EAS(SL(414_URI_TOO_LONG));
     sln_sz_ = sizeof(EAS(SL(414_URI_TOO_LONG))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& unsupported_media_type_415() {
+  message& unsupported_media_type_415() {
     sln_ = EAS(SL(415_UNSUPPORTED_MEDIA_TYPE));
     sln_sz_ = sizeof(EAS(SL(415_UNSUPPORTED_MEDIA_TYPE))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& range_not_satisfiable_416() {
+  message& range_not_satisfiable_416() {
     sln_ = EAS(SL(416_RANGE_NOT_SATISFIABLE));
     sln_sz_ = sizeof(EAS(SL(416_RANGE_NOT_SATISFIABLE))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& expectation_failed_417() {
+  message& expectation_failed_417() {
     sln_ = EAS(SL(417_EXPECTATION_FAILED));
     sln_sz_ = sizeof(EAS(SL(417_EXPECTATION_FAILED))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& unused_418() {
+  message& unused_418() {
     sln_ = EAS(SL(418_UNUSED));
     sln_sz_ = sizeof(EAS(SL(418_UNUSED))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& misdirected_request_421() {
+  message& misdirected_request_421() {
     sln_ = EAS(SL(421_MISDIRECTED_REQUEST));
     sln_sz_ = sizeof(EAS(SL(421_MISDIRECTED_REQUEST))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& unprocessable_content_422() {
+  message& unprocessable_content_422() {
     sln_ = EAS(SL(422_UNPROCESSABLE_CONTENT));
     sln_sz_ = sizeof(EAS(SL(422_UNPROCESSABLE_CONTENT))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& upgrade_required_426() {
+  message& upgrade_required_426() {
     sln_ = EAS(SL(426_UPGRADE_REQUIRED));
     sln_sz_ = sizeof(EAS(SL(426_UPGRADE_REQUIRED))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& internal_server_error_500() {
+  message& internal_server_error_500() {
     sln_ = EAS(SL(500_INTERNAL_SERVER_ERROR));
     sln_sz_ = sizeof(EAS(SL(500_INTERNAL_SERVER_ERROR))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& not_implemented_501() {
+  message& not_implemented_501() {
     sln_ = EAS(SL(501_NOT_IMPLEMENTED));
     sln_sz_ = sizeof(EAS(SL(501_NOT_IMPLEMENTED))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& bad_gateway_502() {
+  message& bad_gateway_502() {
     sln_ = EAS(SL(502_BAD_GATEWAY));
     sln_sz_ = sizeof(EAS(SL(502_BAD_GATEWAY))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& service_unavailable_503() {
+  message& service_unavailable_503() {
     sln_ = EAS(SL(503_SERVICE_UNAVAILABLE));
     sln_sz_ = sizeof(EAS(SL(503_SERVICE_UNAVAILABLE))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& gateway_timeout_504() {
+  message& gateway_timeout_504() {
     sln_ = EAS(SL(504_GATEWAY_TIMEOUT));
     sln_sz_ = sizeof(EAS(SL(504_GATEWAY_TIMEOUT))) - 1;
-    return prepare();
+    return set();
   }
-  inline message& http_version_not_supported_505() {
+  message& http_version_not_supported_505() {
     sln_ = EAS(SL(505_HTTP_VERSION_NOT_SUPPORTED));
     sln_sz_ = sizeof(EAS(SL(505_HTTP_VERSION_NOT_SUPPORTED))) - 1;
-    return prepare();
+    return set();
   }
-  inline std::shared_ptr<reference_buffer> serialize() {
+  std::shared_ptr<reference_buffer> serialize() {
     std::size_t hdr_len = message_.get_headers_length();
     std::size_t bod_len = message_.get_body_length();
     std::size_t slh_off = sln_sz_ + hdr_len;
@@ -295,19 +295,23 @@ class response {
     reference_->set(buf_, slh_off + bod_len + 2);
     return reference_;
   }
-  inline void reset() {
+  void reset() {
     sln_ = nullptr;
     sln_sz_ = 0;
     message_.reset();
   }
-  inline response& add_hop_by_hop_header(std::string_view hop) {
+  response& remove_header(std::string_view key) {
+    message_.remove_header(key);
+    return *this;
+  }
+  response& add_hop_by_hop_header(std::string_view hop) {
     message_.add_hop_by_hop_header(hop);
     return *this;
   }
-  inline hash_set<std::string> get_hop_by_hop_headers() const {
+  hash_set<std::string> get_hop_by_hop_headers() const {
     return message_.get_hop_by_hop_headers();
   }
-  inline response& clear_hop_by_hop_headers() {
+  response& clear_hop_by_hop_headers() {
     message_.clear_hop_by_hop_headers();
     return *this;
   }
@@ -316,16 +320,16 @@ class response {
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr std::size_t kDefaultResponseFullSizeInMemory = 8192;  // 8kb.
-  static constexpr std::size_t kDefaultResponseBodySizeInMemory = 4096;  // 4kb.
+  static constexpr std::size_t kDefaultResponseFullSizeInMemory = 4096;  // 4kb.
+  static constexpr std::size_t kDefaultResponseBodySizeInMemory = 2048;  // 2kb.
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //
-  inline message& prepare() {
+  message& set() {
     auto hdr_buf_size = buf_sz_ - sln_sz_ - bod_sz_;
     auto hdr_buf = &buf_[sln_sz_];
     auto bod_buf = &buf_[sln_sz_ + hdr_buf_size];
-    return message_.prepare(hdr_buf, hdr_buf_size, bod_buf, bod_sz_, 0);
+    return message_.set(hdr_buf, hdr_buf_size, bod_buf, bod_sz_, 0);
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
