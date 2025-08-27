@@ -21,7 +21,7 @@
 #ifndef martianlabs_doba_protocol_http11_message_h
 #define martianlabs_doba_protocol_http11_message_h
 
-#include "hash_set.h"
+#include "common/hash_set.h"
 #include "headers.h"
 #include "body.h"
 
@@ -79,13 +79,11 @@ class message {
     headers_.remove(key);
     return *this;
   }
-  message& add_body(const char* buffer, std::size_t size) {
-    body_.add(buffer, size);
-    return *this;
+  bool add_body(const char* buffer, std::size_t size) {
+    return body_.add(buffer, size);
   }
-  message& add_body(std::string_view sv) {
-    body_.add(sv.data(), sv.size());
-    return *this;
+  bool add_body(std::string_view sv) {
+    return body_.add(sv.data(), sv.size());
   }
   message& add_hop_by_hop_header(std::string_view hop) {
     hop_by_hop_headers_.insert(std::string(hop));

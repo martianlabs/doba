@@ -21,30 +21,24 @@
 #ifndef martianlabs_doba_protocol_http11_decoder_h
 #define martianlabs_doba_protocol_http11_decoder_h
 
-#include <memory>
-
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
 // decoder                                                             ( class )
 // -----------------------------------------------------------------------------
 // This class holds for the http 1.1 server decoder implementation.
 // -----------------------------------------------------------------------------
-// Template parameters:
-//    RQty - request being used.
-//    RSty - response being used.
 // =============================================================================
-template <typename RQty, typename RSty>
 class decoder {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   decoder() {
-    buf_sz_ = RQty::kDefaultFullBufferMemorySize;
-    bod_sz_ = RQty::kDefaultBodyBufferMemorySize;
+    buf_sz_ = request::kDefaultFullBufferMemorySize;
+    bod_sz_ = request::kDefaultBodyBufferMemorySize;
     slh_sz_ = buf_sz_ - bod_sz_;
-    cur_ = 0;
     buf_ = (char*)malloc(buf_sz_);
+    cur_ = 0;
     body_processing_ = false;
     body_size_expected_ = 0;
     body_size_received_ = 0;
@@ -60,24 +54,23 @@ class decoder {
   decoder& operator=(const decoder&) = delete;
   decoder& operator=(decoder&&) noexcept = delete;
   // ___________________________________________________________________________
+  // STATIC-METHODs                                                   ( public )
+  //
+  static void reset(std::shared_ptr<decoder> decoder) {
+    if (decoder) decoder->reset();
+  }
+  static void reset(std::shared_ptr<request> request) {
+    if (request) request->reset();
+  }
+  static void reset(std::shared_ptr<response> response) {
+    if (response) response->reset();
+  }
+  static auto serialize(std::shared_ptr<response> response) {
+    return response ? response->serialize() : nullptr;
+  }
+  // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  void reset() {
-    request_.reset();
-    method_ = method::kUnknown;
-    target_ = target::kUnknown;
-    abs_path_.clear();
-    query_.clear();
-    version_.clear();
-    body_processing_ = false;
-    body_size_expected_ = 0;
-    body_size_received_ = 0;
-    hdr_end_.reset();
-    rln_end_.reset();
-    mtd_end_.reset();
-    pth_end_.reset();
-    ver_end_.reset();
-  }
   bool add(const char* ptr, std::size_t size) {
     if ((slh_sz_ - cur_) < size) {
       // ((error)): the size of the incoming buffer exceeds limits!
@@ -87,12 +80,11 @@ class decoder {
     cur_ += size;
     return true;
   }
-  std::shared_ptr<RQty> process(auto new_request) {
+  std::shared_ptr<request> process(auto new_request, auto on_error) {
     static const auto eoh_len = sizeof(constants::string::kEndOfHeaders) - 1;
     static const auto eol_len = sizeof(constants::string::kCrLf) - 1;
     static const char* eoh = (const char*)constants::string::kEndOfHeaders;
     static const char* eol = (const char*)constants::string::kCrLf;
-    std::shared_ptr<RQty> request;
     bool ready = false;
     if (!body_processing_) {
       // let's detect the [end-of-headers] position..
@@ -116,8 +108,17 @@ class decoder {
               if (ready = !body_processing_) {
                 cur_ -= hdrs_end;
               }
+            } else {
+              // ((error)) -> wrong content received!
+              return on_error("error while parsing headers!");
             }
+          } else {
+            // ((error)) -> wrong content received!
+            return on_error("error while parsing request line!");
           }
+        } else {
+          // ((error)) -> wrong content received!
+          return on_error("error while parsing request line!");
         }
       }
     }
@@ -129,18 +130,17 @@ class decoder {
         auto bbytes = bytes_available < remaining ? bytes_available : remaining;
         body_size_received_ += bbytes;
         if (ready = body_size_received_ == body_size_expected_) {
-          request_->add_body(&buf_[hdrs_end], body_size_received_);
-          if (bytes_available > body_size_received_) {
-            /*
-            pepe
-            */
-
-            /*
-            pepe fin
-            */
+          if (request_->add_body(&buf_[hdrs_end], body_size_received_)) {
+            if (bytes_available > body_size_received_) {
+              auto sz_to_move = bytes_available - body_size_received_;
+              memmove(buf_, &buf_[hdrs_end + body_size_expected_], sz_to_move);
+            }
+            cur_ -= hdrs_end + body_size_received_;
+            body_processing_ = false;
+          } else {
+            // ((error)) -> out of system limits???
+            return on_error("could not process request!", request_);
           }
-          cur_ -= hdrs_end + body_size_received_;
-          body_processing_ = false;
         }
       } else {
         // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -159,6 +159,25 @@ class decoder {
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //
+  void reset() {
+    cur_ = 0;
+    body_processing_ = false;
+    body_size_expected_ = 0;
+    body_size_received_ = 0;
+    method_ = method::kUnknown;
+    target_ = target::kUnknown;
+    method_ = method::kUnknown;
+    target_ = target::kUnknown;
+    request_.reset();
+    abs_path_.clear();
+    query_.clear();
+    version_.clear();
+    hdr_end_.reset();
+    rln_end_.reset();
+    mtd_end_.reset();
+    pth_end_.reset();
+    ver_end_.reset();
+  }
   bool check_request_line() {
     std::size_t i = 0;
     // +---------+-------------------------------------------------------------+
@@ -414,7 +433,7 @@ class decoder {
     return true;
   }
   std::optional<std::string> try_get_absolute_path(std::size_t& i,
-                                                          std::size_t len) {
+                                                   std::size_t len) {
     std::string path;
     char current_character;
     if (buf_[i] != constants::character::kSlash) return std::nullopt;
@@ -445,7 +464,7 @@ class decoder {
     return path;
   }
   std::optional<std::string> try_get_query_part(std::size_t& i,
-                                                       std::size_t len) {
+                                                std::size_t len) {
     std::string query;
     char current_character;
     if (buf_[i] != constants::character::kQuestion) return std::nullopt;
@@ -473,10 +492,9 @@ class decoder {
     }
     return query;
   }
-  std::optional<std::size_t> get(const char* const str,
-                                        std::size_t str_len,
-                                        const char* const pattern,
-                                        std::size_t pattern_len) {
+  std::optional<std::size_t> get(const char* const str, std::size_t str_len,
+                                 const char* const pattern,
+                                 std::size_t pattern_len) {
     for (std::size_t i = 0; i < str_len; ++i) {
       std::size_t j = 0;
       while (j < pattern_len) {
@@ -504,7 +522,7 @@ class decoder {
   bool body_processing_;
   std::size_t body_size_expected_;
   std::size_t body_size_received_;
-  std::shared_ptr<RQty> request_;
+  std::shared_ptr<request> request_;
   std::optional<std::size_t> hdr_end_;  // headers section end.
   std::optional<std::size_t> rln_end_;  // request line end.
   std::optional<std::size_t> mtd_end_;  // method end.

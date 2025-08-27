@@ -21,8 +21,10 @@
 #ifndef martianlabs_doba_protocol_http11_router_h
 #define martianlabs_doba_protocol_http11_router_h
 
+#include "common/hash_map.h"
 #include "method.h"
-#include "hash_map.h"
+#include "request.h"
+#include "response.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -30,17 +32,13 @@ namespace martianlabs::doba::protocol::http11 {
 // -----------------------------------------------------------------------------
 // This class holds for the http 1.1 router implementation.
 // -----------------------------------------------------------------------------
-// Template parameters:
-//    RQty - request being used.
-//    RSty - response being used.
 // =============================================================================
-template <typename RQty, typename RSty>
 class router {
  public:
   // ___________________________________________________________________________
   // USINGs                                                           ( public )
   //
-  using handler_fn = std::function<void(const RQty&, RSty&)>;
+  using handler = std::function<void(const request&, response&)>;
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
@@ -56,12 +54,12 @@ class router {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  void add(method mtd, std::string_view route, handler_fn fn) {
-    auto& map = rts_.try_emplace(mtd).first->second;
-    map.emplace(route, std::move(fn));
+  void add(method method, std::string_view route, handler handler) {
+    auto& map = routes_.try_emplace(method).first->second;
+    map.emplace(route, std::move(handler));
   }
-  std::optional<handler_fn> match(method method, std::string_view path) {
-    if (auto it_m = rts_.find(method); it_m != rts_.end()) {
+  std::optional<handler> match(method method, std::string_view path) {
+    if (auto it_m = routes_.find(method); it_m != routes_.end()) {
       if (auto it_h = it_m->second.find(path); it_h != it_m->second.end()) {
         return it_h->second;
       }
@@ -73,7 +71,7 @@ class router {
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  std::unordered_map<method, hash_map<std::string, handler_fn>> rts_;
+  std::unordered_map<method, hash_map<std::string, handler>> routes_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

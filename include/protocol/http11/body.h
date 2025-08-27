@@ -59,11 +59,13 @@ class body {
     buf_sz_ = 0;
     cur_ = 0;
   }
-  void add(const char* buffer, std::size_t size) {
-    if ((buf_sz_ - cur_) > size) {
-      memcpy(&buf_[cur_], buffer, size);
-      cur_ += size;
+  bool add(const char* buffer, std::size_t size) {
+    if ((buf_sz_ - cur_) < size) {
+      return false;
     }
+    memcpy(&buf_[cur_], buffer, size);
+    cur_ += size;
+    return true;
   }
   std::size_t length() const { return cur_; }
 

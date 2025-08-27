@@ -24,7 +24,7 @@
 #include <optional>
 #include <functional>
 
-#include "reference_buffer.h"
+#include "common/reference_buffer.h"
 
 namespace martianlabs::doba::transport::server {
 // =============================================================================
@@ -37,8 +37,7 @@ namespace martianlabs::doba::transport::server {
 //    RSty - response being used.
 //    DEty - decoder being used.
 // =============================================================================
-template <typename RQty, typename RSty,
-          template <typename, typename> typename DEty>
+template <typename RQty, typename RSty, typename DEty>
 class tcpip {
  public:
   // ___________________________________________________________________________
@@ -157,7 +156,8 @@ class tcpip {
       wsa.len = kDefaultBufferSize;
       receiving = true;
       close_after_response = false;
-      decoder.reset();
+      DEty::reset(decoder);
+      decoder = std::make_shared<DEty>();
       responses = {};
       reference.reset();
       ref_count = 1;
@@ -169,7 +169,7 @@ class tcpip {
       wsa.len = kDefaultBufferSize;
       receiving = true;
       close_after_response = false;
-      decoder.reset();
+      DEty::reset(decoder);
       responses = {};
       reference.reset();
       ref_count = 1;
@@ -181,7 +181,7 @@ class tcpip {
     bool receiving;
     bool close_after_response;
     std::mutex mutex;
-    DEty<RQty, RSty> decoder;
+    std::shared_ptr<DEty> decoder;
     std::queue<std::shared_ptr<RSty>> responses;
     std::shared_ptr<reference_buffer> reference;
     std::size_t ref_count;
@@ -277,9 +277,17 @@ class tcpip {
           if (ovl) {
             if (sz) {
               if (ctx->receiving) {
-                if (ctx->decoder.add(ctx->wsa.buf, sz)) {
-                  while (auto req = ctx->decoder.process(
-                             [this]() -> auto { return pop_request(); })) {
+                if (ctx->decoder->add(ctx->wsa.buf, sz)) {
+                  bool error = false;
+                  while (auto req = ctx->decoder->process(
+                             [this]() -> auto { return pop_request(); },
+                             [this, &error](
+                                 std::string_view error_description,
+                                 std::shared_ptr<RQty> req = nullptr) -> auto {
+                               error = true;
+                               if (req) push_request(req);
+                               return nullptr;
+                             })) {
                     if (on_rok_.has_value()) {
                       enqueue_for_sending(
                           ctx, on_rok_.value()(*req, [this]() -> auto {
@@ -288,7 +296,12 @@ class tcpip {
                     }
                     push_request(req);
                   }
-                  sending(ctx, false);
+                  if (error) {
+                    push_context(ctx);
+                    continue;
+                  } else {
+                    sending(ctx, false);
+                  }
                 } else {
                   push_context(ctx);
                   continue;
@@ -343,7 +356,7 @@ class tcpip {
   bool send(context* ctx) {
     if (!ctx->reference) {
       if (!ctx->responses.empty()) {
-        ctx->reference = ctx->responses.front()->serialize();
+        ctx->reference = DEty::serialize(ctx->responses.front());
       }
     }
     if (!ctx->reference) {
@@ -380,7 +393,7 @@ class tcpip {
   }
   void push_request(std::shared_ptr<RQty> req) {
     std::lock_guard<std::mutex> lock(reqs_queue_mutex_);
-    req->reset();
+    DEty::reset(req);
     reqs_queue_.push(req);
   }
   std::shared_ptr<RQty> pop_request() {
@@ -392,7 +405,7 @@ class tcpip {
   }
   void push_response(std::shared_ptr<RSty> res) {
     std::lock_guard<std::mutex> lock(ress_queue_mutex_);
-    res->reset();
+    DEty::reset(res);
     ress_queue_.push(res);
   }
   std::shared_ptr<RSty> pop_response() {

@@ -22,13 +22,13 @@
     <Filter Include="include\protocol\http11">
       <UniqueIdentifier>{35660661-3472-4c16-ac70-05a58948d2d4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\common">
+      <UniqueIdentifier>{94a96953-cbba-44dd-a28e-63e107ce5406}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\platform.h">
       <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\protocol\result.h">
-      <Filter>include\protocol</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\transport\result.h">
       <Filter>transport</Filter>
@@ -84,32 +84,29 @@
     <ClInclude Include="..\..\include\protocol\http11\server.h">
       <Filter>include\protocol\http11</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\server_base.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\protocol\http11\router.h">
       <Filter>include\protocol\http11</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\reference_buffer.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\protocol\http11\method.h">
       <Filter>include\protocol\http11</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\hash_map.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\hash_set.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\hash_base.h">
-      <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\protocol\http11\decoder.h">
       <Filter>include\protocol\http11</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\protocol\http11\target.h">
       <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\common\hash_base.h">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\common\hash_map.h">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\common\hash_set.h">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\common\reference_buffer.h">
+      <Filter>include\common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

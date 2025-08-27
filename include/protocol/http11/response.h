@@ -21,7 +21,7 @@
 #ifndef martianlabs_doba_protocol_http11_response_h
 #define martianlabs_doba_protocol_http11_response_h
 
-#include "reference_buffer.h"
+#include "common/reference_buffer.h"
 #include "status_line.h"
 #include "message.h"
 
@@ -284,22 +284,6 @@ class response {
     sln_sz_ = sizeof(EAS(SL(505_HTTP_VERSION_NOT_SUPPORTED))) - 1;
     return set();
   }
-  std::shared_ptr<reference_buffer> serialize() {
-    std::size_t hdr_len = message_.get_headers_length();
-    std::size_t bod_len = message_.get_body_length();
-    std::size_t slh_off = sln_sz_ + hdr_len;
-    memcpy(buf_, sln_, sln_sz_);
-    buf_[slh_off] = constants::character::kCr;
-    buf_[slh_off + 1] = constants::character::kLf;
-    memcpy(&buf_[slh_off + 2], &buf_[buf_sz_ - bod_sz_], bod_len);
-    reference_->set(buf_, slh_off + bod_len + 2);
-    return reference_;
-  }
-  void reset() {
-    sln_ = nullptr;
-    sln_sz_ = 0;
-    message_.reset();
-  }
   response& remove_header(std::string_view key) {
     message_.remove_header(key);
     return *this;
@@ -331,6 +315,22 @@ class response {
     auto bod_buf = &buf_[sln_sz_ + hdr_buf_size];
     return message_.set(hdr_buf, hdr_buf_size, bod_buf, bod_sz_, 0);
   }
+  void reset() {
+    sln_ = nullptr;
+    sln_sz_ = 0;
+    message_.reset();
+  }
+  std::shared_ptr<reference_buffer> serialize() {
+    std::size_t hdr_len = message_.get_headers_length();
+    std::size_t bod_len = message_.get_body_length();
+    std::size_t slh_off = sln_sz_ + hdr_len;
+    memcpy(buf_, sln_, sln_sz_);
+    buf_[slh_off] = constants::character::kCr;
+    buf_[slh_off + 1] = constants::character::kLf;
+    memcpy(&buf_[slh_off + 2], &buf_[buf_sz_ - bod_sz_], bod_len);
+    reference_->set(buf_, slh_off + bod_len + 2);
+    return reference_;
+  }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
@@ -341,6 +341,10 @@ class response {
   std::size_t sln_sz_ = 0;
   message message_;
   std::shared_ptr<reference_buffer> reference_;
+  // ___________________________________________________________________________
+  // FRIENDs                                                         ( private )
+  //
+  friend class decoder;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

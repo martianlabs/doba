@@ -24,7 +24,6 @@
 #include <ranges>
 #include <string_view>
 
-#include "server_base.h"
 #include "transport/server/tcpip.h"
 #include "protocol/http11/constants.h"
 #include "protocol/http11/helpers.h"
@@ -41,34 +40,27 @@ namespace martianlabs::doba::protocol::http11 {
 // This class holds for the http 1.1 server implementation.
 // -----------------------------------------------------------------------------
 // Template parameters:
-//    RQty - request being used.
-//    RSty - response being used.
-//    ROty - router being used.
-//    TRty - transport being used.
+//    TRty - transport being used (tcp/ip by default).
 // =============================================================================
-template <typename RQty = request, typename RSty = response,
-          template <typename, typename> class DEty = decoder,
-          template <typename, typename> class ROty = router,
-          template <typename, typename,
-                    template <typename, typename> typename> class TRty =
+template <template <typename, typename, typename> class TRty =
               transport::server::tcpip>
-class server : public server_base<RQty, RSty, DEty, TRty> {
+class server {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   server(const char port[]) {
-    TRty<RQty, RSty, DEty>::set_port(port);
-    TRty<RQty, RSty, DEty>::set_number_of_workers(kDefaultNumberOfWorkers);
-    TRty<RQty, RSty, DEty>::set_on_connection([](socket_type id) {});
-    TRty<RQty, RSty, DEty>::set_on_disconnection([](socket_type id) {});
-    TRty<RQty, RSty, DEty>::set_on_bytes_received(
+    transport_.set_port(port);
+    transport_.set_number_of_workers(kDefaultNumberOfWorkers);
+    transport_.set_on_connection([](socket_type id) {});
+    transport_.set_on_disconnection([](socket_type id) {});
+    transport_.set_on_bytes_received(
         [](socket_type id, unsigned long bytes) {});
-    TRty<RQty, RSty, DEty>::set_on_bytes_sent(
-        [](socket_type id, unsigned long bytes) {});
-    TRty<RQty, RSty, DEty>::set_on_request_ok(
-        [this](const RQty& req, auto new_response) -> std::shared_ptr<RSty> {
-          std::shared_ptr<RSty> res = new_response();
+    transport_.set_on_bytes_sent([](socket_type id, unsigned long bytes) {});
+    transport_.set_on_request_ok(
+        [this](const request& req,
+               auto new_response) -> std::shared_ptr<response> {
+          std::shared_ptr<response> res = new_response();
           if (!process_headers(req, *res)) {
             res->bad_request_400().add_header(headers::kContentLength, 0);
             return res;
@@ -76,22 +68,22 @@ class server : public server_base<RQty, RSty, DEty, TRty> {
           switch (req.get_target()) {
             case target::kOriginForm:
             case target::kAbsoluteForm: {
-              if (auto fn = router_.match(req.get_method(),
-                                          req.get_absolute_path())) {
-                fn->operator()(req, *res);
-                // we're doing this to remove any hop-by-hop added element..
-                for (auto const& hop_by_hop : res->get_hop_by_hop_headers()) {
-                  res->remove_header(hop_by_hop);
-                }
-              } else {
+              auto h = router_.match(req.get_method(), req.get_absolute_path());
+              if (!h) {
                 res->not_found_404().add_header(headers::kContentLength, 0);
+                return res;
+              }
+              h->operator()(req, *res);
+              // we're doing this to remove any hop-by-hop added element..
+              for (auto const& hop_by_hop : res->get_hop_by_hop_headers()) {
+                res->remove_header(hop_by_hop);
               }
             } break;
             case target::kAuthorityForm:
             case target::kAsteriskForm:
-              // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+              // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
               // [to-do] -> add support for this!
-              // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+              // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
               break;
             default:
               res->bad_request_400().add_header(headers::kContentLength, 0);
@@ -99,9 +91,9 @@ class server : public server_base<RQty, RSty, DEty, TRty> {
           }
           return res;
         });
-    TRty<RQty, RSty, DEty>::set_on_request_error(
-        [this](auto new_response) -> std::shared_ptr<RSty> {
-          std::shared_ptr<RSty> response = new_response();
+    transport_.set_on_request_error(
+        [this](auto new_response) -> std::shared_ptr<response> {
+          std::shared_ptr<response> response = new_response();
           response->bad_request_400().add_header(headers::kContentLength, 0);
           return response;
         });
@@ -118,8 +110,9 @@ class server : public server_base<RQty, RSty, DEty, TRty> {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  server& add_route(method method, std::string_view route,
-                    ROty<RQty, RSty>::handler_fn fn) {
+  void start() { transport_.start(); }
+  void stop() { transport_.stop(); }
+  server& add_route(method method, std::string_view route, router::handler fn) {
     router_.add(method, route, fn);
     return *this;
   }
@@ -128,8 +121,8 @@ class server : public server_base<RQty, RSty, DEty, TRty> {
   // ___________________________________________________________________________
   // USINGs                                                          ( private )
   //
-  using on_header_fn =
-      std::function<bool(std::string_view, const RQty&, RSty&)>;
+  using on_header_check_delegate =
+      std::function<bool(std::string_view, const request&, response&)>;
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
@@ -179,8 +172,8 @@ class server : public server_base<RQty, RSty, DEty, TRty> {
     // | Connection          | 1#connection-option                             |
     // | connection-option   | token                                           |
     // +---------------------+-------------------------------------------------+
-    headers_fns_[kConnection] = [this](std::string_view v, const RQty& req,
-                                       RSty& res) -> bool {
+    headers_fns_[kConnection] = [this](std::string_view v, const request& req,
+                                       response& res) -> bool {
       for (auto token : v | std::views::split(constants::character::kComma)) {
         std::string_view value(&*token.begin(), std::ranges::distance(token));
         value = helpers::ows_ltrim(helpers::ows_rtrim(value));
@@ -198,7 +191,7 @@ class server : public server_base<RQty, RSty, DEty, TRty> {
     // | DIGIT               | %x30-39  ; ASCII characters "0" to "9"          |
     // +---------------------+-------------------------------------------------+
   }
-  bool process_headers(const RQty& req, RSty& res) const {
+  bool process_headers(const request& req, response& res) const {
     for (auto const& hdr : req.get_headers()) {
       if (auto itr = headers_fns_.find(hdr.first); itr != headers_fns_.end()) {
         if (!itr->second(hdr.second, req, res)) return false;
@@ -209,8 +202,9 @@ class server : public server_base<RQty, RSty, DEty, TRty> {
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  std::unordered_map<std::string_view, on_header_fn> headers_fns_;
-  ROty<RQty, RSty> router_;
+  std::unordered_map<std::string_view, on_header_check_delegate> headers_fns_;
+  TRty<request, response, decoder> transport_;
+  router router_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

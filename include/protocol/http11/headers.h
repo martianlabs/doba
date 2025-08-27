@@ -25,7 +25,7 @@
 #include <string_view>
 
 #include "constants.h"
-#include "hash_map.h"
+#include "common/hash_map.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================

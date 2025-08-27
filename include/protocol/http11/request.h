@@ -59,23 +59,6 @@ class request {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  void set(const char* request_line_data, std::size_t request_line_size,
-           const char* headers_data, std::size_t headers_size) {
-    if (!request_line_data || !headers_data || !request_line_size ||
-        !headers_size) {
-      return;
-    }
-    memcpy(buf_, request_line_data, request_line_size);
-    memcpy(&buf_[request_line_size], headers_data, headers_size);
-    msg_.set(&buf_[request_line_size], slh_sz_ - request_line_size,
-             &buf_[slh_sz_], bod_sz_, headers_size);
-  }
-  void reset() {
-    mtd_ = method::kUnknown;
-    tgt_ = target::kUnknown;
-    abs_.clear();
-    msg_.reset();
-  }
   request& set_method(method method) {
     mtd_ = method;
     return *this;
@@ -88,13 +71,11 @@ class request {
     abs_ = path;
     return *this;
   }
-  request& add_body(const char* buf, std::size_t size) {
-    msg_.add_body(buf, size);
-    return *this;
+  bool add_body(const char* buf, std::size_t size) {
+    return msg_.add_body(buf, size);
   }
-  request& add_body(std::string_view sv) {
-    msg_.add_body(sv.data(), sv.size());
-    return *this;
+  bool add_body(std::string_view sv) {
+    return msg_.add_body(sv.data(), sv.size());
   }
   request& add_header(std::string_view key, std::string_view value) {
     msg_.add_header(key, value);
@@ -126,6 +107,21 @@ class request {
   //
   static constexpr std::size_t kHttpVersionLen = 8;
   // ___________________________________________________________________________
+  // METHODs                                                         ( private )
+  //
+  void set(const char* r, std::size_t r_sz, const char* h, std::size_t h_sz) {
+    if (!r || !h || !r_sz || !h_sz) return;
+    memcpy(buf_, r, r_sz);
+    memcpy(&buf_[r_sz], h, h_sz);
+    msg_.set(&buf_[r_sz], slh_sz_ - r_sz, &buf_[slh_sz_], bod_sz_, h_sz);
+  }
+  void reset() {
+    mtd_ = method::kUnknown;
+    tgt_ = target::kUnknown;
+    abs_.clear();
+    msg_.reset();
+  }
+  // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
   std::size_t buf_sz_ = 0;
@@ -136,6 +132,10 @@ class request {
   target tgt_;
   std::string abs_;
   message msg_;
+  // ___________________________________________________________________________
+  // FRIENDs                                                         ( private )
+  //
+  friend class decoder;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

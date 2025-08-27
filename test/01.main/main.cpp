@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
                    res.ok_200()
                        .add_header("Content-Type", "text/plain")
                        .add_header("Connection", "keep-alive")
-                       .add_header("Content-Length", "13")
+                       .add_header("Content-Length", 13)
                        .add_body("Hello, World!");
                  })
       .start();
