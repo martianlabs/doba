@@ -228,9 +228,9 @@ class server {
       enum class type { kUnknown, kIpLiteral, kIpV4Address, kRegName };
       if (!v.length()) return true;
       type potential_host_type = type::kUnknown, host_type = type::kUnknown;
+      std::size_t cursor = v.length();
       const std::size_t kMaxDots = 3;
       std::size_t dots[kMaxDots] = {0};
-      std::size_t colon_found = 0;
       if (v[0] == constants::character::kOpenBracket) {
         // check for potential [IP-literal]..
       } else {
@@ -254,10 +254,6 @@ class server {
           std::size_t next_to_third_dot = dots[kMaxDots - 1] + 1;
           while (next_to_third_dot < v.length()) {
             if (!helpers::is_digit(v[next_to_third_dot])) {
-              if (v[next_to_third_dot] != constants::character::kColon) {
-                seems_ok = false;
-              }
-              colon_found = next_to_third_dot;
               break;
             }
             next_to_third_dot++;
@@ -265,6 +261,7 @@ class server {
           if (seems_ok) {
             // potential [IPv4address]!
             potential_host_type = type::kIpV4Address;
+            cursor = next_to_third_dot;
           }
         }
       }
@@ -272,7 +269,7 @@ class server {
         // potential [IP-literal]!
       } else if (potential_host_type == type::kIpV4Address) {
         // potential [IPv4address]!
-        auto check_segment = [](std::string_view segment) -> bool {
+        auto check = [](std::string_view segment) -> bool {
           int segment_value = 0;
           auto [ptr, error_code] = std::from_chars(
               segment.data(), segment.data() + segment.size(), segment_value);
@@ -280,10 +277,18 @@ class server {
                   (segment_value >= 0 && segment_value <= 255));
         };
         std::size_t sz = dots[0];
-        if (check_segment(std::string_view(v.data(), sz))) {
+        if (check(std::string_view(v.data(), sz))) {
           if ((sz = dots[1] - dots[0]) > 0) {
-            if (check_segment(std::string_view(&v.data()[dots[0] + 1], --sz))) {
-              host_type = potential_host_type;
+            if (check(std::string_view(&v.data()[dots[0] + 1], --sz))) {
+              if ((sz = dots[2] - dots[1]) > 0) {
+                if (check(std::string_view(&v.data()[dots[1] + 1], --sz))) {
+                  if ((sz = cursor - dots[2]) > 0) {
+                    if (check(std::string_view(&v.data()[dots[2] + 1], --sz))) {
+                      host_type = potential_host_type;
+                    }
+                  }
+                }
+              }
             }
           }
         }
