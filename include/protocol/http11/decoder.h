@@ -390,6 +390,7 @@ class decoder {
     std::size_t tencoding_count = 0;
     std::size_t i = ver_end_.value() + sizeof(constants::string::kCrLf) - 1;
     std::size_t end = hdr_end_.value() + 2;
+    int host_count = 0;
     while (i < end) {
       std::size_t beg = i;
       while (i < end && buf_[i] != constants::character::kColon) {
@@ -419,7 +420,7 @@ class decoder {
       if (!name.compare(headers::kContentLength)) {
         if ((++clength_count > 1) || (tencoding_count > 0)) return false;
         auto ows_value = helpers::ows_ltrim(helpers::ows_rtrim(value));
-        if (!helpers::is_digit(ows_value)) return false;
+        if (!ows_value.length() || !helpers::is_digit(ows_value)) return false;
         auto first = ows_value.data();
         auto last = ows_value.data() + ows_value.size();
         auto [p, e] = std::from_chars(first, last, body_size_expected_);
@@ -427,10 +428,12 @@ class decoder {
         body_processing_ = body_size_expected_ > 0;
       } else if (!name.compare(headers::kTransferEncoding)) {
         if ((++tencoding_count > 1) || (clength_count > 0)) return false;
+      } else if (!name.compare(headers::kHost)) {
+        host_count++;
       }
       i++;
     }
-    return true;
+    return host_count == 1;
   }
   std::optional<std::string> try_get_absolute_path(std::size_t& i,
                                                    std::size_t len) {

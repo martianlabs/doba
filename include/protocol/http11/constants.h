@@ -256,6 +256,7 @@ struct constants {
     static constexpr uint8_t kALowerCase = 0x61;
     static constexpr uint8_t kFLowerCase = 0x66;
     static constexpr uint8_t kZLowerCase = 0x7A;
+    static constexpr uint8_t kOpenBracket = 0x5B;
   };
   struct string {
     static constexpr uint8_t kCrLf[] = "\r\n";

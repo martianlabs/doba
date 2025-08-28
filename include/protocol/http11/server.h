@@ -131,12 +131,11 @@ class server {
   // METHODs                                                         ( private )
   //
   void setup_headers_functions() {
-    static std::string_view kConnection = headers::kConnection;
     // +-----------------------------------------------------------------------+
     // | ESSENTIAL HEADERS (MANDATORY)                                         |
     // +-----------------------------------------------------------------------+
     // | [ ] Host                                                              |
-    // | [ ] Content-Length                                                    |
+    // | [x] Content-Length                                                (*) |
     // | [x] Connection                                                        |
     // | [ ] Date                                                              |
     // | [ ] Transfer-Encoding                                                 |
@@ -163,6 +162,8 @@ class server {
     // | [ ] Trailer                                                           |
     // | [ ] Vary                                                              |
     // +-----------------------------------------------------------------------+
+    // +                                           (*) implemented by decoder. |
+    // +-----------------------------------------------------------------------+
 
     // +-----------------------------------------------------------------------+
     // |                                                        [ connection ] |
@@ -172,8 +173,8 @@ class server {
     // | Connection          | 1#connection-option                             |
     // | connection-option   | token                                           |
     // +---------------------+-------------------------------------------------+
-    headers_fns_[kConnection] = [this](std::string_view v, const request& req,
-                                       response& res) -> bool {
+    headers_fns_[headers::kConnection] =
+        [this](std::string_view v, const request& req, response& res) -> bool {
       for (auto token : v | std::views::split(constants::character::kComma)) {
         std::string_view value(&*token.begin(), std::ranges::distance(token));
         value = helpers::ows_ltrim(helpers::ows_rtrim(value));
@@ -183,13 +184,115 @@ class server {
       return true;
     };
     // +-----------------------------------------------------------------------+
-    // |                                                    [ content-length ] |
-    // +---------------------+-------------------------------------------------+
-    // | Field               | Definition                                      |
-    // +---------------------+-------------------------------------------------+
-    // | Content-Length      | 1*DIGIT                                         |
-    // | DIGIT               | %x30-39  ; ASCII characters "0" to "9"          |
-    // +---------------------+-------------------------------------------------+
+    // |                                                              [ host ] |
+    // +----------------+------------------------------------------------------+
+    // | Field          | Definition                                           |
+    // +----------------+------------------------------------------------------+
+    // | Host           | uri-host [ ":" port ]                                |
+    // | uri-host       | IP-literal / IPv4address / reg-name                  |
+    // | port           | *DIGIT                                               |
+    // +----------------+------------------------------------------------------+
+    // | IP-literal     | "[" ( IPv6address / IPvFuture ) "]"                  |
+    // +----------------+------------------------------------------------------+
+    // | IPv6address    | 6( h16 ":" ) ls32                                    |
+    // |                | / "::" 5( h16 ":" ) ls32                             |
+    // |                | / [ h16 ] "::" 4( h16 ":" ) ls32                     |
+    // |                | / [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32       |
+    // |                | / [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32       |
+    // |                | / [ *3( h16 ":" ) h16 ] "::" h16 ":" ls32            |
+    // |                | / [ *4( h16 ":" ) h16 ] "::" ls32                    |
+    // |                | / [ *5( h16 ":" ) h16 ] "::" h16                     |
+    // |                | / [ *6( h16 ":" ) h16 ] "::"                         |
+    // +----------------+------------------------------------------------------+
+    // | IPvFuture      | "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" ) |
+    // +----------------+------------------------------------------------------+
+    // | ls32           | ( h16 ":" h16 ) / IPv4address                        |
+    // | h16            | 1*4HEXDIG                                            |
+    // +----------------+------------------------------------------------------+
+    // | IPv4address    | dec-octet "." dec-octet "." dec-octet "." dec-octet  |
+    // | dec-octet      | DIGIT                    ; 0-9                       |
+    // |                | / %x31-39 DIGIT          ; 10-99                     |
+    // |                | / "1" 2DIGIT             ; 100-199                   |
+    // |                | / "2" %x30-34 DIGIT      ; 200-249                   |
+    // |                | / "25" %x30-35           ; 250-255                   |
+    // +----------------+------------------------------------------------------+
+    // | reg-name       | *( unreserved / pct-encoded / sub-delims )           |
+    // +----------------+------------------------------------------------------+
+    // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"                |
+    // | pct-encoded    | "%" HEXDIG HEXDIG                                    |
+    // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / ","  |
+    // |                | / ";" / "="                                          |
+    // +----------------+------------------------------------------------------+
+    headers_fns_[headers::kHost] =
+        [this](std::string_view v, const request& req, response& res) -> bool {
+      enum class type { kUnknown, kIpLiteral, kIpV4Address, kRegName };
+      if (!v.length()) return true;
+      type potential_host_type = type::kUnknown, host_type = type::kUnknown;
+      const std::size_t kMaxDots = 3;
+      std::size_t dots[kMaxDots] = {0};
+      std::size_t colon_found = 0;
+      if (v[0] == constants::character::kOpenBracket) {
+        // check for potential [IP-literal]..
+      } else {
+        // check for potential [IPv4address]..
+        std::size_t i = 0, dots_found = 0;
+        while (i < v.length()) {
+          if (!helpers::is_digit(v[i])) {
+            if (v[i] == constants::character::kDot) {
+              if (dots_found < kMaxDots) {
+                dots[dots_found] = i;
+              }
+              dots_found++;
+            } else {
+              break;
+            }
+          }
+          i++;
+        }
+        if (dots_found == kMaxDots) {
+          bool seems_ok = true;
+          std::size_t next_to_third_dot = dots[kMaxDots - 1] + 1;
+          while (next_to_third_dot < v.length()) {
+            if (!helpers::is_digit(v[next_to_third_dot])) {
+              if (v[next_to_third_dot] != constants::character::kColon) {
+                seems_ok = false;
+              }
+              colon_found = next_to_third_dot;
+              break;
+            }
+            next_to_third_dot++;
+          }
+          if (seems_ok) {
+            // potential [IPv4address]!
+            potential_host_type = type::kIpV4Address;
+          }
+        }
+      }
+      if (potential_host_type == type::kIpLiteral) {
+        // potential [IP-literal]!
+      } else if (potential_host_type == type::kIpV4Address) {
+        // potential [IPv4address]!
+        auto check_segment = [](std::string_view segment) -> bool {
+          int segment_value = 0;
+          auto [ptr, error_code] = std::from_chars(
+              segment.data(), segment.data() + segment.size(), segment_value);
+          return (error_code == std::errc() &&
+                  (segment_value >= 0 && segment_value <= 255));
+        };
+        std::size_t sz = dots[0];
+        if (check_segment(std::string_view(v.data(), sz))) {
+          if ((sz = dots[1] - dots[0]) > 0) {
+            if (check_segment(std::string_view(&v.data()[dots[0] + 1], --sz))) {
+              host_type = potential_host_type;
+            }
+          }
+        }
+      }
+      if (host_type == type::kUnknown) {
+        // check for potential [reg-name]..
+      }
+      return host_type != type::kUnknown;
+    };
   }
   bool process_headers(const request& req, response& res) const {
     for (auto const& hdr : req.get_headers()) {
