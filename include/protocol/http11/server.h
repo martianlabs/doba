@@ -225,51 +225,36 @@ class server {
     // +----------------+------------------------------------------------------+
     headers_fns_[headers::kHost] =
         [this](std::string_view v, const request& req, response& res) -> bool {
-      enum class type { kUnknown, kIpLiteral, kIpV4Address, kRegName };
-      if (!v.length()) return true;
-      type potential_host_type = type::kUnknown, host_type = type::kUnknown;
-      std::size_t cursor = v.length();
       const std::size_t kMaxDots = 3;
-      std::size_t dots[kMaxDots] = {0};
-      if (v[0] == constants::character::kOpenBracket) {
-        // check for potential [IP-literal]..
-      } else {
-        // check for potential [IPv4address]..
-        std::size_t i = 0, dots_found = 0;
-        while (i < v.length()) {
-          if (!helpers::is_digit(v[i])) {
-            if (v[i] == constants::character::kDot) {
-              if (dots_found < kMaxDots) {
-                dots[dots_found] = i;
-              }
-              dots_found++;
+      auto prechech_ipv4 = [](std::string_view sv, std::size_t& cur) -> auto {
+        std::vector<std::size_t> out;
+        std::size_t i = 0;
+        while (i < sv.length()) {
+          if (!helpers::is_digit(sv[i])) {
+            if (sv[i] == constants::character::kDot) {
+              out.push_back(i);
             } else {
               break;
             }
           }
           i++;
         }
-        if (dots_found == kMaxDots) {
+        if (out.size() == kMaxDots) {
           bool seems_ok = true;
-          std::size_t next_to_third_dot = dots[kMaxDots - 1] + 1;
-          while (next_to_third_dot < v.length()) {
-            if (!helpers::is_digit(v[next_to_third_dot])) {
+          std::size_t next_to_third_dot = out[kMaxDots - 1] + 1;
+          while (next_to_third_dot < sv.length()) {
+            if (!helpers::is_digit(sv[next_to_third_dot])) {
               break;
             }
             next_to_third_dot++;
           }
-          if (seems_ok) {
-            // potential [IPv4address]!
-            potential_host_type = type::kIpV4Address;
-            cursor = next_to_third_dot;
-          }
+          if (seems_ok) cur = next_to_third_dot;
         }
-      }
-      if (potential_host_type == type::kIpLiteral) {
-        // potential [IP-literal]!
-      } else if (potential_host_type == type::kIpV4Address) {
-        // potential [IPv4address]!
-        auto check = [](std::string_view segment) -> bool {
+        return out;
+      };
+      auto check_ipv4 = [](std::string_view sv, std::size_t cursor,
+                           const std::vector<std::size_t>& dots) -> bool {
+        auto chk = [](std::string_view segment) -> bool {
           int segment_value = 0;
           auto [ptr, error_code] = std::from_chars(
               segment.data(), segment.data() + segment.size(), segment_value);
@@ -277,14 +262,14 @@ class server {
                   (segment_value >= 0 && segment_value <= 255));
         };
         std::size_t sz = dots[0];
-        if (check(std::string_view(v.data(), sz))) {
+        if (chk(std::string_view(sv.data(), sz))) {
           if ((sz = dots[1] - dots[0]) > 0) {
-            if (check(std::string_view(&v.data()[dots[0] + 1], --sz))) {
+            if (chk(std::string_view(&sv.data()[dots[0] + 1], --sz))) {
               if ((sz = dots[2] - dots[1]) > 0) {
-                if (check(std::string_view(&v.data()[dots[1] + 1], --sz))) {
+                if (chk(std::string_view(&sv.data()[dots[1] + 1], --sz))) {
                   if ((sz = cursor - dots[2]) > 0) {
-                    if (check(std::string_view(&v.data()[dots[2] + 1], --sz))) {
-                      host_type = potential_host_type;
+                    if (chk(std::string_view(&sv.data()[dots[2] + 1], --sz))) {
+                      return true;
                     }
                   }
                 }
@@ -292,9 +277,64 @@ class server {
             }
           }
         }
+        return false;
+      };
+      enum class type { kUnknown, kIpLiteral, kIpV4Address, kRegName };
+      if (!v.length()) return true;
+      type potential_host_type = type::kUnknown, host_type = type::kUnknown;
+      std::size_t cursor = v.length();
+      std::vector<std::size_t> dots;
+      if (v[0] == constants::character::kOpenBracket) {
+        // check for potential [IP-literal]..
+      } else {
+        // check for potential [IPv4address]..
+        if ((dots = prechech_ipv4(v, cursor)).size() == kMaxDots) {
+          potential_host_type = type::kIpV4Address;
+        }
+      }
+      if (potential_host_type == type::kIpLiteral) {
+        // potential [IP-literal]!
+      } else if (potential_host_type == type::kIpV4Address) {
+        // potential [IPv4address]!
+        if (check_ipv4(v, cursor, dots)) {
+          host_type = potential_host_type;
+        }
       }
       if (host_type == type::kUnknown) {
         // check for potential [reg-name]..
+        std::size_t i = 0;
+        host_type = type::kRegName;
+        while (i < v.size()) {
+          if (helpers::is_unreserved(v[i]) || helpers::is_sub_delim(v[i])) {
+            i++;
+          } else if (v[i] == constants::character::kPercent) {
+            if (i + 2 < v.size() && helpers::is_hex_digit(v[i + 1]) &&
+                helpers::is_hex_digit(v[i + 2])) {
+              i += 3;
+            } else {
+              host_type = type::kUnknown;
+              break;
+            }
+          } else if (v[i] == constants::character::kColon) {
+            break;
+          }
+        }
+        cursor = i;
+      }
+      // check for [ ":" port ] part..
+      if (host_type != type::kUnknown) {
+        if (cursor < v.size()) {
+          if (v[cursor++] == constants::character::kColon) {
+            while (cursor < v.size()) {
+              if (!helpers::is_digit(v[cursor++])) {
+                host_type = type::kUnknown;
+                break;
+              }
+            }
+          } else {
+            host_type = type::kUnknown;
+          }
+        }
       }
       return host_type != type::kUnknown;
     };
