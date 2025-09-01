@@ -246,6 +246,14 @@ struct constants {
     static constexpr uint8_t kObsTextStart = 0x80;
     static constexpr uint8_t kObsTextEnd = 0xFF;
     static constexpr uint8_t k0 = 0x30;
+    static constexpr uint8_t k1 = 0x31;
+    static constexpr uint8_t k2 = 0x32;
+    static constexpr uint8_t k3 = 0x33;
+    static constexpr uint8_t k4 = 0x34;
+    static constexpr uint8_t k5 = 0x35;
+    static constexpr uint8_t k6 = 0x36;
+    static constexpr uint8_t k7 = 0x37;
+    static constexpr uint8_t k8 = 0x38;
     static constexpr uint8_t k9 = 0x39;
     static constexpr uint8_t kAUpperCase = 0x41;
     static constexpr uint8_t kFUpperCase = 0x46;
@@ -257,6 +265,7 @@ struct constants {
     static constexpr uint8_t kFLowerCase = 0x66;
     static constexpr uint8_t kZLowerCase = 0x7A;
     static constexpr uint8_t kOpenBracket = 0x5B;
+    static constexpr uint8_t kCloseBracket = 0x5D;
   };
   struct string {
     static constexpr uint8_t kCrLf[] = "\r\n";

@@ -80,7 +80,7 @@ class decoder {
     cur_ += size;
     return true;
   }
-  std::shared_ptr<request> process(auto new_request, auto on_error) {
+  std::shared_ptr<request> process() {
     static const auto eoh_len = sizeof(constants::string::kEndOfHeaders) - 1;
     static const auto eol_len = sizeof(constants::string::kCrLf) - 1;
     static const char* eoh = (const char*)constants::string::kEndOfHeaders;
@@ -99,7 +99,7 @@ class decoder {
               // let's setup the request to be returned!
               const auto rline_end = rln_end_.value() + eol_len;
               const auto hdrs_end = hdr_end_.value() + eoh_len;
-              request_ = new_request();
+              request_ = std::make_shared<request>();
               request_->set(buf_, rline_end, &buf_[rline_end],
                             hdrs_end - rline_end);
               request_->set_method(method_);
@@ -110,15 +110,12 @@ class decoder {
               }
             } else {
               // ((error)) -> wrong content received!
-              return on_error("error while parsing headers!");
             }
           } else {
             // ((error)) -> wrong content received!
-            return on_error("error while parsing request line!");
           }
         } else {
           // ((error)) -> wrong content received!
-          return on_error("error while parsing request line!");
         }
       }
     }
@@ -139,7 +136,6 @@ class decoder {
             body_processing_ = false;
           } else {
             // ((error)) -> out of system limits???
-            return on_error("could not process request!", request_);
           }
         }
       } else {

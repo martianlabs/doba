@@ -59,10 +59,8 @@ class tcpip {
   using on_disconnection_fn = std::function<void(socket_type)>;
   using on_bytes_received_fn = std::function<void(socket_type, unsigned long)>;
   using on_bytes_sent_fn = std::function<void(socket_type, unsigned long)>;
-  using on_req_ok_fn = std::function<std::shared_ptr<RSty>(
-      const RQty&, std::function<std::shared_ptr<RSty>()>)>;
-  using on_req_err_fn = std::function<std::shared_ptr<RSty>(
-      std::function<std::shared_ptr<RSty>()>)>;
+  using on_req_ok_fn = std::function<std::shared_ptr<RSty>(const RQty&)>;
+  using on_req_err_fn = std::function<std::shared_ptr<RSty>()>;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
@@ -278,30 +276,12 @@ class tcpip {
             if (sz) {
               if (ctx->receiving) {
                 if (ctx->decoder->add(ctx->wsa.buf, sz)) {
-                  bool error = false;
-                  while (auto req = ctx->decoder->process(
-                             [this]() -> auto { return pop_request(); },
-                             [this, &error](
-                                 std::string_view error_description,
-                                 std::shared_ptr<RQty> req = nullptr) -> auto {
-                               error = true;
-                               if (req) push_request(req);
-                               return nullptr;
-                             })) {
+                  while (auto req = ctx->decoder->process()) {
                     if (on_rok_.has_value()) {
-                      enqueue_for_sending(
-                          ctx, on_rok_.value()(*req, [this]() -> auto {
-                            return pop_response();
-                          }));
+                      enqueue_for_sending(ctx, on_rok_.value()(*req));
                     }
-                    push_request(req);
                   }
-                  if (error) {
-                    push_context(ctx);
-                    continue;
-                  } else {
-                    sending(ctx, false);
-                  }
+                  sending(ctx, false);
                 } else {
                   push_context(ctx);
                   continue;
@@ -365,7 +345,6 @@ class tcpip {
     }
     auto result = ctx->reference->read(ctx->buf, kDefaultBufferSize);
     if (!result.has_value() || !result.value()) {
-      push_response(ctx->responses.front());
       ctx->responses.pop();
       ctx->reference = nullptr;
       return send(ctx);
@@ -391,30 +370,6 @@ class tcpip {
     contexts_queue_.pop();
     return ctx;
   }
-  void push_request(std::shared_ptr<RQty> req) {
-    std::lock_guard<std::mutex> lock(reqs_queue_mutex_);
-    DEty::reset(req);
-    reqs_queue_.push(req);
-  }
-  std::shared_ptr<RQty> pop_request() {
-    std::lock_guard<std::mutex> lock(reqs_queue_mutex_);
-    if (reqs_queue_.empty()) reqs_queue_.push(std::make_shared<RQty>());
-    std::shared_ptr<RQty> req = reqs_queue_.front();
-    reqs_queue_.pop();
-    return req;
-  }
-  void push_response(std::shared_ptr<RSty> res) {
-    std::lock_guard<std::mutex> lock(ress_queue_mutex_);
-    DEty::reset(res);
-    ress_queue_.push(res);
-  }
-  std::shared_ptr<RSty> pop_response() {
-    std::lock_guard<std::mutex> lock(ress_queue_mutex_);
-    if (ress_queue_.empty()) ress_queue_.push(std::make_shared<RSty>());
-    std::shared_ptr<RSty> res = ress_queue_.front();
-    ress_queue_.pop();
-    return res;
-  }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
@@ -426,10 +381,6 @@ class tcpip {
   std::queue<std::unique_ptr<std::thread>> threads_;
   std::queue<context*> contexts_queue_;
   std::mutex contexts_queue_mutex_;
-  std::queue<std::shared_ptr<RQty>> reqs_queue_;
-  std::mutex reqs_queue_mutex_;
-  std::queue<std::shared_ptr<RSty>> ress_queue_;
-  std::mutex ress_queue_mutex_;
   std::unique_ptr<std::thread> manager_;
   std::optional<on_connection_fn> on_cnn_;
   std::optional<on_disconnection_fn> on_dis_;

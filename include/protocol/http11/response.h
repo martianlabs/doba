@@ -288,17 +288,6 @@ class response {
     message_.remove_header(key);
     return *this;
   }
-  response& add_hop_by_hop_header(std::string_view hop) {
-    message_.add_hop_by_hop_header(hop);
-    return *this;
-  }
-  hash_set<std::string> get_hop_by_hop_headers() const {
-    return message_.get_hop_by_hop_headers();
-  }
-  response& clear_hop_by_hop_headers() {
-    message_.clear_hop_by_hop_headers();
-    return *this;
-  }
 
  private:
   // ___________________________________________________________________________

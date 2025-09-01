@@ -85,17 +85,6 @@ class message {
   bool add_body(std::string_view sv) {
     return body_.add(sv.data(), sv.size());
   }
-  message& add_hop_by_hop_header(std::string_view hop) {
-    hop_by_hop_headers_.insert(std::string(hop));
-    return *this;
-  }
-  hash_set<std::string> get_hop_by_hop_headers() const {
-    return hop_by_hop_headers_;
-  }
-  message& clear_hop_by_hop_headers() {
-    hop_by_hop_headers_.clear();
-    return *this;
-  }
   std::size_t get_headers_length() const { return headers_.length(); }
   std::size_t get_body_length() const { return body_.length(); }
 
@@ -105,7 +94,6 @@ class message {
   //
   headers headers_;
   body body_;
-  hash_set<std::string> hop_by_hop_headers_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 
