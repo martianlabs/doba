@@ -21,6 +21,10 @@
 #ifndef martianlabs_doba_protocol_http11_server_h
 #define martianlabs_doba_protocol_http11_server_h
 
+#include <variant>
+#include <future>
+
+#include "common/execution_policy.h"
 #include "transport/server/tcpip.h"
 #include "protocol/http11/constants.h"
 #include "protocol/http11/helpers.h"
@@ -51,40 +55,49 @@ class server {
   server(const char port[]) {
     transport_.set_port(port);
     transport_.set_number_of_workers(kDefaultNumberOfWorkers);
-    transport_.set_on_connection([](socket_type id) {});
-    transport_.set_on_disconnection([](socket_type id) {});
+    transport_.set_on_client_connection([](socket_type id) {});
+    transport_.set_on_client_disconnection([](socket_type id) {});
     transport_.set_on_bytes_received(
         [](socket_type id, unsigned long bytes) {});
     transport_.set_on_bytes_sent([](socket_type id, unsigned long bytes) {});
-    transport_.set_on_request_ok([this](const request& req) -> auto {
-      std::shared_ptr<response> res = std::make_shared<response>();
-      if (!process_headers(req, *res)) {
-        res->bad_request_400().add_header(headers::kContentLength, 0);
-        return res;
-      }
-      switch (req.get_target()) {
-        case target::kOriginForm:
-        case target::kAbsoluteForm: {
-          auto h = router_.match(req.get_method(), req.get_absolute_path());
-          if (!h) {
+    transport_.set_on_client_request(
+        [this](std::shared_ptr<const request> req)
+            -> TRty<request, response,
+                    router>::on_client_request_result_prototype {
+          using req_in = std::shared_ptr<const request>;
+          using res_in = std::shared_ptr<response>;
+          auto fn_400 = [](req_in req, res_in res) {
+            res->bad_request_400().add_header(headers::kContentLength, 0);
+          };
+          auto fn_404 = [](req_in req, res_in res) {
             res->not_found_404().add_header(headers::kContentLength, 0);
-            return res;
+          };
+          std::shared_ptr<response> res = std::make_shared<response>();
+          // let's check if the incoming request is following the standard..
+          if (process_headers(req)) {
+            switch (req->get_target()) {
+              case target::kOriginForm:
+              case target::kAbsoluteForm:
+                if (auto handler = router_.match(req->get_method(),
+                                                 req->get_absolute_path())) {
+                  return {handler->first, res, handler->second};
+                } else {
+                  return {fn_404, res, common::execution_policy::kSync};
+                }
+                break;
+              case target::kAuthorityForm:
+              case target::kAsteriskForm:
+                // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                // [to-do] -> add support for this!
+                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                break;
+              default:
+                break;
+            }
           }
-          h->operator()(req, *res);
-        } break;
-        case target::kAuthorityForm:
-        case target::kAsteriskForm:
-          // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-          // [to-do] -> add support for this!
-          // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-          break;
-        default:
-          res->bad_request_400().add_header(headers::kContentLength, 0);
-          break;
-      }
-      return res;
-    });
-    transport_.set_on_request_error([this]() -> auto {
+          return {fn_400, res, common::execution_policy::kSync};
+        });
+    transport_.set_on_error([this]() -> auto {
       std::shared_ptr<response> res = std::make_shared<response>();
       res->bad_request_400().add_header(headers::kContentLength, 0);
       return res;
@@ -93,7 +106,7 @@ class server {
   }
   server(const server&) = delete;
   server(server&&) noexcept = delete;
-  ~server() = default;
+  ~server() { stop(); }
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
@@ -104,8 +117,9 @@ class server {
   //
   void start() { transport_.start(); }
   void stop() { transport_.stop(); }
-  server& add_route(method method, std::string_view route, router::handler fn) {
-    router_.add(method, route, fn);
+  server& add_route(method method, std::string_view route,
+                    router::handler handler, common::execution_policy policy) {
+    router_.add(method, route, handler, policy);
     return *this;
   }
 
@@ -158,8 +172,9 @@ class server {
     headers_fns_[headers::kConnection] = checkers::connection_check_fn;
     headers_fns_[headers::kHost] = checkers::host_check_fn;
   }
-  bool process_headers(const request& req, response& res) const {
-    for (auto const& hdr : req.get_headers()) {
+  bool process_headers(std::shared_ptr<const request> req) const {
+    if (!req) return false;
+    for (auto const& hdr : req->get_headers()) {
       if (auto itr = headers_fns_.find(hdr.first); itr != headers_fns_.end()) {
         if (!itr->second(hdr.second)) return false;
       }

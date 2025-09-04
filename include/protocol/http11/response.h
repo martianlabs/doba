@@ -41,7 +41,7 @@ class response {
     buf_sz_ = kDefaultResponseFullSizeInMemory;
     bod_sz_ = kDefaultResponseBodySizeInMemory;
     buf_ = (char*)malloc(buf_sz_);
-    reference_ = std::make_shared<reference_buffer>();
+    reference_ = std::make_shared<common::reference_buffer>();
   }
   response(const response&) = delete;
   response(response&&) noexcept = delete;
@@ -309,7 +309,7 @@ class response {
     sln_sz_ = 0;
     message_.reset();
   }
-  std::shared_ptr<reference_buffer> serialize() {
+  std::shared_ptr<common::reference_buffer> serialize() {
     std::size_t hdr_len = message_.get_headers_length();
     std::size_t bod_len = message_.get_body_length();
     std::size_t slh_off = sln_sz_ + hdr_len;
@@ -329,7 +329,7 @@ class response {
   const char* sln_ = nullptr;
   std::size_t sln_sz_ = 0;
   message message_;
-  std::shared_ptr<reference_buffer> reference_;
+  std::shared_ptr<common::reference_buffer> reference_;
   // ___________________________________________________________________________
   // FRIENDs                                                         ( private )
   //

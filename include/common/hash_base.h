@@ -18,13 +18,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_hash_base_h
-#define martianlabs_doba_hash_base_h
+#ifndef martianlabs_doba_common_hash_base_h
+#define martianlabs_doba_common_hash_base_h
 
 #include <unordered_set>
 #include <string_view>
 
-namespace martianlabs::doba {
+namespace martianlabs::doba::common {
 // =============================================================================
 // base_hash                                                          ( struct )
 // -----------------------------------------------------------------------------
@@ -49,6 +49,6 @@ struct base_equal {
     return lhs == rhs;
   }
 };
-}  // namespace martianlabs::doba
+}  // namespace martianlabs::doba::common
 
 #endif

@@ -68,9 +68,6 @@ namespace martianlabs::doba::protocol::http11::checkers {
 // =============================================================================
 static auto host_check_fn = [](std::string_view sv) -> bool {
   enum class type { kUnknown, kIpLiteral, kIpV4Address, kRegName };
-  auto check_ip_literal = [](std::string_view sv, std::size_t& i) -> type {
-    return type::kUnknown;
-  };
   auto check_ip_v4_address = [](std::string_view sv, std::size_t& i) -> type {
     auto check = [](std::string_view sv) -> bool {
       if (sv.size() == 0x1) {
@@ -86,13 +83,13 @@ static auto host_check_fn = [](std::string_view sv) -> bool {
             !helpers::is_digit(sv[2])) {
           return false;
         }
-        if (sv[0] == '1') {
+        if (sv[0] == constants::character::k1) {
           return true;
-        } else if (sv[0] == '2') {
+        } else if (sv[0] == constants::character::k2) {
           if (sv[1] >= constants::character::k0 &&
               sv[1] <= constants::character::k4) {
             return true;
-          } else if ((sv[1] == '5')) {
+          } else if ((sv[1] == constants::character::k5)) {
             if (sv[2] >= constants::character::k0 &&
                 sv[2] <= constants::character::k5) {
               return true;
@@ -142,6 +139,31 @@ static auto host_check_fn = [](std::string_view sv) -> bool {
     }
     return type::kUnknown;
   };
+  auto check_ip_literal = [](std::string_view sv, std::size_t& i) -> type {
+    if (i < sv.size()) {
+      if (sv[i++] == 'v') {
+        while (i < sv.size() && helpers::is_hex_digit(sv[i])) {
+          i++;
+        }
+        if (i != sv.size() && sv[i] == constants::character::kDot) {
+          while (i < sv.size() && (helpers::is_unreserved(sv[i]) ||
+                                   helpers::is_sub_delim(sv[i]) ||
+                                   sv[i] == constants::character::kColon)) {
+            i++;
+          }
+          if (i != sv.size() &&
+              sv[i++] == constants::character::kCloseBracket) {
+            return type::kIpLiteral;
+          }
+        }
+      } else {
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        // [to-do] -> add support for this!
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+      }
+    }
+    return type::kUnknown;
+  };
   auto check_reg_name = [](std::string_view sv, std::size_t& i) -> type {
     while (i < sv.size()) {
       if (helpers::is_unreserved(sv[i]) || helpers::is_sub_delim(sv[i])) {
@@ -168,7 +190,7 @@ static auto host_check_fn = [](std::string_view sv) -> bool {
   // ipv4address and a reg-name. Because of this, we'll try first the
   // ipv4address way and, if not going well, then trying the reg-name one..
   if (sv[0] == constants::character::kOpenBracket) {
-    probable_type = check_ip_literal(sv, i);
+    probable_type = check_ip_literal(sv, ++i);
   } else if (helpers::is_digit(sv[0])) {
     probable_type = check_ip_v4_address(sv, i);
   }
@@ -192,139 +214,6 @@ static auto host_check_fn = [](std::string_view sv) -> bool {
     }
   }
   return probable_type != type::kUnknown;
-
-  /*
-  auto prechech_ipv4 = [](std::string_view sv, std::size_t& cur) -> auto {
-    std::vector<std::size_t> out;
-    std::size_t i = 0;
-    while (i < sv.length()) {
-      if (!helpers::is_digit(sv[i])) {
-        if (sv[i] == constants::character::kDot) {
-          out.push_back(i);
-        } else {
-          break;
-        }
-      }
-      i++;
-    }
-    if (out.size() == kMaxDots) {
-      bool seems_ok = true;
-      std::size_t next_to_third_dot = out[kMaxDots - 1] + 1;
-      while (next_to_third_dot < sv.length()) {
-        if (!helpers::is_digit(sv[next_to_third_dot])) {
-          break;
-        }
-        next_to_third_dot++;
-      }
-      if (seems_ok) cur = next_to_third_dot;
-    }
-    return out;
-  };
-  auto check_ipv4 = [](std::string_view sv, std::size_t cursor,
-                       const std::vector<std::size_t>& dots) -> bool {
-    auto chk = [](std::string_view segment) -> bool {
-      int segment_value = 0;
-      auto [ptr, error_code] = std::from_chars(
-          segment.data(), segment.data() + segment.size(), segment_value);
-      return (error_code == std::errc() &&
-              (segment_value >= 0 && segment_value <= 255));
-    };
-    std::size_t sz = dots[0];
-    if (chk(std::string_view(sv.data(), sz))) {
-      if ((sz = dots[1] - dots[0]) > 0) {
-        if (chk(std::string_view(&sv.data()[dots[0] + 1], --sz))) {
-          if ((sz = dots[2] - dots[1]) > 0) {
-            if (chk(std::string_view(&sv.data()[dots[1] + 1], --sz))) {
-              if ((sz = cursor - dots[2]) > 0) {
-                if (chk(std::string_view(&sv.data()[dots[2] + 1], --sz))) {
-                  return true;
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    return false;
-  };
-  enum class type { kUnknown, kIpLiteral, kIpV4Address, kRegName };
-  if (!v.length()) return true;
-  type potential_host_type = type::kUnknown, host_type = type::kUnknown;
-  std::size_t cursor = v.length();
-  std::vector<std::size_t> dots;
-  if (v[0] == constants::character::kOpenBracket) {
-    // we found a potential [IP-literal]..
-    potential_host_type = type::kIpLiteral;
-    std::size_t i = 1, cbrackets = 0;
-    while (i < v.size()) {
-      if (!helpers::is_digit(v[i]) && !helpers::is_hex_digit(v[i]) &&
-          !helpers::is_unreserved(v[i]) && !helpers::is_sub_delim(v[i]) &&
-          v[i] != constants::character::kColon &&
-          v[i] != constants::character::kDot && v[i] != 'v' &&
-          (v[i] == constants::character::kCloseBracket && cbrackets++)) {
-        potential_host_type = type::kUnknown;
-        break;
-      }
-      i++;
-    }
-  } else if ((dots = prechech_ipv4(v, cursor)).size() == kMaxDots) {
-    // we found a potential [IPv4address]..
-    potential_host_type = type::kIpV4Address;
-  }
-  if (potential_host_type == type::kIpLiteral) {
-    // check potential [IP-literal]!
-    host_type = potential_host_type;
-  } else if (potential_host_type == type::kIpV4Address) {
-    // check potential [IPv4address]!
-    if (check_ipv4(v, cursor, dots)) {
-      host_type = potential_host_type;
-    }
-  }
-  if (host_type == type::kUnknown) {
-    // we may found a potential [reg-name]..
-    std::size_t i = 0;
-    host_type = type::kRegName;
-    while (i < v.size()) {
-      if (helpers::is_unreserved(v[i]) || helpers::is_sub_delim(v[i])) {
-        i++;
-      } else if (v[i] == constants::character::kPercent) {
-        if (i + 2 < v.size() && helpers::is_hex_digit(v[i + 1]) &&
-            helpers::is_hex_digit(v[i + 2])) {
-          i += 3;
-        } else {
-          host_type = type::kUnknown;
-          break;
-        }
-      } else if (v[i] == constants::character::kColon) {
-        break;
-      } else {
-        host_type = type::kUnknown;
-        break;
-      }
-    }
-    cursor = i;
-  }
-  // check for [ ":" port ] part..
-  if (host_type != type::kUnknown) {
-    if (cursor < v.size()) {
-      if (v[cursor++] == constants::character::kColon) {
-        while (cursor < v.size()) {
-          if (!helpers::is_digit(v[cursor++])) {
-            host_type = type::kUnknown;
-            break;
-          }
-        }
-      } else {
-        host_type = type::kUnknown;
-      }
-    }
-  }
-  return host_type != type::kUnknown;
-  */
-
-  /*
-  pepe fin
-  */
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers
 

@@ -22,6 +22,7 @@
 #define martianlabs_doba_protocol_http11_router_h
 
 #include "common/hash_map.h"
+#include "common/execution_policy.h"
 #include "method.h"
 #include "request.h"
 #include "response.h"
@@ -38,7 +39,9 @@ class router {
   // ___________________________________________________________________________
   // USINGs                                                           ( public )
   //
-  using handler = std::function<void(const request&, response&)>;
+  using handler = std::function<void(std::shared_ptr<const request>,
+                                     std::shared_ptr<response>)>;
+  using hpair = std::pair<handler, common::execution_policy>;
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
@@ -54,24 +57,26 @@ class router {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  void add(method method, std::string_view route, handler handler) {
+  void add(method method, std::string_view route, handler handler,
+           common::execution_policy policy) {
     auto& map = routes_.try_emplace(method).first->second;
-    map.emplace(route, std::move(handler));
+    map.emplace(route, std::make_pair(std::move(handler), policy));
   }
-  std::optional<handler> match(method method, std::string_view path) {
+  auto match(method method, std::string_view path) {
+    std::optional<hpair> res = std::nullopt;
     if (auto it_m = routes_.find(method); it_m != routes_.end()) {
       if (auto it_h = it_m->second.find(path); it_h != it_m->second.end()) {
-        return it_h->second;
+        res = it_h->second;
       }
     }
-    return std::nullopt;
+    return res;
   }
 
  private:
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  std::unordered_map<method, hash_map<std::string, handler>> routes_;
+  std::unordered_map<method, common::hash_map<std::string, hpair>> routes_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

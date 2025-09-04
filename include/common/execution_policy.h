@@ -1,9 +1,9 @@
-﻿//      _       _
-//   __| | ___ | |__   __ _
+﻿//      _       _           
+//   __| | ___ | |__   __ _ 
 //  / _` |/ _ \| '_ \ / _` |
 // | (_| | (_) | |_) | (_| |
 //  \__,_|\___/|_.__/ \__,_|
-//
+// 
 // Copyright 2025 martianLabs
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,20 +18,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_common_hash_map_h
-#define martianlabs_doba_common_hash_map_h
-
-#include "hash_base.h"
+#ifndef martianlabs_doba_common_execution_policy_h
+#define martianlabs_doba_common_execution_policy_h
 
 namespace martianlabs::doba::common {
 // =============================================================================
-// hash_map                                                            ( class )
+// execution_policy                                               ( enum-class )
 // -----------------------------------------------------------------------------
-// This class holds for a generic hash based map.
+// This enum class defines the types of execution policies available.
 // -----------------------------------------------------------------------------
 // =============================================================================
-template <typename KEty, typename VAty>
-using hash_map = std::unordered_map<KEty, VAty, base_hash, base_equal>;
+enum class execution_policy { kAsync, kSync };
 }  // namespace martianlabs::doba::common
 
 #endif

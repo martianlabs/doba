@@ -50,8 +50,8 @@ class message {
   // METHODs                                                          ( public )
   //
   message& set(char* headers_buffer, std::size_t headers_buffer_size,
-                   char* body_buffer, std::size_t body_buffer_size,
-                   std::size_t headers_buffer_used) {
+               char* body_buffer, std::size_t body_buffer_size,
+               std::size_t headers_buffer_used) {
     headers_.set(headers_buffer, headers_buffer_size, headers_buffer_used);
     body_.set(body_buffer, body_buffer_size);
     return *this;
@@ -69,7 +69,7 @@ class message {
   message& add_header(std::string_view k, const T& v) {
     return add_header(k, std::to_string(v));
   }
-  hash_map<std::string_view, std::string_view> get_headers() const {
+  common::hash_map<std::string_view, std::string_view> get_headers() const {
     return headers_.get_all();
   }
   std::optional<std::string_view> get_header(std::string_view k) const {
@@ -82,9 +82,7 @@ class message {
   bool add_body(const char* buffer, std::size_t size) {
     return body_.add(buffer, size);
   }
-  bool add_body(std::string_view sv) {
-    return body_.add(sv.data(), sv.size());
-  }
+  bool add_body(std::string_view sv) { return body_.add(sv.data(), sv.size()); }
   std::size_t get_headers_length() const { return headers_.length(); }
   std::size_t get_body_length() const { return body_.length(); }
 

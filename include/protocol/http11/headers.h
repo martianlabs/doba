@@ -93,10 +93,10 @@ class headers {
   void add(std::string_view k, const T& v) {
     add(k, std::to_string(v));
   }
-  hash_map<std::string_view, std::string_view> get_all() const {
+  common::hash_map<std::string_view, std::string_view> get_all() const {
     bool searching_for_key = true;
     std::size_t i = 0, j = 0, k_start = i, v_start = i;
-    hash_map<std::string_view, std::string_view> out;
+    common::hash_map<std::string_view, std::string_view> out;
     while (i < cur_) {
       switch (buf_[i]) {
         case constants::character::kColon:

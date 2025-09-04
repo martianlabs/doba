@@ -21,10 +21,12 @@
 #ifndef martianlabs_doba_transport_server_tcpipwindows_h
 #define martianlabs_doba_transport_server_tcpipwindows_h
 
+#include <future>
 #include <optional>
 #include <functional>
 
 #include "common/reference_buffer.h"
+#include "common/thread_pool.h"
 
 namespace martianlabs::doba::transport::server {
 // =============================================================================
@@ -55,12 +57,21 @@ class tcpip {
   // ___________________________________________________________________________
   // USINGs                                                           ( public )
   //
-  using on_connection_fn = std::function<void(socket_type)>;
-  using on_disconnection_fn = std::function<void(socket_type)>;
-  using on_bytes_received_fn = std::function<void(socket_type, unsigned long)>;
-  using on_bytes_sent_fn = std::function<void(socket_type, unsigned long)>;
-  using on_req_ok_fn = std::function<std::shared_ptr<RSty>(const RQty&)>;
-  using on_req_err_fn = std::function<std::shared_ptr<RSty>()>;
+  using on_client_request_function_prototype =
+      std::function<void(std::shared_ptr<const RQty>, std::shared_ptr<RSty>)>;
+  using on_client_request_result_prototype =
+      std::tuple<on_client_request_function_prototype, std::shared_ptr<RSty>,
+                 common::execution_policy>;
+  using on_client_connection_prototype = std::function<void(socket_type)>;
+  using on_client_disconnection_prototype = std::function<void(socket_type)>;
+  using on_bytes_received_prototype =
+      std::function<void(socket_type, unsigned long)>;
+  using on_bytes_sent_prototype =
+      std::function<void(socket_type, unsigned long)>;
+  using on_client_request_prototype =
+      std::function<on_client_request_result_prototype(
+          std::shared_ptr<const RQty>)>;
+  using on_error_prototype = std::function<std::shared_ptr<RSty>()>;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
@@ -69,7 +80,7 @@ class tcpip {
     // let's setup all the required resources..
     if (!setupWinsock()) return result::kCouldNotSetupPlaformResources;
     if (!setupListener()) return result::kCouldNotSetupPlaformResources;
-    setupWorkers();
+    if (!setupWorkers()) return result::kCouldNotSetupPlaformResources;
     // let's start incoming connections loop!
     manager_ = std::make_unique<std::thread>([this]() {
       while (keep_running_) {
@@ -93,7 +104,8 @@ class tcpip {
           continue;
         }
         // let's associate the accept socket with the i/o port!
-        auto ctx = pop_context(socket);
+        context* ctx = pop_context();
+        ctx->soc = socket;
         if (!CreateIoCompletionPort((HANDLE)socket, io_h_, (ULONG_PTR)ctx, 0)) {
           // ((error)) -> trying to associate socket to the i/o port!
           continue;
@@ -108,32 +120,52 @@ class tcpip {
     return result::kSucceeded;
   }
   result stop() {
+    if (pool_) {
+      pool_->stop();
+    }
     if (io_h_ != INVALID_HANDLE_VALUE) {
-      if (!CloseHandle(io_h_)) return result::kCouldNotCleanupPlaformResources;
+      if (!CloseHandle(io_h_)) {
+        return result::kCouldNotCleanupPlaformResources;
+      }
       io_h_ = INVALID_HANDLE_VALUE;
     }
     if (accept_socket_ != INVALID_SOCKET) {
-      if (closesocket(accept_socket_) == SOCKET_ERROR)
+      if (closesocket(accept_socket_) == SOCKET_ERROR) {
         return result::kCouldNotCleanupPlaformResources;
+      }
       accept_socket_ = INVALID_SOCKET;
     }
     keep_running_ = false;
-    if (manager_->joinable()) manager_->join();
+    if (manager_->joinable()) {
+      manager_->join();
+    }
     while (!threads_.empty()) {
-      if (threads_.front()->joinable()) threads_.front()->join();
+      if (threads_.front()->joinable()) {
+        threads_.front()->join();
+      }
       threads_.pop();
     }
+    pool_.reset();
     keep_running_ = true;
     return result::kSucceeded;
   }
   void set_port(std::string_view port) { port_.assign(port); }
   void set_number_of_workers(uint8_t workers) { workers_ = workers; }
-  void set_on_connection(const on_connection_fn& fn) { on_cnn_ = fn; }
-  void set_on_disconnection(const on_disconnection_fn& fn) { on_dis_ = fn; }
-  void set_on_bytes_received(const on_bytes_received_fn& fn) { on_rcv_ = fn; }
-  void set_on_bytes_sent(const on_bytes_sent_fn& fn) { on_snd_ = fn; }
-  void set_on_request_ok(const on_req_ok_fn& fn) { on_rok_ = fn; }
-  void set_on_request_error(const on_req_err_fn& fn) { on_rer_ = fn; }
+  void set_on_client_connection(const on_client_connection_prototype& fn) {
+    on_cnn_ = fn;
+  }
+  void set_on_client_disconnection(
+      const on_client_disconnection_prototype& fn) {
+    on_dis_ = fn;
+  }
+  void set_on_bytes_received(const on_bytes_received_prototype& fn) {
+    on_rcv_ = fn;
+  }
+  void set_on_bytes_sent(const on_bytes_sent_prototype& fn) { on_snd_ = fn; }
+  void set_on_client_request(const on_client_request_prototype& fn) {
+    on_req_ = fn;
+  }
+  void set_on_error(const on_error_prototype& fn) { on_err_ = fn; }
 
  private:
   // ___________________________________________________________________________
@@ -145,44 +177,27 @@ class tcpip {
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
-  struct context {
-    context() {
-      ZeroMemory(buf, kDefaultBufferSize);
+  enum class io_type { kSend, kReceive };
+  struct overlapped {
+    overlapped(io_type op_type) {
       ZeroMemory(&ovl, sizeof(WSAOVERLAPPED));
-      soc = INVALID_SOCKET;
-      wsa.buf = buf;
-      wsa.len = kDefaultBufferSize;
-      receiving = true;
-      close_after_response = false;
-      DEty::reset(decoder);
-      decoder = std::make_shared<DEty>();
-      responses = {};
-      reference.reset();
-      ref_count = 1;
-    }
-    void reset() {
-      closesocket(soc);
-      soc = INVALID_SOCKET;
-      wsa.buf = buf;
-      wsa.len = kDefaultBufferSize;
-      receiving = true;
-      close_after_response = false;
-      DEty::reset(decoder);
-      responses = {};
-      reference.reset();
-      ref_count = 1;
+      ZeroMemory(&wsa, sizeof(WSABUF));
+      type = op_type;
     }
     WSAOVERLAPPED ovl;
-    SOCKET soc;
-    CHAR FAR buf[kDefaultBufferSize];
+    CHAR FAR buffer[kDefaultBufferSize];
+    io_type type;
     WSABUF wsa;
-    bool receiving;
-    bool close_after_response;
+  };
+  struct context {
+    context() {
+      soc = INVALID_SOCKET;
+      decoder = std::make_shared<DEty>();
+    }
+    SOCKET soc;
     std::mutex mutex;
     std::shared_ptr<DEty> decoder;
-    std::queue<std::shared_ptr<RSty>> responses;
-    std::shared_ptr<reference_buffer> reference;
-    std::size_t ref_count;
+    std::atomic<int> operations_in_course{1};
   };
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
@@ -250,123 +265,202 @@ class tcpip {
     accept_socket_ = sock;
     return true;
   }
-  void setupWorkers() {
+  bool setupWorkers() {
+    if (!(pool_ = std::make_shared<common::thread_pool>(workers_))) {
+      return false;
+    }
     for (int i = 0; i < workers_; i++) {
-      threads_.push(std::make_unique<std::thread>([this]() {
+      threads_.emplace(std::make_unique<std::thread>([this]() {
         while (true) {
           ULONG_PTR key = NULL;
-          LPOVERLAPPED ovl = NULL;
-          DWORD sz = 0;
-          if (!GetQueuedCompletionStatus(io_h_, &sz, &key, &ovl, INFINITE)) {
-            if (!ovl) {
-              if (WSAGetLastError() == ERROR_INVALID_HANDLE) {
-                break;
+          overlapped* overlapped_operation = NULL;
+          DWORD bytes = 0;
+          if (!GetQueuedCompletionStatus(io_h_, &bytes, &key,
+                                         (LPOVERLAPPED*)&overlapped_operation,
+                                         INFINITE)) {
+            if (!overlapped_operation &&
+                GetLastError() == ERROR_INVALID_HANDLE) {
+              // this will cause worker termination!
+              break;
+            }
+            if (overlapped_operation && key) {
+              // this means a client-side close operation!
+              context* ctx = (context*)key;
+              ctx->operations_in_course--;
+              if (!ctx->operations_in_course) {
+                if (ctx->soc != INVALID_SOCKET) {
+                  shutdown(ctx->soc, SD_BOTH);
+                  closesocket(ctx->soc);
+                  ctx->soc = INVALID_SOCKET;
+                  ctx->operations_in_course = 1;
+                  DEty::reset(ctx->decoder);
+                  push_context(ctx);
+                }
               }
-            } else if (key) {
-              push_context((context*)key);
+              delete overlapped_operation;
             }
             continue;
           }
           if (!key) continue;
           context* ctx = (context*)key;
           std::lock_guard<std::mutex> lock(ctx->mutex);
-          ctx->ref_count--;
-          // let's check if there's a completed operation..
-          if (ovl) {
-            if (sz) {
-              if (ctx->receiving) {
-                if (ctx->decoder->add(ctx->wsa.buf, sz)) {
-                  while (auto req = ctx->decoder->process()) {
-                    if (on_rok_.has_value()) {
-                      enqueue_for_sending(ctx, on_rok_.value()(*req));
+          ctx->operations_in_course--;
+          if (!overlapped_operation && !bytes) {
+            // this means that a new connection was created..
+            if (!receive(ctx, new overlapped(io_type::kReceive))) {
+              if (!ctx->operations_in_course) {
+                if (ctx->soc != INVALID_SOCKET) {
+                  shutdown(ctx->soc, SD_BOTH);
+                  closesocket(ctx->soc);
+                  ctx->soc = INVALID_SOCKET;
+                  ctx->operations_in_course = 1;
+                  DEty::reset(ctx->decoder);
+                  push_context(ctx);
+                }
+              }
+            }
+            on_cnn_(ctx->soc);
+            continue;
+          }
+          switch (overlapped_operation->type) {
+            case io_type::kReceive:
+              if (bytes) {
+                if (ctx->decoder->add(overlapped_operation->wsa.buf, bytes)) {
+                  if (!process(ctx)) {
+                    if (!ctx->operations_in_course) {
+                      if (ctx->soc != INVALID_SOCKET) {
+                        shutdown(ctx->soc, SD_BOTH);
+                        closesocket(ctx->soc);
+                        ctx->soc = INVALID_SOCKET;
+                        ctx->operations_in_course = 1;
+                        DEty::reset(ctx->decoder);
+                        push_context(ctx);
+                      }
                     }
                   }
-                  sending(ctx, false);
-                } else {
-                  push_context(ctx);
-                  continue;
+                  if (!receive(ctx, new overlapped(io_type::kReceive))) {
+                    if (!ctx->operations_in_course) {
+                      if (ctx->soc != INVALID_SOCKET) {
+                        shutdown(ctx->soc, SD_BOTH);
+                        closesocket(ctx->soc);
+                        ctx->soc = INVALID_SOCKET;
+                        ctx->operations_in_course = 1;
+                        DEty::reset(ctx->decoder);
+                        push_context(ctx);
+                      }
+                    }
+                  }
                 }
-              } else if (on_snd_.has_value()) {
-                on_snd_.value()(ctx->soc, sz);
+              } else {
+                if (!ctx->operations_in_course) {
+                  if (ctx->soc != INVALID_SOCKET) {
+                    shutdown(ctx->soc, SD_BOTH);
+                    closesocket(ctx->soc);
+                    ctx->soc = INVALID_SOCKET;
+                    ctx->operations_in_course = 1;
+                    DEty::reset(ctx->decoder);
+                    push_context(ctx);
+                  }
+                }
               }
-            } else {
-              if (!ctx->ref_count) {
-                push_context(ctx);
-                continue;
+              break;
+            case io_type::kSend:
+              if (bytes) {
               }
-            }
-          } else if (!sz) {
-            if (on_cnn_.has_value()) {
-              on_cnn_.value()(ctx->soc);
-            }
-            receiving(ctx);
+              break;
           }
-          if (!perform(ctx) && !ctx->ref_count) {
-            push_context(ctx);
-          }
+          delete overlapped_operation;
         }
       }));
     }
-  }
-  void receiving(context* ctx) {
-    ctx->reference = nullptr;
-    ctx->receiving = true;
-    ctx->wsa.len = kDefaultBufferSize;
-  }
-  void enqueue_for_sending(context* ctx, auto response) {
-    if (response) ctx->responses.push(response);
-  }
-  void sending(context* ctx, bool car) {
-    if (!ctx->responses.empty()) {
-      ctx->receiving = false;
-      ctx->close_after_response = car;
-    }
-  }
-  bool perform(context* ctx) {
-    return ctx->receiving ? receive(ctx) : send(ctx);
-  }
-  bool receive(context* ctx) {
-    DWORD f = 0, r = 0;
-    int res = WSARecv(ctx->soc, &ctx->wsa, 1, &r, &f, &ctx->ovl, 0);
-    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING)
-      return false;
-    ctx->ref_count++;
     return true;
   }
-  bool send(context* ctx) {
-    if (!ctx->reference) {
-      if (!ctx->responses.empty()) {
-        ctx->reference = DEty::serialize(ctx->responses.front());
+  bool receive(context* ctx, overlapped* ovl) {
+    if (ctx->soc == INVALID_SOCKET) {
+      delete ovl;
+      return false;
+    }
+    DWORD f = 0, r = 0;
+    ZeroMemory(ovl, sizeof(WSAOVERLAPPED));
+    ovl->wsa.buf = ovl->buffer;
+    ovl->wsa.len = kDefaultBufferSize;
+    int result = WSARecv(ctx->soc, &ovl->wsa, 1, &r, &f, (LPOVERLAPPED)ovl, 0);
+    if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      delete ovl;
+      return false;
+    }
+    ctx->operations_in_course++;
+    return true;
+  }
+  bool send(context* ctx, overlapped* ovl, CHAR* buffer, std::size_t length) {
+    if (ctx->soc == INVALID_SOCKET) {
+      delete ovl;
+      return false;
+    }
+    DWORD f = 0, w = 0;
+    ZeroMemory(ovl, sizeof(WSAOVERLAPPED));
+    ovl->wsa.buf = buffer;
+    ovl->wsa.len = (ULONG)length;
+    int result = WSASend(ctx->soc, &ovl->wsa, 1, &w, f, (LPOVERLAPPED)ovl, 0);
+    if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      delete ovl;
+      return false;
+    }
+    ctx->operations_in_course++;
+    return true;
+  }
+  bool process(context* ctx) {
+    auto processor = [this](auto ctx, auto result, auto req, auto res) -> bool {
+      std::get<on_client_request_function_prototype>(result)(req, res);
+      auto serialized = DEty::serialize(res);
+      while (true) {
+        auto ovl = new overlapped(io_type::kSend);
+        auto bytes = serialized->read(ovl->buffer, kDefaultBufferSize);
+        if (!bytes.has_value() || !bytes.value()) {
+          delete ovl;
+          break;
+        }
+        if (!send(ctx, ovl, ovl->buffer, bytes.value())) {
+          return false;
+        }
+      }
+      return true;
+    };
+    while (auto req = ctx->decoder->process()) {
+      auto result = on_req_(req);
+      if (auto res = std::get<std::shared_ptr<RSty>>(result); res) {
+        switch (std::get<common::execution_policy>(result)) {
+          case common::execution_policy::kSync: {
+            return processor(ctx, result, req, res);
+          } break;
+          case common::execution_policy::kAsync:
+            pool_->enqueue([this, processor, ctx, result, req, res]() {
+              std::lock_guard<std::mutex> lock(ctx->mutex);
+              if (!processor(ctx, result, req, res)) {
+                if (ctx->soc != INVALID_SOCKET) {
+                  shutdown(ctx->soc, SD_BOTH);
+                  closesocket(ctx->soc);
+                  ctx->soc = INVALID_SOCKET;
+                  ctx->operations_in_course = 1;
+                  DEty::reset(ctx->decoder);
+                  push_context(ctx);
+                }
+              }
+            });
+            break;
+        }
       }
     }
-    if (!ctx->reference) {
-      receiving(ctx);
-      return receive(ctx);
-    }
-    auto result = ctx->reference->read(ctx->buf, kDefaultBufferSize);
-    if (!result.has_value() || !result.value()) {
-      ctx->responses.pop();
-      ctx->reference = nullptr;
-      return send(ctx);
-    }
-    ctx->wsa.len = (ULONG)result.value();
-    DWORD f = 0, s = 0;
-    int res = WSASend(ctx->soc, &ctx->wsa, 1, &s, f, &ctx->ovl, 0);
-    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING)
-      return false;
-    ctx->ref_count++;
     return true;
   }
   void push_context(context* ctx) {
     std::lock_guard<std::mutex> lock(contexts_queue_mutex_);
-    ctx->reset();
-    contexts_queue_.push(ctx);
+    contexts_queue_.emplace(ctx);
   }
-  context* pop_context(SOCKET soc) {
+  context* pop_context() {
     std::lock_guard<std::mutex> lock(contexts_queue_mutex_);
     if (contexts_queue_.empty()) contexts_queue_.push(new context());
     context* ctx = contexts_queue_.front();
-    ctx->soc = soc;
     contexts_queue_.pop();
     return ctx;
   }
@@ -378,16 +472,17 @@ class tcpip {
   uint8_t workers_ = kDefaultNumberOfWorkers;
   HANDLE io_h_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
+  std::shared_ptr<common::thread_pool> pool_;
   std::queue<std::unique_ptr<std::thread>> threads_;
   std::queue<context*> contexts_queue_;
   std::mutex contexts_queue_mutex_;
   std::unique_ptr<std::thread> manager_;
-  std::optional<on_connection_fn> on_cnn_;
-  std::optional<on_disconnection_fn> on_dis_;
-  std::optional<on_bytes_received_fn> on_rcv_;
-  std::optional<on_bytes_sent_fn> on_snd_;
-  std::optional<on_req_ok_fn> on_rok_;
-  std::optional<on_req_err_fn> on_rer_;
+  on_client_connection_prototype on_cnn_;
+  on_client_disconnection_prototype on_dis_;
+  on_bytes_received_prototype on_rcv_;
+  on_bytes_sent_prototype on_snd_;
+  on_client_request_prototype on_req_;
+  on_error_prototype on_err_;
 };
 }  // namespace martianlabs::doba::transport::server
 

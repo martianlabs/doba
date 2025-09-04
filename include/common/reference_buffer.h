@@ -18,13 +18,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_reference_buffer_h
-#define martianlabs_doba_reference_buffer_h
+#ifndef martianlabs_doba_common_reference_buffer_h
+#define martianlabs_doba_common_reference_buffer_h
 
 #include <memory>
 #include <istream>
 
-namespace martianlabs::doba {
+namespace martianlabs::doba::common {
 // =============================================================================
 // reference_buffer                                                    ( class )
 // -----------------------------------------------------------------------------
@@ -58,7 +58,7 @@ class reference_buffer {
     memory_buffer_size_ = size;
     stream_ = nullptr;
   }
-  std::optional<std::size_t> read(char* dst, std::size_t len) { 
+  std::optional<std::size_t> read(char* dst, std::size_t len) {
     if (memory_buffer_ != nullptr) {
       auto n = len < memory_buffer_size_ ? len : memory_buffer_size_;
       memcpy(dst, memory_buffer_, n);
@@ -82,6 +82,6 @@ class reference_buffer {
   std::size_t memory_buffer_size_ = 0;
   std::shared_ptr<std::istream> stream_ = nullptr;
 };
-}  // namespace martianlabs::doba::protocol::http11
+}  // namespace martianlabs::doba::common
 
 #endif

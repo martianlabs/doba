@@ -18,12 +18,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_hash_set_h
-#define martianlabs_doba_hash_set_h
+#ifndef martianlabs_doba_common_hash_set_h
+#define martianlabs_doba_common_hash_set_h
 
 #include "hash_base.h"
 
-namespace martianlabs::doba {
+namespace martianlabs::doba::common {
 // =============================================================================
 // hash_set                                                            ( class )
 // -----------------------------------------------------------------------------
@@ -32,6 +32,6 @@ namespace martianlabs::doba {
 // =============================================================================
 template <typename KEty>
 using hash_set = std::unordered_set<KEty, base_hash, base_equal>;
-}  // namespace martianlabs::doba
+}  // namespace martianlabs::doba::common
 
 #endif

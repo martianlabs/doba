@@ -117,5 +117,11 @@
     <ClInclude Include="..\..\include\protocol\http11\checkers\connection.h">
       <Filter>include\protocol\http11\checkers</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\common\execution_policy.h">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\common\thread_pool.h">
+      <Filter>include\common</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
