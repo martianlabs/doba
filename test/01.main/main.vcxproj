@@ -163,6 +163,10 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\builder\builder.h" />
     <ClInclude Include="..\..\include\builder\property.h" />
+    <ClInclude Include="..\..\include\common\date_server.h" />
+    <ClInclude Include="..\..\include\common\date_server_helpers.h" />
+    <ClInclude Include="..\..\include\common\date_server_helpers_linux.h" />
+    <ClInclude Include="..\..\include\common\date_server_helpers_windows.h" />
     <ClInclude Include="..\..\include\common\execution_policy.h" />
     <ClInclude Include="..\..\include\common\hash_base.h" />
     <ClInclude Include="..\..\include\common\hash_map.h" />

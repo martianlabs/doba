@@ -123,5 +123,17 @@
     <ClInclude Include="..\..\include\common\thread_pool.h">
       <Filter>include\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\common\date_server.h">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\common\date_server_helpers.h">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\common\date_server_helpers_linux.h">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\common\date_server_helpers_windows.h">
+      <Filter>include\common</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

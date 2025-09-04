@@ -66,11 +66,15 @@ class server {
                     router>::on_client_request_result_prototype {
           using req_in = std::shared_ptr<const request>;
           using res_in = std::shared_ptr<response>;
-          auto fn_400 = [](req_in req, res_in res) {
-            res->bad_request_400().add_header(headers::kContentLength, 0);
+          auto fn_400 = [this](req_in req, res_in res) {
+            res->bad_request_400()
+                .add_header(headers::kContentLength, 0)
+                .add_header(headers::kDate, helpers::get_current_date());
           };
-          auto fn_404 = [](req_in req, res_in res) {
-            res->not_found_404().add_header(headers::kContentLength, 0);
+          auto fn_404 = [this](req_in req, res_in res) {
+            res->not_found_404()
+                .add_header(headers::kContentLength, 0)
+                .add_header(headers::kDate, helpers::get_current_date());
           };
           std::shared_ptr<response> res = std::make_shared<response>();
           // let's check if the incoming request is following the standard..
