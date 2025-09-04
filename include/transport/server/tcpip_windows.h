@@ -196,6 +196,7 @@ class tcpip {
     }
     SOCKET soc;
     std::mutex mutex;
+    overlapped rx_overlapped{io_type::kReceive};
     std::shared_ptr<DEty> decoder;
     std::atomic<int> operations_in_course{1};
   };
@@ -297,7 +298,9 @@ class tcpip {
                   push_context(ctx);
                 }
               }
-              delete overlapped_operation;
+              if (overlapped_operation->type == io_type::kSend) {
+                delete overlapped_operation;
+              }
             }
             continue;
           }
@@ -307,7 +310,9 @@ class tcpip {
           ctx->operations_in_course--;
           if (!overlapped_operation && !bytes) {
             // this means that a new connection was created..
-            if (!receive(ctx, new overlapped(io_type::kReceive))) {
+            ZeroMemory(&ctx->rx_overlapped.ovl, sizeof(WSAOVERLAPPED));
+            ZeroMemory(&ctx->rx_overlapped.wsa, sizeof(WSABUF));
+            if (!receive(ctx, &ctx->rx_overlapped)) {
               if (!ctx->operations_in_course) {
                 if (ctx->soc != INVALID_SOCKET) {
                   shutdown(ctx->soc, SD_BOTH);
@@ -338,7 +343,9 @@ class tcpip {
                       }
                     }
                   }
-                  if (!receive(ctx, new overlapped(io_type::kReceive))) {
+                  ZeroMemory(&ctx->rx_overlapped.ovl, sizeof(WSAOVERLAPPED));
+                  ZeroMemory(&ctx->rx_overlapped.wsa, sizeof(WSABUF));
+                  if (!receive(ctx, &ctx->rx_overlapped)) {
                     if (!ctx->operations_in_course) {
                       if (ctx->soc != INVALID_SOCKET) {
                         shutdown(ctx->soc, SD_BOTH);
@@ -367,9 +374,9 @@ class tcpip {
             case io_type::kSend:
               if (bytes) {
               }
+              delete overlapped_operation;
               break;
           }
-          delete overlapped_operation;
         }
       }));
     }

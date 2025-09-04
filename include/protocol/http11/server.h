@@ -121,8 +121,9 @@ class server {
   //
   void start() { transport_.start(); }
   void stop() { transport_.stop(); }
-  server& add_route(method method, std::string_view route,
-                    router::handler handler, common::execution_policy policy) {
+  server& add_route(
+      method method, std::string_view route, router::handler handler,
+      common::execution_policy policy = common::execution_policy::kSync) {
     router_.add(method, route, handler, policy);
     return *this;
   }
