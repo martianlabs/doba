@@ -71,13 +71,9 @@ static auto host_check_fn = [](std::string_view sv) -> bool {
   auto check_ip_v4_address = [](std::string_view sv, std::size_t& i) -> type {
     auto check = [](std::string_view sv) -> bool {
       if (sv.size() == 0x1) {
-        if (!helpers::is_digit(sv[0])) {
-          return false;
-        }
+        return helpers::is_digit(sv[0]);
       } else if (sv.size() == 0x2) {
-        if (!helpers::is_digit(sv[0]) || !helpers::is_digit(sv[1])) {
-          return false;
-        }
+        return helpers::is_digit(sv[0]) && helpers::is_digit(sv[1]);
       } else if (sv.size() == 0x3) {
         if (!helpers::is_digit(sv[0]) || !helpers::is_digit(sv[1]) ||
             !helpers::is_digit(sv[2])) {
@@ -122,45 +118,90 @@ static auto host_check_fn = [](std::string_view sv) -> bool {
     }
     std::size_t sz = dots[0];
     const char* ptr = &sv.data()[0];
-    if (sz && check(std::string_view(ptr, dots[0]))) {
-      sz = dots[1] - dots[0];
-      ptr = &sv.data()[dots[0] + 1];
-      if (sz && check(std::string_view(ptr, sz - 1))) {
-        sz = dots[2] - dots[1];
-        ptr = &sv.data()[dots[1] + 1];
-        if (sz && check(std::string_view(ptr, sz - 1))) {
-          sz = i - dots[2];
-          ptr = &sv.data()[dots[2] + 1];
-          if (sz && check(std::string_view(ptr, sz - 1))) {
-            return type::kIpV4Address;
-          }
-        }
-      }
+    if (!sz || !check(std::string_view(ptr, dots[0]))) {
+      return type::kUnknown;
     }
-    return type::kUnknown;
+    sz = dots[1] - dots[0];
+    ptr = &sv.data()[dots[0] + 1];
+    if (!sz || !check(std::string_view(ptr, sz - 1))) {
+      return type::kUnknown;
+    }
+    sz = dots[2] - dots[1];
+    ptr = &sv.data()[dots[1] + 1];
+    if (!sz || !check(std::string_view(ptr, sz - 1))) {
+      return type::kUnknown;
+    }
+    sz = i - dots[2];
+    ptr = &sv.data()[dots[2] + 1];
+    if (!sz || !check(std::string_view(ptr, sz - 1))) {
+      return type::kUnknown;
+    }
+    return type::kIpV4Address;
   };
-  auto check_ip_literal = [](std::string_view sv, std::size_t& i) -> type {
-    if (i < sv.size()) {
-      if (sv[i++] == 'v') {
-        while (i < sv.size() && helpers::is_hex_digit(sv[i])) {
-          i++;
-        }
-        if (i != sv.size() && sv[i] == constants::character::kDot) {
-          while (i < sv.size() && (helpers::is_unreserved(sv[i]) ||
-                                   helpers::is_sub_delim(sv[i]) ||
-                                   sv[i] == constants::character::kColon)) {
-            i++;
-          }
-          if (i != sv.size() &&
-              sv[i++] == constants::character::kCloseBracket) {
-            return type::kIpLiteral;
-          }
-        }
-      } else {
-        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        // [to-do] -> add support for this!
-        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  auto check_ip_literal = [check_ip_v4_address](std::string_view sv,
+                                                std::size_t& i) -> type {
+    std::size_t pos = sv.find(constants::character::kCloseBracket);
+    if (pos == std::string_view::npos) return type::kUnknown;
+    std::string_view fixed(sv.begin() + 1, sv.begin() + pos);
+    if (i >= fixed.size()) return type::kUnknown;
+    if (fixed[i] == 'v' && ++i) {
+      // [IPvFuture]..
+      std::size_t j = 0;
+      while (i < fixed.size()) {
+        if (!helpers::is_hex_digit(fixed[i])) break;
+        i++;
+        j++;
       }
+      if (j < 1 || j > 4 || i == fixed.size()) return type::kUnknown;
+      if (fixed[i++] != constants::character::kDot) return type::kUnknown;
+      while (i < fixed.size()) {
+        if (!helpers::is_unreserved(fixed[i]) &&
+            !helpers::is_sub_delim(fixed[i]) &&
+            fixed[i] != constants::character::kColon) {
+          return type::kUnknown;
+        }
+        i++;
+      }
+      i++;
+      return type::kIpLiteral;
+    } else {
+      // [IPv6address]..
+      std::vector<std::size_t> colons;
+      while (i < fixed.size()) {
+        if (fixed[i] == constants::character::kColon) colons.emplace_back(i);
+        i++;
+      }
+      if (colons.size() < 2 || colons.size() > 8) return type::kUnknown;
+      bool double_colon = false;
+      std::size_t prev_start = colons[0], j = 1;
+      while (j < colons.size()) {
+        if ((colons[j] - prev_start) == 1) {
+          if (double_colon) {
+            return type::kUnknown;
+          }
+          double_colon = true;
+        } else if ((colons[j] - prev_start) <= 5) {
+          for (auto z = prev_start + 1; z < colons[j]; z++) {
+            if (!helpers::is_hex_digit(fixed[z])) {
+              return type::kUnknown;
+            }
+          }
+        } else {
+          return type::kUnknown;
+        }
+        prev_start = colons[j++];
+      }
+      std::size_t start = colons[j - 1] + 1;
+      std::string_view sub(fixed.begin() + start, fixed.end());
+      if (check_ip_v4_address(sub, j = 0) != type::kIpV4Address) {
+        for (j = start; j < fixed.length(); j++) {
+          if (!helpers::is_hex_digit(fixed[j])) {
+            return type::kUnknown;
+          }
+        }
+      }
+      i = fixed.size() + 2;
+      return type::kIpLiteral;
     }
     return type::kUnknown;
   };

@@ -41,7 +41,6 @@ class response {
     buf_sz_ = kDefaultResponseFullSizeInMemory;
     bod_sz_ = kDefaultResponseBodySizeInMemory;
     buf_ = (char*)malloc(buf_sz_);
-    reference_ = std::make_shared<common::reference_buffer>();
   }
   response(const response&) = delete;
   response(response&&) noexcept = delete;
@@ -317,8 +316,8 @@ class response {
     buf_[slh_off] = constants::character::kCr;
     buf_[slh_off + 1] = constants::character::kLf;
     memcpy(&buf_[slh_off + 2], &buf_[buf_sz_ - bod_sz_], bod_len);
-    reference_->set(buf_, slh_off + bod_len + 2);
-    return reference_;
+    return std::make_shared<common::reference_buffer>(buf_,
+                                                      slh_off + bod_len + 2);
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
@@ -329,7 +328,6 @@ class response {
   const char* sln_ = nullptr;
   std::size_t sln_sz_ = 0;
   message message_;
-  std::shared_ptr<common::reference_buffer> reference_;
   // ___________________________________________________________________________
   // FRIENDs                                                         ( private )
   //

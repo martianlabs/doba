@@ -67,14 +67,10 @@ class server {
           using req_in = std::shared_ptr<const request>;
           using res_in = std::shared_ptr<response>;
           auto fn_400 = [this](req_in req, res_in res) {
-            res->bad_request_400()
-                .add_header(headers::kContentLength, 0)
-                .add_header(headers::kDate, helpers::get_current_date());
+            res->bad_request_400().add_header(headers::kContentLength, 0);
           };
           auto fn_404 = [this](req_in req, res_in res) {
-            res->not_found_404()
-                .add_header(headers::kContentLength, 0)
-                .add_header(headers::kDate, helpers::get_current_date());
+            res->not_found_404().add_header(headers::kContentLength, 0);
           };
           std::shared_ptr<response> res = std::make_shared<response>();
           // let's check if the incoming request is following the standard..
@@ -144,7 +140,7 @@ class server {
     // +-----------------------------------------------------------------------+
     // | ESSENTIAL HEADERS (MANDATORY)                                         |
     // +-----------------------------------------------------------------------+
-    // | [ ] Host                                                              |
+    // | [x] Host                                                              |
     // | [x] Content-Length                                                (*) |
     // | [x] Connection                                                        |
     // | [ ] Date                                                              |
