@@ -21,7 +21,7 @@
 #ifndef martianlabs_doba_protocol_http11_response_h
 #define martianlabs_doba_protocol_http11_response_h
 
-#include "common/reference_buffer.h"
+#include "common/virtual_buffer.h"
 #include "status_line.h"
 #include "message.h"
 
@@ -308,16 +308,15 @@ class response {
     sln_sz_ = 0;
     message_.reset();
   }
-  std::shared_ptr<common::reference_buffer> serialize() {
-    std::size_t hdr_len = message_.get_headers_length();
-    std::size_t bod_len = message_.get_body_length();
-    std::size_t slh_off = sln_sz_ + hdr_len;
+  std::shared_ptr<common::virtual_buffer> serialize() {
+    std::size_t hd_len = message_.get_headers_length();
+    std::size_t bd_len = message_.get_body_length();
+    std::size_t sl_off = sln_sz_ + hd_len;
     memcpy(buf_, sln_, sln_sz_);
-    buf_[slh_off] = constants::character::kCr;
-    buf_[slh_off + 1] = constants::character::kLf;
-    memcpy(&buf_[slh_off + 2], &buf_[buf_sz_ - bod_sz_], bod_len);
-    return std::make_shared<common::reference_buffer>(buf_,
-                                                      slh_off + bod_len + 2);
+    buf_[sl_off] = constants::character::kCr;
+    buf_[sl_off + 1] = constants::character::kLf;
+    memcpy(&buf_[sl_off + 2], &buf_[buf_sz_ - bod_sz_], bd_len);
+    return std::make_shared<common::virtual_buffer>(buf_, sl_off + bd_len + 2);
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )

@@ -34,6 +34,7 @@
 #include "protocol/http11/headers.h"
 #include "protocol/http11/decoder.h"
 #include "protocol/http11/checkers/host.h"
+#include "protocol/http11/checkers/date.h"
 #include "protocol/http11/checkers/connection.h"
 
 namespace martianlabs::doba::protocol::http11 {
@@ -170,8 +171,9 @@ class server {
     // +-----------------------------------------------------------------------+
     // +                                           (*) implemented by decoder. |
     // +-----------------------------------------------------------------------+
-    headers_fns_[headers::kConnection] = checkers::connection_check_fn;
     headers_fns_[headers::kHost] = checkers::host_check_fn;
+    headers_fns_[headers::kConnection] = checkers::connection_check_fn;
+    headers_fns_[headers::kDate] = checkers::date_check_fn;
   }
   bool process_headers(std::shared_ptr<const request> req) const {
     if (!req) return false;

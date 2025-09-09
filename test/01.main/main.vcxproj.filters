@@ -108,7 +108,7 @@
     <ClInclude Include="..\..\include\common\hash_set.h">
       <Filter>include\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\common\reference_buffer.h">
+    <ClInclude Include="..\..\include\common\virtual_buffer.h">
       <Filter>include\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\protocol\http11\checkers\host.h">
@@ -134,6 +134,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\common\date_server_helpers_windows.h">
       <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\checkers\date.h">
+      <Filter>include\protocol\http11\checkers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

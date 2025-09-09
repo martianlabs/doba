@@ -25,7 +25,7 @@
 #include <optional>
 #include <functional>
 
-#include "common/reference_buffer.h"
+#include "common/virtual_buffer.h"
 #include "common/thread_pool.h"
 
 namespace martianlabs::doba::transport::server {
