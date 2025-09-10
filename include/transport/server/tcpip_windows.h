@@ -136,13 +136,9 @@ class tcpip {
       accept_socket_ = INVALID_SOCKET;
     }
     keep_running_ = false;
-    if (manager_->joinable()) {
-      manager_->join();
-    }
+    if (manager_->joinable()) manager_->join();
     while (!threads_.empty()) {
-      if (threads_.front()->joinable()) {
-        threads_.front()->join();
-      }
+      if (threads_.front().joinable()) threads_.front().join();
       threads_.pop();
     }
     pool_.reset();
@@ -179,11 +175,7 @@ class tcpip {
   //
   enum class io_type { kSend, kReceive };
   struct overlapped {
-    overlapped(io_type op_type) {
-      ZeroMemory(&ovl, sizeof(WSAOVERLAPPED));
-      ZeroMemory(&wsa, sizeof(WSABUF));
-      type = op_type;
-    }
+    overlapped(io_type in_type) : type{in_type} {}
     WSAOVERLAPPED ovl;
     CHAR FAR buffer[kDefaultBufferSize];
     io_type type;
@@ -271,7 +263,7 @@ class tcpip {
       return false;
     }
     for (int i = 0; i < workers_; i++) {
-      threads_.emplace(std::make_unique<std::thread>([this]() {
+      threads_.emplace(std::thread([this]() {
         while (true) {
           ULONG_PTR key = NULL;
           overlapped* overlapped_operation = NULL;
@@ -310,8 +302,6 @@ class tcpip {
           ctx->operations_in_course--;
           if (!overlapped_operation && !bytes) {
             // this means that a new connection was created..
-            ZeroMemory(&ctx->rx_overlapped.ovl, sizeof(WSAOVERLAPPED));
-            ZeroMemory(&ctx->rx_overlapped.wsa, sizeof(WSABUF));
             if (!receive(ctx, &ctx->rx_overlapped)) {
               if (!ctx->operations_in_course) {
                 if (ctx->soc != INVALID_SOCKET) {
@@ -343,8 +333,6 @@ class tcpip {
                       }
                     }
                   }
-                  ZeroMemory(&ctx->rx_overlapped.ovl, sizeof(WSAOVERLAPPED));
-                  ZeroMemory(&ctx->rx_overlapped.wsa, sizeof(WSABUF));
                   if (!receive(ctx, &ctx->rx_overlapped)) {
                     if (!ctx->operations_in_course) {
                       if (ctx->soc != INVALID_SOCKET) {
@@ -383,34 +371,26 @@ class tcpip {
     return true;
   }
   bool receive(context* ctx, overlapped* ovl) {
-    if (ctx->soc == INVALID_SOCKET) {
-      delete ovl;
-      return false;
-    }
+    if (ctx->soc == INVALID_SOCKET) return false;
     DWORD f = 0, r = 0;
-    ZeroMemory(ovl, sizeof(WSAOVERLAPPED));
+    ZeroMemory(&ovl->ovl, sizeof(WSAOVERLAPPED));
     ovl->wsa.buf = ovl->buffer;
     ovl->wsa.len = kDefaultBufferSize;
     int result = WSARecv(ctx->soc, &ovl->wsa, 1, &r, &f, (LPOVERLAPPED)ovl, 0);
     if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-      delete ovl;
       return false;
     }
     ctx->operations_in_course++;
     return true;
   }
   bool send(context* ctx, overlapped* ovl, CHAR* buffer, std::size_t length) {
-    if (ctx->soc == INVALID_SOCKET) {
-      delete ovl;
-      return false;
-    }
+    if (ctx->soc == INVALID_SOCKET) return false;
     DWORD f = 0, w = 0;
-    ZeroMemory(ovl, sizeof(WSAOVERLAPPED));
+    ZeroMemory(&ovl->ovl, sizeof(WSAOVERLAPPED));
     ovl->wsa.buf = buffer;
     ovl->wsa.len = (ULONG)length;
     int result = WSASend(ctx->soc, &ovl->wsa, 1, &w, f, (LPOVERLAPPED)ovl, 0);
     if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-      delete ovl;
       return false;
     }
     ctx->operations_in_course++;
@@ -421,13 +401,14 @@ class tcpip {
       std::get<on_client_request_function_prototype>(result)(req, res);
       auto serialized = DEty::serialize(res);
       while (true) {
-        auto ovl = new overlapped(io_type::kSend);
+        overlapped* ovl = new overlapped(io_type::kSend);
         auto bytes = serialized->read(ovl->buffer, kDefaultBufferSize);
         if (!bytes.has_value() || !bytes.value()) {
           delete ovl;
           break;
         }
         if (!send(ctx, ovl, ovl->buffer, bytes.value())) {
+          delete ovl;
           return false;
         }
       }
@@ -437,9 +418,9 @@ class tcpip {
       auto result = on_req_(req);
       if (auto res = std::get<std::shared_ptr<RSty>>(result); res) {
         switch (std::get<common::execution_policy>(result)) {
-          case common::execution_policy::kSync: {
+          case common::execution_policy::kSync:
             return processor(ctx, result, req, res);
-          } break;
+            break;
           case common::execution_policy::kAsync:
             pool_->enqueue([this, processor, ctx, result, req, res]() {
               std::lock_guard<std::mutex> lock(ctx->mutex);
@@ -466,7 +447,7 @@ class tcpip {
   }
   context* pop_context() {
     std::lock_guard<std::mutex> lock(contexts_queue_mutex_);
-    if (contexts_queue_.empty()) contexts_queue_.push(new context());
+    if (contexts_queue_.empty()) contexts_queue_.emplace(new context());
     context* ctx = contexts_queue_.front();
     contexts_queue_.pop();
     return ctx;
@@ -480,7 +461,7 @@ class tcpip {
   HANDLE io_h_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::shared_ptr<common::thread_pool> pool_;
-  std::queue<std::unique_ptr<std::thread>> threads_;
+  std::queue<std::thread> threads_;
   std::queue<context*> contexts_queue_;
   std::mutex contexts_queue_mutex_;
   std::unique_ptr<std::thread> manager_;

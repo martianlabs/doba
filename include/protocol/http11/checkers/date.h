@@ -23,6 +23,9 @@
 
 #include <string_view>
 
+#include "common/hash_set.h"
+#include "protocol/http11/helpers.h"
+
 namespace martianlabs::doba::protocol::http11::checkers {
 // =============================================================================
 // |                                                                  [ date ] |
@@ -71,7 +74,69 @@ namespace martianlabs::doba::protocol::http11::checkers {
 // | GMT            | literal "GMT"                                            |
 // +----------------+----------------------------------------------------------+
 // =============================================================================
-static auto date_check_fn = [](std::string_view v) -> bool { return true; };
+static auto date_check_fn = [](std::string_view v) -> bool {
+  static const common::hash_set<std::string> day_names = {
+      "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+  static const common::hash_set<std::string> month_names = {
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+  std::size_t i = 0;
+  // [day-name]
+  if (v.size() < 3) return false;
+  std::string_view day(v.begin(), v.begin() + 3);
+  if (day_names.find(day) == day_names.end()) return false;
+  i += 3;
+  if (i >= v.size()) return false;
+  if (v[i++] != constants::character::kComma) return false;
+  if (i >= v.size()) return false;
+  if (v[i++] != constants::character::kSpace) return false;
+  // [day]
+  if (i + 1 >= v.size()) return false;
+  if (!helpers::is_digit(v[i]) || !helpers::is_digit(v[i + 1])) return false;
+  i += 2;
+  if (i >= v.size()) return false;
+  if (v[i++] != constants::character::kSpace) return false;
+  // [month]
+  if (i + 2 >= v.size()) return false;
+  std::string_view mon(v.begin() + i, v.begin() + i + 3);
+  if (month_names.find(mon) == month_names.end()) return false;
+  i += 3;
+  if (i >= v.size()) return false;
+  if (v[i++] != constants::character::kSpace) return false;
+  // [year]
+  if (i + 3 >= v.size()) return false;
+  if (!helpers::is_digit(v[i]) || !helpers::is_digit(v[i + 1]) ||
+      !helpers::is_digit(v[i + 2]) || !helpers::is_digit(v[i + 3])) {
+    return false;
+  }
+  i += 4;
+  if (i >= v.size()) return false;
+  if (v[i++] != constants::character::kSpace) return false;
+  // [hour]
+  if (i + 1 >= v.size()) return false;
+  if (!helpers::is_digit(v[i]) || !helpers::is_digit(v[i + 1])) return false;
+  i += 2;
+  if (i >= v.size()) return false;
+  if (v[i++] != constants::character::kColon) return false;
+  // [minute]
+  if (i + 1 >= v.size()) return false;
+  if (!helpers::is_digit(v[i]) || !helpers::is_digit(v[i + 1])) return false;
+  i += 2;
+  if (i >= v.size()) return false;
+  if (v[i++] != constants::character::kColon) return false;
+  // [second]
+  if (i + 1 >= v.size()) return false;
+  if (!helpers::is_digit(v[i]) || !helpers::is_digit(v[i + 1])) return false;
+  i += 2;
+  // [gmt]
+  if (i + 3 >= v.size()) return false;
+  if (v[i] != constants::character::kSpace || v[i + 1] != 'G' ||
+      v[i + 2] != 'M' || v[i + 3] != 'T') {
+    return false;
+  }
+  i += 4;
+  return i == v.size();
+};
 }  // namespace martianlabs::doba::protocol::http11::checkers
 
 #endif

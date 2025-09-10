@@ -52,48 +52,36 @@ class date_server {
   void start() {
     if (running_) return;
     running_ = true;
-    thread_ = std::make_shared<std::thread>([this] {
-      char buffer[64];
+    thread_ = std::thread([this] {
       bool toggle = false;
       while (running_) {
         std::time_t now = std::time(nullptr);
         std::tm gmt{};
         gm_time(&gmt, &now);
-        std::snprintf(buffer, sizeof(buffer),
-                      "%s, %02d %s %04d %02d:%02d:%02d GMT",
+        char* target = toggle ? buf_a_ : buf_b_;
+        std::snprintf(target, kBufSize, "%s, %02d %s %04d %02d:%02d:%02d GMT",
                       kWeekDays[gmt.tm_wday], gmt.tm_mday, kMonths[gmt.tm_mon],
                       1900 + gmt.tm_year, gmt.tm_hour, gmt.tm_min, gmt.tm_sec);
-        std::string& target = toggle ? date_buf_a_ : date_buf_b_;
-        target.assign(buffer);
-        date_ptr_.store(&target, std::memory_order_release);
+
+        front_.store(target, std::memory_order_release);
         toggle = !toggle;
         std::this_thread::sleep_for(std::chrono::seconds(1));
       }
     });
-    // let's do this wait to ensure that the date server put a valid value!
-    while (get().empty()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(0));
-    }
   }
   void stop() {
     if (!running_) return;
     running_ = false;
-    if (thread_ && thread_->joinable()) {
-      thread_->join();
-    }
-    thread_.reset();
-    date_buf_a_.clear();
-    date_buf_b_.clear();
-    date_ptr_ = &date_buf_a_;
+    if (thread_.joinable()) thread_.join();
+    front_.store(buf_a_, std::memory_order_release);
   }
-  const std::string& get() {
-    return *date_ptr_.load(std::memory_order_acquire);
-  }
+  std::string_view get() { return front_.load(std::memory_order_acquire); }
 
  private:
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
+  static constexpr std::size_t kBufSize = 64;
   static constexpr const char* kWeekDays[] = {"Sun", "Mon", "Tue", "Wed",
                                               "Thu", "Fri", "Sat"};
   static constexpr const char* kMonths[] = {"Jan", "Feb", "Mar", "Apr",
@@ -102,11 +90,11 @@ class date_server {
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  std::atomic<bool> running_ = false;
-  std::string date_buf_a_;
-  std::string date_buf_b_;
-  std::shared_ptr<std::thread> thread_;
-  std::atomic<const std::string*> date_ptr_{&date_buf_a_};
+  std::atomic<bool> running_{false};
+  std::thread thread_;
+  char buf_a_[kBufSize]{};
+  char buf_b_[kBufSize]{};
+  std::atomic<const char*> front_{buf_a_};
 };
 }  // namespace martianlabs::doba::common
 
