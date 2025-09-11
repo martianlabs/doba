@@ -65,27 +65,15 @@ class server {
         [this](std::shared_ptr<const request> req)
             -> TRty<request, response,
                     router>::on_client_request_result_prototype {
-          using req_in = std::shared_ptr<const request>;
-          using res_in = std::shared_ptr<response>;
-          auto fn_400 = [this](req_in req, res_in res) {
-            res->bad_request_400().add_header(headers::kContentLength, 0);
+          auto fn_400 = [this](const request& req, response& res) {
+            res.bad_request_400().add_header(headers::kContentLength, 0);
           };
-          auto fn_404 = [this](req_in req, res_in res) {
-            res->not_found_404().add_header(headers::kContentLength, 0);
+          auto fn_404 = [this](const request& req, response& res) {
+            res.not_found_404().add_header(headers::kContentLength, 0);
           };
           std::shared_ptr<response> res = std::make_shared<response>();
           // let's check if the incoming request is following the standard..
           if (process_headers(req)) {
-
-            /*
-            pepe
-            */
-
-            if (auto handler = router_.match(method::kGet, "/plaintext")) {
-              return {handler->first, res, handler->second};
-            }
-            
-            /*
             switch (req->get_target()) {
               case target::kOriginForm:
               case target::kAbsoluteForm:
@@ -105,11 +93,6 @@ class server {
               default:
                 break;
             }
-            */
-
-            /*
-            pepe fin
-            */
           }
           return {fn_400, res, common::execution_policy::kSync};
         });
@@ -192,22 +175,11 @@ class server {
   }
   bool process_headers(std::shared_ptr<const request> req) const {
     if (!req) return false;
-
-    /*
-    pepe
-    */
-
-    /*
     for (auto const& hdr : req->get_headers()) {
       if (auto itr = headers_fns_.find(hdr.first); itr != headers_fns_.end()) {
         if (!itr->second(hdr.second)) return false;
       }
     }
-    */
-
-    /*
-    pepe fin
-    */
     return true;
   }
   // ___________________________________________________________________________

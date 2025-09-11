@@ -25,8 +25,9 @@
 
 #include "method.h"
 #include "target.h"
-#include "message.h"
 #include "helpers.h"
+#include "headers.h"
+#include "common/hash_map.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -49,6 +50,57 @@ class request {
   request& operator=(const request&) = delete;
   request& operator=(request&&) noexcept = delete;
   // ___________________________________________________________________________
+  // METHODs                                                          ( public )
+  //
+  auto get_method() const { return method_; }
+  auto get_target() const { return target_; }
+  auto get_absolute_path() const { return absolute_path_; }
+  auto get_query() const { return query_; }
+  auto get_headers() const {
+    bool searching_for_key = true;
+    std::size_t i = 0, j = 0;
+    for (; i < cursor_; i++) {
+      if (cursor_ - 1 >= 2 && buf_[i] == constants::character::kCr &&
+          buf_[i + 1] == constants::character::kLf) {
+        i += 2;
+        break;
+      }
+    }
+    std::size_t k_start = i, v_start = i;
+    common::hash_map<std::string_view, std::string_view> out;
+    while (i < cursor_) {
+      if (cursor_ - 1 >= 4 && buf_[i] == constants::character::kCr &&
+          buf_[i + 1] == constants::character::kLf &&
+          buf_[i + 2] == constants::character::kCr &&
+          buf_[i + 3] == constants::character::kLf) {
+        break;
+      }
+      switch (buf_[i]) {
+        case constants::character::kColon:
+          if (searching_for_key) {
+            searching_for_key = false;
+            v_start = i + 1;
+          }
+          break;
+        case constants::character::kCr:
+          if (searching_for_key) return out;
+          out.insert(std::make_pair(
+              std::string_view(&buf_[k_start], (v_start - 1) - k_start),
+              helpers::ows_ltrim(helpers::ows_rtrim(
+                  std::string_view(&buf_[v_start], i - v_start)))));
+          searching_for_key = true;
+          k_start = i + 2;
+          j = 0;
+          i++;
+          break;
+        default:
+          break;
+      }
+      i++;
+    }
+    return out;
+  }
+  // ___________________________________________________________________________
   // STATIC-METHODs                                                   ( public )
   //
   static auto from(const char* const buf, std::size_t len) {
@@ -56,8 +108,7 @@ class request {
     if (instance) {
       std::size_t i = 0;
       if (instance->check_request_line(i)) {
-        if (instance->check_headers(i)) {
-        } else {
+        if (!instance->check_headers(i)) {
           instance.reset();
         }
       } else {
@@ -69,16 +120,14 @@ class request {
 
  private:
   // ___________________________________________________________________________
-  // CONSTANTs                                                       ( private )
-  //
-  static constexpr std::size_t kHttpVersionLen = 8;
-  // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                        ( private )
   //
   request(const char* const buf, std::size_t len) {
     buf_ = NULL;
     size_ = 0;
     cursor_ = 0;
+    method_ = method::kUnknown;
+    target_ = target::kUnknown;
     if (buf_ = (char*)malloc(len)) {
       memcpy(buf_, buf, len);
       cursor_ = size_ = len;
@@ -88,7 +137,6 @@ class request {
   // METHODs                                                         ( private )
   //
   bool check_request_line(std::size_t& i) {
-    bool is_connect = false, is_options = false;
     // +---------+-------------------------------------------------------------+
     // | Field   | Definition                                                  |
     // +---------+-------------------------------------------------------------+
@@ -100,14 +148,58 @@ class request {
     // +---------+-------------------------------------------------------------+
     // | source: https://datatracker.ietf.org/doc/html/rfc9110                 |
     // +----------------+------------------------------------------------------+
+    constexpr std::size_t kHttpVersionLen = 8;
     while (i < cursor_) {
       if (buf_[i] == constants::character::kSpace) break;
       if (!helpers::is_token(buf_[i++])) return false;
     }
     if (i == cursor_) return false;
     std::string_view method(buf_, i++);
-    if (!(is_connect = !method.compare(constants::method::kConnect))) {
-      is_options = !method.compare(constants::method::kOptions);
+    switch (method.length()) {
+      case 3:
+        if (!method.compare(constants::method::kGet)) {
+          method_ = method::kGet;
+        } else if (!method.compare(constants::method::kPut)) {
+          method_ = method::kPut;
+        } else {
+          return false;
+        }
+        break;
+      case 4:
+        if (!method.compare(constants::method::kHead)) {
+          method_ = method::kHead;
+        } else if (!method.compare(constants::method::kPost)) {
+          method_ = method::kPost;
+        } else {
+          return false;
+        }
+        break;
+      case 5:
+        if (!method.compare(constants::method::kTrace)) {
+          method_ = method::kTrace;
+        } else {
+          return false;
+        }
+        break;
+      case 6:
+        if (!method.compare(constants::method::kDelete)) {
+          method_ = method::kDelete;
+        } else {
+          return false;
+        }
+        break;
+      case 7:
+        if (!method.compare(constants::method::kConnect)) {
+          method_ = method::kConnect;
+        } else if (!method.compare(constants::method::kOptions)) {
+          method_ = method::kOptions;
+        } else {
+          return false;
+        }
+        break;
+      default:
+        return false;
+        break;
     }
     // +=======================================================================+
     // | HTTP/1.1: request-target (RFC 9112 §2.2) – Valid Forms                |
@@ -131,7 +223,7 @@ class request {
     // | FORM 4: asterisk-form (used with OPTIONS)                             |
     // |    asterisk-form = "*"                                                |
     // +=======================================================================+
-    if (is_connect) {
+    if (method_ == method::kConnect) {
       // +---------------------------------------------------------------------+
       // |                                                      authority-form |
       // +----------------+----------------------------------------------------+
@@ -171,7 +263,7 @@ class request {
       // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       // [to-do] -> add support for this!
       // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    } else if (is_options) {
+    } else if (method_ == method::kOptions) {
       // +---------------------------------------------------------------------+
       // |                                                       asterisk-form |
       // +----------------+----------------------------------------------------+
@@ -182,7 +274,7 @@ class request {
       // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       // [to-do] -> add support for this!
       // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    } else if (chk_get_absolute_path(i)) {
+    } else if (std::string path; try_to_get_absolute_path(i, path)) {
       // +-------------------------------------------------------------------+
       // |                                                       origin-form |
       // +----------------+--------------------------------------------------+
@@ -198,7 +290,10 @@ class request {
       // +----------------+--------------------------------------------------+
       // | source: https://datatracker.ietf.org/doc/html/rfc9110             |
       // +----------------+--------------------------------------------------+
-      if (chk_get_query_part(i)) {
+      target_ = target::kOriginForm;
+      absolute_path_ = path;
+      if (std::string query;  try_to_get_query_part(i, query)) {
+        query_ = query;
       }
     } else {
       // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -319,8 +414,8 @@ class request {
     }
     return host_count == 1;
   }
-  bool chk_get_absolute_path(std::size_t& i) {
-    char current_character;
+  bool try_to_get_absolute_path(std::size_t& i, std::string& path) {
+    char ch;
     if (i >= cursor_) return false;
     if (buf_[i] != constants::character::kSlash) return false;
     while (i < cursor_) {
@@ -330,26 +425,26 @@ class request {
             !helpers::is_hex_digit(buf_[i + 2])) {
           return false;
         }
-        current_character = static_cast<char>(
-            std::stoi(std::string((const char*)&buf_[i + 1], 2), nullptr, 16));
+        auto ptr = (const char*)&buf_[i + 1];
+        ch = static_cast<char>(std::stoi(std::string(ptr, 2), nullptr, 16));
         i += 3;
       } else {
-        current_character = buf_[i];
-        if (current_character == constants::character::kSpace ||
-            current_character == constants::character::kQuestion) {
+        ch = buf_[i];
+        if (ch == constants::character::kSpace ||
+            ch == constants::character::kQuestion) {
           break;
         }
       }
-      if (!helpers::is_pchar(current_character) &&
-          current_character != constants::character::kSlash) {
+      if (!helpers::is_pchar(ch) && ch != constants::character::kSlash) {
         return false;
       }
+      path.push_back(ch);
       i++;
     }
     return true;
   }
-  bool chk_get_query_part(std::size_t& i) {
-    char current_character;
+  bool try_to_get_query_part(std::size_t& i, std::string& query) {
+    char ch;
     if (i >= cursor_) return false;
     if (buf_[i] != constants::character::kQuestion) return false;
     while (i < cursor_) {
@@ -359,33 +454,32 @@ class request {
             !helpers::is_hex_digit(buf_[i + 2])) {
           return false;
         }
-        current_character = static_cast<char>(
-            std::stoi(std::string((const char*)&buf_[i + 1], 2), nullptr, 16));
+        auto ptr = (const char*)&buf_[i + 1];
+        ch = static_cast<char>(std::stoi(std::string(ptr, 2), nullptr, 16));
         i += 3;
       } else {
-        current_character = buf_[i];
-        if (current_character == constants::character::kSpace) break;
+        ch = buf_[i];
+        if (ch == constants::character::kSpace) break;
       }
-      if (!helpers::is_pchar(current_character) &&
-          current_character != constants::character::kSlash &&
-          current_character != constants::character::kQuestion) {
+      if (!helpers::is_pchar(ch) && ch != constants::character::kSlash &&
+          ch != constants::character::kQuestion) {
         return false;
       }
+      query.push_back(ch);
       i++;
     }
     return true;
   }
-  void reset() { cursor_ = 0; }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
   char* buf_;
   std::size_t size_;
   std::size_t cursor_;
-  // ___________________________________________________________________________
-  // FRIENDs                                                         ( private )
-  //
-  friend class decoder;
+  method method_;
+  target target_;
+  std::string absolute_path_;
+  std::string query_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

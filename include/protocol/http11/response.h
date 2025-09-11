@@ -22,8 +22,8 @@
 #define martianlabs_doba_protocol_http11_response_h
 
 #include "common/virtual_buffer.h"
+#include "response_handler.h"
 #include "status_line.h"
-#include "message.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -38,9 +38,11 @@ class response {
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   response() {
-    buf_sz_ = kDefaultResponseFullSizeInMemory;
-    bod_sz_ = kDefaultResponseBodySizeInMemory;
-    buf_ = (char*)malloc(buf_sz_);
+    buf_ = NULL;
+    cursor_ = 0;
+    size_ = constants::limits::kDefaultResponseMaxSize;
+    buf_ = (char*)malloc(size_);
+    handler_ = nullptr;
   }
   response(const response&) = delete;
   response(response&&) noexcept = delete;
@@ -53,284 +55,216 @@ class response {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  message& continue_100() {
-    sln_ = EAS(SL(100_CONTINUE));
-    sln_sz_ = sizeof(EAS(SL(100_CONTINUE))) - 1;
-    return set();
+  std::shared_ptr<common::virtual_buffer> serialize() {
+    static const auto eol = (const char*)constants::string::kCrLf;
+    static const auto eol_len = sizeof(constants::string::kCrLf) - 1;
+    memcpy(&buf_[cursor_], eol, eol_len);
+    cursor_ += eol_len;
+
+    /*
+    pepe
+    */
+
+    memcpy(&buf_[cursor_], "Hello, World!", 13);
+    cursor_ += 13;
+
+    /*
+    pepe fin
+    */
+
+    return std::make_shared<common::virtual_buffer>(buf_, cursor_);
   }
-  message& switching_protocols_101() {
-    sln_ = EAS(SL(101_SWITCHING_PROTOCOLS));
-    sln_sz_ = sizeof(EAS(SL(101_SWITCHING_PROTOCOLS))) - 1;
-    return set();
+  response_handler& continue_100() {
+    return setup(EAS(SL(100_CONTINUE)), sizeof(EAS(SL(100_CONTINUE))) - 1);
   }
-  message& ok_200() {
-    sln_ = EAS(SL(200_OK));
-    sln_sz_ = sizeof(EAS(SL(200_OK))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& switching_protocols_101() {
+    return setup(EAS(SL(101_SWITCHING_PROTOCOLS)),
+                 sizeof(EAS(SL(101_SWITCHING_PROTOCOLS))) - 1);
   }
-  message& created_201() {
-    sln_ = EAS(SL(201_CREATED));
-    sln_sz_ = sizeof(EAS(SL(201_CREATED))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& ok_200() {
+    return setup(EAS(SL(200_OK)), sizeof(EAS(SL(200_OK))) - 1);
   }
-  message& accepted_202() {
-    sln_ = EAS(SL(202_ACCEPTED));
-    sln_sz_ = sizeof(EAS(SL(202_ACCEPTED))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& created_201() {
+    return setup(EAS(SL(201_CREATED)), sizeof(EAS(SL(201_CREATED))) - 1);
   }
-  message& non_authoritative_information_203() {
-    sln_ = EAS(SL(203_NON_AUTHORITATIVE_INFORMATION));
-    sln_sz_ = sizeof(EAS(SL(203_NON_AUTHORITATIVE_INFORMATION))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& accepted_202() {
+    return setup(EAS(SL(202_ACCEPTED)), sizeof(EAS(SL(202_ACCEPTED))) - 1);
   }
-  message& no_content_204() {
-    sln_ = EAS(SL(204_NO_CONTENT));
-    sln_sz_ = sizeof(EAS(SL(204_NO_CONTENT))) - 1;
-    return set();
+  response_handler& non_authoritative_information_203() {
+    return setup(EAS(SL(203_NON_AUTHORITATIVE_INFORMATION)),
+                 sizeof(EAS(SL(203_NON_AUTHORITATIVE_INFORMATION))) - 1);
   }
-  message& reset_content_205() {
-    sln_ = EAS(SL(205_RESET_CONTENT));
-    sln_sz_ = sizeof(EAS(SL(205_RESET_CONTENT))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& no_content_204() {
+    return setup(EAS(SL(204_NO_CONTENT)), sizeof(EAS(SL(204_NO_CONTENT))) - 1);
   }
-  message& partial_content_206() {
-    sln_ = EAS(SL(206_PARTIAL_CONTENT));
-    sln_sz_ = sizeof(EAS(SL(206_PARTIAL_CONTENT))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& reset_content_205() {
+    return setup(EAS(SL(205_RESET_CONTENT)),
+                 sizeof(EAS(SL(205_RESET_CONTENT))) - 1);
   }
-  message& multiple_choices_300() {
-    sln_ = EAS(SL(300_MULTIPLE_CHOICES));
-    sln_sz_ = sizeof(EAS(SL(300_MULTIPLE_CHOICES))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& partial_content_206() {
+    return setup(EAS(SL(206_PARTIAL_CONTENT)),
+                 sizeof(EAS(SL(206_PARTIAL_CONTENT))) - 1);
   }
-  message& moved_permanently_301() {
-    sln_ = EAS(SL(301_MOVED_PERMANENTLY));
-    sln_sz_ = sizeof(EAS(SL(301_MOVED_PERMANENTLY))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& multiple_choices_300() {
+    return setup(EAS(SL(300_MULTIPLE_CHOICES)),
+                 sizeof(EAS(SL(300_MULTIPLE_CHOICES))) - 1);
   }
-  message& found_302() {
-    sln_ = EAS(SL(302_FOUND));
-    sln_sz_ = sizeof(EAS(SL(302_FOUND))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& moved_permanently_301() {
+    return setup(EAS(SL(301_MOVED_PERMANENTLY)),
+                 sizeof(EAS(SL(301_MOVED_PERMANENTLY))) - 1);
   }
-  message& see_other_303() {
-    sln_ = EAS(SL(303_SEE_OTHER));
-    sln_sz_ = sizeof(EAS(SL(303_SEE_OTHER))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& found_302() {
+    return setup(EAS(SL(302_FOUND)), sizeof(EAS(SL(302_FOUND))) - 1);
   }
-  message& not_modified_304() {
-    sln_ = EAS(SL(304_NOT_MODIFIED));
-    sln_sz_ = sizeof(EAS(SL(304_NOT_MODIFIED))) - 1;
-    return set();
+  response_handler& see_other_303() {
+    return setup(EAS(SL(303_SEE_OTHER)), sizeof(EAS(SL(303_SEE_OTHER))) - 1);
   }
-  message& use_proxy_305() {
-    sln_ = EAS(SL(305_USE_PROXY));
-    sln_sz_ = sizeof(EAS(SL(305_USE_PROXY))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& not_modified_304() {
+    return setup(EAS(SL(304_NOT_MODIFIED)),
+                 sizeof(EAS(SL(304_NOT_MODIFIED))) - 1);
   }
-  message& unused_306() {
-    sln_ = EAS(SL(306_UNUSED));
-    sln_sz_ = sizeof(EAS(SL(306_UNUSED))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& use_proxy_305() {
+    return setup(EAS(SL(305_USE_PROXY)), sizeof(EAS(SL(305_USE_PROXY))) - 1);
   }
-  message& temporary_redirect_307() {
-    sln_ = EAS(SL(307_TEMPORARY_REDIRECT));
-    sln_sz_ = sizeof(EAS(SL(307_TEMPORARY_REDIRECT))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& unused_306() {
+    return setup(EAS(SL(306_UNUSED)), sizeof(EAS(SL(306_UNUSED))) - 1);
   }
-  message& permanent_redirect_308() {
-    sln_ = EAS(SL(308_PERMANENT_REDIRECT));
-    sln_sz_ = sizeof(EAS(SL(308_PERMANENT_REDIRECT))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& temporary_redirect_307() {
+    return setup(EAS(SL(307_TEMPORARY_REDIRECT)),
+                 sizeof(EAS(SL(307_TEMPORARY_REDIRECT))) - 1);
   }
-  message& bad_request_400() {
-    sln_ = EAS(SL(400_BAD_REQUEST));
-    sln_sz_ = sizeof(EAS(SL(400_BAD_REQUEST))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& permanent_redirect_308() {
+    return setup(EAS(SL(308_PERMANENT_REDIRECT)),
+                 sizeof(EAS(SL(308_PERMANENT_REDIRECT))) - 1);
   }
-  message& unauthorized_401() {
-    sln_ = EAS(SL(401_UNAUTHORIZED));
-    sln_sz_ = sizeof(EAS(SL(401_UNAUTHORIZED))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& bad_request_400() {
+    return setup(EAS(SL(400_BAD_REQUEST)),
+                 sizeof(EAS(SL(400_BAD_REQUEST))) - 1);
   }
-  message& payment_required_402() {
-    sln_ = EAS(SL(402_PAYMENT_REQUIRED));
-    sln_sz_ = sizeof(EAS(SL(402_PAYMENT_REQUIRED))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& unauthorized_401() {
+    return setup(EAS(SL(401_UNAUTHORIZED)),
+                 sizeof(EAS(SL(401_UNAUTHORIZED))) - 1);
   }
-  message& forbidden_403() {
-    sln_ = EAS(SL(403_FORBIDDEN));
-    sln_sz_ = sizeof(EAS(SL(403_FORBIDDEN))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& payment_required_402() {
+    return setup(EAS(SL(402_PAYMENT_REQUIRED)),
+                 sizeof(EAS(SL(402_PAYMENT_REQUIRED))) - 1);
   }
-  message& not_found_404() {
-    sln_ = EAS(SL(404_NOT_FOUND));
-    sln_sz_ = sizeof(EAS(SL(404_NOT_FOUND))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& forbidden_403() {
+    return setup(EAS(SL(403_FORBIDDEN)), sizeof(EAS(SL(403_FORBIDDEN))) - 1);
   }
-  message& method_not_allowed_405() {
-    sln_ = EAS(SL(405_METHOD_NOT_ALLOWED));
-    sln_sz_ = sizeof(EAS(SL(405_METHOD_NOT_ALLOWED))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& not_found_404() {
+    return setup(EAS(SL(404_NOT_FOUND)), sizeof(EAS(SL(404_NOT_FOUND))) - 1);
   }
-  message& not_acceptable_406() {
-    sln_ = EAS(SL(406_NOT_ACCEPTABLE));
-    sln_sz_ = sizeof(EAS(SL(406_NOT_ACCEPTABLE))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& method_not_allowed_405() {
+    return setup(EAS(SL(405_METHOD_NOT_ALLOWED)),
+                 sizeof(EAS(SL(405_METHOD_NOT_ALLOWED))) - 1);
   }
-  message& proxy_authentication_required_407() {
-    sln_ = EAS(SL(407_PROXY_AUTHENTICATION_REQUIRED));
-    sln_sz_ = sizeof(EAS(SL(407_PROXY_AUTHENTICATION_REQUIRED))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& not_acceptable_406() {
+    return setup(EAS(SL(406_NOT_ACCEPTABLE)),
+                 sizeof(EAS(SL(406_NOT_ACCEPTABLE))) - 1);
   }
-  message& request_timeout_408() {
-    sln_ = EAS(SL(408_REQUEST_TIMEOUT));
-    sln_sz_ = sizeof(EAS(SL(408_REQUEST_TIMEOUT))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& proxy_authentication_required_407() {
+    return setup(EAS(SL(407_PROXY_AUTHENTICATION_REQUIRED)),
+                 sizeof(EAS(SL(407_PROXY_AUTHENTICATION_REQUIRED))) - 1);
   }
-  message& conflict_409() {
-    sln_ = EAS(SL(409_CONFLICT));
-    sln_sz_ = sizeof(EAS(SL(409_CONFLICT))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& request_timeout_408() {
+    return setup(EAS(SL(408_REQUEST_TIMEOUT)),
+                 sizeof(EAS(SL(408_REQUEST_TIMEOUT))) - 1);
   }
-  message& gone_410() {
-    sln_ = EAS(SL(410_GONE));
-    sln_sz_ = sizeof(EAS(SL(410_GONE))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& conflict_409() {
+    return setup(EAS(SL(409_CONFLICT)), sizeof(EAS(SL(409_CONFLICT))) - 1);
   }
-  message& length_required_411() {
-    sln_ = EAS(SL(411_LENGTH_REQUIRED));
-    sln_sz_ = sizeof(EAS(SL(411_LENGTH_REQUIRED))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& gone_410() {
+    return setup(EAS(SL(410_GONE)), sizeof(EAS(SL(410_GONE))) - 1);
   }
-  message& precondition_failed_412() {
-    sln_ = EAS(SL(412_PRECONDITION_FAILED));
-    sln_sz_ = sizeof(EAS(SL(412_PRECONDITION_FAILED))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& length_required_411() {
+    return setup(EAS(SL(411_LENGTH_REQUIRED)),
+                 sizeof(EAS(SL(411_LENGTH_REQUIRED))) - 1);
   }
-  message& content_too_large_413() {
-    sln_ = EAS(SL(413_CONTENT_TOO_LARGE));
-    sln_sz_ = sizeof(EAS(SL(413_CONTENT_TOO_LARGE))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& precondition_failed_412() {
+    return setup(EAS(SL(412_PRECONDITION_FAILED)),
+                 sizeof(EAS(SL(412_PRECONDITION_FAILED))) - 1);
   }
-  message& uri_too_long_414() {
-    sln_ = EAS(SL(414_URI_TOO_LONG));
-    sln_sz_ = sizeof(EAS(SL(414_URI_TOO_LONG))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& content_too_large_413() {
+    return setup(EAS(SL(413_CONTENT_TOO_LARGE)),
+                 sizeof(EAS(SL(413_CONTENT_TOO_LARGE))) - 1);
   }
-  message& unsupported_media_type_415() {
-    sln_ = EAS(SL(415_UNSUPPORTED_MEDIA_TYPE));
-    sln_sz_ = sizeof(EAS(SL(415_UNSUPPORTED_MEDIA_TYPE))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& uri_too_long_414() {
+    return setup(EAS(SL(414_URI_TOO_LONG)),
+                 sizeof(EAS(SL(414_UNSUPPORTED_MEDIA_TYPE))) - 1);
   }
-  message& range_not_satisfiable_416() {
-    sln_ = EAS(SL(416_RANGE_NOT_SATISFIABLE));
-    sln_sz_ = sizeof(EAS(SL(416_RANGE_NOT_SATISFIABLE))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& unsupported_media_type_415() {
+    return setup(EAS(SL(415_UNSUPPORTED_MEDIA_TYPE)),
+                 sizeof(EAS(SL(415_UNSUPPORTED_MEDIA_TYPE))) - 1);
   }
-  message& expectation_failed_417() {
-    sln_ = EAS(SL(417_EXPECTATION_FAILED));
-    sln_sz_ = sizeof(EAS(SL(417_EXPECTATION_FAILED))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& range_not_satisfiable_416() {
+    return setup(EAS(SL(416_RANGE_NOT_SATISFIABLE)),
+                 sizeof(EAS(SL(416_RANGE_NOT_SATISFIABLE))) - 1);
   }
-  message& unused_418() {
-    sln_ = EAS(SL(418_UNUSED));
-    sln_sz_ = sizeof(EAS(SL(418_UNUSED))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& expectation_failed_417() {
+    return setup(EAS(SL(417_EXPECTATION_FAILED)),
+                 sizeof(EAS(SL(417_EXPECTATION_FAILED))) - 1);
   }
-  message& misdirected_request_421() {
-    sln_ = EAS(SL(421_MISDIRECTED_REQUEST));
-    sln_sz_ = sizeof(EAS(SL(421_MISDIRECTED_REQUEST))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& unused_418() {
+    return setup(EAS(SL(418_UNUSED)), sizeof(EAS(SL(418_UNUSED))) - 1);
   }
-  message& unprocessable_content_422() {
-    sln_ = EAS(SL(422_UNPROCESSABLE_CONTENT));
-    sln_sz_ = sizeof(EAS(SL(422_UNPROCESSABLE_CONTENT))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& misdirected_request_421() {
+    return setup(EAS(SL(421_MISDIRECTED_REQUEST)),
+                 sizeof(EAS(SL(421_MISDIRECTED_REQUEST))) - 1);
   }
-  message& upgrade_required_426() {
-    sln_ = EAS(SL(426_UPGRADE_REQUIRED));
-    sln_sz_ = sizeof(EAS(SL(426_UPGRADE_REQUIRED))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& unprocessable_content_422() {
+    return setup(EAS(SL(422_UNPROCESSABLE_CONTENT)),
+                 sizeof(EAS(SL(422_UNPROCESSABLE_CONTENT))) - 1);
   }
-  message& internal_server_error_500() {
-    sln_ = EAS(SL(500_INTERNAL_SERVER_ERROR));
-    sln_sz_ = sizeof(EAS(SL(500_INTERNAL_SERVER_ERROR))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& upgrade_required_426() {
+    return setup(EAS(SL(426_UPGRADE_REQUIRED)),
+                 sizeof(EAS(SL(426_UPGRADE_REQUIRED))) - 1);
   }
-  message& not_implemented_501() {
-    sln_ = EAS(SL(501_NOT_IMPLEMENTED));
-    sln_sz_ = sizeof(EAS(SL(501_NOT_IMPLEMENTED))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& internal_server_error_500() {
+    return setup(EAS(SL(500_INTERNAL_SERVER_ERROR)),
+                 sizeof(EAS(SL(500_INTERNAL_SERVER_ERROR))) - 1);
   }
-  message& bad_gateway_502() {
-    sln_ = EAS(SL(502_BAD_GATEWAY));
-    sln_sz_ = sizeof(EAS(SL(502_BAD_GATEWAY))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& not_implemented_501() {
+    return setup(EAS(SL(501_NOT_IMPLEMENTED)),
+                 sizeof(EAS(SL(501_NOT_IMPLEMENTED))) - 1);
   }
-  message& service_unavailable_503() {
-    sln_ = EAS(SL(503_SERVICE_UNAVAILABLE));
-    sln_sz_ = sizeof(EAS(SL(503_SERVICE_UNAVAILABLE))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& bad_gateway_502() {
+    return setup(EAS(SL(502_BAD_GATEWAY)),
+                 sizeof(EAS(SL(502_BAD_GATEWAY))) - 1);
   }
-  message& gateway_timeout_504() {
-    sln_ = EAS(SL(504_GATEWAY_TIMEOUT));
-    sln_sz_ = sizeof(EAS(SL(504_GATEWAY_TIMEOUT))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& service_unavailable_503() {
+    return setup(EAS(SL(503_SERVICE_UNAVAILABLE)),
+                 sizeof(EAS(SL(503_SERVICE_UNAVAILABLE))) - 1);
   }
-  message& http_version_not_supported_505() {
-    sln_ = EAS(SL(505_HTTP_VERSION_NOT_SUPPORTED));
-    sln_sz_ = sizeof(EAS(SL(505_HTTP_VERSION_NOT_SUPPORTED))) - 1;
-    return set().add_header(headers::kDate, helpers::get_current_date());
+  response_handler& gateway_timeout_504() {
+    return setup(EAS(SL(504_GATEWAY_TIMEOUT)),
+                 sizeof(EAS(SL(504_GATEWAY_TIMEOUT))) - 1);
   }
-  response& remove_header(std::string_view key) {
-    message_.remove_header(key);
-    return *this;
+  response_handler& http_version_not_supported_505() {
+    return setup(EAS(SL(505_HTTP_VERSION_NOT_SUPPORTED)),
+                 sizeof(EAS(SL(505_HTTP_VERSION_NOT_SUPPORTED))) - 1);
+  }
+  response_handler& setup(const char* const sln, std::size_t sln_len) {
+    cursor_ = sln_len;
+    memcpy(buf_, sln, cursor_);
+    handler_ = std::make_shared<response_handler>(buf_, size_, cursor_);
+    return *handler_;
   }
 
  private:
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr std::size_t kDefaultResponseFullSizeInMemory = 4096;  // 4kb.
-  static constexpr std::size_t kDefaultResponseBodySizeInMemory = 2048;  // 2kb.
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //
-  message& set() {
-    auto hdr_buf_size = buf_sz_ - sln_sz_ - bod_sz_;
-    auto hdr_buf = &buf_[sln_sz_];
-    auto bod_buf = &buf_[sln_sz_ + hdr_buf_size];
-    return message_.set(hdr_buf, hdr_buf_size, bod_buf, bod_sz_, 0);
-  }
-  void reset() {
-    sln_ = nullptr;
-    sln_sz_ = 0;
-    message_.reset();
-  }
-  std::shared_ptr<common::virtual_buffer> serialize() {
-    std::size_t hd_len = message_.get_headers_length();
-    std::size_t bd_len = message_.get_body_length();
-    std::size_t sl_off = sln_sz_ + hd_len;
-    memcpy(buf_, sln_, sln_sz_);
-    buf_[sl_off] = constants::character::kCr;
-    buf_[sl_off + 1] = constants::character::kLf;
-    memcpy(&buf_[sl_off + 2], &buf_[buf_sz_ - bod_sz_], bd_len);
-    return std::make_shared<common::virtual_buffer>(buf_, sl_off + bd_len + 2);
-  }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* buf_ = nullptr;
-  std::size_t buf_sz_ = 0;
-  std::size_t bod_sz_ = 0;
-  const char* sln_ = nullptr;
-  std::size_t sln_sz_ = 0;
-  message message_;
-  // ___________________________________________________________________________
-  // FRIENDs                                                         ( private )
-  //
-  friend class decoder;
+  char* buf_;
+  std::size_t size_;
+  std::size_t cursor_;
+  std::shared_ptr<response_handler> handler_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

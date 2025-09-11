@@ -75,9 +75,6 @@
     <ClInclude Include="..\..\include\protocol\http11\status_code.h">
       <Filter>include\protocol\http11</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\protocol\http11\message.h">
-      <Filter>include\protocol\http11</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\protocol\http11\headers.h">
       <Filter>include\protocol\http11</Filter>
     </ClInclude>
@@ -137,6 +134,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\protocol\http11\checkers\date.h">
       <Filter>include\protocol\http11\checkers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\protocol\http11\response_handler.h">
+      <Filter>include\protocol\http11</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

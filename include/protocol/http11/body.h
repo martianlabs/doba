@@ -37,7 +37,6 @@ class body {
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  body() = default;
   body(const body&) = delete;
   body(body&&) noexcept = delete;
   ~body() = default;
@@ -49,33 +48,21 @@ class body {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  void set(char* buffer, std::size_t size) {
-    buf_ = buffer;
-    buf_sz_ = size;
-    cur_ = 0;
-  }
-  void reset() {
-    buf_ = nullptr;
-    buf_sz_ = 0;
-    cur_ = 0;
-  }
-  bool add(const char* buffer, std::size_t size) {
-    if ((buf_sz_ - cur_) < size) {
-      return false;
-    }
-    memcpy(&buf_[cur_], buffer, size);
-    cur_ += size;
-    return true;
-  }
-  std::size_t length() const { return cur_; }
 
  private:
   // ___________________________________________________________________________
+  // CONSTRUCTORs/DESTRUCTORs                                        ( private )
+  //
+  body() {}
+  body(const char* const buffer, std::size_t length) {}
+  body(const std::istream& input_stream) {}
+  body(const std::ostream& output_stream) {}
+  // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* buf_ = nullptr;
-  std::size_t buf_sz_ = 0;
-  std::size_t cur_ = 0;
+  char* memory_buffer_ = nullptr;
+  std::size_t memory_size_ = 0;
+  std::size_t memory_cursor_ = 0;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

@@ -35,8 +35,8 @@ class decoder {
   //
   decoder() {
     cursor_ = 0;
-    size_ = kDefaultMessageSize;
-    buf_ = (char*)malloc(kDefaultMessageSize);
+    size_ = constants::limits::kDefaultRequestMaxSize;
+    buf_ = (char*)malloc(size_);
   }
   decoder(const decoder&) = delete;
   decoder(decoder&&) noexcept = delete;
@@ -46,21 +46,6 @@ class decoder {
   //
   decoder& operator=(const decoder&) = delete;
   decoder& operator=(decoder&&) noexcept = delete;
-  // ___________________________________________________________________________
-  // STATIC-METHODs                                                   ( public )
-  //
-  static void reset(std::shared_ptr<decoder> decoder) {
-    if (decoder) decoder->reset();
-  }
-  static void reset(std::shared_ptr<request> request) {
-    if (request) request->reset();
-  }
-  static void reset(std::shared_ptr<response> response) {
-    if (response) response->reset();
-  }
-  static auto serialize(std::shared_ptr<response> response) {
-    return response ? response->serialize() : nullptr;
-  }
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
@@ -87,16 +72,15 @@ class decoder {
     }
     return std::move(request_);
   }
+  void reset() { cursor_ = 0; }
 
  private:
   // ___________________________________________________________________________
   // CONSTANTs                                                       ( private )
   //
-  static constexpr std::size_t kDefaultMessageSize = 4096;
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //
-  void reset() { cursor_ = 0; }
   // ___________________________________________________________________________
   // STATIC-ATTRIBUTEs                                               ( private )
   //

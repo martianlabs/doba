@@ -58,7 +58,7 @@ class tcpip {
   // USINGs                                                           ( public )
   //
   using on_client_request_function_prototype =
-      std::function<void(std::shared_ptr<const RQty>, std::shared_ptr<RSty>)>;
+      std::function<void(const RQty&, RSty&)>;
   using on_client_request_result_prototype =
       std::tuple<on_client_request_function_prototype, std::shared_ptr<RSty>,
                  common::execution_policy>;
@@ -286,7 +286,7 @@ class tcpip {
                   closesocket(ctx->soc);
                   ctx->soc = INVALID_SOCKET;
                   ctx->operations_in_course = 1;
-                  DEty::reset(ctx->decoder);
+                  ctx->decoder->reset();
                   push_context(ctx);
                 }
               }
@@ -309,7 +309,7 @@ class tcpip {
                   closesocket(ctx->soc);
                   ctx->soc = INVALID_SOCKET;
                   ctx->operations_in_course = 1;
-                  DEty::reset(ctx->decoder);
+                  ctx->decoder->reset();
                   push_context(ctx);
                 }
               }
@@ -328,7 +328,7 @@ class tcpip {
                         closesocket(ctx->soc);
                         ctx->soc = INVALID_SOCKET;
                         ctx->operations_in_course = 1;
-                        DEty::reset(ctx->decoder);
+                        ctx->decoder->reset();
                         push_context(ctx);
                       }
                     }
@@ -340,7 +340,7 @@ class tcpip {
                         closesocket(ctx->soc);
                         ctx->soc = INVALID_SOCKET;
                         ctx->operations_in_course = 1;
-                        DEty::reset(ctx->decoder);
+                        ctx->decoder->reset();
                         push_context(ctx);
                       }
                     }
@@ -353,7 +353,7 @@ class tcpip {
                     closesocket(ctx->soc);
                     ctx->soc = INVALID_SOCKET;
                     ctx->operations_in_course = 1;
-                    DEty::reset(ctx->decoder);
+                    ctx->decoder->reset();
                     push_context(ctx);
                   }
                 }
@@ -398,8 +398,8 @@ class tcpip {
   }
   bool process(context* ctx) {
     auto processor = [this](auto ctx, auto result, auto req, auto res) -> bool {
-      std::get<on_client_request_function_prototype>(result)(req, res);
-      auto serialized = DEty::serialize(res);
+      std::get<on_client_request_function_prototype>(result)(*req, *res);
+      auto serialized = res->serialize();
       while (true) {
         overlapped* ovl = new overlapped(io_type::kSend);
         auto bytes = serialized->read(ovl->buffer, kDefaultBufferSize);
@@ -430,7 +430,7 @@ class tcpip {
                   closesocket(ctx->soc);
                   ctx->soc = INVALID_SOCKET;
                   ctx->operations_in_course = 1;
-                  DEty::reset(ctx->decoder);
+                  ctx->decoder->reset();
                   push_context(ctx);
                 }
               }
