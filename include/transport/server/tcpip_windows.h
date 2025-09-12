@@ -400,10 +400,12 @@ class tcpip {
     auto processor = [this](auto ctx, auto result, auto req, auto res) -> bool {
       std::get<on_client_request_function_prototype>(result)(*req, *res);
       auto snd_queue = res->serialize();
+      std::size_t total_sent = 0;
       while (!snd_queue.empty()) {
         while (true) {
           overlapped* ovl = new overlapped(io_type::kSend);
           auto bytes = snd_queue.front()->read(ovl->buffer, kDefaultBufferSize);
+          total_sent += bytes.value();
           if (bytes.has_value() && bytes.value()) {
             if (!send(ctx, ovl, ovl->buffer, bytes.value())) {
               delete ovl;
@@ -416,6 +418,7 @@ class tcpip {
         }
         snd_queue.pop();
       }
+      printf(">>> SENT: %zd bytes!\n", total_sent);
       return true;
     };
     while (auto req = ctx->decoder->process()) {
