@@ -23,6 +23,8 @@
 
 #include <memory>
 
+#include "body.h"
+
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
 // response_handler                                                    ( class )
@@ -35,8 +37,9 @@ class response_handler {
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  response_handler(char* const buf, const std::size_t& sze, std::size_t& cur)
-      : buf_{buf}, size_{sze}, cursor_{cur} {}
+  response_handler(char* const buf, const std::size_t& sze, std::size_t& cur,
+                   std::shared_ptr<body>& body)
+      : buf_{buf}, size_{sze}, cursor_{cur}, body_{body} {}
   response_handler(const response_handler&) = delete;
   response_handler(response_handler&&) noexcept = delete;
   ~response_handler() = default;
@@ -81,21 +84,28 @@ class response_handler {
   response_handler& add_header(std::string_view key, T&& val) {
     return add_header(key, std::to_string(val));
   }
-  response_handler& add_body(std::string_view body) { return *this; }
+  response_handler& set_body(const char* const buffer, std::size_t length) {
+    body_ = body::memory_reader(buffer, length);
+    return *this;
+  }
+  response_handler& set_body(std::string_view body_data) {
+    body_ = body::memory_reader(body_data.data(), body_data.size());
+    return *this;
+  }
+  template <typename T>
+    requires std::is_arithmetic_v<T>
+  response_handler& set_body(T&& val) {
+    return set_body(std::to_string(val));
+  }
 
  private:
-  // ___________________________________________________________________________
-  // CONSTANTs                                                       ( private )
-  //
-  // ___________________________________________________________________________
-  // METHODs                                                         ( private )
-  //
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
   char* const buf_;
   std::size_t& cursor_;
   const std::size_t& size_;
+  std::shared_ptr<body>& body_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

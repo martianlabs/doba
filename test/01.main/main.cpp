@@ -32,14 +32,16 @@ using namespace martianlabs::doba::protocol::http11;
 int main(int argc, char* argv[]) {
   server my_server("10001");
   my_server
-      .add_route(method::kGet, "/plaintext",
-                 [](const request& req, response& res) {
-                   res.ok_200()
-                       .add_header("Content-Type", "text/plain")
-                       .add_header("Content-Length", 13)
-                       .add_header("Date", "Thu, 11 Sep 2025 19:35:32 GMT")
-                       .add_body("Hello, World!");
-                 })
+      .add_route(
+          method::kGet, "/plaintext",
+          [](const request& req, response& res) {
+            res.ok_200()
+                .add_header("Content-Type", "text/plain")
+                .add_header("Content-Length", 13)
+                .add_header("Date", "Thu, 11 Sep 2025 19:35:32 GMT")
+                .set_body("Hello, World!");
+          },
+          execution_policy::kSync)
       .start();
   return getchar();
 }

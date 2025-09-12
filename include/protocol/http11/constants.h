@@ -273,8 +273,8 @@ struct constants {
     static constexpr uint8_t kHttpVersion[] = "HTTP/1.1";
   };
   struct limits {
-    static constexpr std::size_t kDefaultRequestMaxSize = 4096;
-    static constexpr std::size_t kDefaultResponseMaxSize = 4096;
+    static constexpr std::size_t kDefaultCoreMsgMaxSizeInRam = 4096;
+    static constexpr std::size_t kDefaultBodyMsgMaxSizeInRam = 4096;
   };
 };
 }  // namespace martianlabs::doba::protocol::http11

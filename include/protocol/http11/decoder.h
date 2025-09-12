@@ -35,7 +35,7 @@ class decoder {
   //
   decoder() {
     cursor_ = 0;
-    size_ = constants::limits::kDefaultRequestMaxSize;
+    size_ = constants::limits::kDefaultCoreMsgMaxSizeInRam;
     buf_ = (char*)malloc(size_);
   }
   decoder(const decoder&) = delete;

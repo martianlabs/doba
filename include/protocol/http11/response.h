@@ -40,9 +40,8 @@ class response {
   response() {
     buf_ = NULL;
     cursor_ = 0;
-    size_ = constants::limits::kDefaultResponseMaxSize;
+    size_ = constants::limits::kDefaultCoreMsgMaxSizeInRam;
     buf_ = (char*)malloc(size_);
-    handler_ = nullptr;
   }
   response(const response&) = delete;
   response(response&&) noexcept = delete;
@@ -58,20 +57,31 @@ class response {
   std::shared_ptr<common::virtual_buffer> serialize() {
     static const auto eol = (const char*)constants::string::kCrLf;
     static const auto eol_len = sizeof(constants::string::kCrLf) - 1;
+    if (cursor_ - size_ < eol_len) return nullptr;
     memcpy(&buf_[cursor_], eol, eol_len);
     cursor_ += eol_len;
-
-    /*
-    pepe
-    */
-
-    memcpy(&buf_[cursor_], "Hello, World!", 13);
-    cursor_ += 13;
-
-    /*
-    pepe fin
-    */
-
+    if (body_) {
+      if (body_->get_ios_type() == body::ios_type::kReader) {
+        if (body_->get_buf_type() == body::buf_type::kMemory) {
+          auto ptr = body_->memory_data();
+          auto len = body_->memory_size();
+          if (size_ - cursor_ >= len) {
+            memcpy(&buf_[cursor_], ptr, len);
+            cursor_ += len;
+          } else {
+            // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+            // [to-do] -> add support for this!
+            // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          }
+        } else {
+          // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+          // [to-do] -> add support for this!
+          // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        }
+      } else {
+        return nullptr;
+      }
+    }
     return std::make_shared<common::virtual_buffer>(buf_, cursor_);
   }
   response_handler& continue_100() {
@@ -247,23 +257,18 @@ class response {
   response_handler& setup(const char* const sln, std::size_t sln_len) {
     cursor_ = sln_len;
     memcpy(buf_, sln, cursor_);
-    handler_ = std::make_shared<response_handler>(buf_, size_, cursor_);
+    handler_ = std::make_shared<response_handler>(buf_, size_, cursor_, body_);
     return *handler_;
   }
 
  private:
-  // ___________________________________________________________________________
-  // CONSTANTs                                                       ( private )
-  //
-  // ___________________________________________________________________________
-  // METHODs                                                         ( private )
-  //
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
   char* buf_;
   std::size_t size_;
   std::size_t cursor_;
+  std::shared_ptr<body> body_;
   std::shared_ptr<response_handler> handler_;
 };
 }  // namespace martianlabs::doba::protocol::http11
