@@ -23,6 +23,7 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <fstream>
 
 #include "protocol/http11/server.h"
 

@@ -39,7 +39,7 @@ class response_handler {
   //
   response_handler(char* const buf, const std::size_t& sze, std::size_t& cur,
                    std::shared_ptr<body>& body)
-      : buf_{buf}, size_{sze}, cursor_{cur}, body_{body} {}
+      : buf_{buf}, size_{sze}, cursor_{cur}, body_{body}, headers_start_{cur} {}
   response_handler(const response_handler&) = delete;
   response_handler(response_handler&&) noexcept = delete;
   ~response_handler() = default;
@@ -81,8 +81,50 @@ class response_handler {
   }
   template <typename T>
     requires std::is_arithmetic_v<T>
-  response_handler& add_header(std::string_view key, T&& val) {
+  response_handler& add_header(std::string_view key, const T& val) {
     return add_header(key, std::to_string(val));
+  }
+  response_handler& remove_header(std::string_view k) {
+    bool matched = true;
+    bool searching_for_key = true;
+    std::size_t i = headers_start_, j = 0, k_start = i, k_sz = k.size();
+    while (i < cursor_) {
+      switch (buf_[i]) {
+        case constants::character::kColon:
+          if (searching_for_key) {
+            searching_for_key = false;
+          }
+          break;
+        case constants::character::kCr:
+          if (searching_for_key) return *this;
+          if (matched && j == k_sz) {
+            auto const off = i + 2;
+            std::memmove(&buf_[k_start], &buf_[off], cursor_ - off);
+            cursor_ -= (off - k_start);
+            std::memset(&buf_[cursor_], 0, size_ - cursor_);
+            return *this;
+          }
+          searching_for_key = true;
+          matched = true;
+          k_start = i + 2;
+          j = 0;
+          i++;
+          break;
+        default:
+          if (searching_for_key) {
+            if (matched) {
+              if (j < k_sz) {
+                matched = buf_[i] == helpers::tolower_ascii(k[j++]);
+              } else {
+                matched = false;
+              }
+            }
+          }
+          break;
+      }
+      i++;
+    }
+    return *this;
   }
   response_handler& set_body(const char* const buffer, std::size_t length) {
     body_ = body::memory_reader(buffer, length);
@@ -97,6 +139,10 @@ class response_handler {
   response_handler& set_body(T&& val) {
     return set_body(std::to_string(val));
   }
+  response_handler& set_body(std::shared_ptr<std::ifstream> file_stream) {
+    body_ = body::file_reader(file_stream);
+    return *this;
+  }
 
  private:
   // ___________________________________________________________________________
@@ -105,6 +151,7 @@ class response_handler {
   char* const buf_;
   std::size_t& cursor_;
   const std::size_t& size_;
+  std::size_t headers_start_;
   std::shared_ptr<body>& body_;
 };
 }  // namespace martianlabs::doba::protocol::http11

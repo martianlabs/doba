@@ -25,7 +25,7 @@
 #include <optional>
 #include <functional>
 
-#include "common/virtual_buffer.h"
+#include "common/rorb.h"
 #include "common/thread_pool.h"
 
 namespace martianlabs::doba::transport::server {
@@ -169,7 +169,7 @@ class tcpip {
   //
   static constexpr uint8_t kDefaultNumberOfWorkers = 2;
   static constexpr const char kDefaultPortNumber[] = "80";
-  static constexpr std::size_t kDefaultBufferSize = 1024;
+  static constexpr std::size_t kDefaultBufferSize = 4096;
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
@@ -399,18 +399,22 @@ class tcpip {
   bool process(context* ctx) {
     auto processor = [this](auto ctx, auto result, auto req, auto res) -> bool {
       std::get<on_client_request_function_prototype>(result)(*req, *res);
-      auto serialized = res->serialize();
-      while (true) {
-        overlapped* ovl = new overlapped(io_type::kSend);
-        auto bytes = serialized->read(ovl->buffer, kDefaultBufferSize);
-        if (!bytes.has_value() || !bytes.value()) {
-          delete ovl;
-          break;
+      auto snd_queue = res->serialize();
+      while (!snd_queue.empty()) {
+        while (true) {
+          overlapped* ovl = new overlapped(io_type::kSend);
+          auto bytes = snd_queue.front()->read(ovl->buffer, kDefaultBufferSize);
+          if (bytes.has_value() && bytes.value()) {
+            if (!send(ctx, ovl, ovl->buffer, bytes.value())) {
+              delete ovl;
+              return false;
+            }
+          } else {
+            delete ovl;
+            break;
+          }
         }
-        if (!send(ctx, ovl, ovl->buffer, bytes.value())) {
-          delete ovl;
-          return false;
-        }
+        snd_queue.pop();
       }
       return true;
     };

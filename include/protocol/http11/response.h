@@ -21,7 +21,7 @@
 #ifndef martianlabs_doba_protocol_http11_response_h
 #define martianlabs_doba_protocol_http11_response_h
 
-#include "common/virtual_buffer.h"
+#include "common/rorb.h"
 #include "response_handler.h"
 #include "status_line.h"
 
@@ -54,35 +54,35 @@ class response {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  std::shared_ptr<common::virtual_buffer> serialize() {
+  std::queue<std::shared_ptr<common::rorb>> serialize() {
     static const auto eol = (const char*)constants::string::kCrLf;
     static const auto eol_len = sizeof(constants::string::kCrLf) - 1;
-    if (cursor_ - size_ < eol_len) return nullptr;
-    memcpy(&buf_[cursor_], eol, eol_len);
-    cursor_ += eol_len;
-    if (body_) {
-      if (body_->get_ios_type() == body::ios_type::kReader) {
-        if (body_->get_buf_type() == body::buf_type::kMemory) {
-          auto ptr = body_->memory_data();
-          auto len = body_->memory_size();
-          if (size_ - cursor_ >= len) {
-            memcpy(&buf_[cursor_], ptr, len);
-            cursor_ += len;
+    std::queue<std::shared_ptr<common::rorb>> out;
+    // [headers] end section!
+    if (cursor_ - size_ >= eol_len) {
+      memcpy(&buf_[cursor_], eol, eol_len);
+      cursor_ += eol_len;
+      if (body_) {
+        // [body] section!
+        if (body_->get_ios_type() == body::ios_type::kReader) {
+          if (body_->get_buf_type() == body::buf_type::kMemory) {
+            auto ptr = body_->memory_data();
+            auto len = body_->memory_size();
+            if (size_ - cursor_ >= len) {
+              memcpy(&buf_[cursor_], ptr, len);
+              cursor_ += len;
+              out.emplace(std::make_shared<common::rorb>(buf_, cursor_));
+            } else {
+              out.emplace(std::make_shared<common::rorb>(ptr, len));
+            }
           } else {
-            // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-            // [to-do] -> add support for this!
-            // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            out.emplace(std::make_shared<common::rorb>(buf_, cursor_));
+            out.emplace(std::make_shared<common::rorb>(body_->file_data()));
           }
-        } else {
-          // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-          // [to-do] -> add support for this!
-          // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         }
-      } else {
-        return nullptr;
       }
     }
-    return std::make_shared<common::virtual_buffer>(buf_, cursor_);
+    return out;
   }
   response_handler& continue_100() {
     return setup(EAS(SL(100_CONTINUE)), sizeof(EAS(SL(100_CONTINUE))) - 1);

@@ -54,6 +54,9 @@ class body {
   static auto memory_reader(const char* const buffer, std::size_t length) {
     return std::shared_ptr<body>(new body(buffer, length));
   }
+  static auto file_reader(std::shared_ptr<std::ifstream> file) {
+    return std::shared_ptr<body>(new body(file));
+  }
   // ___________________________________________________________________________
   // ENUMs                                                            ( public )
   //
@@ -64,6 +67,7 @@ class body {
   //
   ios_type get_ios_type() const { return ios_type_; }
   buf_type get_buf_type() const { return buf_type_; }
+  std::shared_ptr<std::istream> file_data() const { return fil_handler_; }
   const char* const memory_data() const { return mem_buffer_; }
   std::size_t memory_size() const { return mem_size_; }
 
@@ -97,6 +101,7 @@ class body {
   body(std::shared_ptr<std::istream> input_stream) {
     ios_type_ = ios_type::kReader;
     buf_type_ = buf_type::kFile;
+    fil_handler_ = input_stream;
     mem_buffer_ = NULL;
     mem_size_ = 0;
     mem_cursor_ = 0;
@@ -107,6 +112,7 @@ class body {
   char* mem_buffer_;
   std::size_t mem_size_;
   std::size_t mem_cursor_;
+  std::shared_ptr<std::istream> fil_handler_;
   ios_type ios_type_;
   buf_type buf_type_;
 };

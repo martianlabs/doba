@@ -171,7 +171,7 @@
     <ClInclude Include="..\..\include\common\hash_base.h" />
     <ClInclude Include="..\..\include\common\hash_map.h" />
     <ClInclude Include="..\..\include\common\hash_set.h" />
-    <ClInclude Include="..\..\include\common\virtual_buffer.h" />
+    <ClInclude Include="..\..\include\common\rorb.h" />
     <ClInclude Include="..\..\include\common\thread_pool.h" />
     <ClInclude Include="..\..\include\platform.h" />
     <ClInclude Include="..\..\include\protocol\http11\body.h" />

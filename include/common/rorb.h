@@ -18,42 +18,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_common_virtual_buffer_h
-#define martianlabs_doba_common_virtual_buffer_h
+#ifndef martianlabs_doba_common_rorb_h
+#define martianlabs_doba_common_rorb_h
 
 #include <memory>
 #include <istream>
+#include <fstream>
 
 namespace martianlabs::doba::common {
 // =============================================================================
-// virtual_buffer                                                      ( class )
+// rorb                                                                ( class )
 // -----------------------------------------------------------------------------
-// This class holds for a generic buffer holding memory/stream references.
+// This class holds for a generic read only reference buffer.
 // -----------------------------------------------------------------------------
 // =============================================================================
-class virtual_buffer {
+class rorb {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  virtual_buffer(std::shared_ptr<std::stringstream> ss) {
+  rorb(std::shared_ptr<std::istream> ss) {
     stream_ = ss;
     memory_buffer_ = nullptr;
     memory_buffer_size_ = 0;
   }
-  virtual_buffer(const char* buffer, std::size_t size) {
+  rorb(const char* buffer, std::size_t size) {
     memory_buffer_ = buffer;
     memory_buffer_size_ = size;
     stream_ = nullptr;
   }
-  virtual_buffer(const virtual_buffer&) = default;
-  virtual_buffer(virtual_buffer&&) noexcept = default;
-  ~virtual_buffer() = default;
+  rorb(const rorb&) = default;
+  rorb(rorb&&) noexcept = default;
+  ~rorb() = default;
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
-  virtual_buffer& operator=(const virtual_buffer&) = default;
-  virtual_buffer& operator=(virtual_buffer&&) noexcept = default;
+  rorb& operator=(const rorb&) = default;
+  rorb& operator=(rorb&&) noexcept = default;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //

@@ -105,9 +105,6 @@
     <ClInclude Include="..\..\include\common\hash_set.h">
       <Filter>include\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\common\virtual_buffer.h">
-      <Filter>include\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\protocol\http11\checkers\host.h">
       <Filter>include\protocol\http11\checkers</Filter>
     </ClInclude>
@@ -137,6 +134,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\protocol\http11\response_handler.h">
       <Filter>include\protocol\http11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\common\rorb.h">
+      <Filter>include\common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
