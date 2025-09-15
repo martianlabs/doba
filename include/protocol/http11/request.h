@@ -103,12 +103,13 @@ class request {
   // ___________________________________________________________________________
   // STATIC-METHODs                                                   ( public )
   //
-  static auto from(const char* const buf, std::size_t len) {
+  static auto from(const char* const buf, std::size_t len, bool& expecting_body,
+                   std::size_t& expected_body_length) {
     auto instance = std::shared_ptr<request>(new request(buf, len));
     if (instance) {
       std::size_t i = 0;
       if (instance->check_request_line(i)) {
-        if (!instance->check_headers(i)) {
+        if (!instance->check_headers(i, expecting_body, expected_body_length)) {
           instance.reset();
         }
       } else {
@@ -346,7 +347,7 @@ class request {
   // +-----------------+-------------------------------------------------------+
   // | source: https://datatracker.ietf.org/doc/html/rfc9110                   |
   // +-------------------------------------------------------------------------+
-  bool check_headers(std::size_t& i) {
+  bool check_headers(std::size_t& i, bool& exp_bdy, std::size_t& exp_bdy_len) {
     std::size_t clength_count = 0;
     std::size_t tencoding_count = 0;
     int host_count = 0;
@@ -383,21 +384,9 @@ class request {
         if (!ows_value.length() || !helpers::is_digit(ows_value)) return false;
         auto first = ows_value.data();
         auto last = ows_value.data() + ows_value.size();
-
-        /*
-        pepe
-        */
-
-        /*
-        auto [p, e] = std::from_chars(first, last, body_size_expected_);
+        auto [p, e] = std::from_chars(first, last, exp_bdy_len);
         if (e != std::errc{}) return false;
-        body_processing_ = body_size_expected_ > 0;
-        */
-
-        /*
-        pepe fin
-        */
-
+        exp_bdy = true;
       } else if (!name.compare(headers::kTransferEncoding)) {
         if ((++tencoding_count > 1) || (clength_count > 0)) return false;
       } else if (!name.compare(headers::kHost)) {
@@ -410,7 +399,6 @@ class request {
           break;
         }
       }
-      i++;
     }
     return host_count == 1;
   }

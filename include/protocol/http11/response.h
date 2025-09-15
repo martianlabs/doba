@@ -38,14 +38,14 @@ class response {
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   response() {
-    buf_ = NULL;
+    buffer_ = NULL;
     cursor_ = 0;
     size_ = constants::limits::kDefaultCoreMsgMaxSizeInRam;
-    buf_ = (char*)malloc(size_);
+    buffer_ = (char*)malloc(size_);
   }
   response(const response&) = delete;
   response(response&&) noexcept = delete;
-  ~response() { free(buf_); }
+  ~response() { free(buffer_); }
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
@@ -60,25 +60,23 @@ class response {
     std::queue<std::shared_ptr<common::rorb>> out;
     // [headers] end section!
     if (cursor_ - size_ >= eol_len) {
-      memcpy(&buf_[cursor_], eol, eol_len);
+      memcpy(&buffer_[cursor_], eol, eol_len);
       cursor_ += eol_len;
-      if (body_) {
+      if (reader_) {
         // [body] section!
-        if (body_->get_ios_type() == body::ios_type::kReader) {
-          if (body_->get_buf_type() == body::buf_type::kMemory) {
-            auto ptr = body_->memory_data();
-            auto len = body_->memory_size();
-            if (size_ - cursor_ >= len) {
-              memcpy(&buf_[cursor_], ptr, len);
-              cursor_ += len;
-              out.emplace(std::make_shared<common::rorb>(buf_, cursor_));
-            } else {
-              out.emplace(std::make_shared<common::rorb>(ptr, len));
-            }
+        if (reader_->get_buffer_type() == body_reader::buffer_type::kMemory) {
+          auto ptr = reader_->memory_data();
+          auto len = reader_->memory_size();
+          if (size_ - cursor_ >= len) {
+            memcpy(&buffer_[cursor_], ptr, len);
+            cursor_ += len;
+            out.emplace(std::make_shared<common::rorb>(buffer_, cursor_));
           } else {
-            out.emplace(std::make_shared<common::rorb>(buf_, cursor_));
-            out.emplace(std::make_shared<common::rorb>(body_->file_data()));
+            out.emplace(std::make_shared<common::rorb>(ptr, len));
           }
+        } else {
+          out.emplace(std::make_shared<common::rorb>(buffer_, cursor_));
+          out.emplace(std::make_shared<common::rorb>(reader_->file_data()));
         }
       }
     }
@@ -256,8 +254,9 @@ class response {
   }
   response_handler& setup(const char* const sln, std::size_t sln_len) {
     cursor_ = sln_len;
-    memcpy(buf_, sln, cursor_);
-    handler_ = std::make_shared<response_handler>(buf_, size_, cursor_, body_);
+    memcpy(buffer_, sln, cursor_);
+    handler_ =
+        std::make_shared<response_handler>(buffer_, size_, cursor_, reader_);
     return *handler_;
   }
 
@@ -265,10 +264,10 @@ class response {
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* buf_;
+  char* buffer_;
   std::size_t size_;
   std::size_t cursor_;
-  std::shared_ptr<body> body_;
+  std::shared_ptr<body_reader> reader_;
   std::shared_ptr<response_handler> handler_;
 };
 }  // namespace martianlabs::doba::protocol::http11

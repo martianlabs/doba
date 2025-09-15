@@ -174,7 +174,8 @@
     <ClInclude Include="..\..\include\common\rorb.h" />
     <ClInclude Include="..\..\include\common\thread_pool.h" />
     <ClInclude Include="..\..\include\platform.h" />
-    <ClInclude Include="..\..\include\protocol\http11\body.h" />
+    <ClInclude Include="..\..\include\protocol\http11\body_reader.h" />
+    <ClInclude Include="..\..\include\protocol\http11\body_writer.h" />
     <ClInclude Include="..\..\include\protocol\http11\checkers\connection.h" />
     <ClInclude Include="..\..\include\protocol\http11\checkers\date.h" />
     <ClInclude Include="..\..\include\protocol\http11\checkers\host.h" />

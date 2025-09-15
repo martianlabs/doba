@@ -23,7 +23,7 @@
 
 #include <memory>
 
-#include "body.h"
+#include "body_reader.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -38,8 +38,12 @@ class response_handler {
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   response_handler(char* const buf, const std::size_t& sze, std::size_t& cur,
-                   std::shared_ptr<body>& body)
-      : buf_{buf}, size_{sze}, cursor_{cur}, body_{body}, headers_start_{cur} {}
+                   std::shared_ptr<body_reader>& body_reader)
+      : buf_{buf},
+        size_{sze},
+        cursor_{cur},
+        body_reader_{body_reader},
+        headers_start_{cur} {}
   response_handler(const response_handler&) = delete;
   response_handler(response_handler&&) noexcept = delete;
   ~response_handler() = default;
@@ -127,21 +131,21 @@ class response_handler {
     return *this;
   }
   response_handler& set_body(const char* const buffer, std::size_t length) {
-    body_ = body::memory_reader(buffer, length);
+    body_reader_ = body_reader::memory_reader(buffer, length);
     return *this;
   }
-  response_handler& set_body(std::string_view body_data) {
-    body_ = body::memory_reader(body_data.data(), body_data.size());
+  response_handler& set_body(std::string_view sv) {
+    body_reader_ = body_reader::memory_reader(sv.data(), sv.size());
+    return *this;
+  }
+  response_handler& set_body(std::shared_ptr<std::ifstream> input_file_stream) {
+    body_reader_ = body_reader::file_reader(input_file_stream);
     return *this;
   }
   template <typename T>
     requires std::is_arithmetic_v<T>
   response_handler& set_body(T&& val) {
     return set_body(std::to_string(val));
-  }
-  response_handler& set_body(std::shared_ptr<std::ifstream> file_stream) {
-    body_ = body::file_reader(file_stream);
-    return *this;
   }
 
  private:
@@ -152,7 +156,7 @@ class response_handler {
   std::size_t& cursor_;
   const std::size_t& size_;
   std::size_t headers_start_;
-  std::shared_ptr<body>& body_;
+  std::shared_ptr<body_reader>& body_reader_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

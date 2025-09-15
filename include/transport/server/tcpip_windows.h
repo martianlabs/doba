@@ -418,7 +418,6 @@ class tcpip {
         }
         snd_queue.pop();
       }
-      printf(">>> SENT: %zd bytes!\n", total_sent);
       return true;
     };
     while (auto req = ctx->decoder->process()) {
