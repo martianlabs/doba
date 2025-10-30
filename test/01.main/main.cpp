@@ -31,7 +31,7 @@ using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http11;
 
 int main(int argc, char* argv[]) {
-  server my_server("10001");
+  server my_server;
   my_server
       .add_route(
           method::kGet, "/plaintext",
@@ -43,6 +43,6 @@ int main(int argc, char* argv[]) {
                 .set_body("Hello, World!");
           },
           execution_policy::kSync)
-      .start();
+      .start("10001");
   return getchar();
 }

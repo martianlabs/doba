@@ -37,13 +37,8 @@ class response_handler {
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  response_handler(char* const buf, const std::size_t& sze, std::size_t& cur,
-                   std::shared_ptr<body_reader>& body_reader)
-      : buf_{buf},
-        size_{sze},
-        cursor_{cur},
-        body_reader_{body_reader},
-        headers_start_{cur} {}
+  response_handler(char* const buf, const std::size_t& sze, std::size_t& cur)
+      : buf_{buf}, size_{sze}, cursor_{cur}, headers_start_{cur} {}
   response_handler(const response_handler&) = delete;
   response_handler(response_handler&&) noexcept = delete;
   ~response_handler() = default;
@@ -147,6 +142,7 @@ class response_handler {
   response_handler& set_body(T&& val) {
     return set_body(std::to_string(val));
   }
+  std::shared_ptr<body_reader> get_body_reader() const { return body_reader_; }
 
  private:
   // ___________________________________________________________________________
@@ -156,7 +152,7 @@ class response_handler {
   std::size_t& cursor_;
   const std::size_t& size_;
   std::size_t headers_start_;
-  std::shared_ptr<body_reader>& body_reader_;
+  std::shared_ptr<body_reader> body_reader_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

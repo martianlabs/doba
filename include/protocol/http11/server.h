@@ -53,25 +53,24 @@ class server {
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  server(const char port[]) {
-    transport_.set_port(port);
-    transport_.set_number_of_workers(kDefaultNumberOfWorkers);
-    transport_.set_on_client_connection([](socket_type id) {});
-    transport_.set_on_client_disconnection([](socket_type id) {});
-    transport_.set_on_bytes_received(
-        [](socket_type id, unsigned long bytes) {});
-    transport_.set_on_bytes_sent([](socket_type id, unsigned long bytes) {});
+  server() {
+
+    /*
+    pepe
+    */
+
     transport_.set_on_client_request(
-        [this](std::shared_ptr<const request> req)
-            -> TRty<request, response,
-                    router>::on_client_request_result_prototype {
+        [this](std::shared_ptr<const request> req,
+               std::shared_ptr<response> res)
+            -> TRty<request, response, router>::on_client_request_result {
+          // let's define our default <400> error response..
           auto fn_400 = [this](const request& req, response& res) {
             res.bad_request_400().add_header(headers::kContentLength, 0);
           };
+          // let's define our default <404> error response..
           auto fn_404 = [this](const request& req, response& res) {
             res.not_found_404().add_header(headers::kContentLength, 0);
           };
-          std::shared_ptr<response> res = std::make_shared<response>();
           // let's check if the incoming request is following the standard..
           if (process_headers(req)) {
             switch (req->get_target()) {
@@ -79,9 +78,9 @@ class server {
               case target::kAbsoluteForm:
                 if (auto handler = router_.match(req->get_method(),
                                                  req->get_absolute_path())) {
-                  return {handler->first, res, handler->second};
+                  return {handler->first, handler->second};
                 } else {
-                  return {fn_404, res, common::execution_policy::kSync};
+                  return {fn_404, common::execution_policy::kSync};
                 }
                 break;
               case target::kAuthorityForm:
@@ -94,13 +93,26 @@ class server {
                 break;
             }
           }
-          return {fn_400, res, common::execution_policy::kSync};
+          return {fn_400, common::execution_policy::kSync};
         });
+
+    /*
+    transport_.set_on_client_connection([](socket_type id) {});
+    transport_.set_on_client_disconnection([](socket_type id) {});
+    transport_.set_on_bytes_received(
+        [](socket_type id, unsigned long bytes) {});
+    transport_.set_on_bytes_sent([](socket_type id, unsigned long bytes) {});
     transport_.set_on_error([this]() -> auto {
       std::shared_ptr<response> res = std::make_shared<response>();
       res->bad_request_400().add_header(headers::kContentLength, 0);
       return res;
     });
+    */
+
+    /*
+    pepe fin
+    */
+
     setup_headers_functions();
   }
   server(const server&) = delete;
@@ -114,7 +126,12 @@ class server {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  void start() { transport_.start(); }
+  void start(
+      const char port[],
+      std::size_t number_of_workers = std::thread::hardware_concurrency(),
+      std::size_t buffer_sz = constants::limits::kDefaultCoreMsgMaxSizeInRam) {
+    transport_.start(port, number_of_workers, buffer_sz);
+  }
   void stop() { transport_.stop(); }
   server& add_route(
       method method, std::string_view route, router::handler handler,
@@ -128,10 +145,6 @@ class server {
   // USINGs                                                          ( private )
   //
   using on_header_check_delegate = std::function<bool(std::string_view)>;
-  // ___________________________________________________________________________
-  // CONSTANTs                                                       ( private )
-  //
-  static constexpr uint8_t kDefaultNumberOfWorkers = 8;
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //

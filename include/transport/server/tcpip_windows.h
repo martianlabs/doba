@@ -18,8 +18,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef martianlabs_doba_transport_server_tcpipwindows_h
-#define martianlabs_doba_transport_server_tcpipwindows_h
+#ifndef martianlabs_doba_transport_server_tcpip_windows_h
+#define martianlabs_doba_transport_server_tcpip_windows_h
 
 #include <future>
 #include <optional>
@@ -57,30 +57,30 @@ class tcpip {
   // ___________________________________________________________________________
   // USINGs                                                           ( public )
   //
-  using on_client_request_function_prototype =
-      std::function<void(const RQty&, RSty&)>;
-  using on_client_request_result_prototype =
-      std::tuple<on_client_request_function_prototype, std::shared_ptr<RSty>,
-                 common::execution_policy>;
-  using on_client_connection_prototype = std::function<void(socket_type)>;
-  using on_client_disconnection_prototype = std::function<void(socket_type)>;
-  using on_bytes_received_prototype =
-      std::function<void(socket_type, unsigned long)>;
-  using on_bytes_sent_prototype =
-      std::function<void(socket_type, unsigned long)>;
-  using on_client_request_prototype =
-      std::function<on_client_request_result_prototype(
-          std::shared_ptr<const RQty>)>;
-  using on_error_prototype = std::function<std::shared_ptr<RSty>()>;
+  using on_client_request_function = std::function<void(const RQty&, RSty&)>;
+  using on_client_request_result =
+      std::tuple<on_client_request_function, common::execution_policy>;
+  using on_client_request = std::function<on_client_request_result(
+      std::shared_ptr<const RQty>, std::shared_ptr<RSty>)>;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  result start() {
-    if (io_h_ != INVALID_HANDLE_VALUE) return result::kAlreadyInitialized;
+  result start(const char port[], std::size_t number_of_workers,
+               std::size_t io_buffer_size) {
+    if (io_completion_port_handler_ != INVALID_HANDLE_VALUE) {
+      return result::kAlreadyInitialized;
+    }
+    buffer_size_ = io_buffer_size;
     // let's setup all the required resources..
-    if (!setupWinsock()) return result::kCouldNotSetupPlaformResources;
-    if (!setupListener()) return result::kCouldNotSetupPlaformResources;
-    if (!setupWorkers()) return result::kCouldNotSetupPlaformResources;
+    if (!setup_winsock()) {
+      return result::kCouldNotSetupPlaformResources;
+    }
+    if (!setup_listener(number_of_workers, port)) {
+      return result::kCouldNotSetupPlaformResources;
+    }
+    if (!setup_workers(number_of_workers)) {
+      return result::kCouldNotSetupPlaformResources;
+    }
     // let's start incoming connections loop!
     manager_ = std::make_unique<std::thread>([this]() {
       while (keep_running_) {
@@ -101,18 +101,22 @@ class tcpip {
         int tcp_no_delay_flag = 1;
         if (setsockopt(socket, IPPROTO_TCP, TCP_NODELAY,
                        (char*)&tcp_no_delay_flag, sizeof(tcp_no_delay_flag))) {
+          closesocket(socket);
           continue;
         }
         // let's associate the accept socket with the i/o port!
-        context* ctx = pop_context();
-        ctx->soc = socket;
-        if (!CreateIoCompletionPort((HANDLE)socket, io_h_, (ULONG_PTR)ctx, 0)) {
+        context* ctx = new context(socket, buffer_size_);
+        if (!CreateIoCompletionPort((HANDLE)socket, io_completion_port_handler_,
+                                    (ULONG_PTR)ctx, 0)) {
           // ((error)) -> trying to associate socket to the i/o port!
+          delete ctx;
           continue;
         }
         // let's notify waiting thread for the new connection!
-        if (!PostQueuedCompletionStatus(io_h_, 0, (ULONG_PTR)ctx, NULL)) {
+        if (!PostQueuedCompletionStatus(io_completion_port_handler_, 0,
+                                        (ULONG_PTR)ctx, NULL)) {
           // ((error)) -> trying to notify waiting thread!
+          delete ctx;
           continue;
         }
       }
@@ -120,14 +124,12 @@ class tcpip {
     return result::kSucceeded;
   }
   result stop() {
-    if (pool_) {
-      pool_->stop();
-    }
-    if (io_h_ != INVALID_HANDLE_VALUE) {
-      if (!CloseHandle(io_h_)) {
+    if (pool_) pool_->stop();
+    if (io_completion_port_handler_ != INVALID_HANDLE_VALUE) {
+      if (!CloseHandle(io_completion_port_handler_)) {
         return result::kCouldNotCleanupPlaformResources;
       }
-      io_h_ = INVALID_HANDLE_VALUE;
+      io_completion_port_handler_ = INVALID_HANDLE_VALUE;
     }
     if (accept_socket_ != INVALID_SOCKET) {
       if (closesocket(accept_socket_) == SOCKET_ERROR) {
@@ -136,7 +138,7 @@ class tcpip {
       accept_socket_ = INVALID_SOCKET;
     }
     keep_running_ = false;
-    if (manager_->joinable()) manager_->join();
+    if (manager_ && manager_->joinable()) manager_->join();
     while (!threads_.empty()) {
       if (threads_.front().joinable()) threads_.front().join();
       threads_.pop();
@@ -145,57 +147,74 @@ class tcpip {
     keep_running_ = true;
     return result::kSucceeded;
   }
-  void set_port(std::string_view port) { port_.assign(port); }
-  void set_number_of_workers(uint8_t workers) { workers_ = workers; }
-  void set_on_client_connection(const on_client_connection_prototype& fn) {
-    on_cnn_ = fn;
+  template <typename Fn>
+  void set_on_client_request(Fn&& fn) {
+    on_client_request_ = std::forward<Fn>(fn);
   }
-  void set_on_client_disconnection(
-      const on_client_disconnection_prototype& fn) {
-    on_dis_ = fn;
-  }
-  void set_on_bytes_received(const on_bytes_received_prototype& fn) {
-    on_rcv_ = fn;
-  }
-  void set_on_bytes_sent(const on_bytes_sent_prototype& fn) { on_snd_ = fn; }
-  void set_on_client_request(const on_client_request_prototype& fn) {
-    on_req_ = fn;
-  }
-  void set_on_error(const on_error_prototype& fn) { on_err_ = fn; }
 
  private:
   // ___________________________________________________________________________
-  // CONSTANTs                                                       ( private )
-  //
-  static constexpr uint8_t kDefaultNumberOfWorkers = 2;
-  static constexpr const char kDefaultPortNumber[] = "80";
-  static constexpr std::size_t kDefaultBufferSize = 4096;
-  // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
-  enum class io_type { kSend, kReceive };
+  enum class send_result : uint8_t { kSuccess, kSending, kSocketError };
+  enum class io_type : uint8_t { kPost, kSend, kReceive };
   struct overlapped {
-    overlapped(io_type in_type) : type{in_type} {}
-    WSAOVERLAPPED ovl;
-    CHAR FAR buffer[kDefaultBufferSize];
+    overlapped(std::size_t buffer_size = 0, io_type in_type = io_type::kPost) {
+      type = in_type;
+      buffer = buffer_size ? new char[buffer_size] : nullptr;
+      buffer_length = 0;
+    }
+    overlapped(const overlapped&) = delete;
+    overlapped(overlapped&&) noexcept = delete;
+    ~overlapped() { delete[] buffer; }
+    overlapped& operator=(const overlapped&) = delete;
+    overlapped& operator=(overlapped&&) noexcept = delete;
+    WSAOVERLAPPED inner_ovl;
+    CHAR* buffer;
+    DWORD buffer_length;
     io_type type;
     WSABUF wsa;
   };
   struct context {
-    context() {
-      soc = INVALID_SOCKET;
-      decoder = std::make_shared<DEty>();
+    context(SOCKET s, std::size_t in_buffer_size) : soc{s} {
+      rx_ovl = new overlapped(in_buffer_size, io_type::kReceive);
+      tx_ovl = new overlapped(in_buffer_size, io_type::kSend);
     }
+    context(const context&) = delete;
+    context(context&&) noexcept = delete;
+    ~context() {
+      delete rx_ovl;
+      delete tx_ovl;
+    }
+    context& operator=(const context&) = delete;
+    context& operator=(context&&) noexcept = delete;
+    inline void push_sending_packet(const std::pair<CHAR*, DWORD>& packet) {
+      std::scoped_lock<std::mutex> lock(sending_queue_mutex);
+      sending_queue.push(packet);
+    }
+    inline auto pop_sending_packet() {
+      std::scoped_lock<std::mutex> lock(sending_queue_mutex);
+      std::pair<CHAR*, DWORD> packet{nullptr, 0};
+      if (!sending_queue.empty()) {
+        packet = sending_queue.front();
+        sending_queue.pop();
+      }
+      return packet;
+    }
+    std::queue<std::pair<CHAR*, DWORD>> sending_queue;
+    std::mutex sending_queue_mutex;
+    std::atomic<bool> active{true};
+    std::atomic<bool> sending{false};
+    std::atomic<int> pending_ops{0};
+    overlapped* rx_ovl;
+    overlapped* tx_ovl;
+    DEty decoder;
     SOCKET soc;
-    std::mutex mutex;
-    overlapped rx_overlapped{io_type::kReceive};
-    std::shared_ptr<DEty> decoder;
-    std::atomic<int> operations_in_course{1};
   };
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //
-  bool setupWinsock() {
+  bool setup_winsock() {
     struct WsaInitializer {
       bool initialized = false;
       WsaInitializer() { initialized = !WSAStartup(MAKEWORD(2, 2), &wsa_data); }
@@ -205,10 +224,10 @@ class tcpip {
     static WsaInitializer wsa_initializer;
     return wsa_initializer.initialized;
   }
-  bool setupListener() {
+  bool setup_listener(std::size_t workers, const char port[]) {
     // let's create our main i/o completion port!
-    HANDLE handle =
-        CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, workers_);
+    HANDLE handle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL,
+                                           DWORD(workers));
     if (!handle) {
       // ((error)) -> while setting up the i/o completion port!
       return false;
@@ -238,10 +257,26 @@ class tcpip {
       closesocket(sock);
       return false;
     }
+    // Permits multiple AF_INET or AF_INET6 sockets to be bound to an
+    // identical socket address.  This option must be set on each
+    // socket (including the first socket) prior to calling bind(2)
+    // on the socket.  To prevent port hijacking, all of the
+    // processes binding to the same address must have the same
+    // effective UID.  This option can be employed with both TCP and
+    // UDP sockets.
+    int opt = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt));
+    int port_num = std::stoi(port);
+    if (port_num < 1 || port_num > 65535) {
+      // ((error)) -> could not set socket opt reuse-address!
+      CloseHandle(handle);
+      closesocket(sock);
+      return false;
+    }
     sockaddr_in addr = {0};
     addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_family = PF_INET;
-    addr.sin_port = htons(atoi(port_.c_str()));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port_num);
     if (bind(sock, (const sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
       // ((error)) -> could not bind socket!
       CloseHandle(handle);
@@ -254,229 +289,222 @@ class tcpip {
       closesocket(sock);
       return false;
     }
-    io_h_ = handle;
+    io_completion_port_handler_ = handle;
     accept_socket_ = sock;
     return true;
   }
-  bool setupWorkers() {
-    if (!(pool_ = std::make_shared<common::thread_pool>(workers_))) {
+  bool setup_workers(std::size_t workers) {
+    if (!(pool_ = std::make_shared<common::thread_pool>(workers))) {
       return false;
     }
-    for (int i = 0; i < workers_; i++) {
+    for (int i = 0; i < workers; i++) {
       threads_.emplace(std::thread([this]() {
         while (true) {
-          ULONG_PTR key = NULL;
-          overlapped* overlapped_operation = NULL;
+          context* ctx = NULL;
+          overlapped* ovl = NULL;
           DWORD bytes = 0;
-          if (!GetQueuedCompletionStatus(io_h_, &bytes, &key,
-                                         (LPOVERLAPPED*)&overlapped_operation,
+          if (!GetQueuedCompletionStatus(io_completion_port_handler_, &bytes,
+                                         (PULONG_PTR)&ctx, (LPOVERLAPPED*)&ovl,
                                          INFINITE)) {
-            if (!overlapped_operation &&
-                GetLastError() == ERROR_INVALID_HANDLE) {
-              // this will cause worker termination!
+            if (!ovl && GetLastError() == ERROR_INVALID_HANDLE) {
               break;
             }
-            if (overlapped_operation && key) {
-              // this means a client-side close operation!
-              context* ctx = (context*)key;
-              ctx->operations_in_course--;
-              if (!ctx->operations_in_course) {
-                if (ctx->soc != INVALID_SOCKET) {
-                  shutdown(ctx->soc, SD_BOTH);
-                  closesocket(ctx->soc);
-                  ctx->soc = INVALID_SOCKET;
-                  ctx->operations_in_course = 1;
-                  ctx->decoder->reset();
-                  push_context(ctx);
-                }
+            if (ovl && ctx) {
+              // this means a [closed] connection!
+              // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+              // [to-do] -> we need to call user's disconnection event!
+              // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+              if (ctx->active.exchange(false)) {
+                shutdown(ctx->soc, SD_BOTH);
+                closesocket(ctx->soc);
               }
-              if (overlapped_operation->type == io_type::kSend) {
-                delete overlapped_operation;
+              operation_completed(ctx);
+            }
+            continue;
+          }
+          if (!ctx) continue;
+          if (!ovl) {
+            if (!bytes) {
+              // this means a [new] connection!
+              // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+              // [to-do] -> we need to call user's connection event!
+              // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+              if (!receive(ctx)) {
               }
             }
             continue;
           }
-          if (!key) continue;
-          context* ctx = (context*)key;
-          std::lock_guard<std::mutex> lock(ctx->mutex);
-          ctx->operations_in_course--;
-          if (!overlapped_operation && !bytes) {
-            // this means that a new connection was created..
-            if (!receive(ctx, &ctx->rx_overlapped)) {
-              if (!ctx->operations_in_course) {
-                if (ctx->soc != INVALID_SOCKET) {
-                  shutdown(ctx->soc, SD_BOTH);
-                  closesocket(ctx->soc);
-                  ctx->soc = INVALID_SOCKET;
-                  ctx->operations_in_course = 1;
-                  ctx->decoder->reset();
-                  push_context(ctx);
+          switch (ovl->type) {
+            case io_type::kPost:
+              if (auto packet = ctx->pop_sending_packet(); packet.first) {
+                switch (send(ctx, packet.first, packet.second)) {
+                  case send_result::kSuccess:
+                    delete[] packet.first;
+                    break;
+                  case send_result::kSending:
+                    ctx->push_sending_packet(packet);
+                    break;
+                  case send_result::kSocketError:
+                    delete[] packet.first;
+                    break;
                 }
               }
-            }
-            on_cnn_(ctx->soc);
-            continue;
-          }
-          switch (overlapped_operation->type) {
+              delete ovl;
+              break;
+            case io_type::kSend:
+              ctx->sending.store(false, std::memory_order_release);
+              if (auto packet = ctx->pop_sending_packet(); packet.first) {
+                switch (send(ctx, packet.first, packet.second)) {
+                  case send_result::kSuccess:
+                    delete[] packet.first;
+                    break;
+                  case send_result::kSending:
+                    ctx->push_sending_packet(packet);
+                    break;
+                  case send_result::kSocketError:
+                    delete[] packet.first;
+                    break;
+                }
+              }
+              break;
             case io_type::kReceive:
               if (bytes) {
-                if (ctx->decoder->add(overlapped_operation->wsa.buf, bytes)) {
-                  if (!process(ctx)) {
-                    if (!ctx->operations_in_course) {
-                      if (ctx->soc != INVALID_SOCKET) {
-                        shutdown(ctx->soc, SD_BOTH);
-                        closesocket(ctx->soc);
-                        ctx->soc = INVALID_SOCKET;
-                        ctx->operations_in_course = 1;
-                        ctx->decoder->reset();
-                        push_context(ctx);
-                      }
+                if (process(ctx, ovl->wsa.buf, bytes)) {
+                  if (!receive(ctx)) {
+                    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                    // [to-do] -> we need to call user's disconnection event!
+                    // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                    if (ctx->active.exchange(false)) {
+                      shutdown(ctx->soc, SD_BOTH);
+                      closesocket(ctx->soc);
                     }
                   }
-                  if (!receive(ctx, &ctx->rx_overlapped)) {
-                    if (!ctx->operations_in_course) {
-                      if (ctx->soc != INVALID_SOCKET) {
-                        shutdown(ctx->soc, SD_BOTH);
-                        closesocket(ctx->soc);
-                        ctx->soc = INVALID_SOCKET;
-                        ctx->operations_in_course = 1;
-                        ctx->decoder->reset();
-                        push_context(ctx);
-                      }
-                    }
+                } else {
+                  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                  // [to-do] -> we need to call user's disconnection event!
+                  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                  if (ctx->active.exchange(false)) {
+                    shutdown(ctx->soc, SD_BOTH);
+                    closesocket(ctx->soc);
                   }
                 }
               } else {
-                if (!ctx->operations_in_course) {
-                  if (ctx->soc != INVALID_SOCKET) {
-                    shutdown(ctx->soc, SD_BOTH);
-                    closesocket(ctx->soc);
-                    ctx->soc = INVALID_SOCKET;
-                    ctx->operations_in_course = 1;
-                    ctx->decoder->reset();
-                    push_context(ctx);
-                  }
+                // this means a [closed] connection!
+                // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                // [to-do] -> we need to call user's disconnection event!
+                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                if (ctx->active.exchange(false)) {
+                  shutdown(ctx->soc, SD_BOTH);
+                  closesocket(ctx->soc);
                 }
               }
               break;
-            case io_type::kSend:
-              if (bytes) {
-              }
-              delete overlapped_operation;
-              break;
           }
+          operation_completed(ctx);
         }
       }));
     }
     return true;
   }
-  bool receive(context* ctx, overlapped* ovl) {
-    if (ctx->soc == INVALID_SOCKET) return false;
+  inline bool receive(context* ctx) {
+    std::memset(&ctx->rx_ovl->inner_ovl, 0, sizeof(WSAOVERLAPPED));
+    std::memset(&ctx->rx_ovl->wsa, 0, sizeof(WSABUF));
     DWORD f = 0, r = 0;
-    ZeroMemory(&ovl->ovl, sizeof(WSAOVERLAPPED));
-    ovl->wsa.buf = ovl->buffer;
-    ovl->wsa.len = kDefaultBufferSize;
-    int result = WSARecv(ctx->soc, &ovl->wsa, 1, &r, &f, (LPOVERLAPPED)ovl, 0);
+    ctx->rx_ovl->wsa.buf = ctx->rx_ovl->buffer;
+    ctx->rx_ovl->wsa.len = ULONG(buffer_size_);
+    operation_started(ctx);
+    int result = WSARecv(ctx->soc, &ctx->rx_ovl->wsa, 1, &r, &f,
+                         (LPOVERLAPPED)ctx->rx_ovl, 0);
     if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      operation_completed(ctx);
       return false;
     }
-    ctx->operations_in_course++;
     return true;
   }
-  bool send(context* ctx, overlapped* ovl, CHAR* buffer, std::size_t length) {
-    if (ctx->soc == INVALID_SOCKET) return false;
+  inline send_result send(context* ctx, CHAR* buf, std::size_t len) {
+    if (ctx->sending.exchange(true, std::memory_order_acq_rel)) {
+      return send_result::kSending;
+    }
+    std::memset(&ctx->tx_ovl->inner_ovl, 0, sizeof(WSAOVERLAPPED));
+    std::memset(&ctx->tx_ovl->wsa, 0, sizeof(WSABUF));
     DWORD f = 0, w = 0;
-    ZeroMemory(&ovl->ovl, sizeof(WSAOVERLAPPED));
-    ovl->wsa.buf = buffer;
-    ovl->wsa.len = (ULONG)length;
-    int result = WSASend(ctx->soc, &ovl->wsa, 1, &w, f, (LPOVERLAPPED)ovl, 0);
+    ctx->tx_ovl->wsa.buf = static_cast<CHAR*>(buf);
+    ctx->tx_ovl->wsa.len = static_cast<ULONG>(len);
+    operation_started(ctx);
+    int result = WSASend(ctx->soc, &ctx->tx_ovl->wsa, 1, &w, f,
+                         (LPOVERLAPPED)ctx->tx_ovl, 0);
     if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-      return false;
+      operation_completed(ctx);
+      return send_result::kSocketError;
     }
-    ctx->operations_in_course++;
-    return true;
+    return send_result::kSuccess;
   }
-  bool process(context* ctx) {
-    auto processor = [this](auto ctx, auto result, auto req, auto res) -> bool {
-      std::get<on_client_request_function_prototype>(result)(*req, *res);
-      auto snd_queue = res->serialize();
-      std::size_t total_sent = 0;
+  inline bool process(context* ctx, const char* buffer, std::size_t size) {
+    auto processor = [this](auto ctx, auto result, auto req, auto res) -> void {
+      std::get<on_client_request_function>(result)(*req, *res);
+      std::queue<std::shared_ptr<common::rorb>> snd_queue = res->serialize();
       while (!snd_queue.empty()) {
         while (true) {
-          overlapped* ovl = new overlapped(io_type::kSend);
-          auto bytes = snd_queue.front()->read(ovl->buffer, kDefaultBufferSize);
-          total_sent += bytes.value();
-          if (bytes.has_value() && bytes.value()) {
-            if (!send(ctx, ovl, ovl->buffer, bytes.value())) {
-              delete ovl;
-              return false;
-            }
-          } else {
-            delete ovl;
+          std::pair<CHAR*, DWORD> packet;
+          packet.first = new CHAR[buffer_size_];
+          packet.second = static_cast<DWORD>(buffer_size_);
+          auto bytes = snd_queue.front()->read(packet.first, packet.second);
+          if (!bytes.has_value() || !bytes.value()) {
+            delete[] packet.first;
             break;
           }
+          packet.second = static_cast<DWORD>(bytes.value());
+          ctx->push_sending_packet(packet);
         }
         snd_queue.pop();
       }
-      return true;
+      operation_started(ctx);
+      if (!PostQueuedCompletionStatus(
+              io_completion_port_handler_, 0, reinterpret_cast<ULONG_PTR>(ctx),
+              reinterpret_cast<LPOVERLAPPED>(new overlapped()))) {
+        operation_completed(ctx);
+      }
     };
-    while (auto req = ctx->decoder->process()) {
-      auto result = on_req_(req);
-      if (auto res = std::get<std::shared_ptr<RSty>>(result); res) {
-        switch (std::get<common::execution_policy>(result)) {
-          case common::execution_policy::kSync:
-            return processor(ctx, result, req, res);
-            break;
-          case common::execution_policy::kAsync:
-            pool_->enqueue([this, processor, ctx, result, req, res]() {
-              std::lock_guard<std::mutex> lock(ctx->mutex);
-              if (!processor(ctx, result, req, res)) {
-                if (ctx->soc != INVALID_SOCKET) {
-                  shutdown(ctx->soc, SD_BOTH);
-                  closesocket(ctx->soc);
-                  ctx->soc = INVALID_SOCKET;
-                  ctx->operations_in_course = 1;
-                  ctx->decoder->reset();
-                  push_context(ctx);
-                }
-              }
-            });
-            break;
-        }
+    if (!ctx->decoder.add(buffer, size)) {
+      return false;
+    }
+    while (auto req = ctx->decoder.process()) {
+      auto res = std::make_shared<RSty>();
+      auto result = on_client_request_(req, res);
+      switch (std::get<common::execution_policy>(result)) {
+        case common::execution_policy::kSync:
+          processor(ctx, result, req, res);
+          break;
+        case common::execution_policy::kAsync:
+          pool_->enqueue([this, processor, ctx, result, req, res]() {
+            processor(ctx, result, req, res);
+          });
+          break;
       }
     }
     return true;
   }
-  void push_context(context* ctx) {
-    std::lock_guard<std::mutex> lock(contexts_queue_mutex_);
-    contexts_queue_.emplace(ctx);
+  inline void operation_started(context* ctx) {
+    ctx->pending_ops.fetch_add(1, std::memory_order_acq_rel);
   }
-  context* pop_context() {
-    std::lock_guard<std::mutex> lock(contexts_queue_mutex_);
-    if (contexts_queue_.empty()) contexts_queue_.emplace(new context());
-    context* ctx = contexts_queue_.front();
-    contexts_queue_.pop();
-    return ctx;
+  inline void operation_completed(context* ctx) {
+    if (ctx->pending_ops.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      if (!ctx->active.load(std::memory_order_acquire)) {
+        delete ctx;
+      }
+    }
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
   bool keep_running_ = true;
-  std::string port_ = kDefaultPortNumber;
-  uint8_t workers_ = kDefaultNumberOfWorkers;
-  HANDLE io_h_ = INVALID_HANDLE_VALUE;
+  std::size_t buffer_size_ = 0;
+  HANDLE io_completion_port_handler_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::shared_ptr<common::thread_pool> pool_;
   std::queue<std::thread> threads_;
-  std::queue<context*> contexts_queue_;
-  std::mutex contexts_queue_mutex_;
   std::unique_ptr<std::thread> manager_;
-  on_client_connection_prototype on_cnn_;
-  on_client_disconnection_prototype on_dis_;
-  on_bytes_received_prototype on_rcv_;
-  on_bytes_sent_prototype on_snd_;
-  on_client_request_prototype on_req_;
-  on_error_prototype on_err_;
+  on_client_request on_client_request_;
 };
 }  // namespace martianlabs::doba::transport::server
 

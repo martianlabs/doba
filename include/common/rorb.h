@@ -58,15 +58,15 @@ class rorb {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  std::optional<std::size_t> read(char* dst, std::size_t len) {
+  std::optional<std::size_t> read(char* dst, std::size_t max_len) {
     if (memory_buffer_ != nullptr) {
-      auto n = len < memory_buffer_size_ ? len : memory_buffer_size_;
+      auto n = max_len < memory_buffer_size_ ? max_len : memory_buffer_size_;
       memcpy(dst, memory_buffer_, n);
       memory_buffer_size_ -= n;
       memory_buffer_ += n;
       return n;
     } else {
-      auto n = stream_->read(dst, len).gcount();
+      auto n = stream_->read(dst, max_len).gcount();
       if (!(stream_->bad() || (stream_->fail() && !stream_->eof()))) {
         return n;
       }

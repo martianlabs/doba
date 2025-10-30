@@ -28,6 +28,7 @@
 #include "helpers.h"
 #include "headers.h"
 #include "common/hash_map.h"
+#include "body_writer.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -43,7 +44,7 @@ class request {
   //
   request(const request&) = delete;
   request(request&&) noexcept = delete;
-  ~request() { free(buf_); }
+  ~request() { free(buffer_); }
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
@@ -52,6 +53,16 @@ class request {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
+  request& set_body(std::size_t length) {
+    body_writer_ = body_writer::memory_writer(length);
+    return *this;
+  }
+  template <typename T>
+    requires std::is_arithmetic_v<T>
+  request& set_body(T&& val) {
+    return set_body(std::to_string(val));
+  }
+  std::shared_ptr<body_writer> get_body_writer() { return body_writer_; }
   auto get_method() const { return method_; }
   auto get_target() const { return target_; }
   auto get_absolute_path() const { return absolute_path_; }
@@ -60,8 +71,8 @@ class request {
     bool searching_for_key = true;
     std::size_t i = 0, j = 0;
     for (; i < cursor_; i++) {
-      if (cursor_ - 1 >= 2 && buf_[i] == constants::character::kCr &&
-          buf_[i + 1] == constants::character::kLf) {
+      if (cursor_ - 1 >= 2 && buffer_[i] == constants::character::kCr &&
+          buffer_[i + 1] == constants::character::kLf) {
         i += 2;
         break;
       }
@@ -69,13 +80,7 @@ class request {
     std::size_t k_start = i, v_start = i;
     common::hash_map<std::string_view, std::string_view> out;
     while (i < cursor_) {
-      if (cursor_ - 1 >= 4 && buf_[i] == constants::character::kCr &&
-          buf_[i + 1] == constants::character::kLf &&
-          buf_[i + 2] == constants::character::kCr &&
-          buf_[i + 3] == constants::character::kLf) {
-        break;
-      }
-      switch (buf_[i]) {
+      switch (buffer_[i]) {
         case constants::character::kColon:
           if (searching_for_key) {
             searching_for_key = false;
@@ -85,9 +90,9 @@ class request {
         case constants::character::kCr:
           if (searching_for_key) return out;
           out.insert(std::make_pair(
-              std::string_view(&buf_[k_start], (v_start - 1) - k_start),
+              std::string_view(&buffer_[k_start], (v_start - 1) - k_start),
               helpers::ows_ltrim(helpers::ows_rtrim(
-                  std::string_view(&buf_[v_start], i - v_start)))));
+                  std::string_view(&buffer_[v_start], i - v_start)))));
           searching_for_key = true;
           k_start = i + 2;
           j = 0;
@@ -96,48 +101,80 @@ class request {
         default:
           break;
       }
+      if (cursor_ - 1 >= 4 && buffer_[i] == constants::character::kCr &&
+          buffer_[i + 1] == constants::character::kLf &&
+          buffer_[i + 2] == constants::character::kCr &&
+          buffer_[i + 3] == constants::character::kLf) {
+        break;
+      }
       i++;
     }
     return out;
   }
+  auto has_body() const { return has_body_; }
+  auto get_body_length() const { return body_length_; }
   // ___________________________________________________________________________
   // STATIC-METHODs                                                   ( public )
   //
-  static auto from(const char* const buf, std::size_t len, bool& expecting_body,
-                   std::size_t& expected_body_length) {
-    auto instance = std::shared_ptr<request>(new request(buf, len));
-    if (instance) {
-      std::size_t i = 0;
-      if (instance->check_request_line(i)) {
-        if (!instance->check_headers(i, expecting_body, expected_body_length)) {
-          instance.reset();
-        }
-      } else {
-        instance.reset();
+  static inline auto from(char* buf, std::size_t len) {
+    method method = method::kUnknown;
+    target target = target::kUnknown;
+    std::shared_ptr<request> req;
+    bool ebd = false;
+    std::size_t ebdlen = 0;
+    std::string absolute_path;
+    std::string query;
+    std::size_t i = 0;
+    if (check_request_line(buf, len, method, target, absolute_path, query, i)) {
+      if (check_headers(buf, len, i, ebd, ebdlen)) {
+        req = std::shared_ptr<request>(new request(
+            buf, len, method, target, absolute_path, query, ebd, ebdlen));
       }
     }
-    return instance;
+    return req;
   }
 
  private:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                        ( private )
   //
-  request(const char* const buf, std::size_t len) {
-    buf_ = NULL;
+  request(const char* const buf, std::size_t len, method method, target target,
+          const std::string& absolute_path, const std::string& query,
+          bool has_body, std::size_t body_length) {
     size_ = 0;
     cursor_ = 0;
-    method_ = method::kUnknown;
-    target_ = target::kUnknown;
-    if (buf_ = (char*)malloc(len)) {
-      memcpy(buf_, buf, len);
+    method_ = method;
+    target_ = target;
+    body_length_ = body_length;
+    if (has_body_ = has_body) {
+      if (body_length_) {
+        if (body_length_ <= constants::limits::kDefaultBodyMsgMaxSizeInRam) {
+          body_writer_ = body_writer::memory_writer(body_length);
+        } else {
+          // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+          // [to-do] -> add support for this!
+          // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        }
+      } else {
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        // [to-do] -> add support for this!
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+      }
+    }
+    absolute_path_ = absolute_path;
+    query_ = query;
+    if (buffer_ = (char*)malloc(len)) {
+      memcpy(buffer_, buf, len);
       cursor_ = size_ = len;
     }
   }
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //
-  bool check_request_line(std::size_t& i) {
+  static inline bool check_request_line(char* buffer, const std::size_t& cursor,
+                                        method& method, target& target,
+                                        std::string& absolute_path,
+                                        std::string& query, std::size_t& i) {
     // +---------+-------------------------------------------------------------+
     // | Field   | Definition                                                  |
     // +---------+-------------------------------------------------------------+
@@ -150,50 +187,50 @@ class request {
     // | source: https://datatracker.ietf.org/doc/html/rfc9110                 |
     // +----------------+------------------------------------------------------+
     constexpr std::size_t kHttpVersionLen = 8;
-    while (i < cursor_) {
-      if (buf_[i] == constants::character::kSpace) break;
-      if (!helpers::is_token(buf_[i++])) return false;
+    while (i < cursor) {
+      if (buffer[i] == constants::character::kSpace) break;
+      if (!helpers::is_token(buffer[i++])) return false;
     }
-    if (i == cursor_) return false;
-    std::string_view method(buf_, i++);
-    switch (method.length()) {
+    if (i == cursor) return false;
+    std::string_view str_method(buffer, i++);
+    switch (str_method.length()) {
       case 3:
-        if (!method.compare(constants::method::kGet)) {
-          method_ = method::kGet;
-        } else if (!method.compare(constants::method::kPut)) {
-          method_ = method::kPut;
+        if (!str_method.compare(constants::method::kGet)) {
+          method = method::kGet;
+        } else if (!str_method.compare(constants::method::kPut)) {
+          method = method::kPut;
         } else {
           return false;
         }
         break;
       case 4:
-        if (!method.compare(constants::method::kHead)) {
-          method_ = method::kHead;
-        } else if (!method.compare(constants::method::kPost)) {
-          method_ = method::kPost;
+        if (!str_method.compare(constants::method::kHead)) {
+          method = method::kHead;
+        } else if (!str_method.compare(constants::method::kPost)) {
+          method = method::kPost;
         } else {
           return false;
         }
         break;
       case 5:
-        if (!method.compare(constants::method::kTrace)) {
-          method_ = method::kTrace;
+        if (!str_method.compare(constants::method::kTrace)) {
+          method = method::kTrace;
         } else {
           return false;
         }
         break;
       case 6:
-        if (!method.compare(constants::method::kDelete)) {
-          method_ = method::kDelete;
+        if (!str_method.compare(constants::method::kDelete)) {
+          method = method::kDelete;
         } else {
           return false;
         }
         break;
       case 7:
-        if (!method.compare(constants::method::kConnect)) {
-          method_ = method::kConnect;
-        } else if (!method.compare(constants::method::kOptions)) {
-          method_ = method::kOptions;
+        if (!str_method.compare(constants::method::kConnect)) {
+          method = method::kConnect;
+        } else if (!str_method.compare(constants::method::kOptions)) {
+          method = method::kOptions;
         } else {
           return false;
         }
@@ -224,7 +261,7 @@ class request {
     // | FORM 4: asterisk-form (used with OPTIONS)                             |
     // |    asterisk-form = "*"                                                |
     // +=======================================================================+
-    if (method_ == method::kConnect) {
+    if (method == method::kConnect) {
       // +---------------------------------------------------------------------+
       // |                                                      authority-form |
       // +----------------+----------------------------------------------------+
@@ -264,7 +301,7 @@ class request {
       // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       // [to-do] -> add support for this!
       // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    } else if (method_ == method::kOptions) {
+    } else if (method == method::kOptions) {
       // +---------------------------------------------------------------------+
       // |                                                       asterisk-form |
       // +----------------+----------------------------------------------------+
@@ -275,7 +312,8 @@ class request {
       // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       // [to-do] -> add support for this!
       // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    } else if (std::string path; try_to_get_absolute_path(i, path)) {
+    } else if (std::string path;
+               try_to_get_absolute_path(buffer, cursor, i, path)) {
       // +-------------------------------------------------------------------+
       // |                                                       origin-form |
       // +----------------+--------------------------------------------------+
@@ -291,10 +329,10 @@ class request {
       // +----------------+--------------------------------------------------+
       // | source: https://datatracker.ietf.org/doc/html/rfc9110             |
       // +----------------+--------------------------------------------------+
-      target_ = target::kOriginForm;
-      absolute_path_ = path;
-      if (std::string query;  try_to_get_query_part(i, query)) {
-        query_ = query;
+      target = target::kOriginForm;
+      absolute_path = path;
+      if (std::string qry; try_to_get_query_part(buffer, cursor, i, qry)) {
+        query = qry;
       }
     } else {
       // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -309,23 +347,23 @@ class request {
     // +----------------+------------------------------------------------------+
     // | source: https://datatracker.ietf.org/doc/html/rfc9110 |               |
     // +-----------------------------------------------------------------------+
-    if (i >= cursor_) return false;
-    if (buf_[i++] != constants::character::kSpace) return false;
-    if (cursor_ - i < kHttpVersionLen) return false;
-    if (buf_[i] != constants::character::kHUpperCase ||
-        buf_[i + 1] != constants::character::kTUpperCase ||
-        buf_[i + 2] != constants::character::kTUpperCase ||
-        buf_[i + 3] != constants::character::kPUpperCase ||
-        buf_[i + 4] != constants::character::kSlash ||
-        !helpers::is_digit(buf_[i + 5]) ||
-        buf_[i + 6] != constants::character::kDot ||
-        !helpers::is_digit(buf_[i + 7])) {
+    if (i >= cursor) return false;
+    if (buffer[i++] != constants::character::kSpace) return false;
+    if (cursor - i < kHttpVersionLen) return false;
+    if (buffer[i] != constants::character::kHUpperCase ||
+        buffer[i + 1] != constants::character::kTUpperCase ||
+        buffer[i + 2] != constants::character::kTUpperCase ||
+        buffer[i + 3] != constants::character::kPUpperCase ||
+        buffer[i + 4] != constants::character::kSlash ||
+        !helpers::is_digit(buffer[i + 5]) ||
+        buffer[i + 6] != constants::character::kDot ||
+        !helpers::is_digit(buffer[i + 7])) {
       return false;
     }
     i += kHttpVersionLen;
-    if (cursor_ - i < 2) return false;
-    if (buf_[i] != constants::character::kCr ||
-        buf_[i + 1] != constants::character::kLf) {
+    if (cursor - i < 2) return false;
+    if (buffer[i] != constants::character::kCr ||
+        buffer[i + 1] != constants::character::kLf) {
       return false;
     }
     i += 2;
@@ -347,23 +385,25 @@ class request {
   // +-----------------+-------------------------------------------------------+
   // | source: https://datatracker.ietf.org/doc/html/rfc9110                   |
   // +-------------------------------------------------------------------------+
-  bool check_headers(std::size_t& i, bool& exp_bdy, std::size_t& exp_bdy_len) {
+  static inline bool check_headers(char* buffer, const std::size_t& cursor,
+                                   std::size_t& i, bool& exp_bdy,
+                                   std::size_t& exp_bdy_len) {
     std::size_t clength_count = 0;
     std::size_t tencoding_count = 0;
     int host_count = 0;
-    while (i < cursor_) {
+    while (i < cursor) {
       std::size_t beg = i;
-      while (i < cursor_ && buf_[i] != constants::character::kColon) {
-        buf_[i++] = helpers::tolower_ascii(buf_[i]);
+      while (i < cursor && buffer[i] != constants::character::kColon) {
+        buffer[i++] = helpers::tolower_ascii(buffer[i]);
       }
-      if (i >= cursor_) return false;
+      if (i >= cursor) return false;
       std::size_t colon = i;
-      while (i < cursor_ && buf_[i] != constants::character::kCr) i++;
-      if (i++ >= cursor_) return false;
-      if (i >= cursor_ || buf_[i] != constants::character::kLf) return false;
-      if (i++ >= cursor_) return false;
-      std::string_view name((const char*)&buf_[beg], colon - beg);
-      std::string_view value((const char*)&buf_[colon + 1], (i - 3) - colon);
+      while (i < cursor && buffer[i] != constants::character::kCr) i++;
+      if (i++ >= cursor) return false;
+      if (i >= cursor || buffer[i] != constants::character::kLf) return false;
+      if (i++ >= cursor) return false;
+      std::string_view name((const char*)&buffer[beg], colon - beg);
+      std::string_view value((const char*)&buffer[colon + 1], (i - 3) - colon);
       // [field-name] validation..
       if (!name.length()) return false;
       for (auto j = 0; j < name.length(); j++) {
@@ -392,9 +432,9 @@ class request {
       } else if (!name.compare(headers::kHost)) {
         host_count++;
       }
-      if (cursor_ - i >= 2) {
-        if (buf_[i] == constants::character::kCr &&
-            buf_[i + 1] == constants::character::kLf) {
+      if (cursor - i >= 2) {
+        if (buffer[i] == constants::character::kCr &&
+            buffer[i + 1] == constants::character::kLf) {
           i += 2;
           break;
         }
@@ -402,22 +442,25 @@ class request {
     }
     return host_count == 1;
   }
-  bool try_to_get_absolute_path(std::size_t& i, std::string& path) {
+  static inline bool try_to_get_absolute_path(char* buffer,
+                                              const std::size_t& cursor,
+                                              std::size_t& i,
+                                              std::string& path) {
     char ch;
-    if (i >= cursor_) return false;
-    if (buf_[i] != constants::character::kSlash) return false;
-    while (i < cursor_) {
-      if (buf_[i] == constants::character::kPercent) {
-        if (i + 2 >= cursor_) return false;
-        if (!helpers::is_hex_digit(buf_[i + 1]) ||
-            !helpers::is_hex_digit(buf_[i + 2])) {
+    if (i >= cursor) return false;
+    if (buffer[i] != constants::character::kSlash) return false;
+    while (i < cursor) {
+      if (buffer[i] == constants::character::kPercent) {
+        if (i + 2 >= cursor) return false;
+        if (!helpers::is_hex_digit(buffer[i + 1]) ||
+            !helpers::is_hex_digit(buffer[i + 2])) {
           return false;
         }
-        auto ptr = (const char*)&buf_[i + 1];
+        auto ptr = (const char*)&buffer[i + 1];
         ch = static_cast<char>(std::stoi(std::string(ptr, 2), nullptr, 16));
         i += 3;
       } else {
-        ch = buf_[i];
+        ch = buffer[i];
         if (ch == constants::character::kSpace ||
             ch == constants::character::kQuestion) {
           break;
@@ -431,22 +474,24 @@ class request {
     }
     return true;
   }
-  bool try_to_get_query_part(std::size_t& i, std::string& query) {
+  static inline bool try_to_get_query_part(char* buffer,
+                                           const std::size_t& cursor,
+                                           std::size_t& i, std::string& query) {
     char ch;
-    if (i >= cursor_) return false;
-    if (buf_[i] != constants::character::kQuestion) return false;
-    while (i < cursor_) {
-      if (buf_[i] == constants::character::kPercent) {
-        if (i + 2 >= cursor_) return false;
-        if (!helpers::is_hex_digit(buf_[i + 1]) ||
-            !helpers::is_hex_digit(buf_[i + 2])) {
+    if (i >= cursor) return false;
+    if (buffer[i] != constants::character::kQuestion) return false;
+    while (i < cursor) {
+      if (buffer[i] == constants::character::kPercent) {
+        if (i + 2 >= cursor) return false;
+        if (!helpers::is_hex_digit(buffer[i + 1]) ||
+            !helpers::is_hex_digit(buffer[i + 2])) {
           return false;
         }
-        auto ptr = (const char*)&buf_[i + 1];
+        auto ptr = (const char*)&buffer[i + 1];
         ch = static_cast<char>(std::stoi(std::string(ptr, 2), nullptr, 16));
         i += 3;
       } else {
-        ch = buf_[i];
+        ch = buffer[i];
         if (ch == constants::character::kSpace) break;
       }
       if (!helpers::is_pchar(ch) && ch != constants::character::kSlash &&
@@ -461,13 +506,16 @@ class request {
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* buf_;
+  char* buffer_;
   std::size_t size_;
   std::size_t cursor_;
   method method_;
   target target_;
   std::string absolute_path_;
   std::string query_;
+  bool has_body_ = false;
+  std::size_t body_length_ = 0;
+  std::shared_ptr<body_writer> body_writer_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

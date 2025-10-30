@@ -21,8 +21,6 @@
 #ifndef martianlabs_doba_protocol_http11_decoder_h
 #define martianlabs_doba_protocol_http11_decoder_h
 
-#include "body_writer.h"
-
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
 // decoder                                                             ( class )
@@ -39,6 +37,7 @@ class decoder {
     cursor_ = 0;
     size_ = constants::limits::kDefaultCoreMsgMaxSizeInRam;
     buffer_ = (char*)malloc(size_);
+    body_bytes_read_ = 0;
   }
   decoder(const decoder&) = delete;
   decoder(decoder&&) noexcept = delete;
@@ -51,7 +50,7 @@ class decoder {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  bool add(const char* ptr, std::size_t size) {
+  inline bool add(const char* ptr, std::size_t size) {
     if ((size_ - cursor_) < size) {
       // ((error)): the size of the incoming buffer exceeds limits!
       return false;
@@ -60,66 +59,60 @@ class decoder {
     cursor_ += size;
     return true;
   }
-  std::shared_ptr<request> process() {
+  inline std::shared_ptr<request> process() {
     static const auto eoh = (const char*)constants::string::kEndOfHeaders;
     static const auto eoh_len = sizeof(constants::string::kEndOfHeaders) - 1;
+    // [first] let's detect the [end-of-headers] position..
     if (!request_) {
-      // let's detect the [end-of-headers] position..
       std::string_view content(buffer_, cursor_);
       if (auto hdr = content.find(eoh); hdr != std::string_view::npos) {
-        request_ = request::from(buffer_, cursor_, exp_bdy_, exp_bdy_len_);
-        if (exp_bdy_) body_writer_ = body_writer::memory_writer(exp_bdy_len_);
+        // try to create a valid request from incoming data..
+        request_ = request::from(buffer_, cursor_);
+        // now let's adjust internal buffer just by copying remaining bytes..
         if (cursor_ -= hdr + eoh_len) {
           memmove(buffer_, &buffer_[hdr + eoh_len], cursor_);
         }
-        cur_bdy_len_ = 0;
       }
     }
-    if (body_writer_) {
-      if (exp_bdy_len_) {
-        // [content-length] based body!
-        std::size_t pending = exp_bdy_len_ - cur_bdy_len_;
-        std::size_t to_grab = cursor_ >= pending ? pending : cursor_;
-        body_writer_->write(buffer_, to_grab);
-        cur_bdy_len_ += to_grab;
-        cursor_ -= to_grab;
-      } else {
-        // [transfer-encoding:chunks] based body!
-        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        // [to-do] -> add support for this!
-        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    // [second] let's process the [bopy] part (if present)..
+    if (request_) {
+      auto body_length = request_->get_body_length();
+      if (request_->has_body()) {
+        if (body_length) {
+          // [content-length] based body!
+          std::size_t pending = body_length - body_bytes_read_;
+          std::size_t to_grab = cursor_ >= pending ? pending : cursor_;
+          request_->get_body_writer()->write(buffer_, to_grab);
+          body_bytes_read_ += to_grab;
+          cursor_ -= to_grab;
+        } else {
+          // [transfer-encoding:chunks] based body!
+          // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+          // [to-do] -> add support for this!
+          // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        }
+      }
+      if (!request_->has_body() || body_bytes_read_ == body_length) {
+        return std::move(request_);
       }
     }
-    return !exp_bdy_ || cur_bdy_len_ == exp_bdy_len_ ? std::move(request_)
-                                                     : nullptr;
+    return nullptr;
   }
-  void reset() {
+  inline void reset() {
     cursor_ = 0;
-    exp_bdy_ = false;
-    exp_bdy_len_ = 0;
-    cur_bdy_len_ = 0;
+    body_bytes_read_ = 0;
     request_.reset();
-    body_writer_.reset();
   }
 
  private:
-  // ___________________________________________________________________________
-  // CONSTANTs                                                       ( private )
-  //
-  // ___________________________________________________________________________
-  // METHODs                                                         ( private )
-  //
   // ___________________________________________________________________________
   // STATIC-ATTRIBUTEs                                               ( private )
   //
   char* buffer_;
   std::size_t size_;
   std::size_t cursor_;
-  bool exp_bdy_;
-  std::size_t exp_bdy_len_;
-  std::size_t cur_bdy_len_;
+  std::size_t body_bytes_read_;
   std::shared_ptr<request> request_;
-  std::shared_ptr<body_writer> body_writer_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 
