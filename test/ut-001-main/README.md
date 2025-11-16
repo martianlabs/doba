@@ -25,11 +25,9 @@ cmake --build build -j$(nproc)
 After building the binary you should get something like the following:
 ```bash
 .
-├─**gateway**
-│     └─build
-│         ├─gateway        Microservice binary file.
-│         ├─ca-root.pem    Needed certificate in order to consume Azure based resources (you can find it in the */setup/microsoft/* folder).
-│         └─registry.json  Needed configuration file if using locally provided registry services (automatically copied by default from */libraries/registry/* folder).
+├─ut-001-main
+│   └─build
+│       └─test
 .
 ```
 
