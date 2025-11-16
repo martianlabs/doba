@@ -12,7 +12,7 @@ To build a **Debug** runtime configuration use:
 ```bash
 cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
 cmake --build build -j$(nproc)
-
+```
 
 For <strong>Release</strong> configuration use:<br><br>
 <pre style="
