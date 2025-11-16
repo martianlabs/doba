@@ -9,8 +9,8 @@
 # BUILD
 
 To build a **Debug** runtime configuration use:
-<pre style="font-family:'Courier New', monospace; font-size:14px; color: rgb(120, 230, 115); background-color: rgba(32, 32, 32, 1.0);">
-cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=<vcpkg-installation-path>/scripts/buildsystems/vcpkg.cmake
+<pre style="font-family:'Courier New', monospace; font-size:24px; color: rgb(120, 230, 115); background-color: rgba(32, 32, 32, 1.0);">
+cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
 cmake --build build -j$(nproc)
 </pre>
 
@@ -19,7 +19,7 @@ For <strong>Release</strong> configuration use:<br><br>
 <pre style="
   color: rgb(120, 230, 115);
   background-color: rgba(32, 32, 32, 1.0);">
-cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=<vcpkg-installation-path>/scripts/buildsystems/vcpkg.cmake
+cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j$(nproc)
 </pre>
 Where,<br><br>
