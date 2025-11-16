@@ -27,8 +27,8 @@ After building the binary you should get something like the following:
 .
 ├─ut-001-main
 │   └─build
-|       └<configuration>
-│           └─test-001
+|       └─|configuration|
+│            └─test-001      (Executable file)
 .
 ```
 
