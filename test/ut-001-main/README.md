@@ -1,6 +1,6 @@
 <div align="center">
 
-  ![DDS Compose](../../resources/gateway_header.png)
+  ![doba](../../resources/doba_logo.png)
 
 </div>
 
