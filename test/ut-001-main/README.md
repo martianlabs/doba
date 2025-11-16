@@ -4,14 +4,13 @@
 
 </div>
 
+# OVERVIEW
+
 <h2 style="font-size:48px;">
   <strong>OVERVIEW<strong>
 </h2>
 
 <span style="font-family:'Courier New', monospace; font-size:14px">
-  It is a stateless physical component of the platform (a process or set of processes, potentially coordinated with a load balancer) whose main task is to act as an access gateway/router for elements external to the core of the platform and to standardize messages content before injecting them to the system. Through this component, both data ingestion and data querying can be performed. It provides a standard API to facilitate integration with third-party systems.
-  Basically, it offers a way to interact with the system (via processor). It uses the registry to obtain its configuration and, mainly, to determine the set of available services and their routes.
-  This configuration can be changed at runtime.
 </span><br>
 
 <h2 style="font-size:48px;">
