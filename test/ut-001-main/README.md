@@ -4,27 +4,17 @@
 
 </div>
 
-<h1>OVERVIEW</h1>
+# OVERVIEW
 
-<h2 style="font-size:48px;">
-  <strong>OVERVIEW<strong>
-</h2>
+# BUILD
 
-<span style="font-family:'Courier New', monospace; font-size:14px">
-</span><br>
-
-<h2 style="font-size:48px;">
-  <strong>BUILD<strong>
-</h2>
-
-<span style="font-family:'Courier New', monospace; font-size:14px">
-For <strong>Debug</strong> configuration use:<br><br>
-<pre style="
-  color: rgb(120, 230, 115);
-  background-color: rgba(32, 32, 32, 1.0);">
+To build a **Debug** runtime configuration use:
+<pre style="font-family:'Courier New', monospace; font-size:14px; color: rgb(120, 230, 115); background-color: rgba(32, 32, 32, 1.0);">
 cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=<vcpkg-installation-path>/scripts/buildsystems/vcpkg.cmake
 cmake --build build -j$(nproc)
 </pre>
+
+
 For <strong>Release</strong> configuration use:<br><br>
 <pre style="
   color: rgb(120, 230, 115);
