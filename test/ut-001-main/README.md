@@ -9,10 +9,9 @@
 # BUILD
 
 To build a **Debug** runtime configuration use:
-<pre style="font-family:'Courier New', monospace; font-size:24px; color: rgb(120, 230, 115); background-color: rgba(32, 32, 32, 1.0);">
+```bash
 cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
 cmake --build build -j$(nproc)
-</pre>
 
 
 For <strong>Release</strong> configuration use:<br><br>
