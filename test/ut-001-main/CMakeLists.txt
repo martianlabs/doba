@@ -5,5 +5,5 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(${CMAKE_SOURCE_DIR})
-add_executable(test-001 main.cpp)
-target_include_directories(gateway PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
+add_executable(test-001 ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
+target_include_directories(test-001 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
