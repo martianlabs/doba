@@ -11,13 +11,13 @@
 To build a **Debug** runtime configuration use:
 ```bash
 cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
-cmake --build build -j$(nproc)
+cmake --build build
 ```
 
 To build a **Release** runtime configuration use:
 ```bash
 cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j$(nproc)
+cmake --build build
 ```
 
 # RUN
@@ -27,7 +27,8 @@ After building the binary you should get something like the following:
 .
 ├─ut-001-main
 │   └─build
-│       └─test
+|       └<configuration>
+│           └─test-001
 .
 ```
 
