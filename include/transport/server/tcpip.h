@@ -72,13 +72,11 @@
 
 #include "platform.h"
 #include "transport/result.h"
-#include "transport/process_result.h"
 
 // =============================================================================
 // platform-dependent includes
 // =============================================================================
 #ifdef _WIN32
-using socket_type = SOCKET;
 #include "transport/server/tcpip_windows.h"
 #elif __linux__
 #include "transport/server/tcpip_linux.h"

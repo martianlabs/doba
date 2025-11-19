@@ -67,13 +67,6 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#include <chrono>
-#include <ctime>
-#include <iomanip>
-#include <sstream>
-#include <string>
-#include <fstream>
-
 #include "protocol/http11/server.h"
 
 using namespace martianlabs::doba::common;
@@ -84,8 +77,9 @@ int main(int argc, char* argv[]) {
   my_server
       .add_route(
           method::kGet, "/plaintext",
-          [](const request& req, response& res) {
-            res.ok_200()
+          [](std::shared_ptr<const request> req,
+             std::shared_ptr<response> res) {
+            res->ok_200()
                 .add_header("Content-Type", "text/plain")
                 .add_header("Content-Length", 13)
                 .add_header("Date", "Thu, 11 Sep 2025 19:35:32 GMT")

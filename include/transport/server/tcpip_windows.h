@@ -70,12 +70,9 @@
 #ifndef martianlabs_doba_transport_server_tcpip_windows_h
 #define martianlabs_doba_transport_server_tcpip_windows_h
 
-#include <future>
-#include <optional>
 #include <functional>
 
 #include "common/rorb.h"
-#include "common/thread_pool.h"
 
 namespace martianlabs::doba::transport::server {
 // =============================================================================
@@ -106,11 +103,10 @@ class tcpip {
   // ___________________________________________________________________________
   // USINGs                                                           ( public )
   //
-  using on_client_request_function = std::function<void(const RQty&, RSty&)>;
-  using on_client_request_result =
-      std::tuple<on_client_request_function, common::execution_policy>;
-  using on_client_request = std::function<on_client_request_result(
-      std::shared_ptr<const RQty>, std::shared_ptr<RSty>)>;
+  using on_request = std::function<void(
+      std::shared_ptr<const RQty>, std::function<void(std::shared_ptr<RSty>)>)>;
+  using on_connection = std::function<void(uint32_t)>;
+  using on_disconnection = std::function<void(uint32_t)>;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
@@ -173,7 +169,6 @@ class tcpip {
     return result::kSucceeded;
   }
   result stop() {
-    if (pool_) pool_->stop();
     if (io_completion_port_handler_ != INVALID_HANDLE_VALUE) {
       if (!CloseHandle(io_completion_port_handler_)) {
         return result::kCouldNotCleanupPlaformResources;
@@ -192,73 +187,82 @@ class tcpip {
       if (threads_.front().joinable()) threads_.front().join();
       threads_.pop();
     }
-    pool_.reset();
     keep_running_ = true;
     return result::kSucceeded;
   }
   template <typename Fn>
-  void set_on_client_request(Fn&& fn) {
-    on_client_request_ = std::forward<Fn>(fn);
+  void set_on_request(Fn&& fn) {
+    on_request_ = std::forward<Fn>(fn);
+  }
+  template <typename Fn>
+  void set_on_connection(Fn&& fn) {
+    on_connection_ = std::forward<Fn>(fn);
+  }
+  template <typename Fn>
+  void set_on_disconnection(Fn&& fn) {
+    on_disconnection_ = std::forward<Fn>(fn);
   }
 
  private:
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
   //
-  enum class send_result : uint8_t { kSuccess, kSending, kSocketError };
-  enum class io_type : uint8_t { kPost, kSend, kReceive };
-  struct overlapped {
-    overlapped(std::size_t buffer_size = 0, io_type in_type = io_type::kPost) {
-      type = in_type;
-      buffer = buffer_size ? new char[buffer_size] : nullptr;
-      buffer_length = 0;
-    }
-    overlapped(const overlapped&) = delete;
-    overlapped(overlapped&&) noexcept = delete;
-    ~overlapped() { delete[] buffer; }
-    overlapped& operator=(const overlapped&) = delete;
-    overlapped& operator=(overlapped&&) noexcept = delete;
-    WSAOVERLAPPED inner_ovl;
-    CHAR* buffer;
-    DWORD buffer_length;
-    io_type type;
+  enum class io_type : uint8_t { kEnqueue, kSend, kReceive };
+  struct overlapped_base : public OVERLAPPED {
+    overlapped_base(io_type in_type) : OVERLAPPED{}, type{in_type}, wsa{} {}
+    const io_type type;
     WSABUF wsa;
   };
+  struct overlapped_receive : public overlapped_base {
+    overlapped_receive(std::size_t in_buffer_size)
+        : overlapped_base(io_type::kReceive) {
+      buffer = new CHAR[in_buffer_size];
+      buffer_size = in_buffer_size;
+    }
+    ~overlapped_receive() { delete[] buffer; }
+    CHAR* buffer;
+    DWORD buffer_size;
+  };
+  struct overlapped_send : public overlapped_base {
+    overlapped_send(std::size_t in_buffer_size)
+        : overlapped_base(io_type::kSend) {
+      buffer = new CHAR[in_buffer_size];
+      buffer_size = in_buffer_size;
+    }
+    ~overlapped_send() { delete[] buffer; }
+    CHAR* buffer;
+    DWORD buffer_size;
+  };
+  struct overlapped_enqueue : public overlapped_base {
+    overlapped_enqueue() : overlapped_base(io_type::kEnqueue) {}
+    std::queue<overlapped_send*> ovls;
+  };
   struct context {
-    context(SOCKET s, std::size_t in_buffer_size) : soc{s} {
-      rx_ovl = new overlapped(in_buffer_size, io_type::kReceive);
-      tx_ovl = new overlapped(in_buffer_size, io_type::kSend);
+    context(SOCKET soc, std::size_t buffer_size) {
+      socket = soc;
+      ovr = new overlapped_receive(buffer_size);
     }
     context(const context&) = delete;
     context(context&&) noexcept = delete;
-    ~context() {
-      delete rx_ovl;
-      delete tx_ovl;
-    }
+    ~context() { delete ovr; }
     context& operator=(const context&) = delete;
     context& operator=(context&&) noexcept = delete;
-    inline void push_sending_packet(const std::pair<CHAR*, DWORD>& packet) {
-      std::scoped_lock<std::mutex> lock(sending_queue_mutex);
-      sending_queue.push(packet);
-    }
-    inline auto pop_sending_packet() {
-      std::scoped_lock<std::mutex> lock(sending_queue_mutex);
-      std::pair<CHAR*, DWORD> packet{nullptr, 0};
-      if (!sending_queue.empty()) {
-        packet = sending_queue.front();
-        sending_queue.pop();
+    void sending_queue_push(std::queue<overlapped_send*>& in) {
+      while (!in.empty()) {
+        sending_queue.emplace(in.front());
+        in.pop();
       }
-      return packet;
     }
-    std::queue<std::pair<CHAR*, DWORD>> sending_queue;
+    overlapped_send* sending_queue_front() const {
+      return !sending_queue.empty() ? sending_queue.front() : nullptr;
+    }
+    void sending_queue_pop() { sending_queue.pop(); }
+    overlapped_receive* ovr{nullptr};
+    std::queue<overlapped_send*> sending_queue;
     std::mutex sending_queue_mutex;
-    std::atomic<bool> active{true};
     std::atomic<bool> sending{false};
-    std::atomic<int> pending_ops{0};
-    overlapped* rx_ovl;
-    overlapped* tx_ovl;
+    SOCKET socket;
     DEty decoder;
-    SOCKET soc;
   };
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
@@ -343,205 +347,134 @@ class tcpip {
     return true;
   }
   bool setup_workers(std::size_t workers) {
-    if (!(pool_ = std::make_shared<common::thread_pool>(workers))) {
-      return false;
-    }
     for (int i = 0; i < workers; i++) {
       threads_.emplace(std::thread([this]() {
         while (true) {
-          context* ctx = NULL;
-          overlapped* ovl = NULL;
+          ULONG_PTR key = NULL;
+          overlapped_base* ovl = NULL;
           DWORD bytes = 0;
           if (!GetQueuedCompletionStatus(io_completion_port_handler_, &bytes,
-                                         (PULONG_PTR)&ctx, (LPOVERLAPPED*)&ovl,
-                                         INFINITE)) {
+                                         &key, (LPOVERLAPPED*)&ovl, INFINITE)) {
             if (!ovl && GetLastError() == ERROR_INVALID_HANDLE) {
               break;
             }
-            if (ovl && ctx) {
+            if (ovl && key) {
               // this means a [closed] connection!
-              // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-              // [to-do] -> we need to call user's disconnection event!
-              // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-              if (ctx->active.exchange(false)) {
-                shutdown(ctx->soc, SD_BOTH);
-                closesocket(ctx->soc);
-              }
-              operation_completed(ctx);
             }
             continue;
           }
-          if (!ctx) continue;
+          if (!key) {
+            continue;
+          }
+          context* ctx = reinterpret_cast<context*>(key);
           if (!ovl) {
             if (!bytes) {
               // this means a [new] connection!
-              // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-              // [to-do] -> we need to call user's connection event!
-              // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-              if (!receive(ctx)) {
+              if (!receive(ctx->socket, ctx->ovr)) {
+                // this means a [closed] connection!
               }
             }
             continue;
           }
           switch (ovl->type) {
-            case io_type::kPost:
-              if (auto packet = ctx->pop_sending_packet(); packet.first) {
-                switch (send(ctx, packet.first, packet.second)) {
-                  case send_result::kSuccess:
-                    delete[] packet.first;
-                    break;
-                  case send_result::kSending:
-                    ctx->push_sending_packet(packet);
-                    break;
-                  case send_result::kSocketError:
-                    delete[] packet.first;
-                    break;
+            case io_type::kEnqueue: {
+              overlapped_enqueue* ove = static_cast<overlapped_enqueue*>(ovl);
+              std::unique_lock<std::mutex> lock(ctx->sending_queue_mutex);
+              ctx->sending_queue_push(ove->ovls);
+              if (overlapped_send* ovs = ctx->sending_queue_front()) {
+                if (!ctx->sending.exchange(true, std::memory_order_acq_rel)) {
+                  if (send(ctx->socket, ovs)) {
+                    ctx->sending_queue_pop();
+                  } else {
+                    // let's close this connection!
+                  }
+                }
+                if (!PostQueuedCompletionStatus(io_completion_port_handler_, 0,
+                                                (ULONG_PTR)key,
+                                                new overlapped_enqueue())) {
+                  // let's close this connection!
                 }
               }
-              delete ovl;
+              delete ove;
               break;
-            case io_type::kSend:
+            }
+            case io_type::kSend: {
+              overlapped_send* ovs = static_cast<overlapped_send*>(ovl);
               ctx->sending.store(false, std::memory_order_release);
-              if (auto packet = ctx->pop_sending_packet(); packet.first) {
-                switch (send(ctx, packet.first, packet.second)) {
-                  case send_result::kSuccess:
-                    delete[] packet.first;
-                    break;
-                  case send_result::kSending:
-                    ctx->push_sending_packet(packet);
-                    break;
-                  case send_result::kSocketError:
-                    delete[] packet.first;
-                    break;
-                }
-              }
+              delete ovs;
               break;
-            case io_type::kReceive:
+            }
+            case io_type::kReceive: {
               if (bytes) {
-                if (process(ctx, ovl->wsa.buf, bytes)) {
-                  if (!receive(ctx)) {
-                    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-                    // [to-do] -> we need to call user's disconnection event!
-                    // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                    if (ctx->active.exchange(false)) {
-                      shutdown(ctx->soc, SD_BOTH);
-                      closesocket(ctx->soc);
-                    }
+                if (process(ctx, ctx->ovr->wsa.buf, bytes)) {
+                  if (!receive(ctx->socket, ctx->ovr)) {
+                    // let's close this connection!
                   }
                 } else {
-                  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-                  // [to-do] -> we need to call user's disconnection event!
-                  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                  if (ctx->active.exchange(false)) {
-                    shutdown(ctx->soc, SD_BOTH);
-                    closesocket(ctx->soc);
-                  }
+                  // let's close this connection!
                 }
               } else {
-                // this means a [closed] connection!
-                // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-                // [to-do] -> we need to call user's disconnection event!
-                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                if (ctx->active.exchange(false)) {
-                  shutdown(ctx->soc, SD_BOTH);
-                  closesocket(ctx->soc);
-                }
+                // let's close this connection!
               }
               break;
+            }
           }
-          operation_completed(ctx);
         }
       }));
     }
     return true;
   }
-  inline bool receive(context* ctx) {
-    std::memset(&ctx->rx_ovl->inner_ovl, 0, sizeof(WSAOVERLAPPED));
-    std::memset(&ctx->rx_ovl->wsa, 0, sizeof(WSABUF));
+  inline bool receive(SOCKET socket, overlapped_receive* ovr) {
     DWORD f = 0, r = 0;
-    ctx->rx_ovl->wsa.buf = ctx->rx_ovl->buffer;
-    ctx->rx_ovl->wsa.len = ULONG(buffer_size_);
-    operation_started(ctx);
-    int result = WSARecv(ctx->soc, &ctx->rx_ovl->wsa, 1, &r, &f,
-                         (LPOVERLAPPED)ctx->rx_ovl, 0);
+    ovr->wsa.buf = ovr->buffer;
+    ovr->wsa.len = ovr->buffer_size;
+    int result = WSARecv(socket, &ovr->wsa, 1, &r, &f, (LPOVERLAPPED)ovr, 0);
     if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-      operation_completed(ctx);
       return false;
     }
     return true;
   }
-  inline send_result send(context* ctx, CHAR* buf, std::size_t len) {
-    if (ctx->sending.exchange(true, std::memory_order_acq_rel)) {
-      return send_result::kSending;
-    }
-    std::memset(&ctx->tx_ovl->inner_ovl, 0, sizeof(WSAOVERLAPPED));
-    std::memset(&ctx->tx_ovl->wsa, 0, sizeof(WSABUF));
+  inline bool send(SOCKET socket, overlapped_send* ovl) {
     DWORD f = 0, w = 0;
-    ctx->tx_ovl->wsa.buf = static_cast<CHAR*>(buf);
-    ctx->tx_ovl->wsa.len = static_cast<ULONG>(len);
-    operation_started(ctx);
-    int result = WSASend(ctx->soc, &ctx->tx_ovl->wsa, 1, &w, f,
-                         (LPOVERLAPPED)ctx->tx_ovl, 0);
+    ovl->wsa.buf = static_cast<CHAR*>(ovl->buffer);
+    ovl->wsa.len = static_cast<ULONG>(ovl->buffer_size);
+    int result = WSASend(socket, &ovl->wsa, 1, &w, f, (LPOVERLAPPED)ovl, 0);
     if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-      operation_completed(ctx);
-      return send_result::kSocketError;
+      return false;
     }
-    return send_result::kSuccess;
+    return true;
   }
   inline bool process(context* ctx, const char* buffer, std::size_t size) {
-    auto processor = [this](auto ctx, auto result, auto req, auto res) -> void {
-      std::get<on_client_request_function>(result)(*req, *res);
-      std::queue<std::shared_ptr<common::rorb>> snd_queue = res->serialize();
-      while (!snd_queue.empty()) {
-        while (true) {
-          std::pair<CHAR*, DWORD> packet;
-          packet.first = new CHAR[buffer_size_];
-          packet.second = static_cast<DWORD>(buffer_size_);
-          auto bytes = snd_queue.front()->read(packet.first, packet.second);
-          if (!bytes.has_value() || !bytes.value()) {
-            delete[] packet.first;
-            break;
-          }
-          packet.second = static_cast<DWORD>(bytes.value());
-          ctx->push_sending_packet(packet);
-        }
-        snd_queue.pop();
-      }
-      operation_started(ctx);
-      if (!PostQueuedCompletionStatus(
-              io_completion_port_handler_, 0, reinterpret_cast<ULONG_PTR>(ctx),
-              reinterpret_cast<LPOVERLAPPED>(new overlapped()))) {
-        operation_completed(ctx);
-      }
-    };
     if (!ctx->decoder.add(buffer, size)) {
       return false;
     }
-    while (auto req = ctx->decoder.process()) {
-      auto res = std::make_shared<RSty>();
-      auto result = on_client_request_(req, res);
-      switch (std::get<common::execution_policy>(result)) {
-        case common::execution_policy::kSync:
-          processor(ctx, result, req, res);
-          break;
-        case common::execution_policy::kAsync:
-          pool_->enqueue([this, processor, ctx, result, req, res]() {
-            processor(ctx, result, req, res);
-          });
-          break;
-      }
+    while (std::shared_ptr<const RQty> req = ctx->decoder.process()) {
+      on_request_(req, [this, ctx](std::shared_ptr<RSty> res) {
+        std::queue<std::shared_ptr<common::rorb>> snd_queue = res->serialize();
+        overlapped_enqueue* ove = new overlapped_enqueue();
+        while (!snd_queue.empty()) {
+          while (true) {
+            overlapped_send* ovs = new overlapped_send(buffer_size_);
+            auto bytes = snd_queue.front()->read(ovs->buffer, ovs->buffer_size);
+            if (!bytes.has_value() || !bytes.value()) {
+              delete ovs;
+              break;
+            }
+            ovs->buffer_size = bytes.value();
+            ove->ovls.emplace(ovs);
+          }
+          snd_queue.pop();
+        }
+        if (!PostQueuedCompletionStatus(io_completion_port_handler_, 0,
+                                        (ULONG_PTR)ctx, ove)) {
+          delete ove;
+          // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+          // [to-do] -> add support for this!
+          // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        }
+      });
     }
     return true;
-  }
-  inline void operation_started(context* ctx) {
-    ctx->pending_ops.fetch_add(1, std::memory_order_acq_rel);
-  }
-  inline void operation_completed(context* ctx) {
-    if (ctx->pending_ops.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-      if (!ctx->active.load(std::memory_order_acquire)) {
-        delete ctx;
-      }
-    }
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
@@ -550,10 +483,11 @@ class tcpip {
   std::size_t buffer_size_ = 0;
   HANDLE io_completion_port_handler_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
-  std::shared_ptr<common::thread_pool> pool_;
   std::queue<std::thread> threads_;
   std::unique_ptr<std::thread> manager_;
-  on_client_request on_client_request_;
+  on_request on_request_;
+  on_connection on_connection_;
+  on_disconnection on_disconnection_;
 };
 }  // namespace martianlabs::doba::transport::server
 

@@ -70,10 +70,8 @@
 #ifndef martianlabs_doba_protocol_http11_server_h
 #define martianlabs_doba_protocol_http11_server_h
 
-#include <variant>
-#include <future>
-
 #include "common/execution_policy.h"
+#include "common/thread_pool.h"
 #include "transport/server/tcpip.h"
 #include "protocol/http11/constants.h"
 #include "protocol/http11/helpers.h"
@@ -103,65 +101,58 @@ class server {
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   server() {
-
-    /*
-    pepe
-    */
-
-    transport_.set_on_client_request(
+    thread_pool_ = std::make_shared<common::thread_pool>(
+        std::thread::hardware_concurrency());
+    transport_.set_on_request(
         [this](std::shared_ptr<const request> req,
-               std::shared_ptr<response> res)
-            -> TRty<request, response, router>::on_client_request_result {
-          // let's define our default <400> error response..
-          auto fn_400 = [this](const request& req, response& res) {
-            res.bad_request_400().add_header(headers::kContentLength, 0);
-          };
-          // let's define our default <404> error response..
-          auto fn_404 = [this](const request& req, response& res) {
-            res.not_found_404().add_header(headers::kContentLength, 0);
-          };
+               std::function<void(std::shared_ptr<response>)> sender) {
+          std::shared_ptr<response> res = std::make_shared<response>();
           // let's check if the incoming request is following the standard..
-          if (process_headers(req)) {
-            switch (req->get_target()) {
-              case target::kOriginForm:
-              case target::kAbsoluteForm:
-                if (auto handler = router_.match(req->get_method(),
-                                                 req->get_absolute_path())) {
-                  return {handler->first, handler->second};
-                } else {
-                  return {fn_404, common::execution_policy::kSync};
-                }
-                break;
-              case target::kAuthorityForm:
-              case target::kAsteriskForm:
-                // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-                // [to-do] -> add support for this!
-                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                break;
-              default:
-                break;
-            }
+          if (!process_headers(req)) {
+            res->bad_request_400().add_header(headers::kContentLength, 0);
+            sender(res);
+            return;
           }
-          return {fn_400, common::execution_policy::kSync};
+          switch (req->get_target()) {
+            case target::kOriginForm:
+            case target::kAbsoluteForm: {
+              auto router_entry =
+                  router_.match(req->get_method(), req->get_absolute_path());
+              if (!router_entry.has_value()) {
+                res->not_found_404().add_header(headers::kContentLength, 0);
+                sender(res);
+                return;
+              }
+              switch (router_entry->second) {
+                case common::execution_policy::kSync:
+                  router_entry->first(req, res);
+                  sender(res);
+                  break;
+                case common::execution_policy::kAsync:
+                  thread_pool_->enqueue([req, res, sender, router_entry]() {
+                    router_entry->first(req, res);
+                    sender(res);
+                  });
+                  break;
+              }
+              break;
+            }
+            case target::kAuthorityForm:
+            case target::kAsteriskForm:
+              // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+              // [to-do] -> add support for this!
+              // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+              break;
+            default:
+              break;
+          }
         });
-
-    /*
-    transport_.set_on_client_connection([](socket_type id) {});
-    transport_.set_on_client_disconnection([](socket_type id) {});
-    transport_.set_on_bytes_received(
-        [](socket_type id, unsigned long bytes) {});
-    transport_.set_on_bytes_sent([](socket_type id, unsigned long bytes) {});
-    transport_.set_on_error([this]() -> auto {
-      std::shared_ptr<response> res = std::make_shared<response>();
-      res->bad_request_400().add_header(headers::kContentLength, 0);
-      return res;
+    transport_.set_on_connection([](uint32_t id) {
+      // nothing to do here by default..
     });
-    */
-
-    /*
-    pepe fin
-    */
-
+    transport_.set_on_disconnection([](uint32_t id) {
+      // nothing to do here by default..
+    });
     setup_headers_functions();
   }
   server(const server&) = delete;
@@ -181,7 +172,10 @@ class server {
       std::size_t buffer_sz = constants::limits::kDefaultCoreMsgMaxSizeInRam) {
     transport_.start(port, number_of_workers, buffer_sz);
   }
-  void stop() { transport_.stop(); }
+  void stop() {
+    thread_pool_->stop();
+    transport_.stop();
+  }
   server& add_route(
       method method, std::string_view route, router::handler handler,
       common::execution_policy policy = common::execution_policy::kSync) {
@@ -248,6 +242,7 @@ class server {
   // ATTRIBUTEs                                                      ( private )
   //
   std::unordered_map<std::string_view, on_header_check_delegate> headers_fns_;
+  std::shared_ptr<common::thread_pool> thread_pool_;
   TRty<request, response, decoder> transport_;
   router router_;
 };
