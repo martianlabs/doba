@@ -112,7 +112,7 @@ class tcpip {
   //
   result start(const char port[], std::size_t number_of_workers,
                std::size_t io_buffer_size) {
-    if (io_completion_port_handler_ != INVALID_HANDLE_VALUE) {
+    if (io_h_ != INVALID_HANDLE_VALUE) {
       return result::kAlreadyInitialized;
     }
     buffer_size_ = io_buffer_size;
@@ -151,15 +151,13 @@ class tcpip {
         }
         // let's associate the accept socket with the i/o port!
         context* ctx = new context(socket, buffer_size_);
-        if (!CreateIoCompletionPort((HANDLE)socket, io_completion_port_handler_,
-                                    (ULONG_PTR)ctx, 0)) {
+        if (!CreateIoCompletionPort((HANDLE)socket, io_h_, (ULONG_PTR)ctx, 0)) {
           // ((error)) -> trying to associate socket to the i/o port!
           delete ctx;
           continue;
         }
         // let's notify waiting thread for the new connection!
-        if (!PostQueuedCompletionStatus(io_completion_port_handler_, 0,
-                                        (ULONG_PTR)ctx, NULL)) {
+        if (!PostQueuedCompletionStatus(io_h_, 0, (ULONG_PTR)ctx, NULL)) {
           // ((error)) -> trying to notify waiting thread!
           delete ctx;
           continue;
@@ -169,11 +167,11 @@ class tcpip {
     return result::kSucceeded;
   }
   result stop() {
-    if (io_completion_port_handler_ != INVALID_HANDLE_VALUE) {
-      if (!CloseHandle(io_completion_port_handler_)) {
+    if (io_h_ != INVALID_HANDLE_VALUE) {
+      if (!CloseHandle(io_h_)) {
         return result::kCouldNotCleanupPlaformResources;
       }
-      io_completion_port_handler_ = INVALID_HANDLE_VALUE;
+      io_h_ = INVALID_HANDLE_VALUE;
     }
     if (accept_socket_ != INVALID_SOCKET) {
       if (closesocket(accept_socket_) == SOCKET_ERROR) {
@@ -217,52 +215,49 @@ class tcpip {
     overlapped_receive(std::size_t in_buffer_size)
         : overlapped_base(io_type::kReceive) {
       buffer = new CHAR[in_buffer_size];
-      buffer_size = in_buffer_size;
+      buffer_sz = in_buffer_size;
     }
     ~overlapped_receive() { delete[] buffer; }
+    DWORD buffer_sz;
     CHAR* buffer;
-    DWORD buffer_size;
   };
   struct overlapped_send : public overlapped_base {
     overlapped_send(std::size_t in_buffer_size)
         : overlapped_base(io_type::kSend) {
       buffer = new CHAR[in_buffer_size];
-      buffer_size = in_buffer_size;
+      buffer_sz = in_buffer_size;
     }
     ~overlapped_send() { delete[] buffer; }
+    std::queue<std::pair<std::shared_ptr<RSty>,
+                         std::queue<std::shared_ptr<common::rorb>>>>
+        responses;
+    DWORD buffer_sz;
     CHAR* buffer;
-    DWORD buffer_size;
   };
   struct overlapped_enqueue : public overlapped_base {
     overlapped_enqueue() : overlapped_base(io_type::kEnqueue) {}
-    std::queue<overlapped_send*> ovls;
+    std::queue<std::shared_ptr<common::rorb>> rorbs;
+    std::shared_ptr<RSty> response;
   };
   struct context {
-    context(SOCKET soc, std::size_t buffer_size) {
-      socket = soc;
+    context(SOCKET socket, std::size_t buffer_size) {
+      soc = socket;
       ovr = new overlapped_receive(buffer_size);
+      ovs = new overlapped_send(buffer_size);
     }
     context(const context&) = delete;
     context(context&&) noexcept = delete;
-    ~context() { delete ovr; }
+    ~context() {
+      delete ovr;
+      delete ovs;
+    }
     context& operator=(const context&) = delete;
     context& operator=(context&&) noexcept = delete;
-    void sending_queue_push(std::queue<overlapped_send*>& in) {
-      while (!in.empty()) {
-        sending_queue.emplace(in.front());
-        in.pop();
-      }
-    }
-    overlapped_send* sending_queue_front() const {
-      return !sending_queue.empty() ? sending_queue.front() : nullptr;
-    }
-    void sending_queue_pop() { sending_queue.pop(); }
-    overlapped_receive* ovr{nullptr};
-    std::queue<overlapped_send*> sending_queue;
-    std::mutex sending_queue_mutex;
     std::atomic<bool> sending{false};
-    SOCKET socket;
+    overlapped_receive* ovr{nullptr};
+    overlapped_send* ovs{nullptr};
     DEty decoder;
+    SOCKET soc;
   };
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
@@ -342,7 +337,7 @@ class tcpip {
       closesocket(sock);
       return false;
     }
-    io_completion_port_handler_ = handle;
+    io_h_ = handle;
     accept_socket_ = sock;
     return true;
   }
@@ -353,8 +348,8 @@ class tcpip {
           ULONG_PTR key = NULL;
           overlapped_base* ovl = NULL;
           DWORD bytes = 0;
-          if (!GetQueuedCompletionStatus(io_completion_port_handler_, &bytes,
-                                         &key, (LPOVERLAPPED*)&ovl, INFINITE)) {
+          if (!GetQueuedCompletionStatus(io_h_, &bytes, &key,
+                                         (LPOVERLAPPED*)&ovl, INFINITE)) {
             if (!ovl && GetLastError() == ERROR_INVALID_HANDLE) {
               break;
             }
@@ -370,44 +365,54 @@ class tcpip {
           if (!ovl) {
             if (!bytes) {
               // this means a [new] connection!
-              if (!receive(ctx->socket, ctx->ovr)) {
+              if (!receive(ctx, ctx->ovr->buffer, ctx->ovr->buffer_sz)) {
                 // this means a [closed] connection!
               }
             }
             continue;
           }
           switch (ovl->type) {
-            case io_type::kEnqueue: {
-              overlapped_enqueue* ove = static_cast<overlapped_enqueue*>(ovl);
-              std::unique_lock<std::mutex> lock(ctx->sending_queue_mutex);
-              ctx->sending_queue_push(ove->ovls);
-              if (overlapped_send* ovs = ctx->sending_queue_front()) {
-                if (!ctx->sending.exchange(true, std::memory_order_acq_rel)) {
-                  if (send(ctx->socket, ovs)) {
-                    ctx->sending_queue_pop();
-                  } else {
-                    // let's close this connection!
-                  }
+            case io_type::kEnqueue:
+              if (!ctx->sending.exchange(true, std::memory_order_acq_rel)) {
+                overlapped_enqueue* ove = static_cast<overlapped_enqueue*>(ovl);
+                ctx->ovs->responses.push(
+                    std::make_pair(ove->response, ove->rorbs));
+                std::optional<std::size_t> returned =
+                    ctx->ovs->responses.front().second.front()->read(
+                        ctx->ovs->buffer, ctx->ovs->buffer_sz);
+                if (!send(ctx, ctx->ovs->buffer, returned.value())) {
+                  // this means a [closed] connection!
                 }
-                if (!PostQueuedCompletionStatus(io_completion_port_handler_, 0,
-                                                (ULONG_PTR)key,
-                                                new overlapped_enqueue())) {
-                  // let's close this connection!
-                }
+                delete ove;
+                continue;
               }
-              delete ove;
+              if (!PostQueuedCompletionStatus(io_h_, 0, (ULONG_PTR)key, ovl)) {
+                // let's close this connection!
+              }
               break;
-            }
             case io_type::kSend: {
-              overlapped_send* ovs = static_cast<overlapped_send*>(ovl);
+              std::optional<std::size_t> returned =
+                  ctx->ovs->responses.front().second.front()->read(
+                      ctx->ovs->buffer, ctx->ovs->buffer_sz);
+              if (!returned.has_value() || !returned.value()) {
+                ctx->ovs->responses.front().second.pop();
+              }
+              if (!ctx->ovs->responses.front().second.empty()) {
+                returned = ctx->ovs->responses.front().second.front()->read(
+                    ctx->ovs->buffer, ctx->ovs->buffer_sz);
+                if (!send(ctx, ctx->ovs->buffer, returned.value())) {
+                  // this means a [closed] connection!
+                }
+                continue;
+              }
+              ctx->ovs->responses.pop();
               ctx->sending.store(false, std::memory_order_release);
-              delete ovs;
               break;
             }
-            case io_type::kReceive: {
+            case io_type::kReceive:
               if (bytes) {
                 if (process(ctx, ctx->ovr->wsa.buf, bytes)) {
-                  if (!receive(ctx->socket, ctx->ovr)) {
+                  if (!receive(ctx, ctx->ovr->buffer, ctx->ovr->buffer_sz)) {
                     // let's close this connection!
                   }
                 } else {
@@ -417,56 +422,44 @@ class tcpip {
                 // let's close this connection!
               }
               break;
-            }
           }
         }
       }));
     }
     return true;
   }
-  inline bool receive(SOCKET socket, overlapped_receive* ovr) {
+  inline bool receive(context* c, char* b, std::size_t l) {
+    std::memset(static_cast<OVERLAPPED*>(c->ovr), 0, sizeof(OVERLAPPED));
     DWORD f = 0, r = 0;
-    ovr->wsa.buf = ovr->buffer;
-    ovr->wsa.len = ovr->buffer_size;
-    int result = WSARecv(socket, &ovr->wsa, 1, &r, &f, (LPOVERLAPPED)ovr, 0);
-    if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+    c->ovr->wsa.buf = b;
+    c->ovr->wsa.len = l;
+    int s = WSARecv(c->soc, &c->ovr->wsa, 1, &r, &f, (LPOVERLAPPED)c->ovr, 0);
+    if (s == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
       return false;
     }
     return true;
   }
-  inline bool send(SOCKET socket, overlapped_send* ovl) {
+  inline bool send(context* c, char* b, std::size_t l) {
+    std::memset(static_cast<OVERLAPPED*>(c->ovs), 0, sizeof(OVERLAPPED));
     DWORD f = 0, w = 0;
-    ovl->wsa.buf = static_cast<CHAR*>(ovl->buffer);
-    ovl->wsa.len = static_cast<ULONG>(ovl->buffer_size);
-    int result = WSASend(socket, &ovl->wsa, 1, &w, f, (LPOVERLAPPED)ovl, 0);
-    if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+    c->ovs->wsa.buf = b;
+    c->ovs->wsa.len = l;
+    int s = WSASend(c->soc, &c->ovs->wsa, 1, &w, f, (LPOVERLAPPED)c->ovs, 0);
+    if (s == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
       return false;
     }
     return true;
   }
-  inline bool process(context* ctx, const char* buffer, std::size_t size) {
-    if (!ctx->decoder.add(buffer, size)) {
+  inline bool process(context* ctx, const char* b, std::size_t l) {
+    if (!ctx->decoder.add(b, l)) {
       return false;
     }
     while (std::shared_ptr<const RQty> req = ctx->decoder.process()) {
       on_request_(req, [this, ctx](std::shared_ptr<RSty> res) {
-        std::queue<std::shared_ptr<common::rorb>> snd_queue = res->serialize();
         overlapped_enqueue* ove = new overlapped_enqueue();
-        while (!snd_queue.empty()) {
-          while (true) {
-            overlapped_send* ovs = new overlapped_send(buffer_size_);
-            auto bytes = snd_queue.front()->read(ovs->buffer, ovs->buffer_size);
-            if (!bytes.has_value() || !bytes.value()) {
-              delete ovs;
-              break;
-            }
-            ovs->buffer_size = bytes.value();
-            ove->ovls.emplace(ovs);
-          }
-          snd_queue.pop();
-        }
-        if (!PostQueuedCompletionStatus(io_completion_port_handler_, 0,
-                                        (ULONG_PTR)ctx, ove)) {
+        ove->response = res;
+        ove->rorbs = res->serialize();
+        if (!PostQueuedCompletionStatus(io_h_, 0, (ULONG_PTR)ctx, ove)) {
           delete ove;
           // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
           // [to-do] -> add support for this!
@@ -481,7 +474,7 @@ class tcpip {
   //
   bool keep_running_ = true;
   std::size_t buffer_size_ = 0;
-  HANDLE io_completion_port_handler_ = INVALID_HANDLE_VALUE;
+  HANDLE io_h_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::queue<std::thread> threads_;
   std::unique_ptr<std::thread> manager_;
