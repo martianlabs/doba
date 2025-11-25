@@ -71,6 +71,7 @@
 #define martianlabs_doba_common_date_server_h
 
 #include <atomic>
+#include <thread>
 
 #include "date_server_helpers.h"
 
@@ -82,11 +83,14 @@ namespace martianlabs::doba::common {
 // -----------------------------------------------------------------------------
 // =============================================================================
 class date_server {
+  // ___________________________________________________________________________
+  // CONSTRUCTORs/DESTRUCTORs                                        ( private )
+  //
+  date_server() = default;
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  date_server() = default;
   date_server(const date_server&) = delete;
   date_server(date_server&&) noexcept = delete;
   ~date_server() { stop(); }
@@ -96,35 +100,49 @@ class date_server {
   date_server& operator=(const date_server&) = delete;
   date_server& operator=(date_server&&) noexcept = delete;
   // ___________________________________________________________________________
+  // STATIC-METHODs                                                   ( public )
+  //
+  static std::shared_ptr<date_server> get() {
+    static std::atomic<std::shared_ptr<date_server>> instance_atomic{nullptr};
+    std::shared_ptr<date_server> expected = nullptr;
+    instance_atomic.compare_exchange_strong(
+        expected, std::shared_ptr<date_server>(new date_server()),
+        std::memory_order_acq_rel);
+    return instance_atomic.load(std::memory_order_acquire);
+  }
+  // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
   void start() {
-    if (running_) return;
-    running_ = true;
-    thread_ = std::thread([this] {
-      bool toggle = false;
-      while (running_) {
-        std::time_t now = std::time(nullptr);
-        std::tm gmt{};
-        gm_time(&gmt, &now);
-        char* target = toggle ? buf_a_ : buf_b_;
-        std::snprintf(target, kBufSize, "%s, %02d %s %04d %02d:%02d:%02d GMT",
-                      kWeekDays[gmt.tm_wday], gmt.tm_mday, kMonths[gmt.tm_mon],
-                      1900 + gmt.tm_year, gmt.tm_hour, gmt.tm_min, gmt.tm_sec);
+    if (!running_.exchange(true, std::memory_order_acq_rel)) {
+      thread_ = std::thread([this] {
+        bool toggle = false;
+        while (running_.load(std::memory_order_acquire)) {
+          std::time_t now = std::time(nullptr);
+          std::tm gmt{};
+          gm_time(&gmt, &now);
+          char* target = toggle ? buf_a_ : buf_b_;
+          std::snprintf(target, kBufSize, "%s, %02d %s %04d %02d:%02d:%02d GMT",
+                        kWeekDays[gmt.tm_wday], gmt.tm_mday,
+                        kMonths[gmt.tm_mon], 1900 + gmt.tm_year, gmt.tm_hour,
+                        gmt.tm_min, gmt.tm_sec);
 
-        front_.store(target, std::memory_order_release);
-        toggle = !toggle;
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-      }
-    });
+          front_.store(target, std::memory_order_release);
+          toggle = !toggle;
+          std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+      });
+    }
   }
   void stop() {
-    if (!running_) return;
-    running_ = false;
-    if (thread_.joinable()) thread_.join();
-    front_.store(buf_a_, std::memory_order_release);
+    if (running_.exchange(false, std::memory_order_acq_rel)) {
+      if (thread_.joinable()) {
+        thread_.join();
+      }
+      front_.store(buf_a_, std::memory_order_release);
+    }
   }
-  std::string_view get() { return front_.load(std::memory_order_acquire); }
+  std::string_view current() { return front_.load(std::memory_order_acquire); }
 
  private:
   // ___________________________________________________________________________

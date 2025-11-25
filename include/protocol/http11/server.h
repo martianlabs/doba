@@ -170,6 +170,7 @@ class server {
       const char port[],
       std::size_t number_of_workers = std::thread::hardware_concurrency(),
       std::size_t buffer_sz = constants::limits::kDefaultCoreMsgMaxSizeInRam) {
+    common::date_server::get()->start();
     transport_.start(port, number_of_workers, buffer_sz);
   }
   void stop() {

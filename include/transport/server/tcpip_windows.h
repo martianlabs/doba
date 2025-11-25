@@ -354,7 +354,10 @@ class tcpip {
               break;
             }
             if (ovl && key) {
-              // this means a [closed] connection!
+              // let's close this connection!
+              // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+              // [to-do] -> add support for this!
+              // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             }
             continue;
           }
@@ -366,14 +369,19 @@ class tcpip {
             if (!bytes) {
               // this means a [new] connection!
               if (!receive(ctx, ctx->ovr->buffer, ctx->ovr->buffer_sz)) {
-                // this means a [closed] connection!
+                // let's close this connection!
+                // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                // [to-do] -> add support for this!
+                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
               }
             }
             continue;
           }
           switch (ovl->type) {
-            case io_type::kEnqueue:
-              if (!ctx->sending.exchange(true, std::memory_order_acq_rel)) {
+            case io_type::kEnqueue: {
+              bool expected = false;
+              if (ctx->sending.compare_exchange_strong(
+                      expected, true, std::memory_order_acq_rel)) {
                 overlapped_enqueue* ove = static_cast<overlapped_enqueue*>(ovl);
                 ctx->ovs->responses.push(
                     std::make_pair(ove->response, ove->rorbs));
@@ -381,15 +389,22 @@ class tcpip {
                     ctx->ovs->responses.front().second.front()->read(
                         ctx->ovs->buffer, ctx->ovs->buffer_sz);
                 if (!send(ctx, ctx->ovs->buffer, returned.value())) {
-                  // this means a [closed] connection!
+                  // let's close this connection!
+                  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                  // [to-do] -> add support for this!
+                  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 }
                 delete ove;
                 continue;
               }
               if (!PostQueuedCompletionStatus(io_h_, 0, (ULONG_PTR)key, ovl)) {
                 // let's close this connection!
+                // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                // [to-do] -> add support for this!
+                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
               }
               break;
+            }
             case io_type::kSend: {
               std::optional<std::size_t> returned =
                   ctx->ovs->responses.front().second.front()->read(
@@ -401,7 +416,10 @@ class tcpip {
                 returned = ctx->ovs->responses.front().second.front()->read(
                     ctx->ovs->buffer, ctx->ovs->buffer_sz);
                 if (!send(ctx, ctx->ovs->buffer, returned.value())) {
-                  // this means a [closed] connection!
+                  // let's close this connection!
+                  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                  // [to-do] -> add support for this!
+                  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 }
                 continue;
               }
@@ -414,12 +432,21 @@ class tcpip {
                 if (process(ctx, ctx->ovr->wsa.buf, bytes)) {
                   if (!receive(ctx, ctx->ovr->buffer, ctx->ovr->buffer_sz)) {
                     // let's close this connection!
+                    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                    // [to-do] -> add support for this!
+                    // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                   }
                 } else {
                   // let's close this connection!
+                  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                  // [to-do] -> add support for this!
+                  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 }
               } else {
                 // let's close this connection!
+                // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                // [to-do] -> add support for this!
+                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
               }
               break;
           }
