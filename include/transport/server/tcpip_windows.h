@@ -234,9 +234,9 @@ class tcpip {
     CHAR* buffer;
   };
   struct overlapped_enqueue : public overlapped_base {
-    overlapped_enqueue(std::shared_ptr<common::rob> data)
-        : overlapped_base(io_type::kEnqueue), rob{data} {}
-    std::shared_ptr<common::rob> rob;
+    overlapped_enqueue(std::queue<std::shared_ptr<common::rob>> data)
+        : overlapped_base(io_type::kEnqueue), robs{data} {}
+    std::queue<std::shared_ptr<common::rob>> robs;
   };
   struct context {
     context(SOCKET socket, std::size_t buffer_size) {
@@ -381,7 +381,11 @@ class tcpip {
           }
           switch (ovl->type) {
             case io_type::kEnqueue: {
-              ctx->robs.emplace(static_cast<overlapped_enqueue*>(ovl)->rob);
+              overlapped_enqueue* ove = static_cast<overlapped_enqueue*>(ovl);
+              while (!ove->robs.empty()) {
+                ctx->robs.emplace(ove->robs.front());
+                ove->robs.pop();
+              }
               if (!ctx->sending) {
                 ctx->sending = send(ctx);
               }

@@ -77,7 +77,6 @@
 #include "helpers.h"
 #include "headers.h"
 #include "common/hash_map.h"
-#include "body.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================

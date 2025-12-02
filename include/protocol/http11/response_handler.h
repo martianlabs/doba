@@ -72,8 +72,6 @@
 
 #include <memory>
 
-#include "body.h"
-
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
 // response_handler                                                    ( class )
@@ -88,13 +86,15 @@ class response_handler {
   //
   response_handler(char*& buffer, const std::size_t& core_size,
                    const std::size_t& body_size, std::size_t& core_cursor,
-                   std::size_t& body_cursor)
+                   std::size_t& body_cursor,
+                   std::shared_ptr<std::istream>& body_stream)
       : buffer_{buffer},
         buffer_core_size_{core_size},
         buffer_body_size_{body_size},
         buffer_core_cursor_{core_cursor},
         buffer_body_cursor_{body_cursor},
-        buffer_core_headers_start_{core_cursor} {}
+        buffer_core_headers_start_{core_cursor},
+        body_stream_{body_stream} {}
   response_handler(const response_handler&) = delete;
   response_handler(response_handler&&) noexcept = delete;
   ~response_handler() = default;
@@ -106,40 +106,66 @@ class response_handler {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  response_handler& add_header(std::string_view key, std::string_view val) {
-    std::size_t k_sz = key.size(), v_sz = val.size();
+  /// @brief    Adds the specified header entry using the provided key/value.
+  ///
+  /// @param    k   User specified key.
+  /// @param    v   User specified value.
+  /// @return       A reference to the current object instance.
+  ///
+  /// @throws       std::runtime_error
+  ///
+  inline response_handler& add_header(std::string_view k, std::string_view v) {
+    std::size_t k_sz = k.size(), v_sz = v.size();
     std::size_t entry_length = k_sz + v_sz + 3;
-    if ((buffer_core_size_ - buffer_core_cursor_) > (entry_length + 2)) {
-      if (!key.size()) return *this;
-      auto initial_cur = buffer_core_cursor_;
-      for (const char& c : key) {
-        if (!helpers::is_token(c)) {
-          buffer_core_cursor_ = initial_cur;
-          return *this;
-        }
-        buffer_[buffer_core_cursor_++] = helpers::tolower_ascii(c);
-      }
-      buffer_[buffer_core_cursor_++] = constants::character::kColon;
-      for (const char& c : val) {
-        if (!(helpers::is_vchar(c) || helpers::is_obs_text(c) ||
-              c == constants::character::kSpace ||
-              c == constants::character::kHTab)) {
-          return *this;
-        }
-      }
-      memcpy(&buffer_[buffer_core_cursor_], val.data(), v_sz);
-      buffer_core_cursor_ += v_sz;
-      buffer_[buffer_core_cursor_++] = constants::character::kCr;
-      buffer_[buffer_core_cursor_++] = constants::character::kLf;
+    if ((buffer_core_size_ - buffer_core_cursor_) <= (entry_length + 2)) {
+      throw std::runtime_error("headers section too large to fit in memory!");
     }
+    if (!k.size()) {
+      return *this;
+    }
+    auto initial_cur = buffer_core_cursor_;
+    for (const char& c : k) {
+      if (!helpers::is_token(c)) {
+        buffer_core_cursor_ = initial_cur;
+        return *this;
+      }
+      buffer_[buffer_core_cursor_++] = helpers::tolower_ascii(c);
+    }
+    buffer_[buffer_core_cursor_++] = constants::character::kColon;
+    for (const char& c : v) {
+      if (!(helpers::is_vchar(c) || helpers::is_obs_text(c) ||
+            c == constants::character::kSpace ||
+            c == constants::character::kHTab)) {
+        return *this;
+      }
+    }
+    memcpy(&buffer_[buffer_core_cursor_], v.data(), v_sz);
+    buffer_core_cursor_ += v_sz;
+    buffer_[buffer_core_cursor_++] = constants::character::kCr;
+    buffer_[buffer_core_cursor_++] = constants::character::kLf;
     return *this;
   }
+  /// @brief    Adds the specified header entry using the provided key/value.
+  ///
+  /// @param    k   User specified key.
+  /// @param    v   User specified (template based) value.
+  /// @return       A reference to the current object instance.
+  ///
+  /// @throws       std::runtime_error
+  ///
   template <typename T>
     requires std::is_arithmetic_v<T>
-  response_handler& add_header(std::string_view key, const T& val) {
+  inline response_handler& add_header(std::string_view key, const T& val) {
     return add_header(key, std::to_string(val));
   }
-  response_handler& remove_header(std::string_view k) {
+  /// @brief    Removes the specified header entry using the provided key.
+  ///
+  /// @param    k   User specified key.
+  /// @return       A reference to the current object instance.
+  ///
+  /// @throws       std::runtime_error
+  ///
+  inline response_handler& remove_header(std::string_view k) {
     bool matched = true;
     bool searching_for_key = true;
     std::size_t i = buffer_core_headers_start_, j = 0, k_start = i,
@@ -184,28 +210,68 @@ class response_handler {
     }
     return *this;
   }
-  response_handler& set_body(const char* const buffer, std::size_t length) {
-    if (buffer_body_size_ - buffer_body_cursor_ >= length) {
-      std::memcpy(&buffer_[buffer_core_size_], buffer, length);
-      buffer_body_cursor_ += length;
-    } else {
-      /*
-      pepe
-      */
-
-      /*
-      pepe fin
-      */
+  /// @brief    Sets body content in memory using specified user buffer.
+  ///
+  /// @param    buf   User buffer pointer.
+  /// @param    len   User buffer length.
+  /// @return         A reference to the current object instance.
+  ///
+  /// @throws         std::runtime_error
+  ///
+  inline response_handler& set_body(const char* const buf, std::size_t len) {
+    if (buffer_body_size_ - buffer_body_cursor_ < len) {
+      throw std::runtime_error("body too large to fit in memory!");
     }
-    return add_header(headers::kContentLength, length);
+    std::memcpy(&buffer_[buffer_core_size_], buf, len);
+    buffer_body_cursor_ += len;
+    return add_header(headers::kContentLength, len);
   }
-  response_handler& set_body(std::string_view sv) {
+  /// @brief    Sets body content in memory using specified string view.
+  ///
+  /// @param    sv    User string view.
+  /// @return         A reference to the current object instance.
+  ///
+  /// @throws         std::runtime_error
+  ///
+  inline response_handler& set_body(std::string_view sv) {
     return set_body(sv.data(), sv.size());
   }
+  /// @brief    Sets body content in memory using specified arithmetic value.
+  ///
+  /// @param    val   User arithmetic (template based) value.
+  /// @return         A reference to the current object instance.
+  ///
+  /// @throws         std::runtime_error
+  ///
   template <typename T>
     requires std::is_arithmetic_v<T>
-  response_handler& set_body(T&& val) {
+  inline response_handler& set_body(T&& val) {
     return set_body(std::to_string(val));
+  }
+  /// @brief    Sets body content using the provided input stream.
+  ///
+  /// @param    stream    User specified stream.
+  /// @return             A reference to the current object instance.
+  ///
+  /// @throws             std::invalid_argument
+  /// @throws             std::runtime_error
+  ///
+  inline response_handler& set_body(std::shared_ptr<std::istream> stream) {
+    if (!(body_stream_ = stream)) {
+      throw std::invalid_argument("input stream is empty!");
+    }
+    std::streampos current = body_stream_->tellg();
+    if (current == std::streampos(-1)) {
+      throw std::runtime_error("input stream not readable!");
+    }
+    body_stream_->seekg(0, std::ios::end);
+    std::streampos off = body_stream_->tellg();
+    if (off == std::streampos(-1)) {
+      throw std::runtime_error("input stream not readable!");
+    }
+    std::size_t body_length = static_cast<std::size_t>(off);
+    body_stream_->seekg(current, std::ios::beg);
+    return add_header(headers::kContentLength, body_length);
   }
 
  private:
@@ -218,6 +284,7 @@ class response_handler {
   const std::size_t& buffer_core_size_;
   const std::size_t& buffer_body_size_;
   std::size_t buffer_core_headers_start_;
+  std::shared_ptr<std::istream>& body_stream_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

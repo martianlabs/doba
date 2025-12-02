@@ -105,8 +105,8 @@ class response {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  inline std::shared_ptr<common::rob> serialize() {
-    std::shared_ptr<common::rob> serialized;
+  inline std::queue<std::shared_ptr<common::rob>> serialize() {
+    std::queue<std::shared_ptr<common::rob>> robs;
     static const auto eol = (const char*)constants::string::kCrLf;
     static const auto eol_len = sizeof(constants::string::kCrLf) - 1;
     // [check] for a valid response!
@@ -117,24 +117,18 @@ class response {
         core_cursor_ += eol_len;
       }
       // [body] section!
-      if (size_ - core_cursor_ >= body_cursor_) {
+      if (!body_stream_) {
         std::memmove(&buffer_[core_cursor_],
                      &buffer_[constants::limits::kDefaultCoreMsgMaxSizeInRam],
                      body_cursor_);
         core_cursor_ += body_cursor_;
-        // [copy] buffer to rob!
-        serialized = std::make_shared<common::rob>(buffer_, core_cursor_);
+        robs.emplace(std::make_shared<common::rob>(buffer_, core_cursor_));
       } else {
-        /*
-        pepe
-        */
-
-        /*
-        pepe fin
-        */
+        robs.emplace(std::make_shared<common::rob>(buffer_, core_cursor_));
+        robs.emplace(std::make_shared<common::rob>(body_stream_));
       }
     }
-    return serialized;
+    return robs;
   }
   inline response_handler& continue_100() {
     return setup(EAS(SL(100_CONTINUE)), sizeof(EAS(SL(100_CONTINUE))) - 1);
@@ -316,7 +310,7 @@ class response {
     handler_ = std::make_shared<response_handler>(
         buffer_, constants::limits::kDefaultCoreMsgMaxSizeInRam,
         constants::limits::kDefaultBodyMsgMaxSizeInRam, core_cursor_,
-        body_cursor_);
+        body_cursor_, body_stream_);
     return *handler_;
   }
   // ___________________________________________________________________________
@@ -326,6 +320,7 @@ class response {
   std::size_t size_;
   std::size_t core_cursor_;
   std::size_t body_cursor_;
+  std::shared_ptr<std::istream> body_stream_;
   std::shared_ptr<response_handler> handler_;
 };
 }  // namespace martianlabs::doba::protocol::http11
