@@ -77,7 +77,7 @@
 #include "helpers.h"
 #include "headers.h"
 #include "common/hash_map.h"
-#include "body_writer.h"
+#include "body.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -102,16 +102,6 @@ class request {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  request& set_body(std::size_t length) {
-    body_writer_ = body_writer::memory_writer(length);
-    return *this;
-  }
-  template <typename T>
-    requires std::is_arithmetic_v<T>
-  request& set_body(T&& val) {
-    return set_body(std::to_string(val));
-  }
-  std::shared_ptr<body_writer> get_body_writer() { return body_writer_; }
   auto get_method() const { return method_; }
   auto get_target() const { return target_; }
   auto get_absolute_path() const { return absolute_path_; }
@@ -197,13 +187,15 @@ class request {
     body_length_ = body_length;
     if (has_body_ = has_body) {
       if (body_length_) {
-        if (body_length_ <= constants::limits::kDefaultBodyMsgMaxSizeInRam) {
-          body_writer_ = body_writer::memory_writer(body_length);
-        } else {
-          // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-          // [to-do] -> add support for this!
-          // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        }
+
+        /*
+        pepe
+        */
+
+        /*
+        pepe fin
+        */
+
       } else {
         // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         // [to-do] -> add support for this!
@@ -564,7 +556,6 @@ class request {
   std::string query_;
   bool has_body_ = false;
   std::size_t body_length_ = 0;
-  std::shared_ptr<body_writer> body_writer_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

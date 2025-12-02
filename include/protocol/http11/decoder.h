@@ -87,6 +87,7 @@ class decoder {
     size_ = constants::limits::kDefaultCoreMsgMaxSizeInRam;
     buffer_ = (char*)malloc(size_);
     body_bytes_read_ = 0;
+    body_read_completed = false;
   }
   decoder(const decoder&) = delete;
   decoder(decoder&&) noexcept = delete;
@@ -125,14 +126,25 @@ class decoder {
     }
     // [second] let's process the [bopy] part (if present)..
     if (request_) {
-      auto body_length = request_->get_body_length();
       if (request_->has_body()) {
-        if (body_length) {
+        if (std::size_t body_length = request_->get_body_length()) {
           // [content-length] based body!
           std::size_t pending = body_length - body_bytes_read_;
           std::size_t to_grab = cursor_ >= pending ? pending : cursor_;
-          request_->get_body_writer()->write(buffer_, to_grab);
-          body_bytes_read_ += to_grab;
+
+          /*
+          pepe
+          */
+
+          /*
+          request_->get_body_mutable()->write(buffer_, to_grab);
+          */
+
+          /*
+          pepe fin
+          */
+
+          body_read_completed = (body_bytes_read_ += to_grab) == body_length;
           cursor_ -= to_grab;
         } else {
           // [transfer-encoding:chunks] based body!
@@ -141,16 +153,13 @@ class decoder {
           // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         }
       }
-      if (!request_->has_body() || body_bytes_read_ == body_length) {
+      if (!request_->has_body() || body_read_completed ) {
+        body_bytes_read_ = 0;
+        body_read_completed = false;
         return std::move(request_);
       }
     }
     return nullptr;
-  }
-  inline void reset() {
-    cursor_ = 0;
-    body_bytes_read_ = 0;
-    request_.reset();
   }
 
  private:
@@ -160,6 +169,7 @@ class decoder {
   char* buffer_;
   std::size_t size_;
   std::size_t cursor_;
+  bool body_read_completed;
   std::size_t body_bytes_read_;
   std::shared_ptr<request> request_;
 };

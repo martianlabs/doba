@@ -81,27 +81,6 @@ namespace martianlabs::doba::protocol::http11 {
 // -----------------------------------------------------------------------------
 // =============================================================================
 struct helpers {
-  static auto get_current_date() {
-
-    /*
-    pepe
-    */
-
-    return "unknown";
-
-    /*
-    static std::shared_ptr<common::date_server> date_server_ptr;
-    if (!date_server_ptr) {
-      date_server_ptr = std::make_shared<common::date_server>();
-      date_server_ptr->start();
-    }
-    return date_server_ptr->get();
-    */
-
-    /*
-    pepe fin
-    */
-  }
   static auto is_digit(std::string_view val) {
     if (!val.size()) return false;
     for (auto const& c : val) {

@@ -81,7 +81,6 @@ int main(int argc, char* argv[]) {
              std::shared_ptr<response> res) {
             res->ok_200()
                 .add_header("Content-Type", "text/plain")
-                .add_header("Content-Length", 13)
                 .add_header("Date", date_server::get()->current())
                 .set_body("Hello, World!");
           },

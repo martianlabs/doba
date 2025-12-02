@@ -72,7 +72,7 @@
 
 #include <functional>
 
-#include "common/rorb.h"
+#include "common/rob.h"
 
 namespace martianlabs::doba::transport::server {
 // =============================================================================
@@ -215,29 +215,28 @@ class tcpip {
     overlapped_receive(std::size_t in_buffer_size)
         : overlapped_base(io_type::kReceive) {
       buffer = new CHAR[in_buffer_size];
-      buffer_sz = in_buffer_size;
+      buffer_size = in_buffer_size;
     }
     ~overlapped_receive() { delete[] buffer; }
-    DWORD buffer_sz;
+    DWORD buffer_size;
     CHAR* buffer;
   };
   struct overlapped_send : public overlapped_base {
     overlapped_send(std::size_t in_buffer_size)
         : overlapped_base(io_type::kSend) {
       buffer = new CHAR[in_buffer_size];
-      buffer_sz = in_buffer_size;
+      buffer_size = in_buffer_size;
+      buffer_cursor = 0;
     }
     ~overlapped_send() { delete[] buffer; }
-    std::queue<std::pair<std::shared_ptr<RSty>,
-                         std::queue<std::shared_ptr<common::rorb>>>>
-        responses;
-    DWORD buffer_sz;
+    DWORD buffer_size;
+    DWORD buffer_cursor;
     CHAR* buffer;
   };
   struct overlapped_enqueue : public overlapped_base {
-    overlapped_enqueue() : overlapped_base(io_type::kEnqueue) {}
-    std::queue<std::shared_ptr<common::rorb>> rorbs;
-    std::shared_ptr<RSty> response;
+    overlapped_enqueue(std::shared_ptr<common::rob> data)
+        : overlapped_base(io_type::kEnqueue), rob{data} {}
+    std::shared_ptr<common::rob> rob;
   };
   struct context {
     context(SOCKET socket, std::size_t buffer_size) {
@@ -253,9 +252,11 @@ class tcpip {
     }
     context& operator=(const context&) = delete;
     context& operator=(context&&) noexcept = delete;
-    std::atomic<bool> sending{false};
+    std::queue<std::shared_ptr<common::rob>> robs;
     overlapped_receive* ovr{nullptr};
     overlapped_send* ovs{nullptr};
+    bool sending{false};
+    std::mutex mutex;
     DEty decoder;
     SOCKET soc;
   };
@@ -365,10 +366,11 @@ class tcpip {
             continue;
           }
           context* ctx = reinterpret_cast<context*>(key);
+          std::unique_lock<std::mutex> lock(ctx->mutex);
           if (!ovl) {
             if (!bytes) {
               // this means a [new] connection!
-              if (!receive(ctx, ctx->ovr->buffer, ctx->ovr->buffer_sz)) {
+              if (!receive(ctx, ctx->ovr->buffer, ctx->ovr->buffer_size)) {
                 // let's close this connection!
                 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
                 // [to-do] -> add support for this!
@@ -379,58 +381,25 @@ class tcpip {
           }
           switch (ovl->type) {
             case io_type::kEnqueue: {
-              bool expected = false;
-              if (ctx->sending.compare_exchange_strong(
-                      expected, true, std::memory_order_acq_rel)) {
-                overlapped_enqueue* ove = static_cast<overlapped_enqueue*>(ovl);
-                ctx->ovs->responses.push(
-                    std::make_pair(ove->response, ove->rorbs));
-                std::optional<std::size_t> returned =
-                    ctx->ovs->responses.front().second.front()->read(
-                        ctx->ovs->buffer, ctx->ovs->buffer_sz);
-                if (!send(ctx, ctx->ovs->buffer, returned.value())) {
-                  // let's close this connection!
-                  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-                  // [to-do] -> add support for this!
-                  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                }
-                delete ove;
-                continue;
+              ctx->robs.emplace(static_cast<overlapped_enqueue*>(ovl)->rob);
+              if (!ctx->sending) {
+                ctx->sending = send(ctx);
               }
-              if (!PostQueuedCompletionStatus(io_h_, 0, (ULONG_PTR)key, ovl)) {
-                // let's close this connection!
-                // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-                // [to-do] -> add support for this!
-                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-              }
+              delete static_cast<overlapped_enqueue*>(ovl);
               break;
             }
             case io_type::kSend: {
-              std::optional<std::size_t> returned =
-                  ctx->ovs->responses.front().second.front()->read(
-                      ctx->ovs->buffer, ctx->ovs->buffer_sz);
-              if (!returned.has_value() || !returned.value()) {
-                ctx->ovs->responses.front().second.pop();
+              if (ctx->ovs->buffer_cursor -= bytes) {
+                std::memmove(ctx->ovs->buffer, &ctx->ovs->buffer[bytes],
+                             ctx->ovs->buffer_cursor);
               }
-              if (!ctx->ovs->responses.front().second.empty()) {
-                returned = ctx->ovs->responses.front().second.front()->read(
-                    ctx->ovs->buffer, ctx->ovs->buffer_sz);
-                if (!send(ctx, ctx->ovs->buffer, returned.value())) {
-                  // let's close this connection!
-                  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-                  // [to-do] -> add support for this!
-                  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                }
-                continue;
-              }
-              ctx->ovs->responses.pop();
-              ctx->sending.store(false, std::memory_order_release);
+              ctx->sending = send(ctx);
               break;
             }
             case io_type::kReceive:
               if (bytes) {
                 if (process(ctx, ctx->ovr->wsa.buf, bytes)) {
-                  if (!receive(ctx, ctx->ovr->buffer, ctx->ovr->buffer_sz)) {
+                  if (!receive(ctx, ctx->ovr->buffer, ctx->ovr->buffer_size)) {
                     // let's close this connection!
                     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
                     // [to-do] -> add support for this!
@@ -455,46 +424,60 @@ class tcpip {
     }
     return true;
   }
-  inline bool receive(context* c, char* b, std::size_t l) {
-    std::memset(static_cast<OVERLAPPED*>(c->ovr), 0, sizeof(OVERLAPPED));
-    DWORD f = 0, r = 0;
-    c->ovr->wsa.buf = b;
-    c->ovr->wsa.len = l;
-    int s = WSARecv(c->soc, &c->ovr->wsa, 1, &r, &f, (LPOVERLAPPED)c->ovr, 0);
-    if (s == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+  inline bool send(context* c) {
+    while (!c->robs.empty()) {
+      if (c->ovs->buffer_cursor == c->ovs->buffer_size) {
+        break;
+      }
+      auto bytes_read =
+          c->robs.front()->read(&c->ovs->buffer[c->ovs->buffer_cursor],
+                                c->ovs->buffer_size - c->ovs->buffer_cursor);
+      if (!bytes_read.has_value() || !bytes_read.value()) {
+        c->robs.pop();
+        continue;
+      }
+      c->ovs->buffer_cursor += bytes_read.value();
+    }
+    if (!c->ovs->buffer_cursor) {
       return false;
     }
-    return true;
-  }
-  inline bool send(context* c, char* b, std::size_t l) {
+    c->ovs->wsa.buf = c->ovs->buffer;
+    c->ovs->wsa.len = c->ovs->buffer_cursor;
     std::memset(static_cast<OVERLAPPED*>(c->ovs), 0, sizeof(OVERLAPPED));
     DWORD f = 0, w = 0;
-    c->ovs->wsa.buf = b;
-    c->ovs->wsa.len = l;
     int s = WSASend(c->soc, &c->ovs->wsa, 1, &w, f, (LPOVERLAPPED)c->ovs, 0);
     if (s == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
       return false;
     }
     return true;
   }
-  inline bool process(context* ctx, const char* b, std::size_t l) {
-    if (!ctx->decoder.add(b, l)) {
+  inline bool receive(context* c, char* b, std::size_t l) {
+    c->ovr->wsa.buf = b;
+    c->ovr->wsa.len = l;
+    std::memset(static_cast<OVERLAPPED*>(c->ovr), 0, sizeof(OVERLAPPED));
+    DWORD f = 0, r = 0;
+    int s = WSARecv(c->soc, &c->ovr->wsa, 1, &r, &f, (LPOVERLAPPED)c->ovr, 0);
+    if (s == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
       return false;
     }
-    while (std::shared_ptr<const RQty> req = ctx->decoder.process()) {
-      on_request_(req, [this, ctx](std::shared_ptr<RSty> res) {
-        overlapped_enqueue* ove = new overlapped_enqueue();
-        ove->response = res;
-        ove->rorbs = res->serialize();
-        if (!PostQueuedCompletionStatus(io_h_, 0, (ULONG_PTR)ctx, ove)) {
-          delete ove;
-          // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-          // [to-do] -> add support for this!
-          // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        }
-      });
-    }
     return true;
+  }
+  inline bool process(context* ctx, const char* b, std::size_t l) {
+    if (ctx->decoder.add(b, l)) {
+      while (std::shared_ptr<const RQty> req = ctx->decoder.process()) {
+        on_request_(req, [this, ctx](std::shared_ptr<RSty> res) {
+          overlapped_enqueue* ove = new overlapped_enqueue(res->serialize());
+          if (!PostQueuedCompletionStatus(io_h_, 0, (ULONG_PTR)ctx, ove)) {
+            delete ove;
+            // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+            // [to-do] -> add support for this!
+            // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          }
+        });
+      }
+      return true;
+    }
+    return false;
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )

@@ -72,7 +72,7 @@
 
 #include <memory>
 
-#include "body_reader.h"
+#include "body.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -86,8 +86,15 @@ class response_handler {
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  response_handler(char* const buf, const std::size_t& sze, std::size_t& cur)
-      : buf_{buf}, size_{sze}, cursor_{cur}, headers_start_{cur} {}
+  response_handler(char*& buffer, const std::size_t& core_size,
+                   const std::size_t& body_size, std::size_t& core_cursor,
+                   std::size_t& body_cursor)
+      : buffer_{buffer},
+        buffer_core_size_{core_size},
+        buffer_body_size_{body_size},
+        buffer_core_cursor_{core_cursor},
+        buffer_body_cursor_{body_cursor},
+        buffer_core_headers_start_{core_cursor} {}
   response_handler(const response_handler&) = delete;
   response_handler(response_handler&&) noexcept = delete;
   ~response_handler() = default;
@@ -102,17 +109,17 @@ class response_handler {
   response_handler& add_header(std::string_view key, std::string_view val) {
     std::size_t k_sz = key.size(), v_sz = val.size();
     std::size_t entry_length = k_sz + v_sz + 3;
-    if ((size_ - cursor_) > (entry_length + 2)) {
+    if ((buffer_core_size_ - buffer_core_cursor_) > (entry_length + 2)) {
       if (!key.size()) return *this;
-      auto initial_cur = cursor_;
+      auto initial_cur = buffer_core_cursor_;
       for (const char& c : key) {
         if (!helpers::is_token(c)) {
-          cursor_ = initial_cur;
+          buffer_core_cursor_ = initial_cur;
           return *this;
         }
-        buf_[cursor_++] = helpers::tolower_ascii(c);
+        buffer_[buffer_core_cursor_++] = helpers::tolower_ascii(c);
       }
-      buf_[cursor_++] = constants::character::kColon;
+      buffer_[buffer_core_cursor_++] = constants::character::kColon;
       for (const char& c : val) {
         if (!(helpers::is_vchar(c) || helpers::is_obs_text(c) ||
               c == constants::character::kSpace ||
@@ -120,10 +127,10 @@ class response_handler {
           return *this;
         }
       }
-      memcpy(&buf_[cursor_], val.data(), v_sz);
-      cursor_ += v_sz;
-      buf_[cursor_++] = constants::character::kCr;
-      buf_[cursor_++] = constants::character::kLf;
+      memcpy(&buffer_[buffer_core_cursor_], val.data(), v_sz);
+      buffer_core_cursor_ += v_sz;
+      buffer_[buffer_core_cursor_++] = constants::character::kCr;
+      buffer_[buffer_core_cursor_++] = constants::character::kLf;
     }
     return *this;
   }
@@ -135,9 +142,10 @@ class response_handler {
   response_handler& remove_header(std::string_view k) {
     bool matched = true;
     bool searching_for_key = true;
-    std::size_t i = headers_start_, j = 0, k_start = i, k_sz = k.size();
-    while (i < cursor_) {
-      switch (buf_[i]) {
+    std::size_t i = buffer_core_headers_start_, j = 0, k_start = i,
+                k_sz = k.size();
+    while (i < buffer_core_cursor_) {
+      switch (buffer_[i]) {
         case constants::character::kColon:
           if (searching_for_key) {
             searching_for_key = false;
@@ -147,9 +155,11 @@ class response_handler {
           if (searching_for_key) return *this;
           if (matched && j == k_sz) {
             auto const off = i + 2;
-            std::memmove(&buf_[k_start], &buf_[off], cursor_ - off);
-            cursor_ -= (off - k_start);
-            std::memset(&buf_[cursor_], 0, size_ - cursor_);
+            std::memmove(&buffer_[k_start], &buffer_[off],
+                         buffer_core_cursor_ - off);
+            buffer_core_cursor_ -= (off - k_start);
+            std::memset(&buffer_[buffer_core_cursor_], 0,
+                        buffer_core_size_ - buffer_core_cursor_);
             return *this;
           }
           searching_for_key = true;
@@ -162,7 +172,7 @@ class response_handler {
           if (searching_for_key) {
             if (matched) {
               if (j < k_sz) {
-                matched = buf_[i] == helpers::tolower_ascii(k[j++]);
+                matched = buffer_[i] == helpers::tolower_ascii(k[j++]);
               } else {
                 matched = false;
               }
@@ -175,33 +185,39 @@ class response_handler {
     return *this;
   }
   response_handler& set_body(const char* const buffer, std::size_t length) {
-    body_reader_ = body_reader::memory_reader(buffer, length);
-    return *this;
+    if (buffer_body_size_ - buffer_body_cursor_ >= length) {
+      std::memcpy(&buffer_[buffer_core_size_], buffer, length);
+      buffer_body_cursor_ += length;
+    } else {
+      /*
+      pepe
+      */
+
+      /*
+      pepe fin
+      */
+    }
+    return add_header(headers::kContentLength, length);
   }
   response_handler& set_body(std::string_view sv) {
-    body_reader_ = body_reader::memory_reader(sv.data(), sv.size());
-    return *this;
-  }
-  response_handler& set_body(std::shared_ptr<std::ifstream> input_file_stream) {
-    body_reader_ = body_reader::file_reader(input_file_stream);
-    return *this;
+    return set_body(sv.data(), sv.size());
   }
   template <typename T>
     requires std::is_arithmetic_v<T>
   response_handler& set_body(T&& val) {
     return set_body(std::to_string(val));
   }
-  std::shared_ptr<body_reader> get_body_reader() const { return body_reader_; }
 
  private:
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* const buf_;
-  std::size_t& cursor_;
-  const std::size_t& size_;
-  std::size_t headers_start_;
-  std::shared_ptr<body_reader> body_reader_;
+  char*& buffer_;
+  std::size_t& buffer_core_cursor_;
+  std::size_t& buffer_body_cursor_;
+  const std::size_t& buffer_core_size_;
+  const std::size_t& buffer_body_size_;
+  std::size_t buffer_core_headers_start_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

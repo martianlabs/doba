@@ -67,88 +67,70 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#ifndef martianlabs_doba_protocol_http11_body_writer_h
-#define martianlabs_doba_protocol_http11_body_writer_h
+#ifndef martianlabs_doba_common_rob_h
+#define martianlabs_doba_common_rob_h
 
 #include <memory>
 #include <istream>
-#include <ostream>
-#include <string_view>
+#include <fstream>
 
-#include "constants.h"
-
-namespace martianlabs::doba::protocol::http11 {
+namespace martianlabs::doba::common {
 // =============================================================================
-// body_writer                                                         ( class )
+// rob                                                                 ( class )
 // -----------------------------------------------------------------------------
-// This class holds for a body writer implementation.
+// This class holds for a common-purpose (memory/stream based) read only buffer.
 // -----------------------------------------------------------------------------
 // =============================================================================
-class body_writer {
+class rob {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  body_writer(const body_writer&) = delete;
-  body_writer(body_writer&&) noexcept = delete;
-  ~body_writer() { free(mem_buffer_); }
+  rob(std::shared_ptr<std::istream> ss) { stream_ = ss; }
+  rob(const char* buffer, std::size_t size) {
+    if (char* alloc = new char[size]) {
+      buffer_ = alloc;
+      buffer_size_ = size;
+      std::memcpy(buffer_, buffer, size);
+    }
+  }
+  rob(const rob&) = delete;
+  rob(rob&&) noexcept = delete;
+  ~rob() { delete[] buffer_; }
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
-  body_writer& operator=(const body_writer&) = delete;
-  body_writer& operator=(body_writer&&) noexcept = delete;
-  // ___________________________________________________________________________
-  // STATIC-METHODs                                                   ( public )
-  //
-  static auto memory_writer(std::size_t length) {
-    return std::shared_ptr<body_writer>(new body_writer(length));
-  }
-  static auto file_writer(std::shared_ptr<std::ofstream> file) {
-    return std::shared_ptr<body_writer>(new body_writer(file));
-  }
-  // ___________________________________________________________________________
-  // ENUMs                                                            ( public )
-  //
-  enum class buffer_type { kMemory, kFile };
+  rob& operator=(const rob&) = delete;
+  rob& operator=(rob&&) noexcept = delete;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  buffer_type get_buffer_type() const { return buf_type_; }
-  void write(const char* const buffer, std::size_t length) {
-    if (buf_type_ == buffer_type::kMemory) {
-      memcpy(&mem_buffer_[mem_cursor_], buffer, length);
-      mem_cursor_ += length;
-    } else {
-      fil_handler_->write(buffer, length);
+  inline std::optional<std::size_t> read(char* dst, std::size_t max_len) {
+    std::optional<std::size_t> bytes_read;
+    if (buffer_) {
+      std::size_t available = buffer_size_ - buffer_cursor_;
+      std::size_t n = max_len < available ? max_len : available;
+      memcpy(dst, &buffer_[buffer_cursor_], n);
+      buffer_cursor_ += n;
+      bytes_read = n;
+    } else if (stream_) {
+      std::size_t n = stream_->read(dst, max_len).gcount();
+      if (!(stream_->bad() || (stream_->fail() && !stream_->eof()))) {
+        bytes_read = n;
+      }
     }
+    return bytes_read;
   }
 
  private:
   // ___________________________________________________________________________
-  // CONSTRUCTORs/DESTRUCTORs                                        ( private )
-  //
-  body_writer(std::size_t length) {
-    buf_type_ = buffer_type::kMemory;
-    mem_size_ = length;
-    mem_buffer_ = (char*)malloc(mem_size_);
-    mem_cursor_ = 0;
-  }
-  body_writer(std::shared_ptr<std::ostream> output_stream) {
-    buf_type_ = buffer_type::kFile;
-    fil_handler_ = output_stream;
-    mem_buffer_ = NULL;
-    mem_size_ = 0;
-    mem_cursor_ = 0;
-  }
-  // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* mem_buffer_;
-  std::size_t mem_size_;
-  std::size_t mem_cursor_;
-  std::shared_ptr<std::ostream> fil_handler_;
-  buffer_type buf_type_;
+  char* buffer_{nullptr};
+  std::size_t buffer_size_{0};
+  std::size_t buffer_cursor_{0};
+  std::shared_ptr<std::istream> stream_;
 };
-}  // namespace martianlabs::doba::protocol::http11
+}  // namespace martianlabs::doba::common
 
 #endif

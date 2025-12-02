@@ -70,9 +70,9 @@
 #ifndef martianlabs_doba_protocol_http11_response_h
 #define martianlabs_doba_protocol_http11_response_h
 
-#include "common/rorb.h"
 #include "response_handler.h"
 #include "status_line.h"
+#include "common/rob.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -88,13 +88,15 @@ class response {
   //
   response() {
     buffer_ = NULL;
-    cursor_ = 0;
-    size_ = constants::limits::kDefaultCoreMsgMaxSizeInRam;
-    buffer_ = (char*)malloc(size_);
+    core_cursor_ = 0;
+    body_cursor_ = 0;
+    size_ = constants::limits::kDefaultCoreMsgMaxSizeInRam +
+            constants::limits::kDefaultBodyMsgMaxSizeInRam;
+    buffer_ = new char[size_];
   }
   response(const response&) = delete;
   response(response&&) noexcept = delete;
-  ~response() { free(buffer_); }
+  ~response() { delete[] buffer_; }
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
@@ -103,36 +105,36 @@ class response {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  inline std::queue<std::shared_ptr<common::rorb>> serialize() {
+  inline std::shared_ptr<common::rob> serialize() {
+    std::shared_ptr<common::rob> serialized;
     static const auto eol = (const char*)constants::string::kCrLf;
     static const auto eol_len = sizeof(constants::string::kCrLf) - 1;
-    std::queue<std::shared_ptr<common::rorb>> out;
     // [check] for a valid response!
-    if (!handler_) {
-      return out;
-    }
-    // [headers] end section!
-    if (cursor_ - size_ >= eol_len) {
-      memcpy(&buffer_[cursor_], eol, eol_len);
-      cursor_ += eol_len;
-      auto reader = handler_->get_body_reader(); 
+    if (handler_) {
+      // [headers] end section!
+      if (size_ - core_cursor_ >= eol_len) {
+        memcpy(&buffer_[core_cursor_], eol, eol_len);
+        core_cursor_ += eol_len;
+      }
       // [body] section!
-      if (reader->get_buffer_type() == body_reader::buffer_type::kMemory) {
-        auto ptr = reader->memory_data();
-        auto len = reader->memory_size();
-        if (size_ - cursor_ >= len) {
-          memcpy(&buffer_[cursor_], ptr, len);
-          cursor_ += len;
-          out.emplace(std::make_shared<common::rorb>(buffer_, cursor_));
-        } else {
-          out.emplace(std::make_shared<common::rorb>(ptr, len));
-        }
+      if (size_ - core_cursor_ >= body_cursor_) {
+        std::memmove(&buffer_[core_cursor_],
+                     &buffer_[constants::limits::kDefaultCoreMsgMaxSizeInRam],
+                     body_cursor_);
+        core_cursor_ += body_cursor_;
+        // [copy] buffer to rob!
+        serialized = std::make_shared<common::rob>(buffer_, core_cursor_);
       } else {
-        out.emplace(std::make_shared<common::rorb>(buffer_, cursor_));
-        out.emplace(std::make_shared<common::rorb>(reader->file_data()));
+        /*
+        pepe
+        */
+
+        /*
+        pepe fin
+        */
       }
     }
-    return out;
+    return serialized;
   }
   inline response_handler& continue_100() {
     return setup(EAS(SL(100_CONTINUE)), sizeof(EAS(SL(100_CONTINUE))) - 1);
@@ -310,9 +312,11 @@ class response {
   // METHODs                                                         ( private )
   //
   inline response_handler& setup(const char* const sln, std::size_t sln_len) {
-    cursor_ = sln_len;
-    memcpy(buffer_, sln, cursor_);
-    handler_ = std::make_shared<response_handler>(buffer_, size_, cursor_);
+    memcpy(buffer_, sln, core_cursor_ = sln_len);
+    handler_ = std::make_shared<response_handler>(
+        buffer_, constants::limits::kDefaultCoreMsgMaxSizeInRam,
+        constants::limits::kDefaultBodyMsgMaxSizeInRam, core_cursor_,
+        body_cursor_);
     return *handler_;
   }
   // ___________________________________________________________________________
@@ -320,7 +324,8 @@ class response {
   //
   char* buffer_;
   std::size_t size_;
-  std::size_t cursor_;
+  std::size_t core_cursor_;
+  std::size_t body_cursor_;
   std::shared_ptr<response_handler> handler_;
 };
 }  // namespace martianlabs::doba::protocol::http11
