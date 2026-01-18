@@ -83,9 +83,8 @@ namespace martianlabs::doba::transport::server {
 // Template parameters:
 //    RQty - request being used.
 //    RSty - response being used.
-//    DEty - decoder being used.
 // =============================================================================
-template <typename RQty, typename RSty, typename DEty, std::size_t BFsz>
+template <typename RQty, typename RSty, std::size_t BFsz>
 class tcpip {
   // ___________________________________________________________________________
   // TYPEs                                                           ( private )
@@ -132,7 +131,6 @@ class tcpip {
     overlapped_send ovs;
     std::mutex mtx;
     bool sending;
-    DEty decoder;
     SOCKET soc;
   };
 
@@ -410,7 +408,7 @@ class tcpip {
       c->ovr.buf_len += bytes;
       while (off < c->ovr.buf_len) {
         std::size_t used = 0;
-        req = c->decoder.process(&c->ovr.buf[off], c->ovr.buf_len - off, used);
+        req = RQty::from(&c->ovr.buf[off], c->ovr.buf_len - off, used);
         if (!used || !req) break;
         if (off + used > c->ovr.buf_len) return false;
         requests.push(std::move(req));

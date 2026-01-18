@@ -82,18 +82,18 @@ namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
 class response : public std::enable_shared_from_this<response> {
  public:
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   response(const response&) = delete;
   response(response&& in) noexcept = delete;
   ~response() { delete[] buffer_; }
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // OPERATORs                                                        ( public )
   //
   response& operator=(const response&) = delete;
   response& operator=(response&& in) noexcept = delete;
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
   inline std::shared_ptr<response> self() { return shared_from_this(); }
@@ -119,14 +119,6 @@ class response : public std::enable_shared_from_this<response> {
     }
     return robs;
   }
-  // @brief    Adds the specified header entry using the provided key/value.
-  //
-  // @param    k   User specified key.
-  // @param    v   User specified value.
-  // @return       A reference to the current object instance.
-  //
-  // @throws       std::runtime_error
-  //
   inline std::shared_ptr<response> add_header(std::string_view k,
                                               std::string_view v) {
     std::size_t k_sz = k.size(), v_sz = v.size();
@@ -159,27 +151,12 @@ class response : public std::enable_shared_from_this<response> {
     buffer_[core_cursor_++] = constants::character::kLf;
     return self();
   }
-  // @brief    Adds the specified header entry using the provided key/value.
-  //
-  // @param    k   User specified key.
-  // @param    v   User specified (template based) value.
-  // @return       A reference to the current object instance.
-  //
-  // @throws       std::runtime_error
-  //
   template <typename T>
     requires std::is_arithmetic_v<T>
   inline std::shared_ptr<response> add_header(std::string_view key,
                                               const T& val) {
     return add_header(key, std::to_string(val));
   }
-  // @brief    Removes the specified header entry using the provided key.
-  //
-  // @param    k   User specified key.
-  // @return       A reference to the current object instance.
-  //
-  // @throws       std::runtime_error
-  //
   inline std::shared_ptr<response> remove_header(std::string_view k) {
     bool matched = true;
     bool searching_for_key = true;
@@ -224,14 +201,6 @@ class response : public std::enable_shared_from_this<response> {
     }
     return self();
   }
-  // @brief    Sets body content in memory using specified user buffer.
-  //
-  // @param    buf   User buffer pointer.
-  // @param    len   User buffer length.
-  // @return         A reference to the current object instance.
-  //
-  // @throws         std::runtime_error
-  //
   inline std::shared_ptr<response> set_body(const char* const buf,
                                             std::size_t len) {
     if (body_size_ - body_cursor_ < len) {
@@ -241,36 +210,14 @@ class response : public std::enable_shared_from_this<response> {
     body_cursor_ += len;
     return add_header(headers::kContentLength, len);
   }
-  // @brief    Sets body content in memory using specified string view.
-  //
-  // @param    sv    User string view.
-  // @return         A reference to the current object instance.
-  //
-  // @throws         std::runtime_error
-  //
   inline std::shared_ptr<response> set_body(std::string_view sv) {
     return set_body(sv.data(), sv.size());
   }
-  // @brief    Sets body content in memory using specified arithmetic value.
-  //
-  // @param    val   User arithmetic (template based) value.
-  // @return         A reference to the current object instance.
-  //
-  // @throws         std::runtime_error
-  //
   template <typename T>
     requires std::is_arithmetic_v<T>
   inline std::shared_ptr<response> set_body(T&& val) {
     return set_body(std::to_string(val));
   }
-  // @brief    Sets body content using the provided input stream.
-  //
-  // @param    stream    User specified stream.
-  // @return             A reference to the current object instance.
-  //
-  // @throws             std::invalid_argument
-  // @throws             std::runtime_error
-  //
   inline std::shared_ptr<response> set_body(
       std::shared_ptr<std::istream> stream) {
     if (!(body_stream_ = stream)) {
@@ -289,7 +236,7 @@ class response : public std::enable_shared_from_this<response> {
     body_stream_->seekg(current, std::ios::beg);
     return add_header(headers::kContentLength, body_length);
   }
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // STATIC-METHODs                                                   ( public )
   //
   static inline std::shared_ptr<response> continue_100() {
@@ -464,7 +411,7 @@ class response : public std::enable_shared_from_this<response> {
   }
 
  private:
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                        ( private )
   //
   response(const char* const status_line, std::size_t status_line_length) {
@@ -481,7 +428,7 @@ class response : public std::enable_shared_from_this<response> {
       buffer_ = alloc;
     }
   }
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // METHODs                                                         ( private )
   //
   static inline std::shared_ptr<response> setup(
@@ -489,7 +436,7 @@ class response : public std::enable_shared_from_this<response> {
     return std::shared_ptr<response>(
         new response(status_line, status_line_length));
   }
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
   char* buffer_ = nullptr;

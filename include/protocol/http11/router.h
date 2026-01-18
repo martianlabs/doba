@@ -82,34 +82,35 @@ namespace martianlabs::doba::protocol::http11 {
 // -----------------------------------------------------------------------------
 // This class holds for the http 1.1 router implementation.
 // -----------------------------------------------------------------------------
+// Template parameters:
+//    FNty - router handle function prototype.
 // =============================================================================
+template <typename FNty>
 class router {
  public:
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // USINGs                                                           ( public )
   //
-  using handler =
-      std::function<std::shared_ptr<response>(std::shared_ptr<const request>)>;
-  using hpair = std::pair<handler, common::execution_policy>;
-  // ___________________________________________________________________________
+  using hpair = std::pair<FNty, common::execution_policy>;
+  // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   router() = default;
   router(const router&) = delete;
   router(router&&) noexcept = delete;
   ~router() = default;
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // OPERATORs                                                        ( public )
   //
   router& operator=(const router&) = delete;
   router& operator=(router&&) noexcept = delete;
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
-  void add(method method, std::string_view route, handler handler,
+  void add(method method, std::string_view route, FNty fn,
            common::execution_policy policy) {
     auto& map = routes_.try_emplace(method).first->second;
-    map.emplace(route, std::make_pair(std::move(handler), policy));
+    map.emplace(route, std::make_pair(fn, policy));
   }
   auto match(method method, std::string_view path) {
     std::optional<hpair> res = std::nullopt;
@@ -122,7 +123,7 @@ class router {
   }
 
  private:
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
   std::unordered_map<method, common::hash_map<std::string, hpair>> routes_;

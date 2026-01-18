@@ -93,11 +93,15 @@ namespace martianlabs::doba::protocol::http11 {
 // Template parameters:
 //    TRty - transport being used (tcp/ip by default).
 // =============================================================================
-template <template <typename, typename, typename, int> class TRty =
+template <template <typename, typename, int> class TRty =
               transport::server::tcpip>
 class server {
+  using router_in = std::shared_ptr<const request>;
+  using router_out = std::shared_ptr<response>;
+  using router_fn = std::function<router_out(router_in)>;
+
  public:
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   server() {
@@ -145,7 +149,7 @@ class server {
           */
 
           /*
-          */
+           */
 
           /*
           pepe fin
@@ -162,12 +166,12 @@ class server {
   server(const server&) = delete;
   server(server&&) noexcept = delete;
   ~server() { stop(); }
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // OPERATORs                                                        ( public )
   //
   server& operator=(const server&) = delete;
   server& operator=(server&&) noexcept = delete;
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
   void start(const char port[]) {
@@ -181,18 +185,18 @@ class server {
     transport_.stop();
   }
   server& add_route(
-      method method, std::string_view route, router::handler handler,
+      method method, std::string_view route, router_fn fn,
       common::execution_policy policy = common::execution_policy::kSync) {
-    router_.add(method, route, handler, policy);
+    router_.add(method, route, fn, policy);
     return *this;
   }
 
  private:
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // USINGs                                                          ( private )
   //
   using on_header_check_delegate = std::function<bool(std::string_view)>;
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // METHODs                                                         ( private )
   //
   void setup_headers_functions() {
@@ -242,13 +246,13 @@ class server {
     }
     return true;
   }
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
   std::unordered_map<std::string_view, on_header_check_delegate> headers_fns_;
   std::shared_ptr<common::thread_pool> thread_pool_;
-  TRty<request, response, decoder, 4096> transport_;
-  router router_;
+  TRty<request, response, 4096> transport_;
+  router<router_fn> router_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 
