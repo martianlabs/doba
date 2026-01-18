@@ -79,7 +79,6 @@
 #include "protocol/http11/response.h"
 #include "protocol/http11/router.h"
 #include "protocol/http11/headers.h"
-#include "protocol/http11/decoder.h"
 #include "protocol/http11/checkers/host.h"
 #include "protocol/http11/checkers/date.h"
 #include "protocol/http11/checkers/connection.h"

@@ -87,25 +87,25 @@ namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
 class request {
  public:
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   request(const request&) = delete;
   request(request&&) noexcept = delete;
   ~request() = default;
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // OPERATORs                                                        ( public )
   //
   request& operator=(const request&) = delete;
   request& operator=(request&&) noexcept = delete;
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
-  auto get_method() const { return method_; }
-  auto get_target() const { return target_; }
-  auto get_absolute_path() const { return absolute_path_; }
-  auto get_query() const { return query_; }
-  auto get_headers() const {
+  inline auto get_method() const { return method_; }
+  inline auto get_target() const { return target_; }
+  inline auto get_absolute_path() const { return absolute_path_; }
+  inline auto get_query() const { return query_; }
+  inline auto get_headers() const {
     bool searching_for_key = true;
     std::size_t i = 0, j = 0;
     for (; i < cursor_; i++) {
@@ -149,9 +149,9 @@ class request {
     }
     return out;
   }
-  auto has_body() const { return has_body_; }
-  auto get_body_length() const { return body_length_; }
-  // ___________________________________________________________________________
+  inline auto has_body() const { return has_body_; }
+  inline auto get_body_length() const { return body_length_; }
+  // ---------------------------------------------------------------------------
   // STATIC-METHODs                                                   ( public )
   //
   static inline auto from(char* buf, std::size_t len, std::size_t& used) {
@@ -182,18 +182,11 @@ class request {
   }
 
  private:
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                        ( private )
   //
-  request()
-      : buffer_(nullptr),
-        size_(0),
-        cursor_(0),
-        method_(method::kUnknown),
-        target_(target::kUnknown),
-        has_body_(false),
-        body_length_(0) {}
-  // ___________________________________________________________________________
+  request() = default;
+  // ---------------------------------------------------------------------------
   // METHODs                                                         ( private )
   //
   static inline bool check_request_line(char* buffer, const std::size_t& cursor,
@@ -528,18 +521,18 @@ class request {
     }
     return true;
   }
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
-  char* buffer_;
-  std::size_t size_;
-  std::size_t cursor_;
-  method method_;
-  target target_;
-  std::string absolute_path_;
-  std::string query_;
+  char* buffer_ = nullptr;
+  std::size_t size_ = 0;
+  std::size_t cursor_ = 0;
+  method method_ = method::kUnknown;
+  target target_ = target::kUnknown;
   bool has_body_ = false;
   std::size_t body_length_ = 0;
+  std::string absolute_path_;
+  std::string query_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

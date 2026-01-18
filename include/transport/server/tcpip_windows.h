@@ -86,7 +86,7 @@ namespace martianlabs::doba::transport::server {
 // =============================================================================
 template <typename RQty, typename RSty, std::size_t BFsz>
 class tcpip {
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // TYPEs                                                           ( private )
   //
   enum class io_type : uint8_t { kEnqueue, kSend, kReceive };
@@ -135,26 +135,26 @@ class tcpip {
   };
 
  public:
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   tcpip() = default;
   tcpip(const tcpip &) = delete;
   tcpip(tcpip &&) noexcept = delete;
   ~tcpip() { stop(); }
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // OPERATORs                                                        ( public )
   //
   tcpip &operator=(const tcpip &) = delete;
   tcpip &operator=(tcpip &&) noexcept = delete;
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // USINGs                                                           ( public )
   //
   using on_request = std::function<void(
       std::shared_ptr<const RQty>, std::function<void(std::shared_ptr<RSty>)>)>;
   using on_connection = std::function<void(uint32_t)>;
   using on_disconnection = std::function<void(uint32_t)>;
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
   result start(const char port[]) {
@@ -261,7 +261,7 @@ class tcpip {
   }
 
  private:
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // METHODs                                                         ( private )
   //
   bool setup_winsock() {
@@ -477,7 +477,7 @@ class tcpip {
     }
     return send_result::kBytesSent;
   }
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
   DWORD number_of_workers_ = 0;

@@ -87,7 +87,7 @@ namespace martianlabs::doba::common {
 // =============================================================================
 class thread_pool {
  public:
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   explicit thread_pool(size_t threads = std::thread::hardware_concurrency()) {
@@ -113,17 +113,17 @@ class thread_pool {
   thread_pool(const thread_pool&) = delete;
   thread_pool(thread_pool&&) noexcept = delete;
   ~thread_pool() { stop(); }
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // OPERATORs                                                        ( public )
   //
   thread_pool& operator=(const thread_pool&) = delete;
   thread_pool& operator=(thread_pool&&) noexcept = delete;
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
   void stop() {
     {
-      std::unique_lock lock(mtx_);
+      std::lock_guard lock(mtx_);
       running_ = false;
     }
     cv_.notify_all();
@@ -137,7 +137,7 @@ class thread_pool {
   template <class F, class... Args>
   void enqueue(F&& f, Args&&... args) {
     {
-      std::unique_lock lock(mtx_);
+      std::lock_guard lock(mtx_);
       if (!running_) return;
       tasks_.emplace([f = std::forward<F>(f),
                       ... args = std::forward<Args>(args)]() mutable {
@@ -148,14 +148,14 @@ class thread_pool {
   }
 
  private:
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
   std::queue<std::thread> workers_;
   std::queue<std::function<void()>> tasks_;
   std::mutex mtx_;
   std::condition_variable cv_;
-  bool running_;
+  bool running_ = false;
 };
 }  // namespace martianlabs::doba::common
 

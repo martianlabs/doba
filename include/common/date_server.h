@@ -83,23 +83,24 @@ namespace martianlabs::doba::common {
 // -----------------------------------------------------------------------------
 // =============================================================================
 class date_server {
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                        ( private )
   //
   date_server() = default;
+
  public:
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   date_server(const date_server&) = delete;
   date_server(date_server&&) noexcept = delete;
   ~date_server() { stop(); }
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // OPERATORs                                                        ( public )
   //
   date_server& operator=(const date_server&) = delete;
   date_server& operator=(date_server&&) noexcept = delete;
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // STATIC-METHODs                                                   ( public )
   //
   static std::shared_ptr<date_server> get() {
@@ -110,7 +111,7 @@ class date_server {
         std::memory_order_acq_rel);
     return instance_atomic.load(std::memory_order_acquire);
   }
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
   void start() {
@@ -145,7 +146,7 @@ class date_server {
   std::string_view current() { return front_.load(std::memory_order_acquire); }
 
  private:
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // CONSTANTs                                                       ( private )
   //
   static constexpr std::size_t kBufSize = 64;
@@ -154,7 +155,7 @@ class date_server {
   static constexpr const char* kMonths[] = {"Jan", "Feb", "Mar", "Apr",
                                             "May", "Jun", "Jul", "Aug",
                                             "Sep", "Oct", "Nov", "Dec"};
-  // ___________________________________________________________________________
+  // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
   std::atomic<bool> running_{false};
