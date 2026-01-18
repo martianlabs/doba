@@ -77,14 +77,15 @@ int main(int argc, char* argv[]) {
   my_server
       .add_route(
           method::kGet, "/plaintext",
-          [](std::shared_ptr<const request> req,
-             std::shared_ptr<response> res) {
-            res->ok_200()
-                .add_header("Content-Type", "text/plain")
-                .add_header("Date", date_server::get()->current())
-                .set_body("Hello, World!");
+          [](std::shared_ptr<const request> req) -> std::shared_ptr<response> {
+            return response::ok_200()
+                ->add_header("Server", "doba")
+                ->add_header("Content-Type", "text/plain")
+                ->add_header("Date", date_server::get()->current())
+                ->set_body("Hello, World!")
+                ->self();
           },
           execution_policy::kSync)
-      .start("10001");
+      .start("8080");
   return getchar();
 }

@@ -88,8 +88,8 @@ class router {
   // ___________________________________________________________________________
   // USINGs                                                           ( public )
   //
-  using handler = std::function<void(std::shared_ptr<const request>,
-                                     std::shared_ptr<response>)>;
+  using handler =
+      std::function<std::shared_ptr<response>(std::shared_ptr<const request>)>;
   using hpair = std::pair<handler, common::execution_policy>;
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )

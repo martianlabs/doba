@@ -82,16 +82,10 @@ class decoder {
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  decoder() {
-    cursor_ = 0;
-    size_ = constants::limits::kDefaultCoreMsgMaxSizeInRam;
-    buffer_ = (char*)malloc(size_);
-    body_bytes_read_ = 0;
-    body_read_completed = false;
-  }
+  decoder() = default;
   decoder(const decoder&) = delete;
   decoder(decoder&&) noexcept = delete;
-  ~decoder() { free(buffer_); }
+  ~decoder() = default;
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
@@ -100,78 +94,9 @@ class decoder {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  inline bool add(const char* ptr, std::size_t size) {
-    if ((size_ - cursor_) < size) {
-      // ((error)): the size of the incoming buffer exceeds limits!
-      return false;
-    }
-    memcpy(&buffer_[cursor_], ptr, size);
-    cursor_ += size;
-    return true;
+  inline auto process(char* buf, std::size_t len, std::size_t& used) {
+    return request::from(buf, len, used);
   }
-  inline std::shared_ptr<request> process() {
-    static const auto eoh = (const char*)constants::string::kEndOfHeaders;
-    static const auto eoh_len = sizeof(constants::string::kEndOfHeaders) - 1;
-    // [first] let's detect the [end-of-headers] position..
-    if (!request_) {
-      std::string_view content(buffer_, cursor_);
-      if (auto hdr = content.find(eoh); hdr != std::string_view::npos) {
-        // try to create a valid request from incoming data..
-        request_ = request::from(buffer_, cursor_);
-        // now let's adjust internal buffer just by copying remaining bytes..
-        if (cursor_ -= hdr + eoh_len) {
-          memmove(buffer_, &buffer_[hdr + eoh_len], cursor_);
-        }
-      }
-    }
-    // [second] let's process the [bopy] part (if present)..
-    if (request_) {
-      if (request_->has_body()) {
-        if (std::size_t body_length = request_->get_body_length()) {
-          // [content-length] based body!
-          std::size_t pending = body_length - body_bytes_read_;
-          std::size_t to_grab = cursor_ >= pending ? pending : cursor_;
-
-          /*
-          pepe
-          */
-
-          /*
-          request_->get_body_mutable()->write(buffer_, to_grab);
-          */
-
-          /*
-          pepe fin
-          */
-
-          body_read_completed = (body_bytes_read_ += to_grab) == body_length;
-          cursor_ -= to_grab;
-        } else {
-          // [transfer-encoding:chunks] based body!
-          // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-          // [to-do] -> add support for this!
-          // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        }
-      }
-      if (!request_->has_body() || body_read_completed ) {
-        body_bytes_read_ = 0;
-        body_read_completed = false;
-        return std::move(request_);
-      }
-    }
-    return nullptr;
-  }
-
- private:
-  // ___________________________________________________________________________
-  // STATIC-ATTRIBUTEs                                               ( private )
-  //
-  char* buffer_;
-  std::size_t size_;
-  std::size_t cursor_;
-  bool body_read_completed;
-  std::size_t body_bytes_read_;
-  std::shared_ptr<request> request_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

@@ -88,10 +88,10 @@ class rob {
   //
   rob(std::shared_ptr<std::istream> ss) { stream_ = ss; }
   rob(const char* buffer, std::size_t size) {
-    if (char* alloc = new char[size]) {
+    if (char* alloc = new (std::nothrow) char[size]) {
+      std::memcpy(alloc, buffer, size);
       buffer_ = alloc;
-      buffer_size_ = size;
-      std::memcpy(buffer_, buffer, size);
+      size_ = size;
     }
   }
   rob(const rob&) = delete;
@@ -108,10 +108,10 @@ class rob {
   inline std::optional<std::size_t> read(char* dst, std::size_t max_len) {
     std::optional<std::size_t> bytes_read;
     if (buffer_) {
-      std::size_t available = buffer_size_ - buffer_cursor_;
+      std::size_t available = size_ - cursor_;
       std::size_t n = max_len < available ? max_len : available;
-      memcpy(dst, &buffer_[buffer_cursor_], n);
-      buffer_cursor_ += n;
+      memcpy(dst, &buffer_[cursor_], n);
+      cursor_ += n;
       bytes_read = n;
     } else if (stream_) {
       std::size_t n = stream_->read(dst, max_len).gcount();
@@ -126,9 +126,9 @@ class rob {
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* buffer_{nullptr};
-  std::size_t buffer_size_{0};
-  std::size_t buffer_cursor_{0};
+  char* buffer_ = nullptr;
+  std::size_t size_ = 0;
+  std::size_t cursor_ = 0;
   std::shared_ptr<std::istream> stream_;
 };
 }  // namespace martianlabs::doba::common

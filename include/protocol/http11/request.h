@@ -92,7 +92,7 @@ class request {
   //
   request(const request&) = delete;
   request(request&&) noexcept = delete;
-  ~request() { free(buffer_); }
+  ~request() = default;
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
@@ -154,7 +154,7 @@ class request {
   // ___________________________________________________________________________
   // STATIC-METHODs                                                   ( public )
   //
-  static inline auto from(char* buf, std::size_t len) {
+  static inline auto from(char* buf, std::size_t len, std::size_t& used) {
     method method = method::kUnknown;
     target target = target::kUnknown;
     std::shared_ptr<request> req;
@@ -165,8 +165,17 @@ class request {
     std::size_t i = 0;
     if (check_request_line(buf, len, method, target, absolute_path, query, i)) {
       if (check_headers(buf, len, i, ebd, ebdlen)) {
-        req = std::shared_ptr<request>(new request(
-            buf, len, method, target, absolute_path, query, ebd, ebdlen));
+        used = i;
+        req = std::shared_ptr<request>(new request());
+        req->buffer_ = buf;
+        req->size_ = len;
+        req->cursor_ = 0;
+        req->method_ = method;
+        req->target_ = target;
+        req->absolute_path_ = absolute_path;
+        req->query_ = query;
+        req->has_body_ = ebd;
+        req->body_length_ = ebdlen;
       }
     }
     return req;
@@ -176,38 +185,14 @@ class request {
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                        ( private )
   //
-  request(const char* const buf, std::size_t len, method method, target target,
-          const std::string& absolute_path, const std::string& query,
-          bool has_body, std::size_t body_length) {
-    size_ = 0;
-    cursor_ = 0;
-    method_ = method;
-    target_ = target;
-    body_length_ = body_length;
-    if (has_body_ = has_body) {
-      if (body_length_) {
-
-        /*
-        pepe
-        */
-
-        /*
-        pepe fin
-        */
-
-      } else {
-        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        // [to-do] -> add support for this!
-        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-      }
-    }
-    absolute_path_ = absolute_path;
-    query_ = query;
-    if (buffer_ = (char*)malloc(len)) {
-      memcpy(buffer_, buf, len);
-      cursor_ = size_ = len;
-    }
-  }
+  request()
+      : buffer_(nullptr),
+        size_(0),
+        cursor_(0),
+        method_(method::kUnknown),
+        target_(target::kUnknown),
+        has_body_(false),
+        body_length_(0) {}
   // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //

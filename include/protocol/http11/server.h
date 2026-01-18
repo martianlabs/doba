@@ -93,7 +93,7 @@ namespace martianlabs::doba::protocol::http11 {
 // Template parameters:
 //    TRty - transport being used (tcp/ip by default).
 // =============================================================================
-template <template <typename, typename, typename> class TRty =
+template <template <typename, typename, typename, int> class TRty =
               transport::server::tcpip>
 class server {
  public:
@@ -101,17 +101,12 @@ class server {
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   server() {
-    thread_pool_ = std::make_shared<common::thread_pool>(
-        std::thread::hardware_concurrency());
     transport_.set_on_request(
-        [this](std::shared_ptr<const request> req,
-               std::function<void(std::shared_ptr<response>)> sender) {
-          std::shared_ptr<response> res = std::make_shared<response>();
+        [this](std::shared_ptr<const request> req, auto sender) -> void {
           // let's check if the incoming request is following the standard..
           if (!process_headers(req)) {
-            res->bad_request_400().add_header(headers::kContentLength, 0);
-            sender(res);
-            return;
+            sender(response::bad_request_400()->add_header(
+                headers::kContentLength, 0));
           }
           switch (req->get_target()) {
             case target::kOriginForm:
@@ -119,19 +114,17 @@ class server {
               auto router_entry =
                   router_.match(req->get_method(), req->get_absolute_path());
               if (!router_entry.has_value()) {
-                res->not_found_404().add_header(headers::kContentLength, 0);
-                sender(res);
+                sender(response::not_found_404()->add_header(
+                    headers::kContentLength, 0));
                 return;
               }
               switch (router_entry->second) {
                 case common::execution_policy::kSync:
-                  router_entry->first(req, res);
-                  sender(res);
+                  sender(router_entry->first(req));
                   break;
                 case common::execution_policy::kAsync:
-                  thread_pool_->enqueue([req, res, sender, router_entry]() {
-                    router_entry->first(req, res);
-                    sender(res);
+                  thread_pool_->enqueue([req, sender, router_entry]() {
+                    sender(router_entry->first(req));
                   });
                   break;
               }
@@ -146,6 +139,17 @@ class server {
             default:
               break;
           }
+
+          /*
+          pepe
+          */
+
+          /*
+          */
+
+          /*
+          pepe fin
+          */
         });
     transport_.set_on_connection([](uint32_t id) {
       // nothing to do here by default..
@@ -166,12 +170,11 @@ class server {
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
-  void start(
-      const char port[],
-      std::size_t number_of_workers = std::thread::hardware_concurrency(),
-      std::size_t buffer_sz = constants::limits::kDefaultCoreMsgMaxSizeInRam) {
+  void start(const char port[]) {
     common::date_server::get()->start();
-    transport_.start(port, number_of_workers, buffer_sz);
+    thread_pool_ = std::make_shared<common::thread_pool>(
+        std::thread::hardware_concurrency() / 2);
+    transport_.start(port);
   }
   void stop() {
     thread_pool_->stop();
@@ -244,7 +247,7 @@ class server {
   //
   std::unordered_map<std::string_view, on_header_check_delegate> headers_fns_;
   std::shared_ptr<common::thread_pool> thread_pool_;
-  TRty<request, response, decoder> transport_;
+  TRty<request, response, decoder, 4096> transport_;
   router router_;
 };
 }  // namespace martianlabs::doba::protocol::http11

@@ -70,7 +70,6 @@
 #ifndef martianlabs_doba_protocol_http11_response_h
 #define martianlabs_doba_protocol_http11_response_h
 
-#include "response_handler.h"
 #include "status_line.h"
 #include "common/rob.h"
 
@@ -81,247 +80,426 @@ namespace martianlabs::doba::protocol::http11 {
 // This class holds for the http 1.1 response implementation.
 // -----------------------------------------------------------------------------
 // =============================================================================
-class response {
+class response : public std::enable_shared_from_this<response> {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  response() {
-    buffer_ = NULL;
-    core_cursor_ = 0;
-    body_cursor_ = 0;
-    size_ = constants::limits::kDefaultCoreMsgMaxSizeInRam +
-            constants::limits::kDefaultBodyMsgMaxSizeInRam;
-    buffer_ = new char[size_];
-  }
   response(const response&) = delete;
-  response(response&&) noexcept = delete;
+  response(response&& in) noexcept = delete;
   ~response() { delete[] buffer_; }
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
   response& operator=(const response&) = delete;
-  response& operator=(response&&) noexcept = delete;
+  response& operator=(response&& in) noexcept = delete;
   // ___________________________________________________________________________
   // METHODs                                                          ( public )
   //
+  inline std::shared_ptr<response> self() { return shared_from_this(); }
   inline std::queue<std::shared_ptr<common::rob>> serialize() {
     std::queue<std::shared_ptr<common::rob>> robs;
-    static const auto eol = (const char*)constants::string::kCrLf;
-    static const auto eol_len = sizeof(constants::string::kCrLf) - 1;
-    // [check] for a valid response!
-    if (handler_) {
-      // [headers] end section!
-      if (size_ - core_cursor_ >= eol_len) {
-        memcpy(&buffer_[core_cursor_], eol, eol_len);
-        core_cursor_ += eol_len;
-      }
-      // [body] section!
-      if (!body_stream_) {
-        std::memmove(&buffer_[core_cursor_],
-                     &buffer_[constants::limits::kDefaultCoreMsgMaxSizeInRam],
-                     body_cursor_);
-        core_cursor_ += body_cursor_;
-        robs.emplace(std::make_shared<common::rob>(buffer_, core_cursor_));
-      } else {
-        robs.emplace(std::make_shared<common::rob>(buffer_, core_cursor_));
-        robs.emplace(std::make_shared<common::rob>(body_stream_));
-      }
+    static constexpr auto eol = constants::string::kCrLf;
+    static constexpr auto eol_len = sizeof(constants::string::kCrLf) - 1;
+    // [headers] end section!
+    if (size_ - core_cursor_ >= eol_len) {
+      memcpy(&buffer_[core_cursor_], eol, eol_len);
+      core_cursor_ += eol_len;
+    }
+    // [body] section!
+    if (!body_stream_) {
+      std::memmove(&buffer_[core_cursor_],
+                   &buffer_[constants::limits::kDefaultCoreMsgMaxSizeInRam],
+                   body_cursor_);
+      core_cursor_ += body_cursor_;
+      robs.emplace(std::make_shared<common::rob>(buffer_, core_cursor_));
+    } else {
+      robs.emplace(std::make_shared<common::rob>(buffer_, core_cursor_));
+      robs.emplace(std::make_shared<common::rob>(body_stream_));
     }
     return robs;
   }
-  inline response_handler& continue_100() {
+  // @brief    Adds the specified header entry using the provided key/value.
+  //
+  // @param    k   User specified key.
+  // @param    v   User specified value.
+  // @return       A reference to the current object instance.
+  //
+  // @throws       std::runtime_error
+  //
+  inline std::shared_ptr<response> add_header(std::string_view k,
+                                              std::string_view v) {
+    std::size_t k_sz = k.size(), v_sz = v.size();
+    std::size_t entry_length = k_sz + v_sz + 3;
+    if ((core_size_ - core_cursor_) <= (entry_length + 2)) {
+      throw std::runtime_error("headers section too large to fit in memory!");
+    }
+    if (!k.size()) {
+      return self();
+    }
+    auto initial_cur = core_cursor_;
+    for (const char& c : k) {
+      if (!helpers::is_token(c)) {
+        core_cursor_ = initial_cur;
+        return self();
+      }
+      buffer_[core_cursor_++] = helpers::tolower_ascii(c);
+    }
+    buffer_[core_cursor_++] = constants::character::kColon;
+    for (const char& c : v) {
+      if (!(helpers::is_vchar(c) || helpers::is_obs_text(c) ||
+            c == constants::character::kSpace ||
+            c == constants::character::kHTab)) {
+        return self();
+      }
+    }
+    memcpy(&buffer_[core_cursor_], v.data(), v_sz);
+    core_cursor_ += v_sz;
+    buffer_[core_cursor_++] = constants::character::kCr;
+    buffer_[core_cursor_++] = constants::character::kLf;
+    return self();
+  }
+  // @brief    Adds the specified header entry using the provided key/value.
+  //
+  // @param    k   User specified key.
+  // @param    v   User specified (template based) value.
+  // @return       A reference to the current object instance.
+  //
+  // @throws       std::runtime_error
+  //
+  template <typename T>
+    requires std::is_arithmetic_v<T>
+  inline std::shared_ptr<response> add_header(std::string_view key,
+                                              const T& val) {
+    return add_header(key, std::to_string(val));
+  }
+  // @brief    Removes the specified header entry using the provided key.
+  //
+  // @param    k   User specified key.
+  // @return       A reference to the current object instance.
+  //
+  // @throws       std::runtime_error
+  //
+  inline std::shared_ptr<response> remove_header(std::string_view k) {
+    bool matched = true;
+    bool searching_for_key = true;
+    std::size_t i = core_headers_start_, j = 0, k_start = i, k_sz = k.size();
+    while (i < core_cursor_) {
+      switch (buffer_[i]) {
+        case constants::character::kColon:
+          if (searching_for_key) {
+            searching_for_key = false;
+          }
+          break;
+        case constants::character::kCr:
+          if (searching_for_key) {
+            return self();
+          }
+          if (matched && j == k_sz) {
+            auto const off = i + 2;
+            std::memmove(&buffer_[k_start], &buffer_[off], core_cursor_ - off);
+            core_cursor_ -= (off - k_start);
+            std::memset(&buffer_[core_cursor_], 0, core_size_ - core_cursor_);
+            return self();
+          }
+          searching_for_key = true;
+          matched = true;
+          k_start = i + 2;
+          j = 0;
+          i++;
+          break;
+        default:
+          if (searching_for_key) {
+            if (matched) {
+              if (j < k_sz) {
+                matched = buffer_[i] == helpers::tolower_ascii(k[j++]);
+              } else {
+                matched = false;
+              }
+            }
+          }
+          break;
+      }
+      i++;
+    }
+    return self();
+  }
+  // @brief    Sets body content in memory using specified user buffer.
+  //
+  // @param    buf   User buffer pointer.
+  // @param    len   User buffer length.
+  // @return         A reference to the current object instance.
+  //
+  // @throws         std::runtime_error
+  //
+  inline std::shared_ptr<response> set_body(const char* const buf,
+                                            std::size_t len) {
+    if (body_size_ - body_cursor_ < len) {
+      throw std::runtime_error("body too large to fit in memory!");
+    }
+    std::memcpy(&buffer_[core_size_], buf, len);
+    body_cursor_ += len;
+    return add_header(headers::kContentLength, len);
+  }
+  // @brief    Sets body content in memory using specified string view.
+  //
+  // @param    sv    User string view.
+  // @return         A reference to the current object instance.
+  //
+  // @throws         std::runtime_error
+  //
+  inline std::shared_ptr<response> set_body(std::string_view sv) {
+    return set_body(sv.data(), sv.size());
+  }
+  // @brief    Sets body content in memory using specified arithmetic value.
+  //
+  // @param    val   User arithmetic (template based) value.
+  // @return         A reference to the current object instance.
+  //
+  // @throws         std::runtime_error
+  //
+  template <typename T>
+    requires std::is_arithmetic_v<T>
+  inline std::shared_ptr<response> set_body(T&& val) {
+    return set_body(std::to_string(val));
+  }
+  // @brief    Sets body content using the provided input stream.
+  //
+  // @param    stream    User specified stream.
+  // @return             A reference to the current object instance.
+  //
+  // @throws             std::invalid_argument
+  // @throws             std::runtime_error
+  //
+  inline std::shared_ptr<response> set_body(
+      std::shared_ptr<std::istream> stream) {
+    if (!(body_stream_ = stream)) {
+      throw std::invalid_argument("input stream is empty!");
+    }
+    std::streampos current = body_stream_->tellg();
+    if (current == std::streampos(-1)) {
+      throw std::runtime_error("input stream not readable!");
+    }
+    body_stream_->seekg(0, std::ios::end);
+    std::streampos off = body_stream_->tellg();
+    if (off == std::streampos(-1)) {
+      throw std::runtime_error("input stream not readable!");
+    }
+    std::size_t body_length = static_cast<std::size_t>(off);
+    body_stream_->seekg(current, std::ios::beg);
+    return add_header(headers::kContentLength, body_length);
+  }
+  // ___________________________________________________________________________
+  // STATIC-METHODs                                                   ( public )
+  //
+  static inline std::shared_ptr<response> continue_100() {
     return setup(EAS(SL(100_CONTINUE)), sizeof(EAS(SL(100_CONTINUE))) - 1);
   }
-  inline response_handler& switching_protocols_101() {
+  static inline std::shared_ptr<response> switching_protocols_101() {
     return setup(EAS(SL(101_SWITCHING_PROTOCOLS)),
                  sizeof(EAS(SL(101_SWITCHING_PROTOCOLS))) - 1);
   }
-  inline response_handler& ok_200() {
+  static inline std::shared_ptr<response> ok_200() {
     return setup(EAS(SL(200_OK)), sizeof(EAS(SL(200_OK))) - 1);
   }
-  inline response_handler& created_201() {
+  static inline std::shared_ptr<response> created_201() {
     return setup(EAS(SL(201_CREATED)), sizeof(EAS(SL(201_CREATED))) - 1);
   }
-  inline response_handler& accepted_202() {
+  static inline std::shared_ptr<response> accepted_202() {
     return setup(EAS(SL(202_ACCEPTED)), sizeof(EAS(SL(202_ACCEPTED))) - 1);
   }
-  inline response_handler& non_authoritative_information_203() {
+  static inline std::shared_ptr<response> non_authoritative_information_203() {
     return setup(EAS(SL(203_NON_AUTHORITATIVE_INFORMATION)),
                  sizeof(EAS(SL(203_NON_AUTHORITATIVE_INFORMATION))) - 1);
   }
-  inline response_handler& no_content_204() {
+  static inline std::shared_ptr<response> no_content_204() {
     return setup(EAS(SL(204_NO_CONTENT)), sizeof(EAS(SL(204_NO_CONTENT))) - 1);
   }
-  inline response_handler& reset_content_205() {
+  static inline std::shared_ptr<response> reset_content_205() {
     return setup(EAS(SL(205_RESET_CONTENT)),
                  sizeof(EAS(SL(205_RESET_CONTENT))) - 1);
   }
-  inline response_handler& partial_content_206() {
+  static inline std::shared_ptr<response> partial_content_206() {
     return setup(EAS(SL(206_PARTIAL_CONTENT)),
                  sizeof(EAS(SL(206_PARTIAL_CONTENT))) - 1);
   }
-  inline response_handler& multiple_choices_300() {
+  static inline std::shared_ptr<response> multiple_choices_300() {
     return setup(EAS(SL(300_MULTIPLE_CHOICES)),
                  sizeof(EAS(SL(300_MULTIPLE_CHOICES))) - 1);
   }
-  inline response_handler& moved_permanently_301() {
+  static inline std::shared_ptr<response> moved_permanently_301() {
     return setup(EAS(SL(301_MOVED_PERMANENTLY)),
                  sizeof(EAS(SL(301_MOVED_PERMANENTLY))) - 1);
   }
-  inline response_handler& found_302() {
+  static inline std::shared_ptr<response> found_302() {
     return setup(EAS(SL(302_FOUND)), sizeof(EAS(SL(302_FOUND))) - 1);
   }
-  inline response_handler& see_other_303() {
+  static inline std::shared_ptr<response> see_other_303() {
     return setup(EAS(SL(303_SEE_OTHER)), sizeof(EAS(SL(303_SEE_OTHER))) - 1);
   }
-  inline response_handler& not_modified_304() {
+  static inline std::shared_ptr<response> not_modified_304() {
     return setup(EAS(SL(304_NOT_MODIFIED)),
                  sizeof(EAS(SL(304_NOT_MODIFIED))) - 1);
   }
-  inline response_handler& use_proxy_305() {
+  static inline std::shared_ptr<response> use_proxy_305() {
     return setup(EAS(SL(305_USE_PROXY)), sizeof(EAS(SL(305_USE_PROXY))) - 1);
   }
-  inline response_handler& unused_306() {
+  static inline std::shared_ptr<response> unused_306() {
     return setup(EAS(SL(306_UNUSED)), sizeof(EAS(SL(306_UNUSED))) - 1);
   }
-  inline response_handler& temporary_redirect_307() {
+  static inline std::shared_ptr<response> temporary_redirect_307() {
     return setup(EAS(SL(307_TEMPORARY_REDIRECT)),
                  sizeof(EAS(SL(307_TEMPORARY_REDIRECT))) - 1);
   }
-  inline response_handler& permanent_redirect_308() {
+  static inline std::shared_ptr<response> permanent_redirect_308() {
     return setup(EAS(SL(308_PERMANENT_REDIRECT)),
                  sizeof(EAS(SL(308_PERMANENT_REDIRECT))) - 1);
   }
-  inline response_handler& bad_request_400() {
+  static inline std::shared_ptr<response> bad_request_400() {
     return setup(EAS(SL(400_BAD_REQUEST)),
                  sizeof(EAS(SL(400_BAD_REQUEST))) - 1);
   }
-  inline response_handler& unauthorized_401() {
+  static inline std::shared_ptr<response> unauthorized_401() {
     return setup(EAS(SL(401_UNAUTHORIZED)),
                  sizeof(EAS(SL(401_UNAUTHORIZED))) - 1);
   }
-  inline response_handler& payment_required_402() {
+  static inline std::shared_ptr<response> payment_required_402() {
     return setup(EAS(SL(402_PAYMENT_REQUIRED)),
                  sizeof(EAS(SL(402_PAYMENT_REQUIRED))) - 1);
   }
-  inline response_handler& forbidden_403() {
+  static inline std::shared_ptr<response> forbidden_403() {
     return setup(EAS(SL(403_FORBIDDEN)), sizeof(EAS(SL(403_FORBIDDEN))) - 1);
   }
-  inline response_handler& not_found_404() {
+  static inline std::shared_ptr<response> not_found_404() {
     return setup(EAS(SL(404_NOT_FOUND)), sizeof(EAS(SL(404_NOT_FOUND))) - 1);
   }
-  inline response_handler& method_not_allowed_405() {
+  static inline std::shared_ptr<response> method_not_allowed_405() {
     return setup(EAS(SL(405_METHOD_NOT_ALLOWED)),
                  sizeof(EAS(SL(405_METHOD_NOT_ALLOWED))) - 1);
   }
-  inline response_handler& not_acceptable_406() {
+  static inline std::shared_ptr<response> not_acceptable_406() {
     return setup(EAS(SL(406_NOT_ACCEPTABLE)),
                  sizeof(EAS(SL(406_NOT_ACCEPTABLE))) - 1);
   }
-  inline response_handler& proxy_authentication_required_407() {
+  static inline std::shared_ptr<response> proxy_authentication_required_407() {
     return setup(EAS(SL(407_PROXY_AUTHENTICATION_REQUIRED)),
                  sizeof(EAS(SL(407_PROXY_AUTHENTICATION_REQUIRED))) - 1);
   }
-  inline response_handler& request_timeout_408() {
+  static inline std::shared_ptr<response> request_timeout_408() {
     return setup(EAS(SL(408_REQUEST_TIMEOUT)),
                  sizeof(EAS(SL(408_REQUEST_TIMEOUT))) - 1);
   }
-  inline response_handler& conflict_409() {
+  static inline std::shared_ptr<response> conflict_409() {
     return setup(EAS(SL(409_CONFLICT)), sizeof(EAS(SL(409_CONFLICT))) - 1);
   }
-  inline response_handler& gone_410() {
+  static inline std::shared_ptr<response> gone_410() {
     return setup(EAS(SL(410_GONE)), sizeof(EAS(SL(410_GONE))) - 1);
   }
-  inline response_handler& length_required_411() {
+  static inline std::shared_ptr<response> length_required_411() {
     return setup(EAS(SL(411_LENGTH_REQUIRED)),
                  sizeof(EAS(SL(411_LENGTH_REQUIRED))) - 1);
   }
-  inline response_handler& precondition_failed_412() {
+  static inline std::shared_ptr<response> precondition_failed_412() {
     return setup(EAS(SL(412_PRECONDITION_FAILED)),
                  sizeof(EAS(SL(412_PRECONDITION_FAILED))) - 1);
   }
-  inline response_handler& content_too_large_413() {
+  static inline std::shared_ptr<response> content_too_large_413() {
     return setup(EAS(SL(413_CONTENT_TOO_LARGE)),
                  sizeof(EAS(SL(413_CONTENT_TOO_LARGE))) - 1);
   }
-  inline response_handler& uri_too_long_414() {
+  static inline std::shared_ptr<response> uri_too_long_414() {
     return setup(EAS(SL(414_URI_TOO_LONG)),
                  sizeof(EAS(SL(414_UNSUPPORTED_MEDIA_TYPE))) - 1);
   }
-  inline response_handler& unsupported_media_type_415() {
+  static inline std::shared_ptr<response> unsupported_media_type_415() {
     return setup(EAS(SL(415_UNSUPPORTED_MEDIA_TYPE)),
                  sizeof(EAS(SL(415_UNSUPPORTED_MEDIA_TYPE))) - 1);
   }
-  inline response_handler& range_not_satisfiable_416() {
+  static inline std::shared_ptr<response> range_not_satisfiable_416() {
     return setup(EAS(SL(416_RANGE_NOT_SATISFIABLE)),
                  sizeof(EAS(SL(416_RANGE_NOT_SATISFIABLE))) - 1);
   }
-  inline response_handler& expectation_failed_417() {
+  static inline std::shared_ptr<response> expectation_failed_417() {
     return setup(EAS(SL(417_EXPECTATION_FAILED)),
                  sizeof(EAS(SL(417_EXPECTATION_FAILED))) - 1);
   }
-  inline response_handler& unused_418() {
+  static inline std::shared_ptr<response> unused_418() {
     return setup(EAS(SL(418_UNUSED)), sizeof(EAS(SL(418_UNUSED))) - 1);
   }
-  inline response_handler& misdirected_request_421() {
+  static inline std::shared_ptr<response> misdirected_request_421() {
     return setup(EAS(SL(421_MISDIRECTED_REQUEST)),
                  sizeof(EAS(SL(421_MISDIRECTED_REQUEST))) - 1);
   }
-  inline response_handler& unprocessable_content_422() {
+  static inline std::shared_ptr<response> unprocessable_content_422() {
     return setup(EAS(SL(422_UNPROCESSABLE_CONTENT)),
                  sizeof(EAS(SL(422_UNPROCESSABLE_CONTENT))) - 1);
   }
-  inline response_handler& upgrade_required_426() {
+  static inline std::shared_ptr<response> upgrade_required_426() {
     return setup(EAS(SL(426_UPGRADE_REQUIRED)),
                  sizeof(EAS(SL(426_UPGRADE_REQUIRED))) - 1);
   }
-  inline response_handler& internal_server_error_500() {
+  static inline std::shared_ptr<response> internal_server_error_500() {
     return setup(EAS(SL(500_INTERNAL_SERVER_ERROR)),
                  sizeof(EAS(SL(500_INTERNAL_SERVER_ERROR))) - 1);
   }
-  inline response_handler& not_implemented_501() {
+  static inline std::shared_ptr<response> not_implemented_501() {
     return setup(EAS(SL(501_NOT_IMPLEMENTED)),
                  sizeof(EAS(SL(501_NOT_IMPLEMENTED))) - 1);
   }
-  inline response_handler& bad_gateway_502() {
+  static inline std::shared_ptr<response> bad_gateway_502() {
     return setup(EAS(SL(502_BAD_GATEWAY)),
                  sizeof(EAS(SL(502_BAD_GATEWAY))) - 1);
   }
-  inline response_handler& service_unavailable_503() {
+  static inline std::shared_ptr<response> service_unavailable_503() {
     return setup(EAS(SL(503_SERVICE_UNAVAILABLE)),
                  sizeof(EAS(SL(503_SERVICE_UNAVAILABLE))) - 1);
   }
-  inline response_handler& gateway_timeout_504() {
+  static inline std::shared_ptr<response> gateway_timeout_504() {
     return setup(EAS(SL(504_GATEWAY_TIMEOUT)),
                  sizeof(EAS(SL(504_GATEWAY_TIMEOUT))) - 1);
   }
-  inline response_handler& http_version_not_supported_505() {
+  static inline std::shared_ptr<response> http_version_not_supported_505() {
     return setup(EAS(SL(505_HTTP_VERSION_NOT_SUPPORTED)),
                  sizeof(EAS(SL(505_HTTP_VERSION_NOT_SUPPORTED))) - 1);
   }
 
  private:
   // ___________________________________________________________________________
+  // CONSTRUCTORs/DESTRUCTORs                                        ( private )
+  //
+  response(const char* const status_line, std::size_t status_line_length) {
+    std::size_t required_memory_for_response =
+        constants::limits::kDefaultCoreMsgMaxSizeInRam +
+        constants::limits::kDefaultBodyMsgMaxSizeInRam;
+    if (char* alloc = new (std::nothrow) char[required_memory_for_response]) {
+      size_ = required_memory_for_response;
+      core_cursor_ = status_line_length;
+      core_headers_start_ = core_cursor_;
+      core_size_ = size_ - constants::limits::kDefaultBodyMsgMaxSizeInRam;
+      body_size_ = size_ - constants::limits::kDefaultCoreMsgMaxSizeInRam;
+      memcpy(alloc, status_line, core_cursor_);
+      buffer_ = alloc;
+    }
+  }
+  // ___________________________________________________________________________
   // METHODs                                                         ( private )
   //
-  inline response_handler& setup(const char* const sln, std::size_t sln_len) {
-    memcpy(buffer_, sln, core_cursor_ = sln_len);
-    handler_ = std::make_shared<response_handler>(
-        buffer_, constants::limits::kDefaultCoreMsgMaxSizeInRam,
-        constants::limits::kDefaultBodyMsgMaxSizeInRam, core_cursor_,
-        body_cursor_, body_stream_);
-    return *handler_;
+  static inline std::shared_ptr<response> setup(
+      const char* const status_line, std::size_t status_line_length) {
+    return std::shared_ptr<response>(
+        new response(status_line, status_line_length));
   }
   // ___________________________________________________________________________
   // ATTRIBUTEs                                                      ( private )
   //
-  char* buffer_;
-  std::size_t size_;
-  std::size_t core_cursor_;
-  std::size_t body_cursor_;
+  char* buffer_ = nullptr;
+  std::size_t size_ = 0;
+  std::size_t core_cursor_ = 0;
+  std::size_t core_headers_start_ = 0;
+  std::size_t core_size_ = 0;
+  std::size_t body_cursor_ = 0;
+  std::size_t body_size_ = 0;
   std::shared_ptr<std::istream> body_stream_;
-  std::shared_ptr<response_handler> handler_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 
