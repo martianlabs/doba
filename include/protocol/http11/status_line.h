@@ -91,6 +91,6 @@ namespace martianlabs::doba::protocol::http11 {
 #define ONE_DOT_ONE 1.1
 #define VERSION CC_EXP(HTTP_HEADER, CC_EXP(SLASH, ONE_DOT_ONE))
 #define SL(x) VERSION CC_RAW(SC_, x) CC_EXP(CC_RAW(RP_, x), CRLF)
-}  // namespace martianlabs::doba::protocol::http11
+} // namespace martianlabs::doba::protocol::http11
 
 #endif

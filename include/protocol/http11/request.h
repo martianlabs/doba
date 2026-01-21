@@ -90,9 +90,9 @@ class request {
   // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
+  request() = default;
   request(const request&) = delete;
   request(request&&) noexcept = delete;
-  ~request() = default;
   // ---------------------------------------------------------------------------
   // OPERATORs                                                        ( public )
   //
@@ -154,10 +154,10 @@ class request {
   // ---------------------------------------------------------------------------
   // STATIC-METHODs                                                   ( public )
   //
-  static inline auto from(char* buf, std::size_t len, std::size_t& used) {
+  static inline void from(request* req, char* buf, std::size_t len,
+                          std::size_t& used) {
     method method = method::kUnknown;
     target target = target::kUnknown;
-    std::shared_ptr<request> req;
     bool ebd = false;
     std::size_t ebdlen = 0;
     std::string absolute_path;
@@ -166,7 +166,6 @@ class request {
     if (check_request_line(buf, len, method, target, absolute_path, query, i)) {
       if (check_headers(buf, len, i, ebd, ebdlen)) {
         used = i;
-        req = std::shared_ptr<request>(new request());
         req->buffer_ = buf;
         req->size_ = len;
         req->cursor_ = 0;
@@ -178,14 +177,9 @@ class request {
         req->body_length_ = ebdlen;
       }
     }
-    return req;
   }
 
  private:
-  // ---------------------------------------------------------------------------
-  // CONSTRUCTORs/DESTRUCTORs                                        ( private )
-  //
-  request() = default;
   // ---------------------------------------------------------------------------
   // METHODs                                                         ( private )
   //

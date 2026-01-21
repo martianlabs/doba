@@ -67,74 +67,18 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#ifndef martianlabs_doba_common_rob_h
-#define martianlabs_doba_common_rob_h
+#ifndef martianlabs_doba_network_environment_h
+#define martianlabs_doba_network_environment_h
 
-#include <memory>
-#include <istream>
-#include <fstream>
+#include "platform.h"
 
-namespace martianlabs::doba::common {
 // =============================================================================
-// rob                                                                 ( class )
-// -----------------------------------------------------------------------------
-// This class holds for a common-purpose (memory/stream based) read only buffer.
-// -----------------------------------------------------------------------------
+// platform-dependent includes
 // =============================================================================
-class rob {
- public:
-  // ---------------------------------------------------------------------------
-  // CONSTRUCTORs/DESTRUCTORs                                         ( public )
-  //
-  rob() = default;
-  rob(const rob&) = delete;
-  rob(rob&&) noexcept = delete;
-  // ---------------------------------------------------------------------------
-  // OPERATORs                                                        ( public )
-  //
-  rob& operator=(const rob&) = delete;
-  rob& operator=(rob&&) noexcept = delete;
-  // ---------------------------------------------------------------------------
-  // METHODs                                                          ( public )
-  //
-  inline void set(std::shared_ptr<std::istream> ss) {
-    buffer_ = nullptr;
-    size_ = 0;
-    cursor_ = 0;
-    stream_ = ss;
-  }
-  inline void set(const char* buffer, std::size_t size) {
-    buffer_ = buffer;
-    size_ = size;
-    cursor_ = 0;
-    stream_.reset();
-  }
-  inline std::size_t read(char* dst, std::size_t max_len) const {
-    std::size_t bytes_read = 0;
-    if (buffer_) {
-      std::size_t available = size_ - cursor_;
-      std::size_t n = max_len < available ? max_len : available;
-      memcpy(dst, &buffer_[cursor_], n);
-      cursor_ += n;
-      bytes_read = n;
-    } else if (stream_) {
-      std::size_t n = stream_->read(dst, max_len).gcount();
-      if (!(stream_->bad() || (stream_->fail() && !stream_->eof()))) {
-        bytes_read = n;
-      }
-    }
-    return bytes_read;
-  }
-
- private:
-  // ---------------------------------------------------------------------------
-  // ATTRIBUTEs                                                      ( private )
-  //
-  const char* buffer_ = nullptr;
-  std::size_t size_ = 0;
-  mutable std::size_t cursor_ = 0;
-  std::shared_ptr<std::istream> stream_;
-};
-}  // namespace martianlabs::doba::common
+#ifdef _WIN32
+#include "network/environment_windows.h"
+#elif __linux__
+#include "network/environment_linux.h"
+#endif
 
 #endif

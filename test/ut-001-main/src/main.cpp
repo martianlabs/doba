@@ -67,25 +67,30 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
+#include "network/environment.h"
 #include "protocol/http11/server.h"
 
 using namespace martianlabs::doba::common;
+using namespace martianlabs::doba::network;
 using namespace martianlabs::doba::protocol::http11;
 
 int main(int argc, char* argv[]) {
+  startup();
   server my_server;
   my_server
       .add_route(
           method::kGet, "/plaintext",
-          [](std::shared_ptr<const request> req) -> std::shared_ptr<response> {
-            return response::ok_200()
-                ->add_header("Server", "doba")
-                ->add_header("Content-Type", "text/plain")
-                ->add_header("Date", date_server::get()->current())
-                ->set_body("Hello, World!")
-                ->self();
+          [](const request& req, response& res) {
+            res.ok_200()
+                .add_header("Server", "doba")
+                .add_header("Content-Type", "text/plain")
+                .add_header("Date", date_server::get()->current())
+                .set_body("Hello, World!");
           },
           execution_policy::kSync)
       .start("8080");
-  return getchar();
+  auto ch = getchar();
+  my_server.stop();
+  cleanup();
+  return 0;
 }

@@ -95,9 +95,7 @@ namespace martianlabs::doba::protocol::http11 {
 template <template <typename, typename, int> class TRty =
               transport::server::tcpip>
 class server {
-  using router_in = std::shared_ptr<const request>;
-  using router_out = std::shared_ptr<response>;
-  using router_fn = std::function<router_out(router_in)>;
+  using router_fn = std::function<void(const request&, response&)>;
 
  public:
   // ---------------------------------------------------------------------------
@@ -105,11 +103,12 @@ class server {
   //
   server() {
     transport_.set_on_request(
-        [this](std::shared_ptr<const request> req, auto sender) -> void {
+        [this](const request* req, response* res, auto process) {
           // let's check if the incoming request is following the standard..
           if (!process_headers(req)) {
-            sender(response::bad_request_400()->add_header(
-                headers::kContentLength, 0));
+            res->bad_request_400().add_header(headers::kContentLength, 0);
+            process(res, common::execution_policy::kSync);
+            return;
           }
           switch (req->get_target()) {
             case target::kOriginForm:
@@ -117,17 +116,19 @@ class server {
               auto router_entry =
                   router_.match(req->get_method(), req->get_absolute_path());
               if (!router_entry.has_value()) {
-                sender(response::not_found_404()->add_header(
-                    headers::kContentLength, 0));
+                res->not_found_404().add_header(headers::kContentLength, 0);
+                process(res, common::execution_policy::kSync);
                 return;
               }
               switch (router_entry->second) {
                 case common::execution_policy::kSync:
-                  sender(router_entry->first(req));
+                  router_entry->first(*req, *res);
+                  process(res, common::execution_policy::kSync);
                   break;
                 case common::execution_policy::kAsync:
-                  thread_pool_->enqueue([req, sender, router_entry]() {
-                    sender(router_entry->first(req));
+                  thread_pool_->enqueue([req, res, process, router_entry]() {
+                    router_entry->first(*req, *res);
+                    process(res, common::execution_policy::kAsync);
                   });
                   break;
               }
@@ -142,17 +143,6 @@ class server {
             default:
               break;
           }
-
-          /*
-          pepe
-          */
-
-          /*
-           */
-
-          /*
-          pepe fin
-          */
         });
     transport_.set_on_connection([](uint32_t id) {
       // nothing to do here by default..
@@ -236,7 +226,7 @@ class server {
     headers_fns_[headers::kConnection] = checkers::connection_check_fn;
     headers_fns_[headers::kDate] = checkers::date_check_fn;
   }
-  bool process_headers(std::shared_ptr<const request> req) const {
+  bool process_headers(const request* const req) const {
     if (!req) return false;
     for (auto const& hdr : req->get_headers()) {
       if (auto itr = headers_fns_.find(hdr.first); itr != headers_fns_.end()) {
