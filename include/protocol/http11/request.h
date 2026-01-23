@@ -154,8 +154,8 @@ class request {
   // ---------------------------------------------------------------------------
   // STATIC-METHODs                                                   ( public )
   //
-  static inline void from(request* req, char* buf, std::size_t len,
-                          std::size_t& used) {
+  static inline auto from(char* buf, std::size_t len, std::size_t& used) {
+    request* req = nullptr;
     method method = method::kUnknown;
     target target = target::kUnknown;
     bool ebd = false;
@@ -165,6 +165,7 @@ class request {
     std::size_t i = 0;
     if (check_request_line(buf, len, method, target, absolute_path, query, i)) {
       if (check_headers(buf, len, i, ebd, ebdlen)) {
+        req = new request();
         used = i;
         req->buffer_ = buf;
         req->size_ = len;
@@ -177,6 +178,7 @@ class request {
         req->body_length_ = ebdlen;
       }
     }
+    return req;
   }
 
  private:

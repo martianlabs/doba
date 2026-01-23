@@ -103,11 +103,11 @@ class server {
   //
   server() {
     transport_.set_on_request(
-        [this](const request* req, response* res, auto process) {
+        [this](const request* req, response* res, auto on_send) {
           // let's check if the incoming request is following the standard..
           if (!process_headers(req)) {
             res->bad_request_400().add_header(headers::kContentLength, 0);
-            process(res, common::execution_policy::kSync);
+            on_send(res);
             return;
           }
           switch (req->get_target()) {
@@ -117,18 +117,18 @@ class server {
                   router_.match(req->get_method(), req->get_absolute_path());
               if (!router_entry.has_value()) {
                 res->not_found_404().add_header(headers::kContentLength, 0);
-                process(res, common::execution_policy::kSync);
+                on_send(res);
                 return;
               }
               switch (router_entry->second) {
                 case common::execution_policy::kSync:
                   router_entry->first(*req, *res);
-                  process(res, common::execution_policy::kSync);
+                  on_send(res);
                   break;
                 case common::execution_policy::kAsync:
-                  thread_pool_->enqueue([req, res, process, router_entry]() {
+                  thread_pool_->enqueue([req, res, on_send, router_entry]() {
                     router_entry->first(*req, *res);
-                    process(res, common::execution_policy::kAsync);
+                    on_send(res);
                   });
                   break;
               }
@@ -144,10 +144,35 @@ class server {
               break;
           }
         });
-    transport_.set_on_connection([](uint32_t id) {
+    transport_.set_on_connection([]() {
+      /*
+      pepe
+      */
+      /*
+      static std::size_t connections = 0;
+      static std::mutex mtx;
+      std::lock_guard<std::mutex> lock(mtx);
+      printf(">>> [%d] CLIENT-CONNECTED (%zd in total)!!!\n", clock(), ++connections);
+      */
+      /*
+      pepe fin
+      */
       // nothing to do here by default..
     });
-    transport_.set_on_disconnection([](uint32_t id) {
+    transport_.set_on_disconnection([]() {
+      /*
+      pepe
+      */
+      /*
+      static std::size_t disconnections = 0;
+      static std::mutex mtx;
+      std::lock_guard<std::mutex> lock(mtx);
+      printf(">>> [%d] CLIENT-DISCONNECTED (%zd in total)!!!\n", clock(),
+             ++disconnections);
+      */
+      /*
+      pepe fin
+      */
       // nothing to do here by default..
     });
     setup_headers_functions();

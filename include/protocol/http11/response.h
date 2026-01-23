@@ -89,30 +89,16 @@ class response {
     std::size_t required_memory_for_response =
         constants::limits::kDefaultCoreMsgMaxSizeInRam +
         constants::limits::kDefaultBodyMsgMaxSizeInRam;
-    auto* buf = new char[required_memory_for_response];
-    auto* rco = new common::rob();
-    auto* rbo = new common::rob();
-    if (buf && rco && rbo) {
+    if (auto* buf = new char[required_memory_for_response]) {
       size_ = required_memory_for_response;
       core_size_ = size_ - constants::limits::kDefaultBodyMsgMaxSizeInRam;
       body_size_ = size_ - constants::limits::kDefaultCoreMsgMaxSizeInRam;
       buffer_ = buf;
-      rob_core = rco;
-      rob_body = rbo;
-      rob_next = rob_core;
-    } else {
-      delete[] buf;
-      delete rco;
-      delete rbo;
     }
   }
   response(const response&) = delete;
   response(response&& in) noexcept = delete;
-  ~response() {
-    delete[] buffer_;
-    delete rob_core;
-    delete rob_body;
-  }
+  ~response() { delete[] buffer_; }
   // ---------------------------------------------------------------------------
   // OPERATORs                                                        ( public )
   //
@@ -121,32 +107,27 @@ class response {
   // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
-  inline const common::rob* const serialize() {
-    static constexpr auto eol = constants::string::kCrLf;
-    static constexpr auto eol_len = sizeof(constants::string::kCrLf) - 1;
-    if (!serialized_) {
-      // [headers] end section!
-      if (size_ - core_cursor_ >= eol_len) {
-        memcpy(&buffer_[core_cursor_], eol, eol_len);
-        core_cursor_ += eol_len;
-      }
+  inline std::queue<common::rob*> const serialize() {
+    std::queue<common::rob*> robs;
+    static const auto eol = (const char*)constants::string::kCrLf;
+    static const auto eol_len = sizeof(constants::string::kCrLf) - 1;
+    // [headers] end section!
+    if (size_ - core_cursor_ >= eol_len) {
+      memcpy(&buffer_[core_cursor_], eol, eol_len);
+      core_cursor_ += eol_len;
       // [body] section!
       if (!body_stream_) {
         std::memmove(&buffer_[core_cursor_],
                      &buffer_[constants::limits::kDefaultCoreMsgMaxSizeInRam],
                      body_cursor_);
         core_cursor_ += body_cursor_;
-        rob_core->set(buffer_, core_cursor_);
+        robs.emplace(new common::rob(buffer_, core_cursor_));
       } else {
-        rob_core->set(buffer_, core_cursor_);
-        rob_body->set(body_stream_);
+        robs.emplace(new common::rob(buffer_, core_cursor_));
+        robs.emplace(new common::rob(body_stream_));
       }
-      rob_next = rob_core;
-      serialized_ = true;
     }
-    common::rob* rob_returned = rob_next;
-    rob_next = rob_next == rob_core ? rob_body : nullptr;
-    return rob_returned;
+    return robs;
   }
   inline response& add_header(std::string_view k, std::string_view v) {
     std::size_t k_sz = k.size(), v_sz = v.size();
@@ -455,10 +436,6 @@ class response {
   std::size_t body_cursor_ = 0;
   std::size_t body_size_ = 0;
   std::shared_ptr<std::istream> body_stream_;
-  common::rob* rob_core{nullptr};
-  common::rob* rob_body{nullptr};
-  common::rob* rob_next{nullptr};
-  bool serialized_ = false;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

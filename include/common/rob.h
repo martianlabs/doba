@@ -86,9 +86,16 @@ class rob {
   // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  rob() = default;
+  rob(std::shared_ptr<std::istream> ss) { stream_ = ss; }
+  rob(const char* const buffer, std::size_t size) {
+    if (buffer_ = new char[size]) {
+      std::memcpy(buffer_, buffer, size);
+      size_ = size;
+    }
+  }
   rob(const rob&) = delete;
   rob(rob&&) noexcept = delete;
+  ~rob() { delete[] buffer_; }
   // ---------------------------------------------------------------------------
   // OPERATORs                                                        ( public )
   //
@@ -97,18 +104,6 @@ class rob {
   // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
-  inline void set(std::shared_ptr<std::istream> ss) {
-    buffer_ = nullptr;
-    size_ = 0;
-    cursor_ = 0;
-    stream_ = ss;
-  }
-  inline void set(const char* buffer, std::size_t size) {
-    buffer_ = buffer;
-    size_ = size;
-    cursor_ = 0;
-    stream_.reset();
-  }
   inline std::size_t read(char* dst, std::size_t max_len) const {
     std::size_t bytes_read = 0;
     if (buffer_) {
@@ -130,7 +125,7 @@ class rob {
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
-  const char* buffer_ = nullptr;
+  char* buffer_ = nullptr;
   std::size_t size_ = 0;
   mutable std::size_t cursor_ = 0;
   std::shared_ptr<std::istream> stream_;
