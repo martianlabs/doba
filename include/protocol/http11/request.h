@@ -127,12 +127,14 @@ class request {
     headers hdrs;
     std::size_t i = 0, j = 0, hdrs_len = 0;
     if (check_request_line(buf, len, mtd, tgt, absolute_path, query_part, i)) {
-      if (check_headers(buf, len, i, hdrs, hdrs_len, j)) {
+      if (check_headers(buf, i, len, hdrs, hdrs_len, j)) {
         req = new request(buf, j);
         req->method_ = mtd;
         req->target_ = tgt;
         req->absolute_path_ = absolute_path;
         req->query_part_ = query_part;
+        req->headers_ = hdrs;
+        req->headers_used_ = hdrs_len;
         bytes_used = j;
       }
     }
@@ -335,11 +337,61 @@ class request {
                                    std::size_t used, headers& hdrs,
                                    std::size_t& hdrs_len,
                                    std::size_t& bytes_decoded) {
+    bool end_of_headers_found = false;
     while (off < used) {
-      off++;
+      // [end-of-headers] check..
+      if (buffer[off] == constants::character::kCr) {
+        if (off + 1 >= used || buffer[off + 1] != constants::character::kLf) {
+          return false;
+        }
+        end_of_headers_found = true;
+        off += 2;
+        break;
+      }
+      // [field-name] decoding..
+      char* col = nullptr;
+      char* fns = &buffer[off];
+      while (off < used) {
+        if (buffer[off] == constants::character::kColon) {
+          col = &buffer[off++];
+          break;
+        }
+        if (!helpers::is_token(buffer[off])) return false;
+        off++;
+      }
+      if (!col) return false;
+      if (col == fns) return false;  // empty field-name not allowed!
+      std::string_view name(fns, col - fns);
+      // [field-value] decoding..
+      char* crlf = nullptr;
+      char* fvs = &buffer[off];
+      while (off < used) {
+        if (buffer[off] == constants::character::kCr) {
+          if (off + 1 >= used || buffer[off + 1] != constants::character::kLf) {
+            return false;
+          }
+          crlf = &buffer[off];
+          break;
+        }
+        if (!helpers::is_vchar(buffer[off]) &&
+            !helpers::is_obs_text(buffer[off]) &&
+            !helpers::is_ows(buffer[off])) {
+          return false;
+        }
+        off++;
+      }
+      if (!crlf) return false;
+      std::string_view value = helpers::ows_rtrim(
+          helpers::ows_ltrim(std::string_view(fvs, crlf - fvs)));
+      hdrs[hdrs_len] = std::make_pair(name, value);
+      hdrs_len++;
+      off += 2;
     }
-    bytes_decoded = off;
-    return true;
+    if (end_of_headers_found) {
+      bytes_decoded = off;
+      return true;
+    }
+    return false;
   }
   // +-------------------------------------------------------------------------+
   // |                                                           absolute-path |
