@@ -72,7 +72,6 @@
 
 #include "common/hash_map.h"
 #include "common/execution_policy.h"
-#include "method.h"
 #include "request.h"
 #include "response.h"
 
@@ -107,12 +106,12 @@ class router {
   // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
-  void add(method method, std::string_view route, FNty fn,
+  void add(const std::string& method, const std::string& route, FNty fn,
            common::execution_policy policy) {
     auto& map = routes_.try_emplace(method).first->second;
     map.emplace(route, std::make_pair(fn, policy));
   }
-  auto match(method method, std::string_view path) {
+  auto match(std::string_view method, std::string_view path) {
     std::optional<hpair> res = std::nullopt;
     if (auto it_m = routes_.find(method); it_m != routes_.end()) {
       if (auto it_h = it_m->second.find(path); it_h != it_m->second.end()) {
@@ -126,7 +125,7 @@ class router {
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
-  std::unordered_map<method, common::hash_map<std::string, hpair>> routes_;
+  common::hash_map<std::string, common::hash_map<std::string, hpair>> routes_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

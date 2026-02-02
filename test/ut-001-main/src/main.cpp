@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
   server my_server;
   my_server
       .add_route(
-          method::kGet, "/plaintext",
+          "GET", "/plaintext",
           [](const request& req, response& res) {
             res.ok_200()
                 .add_header("Server", "doba")

@@ -85,7 +85,9 @@ namespace martianlabs::doba::transport::server {
 //    RQty - request being used.
 //    RSty - response being used.
 // =============================================================================
-template <typename RQty, typename RSty, std::size_t BFsz>
+template <typename RQty, typename RSty,
+          template <typename, typename, std::size_t> class DEty,
+          std::size_t BFsz>
 class tcpip {
   // ---------------------------------------------------------------------------
   // TYPEs                                                           ( private )
@@ -97,42 +99,37 @@ class tcpip {
   };
   struct overlapped_receive : public overlapped_base {
     overlapped_receive() : overlapped_base(io_type::kReceive) {};
-    std::size_t buf_len = 0;
     std::size_t buf_sze = BFsz;
     CHAR buf[BFsz]{};
     WSABUF wsa{};
   };
   struct overlapped_send : public overlapped_base {
     overlapped_send() : overlapped_base(io_type::kSend) {}
-    std::size_t buf_len = 0;
     std::size_t buf_sze = BFsz;
+    std::size_t buf_len = 0;
     CHAR buf[BFsz]{};
     WSABUF wsa{};
   };
   struct overlapped_enqueue : public overlapped_base {
-    overlapped_enqueue(const std::queue<common::rob*>& robs_queue)
-        : overlapped_base(io_type::kEnqueue), robs{robs_queue} {}
+    overlapped_enqueue(long id, const std::queue<common::rob*>& robs_queue)
+        : overlapped_base(io_type::kEnqueue), robs{robs_queue}, cid{id} {}
     std::queue<common::rob*> robs;
+    long cid;
   };
   struct context {
-    context(SOCKET socket) : soc(socket) {}
+    context() = default;
     context(const context&) = delete;
     context(context&&) noexcept = delete;
-    ~context() {
-      closesocket(soc);
-      while (!robs_queue.empty()) {
-        delete robs_queue.front();
-        robs_queue.pop();
-      }
-    }
     context& operator=(const context&) = delete;
     context& operator=(context&&) noexcept = delete;
     std::atomic<long> io_completions_pending{0};
     std::atomic<bool> send_in_flight{false};
     std::atomic<bool> closing{false};
+    std::atomic<long> id{0};
     SOCKET soc = INVALID_SOCKET;
     std::queue<common::rob*> robs_queue;
     std::mutex robs_queue_mutex;
+    DEty<RQty, RSty, BFsz> decoder;
     overlapped_receive ovr;
     overlapped_send ovs;
   };
@@ -200,7 +197,8 @@ class tcpip {
           continue;
         }
         // let's associate the accept socket with the i/o port!
-        context* ctx = new context(socket);
+        context* ctx = pop_context();
+        ctx->soc = socket;
         HANDLE handle = CreateIoCompletionPort(
             (HANDLE)socket, io_h_, reinterpret_cast<ULONG_PTR>(ctx), 0);
         if (!handle) {
@@ -331,75 +329,39 @@ class tcpip {
           bool close_context = false;
           BOOL ios = GetQueuedCompletionStatus(io_h_, &bytes, &key, &ovl, tout);
           context* c = reinterpret_cast<context*>(key);
+          bool query_context_close = false;
           if (ios) {
             if (ovl) {
-              if (!c->closing.load(std::memory_order_acquire)) {
-                switch (reinterpret_cast<overlapped_base*>(ovl)->type) {
-                  case io_type::kEnqueue:
-                    if (!handle_completion_enqueue(c, ovl)) {
-                      bool expected = false;
-                      if (c->closing.compare_exchange_strong(expected, true)) {
-                        closesocket(c->soc);
-                        c->soc = INVALID_SOCKET;
-                      }
-                    }
-                    break;
-                  case io_type::kReceive:
-                    if (!bytes || !handle_completion_receive(c, bytes)) {
-                      bool expected = false;
-                      if (c->closing.compare_exchange_strong(expected, true)) {
-                        closesocket(c->soc);
-                        c->soc = INVALID_SOCKET;
-                      }
-                    }
-                    break;
-                  case io_type::kSend:
-                    if (!handle_completion_send(c, bytes)) {
-                      bool expected = false;
-                      if (c->closing.compare_exchange_strong(expected, true)) {
-                        closesocket(c->soc);
-                        c->soc = INVALID_SOCKET;
-                      }
-                    }
-                    break;
-                }
+              switch (reinterpret_cast<overlapped_base*>(ovl)->type) {
+                case io_type::kEnqueue:
+                  query_context_close = !handle_completion_enqueue(c, ovl);
+                  delete reinterpret_cast<overlapped_enqueue*>(ovl);
+                  break;
+                case io_type::kReceive:
+                  query_context_close =
+                      !bytes || !handle_completion_receive(c, bytes);
+                  break;
+                case io_type::kSend:
+                  query_context_close = !handle_completion_send(c, bytes);
+                  break;
               }
               c->io_completions_pending--;
             } else {
               if (!bytes) {
-                // this means a [new] connection!
-                if (on_client_connected_) {
-                  on_client_connected_();
-                }
-                if (!receive(c)) {
-                  bool expected = false;
-                  if (c->closing.compare_exchange_strong(expected, true)) {
-                    closesocket(c->soc);
-                    c->soc = INVALID_SOCKET;
-                  }
-                }
+                // this means a new connection!
+                if (on_client_connected_) on_client_connected_();
+                query_context_close = !receive(c);
               } else {
-                bool expected = false;
-                if (c->closing.compare_exchange_strong(expected, true)) {
-                  closesocket(c->soc);
-                  c->soc = INVALID_SOCKET;
-                }
+                query_context_close = true;
               }
             }
           } else {
             if (GetLastError() == ERROR_INVALID_HANDLE) {
               // this means [shoutdown] operations!
-              if (!key && !ovl) {
+              if (!c && !ovl) {
                 break;
               }
             } else {
-              if (key) {
-                bool expected = false;
-                if (c->closing.compare_exchange_strong(expected, true)) {
-                  closesocket(c->soc);
-                  c->soc = INVALID_SOCKET;
-                }
-              }
               if (ovl) {
                 c->io_completions_pending--;
                 switch (reinterpret_cast<overlapped_base*>(ovl)->type) {
@@ -411,15 +373,30 @@ class tcpip {
                     break;
                 }
               }
+              query_context_close = true;
             }
           }
-          if (c && c->closing && !c->io_completions_pending) {
-            /*
-            pepe
-            */
-            /*
-            pepe fin
-            */
+          if (c && query_context_close && !c->io_completions_pending) {
+            bool expected = false;
+            if (c->closing.compare_exchange_strong(expected, true)) {
+              // this means a disconnection!
+              if (on_client_disconnected_) on_client_disconnected_();
+              std::lock_guard<std::mutex> robs_queue_lock(c->robs_queue_mutex);
+              while (!c->robs_queue.empty()) {
+                delete c->robs_queue.front();
+                c->robs_queue.pop();
+              }
+              std::memset(&c->ovr.wsa, 0, sizeof(WSABUF));
+              std::memset(&c->ovs.wsa, 0, sizeof(WSABUF));
+              c->ovs.buf_len = 0;
+              closesocket(c->soc);
+              c->soc = INVALID_SOCKET;
+              c->io_completions_pending = 0;
+              c->send_in_flight = false;
+              c->id++;
+              c->closing = false;
+              push_context(c);
+            }
           }
         }
       }));
@@ -427,15 +404,18 @@ class tcpip {
     return true;
   }
   inline bool handle_completion_enqueue(context* c, LPOVERLAPPED ovl) {
-    overlapped_enqueue* ove = reinterpret_cast<overlapped_enqueue*>(ovl);
-    {
-      std::lock_guard<std::mutex> responses_lock(c->robs_queue_mutex);
-      while (!ove->robs.empty()) {
-        c->robs_queue.push(ove->robs.front());
-        ove->robs.pop();
-      }
+    if (c->closing) {
+      return false;
     }
-    delete ove;
+    overlapped_enqueue* ove = reinterpret_cast<overlapped_enqueue*>(ovl);
+    if (ove->cid != c->id) {
+      return false;
+    }
+    while (!ove->robs.empty()) {
+      std::lock_guard<std::mutex> responses_lock(c->robs_queue_mutex);
+      c->robs_queue.push(ove->robs.front());
+      ove->robs.pop();
+    }
     bool expected = false;
     if (c->send_in_flight.compare_exchange_strong(expected, true)) {
       if (drain_robs_queue(c)) {
@@ -445,61 +425,35 @@ class tcpip {
     return true;
   }
   inline bool handle_completion_receive(context* c, DWORD bytes) {
-    if ((c->ovr.buf_len + bytes) > c->ovr.buf_sze) {
-      // buffer is not big enough to hold for the current request!
+    if (c->closing) {
       return false;
     }
-    c->ovr.buf_len += bytes;
-    std::size_t off = 0;
-    while (off < c->ovr.buf_len) {
-      std::size_t used = 0;
-      RQty* req = RQty::from(&c->ovr.buf[off], c->ovr.buf_len - off, used);
-      if (!used) {
-        if (req) {
-          // this is inconsistent (0 used bytes should mean a null req)!
-          // returning false here will trigger an automatic disconnection!
-          delete req;
-          return false;
-        } else {
-          // buffer does not contain enough data to build a single request!
-          break;
-        }
-      }
-      if (off + used > c->ovr.buf_len) {
-        // returned number of used bytes is not coherent!
-        // returning false here will trigger an automatic disconnection!
-        delete req;
-        return false;
-      }
-      if (!req) {
-        // there were errors while decoding incoming data!
-        // returning false here will trigger an automatic disconnection!
-        return false;
-      }
-      off += used;
+    if (!c->decoder.add(c->ovr.buf, bytes)) {
+      return false;
+    }
+    while (RQty* req = c->decoder.process()) {
       if (on_request_) {
         RSty* res = new RSty();
-        on_request_(req, res, [this, c](RSty* res) {
+        long context_id = c->id;
+        on_request_(req, res, [this, c, context_id](RSty* res) {
           c->io_completions_pending++;
           if (!PostQueuedCompletionStatus(
                   io_h_, 0, reinterpret_cast<ULONG_PTR>(c),
-                  new overlapped_enqueue(res->serialize()))) {
+                  new overlapped_enqueue(context_id, res->serialize()))) {
             c->io_completions_pending--;
             // [to-do] -> this is a critical error! we should inform about it!
           }
           delete res;
         });
+        delete req;
       }
-      delete req;
     }
-    // let's adjust the reception buffer now!
-    if (c->ovr.buf_len > off) {
-      std::memmove(c->ovr.buf, &c->ovr.buf[off], c->ovr.buf_len - off);
-    }
-    c->ovr.buf_len -= off;
     return receive(c);
   }
   inline bool handle_completion_send(context* c, DWORD bytes) {
+    if (c->closing) {
+      return false;
+    }
     if (bytes > c->ovs.buf_len) {
       // this is inconsistent because we could not send more bytes than
       // specified! returning false here will trigger an automatic
@@ -531,8 +485,8 @@ class tcpip {
   inline bool receive(context* c) {
     DWORD f = 0, r = 0;
     std::memset(static_cast<OVERLAPPED*>(&c->ovr), 0, sizeof(OVERLAPPED));
-    c->ovr.wsa.buf = &c->ovr.buf[c->ovr.buf_len];
-    c->ovr.wsa.len = c->ovr.buf_sze - c->ovr.buf_len;
+    c->ovr.wsa.buf = c->ovr.buf;
+    c->ovr.wsa.len = c->ovr.buf_sze;
     c->io_completions_pending++;
     int s = WSARecv(c->soc, &c->ovr.wsa, 1, &r, &f, &c->ovr, 0);
     if (s == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
@@ -557,6 +511,19 @@ class tcpip {
     }
     return true;
   }
+  inline void push_context(context* c) {
+    std::lock_guard<std::mutex> contexts_queue_lock(contexts_queue_mutex_);
+    contexts_queue_.push(c);
+  }
+  inline context* pop_context() {
+    std::lock_guard<std::mutex> contexts_queue_lock(contexts_queue_mutex_);
+    if (contexts_queue_.empty()) {
+      return new context();
+    }
+    context* ctx = contexts_queue_.front();
+    contexts_queue_.pop();
+    return ctx;
+  }
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
@@ -566,6 +533,8 @@ class tcpip {
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::queue<std::thread> threads_;
   std::unique_ptr<std::thread> manager_;
+  std::queue<context*> contexts_queue_;
+  std::mutex contexts_queue_mutex_;
   on_request_fn on_request_;
   on_client_connected_fn on_client_connected_;
   on_client_disconnected_fn on_client_disconnected_;

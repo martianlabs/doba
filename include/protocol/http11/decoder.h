@@ -67,26 +67,66 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#ifndef martianlabs_doba_protocol_http11_method_h
-#define martianlabs_doba_protocol_http11_method_h
+#ifndef martianlabs_doba_protocol_http11_decoder_h
+#define martianlabs_doba_protocol_http11_decoder_h
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
-// method                                                         ( enum-class )
+// decoder                                                             ( class )
 // -----------------------------------------------------------------------------
-// This enum class holds for the http 1.1 method implementation.
+// This class holds for the http 1.1 requests decoder.
 // -----------------------------------------------------------------------------
+// Template parameters:
+//    RQty - request being used.
+//    RSty - response being used.
+//    BFsz - buffer size.
 // =============================================================================
-enum class method {
-  kUnknown,
-  kGet,
-  kHead,
-  kPost,
-  kPut,
-  kDelete,
-  kConnect,
-  kOptions,
-  kTrace
+template <typename RQty, typename RSty, std::size_t BFsz>
+class decoder {
+ public:
+  // ---------------------------------------------------------------------------
+  // CONSTRUCTORs/DESTRUCTORs                                         ( public )
+  //
+  decoder() = default;
+  decoder(const decoder&) = delete;
+  decoder(decoder&&) noexcept = delete;
+  // ---------------------------------------------------------------------------
+  // OPERATORs                                                        ( public )
+  //
+  decoder& operator=(const decoder&) = delete;
+  decoder& operator=(decoder&&) noexcept = delete;
+  // ---------------------------------------------------------------------------
+  // METHODs                                                          ( public )
+  //
+  inline bool add(const char* buffer, std::size_t length) noexcept {
+    if (length > (BFsz - len_)) return false;
+    std::memcpy(&buf_[len_], buffer, length);
+    len_ += length;
+    return true;
+  }
+  inline RQty* process() noexcept {
+    RQty* req = nullptr;
+    std::size_t bytes_used = 0;
+    req = RQty::deserialize(buf_, len_, bytes_used);
+    if (bytes_used > len_) {
+      // inconsistent state: the number of bytes deserialized
+      // exceeds the available buffer capacity.
+      delete req;
+      return nullptr;
+    }
+    if (bytes_used < len_) {
+      std::memmove(buf_, &buf_[bytes_used], len_ - bytes_used);
+    }
+    len_ -= bytes_used;
+    return req;
+  }
+
+ private:
+  // ---------------------------------------------------------------------------
+  // ATTRIBUTEs                                                      ( private )
+  //
+  char buf_[BFsz]{};
+  std::size_t len_ = 0;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

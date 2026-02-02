@@ -77,6 +77,7 @@
 #include "protocol/http11/helpers.h"
 #include "protocol/http11/request.h"
 #include "protocol/http11/response.h"
+#include "protocol/http11/decoder.h"
 #include "protocol/http11/router.h"
 #include "protocol/http11/headers.h"
 #include "protocol/http11/checkers/host.h"
@@ -92,9 +93,13 @@ namespace martianlabs::doba::protocol::http11 {
 // Template parameters:
 //    TRty - transport being used (tcp/ip by default).
 // =============================================================================
-template <template <typename, typename, int> class TRty =
-              transport::server::tcpip>
+template <template <typename, typename,
+                    template <typename, typename, std::size_t> typename,
+                    std::size_t> class TRty = transport::server::tcpip>
 class server {
+  // ---------------------------------------------------------------------------
+  // USINGs                                                          ( private )
+  //
   using router_fn = std::function<void(const request&, response&)>;
 
  public:
@@ -152,7 +157,8 @@ class server {
       static std::size_t connections = 0;
       static std::mutex mtx;
       std::lock_guard<std::mutex> lock(mtx);
-      printf(">>> [%d] CLIENT-CONNECTED (%zd in total)!!!\n", clock(), ++connections);
+      printf(">>> [%d] CLIENT-CONNECTED (%zd in total)!!!\n", clock(),
+      ++connections);
       */
       /*
       pepe fin
@@ -199,7 +205,7 @@ class server {
     transport_.stop();
   }
   server& add_route(
-      method method, std::string_view route, router_fn fn,
+      const std::string& method, const std::string& route, router_fn fn,
       common::execution_policy policy = common::execution_policy::kSync) {
     router_.add(method, route, fn, policy);
     return *this;
@@ -253,7 +259,8 @@ class server {
   }
   bool process_headers(const request* const req) const {
     if (!req) return false;
-    for (auto const& hdr : req->get_headers()) {
+    for (auto i = 0; i < req->get_headers_length(); i++) {
+      auto const& hdr = req->get_header(i);
       if (auto itr = headers_fns_.find(hdr.first); itr != headers_fns_.end()) {
         if (!itr->second(hdr.second)) return false;
       }
@@ -265,7 +272,7 @@ class server {
   //
   std::unordered_map<std::string_view, on_header_check_delegate> headers_fns_;
   std::shared_ptr<common::thread_pool> thread_pool_;
-  TRty<request, response, 4096> transport_;
+  TRty<request, response, decoder, 4096> transport_;
   router<router_fn> router_;
 };
 }  // namespace martianlabs::doba::protocol::http11
