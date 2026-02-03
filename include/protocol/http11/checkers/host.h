@@ -123,7 +123,7 @@ namespace martianlabs::doba::protocol::http11::checkers {
 // |                | / ";" / "="                                              |
 // +----------------+----------------------------------------------------------+
 // =============================================================================
-static auto host_check_fn = [](std::string_view sv) -> bool {
+static auto host_fn = [](std::string_view sv) -> bool {
   enum class type { kUnknown, kIpLiteral, kIpV4Address, kRegName };
   auto check_ip_v4_address = [](std::string_view sv, std::size_t& i) -> type {
     auto check = [](std::string_view sv) -> bool {

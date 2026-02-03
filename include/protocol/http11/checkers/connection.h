@@ -143,11 +143,12 @@ namespace martianlabs::doba::protocol::http11::checkers {
 // | connection-option   | token                                               |
 // +---------------------+-----------------------------------------------------+
 // =============================================================================
-static auto connection_check_fn = [](std::string_view v) -> bool {
+static auto connection_fn = [](std::string_view v) -> bool {
   for (auto token : v | std::views::split(constants::character::kComma)) {
     std::string_view value(&*token.begin(), std::ranges::distance(token));
-    value = helpers::ows_ltrim(helpers::ows_rtrim(value));
-    if (!helpers::is_token(value)) return false;
+    helpers::ows_ltrim(value);
+    helpers::ows_rtrim(value);
+    if (!value.empty() && !helpers::is_token(value)) return false;
   }
   return true;
 };

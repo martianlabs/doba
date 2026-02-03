@@ -169,15 +169,15 @@ struct helpers {
     return val == constants::character::kSpace ||
            val == constants::character::kHTab;
   }
-  static constexpr std::string_view ows_ltrim(std::string_view s) noexcept {
-    while (!s.empty() && helpers::is_ows(static_cast<uint8_t>(s.front())))
+  static constexpr void ows_ltrim(std::string_view& s) noexcept {
+    while (!s.empty() && helpers::is_ows(static_cast<uint8_t>(s.front()))) {
       s.remove_prefix(1);
-    return s;
+    }
   }
-  static constexpr std::string_view ows_rtrim(std::string_view s) noexcept {
-    while (!s.empty() && helpers::is_ows(static_cast<uint8_t>(s.back())))
+  static constexpr void ows_rtrim(std::string_view& s) noexcept {
+    while (!s.empty() && helpers::is_ows(static_cast<uint8_t>(s.back()))) {
       s.remove_suffix(1);
-    return s;
+    }
   }
   static constexpr uint8_t tolower_ascii(uint8_t c) noexcept {
     return (c >= constants::character::kAUpperCase &&

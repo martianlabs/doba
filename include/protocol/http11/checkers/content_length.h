@@ -67,72 +67,55 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#ifndef martianlabs_doba_protocol_http11_decoder_h
-#define martianlabs_doba_protocol_http11_decoder_h
+#ifndef martianlabs_doba_protocol_http11_checkers_content_length_h
+#define martianlabs_doba_protocol_http11_checkers_content_length_h
 
-#include "common/deserialize_result.h"
+#include <ranges>
+#include <string_view>
 
-namespace martianlabs::doba::protocol::http11 {
+#include "protocol/http11/constants.h"
+#include "protocol/http11/helpers.h"
+
+namespace martianlabs::doba::protocol::http11::checkers {
 // =============================================================================
-// decoder                                                             ( class )
-// -----------------------------------------------------------------------------
-// This class holds for the http 1.1 requests decoder.
-// -----------------------------------------------------------------------------
-// Template parameters:
-//    RQty - request being used.
-//    RSty - response being used.
-//    BFsz - buffer size.
+// |                                                            [ connection ] |
+// +---------------------------------------------------------------------------+
+// | RFC 9110 §8.6 - Content-Length                                            |
+// +---------------------------------------------------------------------------+
+// | The "Connection" header field provides a means for communicating control  |
+// | information for the current connection. It is primarily used to indicate  |
+// | options that are desired for that particular connection and that are not  |
+// | to be communicated forward by proxies.                                    |
+// |                                                                           |
+// | ABNF:                                                                     |
+// |     Content-Length = 1*DIGIT                                              |
+// |     DIGIT = %x30-39   ; "0" - "9"  (RFC 5234)                             |
+// |                                                                           |
+// | The field value MUST consist of one or more ASCII decimal digits.         |
+// | At least one DIGIT is required (empty value is invalid).                  |
+// | Only characters %x30–%x39 are allowed.                                    |
+// | No optional whitespace (OWS) is allowed before or after the value.        |
+// | No sign characters are allowed ('+' or '-').                              |
+// | No separators (commas) are allowed by the ABNF.                           |
+// | No hexadecimal, octal, or other numeric formats are allowed.              |
+// | No comments or extensions are allowed within the value.                   |
+// +---------------------------------------------------------------------------+
+// | Notes                                                                     |
+// +---------------------------------------------------------------------------+
+// | * Any tolerance for commas, whitespace, or multiple values is NOT defined |
+// |   by the ABNF and belongs to higher-level error handling rules.           |
+// | * ABNF validation must be performed before any numeric conversion.        |
+// | * Overflow handling and semantic validation are explicitly out of scope   |
+// |   of the ABNF definition.                                                 |
+// +---------------------------------------------------------------------------+
 // =============================================================================
-template <typename RQty, typename RSty, std::size_t BFsz>
-class decoder {
- public:
-  // ---------------------------------------------------------------------------
-  // CONSTRUCTORs/DESTRUCTORs                                         ( public )
-  //
-  decoder() = default;
-  decoder(const decoder&) = delete;
-  decoder(decoder&&) noexcept = delete;
-  // ---------------------------------------------------------------------------
-  // OPERATORs                                                        ( public )
-  //
-  decoder& operator=(const decoder&) = delete;
-  decoder& operator=(decoder&&) noexcept = delete;
-  // ---------------------------------------------------------------------------
-  // METHODs                                                          ( public )
-  //
-  inline bool add(const char* buffer, std::size_t length) noexcept {
-    if (length > (BFsz - len_)) return false;
-    std::memcpy(&buf_[len_], buffer, length);
-    len_ += length;
-    return true;
+static auto content_length_fn = [](std::string_view sv) -> bool {
+  if (sv.empty()) return false;
+  for (auto const& c : sv) {
+    if (!helpers::is_digit(c)) return false;
   }
-  inline common::deserialize_result process(RQty*& out) noexcept {
-    RQty* req = nullptr;
-    std::size_t bytes_used = 0;
-    common::deserialize_result res =
-        RQty::deserialize(buf_, len_, req, bytes_used);
-    if (bytes_used > len_) {
-      // inconsistent state: the number of bytes deserialized
-      // exceeds the available buffer capacity.
-      delete req;
-      res = common::deserialize_result::kInvalidSource;
-      return res;
-    }
-    if (bytes_used < len_) {
-      std::memmove(buf_, &buf_[bytes_used], len_ - bytes_used);
-    }
-    len_ -= bytes_used;
-    out = req;
-    return res;
-  }
-
- private:
-  // ---------------------------------------------------------------------------
-  // ATTRIBUTEs                                                      ( private )
-  //
-  char buf_[BFsz]{};
-  std::size_t len_ = 0;
+  return true;
 };
-}  // namespace martianlabs::doba::protocol::http11
+}  // namespace martianlabs::doba::protocol::http11::checkers
 
 #endif

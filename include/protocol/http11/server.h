@@ -83,6 +83,7 @@
 #include "protocol/http11/checkers/host.h"
 #include "protocol/http11/checkers/date.h"
 #include "protocol/http11/checkers/connection.h"
+#include "protocol/http11/checkers/content_length.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -224,7 +225,7 @@ class server {
     // | ESSENTIAL HEADERS (MANDATORY)                                         |
     // +-----------------------------------------------------------------------+
     // | [x] Host                                                              |
-    // | [x] Content-Length                                                (*) |
+    // | [x] Content-Length                                                    |
     // | [x] Connection                                                        |
     // | [x] Date                                                              |
     // | [ ] Transfer-Encoding                                                 |
@@ -251,11 +252,10 @@ class server {
     // | [ ] Trailer                                                           |
     // | [ ] Vary                                                              |
     // +-----------------------------------------------------------------------+
-    // +                                           (*) implemented by decoder. |
-    // +-----------------------------------------------------------------------+
-    headers_fns_[headers::kHost] = checkers::host_check_fn;
-    headers_fns_[headers::kConnection] = checkers::connection_check_fn;
-    headers_fns_[headers::kDate] = checkers::date_check_fn;
+    headers_fns_[headers::kHost] = checkers::host_fn;
+    headers_fns_[headers::kContentLength] = checkers::content_length_fn;
+    headers_fns_[headers::kConnection] = checkers::connection_fn;
+    headers_fns_[headers::kDate] = checkers::date_fn;
   }
   bool process_headers(const request* const req) const {
     if (!req) return false;

@@ -432,30 +432,37 @@ class tcpip {
     if (!c->decoder.add(c->ovr.buf, bytes)) {
       return false;
     }
-    while (true) {
-      std::pair<common::deserialize_result, RQty*> des = c->decoder.process();
-      if (des.first == common::deserialize_result::kInvalidSource) {
-        delete des.second;
-        return false;
-      }
-      if (on_request_ && des.first == common::deserialize_result::kSucceeded) {
-        RSty* res = new RSty();
-        long context_id = c->id;
-        on_request_(des.second, res, [this, c, context_id](RSty* res) {
-          c->io_completions_pending++;
-          if (!PostQueuedCompletionStatus(
-                  io_h_, 0, reinterpret_cast<ULONG_PTR>(c),
-                  new overlapped_enqueue(context_id, res->serialize()))) {
-            c->io_completions_pending--;
-            // [to-do] -> this is a critical error! we should inform about it!
+    bool keep_decoding = true;
+    while (keep_decoding) {
+      RQty* req = nullptr;
+      switch (c->decoder.process(req)) {
+        case common::deserialize_result::kSucceeded:
+          if (on_request_) {
+            RSty* res = new RSty();
+            long context_id = c->id;
+            on_request_(req, res, [this, c, context_id](RSty* res) {
+              c->io_completions_pending++;
+              if (!PostQueuedCompletionStatus(
+                      io_h_, 0, reinterpret_cast<ULONG_PTR>(c),
+                      new overlapped_enqueue(context_id, res->serialize()))) {
+                c->io_completions_pending--;
+                // [to-do] -> this is a critical error! informing about it!
+              }
+              delete res;
+            });
           }
-          delete res;
-        });
-        delete des.second;
-        continue;
+          delete req;
+          break;
+        case common::deserialize_result::kMoreBytesNeeded:
+          // no request returned here! there is no need to delete it..
+          keep_decoding = false;
+          break;
+        case common::deserialize_result::kInvalidSource:
+          // no request returned here! there is no need to delete it..
+          // invalid source data will automatically trigger a disconnection.
+          return false;
+          break;
       }
-      delete des.second;
-      break;
     }
     return receive(c);
   }
