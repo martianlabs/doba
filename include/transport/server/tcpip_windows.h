@@ -74,6 +74,7 @@
 #include <unordered_set>
 
 #include "common/rob.h"
+#include "common/deserialize_result.h"
 
 namespace martianlabs::doba::transport::server {
 // =============================================================================
@@ -431,11 +432,16 @@ class tcpip {
     if (!c->decoder.add(c->ovr.buf, bytes)) {
       return false;
     }
-    while (RQty* req = c->decoder.process()) {
-      if (on_request_) {
+    while (true) {
+      std::pair<common::deserialize_result, RQty*> des = c->decoder.process();
+      if (des.first == common::deserialize_result::kInvalidSource) {
+        delete des.second;
+        return false;
+      }
+      if (on_request_ && des.first == common::deserialize_result::kSucceeded) {
         RSty* res = new RSty();
         long context_id = c->id;
-        on_request_(req, res, [this, c, context_id](RSty* res) {
+        on_request_(des.second, res, [this, c, context_id](RSty* res) {
           c->io_completions_pending++;
           if (!PostQueuedCompletionStatus(
                   io_h_, 0, reinterpret_cast<ULONG_PTR>(c),
@@ -445,8 +451,11 @@ class tcpip {
           }
           delete res;
         });
-        delete req;
+        delete des.second;
+        continue;
       }
+      delete des.second;
+      break;
     }
     return receive(c);
   }

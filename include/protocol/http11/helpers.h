@@ -70,6 +70,10 @@
 #ifndef martianlabs_doba_protocol_http11_helpers_h
 #define martianlabs_doba_protocol_http11_helpers_h
 
+#include <cstdint>
+#include <algorithm>
+#include <string_view>
+
 #include "constants.h"
 #include "common/date_server.h"
 
@@ -81,32 +85,30 @@ namespace martianlabs::doba::protocol::http11 {
 // -----------------------------------------------------------------------------
 // =============================================================================
 struct helpers {
-  static auto is_digit(std::string_view val) {
-    if (!val.size()) return false;
+  static constexpr bool is_digit(std::string_view val) noexcept {
+    if (val.empty()) return false;
     for (auto const& c : val) {
-      if (c < constants::character::k0 || c > constants::character::k9) {
-        return false;
-      }
+      if (!is_digit(static_cast<uint8_t>(c))) return false;
     }
     return true;
   }
-  static auto is_digit(uint8_t val) {
+  static constexpr bool is_digit(uint8_t val) noexcept {
     return val >= constants::character::k0 && val <= constants::character::k9;
   }
-  static auto is_hex_digit(uint8_t val) {
+  static constexpr bool is_hex_digit(uint8_t val) noexcept {
     return is_digit(val) ||
            (val >= constants::character::kAUpperCase &&
             val <= constants::character::kFUpperCase) ||
            (val >= constants::character::kALowerCase &&
             val <= constants::character::kFLowerCase);
   }
-  static auto is_alpha(uint8_t val) {
+  static constexpr bool is_alpha(uint8_t val) noexcept {
     return (val >= constants::character::kAUpperCase &&
             val <= constants::character::kZUpperCase) ||
            (val >= constants::character::kALowerCase &&
             val <= constants::character::kZLowerCase);
   }
-  static auto is_token(uint8_t val) {
+  static constexpr bool is_token(uint8_t val) noexcept {
     return is_digit(val) || is_alpha(val) ||
            val == constants::character::kExclamation ||
            val == constants::character::kHash ||
@@ -124,20 +126,20 @@ struct helpers {
            val == constants::character::kVerticalBar ||
            val == constants::character::kTilde;
   }
-  static auto is_token(std::string_view s) {
+  static constexpr bool is_token(std::string_view s) noexcept {
     for (auto c : s) {
-      if (!is_token(c)) return false;
+      if (!is_token(static_cast<uint8_t>(c))) return false;
     }
     return true;
   }
-  static auto is_unreserved(uint8_t val) {
+  static constexpr bool is_unreserved(uint8_t val) noexcept {
     return is_digit(val) || is_alpha(val) ||
            val == constants::character::kHyphen ||
            val == constants::character::kDot ||
            val == constants::character::kUnderscore ||
            val == constants::character::kTilde;
   }
-  static auto is_sub_delim(uint8_t val) {
+  static constexpr bool is_sub_delim(uint8_t val) noexcept {
     return val == constants::character::kExclamation ||
            val == constants::character::kDollar ||
            val == constants::character::kAmpersand ||
@@ -150,47 +152,47 @@ struct helpers {
            val == constants::character::kSemiColon ||
            val == constants::character::kEquals;
   }
-  static auto is_pchar(uint8_t val) {
+  static constexpr bool is_pchar(uint8_t val) noexcept {
     return is_unreserved(val) || is_sub_delim(val) ||
            val == constants::character::kColon ||
            val == constants::character::kAt;
   }
-  static auto is_vchar(uint8_t val) {
+  static constexpr bool is_vchar(uint8_t val) noexcept {
     return val >= constants::character::kExclamation &&
            val <= constants::character::kTilde;
   }
-  static auto is_obs_text(uint8_t val) {
+  static constexpr bool is_obs_text(uint8_t val) noexcept {
     return val >= constants::character::kObsTextStart &&
            val <= constants::character::kObsTextEnd;
   }
-  static auto is_ows(uint8_t val) {
+  static constexpr bool is_ows(uint8_t val) noexcept {
     return val == constants::character::kSpace ||
            val == constants::character::kHTab;
   }
-  static auto ows_ltrim(std::string_view s) {
-    while (!s.empty() && helpers::is_ows(static_cast<unsigned char>(s.front())))
+  static constexpr std::string_view ows_ltrim(std::string_view s) noexcept {
+    while (!s.empty() && helpers::is_ows(static_cast<uint8_t>(s.front())))
       s.remove_prefix(1);
     return s;
   }
-  static auto ows_rtrim(std::string_view s) {
-    while (!s.empty() && helpers::is_ows(static_cast<unsigned char>(s.back())))
+  static constexpr std::string_view ows_rtrim(std::string_view s) noexcept {
+    while (!s.empty() && helpers::is_ows(static_cast<uint8_t>(s.back())))
       s.remove_suffix(1);
     return s;
   }
-  static auto are_equal(std::string_view a, std::string_view b) {
+  static constexpr uint8_t tolower_ascii(uint8_t c) noexcept {
+    return (c >= constants::character::kAUpperCase &&
+            c <= constants::character::kZUpperCase)
+               ? c + 32
+               : c;
+  };
+  static constexpr bool are_equal(std::string_view a,
+                                  std::string_view b) noexcept {
     return a.size() == b.size() &&
            std::equal(a.begin(), a.end(), b.begin(), [](char ac, char bc) {
-             return std::tolower(static_cast<unsigned char>(ac)) ==
-                    std::tolower(static_cast<unsigned char>(bc));
+             return tolower_ascii(static_cast<uint8_t>(ac)) ==
+                    tolower_ascii(static_cast<uint8_t>(bc));
            });
   }
-  static auto tolower_ascii(char c) {
-    unsigned char u = static_cast<unsigned char>(c);
-    return (u >= constants::character::kAUpperCase &&
-            u <= constants::character::kZUpperCase)
-               ? static_cast<unsigned char>(u + 32)
-               : u;
-  };
 };
 }  // namespace martianlabs::doba::protocol::http11
 

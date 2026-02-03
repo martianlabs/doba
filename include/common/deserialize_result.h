@@ -1,4 +1,4 @@
-﻿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -67,71 +67,21 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#ifndef martianlabs_doba_protocol_http11_decoder_h
-#define martianlabs_doba_protocol_http11_decoder_h
+#ifndef martianlabs_doba_common_deserialize_result_h
+#define martianlabs_doba_common_deserialize_result_h
 
-#include "common/deserialize_result.h"
-
-namespace martianlabs::doba::protocol::http11 {
+namespace martianlabs::doba::common {
 // =============================================================================
-// decoder                                                             ( class )
+// deserialize_result                                             ( enum-class )
 // -----------------------------------------------------------------------------
-// This class holds for the http 1.1 requests decoder.
+// This enum class will hold for all operational states while deserializing.
 // -----------------------------------------------------------------------------
-// Template parameters:
-//    RQty - request being used.
-//    RSty - response being used.
-//    BFsz - buffer size.
 // =============================================================================
-template <typename RQty, typename RSty, std::size_t BFsz>
-class decoder {
- public:
-  // ---------------------------------------------------------------------------
-  // CONSTRUCTORs/DESTRUCTORs                                         ( public )
-  //
-  decoder() = default;
-  decoder(const decoder&) = delete;
-  decoder(decoder&&) noexcept = delete;
-  // ---------------------------------------------------------------------------
-  // OPERATORs                                                        ( public )
-  //
-  decoder& operator=(const decoder&) = delete;
-  decoder& operator=(decoder&&) noexcept = delete;
-  // ---------------------------------------------------------------------------
-  // METHODs                                                          ( public )
-  //
-  inline bool add(const char* buffer, std::size_t length) noexcept {
-    if (length > (BFsz - len_)) return false;
-    std::memcpy(&buf_[len_], buffer, length);
-    len_ += length;
-    return true;
-  }
-  inline std::pair<common::deserialize_result, RQty*> process() noexcept {
-    std::pair<common::deserialize_result, RQty*> result;
-    std::size_t bytes_used = 0;
-    result = RQty::deserialize(buf_, len_, bytes_used);
-    if (bytes_used > len_) {
-      // inconsistent state: the number of bytes deserialized
-      // exceeds the available buffer capacity.
-      delete result.second;
-      result.first = common::deserialize_result::kInvalidSource;
-      result.second = nullptr;
-      return result;
-    }
-    if (bytes_used < len_) {
-      std::memmove(buf_, &buf_[bytes_used], len_ - bytes_used);
-    }
-    len_ -= bytes_used;
-    return result;
-  }
-
- private:
-  // ---------------------------------------------------------------------------
-  // ATTRIBUTEs                                                      ( private )
-  //
-  char buf_[BFsz]{};
-  std::size_t len_ = 0;
+enum class deserialize_result {
+  kSucceeded,        // everything went fine.
+  kInvalidSource,    // source data is invalid.
+  kMoreBytesNeeded,  // more bytes are needed to perform de-serialization.
 };
-}  // namespace martianlabs::doba::protocol::http11
+}  // namespace martianlabs::doba::common
 
 #endif

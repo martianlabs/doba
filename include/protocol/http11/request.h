@@ -77,6 +77,7 @@
 #include "helpers.h"
 #include "headers.h"
 #include "common/hash_map.h"
+#include "common/deserialize_result.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -118,27 +119,31 @@ class request {
   // ---------------------------------------------------------------------------
   // STATIC-METHODs                                                   ( public )
   //
-  static auto deserialize(char* buf, std::size_t len, std::size_t& bytes_used) {
-    request* req = nullptr;
-    target tgt = target::kUnknown;
+  static std::pair<common::deserialize_result, request*> deserialize(
+      char* buffer, std::size_t length, std::size_t& bytes_used) {
+    std::pair<common::deserialize_result, request*> result;
+    target target = target::kUnknown;
     std::string_view query_part;
     std::string_view absolute_path;
-    std::string_view mtd;
+    std::string_view method;
     headers hdrs;
     std::size_t i = 0, j = 0, hdrs_len = 0;
-    if (check_request_line(buf, len, mtd, tgt, absolute_path, query_part, i)) {
-      if (check_headers(buf, i, len, hdrs, hdrs_len, j)) {
-        req = new request(buf, j);
-        req->method_ = mtd;
-        req->target_ = tgt;
-        req->absolute_path_ = absolute_path;
-        req->query_part_ = query_part;
-        req->headers_ = hdrs;
-        req->headers_used_ = hdrs_len;
+    result.first = check_request_line(buffer, length, method, target,
+                                      absolute_path, query_part, i);
+    if (result.first == common::deserialize_result::kSucceeded) {
+      result.first = check_headers(buffer, i, length, hdrs, hdrs_len, j);
+      if (result.first == common::deserialize_result::kSucceeded) {
+        result.second = new request(buffer, j);
+        result.second->method_ = method;
+        result.second->target_ = target;
+        result.second->absolute_path_ = absolute_path;
+        result.second->query_part_ = query_part;
+        result.second->headers_ = hdrs;
+        result.second->headers_used_ = hdrs_len;
         bytes_used = j;
       }
     }
-    return req;
+    return result;
   }
 
  private:
@@ -155,12 +160,10 @@ class request {
   // ---------------------------------------------------------------------------
   // STATIC-METHODs                                                  ( private )
   //
-  static inline bool check_request_line(char* buffer, std::size_t used,
-                                        std::string_view& method_decoded,
-                                        target& target_decoded,
-                                        std::string_view& absolute_path,
-                                        std::string_view& query_part,
-                                        std::size_t& bytes_decoded) {
+  static inline common::deserialize_result check_request_line(
+      char* buffer, std::size_t len, std::string_view& method_decoded,
+      target& target_decoded, std::string_view& absolute_path,
+      std::string_view& query_part, std::size_t& bytes_decoded) {
     std::size_t off = 0, tmp = 0;
     static constexpr std::size_t kHttpVersionLen = 8;
     // +-----------------------------------------------------------------------+
@@ -177,14 +180,18 @@ class request {
     // | source: https://datatracker.ietf.org/doc/html/rfc9110                 |
     // +----------------+------------------------------------------------------+
     char* sp = nullptr;
-    while (off < used) {
-      if (buffer[off] == constants::character::kSpace) {
+    while (off < len) {
+      uint8_t c = static_cast<uint8_t>(buffer[off]);
+      if (c == constants::character::kSpace) {
         sp = &buffer[off++];
         break;
       }
-      if (!helpers::is_token(buffer[off++])) return false;
+      if (!helpers::is_token(c)) {
+        return common::deserialize_result::kInvalidSource;
+      }
+      off++;
     }
-    if (!sp) return false;
+    if (!sp) return common::deserialize_result::kMoreBytesNeeded;
     method_decoded = std::string_view(buffer, sp - buffer);
     // +=======================================================================+
     // | HTTP/1.1: request-target (RFC 9112 §2.2) – Valid Forms                |
@@ -259,7 +266,7 @@ class request {
       // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       // [to-do] -> add support for this!
       // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    } else if (decode_absolute_path(buffer, off, used, absolute_path, tmp)) {
+    } else if (decode_absolute_path(buffer, off, len, absolute_path, tmp)) {
       // +---------------------------------------------------------------------+
       // |                                                         origin-form |
       // +----------------+----------------------------------------------------+
@@ -268,10 +275,14 @@ class request {
       // | origin-form    | absolute-path [ "?" query ]                        |
       // +----------------+----------------------------------------------------+
       target_decoded = target::kOriginForm;
-      if ((off += tmp) >= used) return false;
+      if ((off += tmp) >= len) {
+        return common::deserialize_result::kMoreBytesNeeded;
+      }
       if (buffer[off] == constants::character::kQuestion) {
-        if (!decode_query_part(buffer, ++off, used, query_part, tmp)) {
-          return false;
+        common::deserialize_result res =
+            decode_query_part(buffer, ++off, len, query_part, tmp);
+        if (res != common::deserialize_result::kSucceeded) {
+          return res;
         }
         off += tmp;
       }
@@ -295,9 +306,13 @@ class request {
     // +----------------+------------------------------------------------------+
     // | source: https://datatracker.ietf.org/doc/html/rfc9110 |               |
     // +-----------------------------------------------------------------------+
-    if (off >= used) return false;
-    if (buffer[off++] != constants::character::kSpace) return false;
-    if (used - off < kHttpVersionLen) return false;
+    if (off >= len) return common::deserialize_result::kMoreBytesNeeded;
+    if (buffer[off++] != constants::character::kSpace) {
+      return common::deserialize_result::kInvalidSource;
+    }
+    if (len - off < kHttpVersionLen) {
+      return common::deserialize_result::kMoreBytesNeeded;
+    }
     if (buffer[off + 0] != constants::character::kHUpperCase ||
         buffer[off + 1] != constants::character::kTUpperCase ||
         buffer[off + 2] != constants::character::kTUpperCase ||
@@ -306,16 +321,16 @@ class request {
         !helpers::is_digit(buffer[off + 5]) ||
         buffer[off + 6] != constants::character::kDot ||
         !helpers::is_digit(buffer[off + 7])) {
-      return false;
+      return common::deserialize_result::kInvalidSource;
     }
     off += kHttpVersionLen;
-    if (used - off < 2) return false;
+    if (len - off < 2) return common::deserialize_result::kMoreBytesNeeded;
     if (buffer[off + 0] != constants::character::kCr ||
         buffer[off + 1] != constants::character::kLf) {
-      return false;
+      return common::deserialize_result::kInvalidSource;
     }
     bytes_decoded = (off += 2);
-    return true;
+    return common::deserialize_result::kSucceeded;
   }
   // +-----------------+-------------------------------------------------------+
   // | Rule            | Definition                                            |
@@ -333,16 +348,18 @@ class request {
   // +-----------------+-------------------------------------------------------+
   // | source: https://datatracker.ietf.org/doc/html/rfc9110                   |
   // +-------------------------------------------------------------------------+
-  static inline bool check_headers(char* buffer, std::size_t off,
-                                   std::size_t used, headers& hdrs,
-                                   std::size_t& hdrs_len,
-                                   std::size_t& bytes_decoded) {
+  static inline common::deserialize_result check_headers(
+      char* buffer, std::size_t off, std::size_t len, headers& hdrs,
+      std::size_t& hdrs_len, std::size_t& bytes_decoded) {
     bool end_of_headers_found = false;
-    while (off < used) {
+    while (off < len) {
       // [end-of-headers] check..
       if (buffer[off] == constants::character::kCr) {
-        if (off + 1 >= used || buffer[off + 1] != constants::character::kLf) {
-          return false;
+        if (off + 1 >= len) {
+          return common::deserialize_result::kMoreBytesNeeded;
+        }
+        if (buffer[off + 1] != constants::character::kLf) {
+          return common::deserialize_result::kInvalidSource;
         }
         end_of_headers_found = true;
         off += 2;
@@ -351,24 +368,34 @@ class request {
       // [field-name] decoding..
       char* col = nullptr;
       char* fns = &buffer[off];
-      while (off < used) {
+      while (off < len) {
         if (buffer[off] == constants::character::kColon) {
           col = &buffer[off++];
           break;
         }
-        if (!helpers::is_token(buffer[off])) return false;
+        if (!helpers::is_token(buffer[off])) {
+          return common::deserialize_result::kInvalidSource;
+        }
         off++;
       }
-      if (!col) return false;
-      if (col == fns) return false;  // empty field-name not allowed!
+      if (!col) {
+        return common::deserialize_result::kMoreBytesNeeded;
+      }
+      if (col == fns) {
+        // empty field-name not allowed!
+        return common::deserialize_result::kInvalidSource;
+      }
       std::string_view name(fns, col - fns);
       // [field-value] decoding..
       char* crlf = nullptr;
       char* fvs = &buffer[off];
-      while (off < used) {
+      while (off < len) {
         if (buffer[off] == constants::character::kCr) {
-          if (off + 1 >= used || buffer[off + 1] != constants::character::kLf) {
-            return false;
+          if (off + 1 >= len) {
+            return common::deserialize_result::kMoreBytesNeeded;
+          }
+          if (buffer[off + 1] != constants::character::kLf) {
+            return common::deserialize_result::kInvalidSource;
           }
           crlf = &buffer[off];
           break;
@@ -376,11 +403,13 @@ class request {
         if (!helpers::is_vchar(buffer[off]) &&
             !helpers::is_obs_text(buffer[off]) &&
             !helpers::is_ows(buffer[off])) {
-          return false;
+          return common::deserialize_result::kInvalidSource;
         }
         off++;
       }
-      if (!crlf) return false;
+      if (!crlf) {
+        return common::deserialize_result::kMoreBytesNeeded;
+      }
       std::string_view value = helpers::ows_rtrim(
           helpers::ows_ltrim(std::string_view(fvs, crlf - fvs)));
       hdrs[hdrs_len] = std::make_pair(name, value);
@@ -389,16 +418,16 @@ class request {
     }
     if (end_of_headers_found) {
       bytes_decoded = off;
-      return true;
+      return common::deserialize_result::kSucceeded;
     }
-    return false;
+    return common::deserialize_result::kInvalidSource;
   }
   // +-------------------------------------------------------------------------+
   // |                                                           absolute-path |
   // +----------------+--------------------------------------------------------+
   // | Field          | Definition                                             |
   // +----------------+--------------------------------------------------------+
-  // | path           | segment *( "/" segment )                               |
+  // | abosulte-path  | 1*( "/" segment )                                      |
   // | segment        | *pchar                                                 |
   // | pchar          | unreserved / pct-encoded / sub-delims / ":" / "@"      |
   // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"                  |
@@ -412,25 +441,26 @@ class request {
                                           std::size_t max,
                                           std::string_view& absolute_path,
                                           std::size_t& bytes_decoded) {
-    char* p = &buffer[off];
-    std::size_t len = max - off;
     std::size_t i = 0;
-    if (!p || !len || p[i++] != constants::character::kSlash) return false;
+    char* p = &buffer[off];
+    if (off >= max || p[i++] != constants::character::kSlash) return false;
+    const std::size_t len = max - off;
     while (i < len) {
-      if (p[i] == constants::character::kSpace ||
-          p[i] == constants::character::kQuestion) {
+      uint8_t c = static_cast<uint8_t>(p[i]);
+      if (c == constants::character::kSpace ||
+          c == constants::character::kQuestion) {
         break;
       }
-      if (p[i] == constants::character::kPercent) {
+      if (c == constants::character::kPercent) {
         if (i + 2 >= len) return false;
-        if (!helpers::is_hex_digit(p[i + 1]) ||
-            !helpers::is_hex_digit(p[i + 2])) {
+        if (!helpers::is_hex_digit(static_cast<uint8_t>(p[i + 1])) ||
+            !helpers::is_hex_digit(static_cast<uint8_t>(p[i + 2]))) {
           return false;
         }
         i += 3;
         continue;
       }
-      if (!helpers::is_pchar(p[i]) && p[i] != constants::character::kSlash) {
+      if (!helpers::is_pchar(c) && c != constants::character::kSlash) {
         return false;
       }
       i++;
@@ -452,31 +482,33 @@ class request {
   // +----------------+--------------------------------------------------------+
   // | source: https://datatracker.ietf.org/doc/html/rfc9110                   |
   // +----------------+--------------------------------------------------------+
-  static inline bool decode_query_part(char* buffer, std::size_t off,
-                                       std::size_t max,
-                                       std::string_view& query_part,
-                                       std::size_t& bytes_decoded) {
+  static inline common::deserialize_result decode_query_part(
+      char* buffer, std::size_t off, std::size_t max,
+      std::string_view& query_part, std::size_t& bytes_decoded) {
+    if (off >= max) return common::deserialize_result::kMoreBytesNeeded;
     char* p = &buffer[off];
     std::size_t i = 0;
-    while (i < max) {
-      if (p[i] == constants::character::kSpace) break;
-      if (p[i] == constants::character::kPercent) {
-        if (i + 2 >= max) return false;
-        if (!helpers::is_hex_digit(p[i + 1]) ||
-            !helpers::is_hex_digit(p[i + 2])) {
-          return false;
+    const std::size_t len = max - off;
+    while (i < len) {
+      uint8_t c = static_cast<uint8_t>(p[i]);
+      if (c == constants::character::kSpace) break;
+      if (c == constants::character::kPercent) {
+        if (i + 2 >= len) return common::deserialize_result::kMoreBytesNeeded;
+        if (!helpers::is_hex_digit(static_cast<uint8_t>(p[i + 1])) ||
+            !helpers::is_hex_digit(static_cast<uint8_t>(p[i + 2]))) {
+          return common::deserialize_result::kInvalidSource;
         }
         i += 3;
         continue;
       }
-      if (!helpers::is_pchar(p[i]) && p[i] != constants::character::kSlash &&
-          p[i] != constants::character::kQuestion) {
-        return false;
+      if (!helpers::is_pchar(c) && c != constants::character::kSlash &&
+          c != constants::character::kQuestion) {
+        return common::deserialize_result::kInvalidSource;
       }
       i++;
     }
     query_part = std::string_view(p, bytes_decoded = i);
-    return true;
+    return common::deserialize_result::kSucceeded;
   }
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
@@ -487,7 +519,7 @@ class request {
   std::string_view absolute_path_;
   std::string_view query_part_;
   std::string_view method_;
-  std::array<std::pair<std::string_view, std::string_view>, 64> headers_;
+  headers headers_;
   std::size_t headers_used_ = 0;
 };
 }  // namespace martianlabs::doba::protocol::http11
