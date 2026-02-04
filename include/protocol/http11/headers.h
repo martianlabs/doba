@@ -110,6 +110,7 @@ class headers {
     }
     return data_[i];
   }
+  inline std::size_t length() const { return length_; }
   // ---------------------------------------------------------------------------
   // CONSTANTs                                                        ( public )
   //

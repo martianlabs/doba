@@ -70,7 +70,6 @@
 #ifndef martianlabs_doba_protocol_http11_request_h
 #define martianlabs_doba_protocol_http11_request_h
 
-#include <charconv>
 #include <array>
 
 #include "target.h"
@@ -103,53 +102,69 @@ class request {
   // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
+  inline void set_method(internal::marker method) {
+    if (method.start >= length_ || method.start+method.length >= length_ ) {
+      throw std::out_of_range("out of bounds!");
+    }
+    method_ = std::string_view(&buffer_[method.start], method.length);
+  }
+  inline void set_target(target target) { target_ = target; }
+  inline void set_absolute_path(internal::marker abs_path) {
+    if (abs_path.start >= length_ ||
+        abs_path.start + abs_path.length >= length_) {
+      throw std::out_of_range("out of bounds!");
+    }
+    abs_path_ = std::string_view(&buffer_[abs_path.start], abs_path.length);
+  }
+  inline void set_query_part(internal::marker qry_part) {
+    if (qry_part.start >= length_ ||
+        qry_part.start + qry_part.length >= length_) {
+      throw std::out_of_range("out of bounds!");
+    }
+    qry_part_ = std::string_view(&buffer_[qry_part.start], qry_part.length);
+  }
+  inline void set_headers(internal::headers_markers hdrs, std::size_t len) {
+    for (auto i = 0; i < len; i++) {
+      if (hdrs.data_[i].name.start >= length_ ||
+          hdrs.data_[i].name.start + hdrs.data_[i].name.length >= length_) {
+        throw std::out_of_range("out of bounds!");
+      }
+      if (hdrs.data_[i].value.start >= length_ ||
+          hdrs.data_[i].value.start + hdrs.data_[i].value.length >= length_) {
+        throw std::out_of_range("out of bounds!");
+      }
+      headers_.add(std::string_view(&buffer_[hdrs.data_[i].name.start],
+                                    hdrs.data_[i].name.length),
+                   std::string_view(&buffer_[hdrs.data_[i].value.start],
+                                    hdrs.data_[i].value.length));
+    }
+  }
   inline auto get_method() const { return method_; }
   inline auto get_target() const { return target_; }
   inline auto get_absolute_path() const { return abs_path_; }
   inline auto get_query() const { return qry_part_; }
   inline auto get_header(std::size_t i) const { return headers_.at(i); }
-  inline auto get_headers_length() const { return headers_used_; }
+  inline auto get_headers_length() const { return headers_.length(); }
   inline auto has_body() const { return false; }
   inline auto get_body_length() const { return 0; }
   // ---------------------------------------------------------------------------
   // STATIC-METHODs                                                   ( public )
   //
-  static request* from(const char* const buffer, std::size_t length,
-                       target target, internal::marker method,
-                       internal::marker abs_path, internal::marker qry_part,
-                       internal::headers_markers headers,
-                       std::size_t headers_length) {
-    return new request(buffer, length, target, method, abs_path, qry_part,
-                       headers, headers_length);
+  static request* from(const char* const buffer, std::size_t length) {
+    return new request(buffer, length);
   }
 
  private:
   // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                        ( private )
   //
-  request(const char* const buffer, std::size_t length, target target,
-          internal::marker method, internal::marker abs_path,
-          internal::marker qry_part, internal::headers_markers headers,
-          std::size_t headers_length) {
+  request(const char* const buffer, std::size_t length) {
     if (char* alloc = new char[length]) {
       std::memcpy(alloc, buffer, length);
       buffer_ = alloc;
       length_ = length;
-      target_ = target;
-      abs_path_ = std::string_view(&buffer_[abs_path.start], abs_path.length);
-      qry_part_ = std::string_view(&buffer_[qry_part.start], qry_part.length);
-      method_ = std::string_view(&buffer_[method.start], method.length);
-      for (auto i = 0; i < headers_length; i++) {
-        headers_.add(std::string_view(&buffer_[headers.data_[i].name.start],
-                                      headers.data_[i].name.length),
-                     std::string_view(&buffer_[headers.data_[i].value.start],
-                                      headers.data_[i].value.length));
-      }
     }
   }
-  // ---------------------------------------------------------------------------
-  // STATIC-METHODs                                                  ( private )
-  //
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
@@ -160,7 +175,6 @@ class request {
   std::string_view qry_part_;
   std::string_view method_;
   headers headers_;
-  std::size_t headers_used_ = 0;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

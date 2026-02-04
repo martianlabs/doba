@@ -112,8 +112,12 @@ class decoder {
     if (res != common::deserialize_result::kSucceeded) return res;
     res = check_headers();
     if (res != common::deserialize_result::kSucceeded) return res;
-    out = RQty::from(buffer_, off_, target_, method_, absolute_path_,
-                     query_part_, headers_, headers_len_);
+    out = RQty::from(buffer_, off_);
+    out->set_method(method_);
+    out->set_target(target_);
+    out->set_absolute_path(absolute_path_);
+    out->set_query_part(query_part_);
+    out->set_headers(headers_, headers_len_);
     if (off_ < length_) {
       std::memmove(buffer_, &buffer_[off_], length_ - off_);
     }
