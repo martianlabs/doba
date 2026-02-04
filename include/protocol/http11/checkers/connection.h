@@ -148,7 +148,8 @@ static auto connection_fn = [](std::string_view v) -> bool {
     std::string_view value(&*token.begin(), std::ranges::distance(token));
     helpers::ows_ltrim(value);
     helpers::ows_rtrim(value);
-    if (!value.empty() && !helpers::is_token(value)) return false;
+    if (value.empty()) continue; 
+    if (!helpers::is_token(value)) return false;
   }
   return true;
 };

@@ -143,7 +143,7 @@ static auto date_fn = [](std::string_view v) -> bool {
   if (v[4] != constants::character::kSpace) return false;
   // [day]
   if (!helpers::is_digit(v[5]) || !helpers::is_digit(v[6])) return false;
-  // [ ]
+  // [<sp>]
   if (v[7] != constants::character::kSpace) return false;
   // [month]
   bool month_name_ok = false;

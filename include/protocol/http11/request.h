@@ -96,6 +96,12 @@ class request {
   //
   using pair_of_svs = std::pair<std::string_view, std::string_view>;
   using headers = std::array<pair_of_svs, kMaxHeaders>;
+  struct header_marker {
+    std::size_t field_name_start;
+    std::size_t field_name_length;
+    std::size_t field_value_start;
+    std::size_t field_value_length;
+  };
 
  public:
   // ---------------------------------------------------------------------------
@@ -131,13 +137,10 @@ class request {
     std::pair<std::size_t, std::size_t> query_part;
     std::pair<std::size_t, std::size_t> absolute_path;
     std::pair<std::size_t, std::size_t> method;
-    std::array<std::pair<std::pair<std::size_t, std::size_t>,
-                         std::pair<std::size_t, std::size_t>>,
-               kMaxHeaders>
-        hdrs;
+    std::array<header_marker, kMaxHeaders> hdrs;
     std::size_t i = 0, j = 0, hdrs_len = 0;
     common::deserialize_result result = check_request_line(
-        buffer, length, method, target, absolute_path, query_part, i);
+        buffer, 0, length, method, target, absolute_path, query_part, i);
     if (result == common::deserialize_result::kSucceeded) {
       result = check_headers(buffer, i, length, hdrs, hdrs_len, j);
       if (result == common::deserialize_result::kSucceeded) {
@@ -151,13 +154,11 @@ class request {
             &out_req->buf_[query_part.first], query_part.second);
         for (auto index = 0; index < hdrs_len; index++) {
           out_req->headers_[index].first =
-              std::string_view(&out_req->buf_[hdrs[index].first.first],
-                               hdrs[index].first.second);
+              std::string_view(&out_req->buf_[hdrs[index].field_name_start],
+                               hdrs[index].field_name_length);
           out_req->headers_[index].second =
-              std::string_view(&out_req->buf_[hdrs[index].second.first],
-                               hdrs[index].second.second);
-          helpers::ows_ltrim(out_req->headers_[index].second);
-          helpers::ows_rtrim(out_req->headers_[index].second);
+              std::string_view(&out_req->buf_[hdrs[index].field_value_start],
+                               hdrs[index].field_value_length);
         }
         out_req->headers_used_ = hdrs_len;
         out_bytes_used = j;
@@ -180,13 +181,20 @@ class request {
   // ---------------------------------------------------------------------------
   // STATIC-METHODs                                                  ( private )
   //
+  // +=========================================================================+
+  // |                                                            request-line |
+  // +=========================================================================+
+  // | request-line = method SP request-target SP HTTP-version                 |
+  // +-------------------------------------------------------------------------+
+  // | source: https://datatracker.ietf.org/doc/html/rfc9110                   |
+  // +-------------------------------------------------------------------------+
   static inline common::deserialize_result check_request_line(
-      char* buffer, std::size_t len,
-      std::pair<std::size_t, std::size_t>& method_at, target& target_decoded,
+      char* buffer, std::size_t off, std::size_t len,
+      std::pair<std::size_t, std::size_t>& method_at, target& target,
       std::pair<std::size_t, std::size_t>& absolute_path_at,
       std::pair<std::size_t, std::size_t>& query_part_at,
-      std::size_t& bytes_decoded) {
-    std::size_t off = 0, tmp = 0;
+      std::size_t& bytes_used) {
+    std::size_t tmp = 0;
     static constexpr std::size_t kHttpVersionLen = 8;
     // +-----------------------------------------------------------------------+
     // |                                                                method |
@@ -217,9 +225,9 @@ class request {
     method_at.first = 0;
     method_at.second = sp - buffer;
     std::string_view method(buffer, sp - buffer);
-    // +=======================================================================+
+    // +-----------------------------------------------------------------------+
     // | HTTP/1.1: request-target (RFC 9112 §2.2) – Valid Forms                |
-    // +=======================================================================+
+    // +-----------------------------------------------------------------------+
     // |                                                                       |
     // | request-target = origin-form                                          |
     // |                / absolute-form                                        |
@@ -276,9 +284,7 @@ class request {
       // | reg-name       | *( unreserved / pct-encoded / sub-delims )         |
       // |                | (RFC 3986 §3.2.2)                                  |
       // +----------------+----------------------------------------------------+
-      // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       // [to-do] -> add support for this!
-      // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     } else if (method == constants::method::kOptions) {
       // +---------------------------------------------------------------------+
       // |                                                       asterisk-form |
@@ -287,9 +293,7 @@ class request {
       // +----------------+----------------------------------------------------+
       // | asterisk-form  | "*"                                                |
       // +----------------+----------------------------------------------------+
-      // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       // [to-do] -> add support for this!
-      // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     } else if (decode_absolute_path(buffer, off, len, absolute_path_at, tmp)) {
       // +---------------------------------------------------------------------+
       // |                                                         origin-form |
@@ -298,7 +302,7 @@ class request {
       // +----------------+----------------------------------------------------+
       // | origin-form    | absolute-path [ "?" query ]                        |
       // +----------------+----------------------------------------------------+
-      target_decoded = target::kOriginForm;
+      target = target::kOriginForm;
       if ((off += tmp) >= len) {
         return common::deserialize_result::kMoreBytesNeeded;
       }
@@ -318,9 +322,7 @@ class request {
       // +----------------+----------------------------------------------------+
       // | absolute-form  | URI                                                |
       // +----------------+----------------------------------------------------+
-      // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       // [to-do] -> add support for this!
-      // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     }
     // +-----------------------------------------------------------------------+
     // |                                                          http-version |
@@ -353,9 +355,12 @@ class request {
         buffer[off + 1] != constants::character::kLf) {
       return common::deserialize_result::kInvalidSource;
     }
-    bytes_decoded = (off += 2);
+    bytes_used = (off += 2);
     return common::deserialize_result::kSucceeded;
   }
+  // +=========================================================================+
+  // |                                                                 headers |
+  // +=========================================================================+
   // +-----------------+-------------------------------------------------------+
   // | Rule            | Definition                                            |
   // +-----------------+-------------------------------------------------------+
@@ -374,10 +379,8 @@ class request {
   // +-------------------------------------------------------------------------+
   static inline common::deserialize_result check_headers(
       char* buffer, std::size_t off, std::size_t len,
-      std::array<std::pair<std::pair<std::size_t, std::size_t>,
-                           std::pair<std::size_t, std::size_t>>,
-                 kMaxHeaders>& hdrs,
-      std::size_t& hdrs_len, std::size_t& bytes_decoded) {
+      std::array<header_marker, kMaxHeaders>& hdrs, std::size_t& hdrs_len,
+      std::size_t& bytes_decoded) {
     bool end_of_headers_found = false;
     while (off < len) {
       // [end-of-headers] check..
@@ -438,11 +441,15 @@ class request {
       if (!crlf) {
         return common::deserialize_result::kMoreBytesNeeded;
       }
-      std::size_t fvl = crlf - fvs;
-      hdrs[hdrs_len].first.first = fns - buffer;
-      hdrs[hdrs_len].first.second = fnl;
-      hdrs[hdrs_len].second.first = fvs - buffer;
-      hdrs[hdrs_len].second.second = fvl;
+      while (crlf > fvs && helpers::is_ows(*(crlf - 1))) crlf--;
+      while (fvs < crlf && helpers::is_ows(*fvs)) fvs++;
+      if (hdrs_len >= kMaxHeaders) {
+        return common::deserialize_result::kInvalidSource;
+      }
+      hdrs[hdrs_len].field_name_start = fns - buffer;
+      hdrs[hdrs_len].field_name_length = fnl;
+      hdrs[hdrs_len].field_value_start = fvs - buffer;
+      hdrs[hdrs_len].field_value_length = crlf - fvs;
       hdrs_len++;
       off += 2;
     }
@@ -450,10 +457,11 @@ class request {
       bytes_decoded = off;
       return common::deserialize_result::kSucceeded;
     }
-    return common::deserialize_result::kInvalidSource;
+    return common::deserialize_result::kMoreBytesNeeded;
   }
-  // +-------------------------------------------------------------------------+
-  // |                                                           absolute-path |
+  // +=========================================================================+
+  // |                                                          abosolute-path |
+  // +=========================================================================+
   // +----------------+--------------------------------------------------------+
   // | Field          | Definition                                             |
   // +----------------+--------------------------------------------------------+
@@ -468,13 +476,13 @@ class request {
   // | source: https://datatracker.ietf.org/doc/html/rfc9110                   |
   // +----------------+--------------------------------------------------------+
   static inline bool decode_absolute_path(
-      char* buffer, std::size_t off, std::size_t max,
+      char* buffer, std::size_t off, std::size_t len,
       std::pair<std::size_t, std::size_t>& absolute_path_at,
       std::size_t& bytes_decoded) {
     std::size_t i = 0;
     char* p = &buffer[off];
-    if (off >= max || p[i++] != constants::character::kSlash) return false;
-    const std::size_t len = max - off;
+    if (off >= len || p[i++] != constants::character::kSlash) return false;
+    const std::size_t effective_len = len - off;
     while (i < len) {
       uint8_t c = static_cast<uint8_t>(p[i]);
       if (c == constants::character::kSpace ||
@@ -499,8 +507,9 @@ class request {
     absolute_path_at.second = bytes_decoded = i;
     return true;
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // |                                                              query-part |
+  // +=========================================================================+
   // +----------------+--------------------------------------------------------+
   // | Field          | Definition                                             |
   // +----------------+--------------------------------------------------------+
@@ -514,18 +523,20 @@ class request {
   // | source: https://datatracker.ietf.org/doc/html/rfc9110                   |
   // +----------------+--------------------------------------------------------+
   static inline common::deserialize_result decode_query_part(
-      char* buffer, std::size_t off, std::size_t max,
+      char* buffer, std::size_t off, std::size_t len,
       std::pair<std::size_t, std::size_t>& query_part_at,
       std::size_t& bytes_decoded) {
-    if (off >= max) return common::deserialize_result::kMoreBytesNeeded;
+    if (off >= len) return common::deserialize_result::kMoreBytesNeeded;
     char* p = &buffer[off];
     std::size_t i = 0;
-    const std::size_t len = max - off;
-    while (i < len) {
+    const std::size_t effective_length = len - off;
+    while (i < effective_length) {
       uint8_t c = static_cast<uint8_t>(p[i]);
       if (c == constants::character::kSpace) break;
       if (c == constants::character::kPercent) {
-        if (i + 2 >= len) return common::deserialize_result::kMoreBytesNeeded;
+        if (i + 2 >= effective_length) {
+          return common::deserialize_result::kMoreBytesNeeded;
+        }
         if (!helpers::is_hex_digit(static_cast<uint8_t>(p[i + 1])) ||
             !helpers::is_hex_digit(static_cast<uint8_t>(p[i + 2]))) {
           return common::deserialize_result::kInvalidSource;
