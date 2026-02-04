@@ -70,6 +70,9 @@
 #ifndef martianlabs_doba_protocol_http11_headers_h
 #define martianlabs_doba_protocol_http11_headers_h
 
+#include "constants.h"
+#include "header.h"
+
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
 // headers                                                             ( class )
@@ -79,6 +82,34 @@ namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
 class headers {
  public:
+  // ---------------------------------------------------------------------------
+  // CONSTRUCTORs/DESTRUCTORs                                         ( public )
+  //
+  headers() = default;
+  headers(const headers&) = delete;
+  headers(headers&&) noexcept = delete;
+  // ---------------------------------------------------------------------------
+  // OPERATORs                                                        ( public )
+  //
+  headers& operator=(const headers&) = delete;
+  headers& operator=(headers&&) noexcept = delete;
+  // ---------------------------------------------------------------------------
+  // METHODs                                                          ( public )
+  //
+  inline void add(std::string_view name, std::string_view value) {
+    if (length_ >= constants::limits::kDefaultRequestMaxHeaders) {
+      throw std::out_of_range("maximum number of headers reached!");
+    }
+    data_[length_].name = name;
+    data_[length_].value = value;
+    length_++;
+  }
+  inline header at(std::size_t i) const {
+    if (i >= length_) {
+      throw std::out_of_range("out of bounds!");
+    }
+    return data_[i];
+  }
   // ---------------------------------------------------------------------------
   // CONSTANTs                                                        ( public )
   //
@@ -164,6 +195,13 @@ class headers {
   static constexpr char kAcceptRanges[] = "accept-ranges";
   static constexpr char kETag[] = "etag";
   static constexpr char kLastModified[] = "last-modified";
+
+ private:
+  // ---------------------------------------------------------------------------
+  // ATTRIBUTEs                                                      ( private )
+  //
+  std::array<header, constants::limits::kDefaultRequestMaxHeaders> data_;
+  std::size_t length_ = 0;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

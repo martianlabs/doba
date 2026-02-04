@@ -324,6 +324,7 @@ struct constants {
   struct limits {
     static constexpr std::size_t kDefaultCoreMsgMaxSizeInRam = 4096;
     static constexpr std::size_t kDefaultBodyMsgMaxSizeInRam = 4096;
+    static constexpr std::size_t kDefaultRequestMaxHeaders = 64;
   };
 };
 }  // namespace martianlabs::doba::protocol::http11

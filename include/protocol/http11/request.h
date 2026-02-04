@@ -76,6 +76,7 @@
 #include "target.h"
 #include "helpers.h"
 #include "headers.h"
+#include "internal/headers_markers.h"
 #include "common/hash_map.h"
 #include "common/deserialize_result.h"
 
@@ -87,29 +88,13 @@ namespace martianlabs::doba::protocol::http11 {
 // -----------------------------------------------------------------------------
 // =============================================================================
 class request {
-  // ---------------------------------------------------------------------------
-  // CONSTANTs                                                       ( private )
-  //
-  static constexpr std::size_t kMaxHeaders = 64;
-  // ---------------------------------------------------------------------------
-  // USINGs                                                          ( private )
-  //
-  using pair_of_svs = std::pair<std::string_view, std::string_view>;
-  using headers = std::array<pair_of_svs, kMaxHeaders>;
-  struct header_marker {
-    std::size_t field_name_start;
-    std::size_t field_name_length;
-    std::size_t field_value_start;
-    std::size_t field_value_length;
-  };
-
  public:
   // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   request(const request&) = delete;
   request(request&&) noexcept = delete;
-  ~request() { delete[] buf_; }
+  ~request() { delete[] buffer_; }
   // ---------------------------------------------------------------------------
   // OPERATORs                                                        ( public )
   //
@@ -120,448 +105,59 @@ class request {
   //
   inline auto get_method() const { return method_; }
   inline auto get_target() const { return target_; }
-  inline auto get_absolute_path() const { return absolute_path_; }
-  inline auto get_query() const { return query_part_; }
-  inline auto get_header(std::size_t index) const { return headers_[index]; }
+  inline auto get_absolute_path() const { return abs_path_; }
+  inline auto get_query() const { return qry_part_; }
+  inline auto get_header(std::size_t i) const { return headers_.at(i); }
   inline auto get_headers_length() const { return headers_used_; }
   inline auto has_body() const { return false; }
   inline auto get_body_length() const { return 0; }
   // ---------------------------------------------------------------------------
   // STATIC-METHODs                                                   ( public )
   //
-  static common::deserialize_result deserialize(char* buffer,
-                                                std::size_t length,
-                                                request*& out_req,
-                                                std::size_t& out_bytes_used) {
-    target target = target::kUnknown;
-    std::pair<std::size_t, std::size_t> query_part;
-    std::pair<std::size_t, std::size_t> absolute_path;
-    std::pair<std::size_t, std::size_t> method;
-    std::array<header_marker, kMaxHeaders> hdrs;
-    std::size_t i = 0, j = 0, hdrs_len = 0;
-    common::deserialize_result result = check_request_line(
-        buffer, 0, length, method, target, absolute_path, query_part, i);
-    if (result == common::deserialize_result::kSucceeded) {
-      result = check_headers(buffer, i, length, hdrs, hdrs_len, j);
-      if (result == common::deserialize_result::kSucceeded) {
-        out_req = new request(buffer, j);
-        out_req->target_ = target;
-        out_req->method_ =
-            std::string_view(&out_req->buf_[method.first], method.second);
-        out_req->absolute_path_ = std::string_view(
-            &out_req->buf_[absolute_path.first], absolute_path.second);
-        out_req->query_part_ = std::string_view(
-            &out_req->buf_[query_part.first], query_part.second);
-        for (auto index = 0; index < hdrs_len; index++) {
-          out_req->headers_[index].first =
-              std::string_view(&out_req->buf_[hdrs[index].field_name_start],
-                               hdrs[index].field_name_length);
-          out_req->headers_[index].second =
-              std::string_view(&out_req->buf_[hdrs[index].field_value_start],
-                               hdrs[index].field_value_length);
-        }
-        out_req->headers_used_ = hdrs_len;
-        out_bytes_used = j;
-      }
-    }
-    return result;
+  static request* from(const char* const buffer, std::size_t length,
+                       target target, internal::marker method,
+                       internal::marker abs_path, internal::marker qry_part,
+                       internal::headers_markers headers,
+                       std::size_t headers_length) {
+    return new request(buffer, length, target, method, abs_path, qry_part,
+                       headers, headers_length);
   }
 
  private:
   // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                        ( private )
   //
-  request(const char* const buffer, std::size_t length) {
+  request(const char* const buffer, std::size_t length, target target,
+          internal::marker method, internal::marker abs_path,
+          internal::marker qry_part, internal::headers_markers headers,
+          std::size_t headers_length) {
     if (char* alloc = new char[length]) {
       std::memcpy(alloc, buffer, length);
-      buf_ = alloc;
-      sze_ = length;
+      buffer_ = alloc;
+      length_ = length;
+      target_ = target;
+      abs_path_ = std::string_view(&buffer_[abs_path.start], abs_path.length);
+      qry_part_ = std::string_view(&buffer_[qry_part.start], qry_part.length);
+      method_ = std::string_view(&buffer_[method.start], method.length);
+      for (auto i = 0; i < headers_length; i++) {
+        headers_.add(std::string_view(&buffer_[headers.data_[i].name.start],
+                                      headers.data_[i].name.length),
+                     std::string_view(&buffer_[headers.data_[i].value.start],
+                                      headers.data_[i].value.length));
+      }
     }
   }
   // ---------------------------------------------------------------------------
   // STATIC-METHODs                                                  ( private )
   //
-  // +=========================================================================+
-  // |                                                            request-line |
-  // +=========================================================================+
-  // | request-line = method SP request-target SP HTTP-version                 |
-  // +-------------------------------------------------------------------------+
-  // | source: https://datatracker.ietf.org/doc/html/rfc9110                   |
-  // +-------------------------------------------------------------------------+
-  static inline common::deserialize_result check_request_line(
-      char* buffer, std::size_t off, std::size_t len,
-      std::pair<std::size_t, std::size_t>& method_at, target& target,
-      std::pair<std::size_t, std::size_t>& absolute_path_at,
-      std::pair<std::size_t, std::size_t>& query_part_at,
-      std::size_t& bytes_used) {
-    std::size_t tmp = 0;
-    static constexpr std::size_t kHttpVersionLen = 8;
-    // +-----------------------------------------------------------------------+
-    // |                                                                method |
-    // +---------+-------------------------------------------------------------+
-    // | Field   | Definition                                                  |
-    // +---------+-------------------------------------------------------------+
-    // | method  | token                                                       |
-    // | token   | 1*tchar                                                     |
-    // | tchar   | "!" / "#" / "$" / "%" / "&" / "'" / "*" /                   |
-    // |         | "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"               |
-    // |         | / DIGIT / ALPHA                                             |
-    // +---------+-------------------------------------------------------------+
-    // | source: https://datatracker.ietf.org/doc/html/rfc9110                 |
-    // +----------------+------------------------------------------------------+
-    char* sp = nullptr;
-    while (off < len) {
-      uint8_t c = static_cast<uint8_t>(buffer[off]);
-      if (c == constants::character::kSpace) {
-        sp = &buffer[off++];
-        break;
-      }
-      if (!helpers::is_token(c)) {
-        return common::deserialize_result::kInvalidSource;
-      }
-      off++;
-    }
-    if (!sp) return common::deserialize_result::kMoreBytesNeeded;
-    method_at.first = 0;
-    method_at.second = sp - buffer;
-    std::string_view method(buffer, sp - buffer);
-    // +-----------------------------------------------------------------------+
-    // | HTTP/1.1: request-target (RFC 9112 §2.2) – Valid Forms                |
-    // +-----------------------------------------------------------------------+
-    // |                                                                       |
-    // | request-target = origin-form                                          |
-    // |                / absolute-form                                        |
-    // |                / authority-form                                       |
-    // |                / asterisk-form                                        |
-    // |                                                                       |
-    // |-----------------------------------------------------------------------|
-    // | FORM 1: origin-form (most common)                                     |
-    // |    origin-form = absolute-path [ "?" query ]                          |
-    // |-----------------------------------------------------------------------|
-    // | FORM 2: absolute-form (used via HTTP proxy)                           |
-    // |    URI = scheme ":" hier-part [ "?" query ] [ "#" fragment ]          |
-    // |-----------------------------------------------------------------------|
-    // | FORM 3: authority-form (used with CONNECT)                            |
-    // |    authority-form = host ":" port                                     |
-    // |-----------------------------------------------------------------------|
-    // | FORM 4: asterisk-form (used with OPTIONS)                             |
-    // |    asterisk-form = "*"                                                |
-    // +=======================================================================+
-    if (method == constants::method::kConnect) {
-      // +---------------------------------------------------------------------+
-      // |                                                      authority-form |
-      // +----------------+----------------------------------------------------+
-      // | Rule           | Definition                                         |
-      // +----------------+----------------------------------------------------+
-      // | authority-form | authority                                          |
-      // |                | (RFC 9112 §2.2)                                    |
-      // | authority      | [ userinfo "@" ] host [ ":" port ]                 |
-      // |                | (RFC 3986 §3.2)                                    |
-      // |                |  userinfo is forbidden in HTTP `authority-form`    |
-      // | host           | IP-literal / IPv4address / reg-name                |
-      // |                | (RFC 3986 §3.2.2)                                  |
-      // | port           | *DIGIT                                             |
-      // |                | (RFC 3986 §3.2.3)                                  |
-      // | userinfo       | *( unreserved / pct-encoded / sub-delims / ":" )   |
-      // |                | (RFC 3986 §3.2.1) : forbidden in HTTP              |
-      // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"              |
-      // |                | (RFC 3986 §2.3)                                    |
-      // | pct-encoded    | "%" HEXDIG HEXDIG                                  |
-      // |                | (RFC 3986 §2.1)                                    |
-      // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")"                  |
-      // |                | "*" / "+" / "," / ";" / "="                        |
-      // |                | (RFC 3986 §2.2)                                    |
-      // | IP-literal     | "[" ( IPv6address / IPvFuture ) "]"                |
-      // |                | (RFC 3986 §3.2.2)                                  |
-      // | IPv4address    | dec-octet "." dec-octet "." dec-octet "." dec-octet|
-      // |                | (RFC 3986 §3.2.2)                                  |
-      // | dec-octet      | DIGIT                 ; 0-9                        |
-      // |                | / %x31-39 DIGIT       ; 10-99                      |
-      // |                | / "1" 2DIGIT          ; 100-199                    |
-      // |                | / "2" %x30-34 DIGIT   ; 200-249                    |
-      // |                | / "25" %x30-35        ; 250-255                    |
-      // |                | (RFC 3986 §3.2.2)                                  |
-      // | reg-name       | *( unreserved / pct-encoded / sub-delims )         |
-      // |                | (RFC 3986 §3.2.2)                                  |
-      // +----------------+----------------------------------------------------+
-      // [to-do] -> add support for this!
-    } else if (method == constants::method::kOptions) {
-      // +---------------------------------------------------------------------+
-      // |                                                       asterisk-form |
-      // +----------------+----------------------------------------------------+
-      // | Field          | Definition                                         |
-      // +----------------+----------------------------------------------------+
-      // | asterisk-form  | "*"                                                |
-      // +----------------+----------------------------------------------------+
-      // [to-do] -> add support for this!
-    } else if (decode_absolute_path(buffer, off, len, absolute_path_at, tmp)) {
-      // +---------------------------------------------------------------------+
-      // |                                                         origin-form |
-      // +----------------+----------------------------------------------------+
-      // | Field          | Definition                                         |
-      // +----------------+----------------------------------------------------+
-      // | origin-form    | absolute-path [ "?" query ]                        |
-      // +----------------+----------------------------------------------------+
-      target = target::kOriginForm;
-      if ((off += tmp) >= len) {
-        return common::deserialize_result::kMoreBytesNeeded;
-      }
-      if (buffer[off] == constants::character::kQuestion) {
-        common::deserialize_result res =
-            decode_query_part(buffer, ++off, len, query_part_at, tmp);
-        if (res != common::deserialize_result::kSucceeded) {
-          return res;
-        }
-        off += tmp;
-      }
-    } else {
-      // +---------------------------------------------------------------------+
-      // |                                                       absolute-form |
-      // +----------------+----------------------------------------------------+
-      // | Field          | Definition                                         |
-      // +----------------+----------------------------------------------------+
-      // | absolute-form  | URI                                                |
-      // +----------------+----------------------------------------------------+
-      // [to-do] -> add support for this!
-    }
-    // +-----------------------------------------------------------------------+
-    // |                                                          http-version |
-    // +----------------+------------------------------------------------------+
-    // | HTTP-version   | HTTP-name "/" DIGIT "." DIGIT                        |
-    // | HTTP-name      | %s"HTTP"                                             |
-    // +----------------+------------------------------------------------------+
-    // | source: https://datatracker.ietf.org/doc/html/rfc9110 |               |
-    // +-----------------------------------------------------------------------+
-    if (off >= len) return common::deserialize_result::kMoreBytesNeeded;
-    if (buffer[off++] != constants::character::kSpace) {
-      return common::deserialize_result::kInvalidSource;
-    }
-    if (len - off < kHttpVersionLen) {
-      return common::deserialize_result::kMoreBytesNeeded;
-    }
-    if (buffer[off + 0] != constants::character::kHUpperCase ||
-        buffer[off + 1] != constants::character::kTUpperCase ||
-        buffer[off + 2] != constants::character::kTUpperCase ||
-        buffer[off + 3] != constants::character::kPUpperCase ||
-        buffer[off + 4] != constants::character::kSlash ||
-        !helpers::is_digit(buffer[off + 5]) ||
-        buffer[off + 6] != constants::character::kDot ||
-        !helpers::is_digit(buffer[off + 7])) {
-      return common::deserialize_result::kInvalidSource;
-    }
-    off += kHttpVersionLen;
-    if (len - off < 2) return common::deserialize_result::kMoreBytesNeeded;
-    if (buffer[off + 0] != constants::character::kCr ||
-        buffer[off + 1] != constants::character::kLf) {
-      return common::deserialize_result::kInvalidSource;
-    }
-    bytes_used = (off += 2);
-    return common::deserialize_result::kSucceeded;
-  }
-  // +=========================================================================+
-  // |                                                                 headers |
-  // +=========================================================================+
-  // +-----------------+-------------------------------------------------------+
-  // | Rule            | Definition                                            |
-  // +-----------------+-------------------------------------------------------+
-  // | header-field    | field-name ":" OWS field-value OWS                    |
-  // | field-name      | token                                                 |
-  // | token           | 1*tchar                                               |
-  // | tchar           | ALPHA / DIGIT / "!" / "#" / "$" / "%" / "&" / "'" /   |
-  // |                 | "*" / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"   |
-  // | field-value     | *( field-content )                                    |
-  // | field-content   | field-vchar [ *( SP / HTAB ) field-vchar ]            |
-  // | field-vchar     | VCHAR / obs-text                                      |
-  // | OWS             | *( SP / HTAB )                                        |
-  // | obs-fold        | CRLF 1*( SP / HTAB ) ; obsolete, not supported        |
-  // +-----------------+-------------------------------------------------------+
-  // | source: https://datatracker.ietf.org/doc/html/rfc9110                   |
-  // +-------------------------------------------------------------------------+
-  static inline common::deserialize_result check_headers(
-      char* buffer, std::size_t off, std::size_t len,
-      std::array<header_marker, kMaxHeaders>& hdrs, std::size_t& hdrs_len,
-      std::size_t& bytes_decoded) {
-    bool end_of_headers_found = false;
-    while (off < len) {
-      // [end-of-headers] check..
-      if (buffer[off] == constants::character::kCr) {
-        if (off + 1 >= len) {
-          return common::deserialize_result::kMoreBytesNeeded;
-        }
-        if (buffer[off + 1] != constants::character::kLf) {
-          return common::deserialize_result::kInvalidSource;
-        }
-        end_of_headers_found = true;
-        off += 2;
-        break;
-      }
-      // [field-name] decoding..
-      char* col = nullptr;
-      char* fns = &buffer[off];
-      while (off < len) {
-        if (buffer[off] == constants::character::kColon) {
-          col = &buffer[off++];
-          break;
-        }
-        if (!helpers::is_token(buffer[off])) {
-          return common::deserialize_result::kInvalidSource;
-        }
-        buffer[off] = helpers::tolower_ascii(buffer[off]);
-        off++;
-      }
-      if (!col) {
-        return common::deserialize_result::kMoreBytesNeeded;
-      }
-      if (col == fns) {
-        // empty field-name not allowed!
-        return common::deserialize_result::kInvalidSource;
-      }
-      std::size_t fnl = col - fns;
-      // [field-value] decoding..
-      char* crlf = nullptr;
-      char* fvs = &buffer[off];
-      while (off < len) {
-        if (buffer[off] == constants::character::kCr) {
-          if (off + 1 >= len) {
-            return common::deserialize_result::kMoreBytesNeeded;
-          }
-          if (buffer[off + 1] != constants::character::kLf) {
-            return common::deserialize_result::kInvalidSource;
-          }
-          crlf = &buffer[off];
-          break;
-        }
-        if (!helpers::is_vchar(buffer[off]) &&
-            !helpers::is_obs_text(buffer[off]) &&
-            !helpers::is_ows(buffer[off])) {
-          return common::deserialize_result::kInvalidSource;
-        }
-        off++;
-      }
-      if (!crlf) {
-        return common::deserialize_result::kMoreBytesNeeded;
-      }
-      while (crlf > fvs && helpers::is_ows(*(crlf - 1))) crlf--;
-      while (fvs < crlf && helpers::is_ows(*fvs)) fvs++;
-      if (hdrs_len >= kMaxHeaders) {
-        return common::deserialize_result::kInvalidSource;
-      }
-      hdrs[hdrs_len].field_name_start = fns - buffer;
-      hdrs[hdrs_len].field_name_length = fnl;
-      hdrs[hdrs_len].field_value_start = fvs - buffer;
-      hdrs[hdrs_len].field_value_length = crlf - fvs;
-      hdrs_len++;
-      off += 2;
-    }
-    if (end_of_headers_found) {
-      bytes_decoded = off;
-      return common::deserialize_result::kSucceeded;
-    }
-    return common::deserialize_result::kMoreBytesNeeded;
-  }
-  // +=========================================================================+
-  // |                                                          abosolute-path |
-  // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
-  // | Field          | Definition                                             |
-  // +----------------+--------------------------------------------------------+
-  // | abosulte-path  | 1*( "/" segment )                                      |
-  // | segment        | *pchar                                                 |
-  // | pchar          | unreserved / pct-encoded / sub-delims / ":" / "@"      |
-  // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"                  |
-  // | pct-encoded    | "%" HEXDIG HEXDIG                                      |
-  // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" /        |
-  // |                | "," / ";" / "="                                        |
-  // +----------------+--------------------------------------------------------+
-  // | source: https://datatracker.ietf.org/doc/html/rfc9110                   |
-  // +----------------+--------------------------------------------------------+
-  static inline bool decode_absolute_path(
-      char* buffer, std::size_t off, std::size_t len,
-      std::pair<std::size_t, std::size_t>& absolute_path_at,
-      std::size_t& bytes_decoded) {
-    std::size_t i = 0;
-    char* p = &buffer[off];
-    if (off >= len || p[i++] != constants::character::kSlash) return false;
-    const std::size_t effective_len = len - off;
-    while (i < len) {
-      uint8_t c = static_cast<uint8_t>(p[i]);
-      if (c == constants::character::kSpace ||
-          c == constants::character::kQuestion) {
-        break;
-      }
-      if (c == constants::character::kPercent) {
-        if (i + 2 >= len) return false;
-        if (!helpers::is_hex_digit(static_cast<uint8_t>(p[i + 1])) ||
-            !helpers::is_hex_digit(static_cast<uint8_t>(p[i + 2]))) {
-          return false;
-        }
-        i += 3;
-        continue;
-      }
-      if (!helpers::is_pchar(c) && c != constants::character::kSlash) {
-        return false;
-      }
-      i++;
-    }
-    absolute_path_at.first = p - buffer;
-    absolute_path_at.second = bytes_decoded = i;
-    return true;
-  }
-  // +=========================================================================+
-  // |                                                              query-part |
-  // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
-  // | Field          | Definition                                             |
-  // +----------------+--------------------------------------------------------+
-  // | query          | *( pchar / "/" / "?" )                                 |
-  // | pchar          | unreserved / pct-encoded / sub-delims / ":" / "@"      |
-  // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"                  |
-  // | pct-encoded    | "%" HEXDIG HEXDIG                                      |
-  // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" /        |
-  // |                | "," / ";" / "="                                        |
-  // +----------------+--------------------------------------------------------+
-  // | source: https://datatracker.ietf.org/doc/html/rfc9110                   |
-  // +----------------+--------------------------------------------------------+
-  static inline common::deserialize_result decode_query_part(
-      char* buffer, std::size_t off, std::size_t len,
-      std::pair<std::size_t, std::size_t>& query_part_at,
-      std::size_t& bytes_decoded) {
-    if (off >= len) return common::deserialize_result::kMoreBytesNeeded;
-    char* p = &buffer[off];
-    std::size_t i = 0;
-    const std::size_t effective_length = len - off;
-    while (i < effective_length) {
-      uint8_t c = static_cast<uint8_t>(p[i]);
-      if (c == constants::character::kSpace) break;
-      if (c == constants::character::kPercent) {
-        if (i + 2 >= effective_length) {
-          return common::deserialize_result::kMoreBytesNeeded;
-        }
-        if (!helpers::is_hex_digit(static_cast<uint8_t>(p[i + 1])) ||
-            !helpers::is_hex_digit(static_cast<uint8_t>(p[i + 2]))) {
-          return common::deserialize_result::kInvalidSource;
-        }
-        i += 3;
-        continue;
-      }
-      if (!helpers::is_pchar(c) && c != constants::character::kSlash &&
-          c != constants::character::kQuestion) {
-        return common::deserialize_result::kInvalidSource;
-      }
-      i++;
-    }
-    query_part_at.first = p - buffer;
-    query_part_at.second = bytes_decoded = i;
-    return common::deserialize_result::kSucceeded;
-  }
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
-  char* buf_ = nullptr;
-  std::size_t sze_ = 0;
+  char* buffer_ = nullptr;
+  std::size_t length_ = 0;
   target target_ = target::kUnknown;
-  std::string_view absolute_path_;
-  std::string_view query_part_;
+  std::string_view abs_path_;
+  std::string_view qry_part_;
   std::string_view method_;
   headers headers_;
   std::size_t headers_used_ = 0;

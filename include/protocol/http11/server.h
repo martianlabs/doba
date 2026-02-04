@@ -261,8 +261,8 @@ class server {
     if (!req) return false;
     for (auto i = 0; i < req->get_headers_length(); i++) {
       auto const& hdr = req->get_header(i);
-      if (auto itr = headers_fns_.find(hdr.first); itr != headers_fns_.end()) {
-        if (!itr->second(hdr.second)) return false;
+      if (auto itr = headers_fns_.find(hdr.name); itr != headers_fns_.end()) {
+        if (!itr->second(hdr.value)) return false;
       }
     }
     return true;

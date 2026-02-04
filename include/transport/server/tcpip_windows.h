@@ -435,7 +435,7 @@ class tcpip {
     bool keep_decoding = true;
     while (keep_decoding) {
       RQty* req = nullptr;
-      switch (c->decoder.process(req)) {
+      switch (c->decoder.deserialize(req)) {
         case common::deserialize_result::kSucceeded:
           if (on_request_) {
             RSty* res = new RSty();
