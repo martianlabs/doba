@@ -77,7 +77,7 @@
 #include "protocol/http11/helpers.h"
 
 namespace martianlabs::doba::protocol::http11::checkers {
-// =============================================================================
+// +===========================================================================+
 // |                                                            [ connection ] |
 // +---------------------------------------------------------------------------+
 // | RFC 9110 §7.6.1 - Connection                                              |
@@ -136,18 +136,11 @@ namespace martianlabs::doba::protocol::http11::checkers {
 // | However, a proxy that receives a message with such a connection           |
 // | option MAY delete it before forwarding the message.                       |
 // +---------------------------------------------------------------------------+
-// +---------------------+-----------------------------------------------------+
-// | Field               | Definition                                          |
-// +---------------------+-----------------------------------------------------+
-// | Connection          | 1#connection-option                                 |
-// | connection-option   | token                                               |
-// +---------------------+-----------------------------------------------------+
-// =============================================================================
 static auto connection_fn = [](std::string_view v) -> bool {
   for (auto token : v | std::views::split(constants::character::kComma)) {
+    if (token.begin() == token.end()) continue;
     std::string_view value(&*token.begin(), std::ranges::distance(token));
-    helpers::ows_ltrim(value);
-    helpers::ows_rtrim(value);
+    helpers::ows_trim(value);
     if (value.empty()) continue; 
     if (!helpers::is_token(value)) return false;
   }

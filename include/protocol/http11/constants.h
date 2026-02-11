@@ -269,6 +269,7 @@ struct constants {
     static constexpr uint8_t kCr = 0x0D;
     static constexpr uint8_t kLf = 0x0A;
     static constexpr uint8_t kExclamation = 0x21;
+    static constexpr uint8_t kDoubleQuote = 0x22;
     static constexpr uint8_t kHash = 0x23;
     static constexpr uint8_t kDollar = 0x24;
     static constexpr uint8_t kPercent = 0x25;
@@ -282,7 +283,6 @@ struct constants {
     static constexpr uint8_t kUnderscore = 0x5F;
     static constexpr uint8_t kBackTick = 0x60;
     static constexpr uint8_t kVerticalBar = 0x7C;
-    static constexpr uint8_t kTilde = 0x7E;
     static constexpr uint8_t kLParenthesis = 0x28;
     static constexpr uint8_t kRParenthesis = 0x29;
     static constexpr uint8_t kComma = 0x2C;
@@ -309,17 +309,19 @@ struct constants {
     static constexpr uint8_t kHUpperCase = 0x48;
     static constexpr uint8_t kPUpperCase = 0x50;
     static constexpr uint8_t kTUpperCase = 0x54;
+    static constexpr uint8_t kVUpperCase = 0x56;
     static constexpr uint8_t kZUpperCase = 0x5A;
+    static constexpr uint8_t kBackSlash = 0x5C;
     static constexpr uint8_t kALowerCase = 0x61;
     static constexpr uint8_t kFLowerCase = 0x66;
+    static constexpr uint8_t kVLowerCase = 0x76;
     static constexpr uint8_t kZLowerCase = 0x7A;
     static constexpr uint8_t kOpenBracket = 0x5B;
     static constexpr uint8_t kCloseBracket = 0x5D;
+    static constexpr uint8_t kTilde = 0x7E;
   };
   struct string {
     static constexpr uint8_t kCrLf[] = "\r\n";
-    static constexpr uint8_t kEndOfHeaders[] = "\r\n\r\n";
-    static constexpr uint8_t kHttpVersion[] = "HTTP/1.1";
   };
   struct limits {
     static constexpr std::size_t kDefaultCoreMsgMaxSizeInRam = 4096;

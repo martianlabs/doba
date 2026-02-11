@@ -77,7 +77,7 @@
 #include "protocol/http11/helpers.h"
 
 namespace martianlabs::doba::protocol::http11::checkers {
-// =============================================================================
+// +===========================================================================+
 // |                                                            [ connection ] |
 // +---------------------------------------------------------------------------+
 // | RFC 9110 §8.6 - Content-Length                                            |
@@ -108,7 +108,6 @@ namespace martianlabs::doba::protocol::http11::checkers {
 // | * Overflow handling and semantic validation are explicitly out of scope   |
 // |   of the ABNF definition.                                                 |
 // +---------------------------------------------------------------------------+
-// =============================================================================
 static auto content_length_fn = [](std::string_view sv) -> bool {
   if (sv.empty()) return false;
   for (auto const& c : sv) {

@@ -72,6 +72,11 @@
 
 #include "common/deserialize_result.h"
 #include "internal/headers_markers.h"
+#include "protocol/http11/checkers/host.h"
+#include "protocol/http11/checkers/date.h"
+#include "protocol/http11/checkers/connection.h"
+#include "protocol/http11/checkers/content_length.h"
+#include "protocol/http11/checkers/transfer_encoding.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -90,7 +95,7 @@ class decoder {
   // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  decoder() = default;
+  decoder() { setup_header_checkers_functions(); }
   decoder(const decoder&) = delete;
   decoder(decoder&&) noexcept = delete;
   // ---------------------------------------------------------------------------
@@ -109,15 +114,16 @@ class decoder {
   }
   inline common::deserialize_result deserialize(RQty*& out) noexcept {
     common::deserialize_result res = check_request_line();
-    if (res != common::deserialize_result::kSucceeded) return res;
-    res = check_headers();
-    if (res != common::deserialize_result::kSucceeded) return res;
-    out = RQty::from(buffer_, off_);
-    out->set_method(method_);
-    out->set_target(target_);
-    out->set_absolute_path(absolute_path_);
-    out->set_query_part(query_part_);
-    out->set_headers(headers_, headers_len_);
+    if (res == common::deserialize_result::kSucceeded) {
+      if ((res = check_headers()) == common::deserialize_result::kSucceeded) {
+        out = RQty::from(buffer_, off_);
+        out->set_method(method_);
+        out->set_target(target_);
+        out->set_absolute_path(absolute_path_);
+        out->set_query_part(query_part_);
+        out->set_headers(headers_, headers_len_);
+      }
+    }
     if (off_ < length_) {
       std::memmove(buffer_, &buffer_[off_], length_ - off_);
     }
@@ -132,6 +138,10 @@ class decoder {
   }
 
  private:
+  // ---------------------------------------------------------------------------
+  // USINGs                                                          ( private )
+  //
+  using on_header_check_delegate = std::function<bool(std::string_view)>;
   // ---------------------------------------------------------------------------
   // METHODs                                                        ( private  )
   //
@@ -160,12 +170,11 @@ class decoder {
     // +----------------+------------------------------------------------------+
     char* sp = nullptr;
     while (off < length_) {
-      uint8_t c = static_cast<uint8_t>(buffer_[off]);
-      if (c == constants::character::kSpace) {
+      if (buffer_[off] == constants::character::kSpace) {
         sp = &buffer_[off++];
         break;
       }
-      if (!helpers::is_token(c)) {
+      if (!helpers::is_token(buffer_[off])) {
         return common::deserialize_result::kInvalidSource;
       }
       off++;
@@ -387,15 +396,25 @@ class decoder {
       if (!crlf) {
         return common::deserialize_result::kMoreBytesNeeded;
       }
-      while (crlf > fvs && helpers::is_ows(*(crlf - 1))) crlf--;
+      // let's remove external OWS around the field-value..
       while (fvs < crlf && helpers::is_ows(*fvs)) fvs++;
+      while ((crlf - 1) >= fvs && helpers::is_ows(*(crlf - 1))) crlf--;
+      // space left for next header?
       if (headers_len_ >= constants::limits::kDefaultRequestMaxHeaders) {
         return common::deserialize_result::kInvalidSource;
       }
+      // let's add current header marker to internal structures..
       headers_.data_[headers_len_].name.start = fns - buffer_;
       headers_.data_[headers_len_].name.length = fnl;
       headers_.data_[headers_len_].value.start = fvs - buffer_;
       headers_.data_[headers_len_].value.length = crlf - fvs;
+      // let's check current header value..
+      auto itr_header_checker = headers_fns_.find(std::string_view(fns, fnl));
+      if (itr_header_checker != headers_fns_.end()) {
+        if (!itr_header_checker->second(std::string_view(fvs, crlf - fvs))) {
+          return common::deserialize_result::kInvalidSource;
+        }
+      }
       headers_len_++;
       off += 2;
     }
@@ -495,6 +514,38 @@ class decoder {
     query_part_.length = used = i;
     return common::deserialize_result::kSucceeded;
   }
+  void setup_header_checkers_functions() {
+    // +-----------------------------------------------------------------------+
+    // |                                                       header-checkers |
+    // +-----------------------------------------------------------------------+
+    // | [x] Host                                                              |
+    // | [x] Content-Length                                                    |
+    // | [x] Connection                                                        |
+    // | [x] Date                                                              |
+    // | [ ] Transfer-Encoding                                                 |
+    // | [ ] TE                                                                |
+    // | [ ] Content-Type                                                      |
+    // | [ ] Accept                                                            |
+    // | [ ] Allow                                                             |
+    // | [ ] Server                                                            |
+    // | [ ] User-Agent                                                        |
+    // | [ ] Expect                                                            |
+    // | [ ] Upgrade                                                           |
+    // | [ ] Range                                                             |
+    // | [ ] If-Modified-Since                                                 |
+    // | [ ] Cache-Control                                                     |
+    // | [ ] ETag                                                              |
+    // | [ ] Location                                                          |
+    // | [ ] Access-Control-*                                                  |
+    // | [ ] Trailer                                                           |
+    // | [ ] Vary                                                              |
+    // +-----------------------------------------------------------------------+
+    headers_fns_[headers::kHost] = checkers::host_fn;
+    headers_fns_[headers::kContentLength] = checkers::content_length_fn;
+    headers_fns_[headers::kConnection] = checkers::connection_fn;
+    headers_fns_[headers::kDate] = checkers::date_fn;
+    headers_fns_[headers::kTransferEncoding] = checkers::transfer_encoding_fn;
+  }
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
@@ -507,6 +558,7 @@ class decoder {
   internal::marker method_{0, 0};
   internal::headers_markers headers_;
   std::size_t headers_len_ = 0;
+  std::unordered_map<std::string_view, on_header_check_delegate> headers_fns_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

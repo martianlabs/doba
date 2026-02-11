@@ -74,7 +74,7 @@
 #include <string_view>
 
 namespace martianlabs::doba::protocol::http11::checkers {
-// =============================================================================
+// +===========================================================================+
 // |                                                                  [ host ] |
 // +---------------------------------------------------------------------------+
 // | RFC 9110 §7.2.Host                                                        |
@@ -121,197 +121,165 @@ namespace martianlabs::doba::protocol::http11::checkers {
 // | pct-encoded    | "%" HEXDIG HEXDIG                                        |
 // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / ","      |
 // |                | / ";" / "="                                              |
-// +----------------+----------------------------------------------------------+
-// =============================================================================
+// +---------------------------------------------------------------------------+
 static auto host_fn = [](std::string_view sv) -> bool {
   enum class type { kUnknown, kIpLiteral, kIpV4Address, kRegName };
-  auto check_ip_v4_address = [](std::string_view sv, std::size_t& i) -> type {
-    auto check = [](std::string_view sv) -> bool {
-      if (sv.size() == 0x1) {
-        return helpers::is_digit(sv[0]);
-      } else if (sv.size() == 0x2) {
-        return helpers::is_digit(sv[0]) && helpers::is_digit(sv[1]);
-      } else if (sv.size() == 0x3) {
-        if (!helpers::is_digit(sv[0]) || !helpers::is_digit(sv[1]) ||
-            !helpers::is_digit(sv[2])) {
-          return false;
-        }
-        if (sv[0] == constants::character::k1) {
-          return true;
-        } else if (sv[0] == constants::character::k2) {
-          if (sv[1] >= constants::character::k0 &&
-              sv[1] <= constants::character::k4) {
-            return true;
-          } else if ((sv[1] == constants::character::k5)) {
-            if (sv[2] >= constants::character::k0 &&
-                sv[2] <= constants::character::k5) {
-              return true;
-            }
-          }
-        }
+  // +----------------+--------------------------------------------------------+
+  // | h16            | 1*4HEXDIG                                              |
+  // +----------------+--------------------------------------------------------+
+  static auto skip_n_hextets = [](std::string_view sv, std::size_t n) -> int {
+    int hextets_count = 0;
+    std::size_t off = 0;
+    std::size_t hex_digits = 0;
+    while (off < sv.size() && hextets_count < n) {
+      if (helpers::is_hex_digit(sv[off])) {
+        hex_digits++;
+      } else if (sv[off] == constants::character::kColon) {
+        if (!hex_digits) return false;
+        hextets_count++;
+        hex_digits = 0;
+      } else {
+        return -1;
       }
-      return false;
-    };
-    const std::size_t kMaxDots = 3;
-    std::size_t dots_found = 0;
-    std::array<std::size_t, kMaxDots> dots;
-    while (i < sv.length()) {
-      if (!helpers::is_digit(sv[i])) {
-        if (sv[i] == constants::character::kDot) {
-          if (dots_found > (kMaxDots - 1)) {
-            return type::kUnknown;
-          }
-          dots[dots_found++] = i;
-        } else if (sv[i] == constants::character::kColon) {
-          break;
-        } else {
-          return type::kUnknown;
-        }
-      }
-      i++;
+      off++;
     }
-    if (dots_found != kMaxDots) {
-      return type::kUnknown;
-    }
-    std::size_t sz = dots[0];
-    const char* ptr = &sv.data()[0];
-    if (!sz || !check(std::string_view(ptr, dots[0]))) {
-      return type::kUnknown;
-    }
-    sz = dots[1] - dots[0];
-    ptr = &sv.data()[dots[0] + 1];
-    if (!sz || !check(std::string_view(ptr, sz - 1))) {
-      return type::kUnknown;
-    }
-    sz = dots[2] - dots[1];
-    ptr = &sv.data()[dots[1] + 1];
-    if (!sz || !check(std::string_view(ptr, sz - 1))) {
-      return type::kUnknown;
-    }
-    sz = i - dots[2];
-    ptr = &sv.data()[dots[2] + 1];
-    if (!sz || !check(std::string_view(ptr, sz - 1))) {
-      return type::kUnknown;
-    }
-    return type::kIpV4Address;
+    if (hex_digits) hextets_count++;
+    return hextets_count == n ? off : -1;
   };
-  auto check_ip_literal = [check_ip_v4_address](std::string_view sv,
-                                                std::size_t& i) -> type {
-    std::size_t pos = sv.find(constants::character::kCloseBracket);
-    if (pos == std::string_view::npos) return type::kUnknown;
-    std::string_view fixed(sv.begin() + 1, sv.begin() + pos);
-    if (i >= fixed.size()) return type::kUnknown;
-    if (fixed[i] == 'v' && ++i) {
-      // [IPvFuture]..
-      std::size_t j = 0;
-      while (i < fixed.size()) {
-        if (!helpers::is_hex_digit(fixed[i])) break;
-        i++;
-        j++;
+  // +----------------+--------------------------------------------------------+
+  // | IPv4address    | dec-octet "." dec-octet "." dec-octet "." dec-octet    |
+  // | dec-octet      | DIGIT                    ; 0-9                         |
+  // |                | / %x31-39 DIGIT          ; 10-99                       |
+  // |                | / "1" 2DIGIT             ; 100-199                     |
+  // |                | / "2" %x30-34 DIGIT      ; 200-249                     |
+  // |                | / "25" %x30-35           ; 250-255                     |
+  // +----------------+--------------------------------------------------------+
+  static auto check_ip_v4_address = [](std::string_view sv) -> bool {
+    int dec_octets_count = 0;
+    std::size_t off = 0;
+    std::size_t digits = 0;
+    while (off < sv.size()) {
+      if (helpers::is_digit(sv[off])) {
+        digits++;
+      } else if (sv[off] == constants::character::kDot) {
+        if (!digits) return false;
+        dec_octets_count++;
+        digits = 0;
+      } else {
+        return false;
       }
-      if (j < 1 || j > 4 || i == fixed.size()) return type::kUnknown;
-      if (fixed[i++] != constants::character::kDot) return type::kUnknown;
-      while (i < fixed.size()) {
-        if (!helpers::is_unreserved(fixed[i]) &&
-            !helpers::is_sub_delim(fixed[i]) &&
-            fixed[i] != constants::character::kColon) {
-          return type::kUnknown;
-        }
-        i++;
-      }
-      i++;
-      return type::kIpLiteral;
-    } else {
-      // [IPv6address]..
-      std::vector<std::size_t> colons;
-      while (i < fixed.size()) {
-        if (fixed[i] == constants::character::kColon) colons.emplace_back(i);
-        i++;
-      }
-      if (colons.size() < 2 || colons.size() > 8) return type::kUnknown;
-      bool double_colon = false;
-      std::size_t prev_start = colons[0], j = 1;
-      while (j < colons.size()) {
-        if ((colons[j] - prev_start) == 1) {
-          if (double_colon) {
-            return type::kUnknown;
-          }
-          double_colon = true;
-        } else if ((colons[j] - prev_start) <= 5) {
-          for (auto z = prev_start + 1; z < colons[j]; z++) {
-            if (!helpers::is_hex_digit(fixed[z])) {
-              return type::kUnknown;
-            }
-          }
-        } else {
-          return type::kUnknown;
-        }
-        prev_start = colons[j++];
-      }
-      std::size_t start = colons[j - 1] + 1;
-      std::string_view sub(fixed.begin() + start, fixed.end());
-      if (check_ip_v4_address(sub, j = 0) != type::kIpV4Address) {
-        for (j = start; j < fixed.length(); j++) {
-          if (!helpers::is_hex_digit(fixed[j])) {
-            return type::kUnknown;
-          }
-        }
-      }
-      i = fixed.size() + 2;
-      return type::kIpLiteral;
+      off++;
     }
-    return type::kUnknown;
+    if (digits) dec_octets_count++;
+    return dec_octets_count == 4;
   };
-  auto check_reg_name = [](std::string_view sv, std::size_t& i) -> type {
-    while (i < sv.size()) {
-      if (helpers::is_unreserved(sv[i]) || helpers::is_sub_delim(sv[i])) {
-        i++;
-      } else if (sv[i] == constants::character::kPercent) {
-        if (i + 2 < sv.size() && helpers::is_hex_digit(sv[i + 1]) &&
-            helpers::is_hex_digit(sv[i + 2])) {
-          i += 3;
-        } else {
-          return type::kUnknown;
-        }
-      } else if (sv[i] == constants::character::kColon) {
+  // +--------------+----------------------------------------------------------+
+  // | IPvFuture    | "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )     |
+  // +--------------+----------------------------------------------------------+
+  static auto check_ip_v_future = [](std::string_view sv) -> bool {
+    // 1*HEXDIG "." part..
+    bool hex_digit_valid = false;
+    std::size_t off = 0;
+    while (off < sv.size()) {
+      if (sv[off] == constants::character::kDot) {
+        off++;
         break;
-      } else {
-        return type::kUnknown;
       }
+      if (!helpers::is_hex_digit(sv[off])) return false;
+      if (!hex_digit_valid) hex_digit_valid = true;
+      off++;
     }
-    return type::kRegName;
+    if (off >= sv.size() || !hex_digit_valid) return false;
+    // 1*( unreserved / sub-delims / ":" ) part..
+    bool valid = false;
+    while (off < sv.size()) {
+      if (!helpers::is_unreserved(sv[off]) && !helpers::is_sub_delim(sv[off]) &&
+          sv[off] != constants::character::kColon) {
+        return false;
+      }
+      if (!valid) valid = true;
+      off++;
+    }
+    return valid;
   };
-  if (!sv.size()) return false;
-  std::size_t i = 0;
-  type probable_type = type::kUnknown;
-  // By following the ABNF standard is hard to differentiate between an
-  // ipv4address and a reg-name. Because of this, we'll try first the
-  // ipv4address way and, if not going well, then trying the reg-name one..
-  if (sv[0] == constants::character::kOpenBracket) {
-    probable_type = check_ip_literal(sv, ++i);
-  } else if (helpers::is_digit(sv[0])) {
-    probable_type = check_ip_v4_address(sv, i);
-  }
-  // if anything else didn't work let's try to decode it as reg-name..
-  if (probable_type == type::kUnknown) {
-    probable_type = check_reg_name(sv, i = 0);
-  }
-  // if everything went well then we need to check the 'port' part..
-  if (probable_type != type::kUnknown) {
-    if (i < sv.size()) {
-      if (sv[i++] == constants::character::kColon) {
-        while (i < sv.size()) {
-          if (!helpers::is_digit(sv[i++])) {
-            probable_type = type::kUnknown;
-            break;
-          }
-        }
-      } else {
-        probable_type = type::kUnknown;
-      }
+  // +----------------+--------------------------------------------------------+
+  // | IPv6address    | 6( h16 ":" ) ls32                                      |
+  // |                | / "::" 5( h16 ":" ) ls32                               |
+  // |                | / [ h16 ] "::" 4( h16 ":" ) ls32                       |
+  // |                | / [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32         |
+  // |                | / [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32         |
+  // |                | / [ *3( h16 ":" ) h16 ] "::" h16 ":" ls32              |
+  // |                | / [ *4( h16 ":" ) h16 ] "::" ls32                      |
+  // |                | / [ *5( h16 ":" ) h16 ] "::" h16                       |
+  // |                | / [ *6( h16 ":" ) h16 ] "::"                           |
+  // +----------------+--------------------------------------------------------+
+  // | ls32           | ( h16 ":" h16 ) / IPv4address                          |
+  // | h16            | 1*4HEXDIG                                              |
+  // +----------------+--------------------------------------------------------+
+  static auto check_ip_v6_address = [](std::string_view sv) -> bool {
+    // first character must be either ':' or hex-digit..
+    std::size_t sep = sv.find("::");
+    if (sep == std::string_view::npos) {
+      // +---------------------------------------------------------------------+
+      // | no-compression case!                                                |
+      // +---------------------------------------------------------------------+
+      // | 6( h16 ":" ) ls32                                                   |
+      // +---------------------------------------------------------------------+
+      int offset = skip_n_hextets(sv, 6);
+      if (offset == -1) return false;
+      sv = sv.substr(offset);
+      offset = skip_n_hextets(sv, 2);
+      if (offset == -1) return check_ip_v4_address(sv);
+      return true;
+    } else {
+      // +---------------------------------------------------------------------+
+      // | compression case!                                                   |
+      // +---------------------------------------------------------------------+
+      // | "::" 5( h16 ":" ) ls32                                              |
+      // | / [ h16 ] "::" 4( h16 ":" ) ls32                                    |
+      // | / [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32                      |
+      // | / [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32                      |
+      // | / [ *3( h16 ":" ) h16 ] "::" h16 ":" ls32                           |
+      // | / [ *4( h16 ":" ) h16 ] "::" ls32                                   |
+      // | / [ *5( h16 ":" ) h16 ] "::" h16                                    |
+      // | / [ *6( h16 ":" ) h16 ] "::"                                        |
+      // +---------------------------------------------------------------------+
+      if (sv.find("::", sep + 2) != std::string_view::npos) return false;
     }
-  }
-  return probable_type != type::kUnknown;
+    return false;
+  };
+  // +----------------+--------------------------------------------------------+
+  // | IP-literal     | "[" ( IPv6address / IPvFuture ) "]"                    |
+  // +----------------+--------------------------------------------------------+
+  static auto check_ip_literal = [](std::string_view sv) -> bool {
+    if (sv.size() < 2) return false;  // at least two characters..
+    if (sv.back() != constants::character::kCloseBracket) return false;
+    sv.remove_suffix(1);
+    if (sv[0] == constants::character::kVLowerCase) {
+      sv.remove_prefix(1);
+      return check_ip_v_future(sv);
+    }
+    return check_ip_v6_address(sv);
+  };
+  // +----------------+--------------------------------------------------------+
+  // | uri-host       | IP-literal / IPv4address / reg-name                    |
+  // +----------------+--------------------------------------------------------+
+  static auto check_uri_host = [](std::string_view sv) -> type {
+    // if the provided field-value is empty then we assume it to be regname..
+    if (sv.empty()) return type::kRegName;
+    // let's do a first round to set the potential type based on initial char..
+    if (sv[0] == constants::character::kOpenBracket) {
+      // fully correct to assume this as IPLiteral..
+      return check_ip_literal(sv.substr(1)) ? type::kIpLiteral : type::kUnknown;
+    } else if (helpers::is_digit(sv[0])) {
+      // not fully correct to assume this as IPv4address but enough for now..
+      return check_ip_v4_address(sv) ? type::kIpV4Address : type::kUnknown;
+    } else {
+      // fully correct to assume this as reg-name..
+      return type::kUnknown;
+    }
+  };
+  return check_uri_host(sv) != type::kUnknown;
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers
 

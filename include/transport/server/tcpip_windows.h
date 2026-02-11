@@ -330,20 +330,24 @@ class tcpip {
           bool close_context = false;
           BOOL ios = GetQueuedCompletionStatus(io_h_, &bytes, &key, &ovl, tout);
           context* c = reinterpret_cast<context*>(key);
-          bool query_context_close = false;
           if (ios) {
             if (ovl) {
               switch (reinterpret_cast<overlapped_base*>(ovl)->type) {
                 case io_type::kEnqueue:
-                  query_context_close = !handle_completion_enqueue(c, ovl);
+                  if (!handle_completion_enqueue(c, ovl)) {
+                    mark_context_for_closing(c);
+                  }
                   delete reinterpret_cast<overlapped_enqueue*>(ovl);
                   break;
                 case io_type::kReceive:
-                  query_context_close =
-                      !bytes || !handle_completion_receive(c, bytes);
+                  if (!bytes || !handle_completion_receive(c, bytes)) {
+                    mark_context_for_closing(c);
+                  }
                   break;
                 case io_type::kSend:
-                  query_context_close = !handle_completion_send(c, bytes);
+                  if (!handle_completion_send(c, bytes)) {
+                    mark_context_for_closing(c);
+                  }
                   break;
               }
               c->io_completions_pending--;
@@ -351,9 +355,11 @@ class tcpip {
               if (!bytes) {
                 // this means a new connection!
                 if (on_client_connected_) on_client_connected_();
-                query_context_close = !receive(c);
+                if (!receive(c)) {
+                  mark_context_for_closing(c);
+                }
               } else {
-                query_context_close = true;
+                mark_context_for_closing(c);
               }
             }
           } else {
@@ -362,42 +368,35 @@ class tcpip {
               if (!c && !ovl) {
                 break;
               }
-            } else {
-              if (ovl) {
-                c->io_completions_pending--;
-                switch (reinterpret_cast<overlapped_base*>(ovl)->type) {
-                  case io_type::kEnqueue:
-                    delete reinterpret_cast<overlapped_enqueue*>(ovl);
-                    break;
-                  case io_type::kReceive:
-                  case io_type::kSend:
-                    break;
-                }
+            } else if (c && ovl) {
+              c->io_completions_pending--;
+              switch (reinterpret_cast<overlapped_base*>(ovl)->type) {
+                case io_type::kEnqueue:
+                  delete reinterpret_cast<overlapped_enqueue*>(ovl);
+                  break;
+                case io_type::kReceive:
+                case io_type::kSend:
+                  break;
               }
-              query_context_close = true;
+              mark_context_for_closing(c);
             }
           }
-          if (c && query_context_close && !c->io_completions_pending) {
-            bool expected = false;
-            if (c->closing.compare_exchange_strong(expected, true)) {
-              // this means a disconnection!
-              if (on_client_disconnected_) on_client_disconnected_();
-              std::lock_guard<std::mutex> robs_queue_lock(c->robs_queue_mutex);
-              while (!c->robs_queue.empty()) {
-                delete c->robs_queue.front();
-                c->robs_queue.pop();
-              }
-              std::memset(&c->ovr.wsa, 0, sizeof(WSABUF));
-              std::memset(&c->ovs.wsa, 0, sizeof(WSABUF));
-              c->ovs.buf_len = 0;
-              closesocket(c->soc);
-              c->soc = INVALID_SOCKET;
-              c->io_completions_pending = 0;
-              c->send_in_flight = false;
-              c->id++;
-              c->closing = false;
-              push_context(c);
+          if (c && c->closing && !c->io_completions_pending) {
+            // this means a disconnection!
+            if (on_client_disconnected_) on_client_disconnected_();
+            std::lock_guard<std::mutex> robs_queue_lock(c->robs_queue_mutex);
+            while (!c->robs_queue.empty()) {
+              delete c->robs_queue.front();
+              c->robs_queue.pop();
             }
+            std::memset(&c->ovr.wsa, 0, sizeof(WSABUF));
+            std::memset(&c->ovs.wsa, 0, sizeof(WSABUF));
+            c->ovs.buf_len = 0;
+            c->io_completions_pending = 0;
+            c->send_in_flight = false;
+            c->id++;
+            c->closing = false;
+            push_context(c);
           }
         }
       }));
@@ -482,6 +481,13 @@ class tcpip {
       return true;
     }
     return send(c);
+  }
+  inline void mark_context_for_closing(context* c) {
+    bool expected = false;
+    if (c->closing.compare_exchange_strong(expected, true)) {
+      closesocket(c->soc);
+      c->soc = INVALID_SOCKET;
+    }
   }
   inline bool drain_robs_queue(context* c) {
     std::lock_guard<std::mutex> robs_queue_lock(c->robs_queue_mutex);

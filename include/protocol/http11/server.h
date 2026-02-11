@@ -80,10 +80,6 @@
 #include "protocol/http11/decoder.h"
 #include "protocol/http11/router.h"
 #include "protocol/http11/headers.h"
-#include "protocol/http11/checkers/host.h"
-#include "protocol/http11/checkers/date.h"
-#include "protocol/http11/checkers/connection.h"
-#include "protocol/http11/checkers/content_length.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -110,12 +106,6 @@ class server {
   server() {
     transport_.set_on_request(
         [this](const request* req, response* res, auto on_send) {
-          // let's check if the incoming request is following the standard..
-          if (!process_headers(req)) {
-            res->bad_request_400().add_header(headers::kContentLength, 0);
-            on_send(res);
-            return;
-          }
           switch (req->get_target()) {
             case target::kOriginForm:
             case target::kAbsoluteForm: {
@@ -180,7 +170,6 @@ class server {
       */
       // nothing to do here by default..
     });
-    setup_headers_functions();
   }
   server(const server&) = delete;
   server(server&&) noexcept = delete;
@@ -212,63 +201,8 @@ class server {
 
  private:
   // ---------------------------------------------------------------------------
-  // USINGs                                                          ( private )
-  //
-  using on_header_check_delegate = std::function<bool(std::string_view)>;
-  // ---------------------------------------------------------------------------
-  // METHODs                                                         ( private )
-  //
-  void setup_headers_functions() {
-    // +-----------------------------------------------------------------------+
-    // | ESSENTIAL HEADERS (MANDATORY)                                         |
-    // +-----------------------------------------------------------------------+
-    // | [x] Host                                                              |
-    // | [x] Content-Length                                                    |
-    // | [x] Connection                                                        |
-    // | [x] Date                                                              |
-    // | [ ] Transfer-Encoding                                                 |
-    // | [ ] TE                                                                |
-    // +-----------------------------------------------------------------------+
-    // | STRONGLY RECOMMENDED HEADERS                                          |
-    // +-----------------------------------------------------------------------+
-    // | [ ] Content-Type                                                      |
-    // | [ ] Accept                                                            |
-    // | [ ] Allow                                                             |
-    // | [ ] Server                                                            |
-    // | [ ] User-Agent                                                        |
-    // | [ ] Expect                                                            |
-    // | [ ] Upgrade                                                           |
-    // +-----------------------------------------------------------------------+
-    // | OPTIONAL / ADVANCED HEADERS                                           |
-    // +-----------------------------------------------------------------------+
-    // | [ ] Range                                                             |
-    // | [ ] If-Modified-Since                                                 |
-    // | [ ] Cache-Control                                                     |
-    // | [ ] ETag                                                              |
-    // | [ ] Location                                                          |
-    // | [ ] Access-Control-*                                                  |
-    // | [ ] Trailer                                                           |
-    // | [ ] Vary                                                              |
-    // +-----------------------------------------------------------------------+
-    headers_fns_[headers::kHost] = checkers::host_fn;
-    headers_fns_[headers::kContentLength] = checkers::content_length_fn;
-    headers_fns_[headers::kConnection] = checkers::connection_fn;
-    headers_fns_[headers::kDate] = checkers::date_fn;
-  }
-  bool process_headers(const request* const req) const {
-    if (!req) return false;
-    for (auto i = 0; i < req->get_headers_length(); i++) {
-      auto const& hdr = req->get_header(i);
-      if (auto itr = headers_fns_.find(hdr.name); itr != headers_fns_.end()) {
-        if (!itr->second(hdr.value)) return false;
-      }
-    }
-    return true;
-  }
-  // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
-  std::unordered_map<std::string_view, on_header_check_delegate> headers_fns_;
   std::shared_ptr<common::thread_pool> thread_pool_;
   TRty<request, response, decoder, 4096> transport_;
   router<router_fn> router_;

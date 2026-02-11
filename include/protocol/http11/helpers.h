@@ -161,6 +161,16 @@ struct helpers {
     return val >= constants::character::kExclamation &&
            val <= constants::character::kTilde;
   }
+  static constexpr bool is_qdtext(uint8_t val) noexcept {
+    return val == constants::character::kHTab ||
+           val == constants::character::kSpace ||
+           val == constants::character::kExclamation ||
+           (val >= constants::character::kHash &&
+            val <= constants::character::kOpenBracket) ||
+           (val >= constants::character::kCloseBracket &&
+            val <= constants::character::kTilde) ||
+           is_obs_text(val);
+  }
   static constexpr bool is_obs_text(uint8_t val) noexcept {
     return val >= constants::character::kObsTextStart &&
            val <= constants::character::kObsTextEnd;
@@ -178,6 +188,10 @@ struct helpers {
     while (!s.empty() && helpers::is_ows(static_cast<uint8_t>(s.back()))) {
       s.remove_suffix(1);
     }
+  }
+  static constexpr void ows_trim(std::string_view& s) noexcept {
+    ows_ltrim(s);
+    ows_rtrim(s);
   }
   static constexpr uint8_t tolower_ascii(uint8_t c) noexcept {
     return (c >= constants::character::kAUpperCase &&

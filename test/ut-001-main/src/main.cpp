@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
           },
           execution_policy::kSync)
       .start("8080");
-  auto ch = getchar();
+  std::cin.get();
   my_server.stop();
   cleanup();
   return 0;
