@@ -382,8 +382,6 @@ class tcpip {
             }
           }
           if (c && c->closing && !c->io_completions_pending) {
-            // this means a disconnection!
-            if (on_client_disconnected_) on_client_disconnected_();
             std::lock_guard<std::mutex> robs_queue_lock(c->robs_queue_mutex);
             while (!c->robs_queue.empty()) {
               delete c->robs_queue.front();
@@ -487,6 +485,10 @@ class tcpip {
     if (c->closing.compare_exchange_strong(expected, true)) {
       closesocket(c->soc);
       c->soc = INVALID_SOCKET;
+      // this means a disconnection!
+      if (on_client_disconnected_) {
+        on_client_disconnected_();
+      }
     }
   }
   inline bool drain_robs_queue(context* c) {

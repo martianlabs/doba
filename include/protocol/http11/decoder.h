@@ -396,9 +396,21 @@ class decoder {
       if (!crlf) {
         return common::deserialize_result::kMoreBytesNeeded;
       }
+
+      /*
+      pepe
+      */
+
+      /*
       // let's remove external OWS around the field-value..
       while (fvs < crlf && helpers::is_ows(*fvs)) fvs++;
       while ((crlf - 1) >= fvs && helpers::is_ows(*(crlf - 1))) crlf--;
+      */
+
+      /*
+      pepe fin
+      */
+
       // space left for next header?
       if (headers_len_ >= constants::limits::kDefaultRequestMaxHeaders) {
         return common::deserialize_result::kInvalidSource;
