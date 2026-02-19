@@ -78,8 +78,8 @@
 
 namespace martianlabs::doba::protocol::http11::checkers {
 // +===========================================================================+
-// |                                                            [ connection ] |
-// +---------------------------------------------------------------------------+
+// |                                                                connection |
+// +===========================================================================+
 // | RFC 9110 §7.6.1 - Connection                                              |
 // +---------------------------------------------------------------------------+
 // | The "Connection" header field provides a means for communicating control  |
@@ -136,16 +136,22 @@ namespace martianlabs::doba::protocol::http11::checkers {
 // | However, a proxy that receives a message with such a connection           |
 // | option MAY delete it before forwarding the message.                       |
 // +---------------------------------------------------------------------------+
-static auto connection_fn = [](std::string_view v) -> bool {
+// | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
+// +---------------------------------------------------------------------------+
+static inline bool connection(std::string_view v) {
+  std::size_t options_found = 0;
   for (auto token : v | std::views::split(constants::character::kComma)) {
     if (token.begin() == token.end()) continue;
     std::string_view value(&*token.begin(), std::ranges::distance(token));
     helpers::ows_trim(value);
-    if (value.empty()) continue; 
-    if (!helpers::is_token(value)) return false;
+    if (value.empty()) continue;
+    for (auto const& c : value) {
+      if (!helpers::is_token(c)) return false;
+    }
+    options_found++;
   }
-  return true;
-};
+  return options_found > 0;
+}
 }  // namespace martianlabs::doba::protocol::http11::checkers
 
 #endif

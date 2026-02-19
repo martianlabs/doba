@@ -67,53 +67,55 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#ifndef martianlabs_doba_protocol_http11_checkers_content_length_h
-#define martianlabs_doba_protocol_http11_checkers_content_length_h
-
-#include <ranges>
-#include <string_view>
+#ifndef martianlabs_doba_protocol_http11_checkers_expect_h
+#define martianlabs_doba_protocol_http11_checkers_expect_h
 
 #include "protocol/http11/constants.h"
 #include "protocol/http11/helpers.h"
 
 namespace martianlabs::doba::protocol::http11::checkers {
 // +===========================================================================+
-// |                                                            content-length |
+// |                                                                    expect |
 // +===========================================================================+
-// | RFC 9110 §8.6 - Content-Length                                            |
+// | RFC 9110 (HTTP Semantics) - "Expect" header field (ABNF)                  |
 // +---------------------------------------------------------------------------+
-// | The "Connection" header field provides a means for communicating control  |
-// | information for the current connection. It is primarily used to indicate  |
-// | options that are desired for that particular connection and that are not  |
-// | to be communicated forward by proxies.                                    |
+// |  Expect = #expectation                                                    |
+// |  expectation = token [ "=" ( token / quoted-string ) parameters ]         |
 // |                                                                           |
-// | ABNF:                                                                     |
-// |     Content-Length = 1*DIGIT                                              |
-// |     DIGIT = %x30-39   ; "0" - "9"  (RFC 5234)                             |
+// | Notes (ABNF building blocks referenced above):                            |
 // |                                                                           |
-// | The field value MUST consist of one or more ASCII decimal digits.         |
-// | At least one DIGIT is required (empty value is invalid).                  |
-// | Only characters %x30–%x39 are allowed.                                    |
-// | No optional whitespace (OWS) is allowed before or after the value.        |
-// | No sign characters are allowed ('+' or '-').                              |
-// | No separators (commas) are allowed by the ABNF.                           |
-// | No hexadecimal, octal, or other numeric formats are allowed.              |
-// | No comments or extensions are allowed within the value.                   |
-// +---------------------------------------------------------------------------+
-// | Notes                                                                     |
-// +---------------------------------------------------------------------------+
-// | * Any tolerance for commas, whitespace, or multiple values is NOT defined |
-// |   by the ABNF and belongs to higher-level error handling rules.           |
-// | * ABNF validation must be performed before any numeric conversion.        |
-// | * Overflow handling and semantic validation are explicitly out of scope   |
-// |   of the ABNF definition.                                                 |
+// |  Lists (#rule ABNF extension):                                            |
+// |    1#element => element *( OWS "," OWS element )                          |
+// |    #element  => [ element ] *( OWS "," OWS [ element ] )                  |
+// |                                                                           |
+// |  Tokens:                                                                  |
+// |    token = 1*tchar                                                        |   
+// |    tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+"                  |
+// |          / "-" / "." / "^" / "_" / "`" / "|" / "~"                        |
+// |          / DIGIT / ALPHA                                                  |
+// |                                                                           |
+// |  Quoted strings:                                                          |
+// |    quoted-string = DQUOTE *( qdtext / quoted-pair ) DQUOTE                | 
+// |    qdtext        = HTAB / SP / %x21 / %x23-5B / %x5D-7E / obs-text        |
+// |    quoted-pair   = "\" ( HTAB / SP / VCHAR / obs-text )                   |
+// |                                                                           |
+// |  Parameters:                                                              |
+// |    parameters      = *( OWS ";" OWS [ parameter ] )                       |
+// |    parameter       = parameter-name "=" parameter-value                   | 
+// |    parameter-name  = token                                                |
+// |    parameter-value = ( token / quoted-string )                            |
+// |                                                                           |
+// | Additional rule stated next to the field definition:                      |
+// |  - The Expect field value is case-insensitive.                            |
 // +---------------------------------------------------------------------------+
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+
-static inline bool content_length(std::string_view sv) {
-  if (sv.empty()) return false;
-  for (auto const& c : sv) {
-    if (!helpers::is_digit(c)) return false;
+static inline bool expect(std::string_view v) {
+  for (auto token : v | std::views::split(constants::character::kComma)) {
+    if (token.begin() == token.end()) continue;
+    std::string_view value(&*token.begin(), std::ranges::distance(token));
+    helpers::ows_trim(value);
+    if (value.empty()) continue;
   }
   return true;
 }

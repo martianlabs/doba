@@ -85,127 +85,239 @@ namespace martianlabs::doba::protocol::http11 {
 // -----------------------------------------------------------------------------
 // =============================================================================
 struct helpers {
-  static constexpr bool is_digit(std::string_view val) noexcept {
-    if (val.empty()) return false;
-    for (auto const& c : val) {
-      if (!is_digit(static_cast<uint8_t>(c))) return false;
+  // +-------------------------------------------------------------------------+
+  // | RFC 5234 (ABNF Core Rules) — DIGIT                                      |
+  // +-------------------------------------------------------------------------+
+  // | DIGIT = %x30-39    ; "0" - "9"                                          |
+  // +-------------------------------------------------------------------------+
+  static constexpr bool is_digit(unsigned char c) noexcept {
+    return c >= '0' && c <= '9';
+  }
+  static constexpr bool is_digit(char c) noexcept {
+    return is_digit(static_cast<unsigned char>(c));
+  }
+  // +-------------------------------------------------------------------------+
+  // | RFC 5234 (ABNF Core Rules) — HEXDIG                                     |
+  // +-------------------------------------------------------------------------+
+  // | HEXDIG = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"                      |
+  // |                                                                         |
+  // | DIGIT  = %x30-39   ; "0" - "9"                                          |
+  // +-------------------------------------------------------------------------+
+  // | Note: In HTTP (RFC 9110 / RFC 9112), hexadecimal parsing is             |
+  // | case-insensitive. Therefore, implementations typically also accept      |
+  // | lowercase "a" - "f" (i.e., %x61-66).                                    |
+  // +-------------------------------------------------------------------------+
+  static constexpr bool is_hex_digit(unsigned char c) noexcept {
+    return is_digit(c) || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+  }
+  static constexpr bool is_hex_digit(char c) noexcept {
+    return is_hex_digit(static_cast<unsigned char>(c));
+  }
+  // +-------------------------------------------------------------------------+
+  // | RFC 5234 (ABNF Core Rules) — ALPHA                                      |
+  // +-------------------------------------------------------------------------+
+  // | ALPHA = %x41-5A / %x61-7A                                               |
+  // |        ; A-Z / a-z                                                      |
+  // +-------------------------------------------------------------------------+
+  static constexpr bool is_alpha(unsigned char c) noexcept {
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+  }
+  static constexpr bool is_alpha(char c) noexcept {
+    return is_alpha(static_cast<unsigned char>(c));
+  }
+  // +-------------------------------------------------------------------------+
+  // | RFC 9110 §5.6.2 — token                                                 |
+  // +-------------------------------------------------------------------------+
+  // | token  = 1*tchar                                                        |
+  // |                                                                         |
+  // | tchar  = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /    |
+  // |          "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA                    |
+  // +-------------------------------------------------------------------------+
+  // | DIGIT  = %x30-39   ; "0" - "9"                                          |
+  // | ALPHA  = %x41-5A / %x61-7A   ; A-Z / a-z                                |
+  // +-------------------------------------------------------------------------+
+  static constexpr bool is_token(unsigned char c) noexcept {
+    return is_digit(c) || is_alpha(c) ||
+           c == constants::character::kExclamation ||
+           c == constants::character::kHash ||
+           c == constants::character::kDollar ||
+           c == constants::character::kPercent ||
+           c == constants::character::kAmpersand ||
+           c == constants::character::kApostrophe ||
+           c == constants::character::kAsterisk ||
+           c == constants::character::kPlus ||
+           c == constants::character::kHyphen ||
+           c == constants::character::kDot ||
+           c == constants::character::kCircumflex ||
+           c == constants::character::kUnderscore ||
+           c == constants::character::kBackTick ||
+           c == constants::character::kVerticalBar ||
+           c == constants::character::kTilde;
+  }
+  static constexpr bool is_token(char c) noexcept {
+    return is_token(static_cast<unsigned char>(c));
+  }
+  // +-------------------------------------------------------------------------+
+  // | RFC 3986 §2.3 — unreserved                                              |
+  // +-------------------------------------------------------------------------+
+  // | unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"                      |
+  // +-------------------------------------------------------------------------+
+  // | ALPHA      = %x41-5A / %x61-7A   ; A-Z / a-z                            |
+  // | DIGIT      = %x30-39             ; 0-9                                  |
+  // +-------------------------------------------------------------------------+
+  static constexpr bool is_unreserved(unsigned char c) noexcept {
+    return is_digit(c) || is_alpha(c) || c == constants::character::kHyphen ||
+           c == constants::character::kDot ||
+           c == constants::character::kUnderscore ||
+           c == constants::character::kTilde;
+  }
+  static constexpr bool is_unreserved(char c) noexcept {
+    return is_unreserved(static_cast<unsigned char>(c));
+  }
+  // +-------------------------------------------------------------------------+
+  // | RFC 3986 §2.2 — sub-delims                                              |
+  // +-------------------------------------------------------------------------+
+  // | sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," /      |
+  // |              ";" / "="                                                  |
+  // +-------------------------------------------------------------------------+
+  static constexpr bool is_sub_delim(unsigned char c) noexcept {
+    return c == constants::character::kExclamation ||
+           c == constants::character::kDollar ||
+           c == constants::character::kAmpersand ||
+           c == constants::character::kApostrophe ||
+           c == constants::character::kLParenthesis ||
+           c == constants::character::kRParenthesis ||
+           c == constants::character::kAsterisk ||
+           c == constants::character::kPlus ||
+           c == constants::character::kComma ||
+           c == constants::character::kSemiColon ||
+           c == constants::character::kEquals;
+  }
+  static constexpr bool is_sub_delim(char c) noexcept {
+    return is_sub_delim(static_cast<unsigned char>(c));
+  }
+  // +-------------------------------------------------------------------------+
+  // | RFC 3986 §3.3 — pchar                                                   |
+  // +-------------------------------------------------------------------------+
+  // | pchar = unreserved / pct-encoded / sub-delims / ":" / "@"               |
+  // +-------------------------------------------------------------------------+
+  // | unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"                     |
+  // | pct-encoded = "%" HEXDIG HEXDIG                                         |
+  // | sub-delims  = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," /     |
+  // |               ";" / "="                                                 |
+  // +-------------------------------------------------------------------------+
+  // | ALPHA  = %x41-5A / %x61-7A   ; A-Z / a-z                                |
+  // | DIGIT  = %x30-39             ; 0-9                                      |
+  // | HEXDIG = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"                      |
+  // +-------------------------------------------------------------------------+
+  static constexpr bool is_pchar(unsigned char c) noexcept {
+    return is_unreserved(c) || is_sub_delim(c) ||
+           c == constants::character::kColon || c == constants::character::kAt;
+  }
+  static constexpr bool is_pchar(char c) noexcept {
+    return is_pchar(static_cast<unsigned char>(c));
+  }
+  // +-------------------------------------------------------------------------+
+  // | RFC 5234 (ABNF Core Rules) — VCHAR                                      |
+  // +-------------------------------------------------------------------------+
+  // | VCHAR = %x21-7E                                                         |
+  // |        ; visible (printing) characters                                  |
+  // +-------------------------------------------------------------------------+
+  static constexpr bool is_vchar(unsigned char c) noexcept {
+    return c >= constants::character::kExclamation &&
+           c <= constants::character::kTilde;
+  }
+  static constexpr bool is_vchar(char c) noexcept {
+    return is_vchar(static_cast<unsigned char>(c));
+  }
+  // +-------------------------------------------------------------------------+
+  // | RFC 9110 §5.6.4 — qdtext                                                |
+  // +-------------------------------------------------------------------------+
+  // | qdtext = HTAB / SP / "!" / %x23-5B / %x5D-7E / obs-text                 |
+  // +-------------------------------------------------------------------------+
+  // | HTAB     = %x09                                                         |
+  // | SP       = %x20                                                         |
+  // | obs-text = %x80-FF                                                      |
+  // +-------------------------------------------------------------------------+
+  // | Note: DQUOTE (%x22) and "\" (%x5C) are excluded and only allowed        |
+  // |       via quoted-pair.                                                  |
+  // +-------------------------------------------------------------------------+
+  static constexpr bool is_qdtext(unsigned char c) noexcept {
+    return c == constants::character::kHTab ||
+           c == constants::character::kSpace ||
+           c == constants::character::kExclamation ||
+           (c >= constants::character::kHash &&
+            c <= constants::character::kOpenBracket) ||
+           (c >= constants::character::kCloseBracket &&
+            c <= constants::character::kTilde) ||
+           is_obs_text(c);
+  }
+  static constexpr bool is_qdtext(char c) noexcept {
+    return is_qdtext(static_cast<unsigned char>(c));
+  }
+  // +-------------------------------------------------------------------------+
+  // | RFC 9110 §5.6.4 — obs-text                                              |
+  // +-------------------------------------------------------------------------+
+  // | obs-text = %x80-FF                                                      |
+  // +-------------------------------------------------------------------------+
+  // | Note: obs-text represents obsolete text allowed for backward            |
+  // |       compatibility with legacy implementations.                        |
+  // +-------------------------------------------------------------------------+
+  static constexpr bool is_obs_text(unsigned char c) noexcept {
+    return c >= constants::character::kObsTextStart &&
+           c <= constants::character::kObsTextEnd;
+  }
+  static constexpr bool is_obs_text(char c) noexcept {
+    return is_obs_text(static_cast<unsigned char>(c));
+  }
+  // +-------------------------------------------------------------------------+
+  // | RFC 9110 §5.6.3 — OWS (Optional Whitespace)                             |
+  // +-------------------------------------------------------------------------+
+  // | OWS = *( SP / HTAB )                                                    |
+  // +-------------------------------------------------------------------------+
+  // | SP   = %x20                                                             |
+  // | HTAB = %x09                                                             |
+  // +-------------------------------------------------------------------------+
+  // | Note: OWS is allowed only where explicitly defined by the ABNF.         |
+  // +-------------------------------------------------------------------------+
+  static constexpr bool is_ows(unsigned char c) noexcept {
+    return c == constants::character::kSpace ||
+           c == constants::character::kHTab;
+  }
+  static constexpr bool is_ows(char c) noexcept {
+    return is_ows(static_cast<unsigned char>(c));
+  }
+  // +-------------------------------------------------------------------------+
+  // | Performs OWS trimming on the left side of the provided string_view.     |
+  // +-------------------------------------------------------------------------+
+  static constexpr void ows_ltrim(std::string_view& sv) noexcept {
+    while (!sv.empty() && helpers::is_ows(sv.front())) {
+      sv.remove_prefix(1);
     }
-    return true;
   }
-  static constexpr bool is_digit(uint8_t val) noexcept {
-    return val >= constants::character::k0 && val <= constants::character::k9;
-  }
-  static constexpr bool is_hex_digit(uint8_t val) noexcept {
-    return is_digit(val) ||
-           (val >= constants::character::kAUpperCase &&
-            val <= constants::character::kFUpperCase) ||
-           (val >= constants::character::kALowerCase &&
-            val <= constants::character::kFLowerCase);
-  }
-  static constexpr bool is_alpha(uint8_t val) noexcept {
-    return (val >= constants::character::kAUpperCase &&
-            val <= constants::character::kZUpperCase) ||
-           (val >= constants::character::kALowerCase &&
-            val <= constants::character::kZLowerCase);
-  }
-  static constexpr bool is_token(uint8_t val) noexcept {
-    return is_digit(val) || is_alpha(val) ||
-           val == constants::character::kExclamation ||
-           val == constants::character::kHash ||
-           val == constants::character::kDollar ||
-           val == constants::character::kPercent ||
-           val == constants::character::kAmpersand ||
-           val == constants::character::kApostrophe ||
-           val == constants::character::kAsterisk ||
-           val == constants::character::kPlus ||
-           val == constants::character::kHyphen ||
-           val == constants::character::kDot ||
-           val == constants::character::kCircumflex ||
-           val == constants::character::kUnderscore ||
-           val == constants::character::kBackTick ||
-           val == constants::character::kVerticalBar ||
-           val == constants::character::kTilde;
-  }
-  static constexpr bool is_token(std::string_view s) noexcept {
-    for (auto c : s) {
-      if (!is_token(static_cast<uint8_t>(c))) return false;
-    }
-    return true;
-  }
-  static constexpr bool is_unreserved(uint8_t val) noexcept {
-    return is_digit(val) || is_alpha(val) ||
-           val == constants::character::kHyphen ||
-           val == constants::character::kDot ||
-           val == constants::character::kUnderscore ||
-           val == constants::character::kTilde;
-  }
-  static constexpr bool is_sub_delim(uint8_t val) noexcept {
-    return val == constants::character::kExclamation ||
-           val == constants::character::kDollar ||
-           val == constants::character::kAmpersand ||
-           val == constants::character::kApostrophe ||
-           val == constants::character::kLParenthesis ||
-           val == constants::character::kRParenthesis ||
-           val == constants::character::kAsterisk ||
-           val == constants::character::kPlus ||
-           val == constants::character::kComma ||
-           val == constants::character::kSemiColon ||
-           val == constants::character::kEquals;
-  }
-  static constexpr bool is_pchar(uint8_t val) noexcept {
-    return is_unreserved(val) || is_sub_delim(val) ||
-           val == constants::character::kColon ||
-           val == constants::character::kAt;
-  }
-  static constexpr bool is_vchar(uint8_t val) noexcept {
-    return val >= constants::character::kExclamation &&
-           val <= constants::character::kTilde;
-  }
-  static constexpr bool is_qdtext(uint8_t val) noexcept {
-    return val == constants::character::kHTab ||
-           val == constants::character::kSpace ||
-           val == constants::character::kExclamation ||
-           (val >= constants::character::kHash &&
-            val <= constants::character::kOpenBracket) ||
-           (val >= constants::character::kCloseBracket &&
-            val <= constants::character::kTilde) ||
-           is_obs_text(val);
-  }
-  static constexpr bool is_obs_text(uint8_t val) noexcept {
-    return val >= constants::character::kObsTextStart &&
-           val <= constants::character::kObsTextEnd;
-  }
-  static constexpr bool is_ows(uint8_t val) noexcept {
-    return val == constants::character::kSpace ||
-           val == constants::character::kHTab;
-  }
-  static constexpr void ows_ltrim(std::string_view& s) noexcept {
-    while (!s.empty() && helpers::is_ows(static_cast<uint8_t>(s.front()))) {
-      s.remove_prefix(1);
+  // +-------------------------------------------------------------------------+
+  // | Performs OWS trimming on the right side of the provided string_view.    |
+  // +-------------------------------------------------------------------------+
+  static constexpr void ows_rtrim(std::string_view& sv) noexcept {
+    while (!sv.empty() && helpers::is_ows(sv.back())) {
+      sv.remove_suffix(1);
     }
   }
-  static constexpr void ows_rtrim(std::string_view& s) noexcept {
-    while (!s.empty() && helpers::is_ows(static_cast<uint8_t>(s.back()))) {
-      s.remove_suffix(1);
-    }
+  // +-------------------------------------------------------------------------+
+  // | Performs OWS trimming on left & right sides of the provided string_view.|
+  // +-------------------------------------------------------------------------+
+  static constexpr void ows_trim(std::string_view& sv) noexcept {
+    ows_ltrim(sv);
+    ows_rtrim(sv);
   }
-  static constexpr void ows_trim(std::string_view& s) noexcept {
-    ows_ltrim(s);
-    ows_rtrim(s);
+  // +-------------------------------------------------------------------------+
+  // | Converts character to its lower-case version.                           |
+  // +-------------------------------------------------------------------------+
+  static constexpr unsigned char tolower_ascii(unsigned char c) noexcept {
+    return (c >= 'A' && c <= 'Z') ? c + 32 : c;
   }
-  static constexpr uint8_t tolower_ascii(uint8_t c) noexcept {
-    return (c >= constants::character::kAUpperCase &&
-            c <= constants::character::kZUpperCase)
-               ? c + 32
-               : c;
-  };
-  static constexpr bool are_equal(std::string_view a,
-                                  std::string_view b) noexcept {
-    return a.size() == b.size() &&
-           std::equal(a.begin(), a.end(), b.begin(), [](char ac, char bc) {
-             return tolower_ascii(static_cast<uint8_t>(ac)) ==
-                    tolower_ascii(static_cast<uint8_t>(bc));
-           });
+  static constexpr char tolower_ascii(char c) noexcept {
+    return static_cast<char>(tolower_ascii(static_cast<unsigned char>(c)));
   }
 };
 }  // namespace martianlabs::doba::protocol::http11

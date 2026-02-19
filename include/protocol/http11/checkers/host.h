@@ -115,15 +115,15 @@ static inline bool check_dec_octet(std::string_view sv, std::size_t digits,
   if (!digits || digits > 3) return false;
   if (off < digits) return false;
   if (digits == 2) {
-    if (sv[off - 2] == constants::character::k0) return false;
+    if (sv[off - 2] == '0') return false;
   } else if (digits == 3) {
-    if (sv[off - 3] == constants::character::k2) {
-      if (sv[off - 2] == constants::character::k5) {
-        if (sv[off - 1] > constants::character::k5) return false;
-      } else if (sv[off - 2] > constants::character::k4) {
+    if (sv[off - 3] == '2') {
+      if (sv[off - 2] == '5') {
+        if (sv[off - 1] > '5') return false;
+      } else if (sv[off - 2] > '4') {
         return false;
       }
-    } else if (sv[off - 3] != constants::character::k1) {
+    } else if (sv[off - 3] != '1') {
       return false;
     }
   }
@@ -134,7 +134,7 @@ static inline bool check_dec_octet(std::string_view sv, std::size_t digits,
 // +--------------+------------------------------------------------------------+
 static inline bool check_ip_v_future(std::string_view sv) {
   if (sv.empty()) return false;
-  if (sv.front() != constants::character::kVLowerCase) return false;
+  if (sv.front() != 'v') return false;
   // [1*HEXDIG "."] part..
   std::size_t hex_digits_found = 0;
   std::size_t off = 1;
@@ -315,8 +315,8 @@ static inline bool check_port(std::string_view sv) {
   return true;
 }
 // +===========================================================================+
-// |                                                                  [ host ] |
-// +---------------------------------------------------------------------------+
+// |                                                                      host |
+// +===========================================================================+
 // | RFC 9110 §7.2.Host                                                        |
 // +---------------------------------------------------------------------------+
 // | The "Host" header field in a request provides the host and optional       |
@@ -362,9 +362,10 @@ static inline bool check_port(std::string_view sv) {
 // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / ","      |
 // |                | / ";" / "="                                              |
 // +---------------------------------------------------------------------------+
-static inline auto host_fn = [](std::string_view sv) -> bool {
+// | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
+// +---------------------------------------------------------------------------+
+static inline bool host(std::string_view sv) {
   std::size_t off = 0;
-  helpers::ows_trim(sv);
   if (sv.empty()) return true;  // reg-name!
   std::string_view sv_uri_host;
   std::string_view sv_port;
@@ -386,7 +387,7 @@ static inline auto host_fn = [](std::string_view sv) -> bool {
   if (sv_port.front() != constants::character::kColon) return false;
   sv_port.remove_prefix(1);
   return check_port(sv_port);
-};
+}
 }  // namespace martianlabs::doba::protocol::http11::checkers
 
 #endif

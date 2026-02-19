@@ -296,10 +296,8 @@ class decoder {
     if (length_ - off < kHttpVersionLen) {
       return common::deserialize_result::kMoreBytesNeeded;
     }
-    if (buffer_[off + 0] != constants::character::kHUpperCase ||
-        buffer_[off + 1] != constants::character::kTUpperCase ||
-        buffer_[off + 2] != constants::character::kTUpperCase ||
-        buffer_[off + 3] != constants::character::kPUpperCase ||
+    if (buffer_[off + 0] != 'H' || buffer_[off + 1] != 'T' ||
+        buffer_[off + 2] != 'T' || buffer_[off + 3] != 'P' ||
         buffer_[off + 4] != constants::character::kSlash ||
         !helpers::is_digit(buffer_[off + 5]) ||
         buffer_[off + 6] != constants::character::kDot ||
@@ -396,21 +394,9 @@ class decoder {
       if (!crlf) {
         return common::deserialize_result::kMoreBytesNeeded;
       }
-
-      /*
-      pepe
-      */
-
-      /*
       // let's remove external OWS around the field-value..
       while (fvs < crlf && helpers::is_ows(*fvs)) fvs++;
       while ((crlf - 1) >= fvs && helpers::is_ows(*(crlf - 1))) crlf--;
-      */
-
-      /*
-      pepe fin
-      */
-
       // space left for next header?
       if (headers_len_ >= constants::limits::kDefaultRequestMaxHeaders) {
         return common::deserialize_result::kInvalidSource;
@@ -534,14 +520,14 @@ class decoder {
     // | [x] Content-Length                                                    |
     // | [x] Connection                                                        |
     // | [x] Date                                                              |
-    // | [ ] Transfer-Encoding                                                 |
+    // | [x] Transfer-Encoding                                                 |
+    // | [ ] Expect                                                            |
     // | [ ] TE                                                                |
     // | [ ] Content-Type                                                      |
     // | [ ] Accept                                                            |
     // | [ ] Allow                                                             |
     // | [ ] Server                                                            |
     // | [ ] User-Agent                                                        |
-    // | [ ] Expect                                                            |
     // | [ ] Upgrade                                                           |
     // | [ ] Range                                                             |
     // | [ ] If-Modified-Since                                                 |
@@ -552,11 +538,11 @@ class decoder {
     // | [ ] Trailer                                                           |
     // | [ ] Vary                                                              |
     // +-----------------------------------------------------------------------+
-    headers_fns_[headers::kHost] = checkers::host_fn;
-    headers_fns_[headers::kContentLength] = checkers::content_length_fn;
-    headers_fns_[headers::kConnection] = checkers::connection_fn;
-    headers_fns_[headers::kDate] = checkers::date_fn;
-    headers_fns_[headers::kTransferEncoding] = checkers::transfer_encoding_fn;
+    headers_fns_[headers::kHost] = checkers::host;
+    headers_fns_[headers::kContentLength] = checkers::content_length;
+    headers_fns_[headers::kConnection] = checkers::connection;
+    headers_fns_[headers::kDate] = checkers::date;
+    headers_fns_[headers::kTransferEncoding] = checkers::transfer_encoding;
   }
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )

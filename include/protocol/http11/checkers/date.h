@@ -77,8 +77,8 @@
 
 namespace martianlabs::doba::protocol::http11::checkers {
 // +===========================================================================+
-// |                                                                  [ date ] |
-// +---------------------------------------------------------------------------+
+// |                                                                      date |
+// +===========================================================================+
 // | RFC 9110 §10.1.1 Date                                                     |
 // +---------------------------------------------------------------------------+
 // | The "Date" header field represents the date and time at which the message |
@@ -122,13 +122,17 @@ namespace martianlabs::doba::protocol::http11::checkers {
 // | second         | 2DIGIT                                                   |
 // | GMT            | literal "GMT"                                            |
 // +---------------------------------------------------------------------------+
-static auto date_fn = [](std::string_view v) -> bool {
+// | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
+// +---------------------------------------------------------------------------+
+static inline bool date(std::string_view v) {
   static constexpr std::string_view kDays[] = {"Mon", "Tue", "Wed", "Thu",
                                                "Fri", "Sat", "Sun"};
   static constexpr std::string_view kMons[] = {"Jan", "Feb", "Mar", "Apr",
                                                "May", "Jun", "Jul", "Aug",
                                                "Sep", "Oct", "Nov", "Dec"};
-  // "DDD, DD MMM YYYY HH:MM:SS GMT" --> 29 characters (fixed size)!
+  // +-------------------------------------------------------------------------+
+  // | "DDD, DD MMM YYYY HH:MM:SS GMT" --> 29 characters (fixed size)          |
+  // +-------------------------------------------------------------------------+
   if (v.size() != 29) return false;
   // [day-name]
   bool day_name_ok = false;
@@ -175,7 +179,7 @@ static auto date_fn = [](std::string_view v) -> bool {
   // [GMT]
   if (v[26] != 'G' || v[27] != 'M' || v[28] != 'T') return false;
   return true;
-};
+}
 }  // namespace martianlabs::doba::protocol::http11::checkers
 
 #endif
