@@ -104,7 +104,7 @@ class server {
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   server() {
-    transport_.set_on_request(
+    transport_.setOnRequest(
         [this](const request* req, response* res, auto on_send) {
           switch (req->get_target()) {
             case target::kOriginForm:
@@ -138,7 +138,7 @@ class server {
               break;
           }
         });
-    transport_.set_on_connection([]() {
+    transport_.setOnConnection([]() {
       /*
       pepe
       */
@@ -154,7 +154,7 @@ class server {
       */
       // nothing to do here by default..
     });
-    transport_.set_on_disconnection([]() {
+    transport_.setOnDisconnection([]() {
       /*
       pepe
       */

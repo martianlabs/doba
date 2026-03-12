@@ -123,13 +123,42 @@ class tcpip {
     context(context&&) noexcept = delete;
     context& operator=(const context&) = delete;
     context& operator=(context&&) noexcept = delete;
+    inline void stealRobsQueue(std::queue<common::rob*>& in) {
+      std::unique_lock<std::mutex> lock(robs_mutex);
+      while (!in.empty()) {
+        robs.push(in.front());
+        in.pop();
+      }
+    }
+    inline void emptyRobsQueue() {
+      std::lock_guard<std::mutex> lock(robs_mutex);
+      while (!robs.empty()) {
+        delete robs.front();
+        robs.pop();
+      }
+    }
+    inline bool drainRobsQueue() {
+      std::unique_lock<std::mutex> lock(robs_mutex);
+      std::size_t off = 0;
+      while (!robs.empty() && off < ovs.buf_sze) {
+        if (auto bytes_read_from_current_rob =
+                robs.front()->read(&ovs.buf[off], ovs.buf_sze - off)) {
+          off += bytes_read_from_current_rob;
+        } else {
+          delete robs.front();
+          robs.pop();
+        }
+      }
+      ovs.buf_len = off;
+      return off > 0;
+    }
+    std::queue<common::rob*> robs;
+    std::mutex robs_mutex;
     std::atomic<long> io_completions_pending{0};
     std::atomic<bool> send_in_flight{false};
     std::atomic<bool> closing{false};
     std::atomic<long> id{0};
     SOCKET soc = INVALID_SOCKET;
-    std::queue<common::rob*> robs_queue;
-    std::mutex robs_queue_mutex;
     DEty<RQty, RSty, BFsz> decoder;
     overlapped_receive ovr;
     overlapped_send ovs;
@@ -158,104 +187,94 @@ class tcpip {
   // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
-  result start(const char port[]) {
+  void start(const char port[]) {
     if (io_h_ != INVALID_HANDLE_VALUE) {
-      return result::kAlreadyInitialized;
+      // to-do: an exception should be thrown!
     }
     // let's setup all the required resources..
-    if (!setup_listener(port)) {
-      return result::kCouldNotSetupPlaformResources;
+    if (!setupListener(port)) {
+      // to-do: an exception should be thrown!
     }
-    if (!setup_workers()) {
-      return result::kCouldNotSetupPlaformResources;
+    if (!setupWorkers()) {
+      // to-do: an exception should be thrown!
     }
     // let's start incoming connections loop!
-    manager_ = std::make_unique<std::thread>([this]() {
-      while (keep_running_.load(std::memory_order_relaxed)) {
-        SOCKET socket = WSAAccept(accept_socket_, NULL, NULL, NULL, NULL);
-        if (socket == INVALID_SOCKET) {
-          continue;
-        }
-        // set the socket i/o mode: In this case FIONBIO enables or disables the
-        // blocking mode for the socket based on the numerical value of iMode.
-        // iMode = 0, blocking mode; iMode != 0, non-blocking mode.
-        ULONG i_mode_flag = 1;
-        int ioctl_socket_res = ioctlsocket(socket, FIONBIO, &i_mode_flag);
-        if (ioctl_socket_res != NO_ERROR) {
-          closesocket(socket);
-          continue;
-        }
-        // TCP_NODELAY is a socket option in TCP that disables Nagle's
-        // algorithm. Nagle's algorithm is a mechanism that delays sending small
-        // packets to improve network efficiency by combining them into larger
-        // packets. By disabling this algorithm, TCP_NODELAY allows for
-        // immediate sending of packets, which can reduce latency but may also
-        // lead to more network overhead
-        int tcp_no_delay_flag = 1;
-        if (setsockopt(socket, IPPROTO_TCP, TCP_NODELAY,
-                       (char*)&tcp_no_delay_flag, sizeof(tcp_no_delay_flag))) {
-          closesocket(socket);
-          continue;
-        }
-        // let's associate the accept socket with the i/o port!
-        context* ctx = pop_context();
-        ctx->soc = socket;
-        HANDLE handle = CreateIoCompletionPort(
-            (HANDLE)socket, io_h_, reinterpret_cast<ULONG_PTR>(ctx), 0);
-        if (!handle) {
-          // ((error)) -> trying to associate socket to the i/o port!
-          closesocket(socket);
-          delete ctx;
-          continue;
-        }
-        // let's notify waiting thread for the new connection!
-        if (!PostQueuedCompletionStatus(
-                io_h_, 0, reinterpret_cast<ULONG_PTR>(ctx), NULL)) {
-          // ((error)) -> trying to notify waiting thread!
-          closesocket(socket);
-          delete ctx;
-          continue;
-        }
+    while (keep_running_.load(std::memory_order_relaxed)) {
+      SOCKET socket = WSAAccept(accept_socket_, NULL, NULL, NULL, NULL);
+      if (socket == INVALID_SOCKET) {
+        continue;
       }
-    });
-    return result::kSucceeded;
+      // set the socket i/o mode: In this case FIONBIO enables or disables the
+      // blocking mode for the socket based on the numerical value of iMode.
+      // iMode = 0, blocking mode; iMode != 0, non-blocking mode.
+      ULONG i_mode_flag = 1;
+      int ioctl_socket_res = ioctlsocket(socket, FIONBIO, &i_mode_flag);
+      if (ioctl_socket_res != NO_ERROR) {
+        closesocket(socket);
+        continue;
+      }
+      // TCP_NODELAY is a socket option in TCP that disables Nagle's
+      // algorithm. Nagle's algorithm is a mechanism that delays sending small
+      // packets to improve network efficiency by combining them into larger
+      // packets. By disabling this algorithm, TCP_NODELAY allows for
+      // immediate sending of packets, which can reduce latency but may also
+      // lead to more network overhead
+      int tcp_no_delay_flag = 1;
+      if (setsockopt(socket, IPPROTO_TCP, TCP_NODELAY,
+                     (char*)&tcp_no_delay_flag, sizeof(tcp_no_delay_flag))) {
+        closesocket(socket);
+        continue;
+      }
+      // let's associate the accept socket with the i/o port!
+      context* ctx = popContext();
+      ctx->soc = socket;
+      ULONG_PTR key = reinterpret_cast<ULONG_PTR>(ctx);
+      HANDLE handle = CreateIoCompletionPort((HANDLE)socket, io_h_, key, 0);
+      if (!handle) {
+        // ((error)) -> trying to associate socket to the i/o port!
+        closesocket(socket);
+        delete ctx;
+        continue;
+      }
+      // let's notify waiting thread for the new connection!
+      if (!PostQueuedCompletionStatus(io_h_, 0, key, NULL)) {
+        // ((error)) -> trying to notify waiting thread!
+        closesocket(socket);
+        delete ctx;
+        continue;
+      }
+    }
   }
-  result stop() {
+  void stop() {
     keep_running_.store(false, std::memory_order_relaxed);
     if (accept_socket_ != INVALID_SOCKET) {
       if (closesocket(accept_socket_) == SOCKET_ERROR) {
-        return result::kCouldNotCleanupPlaformResources;
+        // to-do: an exception should be thrown!
       }
       accept_socket_ = INVALID_SOCKET;
     }
-    if (manager_ && manager_->joinable()) {
-      manager_->join();
-    }
     if (io_h_ != INVALID_HANDLE_VALUE) {
       if (!CloseHandle(io_h_)) {
-        return result::kCouldNotCleanupPlaformResources;
+        // to-do: an exception should be thrown!
       }
       io_h_ = INVALID_HANDLE_VALUE;
     }
     while (!threads_.empty()) {
-      if (threads_.front().joinable()) {
-        threads_.front().join();
-      }
+      if (threads_.front().joinable()) threads_.front().join();
       threads_.pop();
     }
     keep_running_.store(true, std::memory_order_relaxed);
-    return result::kSucceeded;
   }
   template <typename Fn>
-  void set_on_request(Fn&& fn) {
+  void setOnRequest(Fn&& fn) {
     on_request_ = std::forward<Fn>(fn);
   }
   template <typename Fn>
-  void set_on_connection(Fn&& fn) {
+  void setOnConnection(Fn&& fn) {
     on_client_connected_ = std::forward<Fn>(fn);
   }
   template <typename Fn>
-  void set_on_disconnection(Fn&& fn) {
+  void setOnDisconnection(Fn&& fn) {
     on_client_disconnected_ = std::forward<Fn>(fn);
   }
 
@@ -263,7 +282,7 @@ class tcpip {
   // ---------------------------------------------------------------------------
   // METHODs                                                         ( private )
   //
-  bool setup_listener(const char port[]) {
+  bool setupListener(const char port[]) {
     // let's use our help class to create a cpu pinning plan!
     auto workers = std::thread::hardware_concurrency() / 2;
     // let's create our main i/o completion port!
@@ -319,130 +338,96 @@ class tcpip {
     io_h_ = io_completion_port_handle;
     return true;
   }
-  bool setup_workers() {
+  bool setupWorkers() {
     for (int i = 0; i < number_of_workers_; i++) {
       threads_.emplace(std::thread([this]() {
-        while (true) {
+        bool keep_up = true;
+        while (keep_up) {
           ULONG_PTR key = NULL;
           LPOVERLAPPED ovl = NULL;
           DWORD bytes = 0;
           DWORD tout = INFINITE;
           bool close_context = false;
-          BOOL ios = GetQueuedCompletionStatus(io_h_, &bytes, &key, &ovl, tout);
-          context* c = reinterpret_cast<context*>(key);
-          if (ios) {
-            if (ovl) {
-              switch (reinterpret_cast<overlapped_base*>(ovl)->type) {
-                case io_type::kEnqueue:
-                  if (!handle_completion_enqueue(c, ovl)) {
-                    mark_context_for_closing(c);
-                  }
-                  delete reinterpret_cast<overlapped_enqueue*>(ovl);
-                  break;
-                case io_type::kReceive:
-                  if (!bytes || !handle_completion_receive(c, bytes)) {
-                    mark_context_for_closing(c);
-                  }
-                  break;
-                case io_type::kSend:
-                  if (!handle_completion_send(c, bytes)) {
-                    mark_context_for_closing(c);
-                  }
-                  break;
-              }
-              c->io_completions_pending--;
-            } else {
-              if (!bytes) {
-                // this means a new connection!
-                if (on_client_connected_) on_client_connected_();
-                if (!receive(c)) {
-                  mark_context_for_closing(c);
-                }
-              } else {
-                mark_context_for_closing(c);
-              }
-            }
-          } else {
-            if (GetLastError() == ERROR_INVALID_HANDLE) {
-              // this means [shoutdown] operations!
-              if (!c && !ovl) {
-                break;
-              }
-            } else if (c && ovl) {
-              c->io_completions_pending--;
-              switch (reinterpret_cast<overlapped_base*>(ovl)->type) {
-                case io_type::kEnqueue:
-                  delete reinterpret_cast<overlapped_enqueue*>(ovl);
-                  break;
-                case io_type::kReceive:
-                case io_type::kSend:
-                  break;
-              }
-              mark_context_for_closing(c);
-            }
-          }
-          if (c && c->closing && !c->io_completions_pending) {
-            std::lock_guard<std::mutex> robs_queue_lock(c->robs_queue_mutex);
-            while (!c->robs_queue.empty()) {
-              delete c->robs_queue.front();
-              c->robs_queue.pop();
-            }
-            std::memset(&c->ovr.wsa, 0, sizeof(WSABUF));
-            std::memset(&c->ovs.wsa, 0, sizeof(WSABUF));
-            c->ovs.buf_len = 0;
-            c->io_completions_pending = 0;
-            c->send_in_flight = false;
-            c->id++;
-            c->closing = false;
-            push_context(c);
-          }
+          keep_up = GetQueuedCompletionStatus(io_h_, &bytes, &key, &ovl, tout)
+                        ? onSucceededQueuedCompletionStatus(key, ovl, bytes)
+                        : onFailedQueuedCompletionStatus(key, ovl, bytes);
+          checkAndRecycle(key);
         }
       }));
     }
     return true;
   }
-  inline bool handle_completion_enqueue(context* c, LPOVERLAPPED ovl) {
-    if (c->closing) {
-      return false;
-    }
-    overlapped_enqueue* ove = reinterpret_cast<overlapped_enqueue*>(ovl);
-    if (ove->cid != c->id) {
-      return false;
-    }
-    while (!ove->robs.empty()) {
-      std::lock_guard<std::mutex> responses_lock(c->robs_queue_mutex);
-      c->robs_queue.push(ove->robs.front());
-      ove->robs.pop();
-    }
-    bool expected = false;
-    if (c->send_in_flight.compare_exchange_strong(expected, true)) {
-      if (drain_robs_queue(c)) {
-        return send(c);
+  inline bool onSucceededQueuedCompletionStatus(ULONG_PTR key, LPOVERLAPPED ovl,
+                                                DWORD bytes) {
+    context* ctx = reinterpret_cast<context*>(key);
+    if (!ctx) return false;
+    if (!ovl) {
+      if (!bytes) {
+        // this means a new connection!
+        if (on_client_connected_) on_client_connected_();
+        if (!receive(ctx)) markContextForClosing(ctx);
       }
+      return true;
+    }
+    bool valid = true;  // is this context still valid?
+    switch (reinterpret_cast<overlapped_base*>(ovl)->type) {
+      case io_type::kEnqueue:
+        valid = handleCompletionEnqueue(ctx, ovl);
+        delete reinterpret_cast<overlapped_enqueue*>(ovl);
+        break;
+      case io_type::kReceive:
+        valid = handleCompletionReceive(ctx, bytes);
+        break;
+      case io_type::kSend:
+        valid = handleCompletionSend(ctx, bytes);
+        break;
+    }
+    ctx->io_completions_pending--;
+    if (!valid) markContextForClosing(ctx);
+    return true;
+  }
+  inline bool onFailedQueuedCompletionStatus(ULONG_PTR key, LPOVERLAPPED ovl,
+                                             DWORD bytes) {
+    context* ctx = reinterpret_cast<context*>(key);
+    if (!ovl) return false;
+    ctx->io_completions_pending--;
+    markContextForClosing(ctx);
+    switch (reinterpret_cast<overlapped_base*>(ovl)->type) {
+      case io_type::kEnqueue:
+        delete reinterpret_cast<overlapped_enqueue*>(ovl);
+        break;
+      case io_type::kReceive:
+      case io_type::kSend:
+        break;
     }
     return true;
   }
-  inline bool handle_completion_receive(context* c, DWORD bytes) {
-    if (c->closing) {
-      return false;
+  inline bool handleCompletionEnqueue(context* ctx, LPOVERLAPPED ovl) {
+    overlapped_enqueue* ove = reinterpret_cast<overlapped_enqueue*>(ovl);
+    if (ove->cid != ctx->id) return true;  // old context completion.. skip it!
+    ctx->stealRobsQueue(ove->robs);
+    bool expected = false;
+    if (ctx->send_in_flight.compare_exchange_strong(expected, true)) {
+      return drainAndSend(ctx);
     }
-    if (!c->decoder.add(c->ovr.buf, bytes)) {
-      return false;
-    }
+    return true;
+  }
+  inline bool handleCompletionReceive(context* ctx, DWORD bytes) {
+    if (!bytes || !ctx->decoder.add(ctx->ovr.buf, bytes)) return false;
     bool keep_decoding = true;
     while (keep_decoding) {
       RQty* req = nullptr;
-      switch (c->decoder.deserialize(req)) {
+      switch (ctx->decoder.deserialize(req)) {
         case common::deserialize_result::kSucceeded:
           if (on_request_) {
             RSty* res = new RSty();
-            long context_id = c->id;
-            on_request_(req, res, [this, c, context_id](RSty* res) {
-              c->io_completions_pending++;
+            long context_id = ctx->id;
+            on_request_(req, res, [this, ctx, context_id](RSty* res) {
+              ctx->io_completions_pending++;
               if (!PostQueuedCompletionStatus(
-                      io_h_, 0, reinterpret_cast<ULONG_PTR>(c),
+                      io_h_, 0, reinterpret_cast<ULONG_PTR>(ctx),
                       new overlapped_enqueue(context_id, res->serialize()))) {
-                c->io_completions_pending--;
+                ctx->io_completions_pending--;
                 // [to-do] -> this is a critical error! informing about it!
               }
               delete res;
@@ -461,50 +446,40 @@ class tcpip {
           break;
       }
     }
-    return receive(c);
+    return receive(ctx);
   }
-  inline bool handle_completion_send(context* c, DWORD bytes) {
-    if (c->closing) {
-      return false;
-    }
-    if (bytes > c->ovs.buf_len) {
-      // this is inconsistent because we could not send more bytes than
-      // specified! returning false here will trigger an automatic
-      // disconnection!
-      return false;
-    }
-    c->ovs.buf_len -= bytes;
-    if (!drain_robs_queue(c)) {
-      c->send_in_flight.store(false, std::memory_order_release);
+  inline bool handleCompletionSend(context* ctx, DWORD bytes) {
+    return drainAndSend(ctx);
+  }
+  inline bool drainAndSend(context* ctx) {
+    if (!ctx->drainRobsQueue()) {
+      ctx->send_in_flight = false;
       return true;
     }
-    return send(c);
+    return send(ctx);
   }
-  inline void mark_context_for_closing(context* c) {
+  inline void markContextForClosing(context* ctx) {
     bool expected = false;
-    if (c->closing.compare_exchange_strong(expected, true)) {
-      closesocket(c->soc);
-      c->soc = INVALID_SOCKET;
+    if (ctx->closing.compare_exchange_strong(expected, true)) {
+      closesocket(ctx->soc);
+      ctx->soc = INVALID_SOCKET;
       // this means a disconnection!
-      if (on_client_disconnected_) {
-        on_client_disconnected_();
-      }
+      if (on_client_disconnected_) on_client_disconnected_();
     }
   }
-  inline bool drain_robs_queue(context* c) {
-    std::lock_guard<std::mutex> robs_queue_lock(c->robs_queue_mutex);
-    std::size_t off = 0;
-    while (!c->robs_queue.empty() && off < c->ovs.buf_sze) {
-      if (auto bytes_read_from_current_rob = c->robs_queue.front()->read(
-              &c->ovs.buf[off], c->ovs.buf_sze - off)) {
-        off += bytes_read_from_current_rob;
-      } else {
-        delete c->robs_queue.front();
-        c->robs_queue.pop();
-      }
+  inline void checkAndRecycle(ULONG_PTR key) {
+    context* c = reinterpret_cast<context*>(key);
+    if (c && c->closing && !c->io_completions_pending) {
+      c->emptyRobsQueue();
+      std::memset(&c->ovr.wsa, 0, sizeof(WSABUF));
+      std::memset(&c->ovs.wsa, 0, sizeof(WSABUF));
+      c->ovs.buf_len = 0;
+      c->io_completions_pending = 0;
+      c->send_in_flight = false;
+      c->id++;
+      c->closing = false;
+      pushContext(c);
     }
-    c->ovs.buf_len = off;
-    return off > 0;
   }
   inline bool receive(context* c) {
     DWORD f = 0, r = 0;
@@ -535,15 +510,13 @@ class tcpip {
     }
     return true;
   }
-  inline void push_context(context* c) {
+  inline void pushContext(context* c) {
     std::lock_guard<std::mutex> contexts_queue_lock(contexts_queue_mutex_);
     contexts_queue_.push(c);
   }
-  inline context* pop_context() {
+  inline context* popContext() {
     std::lock_guard<std::mutex> contexts_queue_lock(contexts_queue_mutex_);
-    if (contexts_queue_.empty()) {
-      return new context();
-    }
+    if (contexts_queue_.empty()) return new context();
     context* ctx = contexts_queue_.front();
     contexts_queue_.pop();
     return ctx;
@@ -556,7 +529,6 @@ class tcpip {
   HANDLE io_h_ = INVALID_HANDLE_VALUE;
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::queue<std::thread> threads_;
-  std::unique_ptr<std::thread> manager_;
   std::queue<context*> contexts_queue_;
   std::mutex contexts_queue_mutex_;
   on_request_fn on_request_;

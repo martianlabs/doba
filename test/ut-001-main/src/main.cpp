@@ -67,6 +67,8 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
+#include <csignal>
+
 #include "network/environment.h"
 #include "protocol/http11/server.h"
 
@@ -74,23 +76,37 @@ using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::network;
 using namespace martianlabs::doba::protocol::http11;
 
+std::atomic<bool> g_stop_requested{false};
+
+extern "C" void signal_handler(int sig) {
+  if (sig == SIGINT || sig == SIGTERM) {
+    g_stop_requested.store(true, std::memory_order_relaxed);
+  }
+}
+
 int main(int argc, char* argv[]) {
+  std::signal(SIGINT, signal_handler);
+  std::signal(SIGTERM, signal_handler);
   startup();
-  server my_server;
-  my_server
-      .add_route(
-          "GET", "/plaintext",
-          [](const request& req, response& res) {
-            res.ok_200()
-                .add_header("Server", "doba")
-                .add_header("Content-Type", "text/plain")
-                .add_header("Date", date_server::get()->current())
-                .set_body("Hello, World!");
-          },
-          execution_policy::kSync)
-      .start("8080");
-  std::cin.get();
-  my_server.stop();
+  server srv;
+  srv.add_route(
+      "GET", "/plaintext",
+      [](const request& req, response& res) {
+        res.ok_200()
+            .add_header("Server", "doba")
+            .add_header("Content-Type", "text/plain")
+            .add_header("Date", date_server::get()->current())
+            .set_body("Hello, World!");
+      },
+      execution_policy::kSync);
+  std::thread stop_thread([&srv]() {
+    while (!g_stop_requested.load(std::memory_order_relaxed)) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    srv.stop();
+  });
+  srv.start("8080");
+  stop_thread.join();
   cleanup();
   return 0;
 }
