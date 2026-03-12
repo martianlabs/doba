@@ -200,17 +200,17 @@ class tcpip {
     }
     // let's start incoming connections loop!
     while (keep_running_.load(std::memory_order_relaxed)) {
-      SOCKET socket = WSAAccept(accept_socket_, NULL, NULL, NULL, NULL);
-      if (socket == INVALID_SOCKET) {
+      SOCKET soc = WSAAccept(accept_socket_, NULL, NULL, NULL, NULL);
+      if (soc == INVALID_SOCKET) {
         continue;
       }
       // set the socket i/o mode: In this case FIONBIO enables or disables the
       // blocking mode for the socket based on the numerical value of iMode.
       // iMode = 0, blocking mode; iMode != 0, non-blocking mode.
       ULONG i_mode_flag = 1;
-      int ioctl_socket_res = ioctlsocket(socket, FIONBIO, &i_mode_flag);
+      int ioctl_socket_res = ioctlsocket(soc, FIONBIO, &i_mode_flag);
       if (ioctl_socket_res != NO_ERROR) {
-        closesocket(socket);
+        closesocket(soc);
         continue;
       }
       // TCP_NODELAY is a socket option in TCP that disables Nagle's
@@ -219,28 +219,27 @@ class tcpip {
       // packets. By disabling this algorithm, TCP_NODELAY allows for
       // immediate sending of packets, which can reduce latency but may also
       // lead to more network overhead
-      int tcp_no_delay_flag = 1;
-      if (setsockopt(socket, IPPROTO_TCP, TCP_NODELAY,
-                     (char*)&tcp_no_delay_flag, sizeof(tcp_no_delay_flag))) {
-        closesocket(socket);
+      int ndf = 1;
+      if (setsockopt(soc, IPPROTO_TCP, TCP_NODELAY, (char*)&ndf, sizeof(ndf))) {
+        closesocket(soc);
         continue;
       }
       // let's associate the accept socket with the i/o port!
-      context* ctx = popContext();
-      ctx->soc = socket;
-      ULONG_PTR key = reinterpret_cast<ULONG_PTR>(ctx);
-      HANDLE handle = CreateIoCompletionPort((HANDLE)socket, io_h_, key, 0);
+      context* c = popContext();
+      c->soc = soc;
+      ULONG_PTR key = reinterpret_cast<ULONG_PTR>(c);
+      HANDLE handle = CreateIoCompletionPort((HANDLE)soc, io_h_, key, 0);
       if (!handle) {
         // ((error)) -> trying to associate socket to the i/o port!
-        closesocket(socket);
-        delete ctx;
+        closesocket(soc);
+        delete c;
         continue;
       }
       // let's notify waiting thread for the new connection!
       if (!PostQueuedCompletionStatus(io_h_, 0, key, NULL)) {
         // ((error)) -> trying to notify waiting thread!
-        closesocket(socket);
-        delete ctx;
+        closesocket(soc);
+        delete c;
         continue;
       }
     }
@@ -359,39 +358,39 @@ class tcpip {
   }
   inline bool onSucceededQueuedCompletionStatus(ULONG_PTR key, LPOVERLAPPED ovl,
                                                 DWORD bytes) {
-    context* ctx = reinterpret_cast<context*>(key);
-    if (!ctx) return false;
+    context* c = reinterpret_cast<context*>(key);
+    if (!c) return false;
     if (!ovl) {
       if (!bytes) {
         // this means a new connection!
         if (on_client_connected_) on_client_connected_();
-        if (!receive(ctx)) markContextForClosing(ctx);
+        if (!receive(c)) markContextForClosing(c);
       }
       return true;
     }
     bool valid = true;  // is this context still valid?
     switch (reinterpret_cast<overlapped_base*>(ovl)->type) {
       case io_type::kEnqueue:
-        valid = handleCompletionEnqueue(ctx, ovl);
+        valid = handleCompletionEnqueue(c, ovl);
         delete reinterpret_cast<overlapped_enqueue*>(ovl);
         break;
       case io_type::kReceive:
-        valid = handleCompletionReceive(ctx, bytes);
+        valid = handleCompletionReceive(c, bytes);
         break;
       case io_type::kSend:
-        valid = handleCompletionSend(ctx, bytes);
+        valid = handleCompletionSend(c, bytes);
         break;
     }
-    ctx->io_completions_pending--;
-    if (!valid) markContextForClosing(ctx);
+    c->io_completions_pending--;
+    if (!valid) markContextForClosing(c);
     return true;
   }
   inline bool onFailedQueuedCompletionStatus(ULONG_PTR key, LPOVERLAPPED ovl,
                                              DWORD bytes) {
-    context* ctx = reinterpret_cast<context*>(key);
+    context* c = reinterpret_cast<context*>(key);
     if (!ovl) return false;
-    ctx->io_completions_pending--;
-    markContextForClosing(ctx);
+    c->io_completions_pending--;
+    markContextForClosing(c);
     switch (reinterpret_cast<overlapped_base*>(ovl)->type) {
       case io_type::kEnqueue:
         delete reinterpret_cast<overlapped_enqueue*>(ovl);
@@ -402,32 +401,32 @@ class tcpip {
     }
     return true;
   }
-  inline bool handleCompletionEnqueue(context* ctx, LPOVERLAPPED ovl) {
+  inline bool handleCompletionEnqueue(context* c, LPOVERLAPPED ovl) {
     overlapped_enqueue* ove = reinterpret_cast<overlapped_enqueue*>(ovl);
-    if (ove->cid != ctx->id) return true;  // old context completion.. skip it!
-    ctx->stealRobsQueue(ove->robs);
+    if (ove->cid != c->id) return true;  // old context completion.. skip it!
+    c->stealRobsQueue(ove->robs);
     bool expected = false;
-    if (ctx->send_in_flight.compare_exchange_strong(expected, true)) {
-      return drainAndSend(ctx);
+    if (c->send_in_flight.compare_exchange_strong(expected, true)) {
+      return drainAndSend(c);
     }
     return true;
   }
-  inline bool handleCompletionReceive(context* ctx, DWORD bytes) {
-    if (!bytes || !ctx->decoder.add(ctx->ovr.buf, bytes)) return false;
+  inline bool handleCompletionReceive(context* c, DWORD bytes) {
+    if (!bytes || !c->decoder.add(c->ovr.buf, bytes)) return false;
     bool keep_decoding = true;
     while (keep_decoding) {
       RQty* req = nullptr;
-      switch (ctx->decoder.deserialize(req)) {
+      switch (c->decoder.deserialize(req)) {
         case common::deserialize_result::kSucceeded:
           if (on_request_) {
             RSty* res = new RSty();
-            long context_id = ctx->id;
-            on_request_(req, res, [this, ctx, context_id](RSty* res) {
-              ctx->io_completions_pending++;
+            long context_id = c->id;
+            on_request_(req, res, [this, c, context_id](RSty* res) {
+              c->io_completions_pending++;
               if (!PostQueuedCompletionStatus(
-                      io_h_, 0, reinterpret_cast<ULONG_PTR>(ctx),
+                      io_h_, 0, reinterpret_cast<ULONG_PTR>(c),
                       new overlapped_enqueue(context_id, res->serialize()))) {
-                ctx->io_completions_pending--;
+                c->io_completions_pending--;
                 // [to-do] -> this is a critical error! informing about it!
               }
               delete res;
@@ -446,23 +445,23 @@ class tcpip {
           break;
       }
     }
-    return receive(ctx);
+    return receive(c);
   }
-  inline bool handleCompletionSend(context* ctx, DWORD bytes) {
-    return drainAndSend(ctx);
+  inline bool handleCompletionSend(context* c, DWORD bytes) {
+    return drainAndSend(c);
   }
-  inline bool drainAndSend(context* ctx) {
-    if (!ctx->drainRobsQueue()) {
-      ctx->send_in_flight = false;
+  inline bool drainAndSend(context* c) {
+    if (!c->drainRobsQueue()) {
+      c->send_in_flight = false;
       return true;
     }
-    return send(ctx);
+    return send(c);
   }
-  inline void markContextForClosing(context* ctx) {
+  inline void markContextForClosing(context* c) {
     bool expected = false;
-    if (ctx->closing.compare_exchange_strong(expected, true)) {
-      closesocket(ctx->soc);
-      ctx->soc = INVALID_SOCKET;
+    if (c->closing.compare_exchange_strong(expected, true)) {
+      closesocket(c->soc);
+      c->soc = INVALID_SOCKET;
       // this means a disconnection!
       if (on_client_disconnected_) on_client_disconnected_();
     }
@@ -517,9 +516,9 @@ class tcpip {
   inline context* popContext() {
     std::lock_guard<std::mutex> contexts_queue_lock(contexts_queue_mutex_);
     if (contexts_queue_.empty()) return new context();
-    context* ctx = contexts_queue_.front();
+    context* c = contexts_queue_.front();
     contexts_queue_.pop();
-    return ctx;
+    return c;
   }
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
