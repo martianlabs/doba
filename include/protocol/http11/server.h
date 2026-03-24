@@ -104,40 +104,41 @@ class server {
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   server() {
-    transport_.setOnRequest(
-        [this](const request* req, response* res, auto on_send) {
-          switch (req->get_target()) {
-            case target::kOriginForm:
-            case target::kAbsoluteForm: {
-              auto router_entry =
-                  router_.match(req->get_method(), req->get_absolute_path());
-              if (!router_entry.has_value()) {
-                res->not_found_404().add_header(headers::kContentLength, 0);
+    transport_.setOnRequest([this](std::shared_ptr<const request> req,
+                                   std::shared_ptr<response> res,
+                                   auto on_send) {
+      switch (req->get_target()) {
+        case target::kOriginForm:
+        case target::kAbsoluteForm: {
+          auto router_entry =
+              router_.match(req->get_method(), req->get_absolute_path());
+          if (!router_entry.has_value()) {
+            res->not_found_404().add_header(headers::kContentLength, 0);
+            on_send(res);
+            return;
+          }
+          switch (router_entry->second) {
+            case common::execution_policy::kSync:
+              router_entry->first(*req, *res);
+              on_send(res);
+              break;
+            case common::execution_policy::kAsync:
+              thread_pool_->enqueue([req, res, on_send, router_entry]() {
+                router_entry->first(*req, *res);
                 on_send(res);
-                return;
-              }
-              switch (router_entry->second) {
-                case common::execution_policy::kSync:
-                  router_entry->first(*req, *res);
-                  on_send(res);
-                  break;
-                case common::execution_policy::kAsync:
-                  thread_pool_->enqueue([req, res, on_send, router_entry]() {
-                    router_entry->first(*req, *res);
-                    on_send(res);
-                  });
-                  break;
-              }
-              break;
-            }
-            case target::kAuthorityForm:
-            case target::kAsteriskForm:
-              // [to-do] -> add support for this!
-              break;
-            default:
+              });
               break;
           }
-        });
+          break;
+        }
+        case target::kAuthorityForm:
+        case target::kAsteriskForm:
+          // [to-do] -> add support for this!
+          break;
+        default:
+          break;
+      }
+    });
     transport_.setOnConnection([]() {
       /*
       pepe

@@ -112,16 +112,18 @@ class decoder {
     length_ += length;
     return true;
   }
-  inline common::deserialize_result deserialize(RQty*& out) noexcept {
-    common::deserialize_result res = check_request_line();
-    if (res == common::deserialize_result::kSucceeded) {
-      if ((res = check_headers()) == common::deserialize_result::kSucceeded) {
-        out = RQty::from(buffer_, off_);
-        out->set_method(method_);
-        out->set_target(target_);
-        out->set_absolute_path(absolute_path_);
-        out->set_query_part(query_part_);
-        out->set_headers(headers_, headers_len_);
+  inline auto deserialize() noexcept {
+    std::pair<common::deserialize_result, std::shared_ptr<RQty>> result;
+    result.first = check_request_line();
+    if (result.first == common::deserialize_result::kSucceeded) {
+      if ((result.first = check_headers()) ==
+          common::deserialize_result::kSucceeded) {
+        result.second = RQty::from(buffer_, off_);
+        result.second->set_method(method_);
+        result.second->set_target(target_);
+        result.second->set_absolute_path(absolute_path_);
+        result.second->set_query_part(query_part_);
+        result.second->set_headers(headers_, headers_len_);
       }
     }
     if (off_ < length_) {
@@ -134,7 +136,7 @@ class decoder {
     absolute_path_ = {0, 0};
     method_ = {0, 0};
     headers_len_ = 0;
-    return res;
+    return result;
   }
 
  private:

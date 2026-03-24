@@ -103,7 +103,7 @@ class request {
   // METHODs                                                          ( public )
   //
   inline void set_method(internal::marker method) {
-    if (method.start >= length_ || method.start+method.length >= length_ ) {
+    if (method.start >= length_ || method.start + method.length >= length_) {
       throw std::out_of_range("out of bounds!");
     }
     method_ = std::string_view(&buffer_[method.start], method.length);
@@ -150,8 +150,8 @@ class request {
   // ---------------------------------------------------------------------------
   // STATIC-METHODs                                                   ( public )
   //
-  static request* from(const char* const buffer, std::size_t length) {
-    return new request(buffer, length);
+  static std::shared_ptr<request> from(const char* const buf, std::size_t len) {
+    return std::shared_ptr<request>(new request(buf, len));
   }
 
  private:

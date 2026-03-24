@@ -107,13 +107,13 @@ class response {
   // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
-  inline std::queue<common::rob*> const serialize() {
-    std::queue<common::rob*> robs;
+  inline std::queue<std::shared_ptr<common::rob>> const serialize() {
+    std::queue<std::shared_ptr<common::rob>> robs;
     static const auto eol = (const char*)constants::string::kCrLf;
     static const auto eol_len = sizeof(constants::string::kCrLf) - 1;
     // [headers] end section!
     if (size_ - core_cursor_ >= eol_len) {
-      memcpy(&buffer_[core_cursor_], eol, eol_len);
+      std::memcpy(&buffer_[core_cursor_], eol, eol_len);
       core_cursor_ += eol_len;
       // [body] section!
       if (!body_stream_) {
