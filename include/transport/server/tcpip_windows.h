@@ -70,8 +70,8 @@
 #ifndef martianlabs_doba_transport_server_tcpip_windows_h
 #define martianlabs_doba_transport_server_tcpip_windows_h
 
+#include <stack>
 #include <functional>
-#include <unordered_set>
 
 #include "common/rob.h"
 #include "common/deserialize_result.h"
@@ -99,12 +99,27 @@ class tcpip {
     context(context&&) noexcept = delete;
     context& operator=(const context&) = delete;
     context& operator=(context&&) noexcept = delete;
-    std::atomic<bool> closing{false};
-    std::atomic<bool> snd_in_flight{false};
-    std::atomic<bool> rcv_in_flight{false};
+    ~context() {
+      while (!buffers.empty()) {
+        delete[] buffers.top();
+        buffers.pop();
+      }
+    }
+    inline std::pair<CHAR*, std::size_t> acquire_buffer() {
+      if (buffers.empty()) return std::make_pair(new CHAR[BFsz], BFsz);
+      std::pair<CHAR*, std::size_t> out;
+      out.first = buffers.top();
+      out.second = BFsz;
+      buffers.pop();
+      return out;
+    }
+    inline void release_buffer(CHAR* buffer) { buffers.push(buffer); }
+    bool closing{false};
+    bool sending{false};
     DEty<RQty, RSty, BFsz> decoder;
-    std::queue<std::shared_ptr<common::rob>> robs_queue;
-    std::mutex robs_queue_mutex;
+    std::queue<std::shared_ptr<common::rob>> robs;
+    std::stack<CHAR*> buffers;
+    std::mutex mutex;
     SOCKET soc;
   };
   enum class io_type : uint8_t { kAccept, kEnqueue, kSend, kReceive };
@@ -128,16 +143,11 @@ class tcpip {
   struct overlapped_receive : overlapped_base {
     explicit overlapped_receive(std::shared_ptr<context> in_ctx)
         : overlapped_base(io_type::kReceive, in_ctx) {}
-    const std::size_t buf_sze = BFsz;
-    CHAR buf[BFsz]{};
     WSABUF wsa{};
   };
   struct overlapped_send : overlapped_base {
     explicit overlapped_send(std::shared_ptr<context> in_ctx)
         : overlapped_base(io_type::kSend, in_ctx) {}
-    const std::size_t buf_sze = BFsz;
-    std::size_t buf_off = 0;
-    CHAR buf[BFsz]{};
     WSABUF wsa{};
   };
 
@@ -166,13 +176,13 @@ class tcpip {
   // METHODs                                                          ( public )
   //
   void start(const char port[]) {
-    if (io_h_ != INVALID_HANDLE_VALUE) {
+    if (io_h_ != nullptr) {
       throw std::runtime_error("TCP/IP transport already started!");
     }
     // Let's setup all the required resources..
     setupWorkers(setupListener(port));
     // Let's start incoming connections loop!
-    while (keep_running_.load(std::memory_order_relaxed)) {
+    while (keep_running_.load()) {
       SOCKET soc = WSAAccept(accept_socket_, NULL, NULL, NULL, NULL);
       if (soc == INVALID_SOCKET) {
         continue;
@@ -193,7 +203,8 @@ class tcpip {
       // immediate sending of packets, which can reduce latency but may also
       // lead to more network overhead
       int ndf = 1;
-      if (setsockopt(soc, IPPROTO_TCP, TCP_NODELAY, (char*)&ndf, sizeof(ndf))) {
+      if (setsockopt(soc, IPPROTO_TCP, TCP_NODELAY,
+                     reinterpret_cast<const char*>(&ndf), sizeof(ndf))) {
         closesocket(soc);
         continue;
       }
@@ -211,12 +222,13 @@ class tcpip {
       if (!PostQueuedCompletionStatus(io_h_, 0, key, ova)) {
         // ((error)) -> Trying to notify waiting thread!
         closesocket(soc);
+        release(ova);
         continue;
       }
     }
   }
   void stop() {
-    keep_running_.store(false, std::memory_order_relaxed);
+    keep_running_ = false;
     for (auto& worker : workers_) {
       if (worker.joinable()) {
         worker.join();
@@ -242,7 +254,8 @@ class tcpip {
   //
   std::size_t setupListener(const char port[]) {
     // Let's use our help class to create a cpu pinning plan!
-    auto workers = std::thread::hardware_concurrency() / 2;
+    auto hc = std::thread::hardware_concurrency();
+    auto workers = std::max(1u, hc ? hc / 2 : 1u);
     // Let's create our main i/o completion port!
     auto io_completion_port_handle =
         CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, workers);
@@ -296,201 +309,243 @@ class tcpip {
     return workers;
   }
   void setupWorkers(std::size_t number_of_workers) {
-    for (int i = 0; i < number_of_workers; i++) {
+    for (std::size_t i = 0; i < number_of_workers; i++) {
       workers_.emplace_back(std::thread([this]() {
         while (true) {
           ULONG_PTR key = NULL;
           LPOVERLAPPED lpo = NULL;
           DWORD bytes = 0;
           DWORD tout = INFINITE;
-          BOOL sta = GetQueuedCompletionStatus(io_h_, &bytes, &key, &lpo, tout);
+          BOOL st = GetQueuedCompletionStatus(io_h_, &bytes, &key, &lpo, tout);
+          DWORD err = st ? ERROR_SUCCESS : GetLastError();
           overlapped_base* ovb = reinterpret_cast<overlapped_base*>(lpo);
-          switch (sta) {
-            case true: {
-              switch (ovb->type) {
-                case io_type::kAccept:
-                  handleAccept(ovb);
-                  break;
-                case io_type::kReceive:
-                  handleReceive(ovb, bytes);
-                  break;
-                case io_type::kEnqueue:
-                  handleEnqueue(ovb);
-                  break;
-                case io_type::kSend:
-                  handleSend(ovb, bytes);
-                  break;
-              }
-              break;
+          if (!ovb) {
+            // Special error case:
+            // - timeout (if used).
+            // - closed port / shutdown.
+            // - -overlapped related error.
+            continue;
+          }
+          std::shared_ptr<context> ctx = ovb->ctx;
+          if (st == TRUE) {
+            if (ovb->type == io_type::kAccept) {
+              auto* ova = reinterpret_cast<overlapped_accept*>(ovb);
+              handleAccept(ctx);
+              release(ova);
+            } else if (ovb->type == io_type::kReceive) {
+              auto* ovr = reinterpret_cast<overlapped_receive*>(ovb);
+              handleReceive(ctx, ovr->wsa.buf, bytes);
+              releaseSafe(ovr);
+            } else if (ovb->type == io_type::kEnqueue) {
+              auto* ove = reinterpret_cast<overlapped_enqueue*>(ovb);
+              handleEnqueue(ctx, ove->robs);
+              release(ove);
+            } else if (ovb->type == io_type::kSend) {
+              auto* ovs = reinterpret_cast<overlapped_send*>(ovb);
+              handleSend(ctx, ovs->wsa.buf, ovs->wsa.len, bytes);
+              releaseSafe(ovs);
             }
-            case false: {
-              markContextForClosing(ovb->ctx);
-              switch (ovb->type) {
-                case io_type::kAccept:
-                  delete reinterpret_cast<overlapped_accept*>(ovb);
-                  break;
-                case io_type::kEnqueue:
-                  delete reinterpret_cast<overlapped_enqueue*>(ovb);
-                  break;
-                case io_type::kReceive:
-                  ovb->ctx->rcv_in_flight = false;
-                  delete reinterpret_cast<overlapped_receive*>(ovb);
-                  break;
-                case io_type::kSend:
-                  ovb->ctx->snd_in_flight = false;
-                  delete reinterpret_cast<overlapped_send*>(ovb);
-                  break;
-              }
+            continue;
+          }
+          switch (ovb->type) {
+            case io_type::kAccept:
+              handleAcceptError(ctx, err);
+              release(reinterpret_cast<overlapped_accept*>(ovb));
               break;
-            }
+            case io_type::kReceive:
+              handleReceiveError(ctx, err);
+              releaseSafe(reinterpret_cast<overlapped_receive*>(ovb));
+              break;
+            case io_type::kEnqueue:
+              handleEnqueueError(ctx, err);
+              release(reinterpret_cast<overlapped_enqueue*>(ovb));
+              break;
+            case io_type::kSend:
+              handleSendError(ctx, err);
+              releaseSafe(reinterpret_cast<overlapped_send*>(ovb));
+              break;
           }
         }
       }));
     }
   }
-  inline void handleAccept(overlapped_base* ovb) {
-    overlapped_accept* ova = reinterpret_cast<overlapped_accept*>(ovb);
+  inline void handleAccept(std::shared_ptr<context> ctx) {
+    std::unique_lock<std::mutex> lock(ctx->mutex);
+    // If the associated context is in 'closing' status then the operation is
+    // discarded and no actions are performed!
+    if (ctx->closing) return;
+    // Let's arm next receive operation!
+    overlapped_receive* ovr = new overlapped_receive(ctx);
+    auto acquired_buffer = ctx->acquire_buffer();
+    ovr->wsa.buf = acquired_buffer.first;
+    ovr->wsa.len = acquired_buffer.second;
+    if (!receive(ctx, ovr)) {
+      markContextForClosing(ctx);
+      release(ovr);
+      return;
+    }
     // Let's call user's callback to notify for new connection!
     if (on_client_connected_) {
       try {
         on_client_connected_();
-      } catch (std::exception ex) {
+      } catch (const std::exception& ex) {
         // [to-do] -> this is a critical error!
       } catch (...) {
         // [to-do] -> this is a critical error!
       }
     }
-    receive(ova->ctx);
-    delete ova;
   }
-  inline void handleReceive(overlapped_base* ovb, DWORD bytes) {
-    overlapped_receive* ovr = reinterpret_cast<overlapped_receive*>(ovb);
+  inline void handleReceive(std::shared_ptr<context> ctx, CHAR* bf, DWORD sz) {
+    std::unique_lock<std::mutex> lock(ctx->mutex);
     // If the associated context is in 'closing' status then the operation is
     // discarded and no actions are performed!
-    if (ovr->ctx->closing) {
-      ovr->ctx->rcv_in_flight = false;
-      delete ovr;
-      return;
-    }
+    if (ctx->closing) return;
     // Any of the following situations will trigger a disconnection!
-    if (!bytes || !ovr->ctx->decoder.add(ovr->buf, bytes)) {
-      ovr->ctx->rcv_in_flight = false;
-      markContextForClosing(ovr->ctx);
-      delete ovr;
+    if (!on_request_ || !sz || !ctx->decoder.add(bf, sz)) {
+      markContextForClosing(ctx);
       return;
     }
-    bool keep_decoding = true;
-    while (keep_decoding) {
-      auto [result, req] = ovr->ctx->decoder.deserialize();
-      switch (result) {
-        case common::deserialize_result::kSucceeded:
-          if (on_request_) {
-            std::shared_ptr<RSty> res = std::make_shared<RSty>();
-            try {
-              on_request_(
-                  req, res,
-                  [ctx = ovr->ctx, iocp = io_h_](std::shared_ptr<RSty> res) {
-                    auto* ove = new overlapped_enqueue(ctx, res->serialize());
-                    if (!PostQueuedCompletionStatus(iocp, 0, 0xFF, ove)) {
-                      // [to-do] -> this is a critical error!
-                      delete ove;
-                    }
-                  });
-            } catch (std::exception ex) {
+    while (true) {
+      auto [result, req] = ctx->decoder.deserialize();
+      if (result == common::deserialize_result::kSucceeded) {
+        try {
+          std::shared_ptr<RSty> res = std::make_shared<RSty>();
+          on_request_(req, res, [this, ctx](std::shared_ptr<RSty> res) {
+            auto* ove = new overlapped_enqueue(ctx, res->serialize());
+            ULONG_PTR key = reinterpret_cast<ULONG_PTR>(ctx.get());
+            if (!PostQueuedCompletionStatus(io_h_, 0, key, ove)) {
               // [to-do] -> this is a critical error!
-              ovr->ctx->rcv_in_flight = false;
-              markContextForClosing(ovr->ctx);
-              keep_decoding = false;
-              delete ovr;
-              return;
-            } catch (...) {
-              // [to-do] -> this is a critical error!
-              ovr->ctx->rcv_in_flight = false;
-              markContextForClosing(ovr->ctx);
-              keep_decoding = false;
-              delete ovr;
-              return;
+              release(ove);
             }
-          }
-          break;
-        case common::deserialize_result::kMoreBytesNeeded:
-          // no request returned here! there is no need to delete it..
-          keep_decoding = false;
-          break;
-        case common::deserialize_result::kInvalidSource:
-          // no request returned here! there is no need to delete it..
-          // invalid source data will automatically trigger a disconnection.
-          ovr->ctx->rcv_in_flight = false;
-          markContextForClosing(ovr->ctx);
-          keep_decoding = false;
-          delete ovr;
+          });
+        } catch (const std::exception& ex) {
+          // [to-do] -> this is a critical error!
+          markContextForClosing(ctx);
           return;
+        } catch (...) {
+          // [to-do] -> this is a critical error!
+          markContextForClosing(ctx);
+          return;
+        }
+      } else if (result == common::deserialize_result::kMoreBytesNeeded) {
+        break;
+      } else if (result == common::deserialize_result::kInvalidSource) {
+        markContextForClosing(ctx);
+        return;
       }
     }
-    ovr->ctx->rcv_in_flight = false;
-    receive(ovr->ctx);
-    delete ovr;
-  }
-  inline void handleEnqueue(overlapped_base* ovb) {
-    overlapped_enqueue* ove = reinterpret_cast<overlapped_enqueue*>(ovb);
-    if (ove->ctx->closing) {
-      delete ove;
-      return;
-    }
-    moveRobs(ove);
-    bool expected = false;
-    if (ove->ctx->snd_in_flight.compare_exchange_strong(expected, true)) {
-      send(ove->ctx);
-    }
-    delete ove;
-  }
-  inline void handleSend(overlapped_base* ovb, DWORD bytes) {
-    overlapped_send* ovs = reinterpret_cast<overlapped_send*>(ovb);
-    if (ovs->ctx->closing) {
-      ovs->ctx->snd_in_flight = false;
-      delete ovs;
-      return;
-    }
-    send(ovs->ctx);
-    ovs->ctx->snd_in_flight = false;
-    delete ovs;
-  }
-  inline void moveRobs(overlapped_enqueue* ove) {
-    std::unique_lock<std::mutex> robs_queue_lock(ove->ctx->robs_queue_mutex);
-    while (!ove->robs.empty()) {
-      ove->ctx->robs_queue.emplace(ove->robs.front());
-      ove->robs.pop();
+    overlapped_receive* ovr = new overlapped_receive(ctx);
+    auto acquired_buffer = ctx->acquire_buffer();
+    ovr->wsa.buf = acquired_buffer.first;
+    ovr->wsa.len = acquired_buffer.second;
+    if (!receive(ctx, ovr)) {
+      markContextForClosing(ctx);
+      release(ovr);
     }
   }
-  inline bool drainRobs(overlapped_send* ovs) {
-    std::unique_lock<std::mutex> robs_queue_lock(ovs->ctx->robs_queue_mutex);
-    ovs->wsa.buf = ovs->buf;
-    std::size_t off = 0;
-    while (!ovs->ctx->robs_queue.empty()) {
-      auto bytes_read_from_current_rob = ovs->ctx->robs_queue.front()->read(
-          &ovs->buf[off], ovs->buf_sze - off);
+  inline void handleEnqueue(std::shared_ptr<context> ctx,
+                            std::queue<std::shared_ptr<common::rob>>& robs) {
+    std::unique_lock<std::mutex> lock(ctx->mutex);
+    // If the associated context is in 'closing' status then the operation is
+    // discarded and no actions are performed!
+    if (ctx->closing) return;
+    // Let's enqueue incoming robs to the parent context queue!
+    while (!robs.empty()) {
+      ctx->robs.emplace(robs.front());
+      robs.pop();
+    }
+    // Let's start a sending operation (if not already in course)!
+    if (!ctx->sending) {
+      overlapped_send* ovs = drainRobs(ctx);
+      if (ctx->sending = (ovs != nullptr)) {
+        if (!send(ctx, ovs)) {
+          markContextForClosing(ctx);
+          ctx->sending = false;
+          release(ovs);
+        }
+      }
+    }
+  }
+  inline void handleSend(std::shared_ptr<context> ctx, CHAR* buffer,
+                         DWORD to_send, DWORD sent) {
+    std::unique_lock<std::mutex> lock(ctx->mutex);
+    // If the associated context is in 'closing' status then the operation is
+    // discarded and no actions are performed!
+    if (ctx->closing) return;
+    // Let's check if there's any reminder from previous operation!
+    overlapped_send* ovs = nullptr;
+    if (sent == to_send) {
+      ovs = drainRobs(ctx);
+    } else {
+      // Let's check for abnormal situations!
+      if (sent > to_send) {
+        markContextForClosing(ctx);
+        return;
+      }
+      ovs = new overlapped_send(ctx);
+      auto acquired_buffer = ctx->acquire_buffer();
+      ovs->wsa.buf = acquired_buffer.first;
+      ovs->wsa.len = to_send - sent;
+      std::memcpy(ovs->wsa.buf, &buffer[sent], ovs->wsa.len);
+    }
+    if (ctx->sending = (ovs != nullptr)) {
+      if (!send(ctx, ovs)) {
+        markContextForClosing(ctx);
+        ctx->sending = false;
+        release(ovs);
+      }
+    }
+  }
+  inline void handleAcceptError(std::shared_ptr<context> ctx, DWORD err) {
+    std::unique_lock<std::mutex> lock(ctx->mutex);
+    markContextForClosing(ctx);
+  }
+  inline void handleReceiveError(std::shared_ptr<context> ctx, DWORD err) {
+    std::unique_lock<std::mutex> lock(ctx->mutex);
+    markContextForClosing(ctx);
+  }
+  inline void handleEnqueueError(std::shared_ptr<context> ctx, DWORD err) {
+    std::unique_lock<std::mutex> lock(ctx->mutex);
+    markContextForClosing(ctx);
+  }
+  inline void handleSendError(std::shared_ptr<context> ctx, DWORD err) {
+    std::unique_lock<std::mutex> lock(ctx->mutex);
+    markContextForClosing(ctx);
+  }
+  inline overlapped_send* drainRobs(std::shared_ptr<context> ctx) {
+    if (ctx->robs.empty()) return nullptr;
+    overlapped_send* ovs = new overlapped_send(ctx);
+    auto acquired_buffer = ctx->acquire_buffer();
+    ovs->wsa.buf = acquired_buffer.first;
+    ovs->wsa.len = 0;
+    while (!ctx->robs.empty()) {
+      auto bytes_read_from_current_rob = ctx->robs.front()->read(
+          &ovs->wsa.buf[ovs->wsa.len], BFsz - ovs->wsa.len);
       if (!bytes_read_from_current_rob) {
-        ovs->ctx->robs_queue.pop();
+        ctx->robs.pop();
         continue;
       }
-      off += bytes_read_from_current_rob;
-      if (off == ovs->buf_sze) {
-        break;
-      }
+      ovs->wsa.len += bytes_read_from_current_rob;
+      if (ovs->wsa.len == BFsz) break;
     }
-    ovs->buf_off = off;
-    ovs->wsa.len = ovs->buf_off;
-    return off > 0;
+    if (!ovs->wsa.len) {
+      release(ovs);
+      return nullptr;
+    }
+    return ovs;
   }
   inline void markContextForClosing(std::shared_ptr<context> ctx) {
-    bool expected = false;
-    if (ctx->closing.compare_exchange_strong(expected, true)) {
+    if (!ctx->closing) {
+      ctx->closing = true;
+      ctx->sending = false;
+      ctx->robs = {};
       closesocket(ctx->soc);
       ctx->soc = INVALID_SOCKET;
+      // Let's call user's callback to notify for disconnection!
       if (on_client_disconnected_) {
         try {
           on_client_disconnected_();
-        } catch (std::exception ex) {
+        } catch (const std::exception& ex) {
           // [to-do] -> this is a critical error!
         } catch (...) {
           // [to-do] -> this is a critical error!
@@ -498,44 +553,33 @@ class tcpip {
       }
     }
   }
-  inline void receive(std::shared_ptr<context> ctx) {
-    if (!ctx || ctx->closing) return;
-    bool expected = false;
-    if (ctx->rcv_in_flight.compare_exchange_strong(expected, true)) {
-      DWORD f = 0, r = 0;
-      overlapped_receive* ovr = new overlapped_receive(ctx);
-      ovr->wsa.buf = ovr->buf;
-      ovr->wsa.len = ovr->buf_sze;
-      int s = WSARecv(ctx->soc, &ovr->wsa, 1, &r, &f, ovr, 0);
-      if (s == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-        ctx->rcv_in_flight = false;
-        delete ovr;
-      }
-    }
+  inline void release(overlapped_accept* ova) { delete ova; }
+  inline void release(overlapped_enqueue* ove) { delete ove; }
+  template <typename T>
+  inline void release(T* ovx) {
+    ovx->ctx->release_buffer(ovx->wsa.buf);
+    delete ovx;
   }
-  inline void send(std::shared_ptr<context> ctx) {
-    if (!ctx || ctx->closing) return;
-    bool expected = false;
-    overlapped_send* ovs = new overlapped_send(ctx);
-    if (!drainRobs(ovs)) {
-      ovs->ctx->snd_in_flight = false;
-      delete ovs;
-      return;
-    }
-    DWORD bytes = 0;
-    DWORD flags = 0;
-    int s = WSASend(ctx->soc, &ovs->wsa, 1, &bytes, flags, ovs, 0);
-    if (s == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-      ctx->snd_in_flight = false;
-      markContextForClosing(ctx);
-      delete ovs;
-    }
+  template <typename T>
+  inline void releaseSafe(T* ovx) {
+    std::unique_lock<std::mutex> lock(ovx->ctx->mutex);
+    release(ovx);
+  }
+  inline bool receive(std::shared_ptr<context> ctx, overlapped_receive* ovr) {
+    DWORD f = 0, r = 0;
+    return !(WSARecv(ctx->soc, &ovr->wsa, 1, &r, &f, ovr, 0) == SOCKET_ERROR &&
+             WSAGetLastError() != WSA_IO_PENDING);
+  }
+  inline bool send(std::shared_ptr<context> ctx, overlapped_send* ovs) {
+    DWORD f = 0, s = 0;
+    return !(WSASend(ctx->soc, &ovs->wsa, 1, &s, f, ovs, 0) == SOCKET_ERROR &&
+             WSAGetLastError() != WSA_IO_PENDING);
   }
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
   std::atomic<bool> keep_running_ = true;
-  HANDLE io_h_ = INVALID_HANDLE_VALUE;
+  HANDLE io_h_ = nullptr;
   SOCKET accept_socket_ = INVALID_SOCKET;
   std::vector<std::thread> workers_;
   on_request_fn on_request_;
