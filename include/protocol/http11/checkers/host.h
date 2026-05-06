@@ -88,7 +88,7 @@ static inline int skip_n_hextets(std::string_view sv) {
   while (off < sv.size()) {
     if (helpers::is_hex_digit(sv[off])) {
       if (++hex_digits > 4) return -1;
-    } else if (sv[off] == constants::character::kColon) {
+    } else if (sv[off] == ':') {
       if (!hex_digits) {
         return -1;
       }
@@ -99,7 +99,7 @@ static inline int skip_n_hextets(std::string_view sv) {
     }
     off++;
   }
-  if (sv.size() && sv.back() == constants::character::kColon) return -1;
+  if (sv.size() && sv.back() == ':') return -1;
   if (hex_digits) hextets_found++;
   return hextets_found;
 }
@@ -138,7 +138,7 @@ static inline bool check_ip_v_future(std::string_view sv) {
   // [1*HEXDIG "."] part..
   std::size_t hex_digits_found = 0;
   std::size_t off = 1;
-  while (off < sv.size() && sv[off] != constants::character::kDot) {
+  while (off < sv.size() && sv[off] != '.') {
     if (!helpers::is_hex_digit(sv[off])) return false;
     hex_digits_found++;
     off++;
@@ -148,7 +148,7 @@ static inline bool check_ip_v_future(std::string_view sv) {
   std::size_t subparts_found = 0;
   while (off < sv.size()) {
     if (!helpers::is_unreserved(sv[off]) && !helpers::is_sub_delim(sv[off]) &&
-        sv[off] != constants::character::kColon) {
+        sv[off] != ':') {
       return false;
     }
     subparts_found++;
@@ -165,7 +165,7 @@ static inline bool check_ip_v4_address(std::string_view sv) {
   std::size_t off = 0;
   std::size_t digits = 0;
   while (off < sv.size()) {
-    if (sv[off] == constants::character::kDot) {
+    if (sv[off] == '.') {
       if (!digits || digits > 3) return false;
       if (!check_dec_octet(sv, digits, off)) return false;
       dec_octets_count++;
@@ -206,9 +206,9 @@ static inline bool check_ip_v6_address(std::string_view sv) {
     // +-----------------------------------------------------------------------+
     // | 6( h16 ":" ) ls32                                                     |
     // +-----------------------------------------------------------------------+
-    std::size_t dot = sv.find(constants::character::kDot);
+    std::size_t dot = sv.find('.');
     if (dot == std::string_view::npos) return skip_n_hextets(sv) == 8;
-    std::size_t col = sv.find_last_of(constants::character::kColon);
+    std::size_t col = sv.find_last_of(':');
     if (col == std::string_view::npos) return false;
     if (dot <= col) return false;
     head = sv.substr(0, col);
@@ -233,12 +233,12 @@ static inline bool check_ip_v6_address(std::string_view sv) {
     std::string_view svr = sv.substr(sep + 2);
     int lh = !svl.empty() ? skip_n_hextets(svl) : 0;
     if (lh == -1) return false;
-    std::size_t dot = svr.find(constants::character::kDot);
+    std::size_t dot = svr.find('.');
     if (dot == std::string_view::npos) {
       int rh = !svr.empty() ? skip_n_hextets(svr) : 0;
       return rh == -1 ? false : lh + rh <= 7;
     }
-    std::size_t col = svr.find_last_of(constants::character::kColon);
+    std::size_t col = svr.find_last_of(':');
     if (col != std::string_view::npos) {
       if (dot <= col) return false;
       head = svr.substr(0, col);
@@ -260,8 +260,8 @@ static inline bool check_ip_v6_address(std::string_view sv) {
 // +----------------+----------------------------------------------------------+
 static inline bool check_ip_literal(std::string_view sv) {
   if (sv.size() < 2) return false;  // at least two characters..
-  if (sv.front() != constants::character::kOpenBracket) return false;
-  if (sv.back() != constants::character::kCloseBracket) return false;
+  if (sv.front() != '[') return false;
+  if (sv.back() != ']') return false;
   sv.remove_prefix(1);
   sv.remove_suffix(1);
   if (sv.empty()) return false;
@@ -277,7 +277,7 @@ static inline bool check_reg_name(std::string_view sv) {
   while (off < sv.size()) {
     if (!helpers::is_unreserved(sv[off])) {
       if (!helpers::is_sub_delim(sv[off])) {
-        if (sv[off] != constants::character::kPercent) return false;
+        if (sv[off] != '%') return false;
         if (off + 2 >= sv.size()) return false;
         if (!helpers::is_hex_digit(sv[off + 1])) return false;
         if (!helpers::is_hex_digit(sv[off + 2])) return false;
@@ -369,14 +369,14 @@ static inline bool host(std::string_view sv) {
   if (sv.empty()) return true;  // reg-name!
   std::string_view sv_uri_host;
   std::string_view sv_port;
-  if (sv.front() == constants::character::kOpenBracket) {
-    std::size_t clb = sv.find_first_of(constants::character::kCloseBracket);
+  if (sv.front() == '[') {
+    std::size_t clb = sv.find_first_of(']');
     if (clb == std::string_view::npos) return false;  // pre-check!
     sv_uri_host = sv.substr(0, clb + 1);
     sv_port = sv.substr(clb + 1);
   } else {
     sv_uri_host = sv;
-    std::size_t col = sv.find_last_of(constants::character::kColon);
+    std::size_t col = sv.find_last_of(':');
     if (col != std::string_view::npos) {
       sv_uri_host = sv.substr(0, col);
       sv_port = sv.substr(col);
@@ -384,7 +384,7 @@ static inline bool host(std::string_view sv) {
   }
   if (check_uri_host(sv_uri_host) == host_type::kUnknown) return false;
   if (sv_port.empty()) return true;
-  if (sv_port.front() != constants::character::kColon) return false;
+  if (sv_port.front() != ':') return false;
   sv_port.remove_prefix(1);
   return check_port(sv_port);
 }

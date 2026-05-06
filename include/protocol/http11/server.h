@@ -72,12 +72,12 @@
 
 #include "common/execution_policy.h"
 #include "common/thread_pool.h"
+#include "common/date_server.h"
 #include "transport/server/tcpip.h"
-#include "protocol/http11/constants.h"
+#include "protocol/http11/method.h"
 #include "protocol/http11/helpers.h"
 #include "protocol/http11/request.h"
 #include "protocol/http11/response.h"
-#include "protocol/http11/decoder.h"
 #include "protocol/http11/router.h"
 #include "protocol/http11/headers.h"
 
@@ -90,9 +90,8 @@ namespace martianlabs::doba::protocol::http11 {
 // Template parameters:
 //    TRty - transport being used (tcp/ip by default).
 // =============================================================================
-template <template <typename, typename,
-                    template <typename, typename, std::size_t> typename,
-                    std::size_t> class TRty = transport::server::tcpip>
+template <template <typename, typename, std::size_t> class TRty =
+              transport::server::tcpip>
 class server {
   // ---------------------------------------------------------------------------
   // USINGs                                                          ( private )
@@ -205,7 +204,7 @@ class server {
   // ATTRIBUTEs                                                      ( private )
   //
   std::shared_ptr<common::thread_pool> thread_pool_;
-  TRty<request, response, decoder, 4096> transport_;
+  TRty<request, response, 4096> transport_;
   router<router_fn> router_;
 };
 }  // namespace martianlabs::doba::protocol::http11

@@ -140,7 +140,7 @@ namespace martianlabs::doba::protocol::http11::checkers {
 // +---------------------------------------------------------------------------+
 static inline bool connection(std::string_view v) {
   std::size_t options_found = 0;
-  for (auto token : v | std::views::split(constants::character::kComma)) {
+  for (auto token : v | std::views::split(',')) {
     if (token.begin() == token.end()) continue;
     std::string_view value(&*token.begin(), std::ranges::distance(token));
     helpers::ows_trim(value);

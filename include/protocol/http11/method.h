@@ -67,25 +67,42 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#ifndef martianlabs_doba_protocol_http11_internal_marker_h
-#define martianlabs_doba_protocol_http11_internal_marker_h
+#ifndef martianlabs_doba_protocol_http11_method_h
+#define martianlabs_doba_protocol_http11_method_h
 
-#include <string_view>
-
-namespace martianlabs::doba::protocol::http11::internal {
+namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
-// marker                                                             ( struct )
+// method                                                             ( struct )
 // -----------------------------------------------------------------------------
-// This structs holds for a generic markers placeholder.
+// This struct holds for the http 1.1 method constants.
 // -----------------------------------------------------------------------------
 // =============================================================================
-struct marker {
-  // ---------------------------------------------------------------------------
-  // ATTRIBUTEs                                                       ( public )
-  //
-  std::size_t start;
-  std::size_t length;
+struct method {
+  // https://www.rfc-editor.org/rfc/rfc9110#section-9
+  // +---------+---------------------------------------------------------------+
+  // | Method  | Description                                                   |
+  // +---------+---------------------------------------------------------------+
+  // | GET     | Transfer a current representation of the target resource.     |
+  // | HEAD    | Same as GET, but do not transfer the response content.        |
+  // | POST    | Perform resource-specific processing on the request content.  |
+  // | PUT     | Replace all current representations of the target resource    |
+  // |         | with the request content.                                     |
+  // | DELETE  | Remove all current representations of the target resource.    |
+  // | CONNECT | Establish a tunnel to the server identified by the            |
+  // |         | target resource.                                              |
+  // | OPTIONS | Describe the communication options for the target resource.   |
+  // | TRACE   | Perform a message loop-back test along the path to the        |
+  // |         | target resource.                                              |
+  // +---------+---------------------------------------------------------------+
+  static constexpr char kGet[] = "GET";
+  static constexpr char kHead[] = "HEAD";
+  static constexpr char kPost[] = "POST";
+  static constexpr char kPut[] = "PUT";
+  static constexpr char kDelete[] = "DELETE";
+  static constexpr char kConnect[] = "CONNECT";
+  static constexpr char kOptions[] = "OPTIONS";
+  static constexpr char kTrace[] = "TRACE";
 };
-}  // namespace martianlabs::doba::protocol::http11::internal
+}  // namespace martianlabs::doba::protocol::http11
 
 #endif

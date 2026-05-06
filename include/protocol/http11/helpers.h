@@ -74,9 +74,6 @@
 #include <algorithm>
 #include <string_view>
 
-#include "constants.h"
-#include "common/date_server.h"
-
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
 // helpers                                                            ( struct )
@@ -91,7 +88,7 @@ struct helpers {
   // | DIGIT = %x30-39    ; "0" - "9"                                          |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_digit(unsigned char c) noexcept {
-    return c >= '0' && c <= '9';
+    return c >= 0x30 && c <= 0x39;
   }
   static constexpr bool is_digit(char c) noexcept {
     return is_digit(static_cast<unsigned char>(c));
@@ -137,22 +134,10 @@ struct helpers {
   // | ALPHA  = %x41-5A / %x61-7A   ; A-Z / a-z                                |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_token(unsigned char c) noexcept {
-    return is_digit(c) || is_alpha(c) ||
-           c == constants::character::kExclamation ||
-           c == constants::character::kHash ||
-           c == constants::character::kDollar ||
-           c == constants::character::kPercent ||
-           c == constants::character::kAmpersand ||
-           c == constants::character::kApostrophe ||
-           c == constants::character::kAsterisk ||
-           c == constants::character::kPlus ||
-           c == constants::character::kHyphen ||
-           c == constants::character::kDot ||
-           c == constants::character::kCircumflex ||
-           c == constants::character::kUnderscore ||
-           c == constants::character::kBackTick ||
-           c == constants::character::kVerticalBar ||
-           c == constants::character::kTilde;
+    return c == '!' || c == '#' || c == '$' || c == '%' || c == '&' ||
+           c == '\'' || c == '*' || c == '+' || c == '-' || c == '.' ||
+           c == '^' || c == '_' || c == '`' || c == '|' || c == '~' ||
+           is_digit(c) || is_alpha(c);
   }
   static constexpr bool is_token(char c) noexcept {
     return is_token(static_cast<unsigned char>(c));
@@ -166,10 +151,8 @@ struct helpers {
   // | DIGIT      = %x30-39             ; 0-9                                  |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_unreserved(unsigned char c) noexcept {
-    return is_digit(c) || is_alpha(c) || c == constants::character::kHyphen ||
-           c == constants::character::kDot ||
-           c == constants::character::kUnderscore ||
-           c == constants::character::kTilde;
+    return is_alpha(c) || is_digit(c) || c == '-' || c == '.' || c == '_' ||
+           c == '~';
   }
   static constexpr bool is_unreserved(char c) noexcept {
     return is_unreserved(static_cast<unsigned char>(c));
@@ -181,17 +164,8 @@ struct helpers {
   // |              ";" / "="                                                  |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_sub_delim(unsigned char c) noexcept {
-    return c == constants::character::kExclamation ||
-           c == constants::character::kDollar ||
-           c == constants::character::kAmpersand ||
-           c == constants::character::kApostrophe ||
-           c == constants::character::kLParenthesis ||
-           c == constants::character::kRParenthesis ||
-           c == constants::character::kAsterisk ||
-           c == constants::character::kPlus ||
-           c == constants::character::kComma ||
-           c == constants::character::kSemiColon ||
-           c == constants::character::kEquals;
+    return c == '!' || c == '$' || c == '&' || c == '\'' || c == '(' ||
+           c == ')' || c == '*' || c == '+' || c == ',' || c == ';' || c == '=';
   }
   static constexpr bool is_sub_delim(char c) noexcept {
     return is_sub_delim(static_cast<unsigned char>(c));
@@ -211,8 +185,7 @@ struct helpers {
   // | HEXDIG = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"                      |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_pchar(unsigned char c) noexcept {
-    return is_unreserved(c) || is_sub_delim(c) ||
-           c == constants::character::kColon || c == constants::character::kAt;
+    return is_unreserved(c) || is_sub_delim(c) || c == ':' || c == '@';
   }
   static constexpr bool is_pchar(char c) noexcept {
     return is_pchar(static_cast<unsigned char>(c));
@@ -224,8 +197,7 @@ struct helpers {
   // |        ; visible (printing) characters                                  |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_vchar(unsigned char c) noexcept {
-    return c >= constants::character::kExclamation &&
-           c <= constants::character::kTilde;
+    return c >= 0x21 && c <= 0x7E;
   }
   static constexpr bool is_vchar(char c) noexcept {
     return is_vchar(static_cast<unsigned char>(c));
@@ -243,14 +215,8 @@ struct helpers {
   // |       via quoted-pair.                                                  |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_qdtext(unsigned char c) noexcept {
-    return c == constants::character::kHTab ||
-           c == constants::character::kSpace ||
-           c == constants::character::kExclamation ||
-           (c >= constants::character::kHash &&
-            c <= constants::character::kOpenBracket) ||
-           (c >= constants::character::kCloseBracket &&
-            c <= constants::character::kTilde) ||
-           is_obs_text(c);
+    return c == '\t' || c == ' ' || c == '!' || (c >= 0x23 && c <= 0x5B) ||
+           (c >= 0x5D && c <= 0x7E) || is_obs_text(c);
   }
   static constexpr bool is_qdtext(char c) noexcept {
     return is_qdtext(static_cast<unsigned char>(c));
@@ -264,8 +230,7 @@ struct helpers {
   // |       compatibility with legacy implementations.                        |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_obs_text(unsigned char c) noexcept {
-    return c >= constants::character::kObsTextStart &&
-           c <= constants::character::kObsTextEnd;
+    return c >= 0x80 && c <= 0xFF;
   }
   static constexpr bool is_obs_text(char c) noexcept {
     return is_obs_text(static_cast<unsigned char>(c));
@@ -281,8 +246,7 @@ struct helpers {
   // | Note: OWS is allowed only where explicitly defined by the ABNF.         |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_ows(unsigned char c) noexcept {
-    return c == constants::character::kSpace ||
-           c == constants::character::kHTab;
+    return c == ' ' || c == '\t';
   }
   static constexpr bool is_ows(char c) noexcept {
     return is_ows(static_cast<unsigned char>(c));

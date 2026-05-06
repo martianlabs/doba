@@ -75,17 +75,7 @@
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http11;
 
-std::atomic<bool> g_stop_requested{false};
-
-extern "C" void signal_handler(int sig) {
-  if (sig == SIGINT || sig == SIGTERM) {
-    g_stop_requested.store(true, std::memory_order_relaxed);
-  }
-}
-
 int main(int argc, char* argv[]) {
-  std::signal(SIGINT, signal_handler);
-  std::signal(SIGTERM, signal_handler);
   martianlabs::doba::network::startup();
   server srv;
   srv.add_route(
@@ -98,14 +88,8 @@ int main(int argc, char* argv[]) {
             .set_body("Hello, World!");
       },
       execution_policy::kSync);
-  std::thread thd([&srv]() {
-    while (!g_stop_requested.load(std::memory_order_relaxed)) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    }
-    srv.stop();
-  });
   srv.start("8080");
-  thd.join();
+  std::cin.get();
   martianlabs::doba::network::cleanup();
   return 0;
 }

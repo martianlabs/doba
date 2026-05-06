@@ -70,9 +70,6 @@
 #ifndef martianlabs_doba_protocol_http11_headers_h
 #define martianlabs_doba_protocol_http11_headers_h
 
-#include "constants.h"
-#include "header.h"
-
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
 // headers                                                             ( class )
@@ -82,35 +79,6 @@ namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
 class headers {
  public:
-  // ---------------------------------------------------------------------------
-  // CONSTRUCTORs/DESTRUCTORs                                         ( public )
-  //
-  headers() = default;
-  headers(const headers&) = delete;
-  headers(headers&&) noexcept = delete;
-  // ---------------------------------------------------------------------------
-  // OPERATORs                                                        ( public )
-  //
-  headers& operator=(const headers&) = delete;
-  headers& operator=(headers&&) noexcept = delete;
-  // ---------------------------------------------------------------------------
-  // METHODs                                                          ( public )
-  //
-  inline void add(std::string_view name, std::string_view value) {
-    if (length_ >= constants::limits::kDefaultRequestMaxHeaders) {
-      throw std::out_of_range("maximum number of headers reached!");
-    }
-    data_[length_].name = name;
-    data_[length_].value = value;
-    length_++;
-  }
-  inline header at(std::size_t i) const {
-    if (i >= length_) {
-      throw std::out_of_range("out of bounds!");
-    }
-    return data_[i];
-  }
-  inline std::size_t length() const { return length_; }
   // ---------------------------------------------------------------------------
   // CONSTANTs                                                        ( public )
   //
@@ -157,52 +125,45 @@ class headers {
   // | ETag                   | RFC 9110 §8.8.3    | Response                  |
   // | Last-Modified          | RFC 9110 §8.8.2    | Response                  |
   // +------------------------+--------------------+---------------------------+
-  static constexpr char kConnection[] = "connection";
-  static constexpr char kDate[] = "date";
-  static constexpr char kVia[] = "via";
-  static constexpr char kCacheControl[] = "cache-control";
-  static constexpr char kPragma[] = "pragma";
-  static constexpr char kWarning[] = "warning";
-  static constexpr char kHost[] = "host";
-  static constexpr char kUserAgent[] = "user-agent";
-  static constexpr char kAccept[] = "accept";
-  static constexpr char kAcceptEncoding[] = "accept-encoding";
-  static constexpr char kAcceptLanguage[] = "accept-language";
-  static constexpr char kAuthorization[] = "authorization";
-  static constexpr char kExpect[] = "expect";
-  static constexpr char kFrom[] = "from";
-  static constexpr char kIfMatch[] = "if-match";
-  static constexpr char kIfNoneMatch[] = "if-none-match";
-  static constexpr char kIfModifiedSince[] = "if-modified-since";
-  static constexpr char kIfUnmodifiedSince[] = "if-unmodified-since";
-  static constexpr char kRange[] = "range";
-  static constexpr char kReferer[] = "referer";
-  static constexpr char kTe[] = "te";
-  static constexpr char kUpgrade[] = "upgrade";
-  static constexpr char kCookie[] = "cookie";
-  static constexpr char kLocation[] = "location";
-  static constexpr char kServer[] = "server";
-  static constexpr char kVary[] = "vary";
-  static constexpr char kWwwAuthenticate[] = "www-authenticate";
-  static constexpr char kContentLength[] = "content-length";
-  static constexpr char kContentType[] = "content-type";
-  static constexpr char kContentEncoding[] = "content-encoding";
-  static constexpr char kContentLanguage[] = "content-language";
-  static constexpr char kContentRange[] = "content-range";
-  static constexpr char kTrailer[] = "trailer";
-  static constexpr char kTransferEncoding[] = "transfer-encoding";
-  static constexpr char kAllow[] = "allow";
-  static constexpr char kRetryAfter[] = "retry-after";
-  static constexpr char kAcceptRanges[] = "accept-ranges";
-  static constexpr char kETag[] = "etag";
-  static constexpr char kLastModified[] = "last-modified";
-
- private:
-  // ---------------------------------------------------------------------------
-  // ATTRIBUTEs                                                      ( private )
-  //
-  std::array<header, constants::limits::kDefaultRequestMaxHeaders> data_;
-  std::size_t length_ = 0;
+  static constexpr char kConnection[] = "Connection";
+  static constexpr char kDate[] = "Date";
+  static constexpr char kVia[] = "Via";
+  static constexpr char kCacheControl[] = "Cache-Control";
+  static constexpr char kPragma[] = "Pragma";
+  static constexpr char kWarning[] = "Warning";
+  static constexpr char kHost[] = "Host";
+  static constexpr char kUserAgent[] = "User-agent";
+  static constexpr char kAccept[] = "Accept";
+  static constexpr char kAcceptEncoding[] = "Accept-Encoding";
+  static constexpr char kAcceptLanguage[] = "Accept-Language";
+  static constexpr char kAuthorization[] = "Authorization";
+  static constexpr char kExpect[] = "Expect";
+  static constexpr char kFrom[] = "From";
+  static constexpr char kIfMatch[] = "If-Match";
+  static constexpr char kIfNoneMatch[] = "If-None-Match";
+  static constexpr char kIfModifiedSince[] = "If-Modified-Since";
+  static constexpr char kIfUnmodifiedSince[] = "If-Unmodified-Since";
+  static constexpr char kRange[] = "Range";
+  static constexpr char kReferer[] = "Referer";
+  static constexpr char kTe[] = "TE";
+  static constexpr char kUpgrade[] = "Upgrade";
+  static constexpr char kCookie[] = "Cookie";
+  static constexpr char kLocation[] = "Location";
+  static constexpr char kServer[] = "Server";
+  static constexpr char kVary[] = "Vary";
+  static constexpr char kWwwAuthenticate[] = "WWW-Authenticate";
+  static constexpr char kContentLength[] = "Content-Length";
+  static constexpr char kContentType[] = "Content-Type";
+  static constexpr char kContentEncoding[] = "Content-Encoding";
+  static constexpr char kContentLanguage[] = "Content-Language";
+  static constexpr char kContentRange[] = "Content-Range";
+  static constexpr char kTrailer[] = "Trailer";
+  static constexpr char kTransferEncoding[] = "Transfer-Encoding";
+  static constexpr char kAllow[] = "Allow";
+  static constexpr char kRetryAfter[] = "Retry-After";
+  static constexpr char kAcceptRanges[] = "Accept-Ranges";
+  static constexpr char kETag[] = "ETAG";
+  static constexpr char kLastModified[] = "Last-Modified";
 };
 }  // namespace martianlabs::doba::protocol::http11
 

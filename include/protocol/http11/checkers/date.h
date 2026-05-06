@@ -142,12 +142,12 @@ static inline bool date(std::string_view v) {
   }
   if (!day_name_ok) return false;
   // [,<sp>]
-  if (v[3] != constants::character::kComma) return false;
-  if (v[4] != constants::character::kSpace) return false;
+  if (v[3] != ',') return false;
+  if (v[4] != ' ') return false;
   // [day]
   if (!helpers::is_digit(v[5]) || !helpers::is_digit(v[6])) return false;
   // [<sp>]
-  if (v[7] != constants::character::kSpace) return false;
+  if (v[7] != ' ') return false;
   // [month]
   bool month_name_ok = false;
   std::string_view month_name = v.substr(8, 3);
@@ -156,26 +156,26 @@ static inline bool date(std::string_view v) {
   }
   if (!month_name_ok) return false;
   // [<sp>]
-  if (v[11] != constants::character::kSpace) return false;
+  if (v[11] != ' ') return false;
   // [year]
   if (!helpers::is_digit(v[12]) || !helpers::is_digit(v[13]) ||
       !helpers::is_digit(v[14]) || !helpers::is_digit(v[15])) {
     return false;
   }
   // [<sp>]
-  if (v[16] != constants::character::kSpace) return false;
+  if (v[16] != ' ') return false;
   // [hour]
   if (!helpers::is_digit(v[17]) || !helpers::is_digit(v[18])) return false;
   // [:]
-  if (v[19] != constants::character::kColon) return false;
+  if (v[19] != ':') return false;
   // [minute]
   if (!helpers::is_digit(v[20]) || !helpers::is_digit(v[21])) return false;
   // [:]
-  if (v[22] != constants::character::kColon) return false;
+  if (v[22] != ':') return false;
   // [second]
   if (!helpers::is_digit(v[23]) || !helpers::is_digit(v[24])) return false;
   // [<sp>]
-  if (v[25] != constants::character::kSpace) return false;
+  if (v[25] != ' ') return false;
   // [GMT]
   if (v[26] != 'G' || v[27] != 'M' || v[28] != 'T') return false;
   return true;

@@ -67,25 +67,21 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#ifndef martianlabs_doba_protocol_http11_internal_header_marker_h
-#define martianlabs_doba_protocol_http11_internal_header_marker_h
+#ifndef martianlabs_doba_protocol_deserialization_h
+#define martianlabs_doba_protocol_deserialization_h
 
-#include "marker.h"
-
-namespace martianlabs::doba::protocol::http11::internal {
+namespace martianlabs::doba::protocol {
 // =============================================================================
-// header                                                             ( struct )
+// deserialization_result_code                                    ( enum-class )
 // -----------------------------------------------------------------------------
-// This structs holds for header name/value definitions.
+// This class holds for the result code on protocol deserialization processes.
 // -----------------------------------------------------------------------------
 // =============================================================================
-struct header_marker {
-  // ---------------------------------------------------------------------------
-  // ATTRIBUTEs                                                       ( public )
-  //
-  marker name = {0, 0};
-  marker value = {0, 0};
+enum class deserialization_result {
+  kSucceeded,        // everything went fine.
+  kInvalidSource,    // source data is invalid.
+  kMoreBytesNeeded,  // more bytes are needed to perform de-serialization.
 };
-}  // namespace martianlabs::doba::protocol::http11::internal
+}  // namespace martianlabs::doba::protocol
 
 #endif
