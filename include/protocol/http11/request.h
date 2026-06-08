@@ -113,38 +113,29 @@ class request {
   // ---------------------------------------------------------------------------
   // STATIC-METHODs                                                   ( public )
   //
-  static auto deserialize(const char* buffer, std::size_t length) {
-    auto deserialization_result =
-        std::make_tuple(deserialization_result::kSucceeded,
-                        std::shared_ptr<request>(), std::size_t{0});
-    auto& [result, req, bytes_consumed] = deserialization_result;
-    if (buffer == nullptr) {
-      result = deserialization_result::kInvalidSource;
-      return deserialization_result;
-    }
-    if (length == 0) {
-      result = deserialization_result::kMoreBytesNeeded;
-      return deserialization_result;
-    }
+  static deserialization_result deserialize(
+      const char* buffer, std::size_t length,
+      std::shared_ptr<request>& out_request, std::size_t& out_bytes_used) {
+    if (buffer == nullptr) return deserialization_result::kInvalidSource;
+    if (length == 0) return deserialization_result::kMoreBytesNeeded;
     // Let's create a new request instance!
-    req = std::make_shared<request>();
+    out_request = std::make_shared<request>();
     // Let's try to decode the status-line part!
-    std::size_t bytes_used = 0;
+    size_t used = 0;
     const char* end = &buffer[length];
-    result = req->decode_request_line(buffer, end, bytes_used);
-    if (result != deserialization_result::kSucceeded) {
-      return deserialization_result;
-    }
+    deserialization_result result =
+        out_request->decode_request_line(buffer, end, used);
+    if (result != deserialization_result::kSucceeded) return result;
     // Let's try to decode the headers part!
-    const char* ptr = &buffer[bytes_used];
-    bytes_consumed += bytes_used;
-    bytes_used = 0;
-    result = req->decode_headers(ptr, end, bytes_used);
+    const char* ptr = &buffer[used];
+    out_bytes_used += used;
+    used = 0;
+    result = out_request->decode_headers(ptr, end, used);
     if (result != deserialization_result::kSucceeded) {
-      return deserialization_result;
+      return result;
     }
-    bytes_consumed += bytes_used;
-    return deserialization_result;
+    out_bytes_used += used;
+    return deserialization_result::kSucceeded;
   }
 
  private:
@@ -268,9 +259,7 @@ class request {
           if (ptr < end && *ptr == '?') {
             bytes_used = 0;
             auto result = decode_query_part(++ptr, end, bytes_used);
-            if (result != deserialization_result::kSucceeded) {
-              return result;
-            }
+            if (result != deserialization_result::kSucceeded) return result;
             ptr += bytes_used;
           }
           break;
@@ -442,7 +431,7 @@ class request {
       }
       if (fns == ptr) return deserialization_result::kInvalidSource;
       std::size_t fnl = ptr - fns;
-      ptr++; // due to ':' character.
+      ptr++;  // due to ':' character.
       // [field-value] decoding..
       if (ptr >= end) return deserialization_result::kMoreBytesNeeded;
       const char* fvs = ptr;
@@ -489,6 +478,7 @@ class request {
   std::string query_part_;
   std::string absolute_path_;
   std::vector<std::pair<std::string, std::string>> headers_;
+  std::vector<std::pair<std::string, std::string>> query_parameters_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

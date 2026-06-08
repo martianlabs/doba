@@ -71,6 +71,9 @@
 #define martianlabs_doba_common_date_server_h
 
 #include <atomic>
+#include <chrono>
+#include <cstring>
+#include <string_view>
 #include <thread>
 
 #include "date_server_helpers.h"
@@ -79,14 +82,17 @@ namespace martianlabs::doba::common {
 // =============================================================================
 // date_server                                                         ( class )
 // -----------------------------------------------------------------------------
-// This class holds for a highly optimized dates server.
+// This specification holds for a [cross-platform] date server implementation
 // -----------------------------------------------------------------------------
 // =============================================================================
 class date_server {
   // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                        ( private )
   //
-  date_server() = default;
+  date_server() {
+    write_date(slot_a_.text);
+    front_.store(&slot_a_, std::memory_order_release);
+  }
 
  public:
   // ---------------------------------------------------------------------------
@@ -101,68 +107,97 @@ class date_server {
   date_server& operator=(const date_server&) = delete;
   date_server& operator=(date_server&&) noexcept = delete;
   // ---------------------------------------------------------------------------
-  // STATIC-METHODs                                                   ( public )
-  //
-  static std::shared_ptr<date_server> get() {
-    static std::atomic<std::shared_ptr<date_server>> instance_atomic{nullptr};
-    std::shared_ptr<date_server> expected = nullptr;
-    instance_atomic.compare_exchange_strong(
-        expected, std::shared_ptr<date_server>(new date_server()),
-        std::memory_order_acq_rel);
-    return instance_atomic.load(std::memory_order_acquire);
-  }
-  // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
+  static date_server& get() {
+    static date_server instance;
+    return instance;
+  }
   void start() {
-    if (!running_.exchange(true, std::memory_order_acq_rel)) {
-      thread_ = std::thread([this] {
-        bool toggle = false;
-        while (running_.load(std::memory_order_acquire)) {
-          std::time_t now = std::time(nullptr);
-          std::tm gmt{};
-          gm_time(&gmt, &now);
-          char* target = toggle ? buf_a_ : buf_b_;
-          std::snprintf(target, kBufSize, "%s, %02d %s %04d %02d:%02d:%02d GMT",
-                        kWeekDays[gmt.tm_wday], gmt.tm_mday,
-                        kMonths[gmt.tm_mon], 1900 + gmt.tm_year, gmt.tm_hour,
-                        gmt.tm_min, gmt.tm_sec);
-
-          front_.store(target, std::memory_order_release);
-          toggle = !toggle;
-          std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
-      });
+    bool expected = false;
+    if (!running_.compare_exchange_strong(expected, true,
+                                          std::memory_order_acq_rel,
+                                          std::memory_order_acquire)) {
+      return;
     }
+    jthread_ = std::jthread([this] {
+      slot* next = &slot_b_;
+      while (running_.load(std::memory_order_acquire)) {
+        write_date(next->text);
+        front_.store(next, std::memory_order_release);
+        next = next == &slot_a_ ? &slot_b_ : &slot_a_;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+      }
+    });
   }
   void stop() {
-    if (running_.exchange(false, std::memory_order_acq_rel)) {
-      if (thread_.joinable()) {
-        thread_.join();
-      }
-      front_.store(buf_a_, std::memory_order_release);
-    }
+    if (!running_.exchange(false, std::memory_order_acq_rel)) return;
   }
-  std::string_view current() { return front_.load(std::memory_order_acquire); }
+  std::string_view current() const noexcept {
+    const slot* s = front_.load(std::memory_order_acquire);
+    return {s->text, kDateLen};
+  }
 
  private:
   // ---------------------------------------------------------------------------
   // CONSTANTs                                                       ( private )
   //
-  static constexpr std::size_t kBufSize = 64;
+  static constexpr std::size_t kDateLen = 29;
+  static constexpr std::size_t kBufSize = kDateLen + 1;
   static constexpr const char* kWeekDays[] = {"Sun", "Mon", "Tue", "Wed",
                                               "Thu", "Fri", "Sat"};
   static constexpr const char* kMonths[] = {"Jan", "Feb", "Mar", "Apr",
                                             "May", "Jun", "Jul", "Aug",
                                             "Sep", "Oct", "Nov", "Dec"};
   // ---------------------------------------------------------------------------
+  // STRUCTs                                                         ( private )
+  //
+  struct slot {
+    char text[kBufSize]{};
+  };
+  // ---------------------------------------------------------------------------
+  // METHODs                                                         ( private )
+  //
+  static void two_digits(char* out, int value) noexcept {
+    out[0] = static_cast<char>('0' + value / 10);
+    out[1] = static_cast<char>('0' + value % 10);
+  }
+  static void four_digits(char* out, int value) noexcept {
+    out[0] = static_cast<char>('0' + value / 1000 % 10);
+    out[1] = static_cast<char>('0' + value / 100 % 10);
+    out[2] = static_cast<char>('0' + value / 10 % 10);
+    out[3] = static_cast<char>('0' + value % 10);
+  }
+  static void write_date(char* out) noexcept {
+    std::time_t now = std::time(nullptr);
+    std::tm gmt{};
+    gm_time(&gmt, &now);
+    std::memcpy(out + 0, kWeekDays[gmt.tm_wday], 3);
+    out[3] = ',';
+    out[4] = ' ';
+    two_digits(out + 5, gmt.tm_mday);
+    out[7] = ' ';
+    std::memcpy(out + 8, kMonths[gmt.tm_mon], 3);
+    out[11] = ' ';
+    four_digits(out + 12, 1900 + gmt.tm_year);
+    out[16] = ' ';
+    two_digits(out + 17, gmt.tm_hour);
+    out[19] = ':';
+    two_digits(out + 20, gmt.tm_min);
+    out[22] = ':';
+    two_digits(out + 23, gmt.tm_sec);
+    out[25] = ' ';
+    std::memcpy(out + 26, "GMT", 3);
+    out[29] = '\0';
+  }
+  // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
+  std::atomic<const slot*> front_{&slot_a_};
   std::atomic<bool> running_{false};
-  std::thread thread_;
-  char buf_a_[kBufSize]{};
-  char buf_b_[kBufSize]{};
-  std::atomic<const char*> front_{buf_a_};
+  std::jthread jthread_;
+  slot slot_a_{};
+  slot slot_b_{};
 };
 }  // namespace martianlabs::doba::common
 

@@ -183,7 +183,7 @@ class server {
   // METHODs                                                          ( public )
   //
   void start(const char port[]) {
-    common::date_server::get()->start();
+    common::date_server::get().start();
     thread_pool_ = std::make_shared<common::thread_pool>(
         std::thread::hardware_concurrency() / 2);
     transport_.start(port);
@@ -204,7 +204,7 @@ class server {
   // ATTRIBUTEs                                                      ( private )
   //
   std::shared_ptr<common::thread_pool> thread_pool_;
-  TRty<request, response, 4096> transport_;
+  TRty<request, response, 8192> transport_;
   router<router_fn> router_;
 };
 }  // namespace martianlabs::doba::protocol::http11

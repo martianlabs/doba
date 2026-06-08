@@ -97,11 +97,32 @@ class response {
   // METHODs                                                          ( public )
   //
   std::string_view serialize() {
-    buffer_.assign(status_line_).append(headers_).append("\r\n").append(body_);
-    return std::string_view(buffer_);
+    std::size_t sln_plus_hdr_len = sln_len_ + hdr_len_;
+    memory_[sln_plus_hdr_len++] = '\r';
+    memory_[sln_plus_hdr_len++] = '\n';
+    if (!hdr_len_) {
+      memory_[sln_plus_hdr_len++] = '\r';
+      memory_[sln_plus_hdr_len++] = '\n';
+    }
+    std::size_t end_of_core = sln_plus_hdr_len;
+    std::memmove(&memory_[end_of_core], &memory_[bdy_beg_], bdy_len_);
+    return memory_;
   }
   response& add_header(std::string_view k, std::string_view v) {
-    headers_.append(k).append(": ").append(v).append("\r\n");
+    std::size_t k_size = k.size();
+    std::size_t v_size = v.size();
+    std::size_t space_left = bdy_beg_ - sln_len_ - hdr_len_;
+    if (k_size + v_size + 3 > space_left) return *this;
+    std::memcpy(&memory_[sln_len_ + hdr_len_], k.data(), k.size());
+    hdr_len_ += k.size();
+    memory_[sln_len_ + hdr_len_] = ':';
+    hdr_len_++;
+    std::memcpy(&memory_[sln_len_ + hdr_len_], v.data(), v.size());
+    hdr_len_ += v.size();
+    memory_[sln_len_ + hdr_len_] = '\r';
+    hdr_len_++;
+    memory_[sln_len_ + hdr_len_] = '\n';
+    hdr_len_++;
     return *this;
   }
   template <typename T>
@@ -110,8 +131,11 @@ class response {
     return add_header(key, std::to_string(val));
   }
   response& set_body(std::string_view sv) {
-    body_ = sv;
-    return add_header(headers::kContentLength, sv.length());
+    std::size_t body_size = sv.size();
+    if (body_size > kMaxBodySizeInMemory) return *this;
+    std::memcpy(&memory_[bdy_beg_], sv.data(), body_size);
+    bdy_len_ = body_size;
+    return *this;
   }
   template <typename T>
     requires std::is_arithmetic_v<T>
@@ -167,19 +191,28 @@ class response {
 
  private:
   // ---------------------------------------------------------------------------
+  // CONSTANTs                                                       ( private )
+  //
+  static constexpr std::size_t kMaxSizeInMemory = 8192;
+  static constexpr std::size_t kMaxBodySizeInMemory = 4096;
+  // ---------------------------------------------------------------------------
   // METHODs                                                         ( private )
   //
   response& sln(auto&& status_line) {
-    status_line_.assign(status_line);
+    sln_len_ = strlen(status_line);
+    std::memcpy(memory_, status_line, sln_len_);
+    hdr_len_ = 0;
+    bdy_len_ = 0;
     return *this;
   }
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
-  std::string buffer_;
-  std::string status_line_;
-  std::string headers_;
-  std::string body_;
+  char memory_[kMaxSizeInMemory];
+  std::size_t sln_len_{0};
+  std::size_t hdr_len_{0};
+  std::size_t bdy_beg_{kMaxSizeInMemory - kMaxBodySizeInMemory};
+  std::size_t bdy_len_{0};
   std::shared_ptr<std::istream> body_stream_;
 };
 }  // namespace martianlabs::doba::protocol::http11

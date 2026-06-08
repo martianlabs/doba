@@ -71,6 +71,7 @@
 #define martianlabs_doba_transport_server_tcpip_windows_h
 
 #include <mswsock.h>
+
 #include <functional>
 #include <unordered_set>
 
@@ -105,21 +106,77 @@ class tcpip {
     context& operator=(const context&) = delete;
     context& operator=(context&&) noexcept = delete;
     ~context() { contexts_in_use_--; }
-    static bool empty() { return contexts_in_use_ == 0; }
-    static inline std::atomic<std::size_t> contexts_in_use_;
+    // [context] handling methods
+    static inline bool empty() { return contexts_in_use_ == 0; }
+    static inline std::atomic<std::size_t> contexts_in_use_{0};
+    inline bool prepareForClosing() {
+      bool expected = false;
+      if (closing.compare_exchange_strong(expected, true)) {
+        std::lock_guard<std::mutex> lock(pending_responses_mutex);
+        pending_responses = {};
+        ovr->ctx.reset();
+        ovs->ctx.reset();
+        closesocket(socket);
+        socket = INVALID_SOCKET;
+      }
+      return expected;
+    }
+    // [context] attributes
     std::atomic<bool> closing{false};
-    bool sending{false};
-    std::queue<std::shared_ptr<RSty>> responses;
-    std::mutex responses_mutex;
-    overlapped_receive* ovr{nullptr};
-    overlapped_send* ovs{nullptr};
-    WSABUF wsa_rcv{};
-    WSABUF wsa_snd{};
-    CHAR rcv_buf[BFsz]{};
-    CHAR* snd_buf{nullptr};
-    ULONG rcv_len{0};
-    ULONG snd_len{0};
     SOCKET socket;
+    // [receiving] attributes
+    overlapped_receive* ovr{nullptr};
+    CHAR rcv_buf[BFsz]{0};
+    WSABUF wsa_rcv{0};
+    ULONG rcv_len{0};
+    // [sending] attributes
+    overlapped_send* ovs{nullptr};
+    WSABUF wsa_snd{0};
+    ULONG snd_len{0};
+    ULONG snd_acc{0};
+    // [responses] attributes
+    std::queue<std::unique_ptr<std::string>> pending_responses;
+    std::unique_ptr<std::string> response_in_course{nullptr};
+    std::mutex pending_responses_mutex;
+    bool sending{false};
+    // [responses] handling methods
+    void pusPendingResponse(std::unique_ptr<std::string> response) {
+      std::lock_guard<std::mutex> lock(pending_responses_mutex);
+      pending_responses.push(std::move(response));
+    }
+    bool popPendingResponseAndSend(DWORD bytes_received = 0) {
+      std::lock_guard<std::mutex> lock(pending_responses_mutex);
+      snd_acc += bytes_received;
+      sending = snd_acc < snd_len;
+      if (sending) return true;
+      response_in_course = nullptr;
+      if (pending_responses.empty()) return true;
+      std::unique_ptr<std::string> response =
+          std::move(pending_responses.front());
+      pending_responses.pop();
+      sending = send(std::move(response));
+      return sending;
+    }
+    // [i/o] handling methods
+    bool receive() {
+      DWORD f = 0, r = 0;
+      std::memset(&wsa_snd, 0, sizeof(WSABUF));
+      wsa_rcv.buf = &rcv_buf[rcv_len];
+      wsa_rcv.len = BFsz - rcv_len;
+      int res = WSARecv(socket, &wsa_rcv, 1, &r, &f, ovr, 0);
+      return !(res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING);
+    }
+    bool send(std::unique_ptr<std::string> buffer) {
+      DWORD f = 0, s = 0;
+      snd_acc = 0;
+      snd_len = buffer->size();
+      std::memset(&wsa_snd, 0, sizeof(WSABUF));
+      wsa_snd.buf = buffer->data();
+      wsa_snd.len = snd_len;
+      response_in_course = std::move(buffer);
+      int res = WSASend(socket, &wsa_snd, 1, &s, f, ovs, 0);
+      return !(res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING);
+    }
   };
   enum class io_type : uint8_t { kAccept, kSend, kReceive, kStop };
   struct overlapped_base : OVERLAPPED {
@@ -177,7 +234,7 @@ class tcpip {
     // Let's setup all the required resources..
     auto workers = setupListener(port);
     setupWorkers(workers);
-    setupAcceptPipeline(std::max<std::size_t>(2, workers * 2));
+    setupAcceptPipeline(std::max<std::size_t>(2, workers));
   }
   void stop() {
     if (io_h_ == nullptr) return;
@@ -188,11 +245,6 @@ class tcpip {
     if (io_h_ != nullptr) {
       for (std::size_t i = 0; i < workers_.size(); i++) {
         PostQueuedCompletionStatus(io_h_, 0, 0, new overlapped_stop());
-      }
-    }
-    for (auto& worker : workers_) {
-      if (worker.joinable()) {
-        worker.join();
       }
     }
     workers_.clear();
@@ -237,8 +289,7 @@ class tcpip {
   }
   std::size_t setupListener(const char port[]) {
     // Let's use our help class to create a cpu pinning plan!
-    auto hc = std::thread::hardware_concurrency();
-    auto workers = std::max(1u, hc ? hc / 2 : 1u);
+    std::size_t workers = std::thread::hardware_concurrency();
     // Let's create our main i/o completion port!
     HANDLE ioh = CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0, workers);
     if (ioh == NULL) {
@@ -306,7 +357,7 @@ class tcpip {
   }
   void setupWorkers(std::size_t number_of_workers) {
     for (std::size_t i = 0; i < number_of_workers; i++) {
-      workers_.emplace_back(std::thread([this]() {
+      workers_.emplace_back(std::jthread([this]() {
         bool stopping = false;
         while (true) {
           ULONG_PTR key = NULL;
@@ -375,7 +426,7 @@ class tcpip {
       return;
     }
     // Let's arm next receive operation!
-    if (!receive(ctx)) {
+    if (!ctx->receive()) {
       closesocket(ova->socket);
       return;
     }
@@ -390,88 +441,84 @@ class tcpip {
       }
     }
   }
-  void handleReceive(std::shared_ptr<context> ctx, DWORD bytes) {
+  void handleReceive(std::shared_ptr<context> ctx, DWORD bytes_received) {
     // If the associated context is in 'closing' status then the operation is
     // discarded and no actions are performed!
     if (!ctx || ctx->closing.load()) return;
     // Any of the following situations will trigger a disconnection!
-    if (!on_request_ || !bytes || (ctx->rcv_len + bytes) >= BFsz) {
+    if (!on_request_ || !bytes_received) {
       markContextForClosing(ctx);
       return;
     }
-    ctx->rcv_len += bytes;
-    // Now we will perform the request decoding phase!
-    while (true) {
-      auto [code, req, bytes] = RQty::deserialize(ctx->rcv_buf, ctx->rcv_len);
-      // Let's close this context if bytes consumed make no sense!
-      if (bytes > ctx->rcv_len) {
-        markContextForClosing(ctx);
-        return;
-      }
-      if (code == protocol::deserialization_result::kSucceeded) {
-        // In case of 'succeeded' operation, bytes can NOT be zero!
-        if (bytes == 0) {
-          markContextForClosing(ctx);
-          return;
-        }
-        // Let's call user handler!
-        std::shared_ptr<RSty> res = std::make_shared<RSty>();
-        on_request_(req, res, [this, ctx](std::shared_ptr<RSty> res) {
-          // If the associated context is in 'closing' status then the operation
-          // is discarded and no actions are performed!
-          if (!ctx || ctx->closing.load()) return;
-          std::unique_lock<std::mutex> responses_lock(ctx->responses_mutex);
-          // Let's enqueue incoming robs to the parent context queue!
-          ctx->responses.push(res);
-          // If a sending is in course, then return!
-          if (ctx->sending) return;
-          // Let's try to drain robs queue and send!
-          tryToDrainRobsAndSend(ctx);
-        });
-        if (ctx->rcv_len > bytes) {
-          std::memmove(ctx->rcv_buf, &ctx->rcv_buf[bytes],
-                       ctx->rcv_len - bytes);
-        }
-        ctx->rcv_len -= bytes;
-        continue;
-      } else if (code == protocol::deserialization_result::kMoreBytesNeeded) {
+    ctx->rcv_len += bytes_received;
+    // Now, we'll try to decode as many requests as possible..
+    DWORD oin = 0;
+    std::shared_ptr<RQty> req;
+    std::size_t bytes_used_on_deserialization = 0;
+    std::unique_ptr<std::string> out = std::make_unique<std::string>();
+    while (oin < ctx->rcv_len) {
+      std::size_t space_left_in = ctx->rcv_len - oin;
+      protocol::deserialization_result result =
+          RQty::deserialize(&ctx->rcv_buf[oin], space_left_in, req = nullptr,
+                            bytes_used_on_deserialization = 0);
+      if (result == protocol::deserialization_result::kMoreBytesNeeded) {
         // In case of 'failed' operation, bytes can NOT be greater than zero!
-        if (bytes < 0) {
+        if (bytes_used_on_deserialization > 0) {
           markContextForClosing(ctx);
           return;
         }
         break;
-      } else {
-        // For any other result code we'll mark this context as 'closing'..
+      }
+      if (result == protocol::deserialization_result::kInvalidSource) {
+        // In this case we'll mark this context as 'closing'..
         markContextForClosing(ctx);
         return;
       }
+      // In case of 'succeeded' operation, consumed bytes can NOT be zero!
+      // Also, used bytes in deserialization must be within valid memory range!
+      if (bytes_used_on_deserialization == 0 ||
+          bytes_used_on_deserialization > (space_left_in)) {
+        markContextForClosing(ctx);
+        return;
+      }
+      // In case of 'succeeded' operation, returned request cannot be NULL!
+      if (req == nullptr) {
+        markContextForClosing(ctx);
+        return;
+      }
+      // Let's call user handler!
+      std::shared_ptr<RSty> res = std::make_shared<RSty>();
+      on_request_(req, res, [this, ctx, &out](std::shared_ptr<RSty> res) {
+        // If the associated context is in 'closing' status then the operation
+        // is discarded and no actions are performed!
+        if (!ctx || ctx->closing.load()) return;
+        // Let's append this response to the outgoing buffer!
+        out->append(res->serialize());
+      });
+      oin += bytes_used_on_deserialization;
+    }
+    ctx->rcv_len -= oin;
+    ctx->pusPendingResponse(std::move(out));
+    // Let's arm send operation!
+    if (!ctx->popPendingResponseAndSend()) {
+      markContextForClosing(ctx);
+      return;
     }
     // Let's arm next receive operation!
-    if (!receive(ctx)) markContextForClosing(ctx);
+    if (!ctx->receive()) {
+      markContextForClosing(ctx);
+      return;
+    }
   }
   void handleSend(std::shared_ptr<context> ctx, DWORD bytes) {
     // If the associated context is in 'closing' status then the operation is
     // discarded and no actions are performed!
     if (!ctx || ctx->closing.load()) return;
-    std::unique_lock<std::mutex> responses_lock(ctx->responses_mutex);
-    // Let's check for abnormal situations!
-    if (bytes > ctx->snd_len) {
+    // Let's arm send operation!
+    if (!ctx->popPendingResponseAndSend(bytes)) {
       markContextForClosing(ctx);
       return;
     }
-    ctx->snd_buf += bytes;
-    ctx->snd_len -= bytes;
-    // Now we need to check if there are bytes pending to be sent..
-    if (ctx->snd_len) {
-      ctx->sending = send(ctx);
-      return;
-    }
-    // If we reached this point it means that we have a valid response in
-    // queue and we completed the sending action!
-    ctx->responses.pop();
-    // Let's try to drain robs queue and send!
-    tryToDrainRobsAndSend(ctx);
   }
   void handleError(overlapped_base* ovb) {
     if (ovb->ctx) markContextForClosing(ovb->ctx);
@@ -482,15 +529,8 @@ class tcpip {
     }
   }
   void markContextForClosing(std::shared_ptr<context> ctx) {
-    bool expected = false;
-    if (ctx->closing.compare_exchange_strong(expected, true)) {
-      std::unique_lock<std::mutex> responses_lock(ctx->responses_mutex);
-      ctx->responses = {};
-      ctx->sending = false;
-      ctx->ovr->ctx = nullptr;
-      ctx->ovs->ctx = nullptr;
-      closesocket(ctx->socket);
-      ctx->socket = INVALID_SOCKET;
+    // Let's prepare this context for closing!
+    if (ctx && ctx->prepareForClosing()) {
       // Let's call user's callback to notify for disconnection!
       if (on_client_disconnected_) {
         try {
@@ -503,39 +543,6 @@ class tcpip {
       }
     }
   }
-  void tryToDrainRobsAndSend(std::shared_ptr<context> ctx) {
-    ctx->snd_buf = nullptr;
-    ctx->snd_len = 0;
-    ctx->wsa_snd.buf = nullptr;
-    ctx->wsa_snd.len = 0;
-    ctx->sending = false;
-    while (!ctx->responses.empty()) {
-      std::string_view serialized = ctx->responses.front()->serialize();
-      if (!serialized.length()) {
-        ctx->responses.pop();
-        continue;
-      }
-      ctx->snd_buf = const_cast<CHAR*>(serialized.data());
-      ctx->snd_len = serialized.length();
-      break;
-    }
-    if (!ctx->snd_len) return;
-    ctx->sending = send(ctx);
-  }
-  bool receive(std::shared_ptr<context> ctx) {
-    DWORD f = 0, r = 0;
-    ctx->wsa_rcv.buf = &ctx->rcv_buf[ctx->rcv_len];
-    ctx->wsa_rcv.len = BFsz - ctx->rcv_len;
-    int res = WSARecv(ctx->socket, &ctx->wsa_rcv, 1, &r, &f, ctx->ovr, 0);
-    return !(res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING);
-  }
-  bool send(std::shared_ptr<context> ctx) {
-    DWORD f = 0, s = 0;
-    ctx->wsa_snd.buf = ctx->snd_buf;
-    ctx->wsa_snd.len = ctx->snd_len;
-    int res = WSASend(ctx->socket, &ctx->wsa_snd, 1, &s, f, ctx->ovs, 0);
-    return !(res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING);
-  }
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
@@ -543,7 +550,7 @@ class tcpip {
   SOCKET accept_socket_ = INVALID_SOCKET;
   LPFN_ACCEPTEX accept_ex_ = nullptr;
   std::size_t accept_depth_ = 0;
-  std::vector<std::thread> workers_;
+  std::vector<std::jthread> workers_;
   on_request_fn on_request_;
   on_client_connected_fn on_client_connected_;
   on_client_disconnected_fn on_client_disconnected_;
