@@ -69,7 +69,6 @@
 
 #include <csignal>
 
-#include "builder/builder.h"
 #include "network/environment.h"
 #include "protocol/http11/server.h"
 

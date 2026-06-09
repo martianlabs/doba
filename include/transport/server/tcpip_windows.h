@@ -223,8 +223,14 @@ class tcpip {
   using on_send_fn = std::function<void(std::shared_ptr<RSty>)>;
   using on_request_fn = std::function<void(std::shared_ptr<const RQty>,
                                            std::shared_ptr<RSty>, on_send_fn)>;
-  using on_client_connected_fn = std::function<void()>;
-  using on_client_disconnected_fn = std::function<void()>;
+  using on_connection_fn = std::function<void()>;
+  using on_disconnection_fn = std::function<void()>;
+  // ---------------------------------------------------------------------------
+  // PROPERTIEs                                                       ( public )
+  //
+  on_request_fn onRequest;
+  on_connection_fn onConnection;
+  on_disconnection_fn onDisconnection;
   // ---------------------------------------------------------------------------
   // METHODs                                                          ( public )
   //
@@ -256,19 +262,7 @@ class tcpip {
       io_h_ = nullptr;
     }
   }
-  template <typename Fn>
-  void setOnRequest(Fn&& fn) {
-    on_request_ = std::forward<Fn>(fn);
-  }
-  template <typename Fn>
-  void setOnConnection(Fn&& fn) {
-    on_client_connected_ = std::forward<Fn>(fn);
-  }
-  template <typename Fn>
-  void setOnDisconnection(Fn&& fn) {
-    on_client_disconnected_ = std::forward<Fn>(fn);
-  }
-
+  
  private:
   // ---------------------------------------------------------------------------
   // METHODs                                                         ( private )
@@ -432,14 +426,14 @@ class tcpip {
       return;
     }
     // Let's call user's callback to notify for new connection!
-    if (on_client_connected_) {
-      try {
-        on_client_connected_();
-      } catch (const std::exception& ex) {
-        markContextForClosing(ctx);
-      } catch (...) {
-        markContextForClosing(ctx);
-      }
+    try {
+      onConnection();
+    } catch (const std::exception& ex) {
+      markContextForClosing(ctx);
+      return;
+    } catch (...) {
+      markContextForClosing(ctx);
+      return;
     }
   }
   void handleReceive(std::shared_ptr<context> ctx, DWORD bytes_received) {
@@ -447,7 +441,7 @@ class tcpip {
     // discarded and no actions are performed!
     if (!ctx || ctx->closing.load()) return;
     // Any of the following situations will trigger a disconnection!
-    if (!on_request_ || !bytes_received) {
+    if (!bytes_received) {
       markContextForClosing(ctx);
       return;
     }
@@ -489,13 +483,21 @@ class tcpip {
       }
       // Let's call user handler!
       std::shared_ptr<RSty> res = std::make_shared<RSty>();
-      on_request_(req, res, [this, ctx, &out](std::shared_ptr<RSty> res) {
-        // If the associated context is in 'closing' status then the operation
-        // is discarded and no actions are performed!
-        if (!ctx || ctx->closing.load()) return;
-        // Let's append this response to the outgoing buffer!
-        out->append(res->serialize());
-      });
+      try {
+        onRequest(req, res, [this, ctx, &out](std::shared_ptr<RSty> res) {
+          // If the associated context is in 'closing' status then the operation
+          // is discarded and no actions are performed!
+          if (!ctx || ctx->closing.load()) return;
+          // Let's append this response to the outgoing buffer!
+          out->append(res->serialize());
+        });
+      } catch (const std::exception& ex) {
+        markContextForClosing(ctx);
+        return;
+      } catch (...) {
+        markContextForClosing(ctx);
+        return;
+      }
       oin += bytes_used_on_deserialization;
     }
     ctx->rcv_len -= oin;
@@ -533,14 +535,14 @@ class tcpip {
     // Let's prepare this context for closing!
     if (ctx && ctx->prepareForClosing()) {
       // Let's call user's callback to notify for disconnection!
-      if (on_client_disconnected_) {
-        try {
-          on_client_disconnected_();
-        } catch (const std::exception& ex) {
-          // [to-do] -> this is a critical error!
-        } catch (...) {
-          // [to-do] -> this is a critical error!
-        }
+      try {
+        onDisconnection();
+      } catch (const std::exception& ex) {
+        markContextForClosing(ctx);
+        return;
+      } catch (...) {
+        markContextForClosing(ctx);
+        return;
       }
     }
   }
@@ -552,9 +554,6 @@ class tcpip {
   LPFN_ACCEPTEX accept_ex_ = nullptr;
   std::size_t accept_depth_ = 0;
   std::vector<std::jthread> workers_;
-  on_request_fn on_request_;
-  on_client_connected_fn on_client_connected_;
-  on_client_disconnected_fn on_client_disconnected_;
 };
 }  // namespace martianlabs::doba::transport::server
 

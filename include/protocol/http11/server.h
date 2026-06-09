@@ -103,9 +103,8 @@ class server {
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   server() {
-    transport_.setOnRequest([this](std::shared_ptr<const request> req,
-                                   std::shared_ptr<response> res,
-                                   auto on_send) {
+    transport_.onRequest = [this](std::shared_ptr<const request> req,
+                                  std::shared_ptr<response> res, auto on_send) {
       switch (req->get_target()) {
         case target::kOriginForm:
         case target::kAbsoluteForm: {
@@ -137,24 +136,26 @@ class server {
         default:
           break;
       }
-    });
-    transport_.setOnConnection([]() {
+    };
+    transport_.onConnection = []() {
       /*
       pepe
       */
+
       /*
       static std::size_t connections = 0;
       static std::mutex mtx;
       std::lock_guard<std::mutex> lock(mtx);
-      printf(">>> [%d] CLIENT-CONNECTED (%zd in total)!!!\n", clock(),
+      printf(">>> [%d] CLIENT-CONNECTED (%zd in
+      total)!!!\n", clock(),
       ++connections);
       */
+
       /*
       pepe fin
       */
-      // nothing to do here by default..
-    });
-    transport_.setOnDisconnection([]() {
+    };
+    transport_.onDisconnection = []() {
       /*
       pepe
       */
@@ -169,7 +170,7 @@ class server {
       pepe fin
       */
       // nothing to do here by default..
-    });
+    };
   }
   server(const server&) = delete;
   server(server&&) noexcept = delete;
