@@ -70,6 +70,9 @@
 #ifndef martianlabs_doba_builder_builder_h
 #define martianlabs_doba_builder_builder_h
 
+#include <memory>
+#include <concepts>
+
 #include "builder/property.h"
 
 namespace martianlabs::doba::builder {
@@ -83,25 +86,27 @@ namespace martianlabs::doba::builder {
 //    INty - instance type being provided.
 // =============================================================================
 template <typename DEty, typename INty>
-class base_builder {
+  requires(
+      requires(DEty& d) {
+        { d.build() } -> std::same_as<std::shared_ptr<INty>>;
+      } ||
+      requires(const DEty& d) {
+        { d.build() } -> std::same_as<std::shared_ptr<INty>>;
+      })
+class builder {
  public:
   // ___________________________________________________________________________
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
-  base_builder() {
-    static_assert(
-        requires(DEty d) {
-          { d.build() } -> std::same_as<std::shared_ptr<INty>>;
-        }, "((error)) - builder class must implement build() method!");
-  }
-  base_builder(const base_builder&) = delete;
-  base_builder(base_builder&&) noexcept = delete;
-  ~base_builder() = default;
+  builder() = default;
+  builder(const builder&) = delete;
+  builder(builder&&) noexcept = delete;
+  ~builder() = default;
   // ___________________________________________________________________________
   // OPERATORs                                                        ( public )
   //
-  base_builder& operator=(const base_builder&) = delete;
-  base_builder& operator=(base_builder&&) noexcept = delete;
+  builder& operator=(const builder&) = delete;
+  builder& operator=(builder&&) noexcept = delete;
 };
 }  // namespace martianlabs::doba::builder
 

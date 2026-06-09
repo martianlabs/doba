@@ -118,8 +118,9 @@ class tcpip {
         ovs->ctx.reset();
         closesocket(socket);
         socket = INVALID_SOCKET;
+        return true;
       }
-      return expected;
+      return false;
     }
     // [context] attributes
     std::atomic<bool> closing{false};
