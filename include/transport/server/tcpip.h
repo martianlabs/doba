@@ -73,6 +73,25 @@
 #include "platform.h"
 
 // =============================================================================
+// platform-independent types
+// =============================================================================
+namespace martianlabs::doba::transport::server {
+struct types {
+  template <typename RSty>
+  using on_send_delegate = std::function<void(std::shared_ptr<RSty>)>;
+  template <typename RQty, typename RSty>
+  using on_request_delegate =
+      std::function<void(std::shared_ptr<const RQty>, std::shared_ptr<RSty>,
+                         on_send_delegate<RSty>)>;
+  template <typename RSty>
+  using on_bad_request_delegate =
+      std::function<void(std::string_view, std::shared_ptr<RSty>)>;
+  using on_client_connected_delegate = std::function<void()>;
+  using on_client_disconnected_delegate = std::function<void()>;
+};
+}  // namespace martianlabs::doba::transport::server
+
+// =============================================================================
 // platform-dependent includes
 // =============================================================================
 #ifdef _WIN32

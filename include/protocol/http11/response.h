@@ -94,7 +94,7 @@ class response {
   response& operator=(const response&) = delete;
   response& operator=(response&& in) noexcept = delete;
   // ---------------------------------------------------------------------------
-  // METHODs                                                          ( public )
+  // serialize                                                        ( public )
   //
   std::string_view serialize() {
     std::size_t sln_plus_hdr_len = sln_len_ + hdr_len_;
@@ -108,6 +108,9 @@ class response {
     std::memmove(&memory_[end_of_core], &memory_[bdy_beg_], bdy_len_);
     return memory_;
   }
+  // ---------------------------------------------------------------------------
+  // add_header                                                       ( public )
+  //
   response& add_header(std::string_view k, std::string_view v) {
     std::size_t k_size = k.size();
     std::size_t v_size = v.size();
@@ -125,11 +128,17 @@ class response {
     hdr_len_++;
     return *this;
   }
+  // ---------------------------------------------------------------------------
+  // add_header                                                       ( public )
+  //
   template <typename T>
     requires std::is_arithmetic_v<T>
   response& add_header(std::string_view key, const T& val) {
     return add_header(key, std::to_string(val));
   }
+  // ---------------------------------------------------------------------------
+  // set_body                                                         ( public )
+  //
   response& set_body(std::string_view sv) {
     std::size_t body_size = sv.size();
     if (body_size > kMaxBodySizeInMemory) return *this;
@@ -137,11 +146,17 @@ class response {
     bdy_len_ = body_size;
     return *this;
   }
+  // ---------------------------------------------------------------------------
+  // set_body                                                         ( public )
+  //
   template <typename T>
     requires std::is_arithmetic_v<T>
   response& set_body(T&& val) {
     return set_body(std::to_string(val));
   }
+  // ---------------------------------------------------------------------------
+  // STATUS-LINE-METHODs                                              ( public )
+  //
   response& continue_100() { return sln(status_line::k100); }
   response& switching_protocols_101() { return sln(status_line::k101); }
   response& ok_200() { return sln(status_line::k200); }
@@ -196,7 +211,7 @@ class response {
   static constexpr std::size_t kMaxSizeInMemory = 8192;
   static constexpr std::size_t kMaxBodySizeInMemory = 4096;
   // ---------------------------------------------------------------------------
-  // METHODs                                                         ( private )
+  // sln                                                             ( private )
   //
   response& sln(auto&& status_line) {
     sln_len_ = strlen(status_line);
@@ -208,7 +223,7 @@ class response {
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
-  char memory_[kMaxSizeInMemory];
+  char memory_[kMaxSizeInMemory]{0};
   std::size_t sln_len_{0};
   std::size_t hdr_len_{0};
   std::size_t bdy_beg_{kMaxSizeInMemory - kMaxBodySizeInMemory};

@@ -78,35 +78,34 @@
 
 namespace martianlabs::doba::protocol::http11::checkers {
 // +===========================================================================+
-// |                                                            content-length |
+// |                                                            content_length |
 // +===========================================================================+
-// | RFC 9110 §8.6 - Content-Length                                            |
+// | RFC 9110 §8.6 Content-Length                                              |
 // +---------------------------------------------------------------------------+
-// | The "Connection" header field provides a means for communicating control  |
-// | information for the current connection. It is primarily used to indicate  |
-// | options that are desired for that particular connection and that are not  |
-// | to be communicated forward by proxies.                                    |
+// | The "Content-Length" header field indicates the associated                |
+// | representation's data length as a decimal non-negative integer number of  |
+// | octets.                                                                   |
 // |                                                                           |
-// | ABNF:                                                                     |
-// |     Content-Length = 1*DIGIT                                              |
-// |     DIGIT = %x30-39   ; "0" - "9"  (RFC 5234)                             |
+// | When transferring a representation as content, Content-Length refers      |
+// | specifically to the amount of data enclosed so that it can be used to     |
+// | delimit message framing.                                                  |
 // |                                                                           |
-// | The field value MUST consist of one or more ASCII decimal digits.         |
-// | At least one DIGIT is required (empty value is invalid).                  |
-// | Only characters %x30–%x39 are allowed.                                    |
-// | No optional whitespace (OWS) is allowed before or after the value.        |
-// | No sign characters are allowed ('+' or '-').                              |
-// | No separators (commas) are allowed by the ABNF.                           |
-// | No hexadecimal, octal, or other numeric formats are allowed.              |
-// | No comments or extensions are allowed within the value.                   |
+// | In other cases, Content-Length indicates the selected representation's    |
+// | current length.                                                           |
+// |                                                                           |
+// | Any Content-Length field value greater than or equal to zero is valid.    |
+// | The grammar does not define a maximum number of decimal digits.           |
+// |                                                                           |
+// | Example:                                                                  |
+// |  Content-Length: 3495                                                     |
 // +---------------------------------------------------------------------------+
-// | Notes                                                                     |
+// | RFC 9110 §8.6 Content-Length (ABNF summary)                               |
 // +---------------------------------------------------------------------------+
-// | * Any tolerance for commas, whitespace, or multiple values is NOT defined |
-// |   by the ABNF and belongs to higher-level error handling rules.           |
-// | * ABNF validation must be performed before any numeric conversion.        |
-// | * Overflow handling and semantic validation are explicitly out of scope   |
-// |   of the ABNF definition.                                                 |
+// +----------------+----------------------------------------------------------+
+// | Field          | Definition                                               |
+// +----------------+----------------------------------------------------------+
+// | Content-Length | 1*DIGIT                                                  |
+// | DIGIT          | %x30-39 ; decimal digit "0" through "9"                  |
 // +---------------------------------------------------------------------------+
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+

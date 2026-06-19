@@ -79,106 +79,342 @@ namespace martianlabs::doba::protocol::http11::checkers {
 // +===========================================================================+
 // |                                                                      date |
 // +===========================================================================+
-// | RFC 9110 §10.1.1 Date                                                     |
+// | RFC 9110 §6.6.1 Date                                                      |
 // +---------------------------------------------------------------------------+
 // | The "Date" header field represents the date and time at which the message |
-// | was originated.                                                           |
+// | was originated. Its field value is an HTTP-date, as defined in RFC 9110   |
+// | Section 5.6.7 ("Date/Time Formats").                                      |
 // |                                                                           |
-// | An origin server MUST send a Date header field in all responses,          |
-// | except in these cases:                                                    |
+// | A sender SHOULD generate the field value as the best available            |
+// | approximation of the date and time at which the message was generated.    |
 // |                                                                           |
-// |   * A response to a 1xx (Informational) request,                          |
-// |   * A 204 (No Content) response, or                                       |
-// |   * A 304 (Not Modified) response.                                        |
+// | An origin server with a clock MUST generate a Date header field in all    |
+// | 2xx, 3xx, and 4xx responses. It MAY generate one in 1xx and 5xx           |
+// | responses. An origin server without a clock MUST NOT generate this field. |
 // |                                                                           |
-// | A recipient with a clock that receives a response message without a Date  |
-// | header field MUST record the time it was received and use that value      |
-// | as the Date field value.                                                  |
+// | A recipient parsing an HTTP-date MUST accept all three date formats:      |
 // |                                                                           |
-// | The field value is an HTTP-date, as defined in Section 5.6.7              |
-// | ("Date/Time Formats").                                                    |
+// |   * IMF-fixdate                                                           |
+// |   * rfc850-date                                                           |
+// |   * asctime-date                                                          |
+// |                                                                           |
+// | A sender generating an HTTP-date MUST use IMF-fixdate.                    |
 // |                                                                           |
 // | Example:                                                                  |
-// |  Date: Tue, 15 Nov 1994 08:12:31 GMT                                      |
+// |   Date: Tue, 15 Nov 1994 08:12:31 GMT                                     |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.7 Date/Time Formats (ABNF summary)                          |
+// | RFC 9110 §5.6.7 Date/Time Formats — ABNF                                  |
 // +---------------------------------------------------------------------------+
 // +----------------+----------------------------------------------------------+
 // | Field          | Definition                                               |
 // +----------------+----------------------------------------------------------+
 // | Date           | HTTP-date                                                |
-// | HTTP-date      | IMF-fixdate                                              |
+// | HTTP-date      | IMF-fixdate / obs-date                                   |
+// |                |                                                          |
 // | IMF-fixdate    | day-name "," SP date1 SP time-of-day SP GMT              |
-// | day-name       | "Mon" / "Tue" / "Wed" / "Thu" / "Fri" / "Sat" /          |
-// |                | "Sun"                                                    |
+// | day-name       | %s"Mon" / %s"Tue" / %s"Wed" / %s"Thu" / %s"Fri" /        |
+// |                | %s"Sat" / %s"Sun"                                        |
 // | date1          | day SP month SP year                                     |
 // | day            | 2DIGIT                                                   |
-// | month          | "Jan" / "Feb" / "Mar" / "Apr" / "May" / "Jun" /          |
-// |                | "Jul" / "Aug" / "Sep" / "Oct" / "Nov" / "Dec"            |
+// | month          | %s"Jan" / %s"Feb" / %s"Mar" / %s"Apr" / %s"May" /        |
+// |                | %s"Jun" / %s"Jul" / %s"Aug" / %s"Sep" / %s"Oct" /        |
+// |                | %s"Nov" / %s"Dec"                                        |
 // | year           | 4DIGIT                                                   |
+// | GMT            | %s"GMT"                                                  |
 // | time-of-day    | hour ":" minute ":" second                               |
 // | hour           | 2DIGIT                                                   |
 // | minute         | 2DIGIT                                                   |
 // | second         | 2DIGIT                                                   |
-// | GMT            | literal "GMT"                                            |
+// |                |                                                          |
+// | obs-date       | rfc850-date / asctime-date                               |
+// |                |                                                          |
+// | rfc850-date    | day-name-l "," SP date2 SP time-of-day SP GMT            |
+// | date2          | day "-" month "-" 2DIGIT                                 |
+// | day-name-l     | %s"Monday" / %s"Tuesday" / %s"Wednesday" /               |
+// |                | %s"Thursday" / %s"Friday" / %s"Saturday" / %s"Sunday"    |
+// |                |                                                          |
+// | asctime-date   | day-name SP date3 SP time-of-day SP year                 |
+// | date3          | month SP ( 2DIGIT / ( SP 1DIGIT ) )                      |
 // +---------------------------------------------------------------------------+
-// | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
+// | RFC 5234 core rules used above:                                           |
+// |                                                                           |
+// |   DIGIT = %x30-39                                                         |
+// |   SP    = %x20                                                            |
+// |                                                                           |
+// | The %s prefix indicates a case-sensitive string. Therefore, day names,    |
+// | month names, and "GMT" have exactly the capitalization shown above.       |
+// |                                                                           |
+// | No whitespace other than the SP characters explicitly present in the      |
+// | grammar is permitted inside an HTTP-date.                                 |
+// |                                                                           |
+// | IMPORTANT: field-value is expected to be normalized, with no OWS around   |
+// | the value, before this syntax validator is called.                        |
+// +===========================================================================+
 // +---------------------------------------------------------------------------+
-static inline bool date(std::string_view v) {
-  static constexpr std::string_view kDays[] = {"Mon", "Tue", "Wed", "Thu",
-                                               "Fri", "Sat", "Sun"};
-  static constexpr std::string_view kMons[] = {"Jan", "Feb", "Mar", "Apr",
-                                               "May", "Jun", "Jul", "Aug",
-                                               "Sep", "Oct", "Nov", "Dec"};
-  // +-------------------------------------------------------------------------+
-  // | "DDD, DD MMM YYYY HH:MM:SS GMT" --> 29 characters (fixed size)          |
-  // +-------------------------------------------------------------------------+
-  if (v.size() != 29) return false;
-  // [day-name]
-  bool day_name_ok = false;
-  std::string_view day_name = v.substr(0, 3);
-  for (auto const& day : kDays) {
-    if ((day_name_ok = !day.compare(day_name))) break;
+// | CONSTANTs                                                                 |
+// +---------------------------------------------------------------------------+
+static constexpr inline std::size_t kDaysInWeek = 7;
+static constexpr inline std::size_t kMonthsInYear = 12;
+static constexpr inline std::string_view kShortDayNames[kDaysInWeek] = {
+    "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+static constexpr inline std::string_view kLongDayNames[kDaysInWeek] = {
+    "Monday", "Tuesday",  "Wednesday", "Thursday",
+    "Friday", "Saturday", "Sunday"};
+static constexpr inline std::string_view kShortMonthNames[kMonthsInYear] = {
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+// +---------------------------------------------------------------------------+
+// | is_short_day_name                                                         |
+// +---------------------------------------------------------------------------+
+static inline bool is_short_day_name(std::string_view sv) {
+  for (std::size_t i = 0; i < kDaysInWeek; i++) {
+    if (!kShortDayNames[i].compare(sv)) return true;
   }
-  if (!day_name_ok) return false;
-  // [,<sp>]
-  if (v[3] != ',') return false;
-  if (v[4] != ' ') return false;
-  // [day]
-  if (!helpers::is_digit(v[5]) || !helpers::is_digit(v[6])) return false;
-  // [<sp>]
-  if (v[7] != ' ') return false;
-  // [month]
-  bool month_name_ok = false;
-  std::string_view month_name = v.substr(8, 3);
-  for (auto const& month : kMons) {
-    if ((month_name_ok = !month.compare(month_name))) break;
+  return false;
+}
+// +---------------------------------------------------------------------------+
+// | is_long_day_name                                                          |
+// +---------------------------------------------------------------------------+
+static inline bool is_long_day_name(std::string_view sv) {
+  for (std::size_t i = 0; i < kDaysInWeek; i++) {
+    if (!kLongDayNames[i].compare(sv)) return true;
   }
-  if (!month_name_ok) return false;
-  // [<sp>]
-  if (v[11] != ' ') return false;
-  // [year]
-  if (!helpers::is_digit(v[12]) || !helpers::is_digit(v[13]) ||
-      !helpers::is_digit(v[14]) || !helpers::is_digit(v[15])) {
+  return false;
+}
+// +---------------------------------------------------------------------------+
+// | is_short_month_name                                                       |
+// +---------------------------------------------------------------------------+
+static inline bool is_short_month_name(std::string_view sv) {
+  for (std::size_t i = 0; i < kMonthsInYear; i++) {
+    if (!kShortMonthNames[i].compare(sv)) return true;
+  }
+  return false;
+}
+// +---------------------------------------------------------------------------+
+// | try_to_parse_short_day_name                                               |
+// +---------------------------------------------------------------------------+
+static inline bool try_to_parse_short_day_name(std::string_view sv,
+                                               std::string_view delimiter,
+                                               std::size_t& used_characters) {
+  std::size_t delimiter_pos = sv.find(delimiter);
+  if (delimiter_pos == std::string_view::npos) return false;
+  for (std::size_t i = 0; i < kDaysInWeek; i++) {
+    if (!kShortDayNames[i].compare(sv.substr(0, delimiter_pos))) {
+      used_characters = delimiter_pos + delimiter.size();
+      return true;
+    }
+  }
+  return false;
+}
+// +---------------------------------------------------------------------------+
+// | try_to_parse_long_day_name                                                |
+// +---------------------------------------------------------------------------+
+static inline bool try_to_parse_long_day_name(std::string_view sv,
+                                              std::string_view delimiter,
+                                              std::size_t& used_characters) {
+  std::size_t delimiter_pos = sv.find(delimiter);
+  if (delimiter_pos == std::string_view::npos) return false;
+  for (std::size_t i = 0; i < kDaysInWeek; i++) {
+    if (!kLongDayNames[i].compare(sv.substr(0, delimiter_pos))) {
+      used_characters = delimiter_pos + delimiter.size();
+      return true;
+    }
+  }
+  return false;
+}
+// +---------------------------------------------------------------------------+
+// | try_to_parse_short_month_name                                             |
+// +---------------------------------------------------------------------------+
+static inline bool try_to_parse_short_month_name(std::string_view sv,
+                                                 std::string_view delimiter,
+                                                 std::size_t& used_characters) {
+  std::size_t delimiter_pos = sv.find(delimiter);
+  if (delimiter_pos == std::string_view::npos) return false;
+  for (std::size_t i = 0; i < kMonthsInYear; i++) {
+    if (!kShortMonthNames[i].compare(sv.substr(0, delimiter_pos))) {
+      used_characters = delimiter_pos + delimiter.size();
+      return true;
+    }
+  }
+  return false;
+}
+static inline bool try_to_parse_2_digit_number(std::string_view sv) {
+  if (sv.size() < 2 || !helpers::is_digit(sv[0]) || !helpers::is_digit(sv[1])) {
     return false;
   }
-  // [<sp>]
-  if (v[16] != ' ') return false;
-  // [hour]
-  if (!helpers::is_digit(v[17]) || !helpers::is_digit(v[18])) return false;
-  // [:]
-  if (v[19] != ':') return false;
-  // [minute]
-  if (!helpers::is_digit(v[20]) || !helpers::is_digit(v[21])) return false;
-  // [:]
-  if (v[22] != ':') return false;
-  // [second]
-  if (!helpers::is_digit(v[23]) || !helpers::is_digit(v[24])) return false;
-  // [<sp>]
-  if (v[25] != ' ') return false;
-  // [GMT]
-  if (v[26] != 'G' || v[27] != 'M' || v[28] != 'T') return false;
   return true;
+}
+static inline bool try_to_parse_4_digit_number(std::string_view sv) {
+  if (sv.size() < 4 || !helpers::is_digit(sv[0]) || !helpers::is_digit(sv[1]) ||
+      !helpers::is_digit(sv[2]) || !helpers::is_digit(sv[3])) {
+    return false;
+  }
+  return true;
+}
+// +---------------------------------------------------------------------------+
+// | IMF-fixdate                                                               |
+// +---------------------------------------------------------------------------+
+// | "DDD, DD MMM YYYY HH:MM:SS GMT" --> 29 characters (fixed size)            |
+// +---------------------------------------------------------------------------+
+static inline bool is_imf_fixdate(std::string_view sv) {
+  if (sv.size() != 29) return false;
+  std::size_t used_characters = 0;
+  if (!try_to_parse_short_day_name(sv, ", ", used_characters)) return false;
+  sv.remove_prefix(used_characters);
+  if (!try_to_parse_2_digit_number(sv)) return false;
+  sv.remove_prefix(2);
+  if (sv.empty() || sv[0] != ' ') return false;
+  sv.remove_prefix(1);
+  if (!try_to_parse_short_month_name(sv, " ", used_characters)) return false;
+  sv.remove_prefix(used_characters);
+  if (!try_to_parse_4_digit_number(sv)) return false;
+  sv.remove_prefix(4);
+  if (sv.empty() || sv[0] != ' ') return false;
+  sv.remove_prefix(1);
+  if (!try_to_parse_2_digit_number(sv)) return false;
+  sv.remove_prefix(2);
+  if (sv.empty() || sv[0] != ':') return false;
+  sv.remove_prefix(1);
+  if (!try_to_parse_2_digit_number(sv)) return false;
+  sv.remove_prefix(2);
+  if (sv.empty() || sv[0] != ':') return false;
+  sv.remove_prefix(1);
+  if (!try_to_parse_2_digit_number(sv)) return false;
+  sv.remove_prefix(2);
+  if (sv.empty() || sv[0] != ' ') return false;
+  sv.remove_prefix(1);
+  if (sv.size() < 3 || sv[0] != 'G' || sv[1] != 'M' || sv[2] != 'T') {
+    return false;
+  }
+  sv.remove_prefix(3);
+  return true;
+}
+// +---------------------------------------------------------------------------+
+// | rfc850-date                                                               |
+// +---------------------------------------------------------------------------+
+// | "DDDDDDDDD, DD-MMM-YY HH:MM:SS GMT" --> 30-33 characters                  |
+// +---------------------------------------------------------------------------+
+// | Variable size because the full day name contains 6-9 characters.          |
+// +---------------------------------------------------------------------------+
+static inline bool is_rfc850_date(std::string_view sv) {
+  /*
+  if (sv.size() < 30 || sv.size() > 33) return false;
+  // [day-name-l]
+  std::size_t off = sv.find(',');
+  if (off == std::string_view::npos) return false;
+  std::string_view day_name_l(sv.substr(0, off));
+  std::size_t i_day = 0;
+  while (i_day < kDaysInWeek) {
+    if (!kLongDayNames[i_day].compare(day_name_l)) break;
+    i_day++;
+  }
+  if (i_day == kDaysInWeek) return false;
+  // [", "]
+  sv.remove_prefix(off + 1);
+  if (sv.empty() || sv[0] != ' ') return false;
+  sv.remove_prefix(1);
+  // [day]
+  if (sv.size() < 2 || !helpers::is_digit(sv[0]) || !helpers::is_digit(sv[1])) {
+    return false;
+  }
+  sv.remove_prefix(2);
+  // ["-"]
+  if (sv.empty() || sv[0] != '-') return false;
+  sv.remove_prefix(1);
+  // [month]
+  if (sv.size() < 3) return false;
+  std::string_view month_name = sv.substr(0, 3);
+  std::size_t i_mon = 0;
+  while (i_mon < kMonthsInYear) {
+    if (!kShortMonthNames[i_mon].compare(month_name)) break;
+    i_mon++;
+  }
+  if (i_mon == kMonthsInYear) return false;
+  sv.remove_prefix(3);
+  // ["-"]
+  if (sv.empty() || sv[0] != '-') return false;
+  sv.remove_prefix(1);
+  // [year]
+  if (sv.size() < 2 || !helpers::is_digit(sv[0]) || !helpers::is_digit(sv[1])) {
+    return false;
+  }
+  sv.remove_prefix(2);
+  // [" "]
+  if (sv.empty() || sv[0] != ' ') return false;
+  sv.remove_prefix(1);
+  // [hour]
+  if (sv.size() < 2 || !helpers::is_digit(sv[0]) || !helpers::is_digit(sv[1])) {
+    return false;
+  }
+  sv.remove_prefix(2);
+  // [":"]
+  if (sv.empty() || sv[0] != ':') return false;
+  sv.remove_prefix(1);
+  // [minute]
+  if (sv.size() < 2 || !helpers::is_digit(sv[0]) || !helpers::is_digit(sv[1])) {
+    return false;
+  }
+  sv.remove_prefix(2);
+  // [":"]
+  if (sv.empty() || sv[0] != ':') return false;
+  sv.remove_prefix(1);
+  // [second]
+  if (sv.size() < 2 || !helpers::is_digit(sv[0]) || !helpers::is_digit(sv[1])) {
+    return false;
+  }
+  sv.remove_prefix(2);
+  // [" "]
+  if (sv.empty() || sv[0] != ' ') return false;
+  sv.remove_prefix(1);
+  // [GMT]
+  if (sv.size() < 3 || sv[0] != 'G' || sv[1] != 'M' || sv[2] != 'T') {
+    return false;
+  }
+  sv.remove_prefix(3);
+  return true;
+  */
+  return false;
+}
+// +---------------------------------------------------------------------------+
+// | asctime-date                                                              |
+// +---------------------------------------------------------------------------+
+// | "DDD MMM DD HH:MM:SS YYYY" --> 24 characters (fixed size)                 |
+// +---------------------------------------------------------------------------+
+// | A single-digit day is represented as SP DIGIT, e.g. "Nov  6".             |
+// +---------------------------------------------------------------------------+
+static inline bool is_asctime_date(std::string_view sv) {
+  /*
+  if (sv.size() != 24) return false;
+  // [day-name]
+  std::string_view day_name = sv.substr(0, 3);
+  std::size_t i_day = 0;
+  while (i_day < kDaysInWeek) {
+    if (!kShortDayNames[i_day].compare(day_name)) break;
+    i_day++;
+  }
+  if (i_day == kDaysInWeek) return false;
+  sv.remove_prefix(3);
+  if (sv[0] != ' ') return false;
+  sv.remove_prefix(1);
+  // [month-name]
+  std::string_view month_name = sv.substr(0, 3);
+  std::size_t i_mon = 0;
+  while (i_mon < kMonthsInYear) {
+    if (!kShortMonthNames[i_mon].compare(month_name)) break;
+    i_mon++;
+  }
+  if (i_mon == kMonthsInYear) return false;
+  sv.remove_prefix(3);
+  if (sv[0] != ' ') return false;
+  sv.remove_prefix(1);
+  */
+  return false;
+}
+// +---------------------------------------------------------------------------+
+// | date                                                                      |
+// +---------------------------------------------------------------------------+
+static inline bool date(std::string_view v) {
+  return is_imf_fixdate(v) || is_rfc850_date(v) || is_asctime_date(v);
 }
 }  // namespace martianlabs::doba::protocol::http11::checkers
 

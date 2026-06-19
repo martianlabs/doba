@@ -72,15 +72,33 @@
 
 namespace martianlabs::doba::protocol {
 // =============================================================================
-// deserialization_result_code                                    ( enum-class )
+// deserialization_status                                         ( enum-class )
 // -----------------------------------------------------------------------------
-// This class holds for the result code on protocol deserialization processes.
-// -----------------------------------------------------------------------------
+// This enum class holds the result code on protocol deserialization processes.
 // =============================================================================
-enum class deserialization_result {
+enum class deserialization_status {
   kSucceeded,        // everything went fine.
   kInvalidSource,    // source data is invalid.
   kMoreBytesNeeded,  // more bytes are needed to perform de-serialization.
+};
+// =============================================================================
+// deserialization_result                                             ( struct )
+// -----------------------------------------------------------------------------
+// This struct holds for the result on protocol deserialization processes.
+// -----------------------------------------------------------------------------
+// Template parameters:
+//    RQty - request being used.
+// =============================================================================
+template <typename RQty>
+struct deserialization_result {
+  deserialization_result(deserialization_status code) : code(code) {}
+  deserialization_result(std::shared_ptr<RQty> request, std::size_t bytes_used)
+      : code(deserialization_status::kSucceeded),
+        request(request),
+        bytes_used(bytes_used) {}
+  deserialization_status code = deserialization_status::kInvalidSource;
+  std::shared_ptr<RQty> request = nullptr;
+  std::size_t bytes_used = 0;
 };
 }  // namespace martianlabs::doba::protocol
 

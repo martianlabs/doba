@@ -103,74 +103,49 @@ class server {
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
   server() {
-    transport_.onRequest = [this](std::shared_ptr<const request> req,
-                                  std::shared_ptr<response> res, auto on_send) {
-      switch (req->get_target()) {
-        case target::kOriginForm:
-        case target::kAbsoluteForm: {
-          auto router_entry =
-              router_.match(req->get_method(), req->get_absolute_path());
-          if (!router_entry.has_value()) {
-            res->not_found_404().add_header(headers::kContentLength, 0);
-            on_send(res);
-            return;
-          }
-          switch (router_entry->second) {
-            case common::execution_policy::kSync:
-              router_entry->first(*req, *res);
-              on_send(res);
-              break;
-            case common::execution_policy::kAsync:
-              thread_pool_->enqueue([req, res, on_send, router_entry]() {
-                router_entry->first(*req, *res);
+    transport_.on_request =
+        [this](std::shared_ptr<const request> req,
+               std::shared_ptr<response> res,
+               transport::server::types::on_send_delegate<response> on_send) {
+          switch (req->get_target()) {
+            case target::kOriginForm:
+            case target::kAbsoluteForm: {
+              std::optional<router<router_fn>::data> router_entry =
+                  router_.match(req->get_method(), req->get_absolute_path());
+              if (!router_entry.has_value()) {
+                res->not_found_404().add_header(headers::kContentLength, 0);
                 on_send(res);
-              });
+                return;
+              }
+              switch (router_entry->second) {
+                case common::execution_policy::kSync:
+                  router_entry->first(*req, *res);
+                  on_send(res);
+                  break;
+                case common::execution_policy::kAsync:
+                  thread_pool_->enqueue([req, res, on_send, router_entry]() {
+                    router_entry->first(*req, *res);
+                    on_send(res);
+                  });
+                  break;
+              }
+              break;
+            }
+            case target::kAuthorityForm:
+            case target::kAsteriskForm:
+              // [to-do] -> add support for this!
+              break;
+            default:
               break;
           }
-          break;
-        }
-        case target::kAuthorityForm:
-        case target::kAsteriskForm:
-          // [to-do] -> add support for this!
-          break;
-        default:
-          break;
-      }
+        };
+    transport_.on_bad_request = [](std::string_view reason,
+                                   std::shared_ptr<response> res) {
+      res->bad_request_400().set_body(reason).add_header(
+          headers::kContentLength, reason.size());
     };
-    transport_.onConnection = []() {
-      /*
-      pepe
-      */
-
-      /*
-      static std::size_t connections = 0;
-      static std::mutex mtx;
-      std::lock_guard<std::mutex> lock(mtx);
-      printf(">>> [%d] CLIENT-CONNECTED (%zd in
-      total)!!!\n", clock(),
-      ++connections);
-      */
-
-      /*
-      pepe fin
-      */
-    };
-    transport_.onDisconnection = []() {
-      /*
-      pepe
-      */
-      /*
-      static std::size_t disconnections = 0;
-      static std::mutex mtx;
-      std::lock_guard<std::mutex> lock(mtx);
-      printf(">>> [%d] CLIENT-DISCONNECTED (%zd in total)!!!\n", clock(),
-             ++disconnections);
-      */
-      /*
-      pepe fin
-      */
-      // nothing to do here by default..
-    };
+    transport_.on_connection = [this]() { connections_++; };
+    transport_.on_disconnection = [this]() { connections_--; };
   }
   server(const server&) = delete;
   server(server&&) noexcept = delete;
@@ -181,7 +156,7 @@ class server {
   server& operator=(const server&) = delete;
   server& operator=(server&&) noexcept = delete;
   // ---------------------------------------------------------------------------
-  // METHODs                                                          ( public )
+  // start                                                            ( public )
   //
   void start(const char port[]) {
     common::date_server::get().start();
@@ -189,10 +164,16 @@ class server {
         std::thread::hardware_concurrency() / 2);
     transport_.start(port);
   }
+  // ---------------------------------------------------------------------------
+  // stop                                                             ( public )
+  //
   void stop() {
     thread_pool_->stop();
     transport_.stop();
   }
+  // ---------------------------------------------------------------------------
+  // add_route                                                        ( public )
+  //
   server& add_route(
       const std::string& method, const std::string& route, router_fn fn,
       common::execution_policy policy = common::execution_policy::kSync) {
@@ -206,6 +187,7 @@ class server {
   //
   std::shared_ptr<common::thread_pool> thread_pool_;
   TRty<request, response, 8192> transport_;
+  std::atomic<uint32_t> connections_{0};
   router<router_fn> router_;
 };
 }  // namespace martianlabs::doba::protocol::http11

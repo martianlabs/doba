@@ -90,7 +90,7 @@ class router {
   // ---------------------------------------------------------------------------
   // USINGs                                                           ( public )
   //
-  using hpair = std::pair<FNty, common::execution_policy>;
+  using data = std::pair<FNty, common::execution_policy>;
   // ---------------------------------------------------------------------------
   // CONSTRUCTORs/DESTRUCTORs                                         ( public )
   //
@@ -104,15 +104,20 @@ class router {
   router& operator=(const router&) = delete;
   router& operator=(router&&) noexcept = delete;
   // ---------------------------------------------------------------------------
-  // METHODs                                                          ( public )
+  // add                                                              ( public )
   //
   void add(const std::string& method, const std::string& route, FNty fn,
            common::execution_policy policy) {
+    std::lock_guard<std::mutex> lock(routes_mutex_);
     auto& map = routes_.try_emplace(method).first->second;
     map.emplace(route, std::make_pair(fn, policy));
   }
-  auto match(std::string_view method, std::string_view path) {
-    std::optional<hpair> res = std::nullopt;
+  // ---------------------------------------------------------------------------
+  // match                                                            ( public )
+  //
+  std::optional<data> match(std::string_view method, std::string_view path) {
+    std::lock_guard<std::mutex> lock(routes_mutex_);
+    std::optional<data> res = std::nullopt;
     if (auto it_m = routes_.find(method); it_m != routes_.end()) {
       if (auto it_h = it_m->second.find(path); it_h != it_m->second.end()) {
         res = it_h->second;
@@ -125,7 +130,8 @@ class router {
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //
-  common::hash_map<std::string, common::hash_map<std::string, hpair>> routes_;
+  common::hash_map<std::string, common::hash_map<std::string, data>> routes_;
+  std::mutex routes_mutex_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

@@ -72,11 +72,31 @@
 #include "network/environment.h"
 #include "protocol/http11/server.h"
 
+
+#include "protocol/http11/checkers/date.h"
+
+
+
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http11;
 
 int main(int argc, char* argv[]) {
   martianlabs::doba::network::startup();
+
+  std::string test_01 = "Sun, 06 Nov 1994 08:49:37 GMT";
+  std::string test_02 = "Sunday, 06-Nov-94 08:49:37 GMT";
+  std::string test_03 = "Sun Nov  6 08:49:37 1994";
+
+  bool result_01 =
+      martianlabs::doba::protocol::http11::checkers::date(test_01);
+  bool result_02 =
+      martianlabs::doba::protocol::http11::checkers::date(test_02);
+  bool result_03 =
+      martianlabs::doba::protocol::http11::checkers::date(test_03);
+
+
+
+
   server srv;
   srv.add_route(
          "GET", "/pipeline",
@@ -91,6 +111,7 @@ int main(int argc, char* argv[]) {
          execution_policy::kSync)
       .start("8080");
   std::cin.get();
+  date_server::get().stop();
   martianlabs::doba::network::cleanup();
   return 0;
 }

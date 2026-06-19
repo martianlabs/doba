@@ -73,74 +73,73 @@
 #include <ranges>
 #include <string_view>
 
-#include "protocol/http11/constants.h"
 #include "protocol/http11/helpers.h"
 
 namespace martianlabs::doba::protocol::http11::checkers {
 // +===========================================================================+
 // |                                                                connection |
 // +===========================================================================+
-// | RFC 9110 §7.6.1 - Connection                                              |
+// | RFC 9110 §7.6.1 Connection                                                |
 // +---------------------------------------------------------------------------+
-// | The "Connection" header field provides a means for communicating control  |
-// | information for the current connection. It is primarily used to indicate  |
-// | options that are desired for that particular connection and that are not  |
-// | to be communicated forward by proxies.                                    |
+// | The "Connection" header field allows the sender to list control options   |
+// | that are specific to the current connection.                              |
 // |                                                                           |
-// | ABNF:                                                                     |
-// |     Connection = #connection-option                                       |
-// |     connection-option = token                                             |
+// | Connection options are case-insensitive.                                  |
 // |                                                                           |
-// | A proxy or gateway MUST remove or replace any header fields nominated by  |
-// | the Connection header field before forwarding the message.                |
-// | In other words, if a header field is listed in the Connection header      |
-// | field, then it is to be removed from the message before forwarding it     |
-// | to the next recipient.                                                    |
-// | Any HTTP/1.1 message containing a Connection header field MUST include at |
-// | least one connection option.                                              |
+// | An intermediary MUST process the Connection field before forwarding the   |
+// | message. It MUST remove every header or trailer field named by a          |
+// | connection option and then remove or replace the Connection field itself. |
 // |                                                                           |
-// | The Connection header field's value has no meaning in HTTP/2 or HTTP/3.   |
-// | A sender MUST NOT generate a message containing connection options for    |
-// | those versions, and a recipient MUST treat messages that contain          |
-// | connection options as malformed.                                          |
+// | A sender MUST NOT include a connection option corresponding to a field    |
+// | intended for all recipients in the request or response chain.             |
 // |                                                                           |
-// | Connection options are case-insensitive. If a proxy receives a            |
-// | message with a Connection header field, it MUST remove that header field  |
-// | and any header fields nominated by it before forwarding the message.      |
+// | The "close" connection option indicates that the sender will close the    |
+// | connection after completion of the current request-response exchange.     |
 // |                                                                           |
-// | For example:                                                              |
-// |     Connection: keep-alive                                                |
-// | would allow the sender to indicate that it desires a                      |
-// | persistent connection.                                                    |
+// | Examples:                                                                 |
+// |  Connection: close                                                        |
+// |  Connection: keep-alive, upgrade                                          |
+// +---------------------------------------------------------------------------+
+// | RFC 9110 §7.6.1 and §§5.6.1-5.6.3 (ABNF summary)                          |
+// +---------------------------------------------------------------------------+
+// +-------------------+-------------------------------------------------------+
+// | Field             | Definition                                            |
+// +-------------------+-------------------------------------------------------+
+// | Connection        | #connection-option                                    |
+// |                   | equivalent, for recipient parsing, to:                |
+// |                   | [ connection-option ]                                 |
+// |                   | *( OWS "," OWS [ connection-option ] )                |
+// | connection-option | token                                                 |
+// | token             | 1*tchar                                               |
+// | tchar             | "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" /       |
+// |                   | "-" / "." / "^" / "_" / "`" / "|" / "~" / DIGIT /     |
+// |                   | ALPHA                                                 |
+// | OWS               | *( SP / HTAB )                                        |
+// | SP                | %x20                                                  |
+// | HTAB              | %x09                                                  |
+// | DIGIT             | %x30-39                                               |
+// | ALPHA             | %x41-5A / %x61-7A                                     |
+// +---------------------------------------------------------------------------+
+// | The "#" operator defines a comma-separated list.                          |
 // |                                                                           |
-// | When a client sends a Connection header field with the "close" connection |
-// | option, it is indicating that it wants to close the connection after this |
-// | request is complete.                                                      |
+// | "#connection-option" allows zero or more connection options. A recipient  |
+// | MUST parse and ignore a reasonable number of empty list elements.         |
 // |                                                                           |
-// | When a server sends a Connection header field with the "close" connection |
-// | option, it is indicating that it will close the connection                |
-// | after delivering this response.                                           |
+// | Therefore, these forms are valid for recipient-side list parsing:         |
+// |  Connection:                                                              |
+// |  Connection: ,                                                            |
+// |  Connection: close,                                                       |
+// |  Connection: , close                                                      |
+// |  Connection: close, , upgrade                                             |
 // |                                                                           |
-// | The connection options do not have to correspond to a header              |
-// | field present in the message, since a connection option might be used to  |
-// | indicate other features or options (such as "close") that are             |
-// | not implemented as header fields.                                         |
-// |                                                                           |
-// | A sender MUST NOT include a connection option corresponding to a header   |
-// | field that is defined as being connection-specific, such as               |
-// | Transfer-Encoding, since such header fields are always implicitly         |
-// | hop-by-hop.                                                               |
-// |                                                                           |
-// | A sender MUST NOT include a connection option for a header field that is  |
-// | not in the message because the option would have no effect.               |
-// | However, a proxy that receives a message with such a connection           |
-// | option MAY delete it before forwarding the message.                       |
+// | Semantic processing, including case-insensitive option comparison and     |
+// | removal of nominated fields by intermediaries, is separate from ABNF      |
+// | validation.                                                               |
 // +---------------------------------------------------------------------------+
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+
-static inline bool connection(std::string_view v) {
-  std::size_t options_found = 0;
-  for (auto token : v | std::views::split(',')) {
+static inline bool connection(std::string_view sv) {
+  for (auto token : sv | std::views::split(',')) {
     if (token.begin() == token.end()) continue;
     std::string_view value(&*token.begin(), std::ranges::distance(token));
     helpers::ows_trim(value);
@@ -148,9 +147,8 @@ static inline bool connection(std::string_view v) {
     for (auto const& c : value) {
       if (!helpers::is_token(c)) return false;
     }
-    options_found++;
   }
-  return options_found > 0;
+  return true;
 }
 }  // namespace martianlabs::doba::protocol::http11::checkers
 

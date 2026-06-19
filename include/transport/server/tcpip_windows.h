@@ -92,113 +92,76 @@ class tcpip {
   // ---------------------------------------------------------------------------
   // CONSTANTs                                                       ( private )
   //
-  static constexpr DWORD kAABs = static_cast<DWORD>(
-      sizeof(sockaddr_storage) + 16);  // Accept-Address-Bytes
+  static constexpr DWORD kAcceptAddressBytes =
+      static_cast<DWORD>(sizeof(sockaddr_storage) + 16);
   // ---------------------------------------------------------------------------
   // TYPEs                                                           ( private )
   //
   struct overlapped_receive;
   struct overlapped_send;
   struct context {
-    context(SOCKET in_socket) : socket{in_socket} { contexts_in_use_++; }
+    // [constructors/destructors]
+    context(SOCKET in_socket) : socket{in_socket} {}
     context(const context&) = delete;
     context(context&&) noexcept = delete;
+    // [operators]
     context& operator=(const context&) = delete;
     context& operator=(context&&) noexcept = delete;
-    ~context() { contexts_in_use_--; }
-    // [context] handling methods
-    static inline bool empty() { return contexts_in_use_ == 0; }
-    static inline std::atomic<std::size_t> contexts_in_use_{0};
-    inline bool prepareForClosing() {
-      bool expected = false;
-      if (closing.compare_exchange_strong(expected, true)) {
-        std::lock_guard<std::mutex> lock(pending_responses_mutex);
-        pending_responses = {};
-        ovr->ctx.reset();
-        ovs->ctx.reset();
-        closesocket(socket);
-        socket = INVALID_SOCKET;
-        return true;
-      }
-      return false;
+    ~context() = default;
+    // [push_pending_response]
+    void push_pending_response(std::unique_ptr<std::string> buffer) {
+      if (!buffer || buffer->empty()) return;
+      std::lock_guard<std::mutex> sending_lock(responses_mutex);
+      responses.push(std::move(buffer));
     }
-    // [context] attributes
+    // [pop_pending_response]
+    std::unique_ptr<std::string> pop_pending_response() {
+      std::lock_guard<std::mutex> sending_lock(responses_mutex);
+      if (responses.empty()) return nullptr;
+      std::unique_ptr<std::string> response = std::move(responses.front());
+      responses.pop();
+      return response;
+    }
+    // [general] attributes
+    SOCKET socket{INVALID_SOCKET};
     std::atomic<bool> closing{false};
-    SOCKET socket;
-    // [receiving] attributes
-    overlapped_receive* ovr{nullptr};
-    CHAR rcv_buf[BFsz]{0};
-    WSABUF wsa_rcv{0};
-    ULONG rcv_len{0};
-    // [sending] attributes
-    overlapped_send* ovs{nullptr};
-    WSABUF wsa_snd{0};
-    ULONG snd_len{0};
-    ULONG snd_acc{0};
     // [responses] attributes
-    std::queue<std::unique_ptr<std::string>> pending_responses;
-    std::unique_ptr<std::string> response_in_course{nullptr};
-    std::mutex pending_responses_mutex;
+    std::unique_ptr<std::string> response_in_flight{nullptr};
+    std::queue<std::unique_ptr<std::string>> responses;
+    std::mutex responses_mutex;
+    // [sending] attributes
+    bool close_after_sending{false};
+    std::mutex sending_mutex;
     bool sending{false};
-    // [responses] handling methods
-    void pusPendingResponse(std::unique_ptr<std::string> response) {
-      std::lock_guard<std::mutex> lock(pending_responses_mutex);
-      pending_responses.push(std::move(response));
-    }
-    bool popPendingResponseAndSend(DWORD bytes_received = 0) {
-      std::lock_guard<std::mutex> lock(pending_responses_mutex);
-      snd_acc += bytes_received;
-      sending = snd_acc < snd_len;
-      if (sending) return true;
-      response_in_course = nullptr;
-      if (pending_responses.empty()) return true;
-      std::unique_ptr<std::string> response =
-          std::move(pending_responses.front());
-      pending_responses.pop();
-      sending = send(std::move(response));
-      return sending;
-    }
-    // [i/o] handling methods
-    bool receive() {
-      DWORD f = 0, r = 0;
-      std::memset(&wsa_snd, 0, sizeof(WSABUF));
-      wsa_rcv.buf = &rcv_buf[rcv_len];
-      wsa_rcv.len = BFsz - rcv_len;
-      int res = WSARecv(socket, &wsa_rcv, 1, &r, &f, ovr, 0);
-      return !(res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING);
-    }
-    bool send(std::unique_ptr<std::string> buffer) {
-      DWORD f = 0, s = 0;
-      snd_acc = 0;
-      snd_len = buffer->size();
-      std::memset(&wsa_snd, 0, sizeof(WSABUF));
-      wsa_snd.buf = buffer->data();
-      wsa_snd.len = snd_len;
-      response_in_course = std::move(buffer);
-      int res = WSASend(socket, &wsa_snd, 1, &s, f, ovs, 0);
-      return !(res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING);
-    }
   };
   enum class io_type : uint8_t { kAccept, kSend, kReceive, kStop };
   struct overlapped_base : OVERLAPPED {
     overlapped_base(io_type in_type, std::shared_ptr<context> in_ctx = nullptr)
         : OVERLAPPED{}, type{in_type}, ctx{in_ctx} {}
+    io_type get_type() const { return type; }
+    std::shared_ptr<context> get_context() const { return ctx; }
+
+   private:
     const io_type type;
     std::shared_ptr<context> ctx;
   };
   struct overlapped_accept : overlapped_base {
     overlapped_accept(SOCKET in_socket)
         : overlapped_base(io_type::kAccept), socket{in_socket} {}
-    SOCKET socket;
-    CHAR addresses[(kAABs * 2)]{};
+    SOCKET socket{INVALID_SOCKET};
+    CHAR addresses[(kAcceptAddressBytes * 2)]{0};
   };
   struct overlapped_receive : overlapped_base {
     overlapped_receive(std::shared_ptr<context> in_ctx)
         : overlapped_base(io_type::kReceive, in_ctx) {}
+    CHAR buffer[BFsz]{0};
+    WSABUF wsa{0};
   };
   struct overlapped_send : overlapped_base {
     overlapped_send(std::shared_ptr<context> in_ctx)
         : overlapped_base(io_type::kSend, in_ctx) {}
+    std::unique_ptr<std::string> buffer;
+    WSABUF wsa{0};
   };
   struct overlapped_stop : overlapped_base {
     overlapped_stop() : overlapped_base(io_type::kStop) {}
@@ -218,71 +181,66 @@ class tcpip {
   tcpip& operator=(const tcpip&) = delete;
   tcpip& operator=(tcpip&&) noexcept = delete;
   // ---------------------------------------------------------------------------
-  // USINGs                                                           ( public )
-  //
-  using on_send_fn = std::function<void(std::shared_ptr<RSty>)>;
-  using on_request_fn = std::function<void(std::shared_ptr<const RQty>,
-                                           std::shared_ptr<RSty>, on_send_fn)>;
-  using on_connection_fn = std::function<void()>;
-  using on_disconnection_fn = std::function<void()>;
-  // ---------------------------------------------------------------------------
   // PROPERTIEs                                                       ( public )
   //
-  on_request_fn onRequest;
-  on_connection_fn onConnection;
-  on_disconnection_fn onDisconnection;
+  types::on_request_delegate<RQty, RSty> on_request;
+  types::on_bad_request_delegate<RSty> on_bad_request;
+  types::on_client_connected_delegate on_connection;
+  types::on_client_disconnected_delegate on_disconnection;
   // ---------------------------------------------------------------------------
-  // METHODs                                                          ( public )
+  // start                                                            ( public )
   //
   void start(const char port[]) {
     if (io_h_ != nullptr) {
       throw std::runtime_error("TCP/IP transport already started!");
     }
     // Let's setup all the required resources..
-    auto workers = setupListener(port);
-    setupWorkers(workers);
-    setupAcceptPipeline(std::max<std::size_t>(2, workers));
+    auto workers = setup_listener(port);
+    setup_workers(workers);
+    setup_accept_pipeline(std::max<std::size_t>(2, workers));
   }
+  // ---------------------------------------------------------------------------
+  // stop                                                             ( public )
+  //
   void stop() {
-    if (io_h_ == nullptr) return;
+    if (io_h_ == nullptr) {
+      return;
+    }
     if (accept_socket_ != INVALID_SOCKET) {
       closesocket(accept_socket_);
       accept_socket_ = INVALID_SOCKET;
     }
-    if (io_h_ != nullptr) {
-      for (std::size_t i = 0; i < workers_.size(); i++) {
-        PostQueuedCompletionStatus(io_h_, 0, 0, new overlapped_stop());
+    for (std::size_t i = 0; i < workers_.size(); i++) {
+      if (!PostQueuedCompletionStatus(io_h_, 0, 0, new overlapped_stop())) {
+        /*
+        pepe
+        */
+
+        /*
+        pepe fin
+        */
       }
     }
     workers_.clear();
     accept_ex_ = nullptr;
     accept_depth_ = 0;
-    if (io_h_ != nullptr) {
-      CloseHandle(io_h_);
-      io_h_ = nullptr;
+    if (!CloseHandle(io_h_)) {
+      /*
+      pepe
+      */
+
+      /*
+      pepe fin
+      */
     }
+    io_h_ = nullptr;
   }
-  
+
  private:
   // ---------------------------------------------------------------------------
-  // METHODs                                                         ( private )
+  // setup_listener                                                  ( private )
   //
-  bool postAccept() {
-    SOCKET soc = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0,
-                            WSA_FLAG_OVERLAPPED);
-    if (soc == INVALID_SOCKET) return false;
-    overlapped_accept* ova = new overlapped_accept(soc);
-    DWORD received = 0;
-    BOOL accepted = accept_ex_(accept_socket_, ova->socket, ova->addresses, 0,
-                               kAABs, kAABs, &received, ova);
-    if (accepted == FALSE && WSAGetLastError() != ERROR_IO_PENDING) {
-      closesocket(ova->socket);
-      delete ova;
-      return false;
-    }
-    return true;
-  }
-  std::size_t setupListener(const char port[]) {
+  std::size_t setup_listener(const char port[]) {
     // Let's use our help class to create a cpu pinning plan!
     std::size_t workers = std::thread::hardware_concurrency();
     // Let's create our main i/o completion port!
@@ -342,55 +300,64 @@ class tcpip {
     io_h_ = ioh;
     return workers;
   }
-  void setupAcceptPipeline(std::size_t accepts_in_flight) {
+  // ---------------------------------------------------------------------------
+  // setup_accept_pipeline                                           ( private )
+  //
+  void setup_accept_pipeline(std::size_t accepts_in_flight) {
     accept_depth_ = accepts_in_flight;
     for (std::size_t i = 0; i < accept_depth_; i++) {
-      if (!postAccept()) {
+      if (!post_accept()) {
         throw std::runtime_error("AcceptEx pipeline could not be armed!");
       }
     }
   }
-  void setupWorkers(std::size_t number_of_workers) {
+  // ---------------------------------------------------------------------------
+  // setup_workers                                                   ( private )
+  //
+  void setup_workers(std::size_t number_of_workers) {
     for (std::size_t i = 0; i < number_of_workers; i++) {
       workers_.emplace_back(std::jthread([this]() {
         bool stopping = false;
-        while (true) {
+        while (!stopping) {
           ULONG_PTR key = NULL;
           LPOVERLAPPED lpo = NULL;
-          DWORD bytes = 0;
+          DWORD n = 0;  // bytes transfered..
           DWORD tout = INFINITE;
-          if (stopping && context::empty()) break;
-          BOOL st = GetQueuedCompletionStatus(io_h_, &bytes, &key, &lpo, tout);
+          BOOL st = GetQueuedCompletionStatus(io_h_, &n, &key, &lpo, tout);
           DWORD err = st ? ERROR_SUCCESS : GetLastError();
           overlapped_base* ovb = reinterpret_cast<overlapped_base*>(lpo);
           if (st == TRUE) {
-            if (ovb->type == io_type::kAccept) {
-              auto* ova = reinterpret_cast<overlapped_accept*>(ovb);
-              handleAccept(ova);
-              delete ova;
-            } else if (ovb->type == io_type::kReceive) {
-              handleReceive(ovb->ctx, bytes);
-            } else if (ovb->type == io_type::kSend) {
-              handleSend(ovb->ctx, bytes);
-            } else if (ovb->type == io_type::kStop) {
-              auto* ovx = reinterpret_cast<overlapped_stop*>(ovb);
-              stopping = true;
-              delete ovx;
+            switch (ovb->get_type()) {
+              case io_type::kAccept:
+                handle_accept(reinterpret_cast<overlapped_accept*>(ovb));
+                break;
+              case io_type::kReceive:
+                handle_receive(reinterpret_cast<overlapped_receive*>(ovb), n);
+                break;
+              case io_type::kSend:
+                handle_send(reinterpret_cast<overlapped_send*>(ovb), n);
+                break;
+              case io_type::kStop:
+                handle_stop(stopping);
+                break;
             }
-            continue;
+          } else {
+            handle_error(ovb);
           }
-          handleError(ovb);
+          handle_overlapped(ovb);
         }
       }));
     }
   }
-  void handleAccept(overlapped_accept* ova) {
-    if (!postAccept()) return;
-    if (ova->socket == INVALID_SOCKET) return;
+  // ---------------------------------------------------------------------------
+  // handle_accept                                                   ( private )
+  //
+  void handle_accept(overlapped_accept* ova) {
+    if (!post_accept()) {
+      return;
+    }
     // Let's create a new context for this accepted socket!
     std::shared_ptr<context> ctx = std::make_shared<context>(ova->socket);
-    ctx->ovr = new overlapped_receive(ctx);
-    ctx->ovs = new overlapped_send(ctx);
     // Let's set the accepted socket to be associated with the listening socket!
     int result = setsockopt(ova->socket, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
                             reinterpret_cast<const char*>(&accept_socket_),
@@ -421,130 +388,336 @@ class tcpip {
       return;
     }
     // Let's arm next receive operation!
-    if (!ctx->receive()) {
+    if (!receive(ctx)) {
       closesocket(ova->socket);
       return;
     }
     // Let's call user's callback to notify for new connection!
     try {
-      onConnection();
+      on_connection();
     } catch (const std::exception& ex) {
-      markContextForClosing(ctx);
+      mark_context_for_closing(ctx);
       return;
     } catch (...) {
-      markContextForClosing(ctx);
+      mark_context_for_closing(ctx);
       return;
     }
   }
-  void handleReceive(std::shared_ptr<context> ctx, DWORD bytes_received) {
+  // ---------------------------------------------------------------------------
+  // handle_receive                                                  ( private )
+  //
+  void handle_receive(overlapped_receive* ovr, DWORD bytes_received) {
     // If the associated context is in 'closing' status then the operation is
     // discarded and no actions are performed!
-    if (!ctx || ctx->closing.load()) return;
-    // Any of the following situations will trigger a disconnection!
-    if (!bytes_received) {
-      markContextForClosing(ctx);
+    if (ovr->get_context()->closing.load()) {
       return;
     }
-    ctx->rcv_len += bytes_received;
+    // Any of the following situations will trigger a disconnection!
+    if (!bytes_received) {
+      mark_context_for_closing(ovr->get_context());
+      return;
+    }
     // Now, we'll try to decode as many requests as possible..
     DWORD oin = 0;
-    std::shared_ptr<RQty> req;
-    std::size_t bytes_used_on_deserialization = 0;
     std::unique_ptr<std::string> out = std::make_unique<std::string>();
-    while (oin < ctx->rcv_len) {
-      std::size_t space_left_in = ctx->rcv_len - oin;
-      protocol::deserialization_result result =
-          RQty::deserialize(&ctx->rcv_buf[oin], space_left_in, req = nullptr,
-                            bytes_used_on_deserialization = 0);
-      if (result == protocol::deserialization_result::kMoreBytesNeeded) {
+    while (oin < bytes_received) {
+      std::shared_ptr<RSty> res = std::make_shared<RSty>();
+      std::size_t space_left_in = bytes_received - oin;
+      protocol::deserialization_result<RQty> result =
+          RQty::deserialize(std::string_view(&ovr->buffer[oin], space_left_in));
+      if (result.code == protocol::deserialization_status::kMoreBytesNeeded) {
         // In case of 'failed' operation, bytes can NOT be greater than zero!
-        if (bytes_used_on_deserialization > 0) {
-          markContextForClosing(ctx);
+        if (result.bytes_used > 0) {
+          // In this case we'll mark this context as 'closing'..
+          try {
+            on_bad_request("Inconsistent deserialization status!", res);
+            send_error_and_mark_context_for_closing(ovr->get_context(), res);
+          } catch (const std::exception&) {
+            mark_context_for_closing(ovr->get_context());
+          } catch (...) {
+            mark_context_for_closing(ovr->get_context());
+          }
           return;
         }
         break;
       }
-      if (result == protocol::deserialization_result::kInvalidSource) {
+      if (result.code == protocol::deserialization_status::kInvalidSource) {
         // In this case we'll mark this context as 'closing'..
-        markContextForClosing(ctx);
+        try {
+          on_bad_request("Invalid source deserialization content!", res);
+          send_error_and_mark_context_for_closing(ovr->get_context(), res);
+        } catch (const std::exception&) {
+          mark_context_for_closing(ovr->get_context());
+        } catch (...) {
+          mark_context_for_closing(ovr->get_context());
+        }
         return;
       }
       // In case of 'succeeded' operation, consumed bytes can NOT be zero!
       // Also, used bytes in deserialization must be within valid memory range!
-      if (bytes_used_on_deserialization == 0 ||
-          bytes_used_on_deserialization > (space_left_in)) {
-        markContextForClosing(ctx);
+      if (result.bytes_used == 0 || result.bytes_used > (space_left_in)) {
+        // In this case we'll mark this context as 'closing'..
+        try {
+          on_bad_request("Inconsistent deserialization status!", res);
+          send_error_and_mark_context_for_closing(ovr->get_context(), res);
+        } catch (const std::exception&) {
+          mark_context_for_closing(ovr->get_context());
+        } catch (...) {
+          mark_context_for_closing(ovr->get_context());
+        }
         return;
       }
       // In case of 'succeeded' operation, returned request cannot be NULL!
-      if (req == nullptr) {
-        markContextForClosing(ctx);
+      if (result.request == nullptr) {
+        // In this case we'll mark this context as 'closing'..
+        try {
+          on_bad_request("Inconsistent deserialization status!", res);
+          send_error_and_mark_context_for_closing(ovr->get_context(), res);
+        } catch (const std::exception&) {
+          mark_context_for_closing(ovr->get_context());
+        } catch (...) {
+          mark_context_for_closing(ovr->get_context());
+        }
         return;
       }
       // Let's call user handler!
-      std::shared_ptr<RSty> res = std::make_shared<RSty>();
       try {
-        onRequest(req, res, [this, ctx, &out](std::shared_ptr<RSty> res) {
-          // If the associated context is in 'closing' status then the operation
-          // is discarded and no actions are performed!
-          if (!ctx || ctx->closing.load()) return;
+        std::shared_ptr<context> ctx = ovr->get_context();
+        on_request(result.request, res, [this, ctx, &out](auto res) {
+          // If the associated context is in 'closing' status then
+          // the operation is discarded and no actions are performed!
+          if (ctx->closing.load()) {
+            return;
+          }
           // Let's append this response to the outgoing buffer!
           out->append(res->serialize());
         });
       } catch (const std::exception& ex) {
-        markContextForClosing(ctx);
+        mark_context_for_closing(ovr->get_context());
         return;
       } catch (...) {
-        markContextForClosing(ctx);
+        mark_context_for_closing(ovr->get_context());
         return;
       }
-      oin += bytes_used_on_deserialization;
+      oin += result.bytes_used;
     }
-    ctx->rcv_len -= oin;
-    ctx->pusPendingResponse(std::move(out));
+    // Let's add batched responses buffer to pending queue!
+    enqueue(ovr->get_context(), std::move(out));
+    // Let's arm next receive operation!
+    arm_next_receive_operation(ovr->get_context());
     // Let's arm send operation!
-    if (!ctx->popPendingResponseAndSend()) {
-      markContextForClosing(ctx);
+    arm_next_send_operation(ovr->get_context());
+  }
+  // ---------------------------------------------------------------------------
+  // handle_send                                                     ( private )
+  //
+  void handle_send(overlapped_send* ovs, DWORD bytes) {
+    if (!arm_pending_send_operation(ovs, bytes)) {
+      arm_next_send_operation(ovs->get_context());
+    }
+  }
+  // ---------------------------------------------------------------------------
+  // handle_stop                                                     ( private )
+  //
+  void handle_stop(bool& stopping) { stopping = true; }
+  // ---------------------------------------------------------------------------
+  // handle_error                                                    ( private )
+  //
+  void handle_error(overlapped_base* ovb) {
+    switch (ovb->get_type()) {
+      case io_type::kAccept:
+        break;
+      case io_type::kReceive:
+      case io_type::kSend:
+        mark_context_for_closing(ovb->get_context());
+        break;
+      case io_type::kStop:
+        break;
+    }
+  }
+  // ---------------------------------------------------------------------------
+  // handle_overlapped                                               ( private )
+  //
+  void handle_overlapped(overlapped_base* ovb) {
+    switch (ovb->get_type()) {
+      case io_type::kAccept:
+        delete reinterpret_cast<overlapped_accept*>(ovb);
+        break;
+      case io_type::kReceive:
+        delete reinterpret_cast<overlapped_receive*>(ovb);
+        break;
+      case io_type::kSend:
+        delete reinterpret_cast<overlapped_send*>(ovb);
+        break;
+      case io_type::kStop:
+        delete reinterpret_cast<overlapped_stop*>(ovb);
+        break;
+    }
+  }
+  // ---------------------------------------------------------------------------
+  // send_error_and_mark_context_for_closing                         ( private )
+  //
+  void send_error_and_mark_context_for_closing(std::shared_ptr<context> ctx,
+                                               std::shared_ptr<RSty> response) {
+    if (response) {
+      std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
+      std::unique_ptr<std::string> out = std::make_unique<std::string>();
+      ctx->close_after_sending = true;
+      out->append(response->serialize());
+      enqueue(ctx, std::move(out));
+    }
+    arm_next_send_operation(ctx);
+  }
+  // ---------------------------------------------------------------------------
+  // mark_context_for_closing                                        ( private )
+  //
+  void mark_context_for_closing(std::shared_ptr<context> ctx) {
+    // Let's prepare this context for closing!
+    bool expected = false;
+    if (ctx->closing.compare_exchange_strong(expected, true)) {
+      closesocket(ctx->socket);
+      ctx->socket = INVALID_SOCKET;
+      // Let's call user's callback to notify for disconnection!
+      try {
+        on_disconnection();
+      } catch (const std::exception& ex) {
+        // [to-do] -> add support for this!
+      } catch (...) {
+        // [to-do] -> add support for this!
+      }
+    }
+  }
+  // ---------------------------------------------------------------------------
+  // arm_pending_send_operation                                      ( private )
+  //
+  bool arm_pending_send_operation(overlapped_send* ovs, DWORD bytes) {
+    // If the associated context is in 'closing' status then the operation is
+    // not dispatched and no actions are performed!
+    if (ovs->get_context()->closing.load()) {
+      return false;
+    }
+    std::lock_guard<std::mutex> sending_lock(ovs->get_context()->sending_mutex);
+    ovs->buffer->erase(0, bytes);
+    ovs->get_context()->sending = false;
+    if (ovs->buffer->empty()) {
+      return false;
+    }
+    // Let's arm next send operation!
+    if (!send(ovs->get_context(), std::move(ovs->buffer))) {
+      mark_context_for_closing(ovs->get_context());
+      ovs->get_context()->sending = false;
+      return false;
+    }
+    ovs->get_context()->sending = true;
+    return true;
+  }
+  // ---------------------------------------------------------------------------
+  // arm_next_send_operation                                         ( private )
+  //
+  void arm_next_send_operation(std::shared_ptr<context> ctx) {
+    // If the associated context is in 'closing' status then the operation is
+    // not dispatched and no actions are performed!
+    if (ctx->closing.load()) {
+      return;
+    }
+    // If the associated context is already sending then the operation is not
+    // dispatched and no actions are performed!
+    std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
+    if (ctx->sending) {
+      return;
+    }
+    std::unique_ptr<std::string> buffer = dequeue(ctx);
+    if (!buffer) {
+      // Let's check if we need to close this context after sending all pending
+      // responses!
+      if (ctx->close_after_sending) {
+        mark_context_for_closing(ctx);
+      }
+      return;
+    }
+    // Let's arm next send operation!
+    if (!send(ctx, std::move(buffer))) {
+      mark_context_for_closing(ctx);
+      ctx->sending = false;
+      return;
+    }
+    ctx->sending = true;
+  }
+  // ---------------------------------------------------------------------------
+  // arm_next_receive_operation                                      ( private )
+  //
+  void arm_next_receive_operation(std::shared_ptr<context> ctx) {
+    // If the associated context is in 'closing' status then the operation is
+    if (ctx->closing.load()) {
       return;
     }
     // Let's arm next receive operation!
-    if (!ctx->receive()) {
-      markContextForClosing(ctx);
-      return;
+    if (!receive(ctx)) {
+      mark_context_for_closing(ctx);
     }
   }
-  void handleSend(std::shared_ptr<context> ctx, DWORD bytes) {
-    // If the associated context is in 'closing' status then the operation is
-    // discarded and no actions are performed!
-    if (!ctx || ctx->closing.load()) return;
-    // Let's arm send operation!
-    if (!ctx->popPendingResponseAndSend(bytes)) {
-      markContextForClosing(ctx);
-      return;
-    }
+  // ---------------------------------------------------------------------------
+  // enqueue                                                         ( private )
+  //
+  void enqueue(std::shared_ptr<context> ctx, std::unique_ptr<std::string> bf) {
+    ctx->push_pending_response(std::move(bf));
   }
-  void handleError(overlapped_base* ovb) {
-    if (ovb->ctx) markContextForClosing(ovb->ctx);
-    if (ovb->type == io_type::kAccept) {
-      delete reinterpret_cast<overlapped_accept*>(ovb);
-    } else if (ovb->type == io_type::kStop) {
-      delete reinterpret_cast<overlapped_stop*>(ovb);
-    }
+  // ---------------------------------------------------------------------------
+  // dequeue                                                         ( private )
+  //
+  std::unique_ptr<std::string> dequeue(std::shared_ptr<context> ctx) {
+    return ctx->pop_pending_response();
   }
-  void markContextForClosing(std::shared_ptr<context> ctx) {
-    // Let's prepare this context for closing!
-    if (ctx && ctx->prepareForClosing()) {
-      // Let's call user's callback to notify for disconnection!
-      try {
-        onDisconnection();
-      } catch (const std::exception& ex) {
-        markContextForClosing(ctx);
-        return;
-      } catch (...) {
-        markContextForClosing(ctx);
-        return;
-      }
+  // ---------------------------------------------------------------------------
+  // receive                                                         ( private )
+  //
+  bool receive(std::shared_ptr<context> ctx) {
+    DWORD f = 0, r = 0;
+    overlapped_receive* ovr = new overlapped_receive(ctx);
+    std::memset(&ovr->wsa, 0, sizeof(WSABUF));
+    std::memset(static_cast<OVERLAPPED*>(ovr), 0, sizeof(OVERLAPPED));
+    ovr->wsa.buf = ovr->buffer;
+    ovr->wsa.len = BFsz;
+    int res = WSARecv(ctx->socket, &ovr->wsa, 1, &r, &f, ovr, 0);
+    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      return false;
     }
+    return true;
+  }
+  // ---------------------------------------------------------------------------
+  // send                                                            ( private )
+  //
+  bool send(std::shared_ptr<context> ctx, std::unique_ptr<std::string> buffer) {
+    DWORD f = 0, s = 0;
+    overlapped_send* ovs = new overlapped_send(ctx);
+    std::memset(&ovs->wsa, 0, sizeof(WSABUF));
+    std::memset(static_cast<OVERLAPPED*>(ovs), 0, sizeof(OVERLAPPED));
+    ovs->buffer = std::move(buffer);
+    ovs->wsa.buf = ovs->buffer->data();
+    ovs->wsa.len = ovs->buffer->size();
+    int res = WSASend(ctx->socket, &ovs->wsa, 1, &s, f, ovs, 0);
+    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      return false;
+    }
+    return true;
+  }
+  // ---------------------------------------------------------------------------
+  // post_accept                                                     ( private )
+  //
+  bool post_accept() {
+    SOCKET soc = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0,
+                            WSA_FLAG_OVERLAPPED);
+    if (soc == INVALID_SOCKET) return false;
+    overlapped_accept* ova = new overlapped_accept(soc);
+    DWORD received = 0;
+    BOOL accepted =
+        accept_ex_(accept_socket_, ova->socket, ova->addresses, 0,
+                   kAcceptAddressBytes, kAcceptAddressBytes, &received, ova);
+    if (accepted == FALSE && WSAGetLastError() != ERROR_IO_PENDING) {
+      delete ova;
+      return false;
+    }
+    return true;
   }
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
