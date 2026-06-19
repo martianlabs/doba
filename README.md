@@ -1,3 +1,3 @@
-![DDS Compose](resources/doba_logo_center_white_bg_tight.png)
+![doba](resources/doba.png)
 
 An include-only c++ library for high performance communications.
