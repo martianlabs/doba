@@ -75,27 +75,63 @@
 
 namespace martianlabs::doba::common {
 // =============================================================================
+// ascii_to_lower                                                     ( helper )
+// -----------------------------------------------------------------------------
+// Converts an ASCII uppercase character to lowercase.
+// All other values are returned unchanged.
+// -----------------------------------------------------------------------------
+// =============================================================================
+static constexpr unsigned char ascii_to_lower(unsigned char value) noexcept {
+  if (value >= 'A' && value <= 'Z') {
+    return static_cast<unsigned char>(value + ('a' - 'A'));
+  }
+  return value;
+}
+// =============================================================================
 // base_hash                                                          ( struct )
 // -----------------------------------------------------------------------------
 // This struct is needed for the hash_set/hash_map helpers.
+// It performs an ASCII case-insensitive hash.
 // -----------------------------------------------------------------------------
 // =============================================================================
 struct base_hash {
   using is_transparent = void;
-  size_t operator()(std::string_view s) const noexcept {
-    return std::hash<std::string_view>{}(s);
+  std::size_t operator()(std::string_view value) const noexcept {
+    std::size_t hash;
+    if constexpr (sizeof(std::size_t) == 8) {
+      hash = static_cast<std::size_t>(14695981039346656037ull);
+    } else {
+      hash = static_cast<std::size_t>(2166136261u);
+    }
+    for (const char character : value) {
+      hash ^= static_cast<std::size_t>(
+          ascii_to_lower(static_cast<unsigned char>(character)));
+      if constexpr (sizeof(std::size_t) == 8) {
+        hash *= static_cast<std::size_t>(1099511628211ull);
+      } else {
+        hash *= static_cast<std::size_t>(16777619u);
+      }
+    }
+    return hash;
   }
 };
 // =============================================================================
 // base_equal                                                         ( struct )
 // -----------------------------------------------------------------------------
-// This struct is needed for the hash_set/hash_map jelpers.
+// This struct is needed for the hash_set/hash_map helpers.
+// It performs an ASCII case-insensitive comparison.
 // -----------------------------------------------------------------------------
 // =============================================================================
 struct base_equal {
   using is_transparent = void;
   bool operator()(std::string_view lhs, std::string_view rhs) const noexcept {
-    return lhs == rhs;
+    if (lhs.size() != rhs.size()) return false;
+    for (std::size_t index = 0; index < lhs.size(); ++index) {
+      const auto left = ascii_to_lower(static_cast<unsigned char>(lhs[index]));
+      const auto right = ascii_to_lower(static_cast<unsigned char>(rhs[index]));
+      if (left != right) return false;
+    }
+    return true;
   }
 };
 }  // namespace martianlabs::doba::common

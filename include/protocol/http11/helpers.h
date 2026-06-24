@@ -283,6 +283,78 @@ struct helpers {
   static constexpr char tolower_ascii(char c) noexcept {
     return static_cast<char>(tolower_ascii(static_cast<unsigned char>(c)));
   }
+
+  /*
+  pepe
+  */
+
+  // +-------------------------------------------------------------------------+
+  // | Consumes a token from the provided string_view.                         |
+  // +-------------------------------------------------------------------------+
+  static constexpr std::string_view parse_token(std::string_view sv) noexcept {
+    std::string_view token;
+    for (std::size_t i = 0; i < sv.size(); ++i) {
+      if (!is_token(sv[i])) {
+        return sv.substr(0, i);
+      }
+    }
+    return sv.substr(0, sv.size());
+  }
+  // +-------------------------------------------------------------------------+
+  // | Consumes a quoted-string from the provided string_view.                 |
+  // +-------------------------------------------------------------------------+
+  static constexpr std::string_view parse_quoted_string(
+      std::string_view sv) noexcept {
+    if (sv.empty() || sv.front() != '"') return {};
+    std::size_t end_index = 1;
+    bool inside_quoted_string = true;
+    while (end_index < sv.size() && inside_quoted_string) {
+      if (sv[end_index] == '"') {
+        inside_quoted_string = false;
+      } else if (sv[end_index] == '\\' && end_index + 1 < sv.size()) {
+        end_index += 2;  // Skip the escaped character
+        continue;
+      }
+      end_index++;
+    }
+    if (inside_quoted_string) return {};
+    return sv.substr(0, end_index);
+  }
+  // +---------------------------------------------------------------------------+
+  // | Finds the position of the first list separator (comma) in the provided    |
+  // | string_view, taking into account quoted strings.                          |
+  // +---------------------------------------------------------------------------+
+  static constexpr bool find_list_separator(std::string_view sv,
+                                            std::size_t& separator) {
+    separator = std::string_view::npos;
+    for (std::size_t index = 0; index < sv.size();) {
+      if (sv[index] == ',') {
+        separator = index;
+        return true;
+      }
+      if (sv[index] != '"') {
+        ++index;
+        continue;
+      }
+      const std::string_view q = helpers::parse_quoted_string(sv.substr(index));
+      if (q.empty()) return false;
+      index += q.size();
+    }
+    return true;
+  }
+  // +-------------------------------------------------------------------------+
+  // | Compares two string_views for case-insensitive equality.                |
+  // +-------------------------------------------------------------------------+
+  static inline bool iequals(std::string_view a, std::string_view b) {
+    return a.size() == b.size() &&
+           std::equal(a.begin(), a.end(), b.begin(), [](char ac, char bc) {
+             return tolower_ascii(ac) == tolower_ascii(bc);
+           });
+  }
+
+  /*
+  pepe fin
+  */
 };
 }  // namespace martianlabs::doba::protocol::http11
 

@@ -67,15 +67,15 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#ifndef martianlabs_doba_protocol_http11_checkers_connection_h
-#define martianlabs_doba_protocol_http11_checkers_connection_h
+#ifndef martianlabs_doba_protocol_http11_checkers_h_connection_h
+#define martianlabs_doba_protocol_http11_checkers_h_connection_h
 
 #include <ranges>
 #include <string_view>
 
 #include "protocol/http11/helpers.h"
 
-namespace martianlabs::doba::protocol::http11::checkers {
+namespace martianlabs::doba::protocol::http11::checkers::headers {
 // +===========================================================================+
 // |                                                                connection |
 // +===========================================================================+
@@ -138,18 +138,24 @@ namespace martianlabs::doba::protocol::http11::checkers {
 // +---------------------------------------------------------------------------+
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+
-static inline bool connection(std::string_view sv) {
-  for (auto token : sv | std::views::split(',')) {
-    if (token.begin() == token.end()) continue;
-    std::string_view value(&*token.begin(), std::ranges::distance(token));
-    helpers::ows_trim(value);
-    if (value.empty()) continue;
-    for (auto const& c : value) {
-      if (!helpers::is_token(c)) return false;
+class connection {
+ public:
+  // +=========================================================================+
+  // | [>] check                                                    ( public ) |
+  // +=========================================================================+
+  static bool check(std::string_view sv) {
+    for (auto token : sv | std::views::split(',')) {
+      if (token.begin() == token.end()) continue;
+      std::string_view value(&*token.begin(), std::ranges::distance(token));
+      helpers::ows_trim(value);
+      if (value.empty()) continue;
+      for (auto const& c : value) {
+        if (!helpers::is_token(c)) return false;
+      }
     }
+    return true;
   }
-  return true;
-}
-}  // namespace martianlabs::doba::protocol::http11::checkers
+};
+}  // namespace martianlabs::doba::protocol::http11::checkers::headers
 
 #endif

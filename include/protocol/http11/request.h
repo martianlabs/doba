@@ -77,6 +77,12 @@
 #include "headers.h"
 #include "common/hash_map.h"
 #include "protocol/deserialization.h"
+#include "checkers/connection.h"
+#include "checkers/host.h"
+#include "checkers/content_length.h"
+#include "checkers/transfer_encoding.h"
+#include "checkers/expect.h"
+#include "checkers/date.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // =============================================================================
@@ -453,14 +459,109 @@ class request {
           return deserialization_status::kInvalidSource;
         }
       }
-      std::string_view field_value =buffer.substr(off, end_of_header - off);
+      std::string_view field_value = buffer.substr(off, end_of_header - off);
       helpers::ows_trim(field_value);
+      auto const itr_checker = header_checkers_.find(field_name);
+      if (itr_checker != header_checkers_.end()) {
+        if (!itr_checker->second(field_value)) {
+          return deserialization_status::kInvalidSource;
+        }
+      }
       headers_.emplace_back(field_name, field_value);
       fn_start = off = end_of_header + 2;
       field_name_decoded = false;
     }
     return deserialization_status::kSucceeded;
   }
+  // +=========================================================================+
+  // |                      HTTP/1.1 SERVER HEADER CHECKLIST                   |
+  // +=========================================================================+
+  // +------------------------------------------------------------+------------+
+  // | Header                                                     |  Supported |
+  // +------------------------------------------------------------+------------+
+  // | Host                                                       |     [x]    |
+  // | Content-Length                                             |     [x]    |
+  // | Transfer-Encoding                                          |     [x]    |
+  // | Connection                                                 |     [x]    |
+  // | TE                                                         |     [ ]    |
+  // | Trailer                                                    |     [ ]    |
+  // | Expect                                                     |     [x]    |
+  // | Upgrade                                                    |     [ ]    |
+  // | Content-Type                                               |     [ ]    |
+  // | Content-Encoding                                           |     [ ]    |
+  // | Date                                                       |     [x]    |
+  // | Accept                                                     |     [ ]    |
+  // | Accept-Encoding                                            |     [ ]    |
+  // | Accept-Language                                            |     [ ]    |
+  // | Content-Language                                           |     [ ]    |
+  // | Content-Location                                           |     [ ]    |
+  // | Range                                                      |     [ ]    |
+  // | Content-Range                                              |     [ ]    |
+  // | Accept-Ranges                                              |     [ ]    |
+  // | If-Range                                                   |     [ ]    |
+  // | ETag                                                       |     [ ]    |
+  // | Last-Modified                                              |     [ ]    |
+  // | If-Match                                                   |     [ ]    |
+  // | If-None-Match                                              |     [ ]    |
+  // | If-Modified-Since                                          |     [ ]    |
+  // | If-Unmodified-Since                                        |     [ ]    |
+  // | Cache-Control                                              |     [ ]    |
+  // | Vary                                                       |     [ ]    |
+  // | Age                                                        |     [ ]    |
+  // | Expires                                                    |     [ ]    |
+  // | Pragma                                                     |     [ ]    |
+  // | Location                                                   |     [ ]    |
+  // | Allow                                                      |     [ ]    |
+  // | Retry-After                                                |     [ ]    |
+  // | Authorization                                              |     [ ]    |
+  // | WWW-Authenticate                                           |     [ ]    |
+  // | Authentication-Info                                        |     [ ]    |
+  // | Cookie                                                     |     [ ]    |
+  // | Set-Cookie                                                 |     [ ]    |
+  // | User-Agent                                                 |     [ ]    |
+  // | Server                                                     |     [ ]    |
+  // | Referer                                                    |     [ ]    |
+  // | Max-Forwards                                               |     [ ]    |
+  // | From                                                       |     [ ]    |
+  // | Accept-Charset                                             |     [ ]    |
+  // | Origin                                                     |     [ ]    |
+  // | Access-Control-Request-Method                              |     [ ]    |
+  // | Access-Control-Request-Headers                             |     [ ]    |
+  // | Access-Control-Allow-Origin                                |     [ ]    |
+  // | Access-Control-Allow-Methods                               |     [ ]    |
+  // | Access-Control-Allow-Headers                               |     [ ]    |
+  // | Access-Control-Allow-Credentials                           |     [ ]    |
+  // | Access-Control-Expose-Headers                              |     [ ]    |
+  // | Access-Control-Max-Age                                     |     [ ]    |
+  // | Sec-WebSocket-Key                                          |     [ ]    |
+  // | Sec-WebSocket-Accept                                       |     [ ]    |
+  // | Sec-WebSocket-Version                                      |     [ ]    |
+  // | Sec-WebSocket-Protocol                                     |     [ ]    |
+  // | Sec-WebSocket-Extensions                                   |     [ ]    |
+  // | Via                                                        |     [ ]    |
+  // | Forwarded                                                  |     [ ]    |
+  // | X-Forwarded-For                                            |     [ ]    |
+  // | X-Forwarded-Host                                           |     [ ]    |
+  // | X-Forwarded-Proto                                          |     [ ]    |
+  // | Keep-Alive                                                 |     [ ]    |
+  // | Proxy-Connection                                           |     [ ]    |
+  // +-------------------------------------------------------------------------+
+  // ---------------------------------------------------------------------------
+  // TYPEs                                                           ( private )
+  //
+  using header_check_delegate = std::function<bool(std::string_view)>;
+  // ---------------------------------------------------------------------------
+  // CONSTANTs                                                       ( private )
+  //
+  const common::hash_map<std::string_view, header_check_delegate>
+      header_checkers_ = {
+          {"Host", checkers::headers::host::check},
+          {"Content-Length", checkers::headers::content_length::check},
+          {"Transfer-Encoding", checkers::headers::transfer_encoding::check},
+          {"Connection", checkers::headers::connection::check},
+          {"Expect", checkers::headers::expect::check},
+          {"Date", checkers::headers::date::check},
+  };
   // ---------------------------------------------------------------------------
   // ATTRIBUTEs                                                      ( private )
   //

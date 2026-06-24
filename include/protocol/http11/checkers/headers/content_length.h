@@ -67,16 +67,15 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#ifndef martianlabs_doba_protocol_http11_checkers_content_length_h
-#define martianlabs_doba_protocol_http11_checkers_content_length_h
+#ifndef martianlabs_doba_protocol_http11_checkers_h_content_length_h
+#define martianlabs_doba_protocol_http11_checkers_h_content_length_h
 
 #include <ranges>
 #include <string_view>
 
-#include "protocol/http11/constants.h"
 #include "protocol/http11/helpers.h"
 
-namespace martianlabs::doba::protocol::http11::checkers {
+namespace martianlabs::doba::protocol::http11::checkers::headers {
 // +===========================================================================+
 // |                                                            content_length |
 // +===========================================================================+
@@ -109,13 +108,19 @@ namespace martianlabs::doba::protocol::http11::checkers {
 // +---------------------------------------------------------------------------+
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+
-static inline bool content_length(std::string_view sv) {
-  if (sv.empty()) return false;
-  for (auto const& c : sv) {
-    if (!helpers::is_digit(c)) return false;
+class content_length {
+ public:
+  // +=========================================================================+
+  // | [>] check                                                    ( public ) |
+  // +=========================================================================+
+  static bool check(std::string_view sv) {
+    if (sv.empty()) return false;
+    for (auto const& c : sv) {
+      if (!helpers::is_digit(c)) return false;
+    }
+    return true;
   }
-  return true;
-}
-}  // namespace martianlabs::doba::protocol::http11::checkers
+};
+}  // namespace martianlabs::doba::protocol::http11::checkers::headers
 
 #endif

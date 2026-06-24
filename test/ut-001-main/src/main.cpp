@@ -73,7 +73,7 @@
 #include "protocol/http11/server.h"
 
 
-#include "protocol/http11/checkers/date.h"
+#include "protocol/http11/checkers/te.h"
 
 
 
@@ -83,16 +83,22 @@ using namespace martianlabs::doba::protocol::http11;
 int main(int argc, char* argv[]) {
   martianlabs::doba::network::startup();
 
-  std::string test_01 = "Sun, 06 Nov 1994 08:49:37 GMT";
-  std::string test_02 = "Sunday, 06-Nov-94 08:49:37 GMT";
-  std::string test_03 = "Sun Nov  6 08:49:37 1994";
+  std::string test_01 = "gzip; window=15 ; q=0.8, trailers";
 
-  bool result_01 =
-      martianlabs::doba::protocol::http11::checkers::date(test_01);
+  bool result_01 = martianlabs::doba::protocol::http11::checkers::headers::
+      transfer_encoding::check(test_01);
+  /*
   bool result_02 =
-      martianlabs::doba::protocol::http11::checkers::date(test_02);
+      martianlabs::doba::protocol::http11::checkers::expect(test_02);
   bool result_03 =
-      martianlabs::doba::protocol::http11::checkers::date(test_03);
+      martianlabs::doba::protocol::http11::checkers::expect(test_03);
+  bool result_04 =
+      martianlabs::doba::protocol::http11::checkers::expect(test_04);
+  bool result_05 =
+      martianlabs::doba::protocol::http11::checkers::expect(test_05);
+  bool result_07 =
+      martianlabs::doba::protocol::http11::checkers::expect(test_07);
+  */
 
 
 
