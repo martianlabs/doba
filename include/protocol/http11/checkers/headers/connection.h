@@ -76,9 +76,10 @@
 #include "protocol/http11/helpers.h"
 
 namespace martianlabs::doba::protocol::http11::checkers::headers {
-// +===========================================================================+
-// |                                                                connection |
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] connection                                                  ( class ) |
+// +---------------------------------------------------------------------------+
 // | RFC 9110 §7.6.1 Connection                                                |
 // +---------------------------------------------------------------------------+
 // | The "Connection" header field allows the sender to list control options   |
@@ -138,6 +139,7 @@ namespace martianlabs::doba::protocol::http11::checkers::headers {
 // +---------------------------------------------------------------------------+
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class connection {
  public:
   // +=========================================================================+
@@ -147,7 +149,19 @@ class connection {
     for (auto token : sv | std::views::split(',')) {
       if (token.begin() == token.end()) continue;
       std::string_view value(&*token.begin(), std::ranges::distance(token));
+
+      /*
+      pepe
+      */
+
+      /*
       helpers::ows_trim(value);
+      */
+
+      /*
+      pepe fin
+      */
+
       if (value.empty()) continue;
       for (auto const& c : value) {
         if (!helpers::is_token(c)) return false;

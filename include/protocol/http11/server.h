@@ -74,7 +74,7 @@
 #include "common/thread_pool.h"
 #include "common/date_server.h"
 #include "transport/server/tcpip.h"
-#include "protocol/http11/method.h"
+#include "protocol/http11/methods.h"
 #include "protocol/http11/helpers.h"
 #include "protocol/http11/request.h"
 #include "protocol/http11/response.h"
@@ -82,26 +82,28 @@
 #include "protocol/http11/headers.h"
 
 namespace martianlabs::doba::protocol::http11 {
-// =============================================================================
-// server                                                              ( class )
-// -----------------------------------------------------------------------------
-// This class holds for the http 1.1 server implementation.
-// -----------------------------------------------------------------------------
-// Template parameters:
-//    TRty - transport being used (tcp/ip by default).
-// =============================================================================
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] server                                                      ( class ) |
+// +---------------------------------------------------------------------------+
+// | This class holds for the http 1.1 server implementation.                  |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   TRty - transport being used (tcp/ip by default).                        |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 template <template <typename, typename, std::size_t> class TRty =
               transport::server::tcpip>
 class server {
-  // ---------------------------------------------------------------------------
-  // USINGs                                                          ( private )
-  //
+  // +=========================================================================+
+  // | [>] USINGs                                                   ( public ) |
+  // +=========================================================================+
   using router_fn = std::function<void(const request&, response&)>;
 
  public:
-  // ---------------------------------------------------------------------------
-  // CONSTRUCTORs/DESTRUCTORs                                         ( public )
-  //
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
   server() {
     transport_.on_request =
         [this](std::shared_ptr<const request> req,
@@ -136,7 +138,9 @@ class server {
               // [to-do] -> add support for this!
               break;
             default:
-              break;
+              res->bad_request_400().add_header(headers::kContentLength, 0);
+              on_send(res);
+              return;
           }
         };
     transport_.on_bad_request = [](std::string_view reason,
@@ -150,30 +154,30 @@ class server {
   server(const server&) = delete;
   server(server&&) noexcept = delete;
   ~server() { stop(); }
-  // ---------------------------------------------------------------------------
-  // OPERATORs                                                        ( public )
-  //
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +=========================================================================+
   server& operator=(const server&) = delete;
   server& operator=(server&&) noexcept = delete;
-  // ---------------------------------------------------------------------------
-  // start                                                            ( public )
-  //
+  // +=========================================================================+
+  // | [>] start                                                    ( public ) |
+  // +=========================================================================+
   void start(const char port[]) {
     common::date_server::get().start();
     thread_pool_ = std::make_shared<common::thread_pool>(
         std::thread::hardware_concurrency() / 2);
     transport_.start(port);
   }
-  // ---------------------------------------------------------------------------
-  // stop                                                             ( public )
-  //
+  // +=========================================================================+
+  // | [>] stop                                                     ( public ) |
+  // +=========================================================================+
   void stop() {
     thread_pool_->stop();
     transport_.stop();
   }
-  // ---------------------------------------------------------------------------
-  // add_route                                                        ( public )
-  //
+  // +=========================================================================+
+  // | [>] add_route                                                ( public ) |
+  // +=========================================================================+
   server& add_route(
       const std::string& method, const std::string& route, router_fn fn,
       common::execution_policy policy = common::execution_policy::kSync) {
@@ -182,11 +186,11 @@ class server {
   }
 
  private:
-  // ---------------------------------------------------------------------------
-  // ATTRIBUTEs                                                      ( private )
-  //
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
   std::shared_ptr<common::thread_pool> thread_pool_;
-  TRty<request, response, 8192> transport_;
+  TRty<request, response, 4096> transport_;
   std::atomic<uint32_t> connections_{0};
   router<router_fn> router_;
 };

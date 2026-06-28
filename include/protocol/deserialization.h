@@ -71,24 +71,28 @@
 #define martianlabs_doba_protocol_deserialization_h
 
 namespace martianlabs::doba::protocol {
-// =============================================================================
-// deserialization_status                                         ( enum-class )
-// -----------------------------------------------------------------------------
-// This enum class holds the result code on protocol deserialization processes.
-// =============================================================================
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] deserialization_status                                 ( enum-class ) |
+// +---------------------------------------------------------------------------+
+// | This enum class holds the result code on protocol deserialization.        |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 enum class deserialization_status {
   kSucceeded,        // everything went fine.
   kInvalidSource,    // source data is invalid.
   kMoreBytesNeeded,  // more bytes are needed to perform de-serialization.
 };
-// =============================================================================
-// deserialization_result                                             ( struct )
-// -----------------------------------------------------------------------------
-// This struct holds for the result on protocol deserialization processes.
-// -----------------------------------------------------------------------------
-// Template parameters:
-//    RQty - request being used.
-// =============================================================================
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] deserialization_result                                     ( struct ) |
+// +---------------------------------------------------------------------------+
+// | This struct holds the overall result on protocol deserialization.         |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   RQty - request being used.                                              |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 template <typename RQty>
 struct deserialization_result {
   deserialization_result(deserialization_status code) : code(code) {}

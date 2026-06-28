@@ -75,9 +75,10 @@
 #include "protocol/http11/helpers.h"
 
 namespace martianlabs::doba::protocol::http11::checkers::headers {
-// +===========================================================================+
-// |                                                                        te |
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] te                                                          ( class ) |
+// +---------------------------------------------------------------------------+
 // | RFC 9110 §10.1.4 TE                                                       |
 // +---------------------------------------------------------------------------+
 // | The "TE" request header field describes the client's capabilities with    |
@@ -136,6 +137,7 @@ namespace martianlabs::doba::protocol::http11::checkers::headers {
 // |                                                                           |
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class te {
  public:
   // +=========================================================================+
@@ -144,6 +146,12 @@ class te {
   static bool check(std::string_view sv) {
     bool follows_separator = false;
     while (true) {
+
+      /*
+      pepe
+      */
+
+      /*
       std::size_t separator = std::string_view::npos;
       if (!helpers::find_list_separator(sv, separator)) return false;
       const bool has_separator = separator != std::string_view::npos;
@@ -152,25 +160,18 @@ class te {
       if (follows_separator) helpers::ows_ltrim(t_codings);
       // OWS before the current comma belongs to the list separator.
       if (has_separator) helpers::ows_rtrim(t_codings);
-
-      /*
-      pepe
-      */
-
-      /*
       // Empty list elements are ignored by recipients.
       if (!t_codings.empty() && !try_to_parse_t_codings(t_codings)) {
         return false;
       }
+      if (!has_separator) return true;
+      sv.remove_prefix(separator + 1);
+      follows_separator = true;
       */
 
       /*
       pepe fin
       */
-
-      if (!has_separator) return true;
-      sv.remove_prefix(separator + 1);
-      follows_separator = true;
     }
   }
 

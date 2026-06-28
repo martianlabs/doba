@@ -72,51 +72,49 @@
 
 #include "common/hash_map.h"
 #include "common/execution_policy.h"
-#include "request.h"
-#include "response.h"
 
 namespace martianlabs::doba::protocol::http11 {
-// =============================================================================
-// router                                                              ( class )
-// -----------------------------------------------------------------------------
-// This class holds for the http 1.1 router implementation.
-// -----------------------------------------------------------------------------
-// Template parameters:
-//    FNty - router handle function prototype.
-// =============================================================================
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] router                                                      ( class ) |
+// +---------------------------------------------------------------------------+
+// | This class holds for the http 1.1 router implementation.                  |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   FNty - router handle function prototype.                                |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 template <typename FNty>
 class router {
  public:
-  // ---------------------------------------------------------------------------
-  // USINGs                                                           ( public )
-  //
+  // +=========================================================================+
+  // | [>] USINGs                                                   ( public ) |
+  // +=========================================================================+
   using data = std::pair<FNty, common::execution_policy>;
-  // ---------------------------------------------------------------------------
-  // CONSTRUCTORs/DESTRUCTORs                                         ( public )
-  //
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
   router() = default;
   router(const router&) = delete;
   router(router&&) noexcept = delete;
   ~router() = default;
-  // ---------------------------------------------------------------------------
-  // OPERATORs                                                        ( public )
-  //
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +=========================================================================+
   router& operator=(const router&) = delete;
   router& operator=(router&&) noexcept = delete;
-  // ---------------------------------------------------------------------------
-  // add                                                              ( public )
-  //
+  // +=========================================================================+
+  // | [>] add                                                      ( public ) |
+  // +=========================================================================+
   void add(const std::string& method, const std::string& route, FNty fn,
            common::execution_policy policy) {
-    std::lock_guard<std::mutex> lock(routes_mutex_);
     auto& map = routes_.try_emplace(method).first->second;
     map.emplace(route, std::make_pair(fn, policy));
   }
-  // ---------------------------------------------------------------------------
-  // match                                                            ( public )
-  //
+  // +=========================================================================+
+  // | [>] match                                                    ( public ) |
+  // +=========================================================================+
   std::optional<data> match(std::string_view method, std::string_view path) {
-    std::lock_guard<std::mutex> lock(routes_mutex_);
     std::optional<data> res = std::nullopt;
     if (auto it_m = routes_.find(method); it_m != routes_.end()) {
       if (auto it_h = it_m->second.find(path); it_h != it_m->second.end()) {
@@ -127,11 +125,10 @@ class router {
   }
 
  private:
-  // ---------------------------------------------------------------------------
-  // ATTRIBUTEs                                                      ( private )
-  //
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +=========================================================================+
   common::hash_map<std::string, common::hash_map<std::string, data>> routes_;
-  std::mutex routes_mutex_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

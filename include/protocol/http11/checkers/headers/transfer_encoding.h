@@ -76,9 +76,10 @@
 #include "protocol/http11/helpers.h"
 
 namespace martianlabs::doba::protocol::http11::checkers::headers {
-// +===========================================================================+
-// |                                                         transfer-encoding |
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] transfer_encoding                                           ( class ) |
+// +---------------------------------------------------------------------------+
 // | RFC 9112 §6.1 Transfer-Encoding                                           |
 // +---------------------------------------------------------------------------+
 // | The "Transfer-Encoding" header field lists the transfer coding names      |
@@ -143,6 +144,7 @@ namespace martianlabs::doba::protocol::http11::checkers::headers {
 // +---------------------------------------------------------------------------+
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class transfer_encoding {
  public:
   // +=========================================================================+
@@ -150,31 +152,52 @@ class transfer_encoding {
   // +=========================================================================+
   static bool check(std::string_view sv) {
     bool follows_separator = false;
-    while (true) {
-      std::size_t separator = std::string_view::npos;
-      if (!helpers::find_list_separator(sv, separator)) return false;
-      const bool has_separator = separator != std::string_view::npos;
-      std::string_view te = has_separator ? sv.substr(0, separator) : sv;
-      // OWS after the previous comma belongs to the list separator.
-      if (follows_separator) helpers::ows_ltrim(te);
-      // OWS before the current comma belongs to the list separator.
-      if (has_separator) helpers::ows_rtrim(te);
-      // Empty list elements are ignored by recipients.
-      if (!te.empty() && !try_to_parse_transfer_coding(te)) return false;
-      if (!has_separator) return true;
-      sv.remove_prefix(separator + 1);
-      follows_separator = true;
+    const char* buffer = sv.data();
+    std::size_t length = sv.size();
+    std::size_t i = 0, last = 0;
+    bool inside_string = false;
+    while (i < length) {
+      if (buffer[i] == '"') {
+        inside_string = !inside_string;
+        i++;
+        continue;
+      }
+      if (buffer[i] == '\\') {
+        if (!inside_string || i + 1 >= length) return false;
+        i += 2;
+        continue;
+      }
+      if (buffer[i] == ',' && !inside_string) {
+        std::string_view transfer_coding(&buffer[last], i++ - last);
+        if (follows_separator) helpers::ows_ltrim(transfer_coding);
+        helpers::ows_rtrim(transfer_coding);
+        if (!transfer_coding.empty() &&
+            !parse_transfer_coding(transfer_coding)) {
+          return false;
+        }
+        follows_separator = true;
+        last = i;
+        continue;
+      }
+      i++;
     }
+    if (inside_string) return false;
+    std::string_view transfer_coding(&buffer[last], length - last);
+    if (follows_separator) helpers::ows_ltrim(transfer_coding);
+    if (!transfer_coding.empty() && !parse_transfer_coding(transfer_coding)) {
+      return false;
+    }
+    return true;
   }
 
  private:
   // +=========================================================================+
-  // | [>] try_to_parse_parameter                                  ( private ) |
+  // | [>] consume_parameter                                       ( private ) |
   // +=========================================================================+
-  static bool try_to_parse_parameter(std::string_view sv,
-                                     std::size_t& bytes_used) {
-    bytes_used = 0;
-    const std::string_view parameter_name = helpers::parse_token(sv);
+  static std::string_view consume_parameter(const char* buffer,
+                                            std::size_t length) {
+    /*
+    const std::string_view parameter_name = helpers::consume_token(sv);
     if (parameter_name.empty()) return false;
     sv.remove_prefix(parameter_name.size());
     bytes_used += parameter_name.size();
@@ -202,35 +225,57 @@ class transfer_encoding {
     if (parameter_value.empty()) return false;
     bytes_used += parameter_value.size();
     return true;
+    */
+
+    return std::string_view();
   }
   // +=========================================================================+
-  // | [>] try_to_parse_transfer_parameters                        ( private ) |
+  // | [>] consume_transfer_parameters                             ( private ) |
   // +=========================================================================+
-  static bool try_to_parse_transfer_parameters(std::string_view sv) {
-    while (!sv.empty()) {
+  static std::size_t consume_transfer_parameters(const char* buffer,
+                                                 std::size_t length) {
+    /*
+    std::size_t i = 0;
+    while (i < length) {
       // OWS before ';'.
-      while (!sv.empty() && helpers::is_ows(sv.front())) sv.remove_prefix(1);
-      if (sv.empty() || sv.front() != ';') return false;
-      sv.remove_prefix(1);
+      while (i < length && helpers::is_ows(buffer[i])) i++;
+      if (i >= length || buffer[i] != ';') return std::string_view();
+      i++;
       // OWS after ';'.
-      while (!sv.empty() && helpers::is_ows(sv.front())) sv.remove_prefix(1);
+      while (i < length && helpers::is_ows(buffer[i])) i++;
       // A transfer-parameter is mandatory after every ';'.
-      if (sv.empty()) return false;
-      std::size_t bytes_used = 0;
-      if (!try_to_parse_parameter(sv, bytes_used)) return false;
-      if (bytes_used == 0 || bytes_used > sv.size()) return false;
-      sv.remove_prefix(bytes_used);
+      if (i >= length) return std::string_view();
+      const std::size_t available = length - i;
+      std::string_view parameter = consume_parameter(&buffer[i], available);
+      const std::size_t parameter_size = parameter.size();
+      if (parameter.empty() || parameter_size > available) {
+        return std::string_view(buffer, i);
+      }
+      i += parameter_size;
     }
-    return true;
+    return std::string_view(buffer, i);
+    */
+
+    return std::string_view::npos;
   }
   // +=========================================================================+
-  // | [>] try_to_parse_transfer_coding                            ( private ) |
+  // | [>] parse_transfer_coding                                   ( private ) |
   // +=========================================================================+
-  static bool try_to_parse_transfer_coding(std::string_view sv) {
-    const std::string_view coding_name = helpers::parse_token(sv);
-    if (coding_name.empty()) return false;
-    sv.remove_prefix(coding_name.size());
-    return try_to_parse_transfer_parameters(sv);
+  static bool parse_transfer_coding(std::string_view sv) {
+    /*
+    const std::string_view coding_name = helpers::consume_token(buffer, length);
+    if (coding_name.empty()) return std::string_view::npos;
+    const std::size_t coding_name_size = coding_name.size();
+    std::size_t off = coding_name_size;
+    buffer += coding_name_size;
+    length -= coding_name_size;
+    std::size_t used = consume_transfer_parameters(buffer, length);
+    if (used == std::string_view::npos) return used;
+    off += used;
+    return off;
+    */
+
+    return true;
   }
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers::headers

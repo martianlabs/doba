@@ -75,9 +75,10 @@
 #include "protocol/http11/helpers.h"
 
 namespace martianlabs::doba::protocol::http11::checkers::headers {
-// +===========================================================================+
-// |                                                                    expect |
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] expect                                                      ( class ) |
+// +---------------------------------------------------------------------------+
 // | RFC 9110 §10.1.1 Expect                                                   |
 // +---------------------------------------------------------------------------+
 // | The "Expect" header field in a request indicates a set of behaviors       |
@@ -158,6 +159,7 @@ namespace martianlabs::doba::protocol::http11::checkers::headers {
 // |                                                                           |
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class expect {
  public:
   // +=========================================================================+
@@ -167,6 +169,12 @@ class expect {
     bool follows_separator = false;
     while (true) {
       std::size_t separator = std::string_view::npos;
+
+      /*
+      pepe
+      */
+
+      /*
       if (!helpers::find_list_separator(sv, separator)) return false;
       const bool has_separator = separator != std::string_view::npos;
       std::string_view expectation =
@@ -179,18 +187,30 @@ class expect {
       if (!expectation.empty() && !try_to_parse_expectation(expectation)) {
         return false;
       }
+
       if (!has_separator) return true;
       sv.remove_prefix(separator + 1);
       follows_separator = true;
+      */
+
+      /*
+      pepe fin
+      */
     }
   }
 
  private:
+
+  /*
+  pepe
+  */
+
+  /*
   // +=========================================================================+
   // | [>] try_to_parse_expect_parameter                           ( private ) |
   // +=========================================================================+
   static bool try_to_parse_expect_parameter(std::string_view sv,
-                                            std::size_t& bytes_used) {
+                                                   std::size_t& bytes_used) {
     bytes_used = 0;
     const std::string_view parameter_name = helpers::parse_token(sv);
     if (parameter_name.empty()) return false;
@@ -263,6 +283,12 @@ class expect {
     }
     return try_to_parse_expect_parameters(sv);
   }
+  */
+
+  /*
+  pepe fin
+  */
+
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers::headers
 

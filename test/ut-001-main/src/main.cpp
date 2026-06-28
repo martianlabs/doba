@@ -71,11 +71,7 @@
 
 #include "network/environment.h"
 #include "protocol/http11/server.h"
-
-
-#include "protocol/http11/checkers/te.h"
-
-
+#include "protocol/http11/checkers/headers/te.h"
 
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http11;
@@ -83,22 +79,15 @@ using namespace martianlabs::doba::protocol::http11;
 int main(int argc, char* argv[]) {
   martianlabs::doba::network::startup();
 
-  std::string test_01 = "gzip; window=15 ; q=0.8, trailers";
 
+
+
+
+  std::string test_01 = "gzip; window=15 ; q=0.8, trailers";
   bool result_01 = martianlabs::doba::protocol::http11::checkers::headers::
       transfer_encoding::check(test_01);
-  /*
-  bool result_02 =
-      martianlabs::doba::protocol::http11::checkers::expect(test_02);
-  bool result_03 =
-      martianlabs::doba::protocol::http11::checkers::expect(test_03);
-  bool result_04 =
-      martianlabs::doba::protocol::http11::checkers::expect(test_04);
-  bool result_05 =
-      martianlabs::doba::protocol::http11::checkers::expect(test_05);
-  bool result_07 =
-      martianlabs::doba::protocol::http11::checkers::expect(test_07);
-  */
+
+
 
 
 

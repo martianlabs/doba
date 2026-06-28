@@ -67,19 +67,20 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#ifndef martianlabs_doba_protocol_http11_status_line_h
-#define martianlabs_doba_protocol_http11_status_line_h
+#ifndef martianlabs_doba_protocol_http11_status_lines_h
+#define martianlabs_doba_protocol_http11_status_lines_h
 
-#include "status_code.h"
-#include "reason_phrase.h"
+#include "status_codes.h"
+#include "reason_phrases.h"
 
 namespace martianlabs::doba::protocol::http11 {
-// =============================================================================
-//                                                                    ( macros )
-// -----------------------------------------------------------------------------
-// This section holds for the http 1.1 status lines.
-// -----------------------------------------------------------------------------
-// =============================================================================
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] common-usage                                               ( macros ) |
+// +---------------------------------------------------------------------------+
+// | This section holds for common-usage macros.                               |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 #define SP
 #define CRLF \r\n
 #define STR_VALUE(x) #x
@@ -91,15 +92,17 @@ namespace martianlabs::doba::protocol::http11 {
 #define ONE_DOT_ONE 1.1
 #define VERSION CC_EXP(HTTP_HEADER, CC_EXP(SLASH, ONE_DOT_ONE))
 #define SL(x) VERSION CC_RAW(SC_, x) CC_EXP(CC_RAW(RP_, x), CRLF)
-
-// =============================================================================
-// status_line                                                         ( class )
-// -----------------------------------------------------------------------------
-// This class holds for the http 1.1 status lines.
-// -----------------------------------------------------------------------------
-// =============================================================================
-struct status_line {
-  // [literals]
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] status_lines                                               ( struct ) |
+// +---------------------------------------------------------------------------+
+// | This class holds for the http 1.1 status lines.                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct status_lines {
+  // +=========================================================================+
+  // | [>] LITERALs                                                 ( public ) |
+  // +=========================================================================+
   static constexpr char k100[] = EAS(SL(100_CONTINUE));
   static constexpr char k101[] = EAS(SL(101_SWITCHING_PROTOCOLS));
   static constexpr char k200[] = EAS(SL(200_OK));
@@ -146,7 +149,9 @@ struct status_line {
   static constexpr char k503[] = EAS(SL(503_SERVICE_UNAVAILABLE));
   static constexpr char k504[] = EAS(SL(504_GATEWAY_TIMEOUT));
   static constexpr char k505[] = EAS(SL(505_HTTP_VERSION_NOT_SUPPORTED));
-  // [sizes]
+  // +=========================================================================+
+  // | [>] SIZEs                                                    ( public ) |
+  // +=========================================================================+
   static constexpr std::size_t k100Sz = sizeof(k100) - 1;
   static constexpr std::size_t k101Sz = sizeof(k101) - 1;
   static constexpr std::size_t k200Sz = sizeof(k200) - 1;

@@ -67,18 +67,21 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#ifndef martianlabs_doba_protocol_http11_method_h
-#define martianlabs_doba_protocol_http11_method_h
+#ifndef martianlabs_doba_protocol_http11_methods_h
+#define martianlabs_doba_protocol_http11_methods_h
 
 namespace martianlabs::doba::protocol::http11 {
-// =============================================================================
-// method                                                             ( struct )
-// -----------------------------------------------------------------------------
-// This struct holds for the http 1.1 method constants.
-// -----------------------------------------------------------------------------
-// =============================================================================
-struct method {
-  // https://www.rfc-editor.org/rfc/rfc9110#section-9
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] methods                                                    ( struct ) |
+// +---------------------------------------------------------------------------+
+// | This struct holds for the http 1.1 methods specification.                 |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct methods {
+  // +=========================================================================+
+  // | [>] CONSTANTs                                                ( public ) |
+  // +=========================================================================+
   // +---------+---------------------------------------------------------------+
   // | Method  | Description                                                   |
   // +---------+---------------------------------------------------------------+

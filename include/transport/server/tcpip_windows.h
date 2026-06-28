@@ -78,27 +78,28 @@
 #include "protocol/deserialization.h"
 
 namespace martianlabs::doba::transport::server {
-// =============================================================================
-// tcpip [windows]                                                     ( class )
-// -----------------------------------------------------------------------------
-// This specification holds for the WindowsTM server transport implementation.
-// -----------------------------------------------------------------------------
-// Template parameters:
-//    RQty - request being used.
-//    RSty - response being used.
-// =============================================================================
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] tcpip [windowsTM]                                           ( class ) |
+// +---------------------------------------------------------------------------+
+// | This specification holds for the WindowsTM server transport.              |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   RQty - request being used.                                              |
+// |   RSty - response being used.                                             |
+// |   BFsz - buffer size for I/O operations.                                  |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, std::size_t BFsz>
 class tcpip {
-  // ---------------------------------------------------------------------------
-  // CONSTANTs                                                       ( private )
-  //
+  // +=========================================================================+
+  // | [>] CONSTANTS                                               ( private ) |
+  // +=========================================================================+
   static constexpr DWORD kAcceptAddressBytes =
       static_cast<DWORD>(sizeof(sockaddr_storage) + 16);
-  // ---------------------------------------------------------------------------
-  // TYPEs                                                           ( private )
-  //
-  struct overlapped_receive;
-  struct overlapped_send;
+  // +=========================================================================+
+  // | [>] TYPEs                                                   ( private ) |
+  // +=========================================================================+
   struct context {
     // [constructors/destructors]
     context(SOCKET in_socket) : socket{in_socket} {}
@@ -111,12 +112,10 @@ class tcpip {
     // [push_pending_response]
     void push_pending_response(std::unique_ptr<std::string> buffer) {
       if (!buffer || buffer->empty()) return;
-      std::lock_guard<std::mutex> sending_lock(responses_mutex);
       responses.push(std::move(buffer));
     }
     // [pop_pending_response]
     std::unique_ptr<std::string> pop_pending_response() {
-      std::lock_guard<std::mutex> sending_lock(responses_mutex);
       if (responses.empty()) return nullptr;
       std::unique_ptr<std::string> response = std::move(responses.front());
       responses.pop();
@@ -128,7 +127,6 @@ class tcpip {
     // [responses] attributes
     std::unique_ptr<std::string> response_in_flight{nullptr};
     std::queue<std::unique_ptr<std::string>> responses;
-    std::mutex responses_mutex;
     // [sending] attributes
     bool close_after_sending{false};
     std::mutex sending_mutex;
@@ -168,48 +166,45 @@ class tcpip {
   };
 
  public:
-  // ---------------------------------------------------------------------------
-  // CONSTRUCTORs/DESTRUCTORs                                         ( public )
-  //
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
   tcpip() = default;
   tcpip(const tcpip&) = delete;
   tcpip(tcpip&&) noexcept = delete;
   ~tcpip() { stop(); }
-  // ---------------------------------------------------------------------------
-  // OPERATORs                                                        ( public )
-  //
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +=========================================================================+
   tcpip& operator=(const tcpip&) = delete;
   tcpip& operator=(tcpip&&) noexcept = delete;
-  // ---------------------------------------------------------------------------
-  // PROPERTIEs                                                       ( public )
-  //
+  // +=========================================================================+
+  // | [>] PROPERTIEs                                               ( public ) |
+  // +=========================================================================+
   types::on_request_delegate<RQty, RSty> on_request;
   types::on_bad_request_delegate<RSty> on_bad_request;
   types::on_client_connected_delegate on_connection;
   types::on_client_disconnected_delegate on_disconnection;
-  // ---------------------------------------------------------------------------
-  // start                                                            ( public )
-  //
+  // +=========================================================================+
+  // | [>] start                                                    ( public ) |
+  // +=========================================================================+
   void start(const char port[]) {
-    if (io_h_ != nullptr) {
-      throw std::runtime_error("TCP/IP transport already started!");
-    }
+    // If the i/o completion port is valid then we are already started!
+    if (io_h_ != nullptr) return;
     // Let's setup all the required resources..
     auto workers = setup_listener(port);
     setup_workers(workers);
     setup_accept_pipeline(std::max<std::size_t>(2, workers));
   }
-  // ---------------------------------------------------------------------------
-  // stop                                                             ( public )
-  //
+  // +=========================================================================+
+  // | [>] stop                                                     ( public ) |
+  // +=========================================================================+
   void stop() {
-    if (io_h_ == nullptr) {
-      return;
-    }
-    if (accept_socket_ != INVALID_SOCKET) {
-      closesocket(accept_socket_);
-      accept_socket_ = INVALID_SOCKET;
-    }
+    // If the i/o completion port is not valid then we are already stopped!
+    if (io_h_ == nullptr) return;
+    // Let's close the listening socket and post stop messages to all workers!
+    closesocket(accept_socket_);
+    accept_socket_ = INVALID_SOCKET;
     for (std::size_t i = 0; i < workers_.size(); i++) {
       if (!PostQueuedCompletionStatus(io_h_, 0, 0, new overlapped_stop())) {
         /*
@@ -237,9 +232,9 @@ class tcpip {
   }
 
  private:
-  // ---------------------------------------------------------------------------
-  // setup_listener                                                  ( private )
-  //
+  // +=========================================================================+
+  // | [>] setup_listener                                          ( private ) |
+  // +=========================================================================+
   std::size_t setup_listener(const char port[]) {
     // Let's use our help class to create a cpu pinning plan!
     std::size_t workers = std::thread::hardware_concurrency();
@@ -300,9 +295,9 @@ class tcpip {
     io_h_ = ioh;
     return workers;
   }
-  // ---------------------------------------------------------------------------
-  // setup_accept_pipeline                                           ( private )
-  //
+  // +=========================================================================+
+  // | [>] setup_accept_pipeline                                   ( private ) |
+  // +=========================================================================+
   void setup_accept_pipeline(std::size_t accepts_in_flight) {
     accept_depth_ = accepts_in_flight;
     for (std::size_t i = 0; i < accept_depth_; i++) {
@@ -311,9 +306,9 @@ class tcpip {
       }
     }
   }
-  // ---------------------------------------------------------------------------
-  // setup_workers                                                   ( private )
-  //
+  // +=========================================================================+
+  // | [>] setup_workers                                           ( private ) |
+  // +=========================================================================+
   void setup_workers(std::size_t number_of_workers) {
     for (std::size_t i = 0; i < number_of_workers; i++) {
       workers_.emplace_back(std::jthread([this]() {
@@ -349,13 +344,11 @@ class tcpip {
       }));
     }
   }
-  // ---------------------------------------------------------------------------
-  // handle_accept                                                   ( private )
-  //
+  // +=========================================================================+
+  // | [>] handle_accept                                           ( private ) |
+  // +=========================================================================+
   void handle_accept(overlapped_accept* ova) {
-    if (!post_accept()) {
-      return;
-    }
+    if (!post_accept()) return;
     // Let's create a new context for this accepted socket!
     std::shared_ptr<context> ctx = std::make_shared<context>(ova->socket);
     // Let's set the accepted socket to be associated with the listening socket!
@@ -388,10 +381,7 @@ class tcpip {
       return;
     }
     // Let's arm next receive operation!
-    if (!receive(ctx)) {
-      closesocket(ova->socket);
-      return;
-    }
+    arm_next_receive_operation(ctx);
     // Let's call user's callback to notify for new connection!
     try {
       on_connection();
@@ -403,15 +393,13 @@ class tcpip {
       return;
     }
   }
-  // ---------------------------------------------------------------------------
-  // handle_receive                                                  ( private )
-  //
+  // +=========================================================================+
+  // | [>] handle_receive                                          ( private ) |
+  // +=========================================================================+
   void handle_receive(overlapped_receive* ovr, DWORD bytes_received) {
     // If the associated context is in 'closing' status then the operation is
     // discarded and no actions are performed!
-    if (ovr->get_context()->closing.load()) {
-      return;
-    }
+    if (ovr->get_context()->closing.load()) return;
     // Any of the following situations will trigger a disconnection!
     if (!bytes_received) {
       mark_context_for_closing(ovr->get_context());
@@ -486,9 +474,7 @@ class tcpip {
         on_request(result.request, res, [this, ctx, &out](auto res) {
           // If the associated context is in 'closing' status then
           // the operation is discarded and no actions are performed!
-          if (ctx->closing.load()) {
-            return;
-          }
+          if (ctx->closing.load()) return;
           // Let's append this response to the outgoing buffer!
           out->append(res->serialize());
         });
@@ -508,21 +494,21 @@ class tcpip {
     // Let's arm send operation!
     arm_next_send_operation(ovr->get_context());
   }
-  // ---------------------------------------------------------------------------
-  // handle_send                                                     ( private )
-  //
+  // +=========================================================================+
+  // | [>] handle_send                                             ( private ) |
+  // +=========================================================================+
   void handle_send(overlapped_send* ovs, DWORD bytes) {
     if (!arm_pending_send_operation(ovs, bytes)) {
       arm_next_send_operation(ovs->get_context());
     }
   }
-  // ---------------------------------------------------------------------------
-  // handle_stop                                                     ( private )
-  //
+  // +=========================================================================+
+  // | [>] handle_stop                                             ( private ) |
+  // +=========================================================================+
   void handle_stop(bool& stopping) { stopping = true; }
-  // ---------------------------------------------------------------------------
-  // handle_error                                                    ( private )
-  //
+  // +=========================================================================+
+  // | [>] handle_error                                            ( private ) |
+  // +=========================================================================+
   void handle_error(overlapped_base* ovb) {
     switch (ovb->get_type()) {
       case io_type::kAccept:
@@ -535,9 +521,9 @@ class tcpip {
         break;
     }
   }
-  // ---------------------------------------------------------------------------
-  // handle_overlapped                                               ( private )
-  //
+  // +=========================================================================+
+  // | [>] handle_overlapped                                       ( private ) |
+  // +=========================================================================+
   void handle_overlapped(overlapped_base* ovb) {
     switch (ovb->get_type()) {
       case io_type::kAccept:
@@ -554,9 +540,9 @@ class tcpip {
         break;
     }
   }
-  // ---------------------------------------------------------------------------
-  // send_error_and_mark_context_for_closing                         ( private )
-  //
+  // +=========================================================================+
+  // | [>] send_error_and_mark_context_for_closing                 ( private ) |
+  // +=========================================================================+
   void send_error_and_mark_context_for_closing(std::shared_ptr<context> ctx,
                                                std::shared_ptr<RSty> response) {
     if (response) {
@@ -568,9 +554,9 @@ class tcpip {
     }
     arm_next_send_operation(ctx);
   }
-  // ---------------------------------------------------------------------------
-  // mark_context_for_closing                                        ( private )
-  //
+  // +=========================================================================+
+  // | [>] mark_context_for_closing                                ( private ) |
+  // +=========================================================================+
   void mark_context_for_closing(std::shared_ptr<context> ctx) {
     // Let's prepare this context for closing!
     bool expected = false;
@@ -587,21 +573,17 @@ class tcpip {
       }
     }
   }
-  // ---------------------------------------------------------------------------
-  // arm_pending_send_operation                                      ( private )
-  //
+  // +=========================================================================+
+  // | [>] arm_pending_send_operation                              ( private ) |
+  // +=========================================================================+
   bool arm_pending_send_operation(overlapped_send* ovs, DWORD bytes) {
     // If the associated context is in 'closing' status then the operation is
     // not dispatched and no actions are performed!
-    if (ovs->get_context()->closing.load()) {
-      return false;
-    }
+    if (ovs->get_context()->closing.load()) return false;
     std::lock_guard<std::mutex> sending_lock(ovs->get_context()->sending_mutex);
     ovs->buffer->erase(0, bytes);
     ovs->get_context()->sending = false;
-    if (ovs->buffer->empty()) {
-      return false;
-    }
+    if (ovs->buffer->empty()) return false;
     // Let's arm next send operation!
     if (!send(ovs->get_context(), std::move(ovs->buffer))) {
       mark_context_for_closing(ovs->get_context());
@@ -611,28 +593,21 @@ class tcpip {
     ovs->get_context()->sending = true;
     return true;
   }
-  // ---------------------------------------------------------------------------
-  // arm_next_send_operation                                         ( private )
-  //
+  // +=========================================================================+
+  // | [>] arm_next_send_operation                                 ( private ) |
+  // +=========================================================================+
   void arm_next_send_operation(std::shared_ptr<context> ctx) {
     // If the associated context is in 'closing' status then the operation is
     // not dispatched and no actions are performed!
-    if (ctx->closing.load()) {
-      return;
-    }
+    if (ctx->closing.load()) return;
     // If the associated context is already sending then the operation is not
     // dispatched and no actions are performed!
     std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-    if (ctx->sending) {
-      return;
-    }
+    if (ctx->sending) return;
     std::unique_ptr<std::string> buffer = dequeue(ctx);
     if (!buffer) {
-      // Let's check if we need to close this context after sending all pending
-      // responses!
-      if (ctx->close_after_sending) {
-        mark_context_for_closing(ctx);
-      }
+      // Let's check if we need to close this context after sending!
+      if (ctx->close_after_sending) mark_context_for_closing(ctx);
       return;
     }
     // Let's arm next send operation!
@@ -643,34 +618,30 @@ class tcpip {
     }
     ctx->sending = true;
   }
-  // ---------------------------------------------------------------------------
-  // arm_next_receive_operation                                      ( private )
-  //
+  // +=========================================================================+
+  // | [>] arm_next_receive_operation                              ( private ) |
+  // +=========================================================================+
   void arm_next_receive_operation(std::shared_ptr<context> ctx) {
     // If the associated context is in 'closing' status then the operation is
-    if (ctx->closing.load()) {
-      return;
-    }
+    if (ctx->closing.load()) return;
     // Let's arm next receive operation!
-    if (!receive(ctx)) {
-      mark_context_for_closing(ctx);
-    }
+    if (!receive(ctx)) mark_context_for_closing(ctx);
   }
-  // ---------------------------------------------------------------------------
-  // enqueue                                                         ( private )
-  //
+  // +=========================================================================+
+  // | [>] enqueue                                                 ( private ) |
+  // +=========================================================================+
   void enqueue(std::shared_ptr<context> ctx, std::unique_ptr<std::string> bf) {
     ctx->push_pending_response(std::move(bf));
   }
-  // ---------------------------------------------------------------------------
-  // dequeue                                                         ( private )
-  //
+  // +=========================================================================+
+  // | [>] dequeue                                                 ( private ) |
+  // +=========================================================================+
   std::unique_ptr<std::string> dequeue(std::shared_ptr<context> ctx) {
     return ctx->pop_pending_response();
   }
-  // ---------------------------------------------------------------------------
-  // receive                                                         ( private )
-  //
+  // +=========================================================================+
+  // | [>] receive                                                 ( private ) |
+  // +=========================================================================+
   bool receive(std::shared_ptr<context> ctx) {
     DWORD f = 0, r = 0;
     overlapped_receive* ovr = new overlapped_receive(ctx);
@@ -684,9 +655,10 @@ class tcpip {
     }
     return true;
   }
-  // ---------------------------------------------------------------------------
-  // send                                                            ( private )
-  //
+  // +=========================================================================+
+  // | [>] send                                s                    ( private )
+  // |
+  // +=========================================================================+
   bool send(std::shared_ptr<context> ctx, std::unique_ptr<std::string> buffer) {
     DWORD f = 0, s = 0;
     overlapped_send* ovs = new overlapped_send(ctx);
@@ -701,9 +673,9 @@ class tcpip {
     }
     return true;
   }
-  // ---------------------------------------------------------------------------
-  // post_accept                                                     ( private )
-  //
+  // +=========================================================================+
+  // | [>] post_accept                                             ( private ) |
+  // +=========================================================================+
   bool post_accept() {
     SOCKET soc = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0,
                             WSA_FLAG_OVERLAPPED);
@@ -719,9 +691,9 @@ class tcpip {
     }
     return true;
   }
-  // ---------------------------------------------------------------------------
-  // ATTRIBUTEs                                                      ( private )
-  //
+  // +=========================================================================+
+  // | ATTRIBUTEs                                                  ( private ) |
+  // +=========================================================================+
   HANDLE io_h_ = nullptr;
   SOCKET accept_socket_ = INVALID_SOCKET;
   LPFN_ACCEPTEX accept_ex_ = nullptr;
