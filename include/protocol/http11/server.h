@@ -134,6 +134,7 @@ class server {
               break;
             }
             case target::kAuthorityForm:
+              // [to-do] -> add support for this!
             case target::kAsteriskForm:
               // [to-do] -> add support for this!
               break;

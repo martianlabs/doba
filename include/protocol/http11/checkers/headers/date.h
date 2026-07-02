@@ -157,7 +157,7 @@ class date {
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
   // +=========================================================================+
-  static bool check(std::string_view v) {
+  static constexpr bool check(std::string_view v) {
     return is_imf_fixdate(v) || is_rfc850_date(v) || is_asctime_date(v);
   }
 
@@ -176,11 +176,11 @@ class date {
       "Jan", "Feb", "Mar", "Apr", "May", "Jun",
       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
   // +=========================================================================+
-  // | [>] try_to_parse_short_day_name                             ( private ) |
+  // | [>] parse_short_day_name                                    ( private ) |
   // +=========================================================================+
-  static bool try_to_parse_short_day_name(std::string_view sv,
-                                          std::string_view delimiter,
-                                          std::size_t& used_characters) {
+  static constexpr bool parse_short_day_name(std::string_view sv,
+                                             std::string_view delimiter,
+                                             std::size_t& used_characters) {
     std::size_t delimiter_pos = sv.find(delimiter);
     if (delimiter_pos == std::string_view::npos) return false;
     for (std::size_t i = 0; i < kDaysInWeek; i++) {
@@ -192,11 +192,11 @@ class date {
     return false;
   }
   // +=========================================================================+
-  // | [>] try_to_parse_long_day_name                              ( private ) |
+  // | [>] parse_long_day_name                                     ( private ) |
   // +=========================================================================+
-  static bool try_to_parse_long_day_name(std::string_view sv,
-                                         std::string_view delimiter,
-                                         std::size_t& used_characters) {
+  static constexpr bool parse_long_day_name(std::string_view sv,
+                                            std::string_view delimiter,
+                                            std::size_t& used_characters) {
     std::size_t delimiter_pos = sv.find(delimiter);
     if (delimiter_pos == std::string_view::npos) return false;
     for (std::size_t i = 0; i < kDaysInWeek; i++) {
@@ -208,11 +208,11 @@ class date {
     return false;
   }
   // +=========================================================================+
-  // | [>] try_to_parse_short_month_name                           ( private ) |
+  // | [>] parse_short_month_name                                  ( private ) |
   // +=========================================================================+
-  static bool try_to_parse_short_month_name(std::string_view sv,
-                                            std::string_view delimiter,
-                                            std::size_t& used_characters) {
+  static constexpr bool parse_short_month_name(std::string_view sv,
+                                               std::string_view delimiter,
+                                               std::size_t& used_characters) {
     std::size_t delimiter_pos = sv.find(delimiter);
     if (delimiter_pos == std::string_view::npos) return false;
     for (std::size_t i = 0; i < kMonthsInYear; i++) {
@@ -224,9 +224,10 @@ class date {
     return false;
   }
   // +=========================================================================+
-  // | [>] try_to_parse_n_digit_number                             ( private ) |
+  // | [>] parse_n_digit_number                                    ( private ) |
   // +=========================================================================+
-  static bool try_to_parse_n_digit_number(std::string_view sv, std::size_t n) {
+  static constexpr bool parse_n_digit_number(std::string_view sv,
+                                             std::size_t n) {
     if (sv.size() < n) return false;
     for (std::size_t i = 0; i < n; i++) {
       if (!helpers::is_digit(sv[i])) return false;
@@ -234,9 +235,9 @@ class date {
     return true;
   }
   // +=========================================================================+
-  // | [>] try_to_parse_asctime_day                                ( private ) |
+  // | [>] parse_asctime_day                                       ( private ) |
   // +=========================================================================+
-  static bool try_to_parse_asctime_day(std::string_view sv) {
+  static constexpr bool parse_asctime_day(std::string_view sv) {
     if (sv.size() < 2) return false;
     return (helpers::is_digit(sv[0]) && helpers::is_digit(sv[1])) ||
            (sv[0] == ' ' && helpers::is_digit(sv[1]));
@@ -246,38 +247,40 @@ class date {
   // +=========================================================================+
   // | "DDD, DD MMM YYYY HH:MM:SS GMT" --> 29 characters (fixed size)          |
   // +-------------------------------------------------------------------------+
-  static bool is_imf_fixdate(std::string_view sv) {
-    if (sv.size() != 29) return false;
-    std::size_t used_characters = 0;
-    if (!try_to_parse_short_day_name(sv, ", ", used_characters)) return false;
-    sv.remove_prefix(used_characters);
-    if (!try_to_parse_n_digit_number(sv, 2)) return false;
-    sv.remove_prefix(2);
-    if (sv.empty() || sv[0] != ' ') return false;
-    sv.remove_prefix(1);
-    if (!try_to_parse_short_month_name(sv, " ", used_characters)) return false;
-    sv.remove_prefix(used_characters);
-    if (!try_to_parse_n_digit_number(sv, 4)) return false;
-    sv.remove_prefix(4);
-    if (sv.empty() || sv[0] != ' ') return false;
-    sv.remove_prefix(1);
-    if (!try_to_parse_n_digit_number(sv, 2)) return false;
-    sv.remove_prefix(2);
-    if (sv.empty() || sv[0] != ':') return false;
-    sv.remove_prefix(1);
-    if (!try_to_parse_n_digit_number(sv, 2)) return false;
-    sv.remove_prefix(2);
-    if (sv.empty() || sv[0] != ':') return false;
-    sv.remove_prefix(1);
-    if (!try_to_parse_n_digit_number(sv, 2)) return false;
-    sv.remove_prefix(2);
-    if (sv.empty() || sv[0] != ' ') return false;
-    sv.remove_prefix(1);
-    if (sv.size() < 3 || sv[0] != 'G' || sv[1] != 'M' || sv[2] != 'T') {
+  static constexpr bool is_imf_fixdate(std::string_view sv) {
+    constexpr std::size_t kImfFixdateLength = 29;
+    const std::size_t len = sv.size();
+    if (len != kImfFixdateLength) return false;
+    std::size_t i = 0, bytes_used = 0;
+    if (!parse_short_day_name(sv, ", ", bytes_used)) return false;
+    i += bytes_used;
+    if (!parse_n_digit_number(sv.substr(i), 2)) return false;
+    i += 2;
+    if (len <= i || sv[i] != ' ') return false;
+    i++;
+    if (!parse_short_month_name(sv.substr(i), " ", bytes_used)) return false;
+    i += bytes_used;
+    if (!parse_n_digit_number(sv.substr(i), 4)) return false;
+    i += 4;
+    if (len <= i || sv[i] != ' ') return false;
+    i++;
+    if (!parse_n_digit_number(sv.substr(i), 2)) return false;
+    i += 2;
+    if (len <= i || sv[i] != ':') return false;
+    i++;
+    if (!parse_n_digit_number(sv.substr(i), 2)) return false;
+    i += 2;
+    if (len <= i || sv[i] != ':') return false;
+    i++;
+    if (!parse_n_digit_number(sv.substr(i), 2)) return false;
+    i += 2;
+    if (len <= i || sv[i] != ' ') return false;
+    i++;
+    if (len < i + 3 || sv[i] != 'G' || sv[i + 1] != 'M' || sv[i + 2] != 'T') {
       return false;
     }
-    sv.remove_prefix(3);
-    return sv.empty();
+    i += 3;
+    return len == i;
   }
   // +=========================================================================+
   // | [>] is_rfc850_date                                          ( private ) |
@@ -287,38 +290,41 @@ class date {
   // +-------------------------------------------------------------------------+
   // | Variable size because the full day name contains 6-9 characters.        |
   // +-------------------------------------------------------------------------+
-  static bool is_rfc850_date(std::string_view sv) {
-    if (sv.size() < 30 || sv.size() > 33) return false;
-    std::size_t used_characters = 0;
-    if (!try_to_parse_long_day_name(sv, ", ", used_characters)) return false;
-    sv.remove_prefix(used_characters);
-    if (!try_to_parse_n_digit_number(sv, 2)) return false;
-    sv.remove_prefix(2);
-    if (sv.empty() || sv[0] != '-') return false;
-    sv.remove_prefix(1);
-    if (!try_to_parse_short_month_name(sv, "-", used_characters)) return false;
-    sv.remove_prefix(used_characters);
-    if (!try_to_parse_n_digit_number(sv, 2)) return false;
-    sv.remove_prefix(2);
-    if (sv.empty() || sv[0] != ' ') return false;
-    sv.remove_prefix(1);
-    if (!try_to_parse_n_digit_number(sv, 2)) return false;
-    sv.remove_prefix(2);
-    if (sv.empty() || sv[0] != ':') return false;
-    sv.remove_prefix(1);
-    if (!try_to_parse_n_digit_number(sv, 2)) return false;
-    sv.remove_prefix(2);
-    if (sv.empty() || sv[0] != ':') return false;
-    sv.remove_prefix(1);
-    if (!try_to_parse_n_digit_number(sv, 2)) return false;
-    sv.remove_prefix(2);
-    if (sv.empty() || sv[0] != ' ') return false;
-    sv.remove_prefix(1);
-    if (sv.size() < 3 || sv[0] != 'G' || sv[1] != 'M' || sv[2] != 'T') {
+  static constexpr bool is_rfc850_date(std::string_view sv) {
+    constexpr std::size_t kMinRfc850DateLength = 30;
+    constexpr std::size_t kMaxRfc850DateLength = 33;
+    const std::size_t len = sv.size();
+    if (len < kMinRfc850DateLength || len > kMaxRfc850DateLength) return false;
+    std::size_t i = 0, bytes = 0;
+    if (!parse_long_day_name(sv, ", ", bytes)) return false;
+    i += bytes;
+    if (!parse_n_digit_number(sv.substr(i), 2)) return false;
+    i += 2;
+    if (len <= i || sv[i] != '-') return false;
+    i++;
+    if (!parse_short_month_name(sv.substr(i), "-", bytes)) return false;
+    i += bytes;
+    if (!parse_n_digit_number(sv.substr(i), 2)) return false;
+    i += 2;
+    if (len <= i || sv[i] != ' ') return false;
+    i++;
+    if (!parse_n_digit_number(sv.substr(i), 2)) return false;
+    i += 2;
+    if (len <= i || sv[i] != ':') return false;
+    i++;
+    if (!parse_n_digit_number(sv.substr(i), 2)) return false;
+    i += 2;
+    if (len <= i || sv[i] != ':') return false;
+    i++;
+    if (!parse_n_digit_number(sv.substr(i), 2)) return false;
+    i += 2;
+    if (len <= i || sv[i] != ' ') return false;
+    i++;
+    if (len < i + 3 || sv[i] != 'G' || sv[i + 1] != 'M' || sv[i + 2] != 'T') {
       return false;
     }
-    sv.remove_prefix(3);
-    return sv.empty();
+    i += 3;
+    return len == i;
   }
   // +=========================================================================+
   // | [>] is_asctime_date                                         ( private ) |
@@ -327,32 +333,34 @@ class date {
   // +-------------------------------------------------------------------------+
   // | A single-digit day is represented as SP DIGIT, e.g. "Nov  6".           |
   // +-------------------------------------------------------------------------+
-  static bool is_asctime_date(std::string_view sv) {
-    if (sv.size() != 24) return false;
-    std::size_t used_characters = 0;
-    if (!try_to_parse_short_day_name(sv, " ", used_characters)) return false;
-    sv.remove_prefix(used_characters);
-    if (!try_to_parse_short_month_name(sv, " ", used_characters)) return false;
-    sv.remove_prefix(used_characters);
-    if (!try_to_parse_asctime_day(sv)) return false;
-    sv.remove_prefix(2);
-    if (sv.empty() || sv[0] != ' ') return false;
-    sv.remove_prefix(1);
-    if (!try_to_parse_n_digit_number(sv, 2)) return false;
-    sv.remove_prefix(2);
-    if (sv.empty() || sv[0] != ':') return false;
-    sv.remove_prefix(1);
-    if (!try_to_parse_n_digit_number(sv, 2)) return false;
-    sv.remove_prefix(2);
-    if (sv.empty() || sv[0] != ':') return false;
-    sv.remove_prefix(1);
-    if (!try_to_parse_n_digit_number(sv, 2)) return false;
-    sv.remove_prefix(2);
-    if (sv.empty() || sv[0] != ' ') return false;
-    sv.remove_prefix(1);
-    if (!try_to_parse_n_digit_number(sv, 4)) return false;
-    sv.remove_prefix(4);
-    return sv.empty();
+  static constexpr bool is_asctime_date(std::string_view sv) {
+    constexpr std::size_t kAsctimeDateLength = 24;
+    const std::size_t len = sv.size();
+    if (len != kAsctimeDateLength) return false;
+    std::size_t off = 0, bytes_used = 0;
+    if (!parse_short_day_name(sv, " ", bytes_used)) return false;
+    off += bytes_used;
+    if (!parse_short_month_name(sv.substr(off), " ", bytes_used)) return false;
+    off += bytes_used;
+    if (!parse_asctime_day(sv.substr(off))) return false;
+    off += 2;
+    if (len <= off || sv[off] != ' ') return false;
+    off++;
+    if (!parse_n_digit_number(sv.substr(off), 2)) return false;
+    off += 2;
+    if (len <= off || sv[off] != ':') return false;
+    off++;
+    if (!parse_n_digit_number(sv.substr(off), 2)) return false;
+    off += 2;
+    if (len <= off || sv[off] != ':') return false;
+    off++;
+    if (!parse_n_digit_number(sv.substr(off), 2)) return false;
+    off += 2;
+    if (len <= off || sv[off] != ' ') return false;
+    off++;
+    if (!parse_n_digit_number(sv.substr(off), 4)) return false;
+    off += 4;
+    return off == len;
   }
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers::headers

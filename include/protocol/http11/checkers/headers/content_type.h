@@ -67,155 +67,136 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#ifndef martianlabs_doba_protocol_http11_checkers_h_transfer_encoding_h
-#define martianlabs_doba_protocol_http11_checkers_h_transfer_encoding_h
+#ifndef martianlabs_doba_protocol_http11_checkers_h_content_type_h
+#define martianlabs_doba_protocol_http11_checkers_h_content_type_h
 
 #include <ranges>
-#include <string_view>
 
 #include "protocol/http11/helpers.h"
 
 namespace martianlabs::doba::protocol::http11::checkers::headers {
 // /////////////////////////////////////////////////////////////////////////////
+// +===========================================================================+
+// |                                                              content-type |
+// +===========================================================================+
+// | RFC 9110 §8.3 Content-Type                                                |
 // +---------------------------------------------------------------------------+
-// | [>] transfer_encoding                                           ( class ) |
+// | The "Content-Type" header field indicates the media type of the           |
+// | associated representation. It identifies both the representation's data   |
+// | format and how that data is intended to be processed by a recipient,      |
+// | after any content codings identified by Content-Encoding are decoded.     |
+// |                                                                           |
+// | A sender that generates a message containing content SHOULD generate a    |
+// | Content-Type header field unless the intended media type is unknown.      |
+// |                                                                           |
+// | If Content-Type is absent, a recipient MAY assume                         |
+// | "application/octet-stream" or examine the representation data to          |
+// | determine its type. Content inspection ("MIME sniffing") can produce      |
+// | incorrect conclusions and expose additional security risks.               |
+// |                                                                           |
+// | Content-Type is a singleton field. It is not a comma-separated list.      |
+// | Multiple field instances can be combined into an invalid list-like value; |
+// | differing recovery strategies can create interoperability and security    |
+// | issues.                                                                   |
+// |                                                                           |
+// | The type and subtype are case-insensitive. Parameter names are also       |
+// | case-insensitive, while parameter values can be case-sensitive depending  |
+// | on the semantics defined for each parameter.                              |
+// |                                                                           |
+// | Examples:                                                                 |
+// |   Content-Type: text/html                                                 |
+// |   Content-Type: text/html; charset=utf-8                                  |
+// |   Content-Type: application/json                                          |
+// |   Content-Type: multipart/form-data; boundary="example-boundary"          |
 // +---------------------------------------------------------------------------+
-// | RFC 9112 §6.1 Transfer-Encoding                                           |
+// | RFC 9110 §8.3 and §8.3.1 Content-Type / Media Type (ABNF summary)         |
 // +---------------------------------------------------------------------------+
-// | The "Transfer-Encoding" header field lists the transfer coding names      |
-// | corresponding to the sequence of transfer codings that have been, or will |
-// | be, applied to the content in order to form the message body.             |
-// |                                                                           |
-// | Transfer codings are a property of the HTTP message rather than a property|
-// | of the selected representation. They are primarily used to delimit        |
-// | dynamically generated content and to distinguish transformations applied  |
-// | during message transfer from representation content codings.              |
-// |                                                                           |
-// | Transfer codings are listed in the order in which they were applied.      |
-// | Consequently, a recipient decodes them in the reverse order.              |
-// |                                                                           |
-// | A recipient MUST be able to parse the "chunked" transfer coding because   |
-// | it has a fundamental role in HTTP/1.1 message framing when the content    |
-// | length is not known in advance.                                           |
-// |                                                                           |
-// | Transfer coding names are case-insensitive.                               |
-// |                                                                           |
-// | Example:                                                                  |
-// |  Transfer-Encoding: gzip, chunked                                         |
-// |                                                                           |
-// | Example with transfer parameters:                                         |
-// |  Transfer-Encoding: custom; level=5, chunked                              |
+// +-----------------+---------------------------------------------------------+
+// | Field           | Definition                                              |
+// +-----------------+---------------------------------------------------------+
+// | Content-Type    | media-type                                              |
+// | media-type      | type "/" subtype parameters                             |
+// | type            | token                                                   |
+// | subtype         | token                                                   |
+// | parameters      | *( OWS ";" OWS [ parameter ] )                          |
+// | parameter       | parameter-name "=" parameter-value                      |
+// | parameter-name  | token                                                   |
+// | parameter-value | token / quoted-string                                   |
+// | token           | 1*tchar                                                 |
+// | tchar           | "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" /   |
+// |                 | "." / "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA       |
+// | quoted-string   | DQUOTE *( qdtext / quoted-pair ) DQUOTE                 |
+// | qdtext          | HTAB / SP / %x21 / %x23-5B / %x5D-7E / obs-text         |
+// | quoted-pair     | "\" ( HTAB / SP / VCHAR / obs-text )                    |
+// | obs-text        | %x80-FF                                                 |
+// | OWS             | *( SP / HTAB )                                          |
+// | DQUOTE          | %x22                                                    |
+// | VCHAR           | %x21-7E                                                 |
 // +---------------------------------------------------------------------------+
-// | RFC 9112 §6.1 / RFC 9110 §10.1.4 (ABNF summary)                           |
+// | RFC 9110 §5.6.6 parameter rules                                           |
 // +---------------------------------------------------------------------------+
-// +--------------------+------------------------------------------------------+
-// | Field              | Definition                                           |
-// +--------------------+------------------------------------------------------+
-// | Transfer-Encoding  | #transfer-coding                                     |
-// | transfer-coding    | token *( OWS ";" OWS transfer-parameter )            |
-// | transfer-parameter | token BWS "=" BWS ( token / quoted-string )          |
-// | token              | 1*tchar                                              |
-// | tchar              | "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" /      |
-// |                    | "-" / "." / "^" / "_" / "`" / "|" / "~" /            |
-// |                    | DIGIT / ALPHA                                        |
-// | quoted-string      | DQUOTE *( qdtext / quoted-pair ) DQUOTE              |
-// | qdtext             | HTAB / SP / %x21 / %x23-5B / %x5D-7E / obs-text      |
-// | quoted-pair        | "\" ( HTAB / SP / VCHAR / obs-text )                 |
-// | OWS                | *( SP / HTAB )                                       |
-// | BWS                | OWS                                                  |
-// | VCHAR              | %x21-7E                                              |
-// | obs-text           | %x80-FF                                              |
+// | Parameters are introduced by a semicolon and consist of a name/value      |
+// | pair. Parameter names and unquoted parameter values are tokens. A value   |
+// | that is not representable as a token can be carried as a quoted-string.   |
+// |                                                                           |
+// | No whitespace is allowed around the "=" character, not even BWS:          |
+// |                                                                           |
+// |   text/html; charset=utf-8       valid                                    |
+// |   text/html; charset="utf-8"     valid                                    |
+// |   text/html; charset =utf-8      invalid                                  |
+// |   text/html; charset= utf-8      invalid                                  |
+// |                                                                           |
+// | The quoted and unquoted forms are equivalent when the value matches the   |
+// | token production. An empty quoted-string is syntactically valid, whereas  |
+// | an unquoted parameter value cannot be empty because token is 1*tchar.     |
+// |                                                                           |
+// | The "[ parameter ]" component is optional in the RFC grammar. Therefore,  |
+// | the purely syntactic ABNF permits empty parameter slots, including a      |
+// | trailing semicolon or consecutive semicolons:                             |
+// |                                                                           |
+// |   text/plain;                                                             |
+// |   text/plain;;charset=utf-8                                               |
+// |                                                                           |
+// | This tolerance does not make an empty parameter semantically meaningful.  |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.1 List-Based Fields                                         |
-// +---------------------------------------------------------------------------+
-// | The "#rule" extension defines a comma-delimited list whose elements can   |
-// | be surrounded by optional whitespace:                                     |
-// |                                                                           |
-// |  1#element = element *( OWS "," OWS element )                             |
-// |  #element  = [ 1#element ]                                                |
-// |                                                                           |
-// | For recipient-side parsing, empty list elements MUST be parsed and        |
-// | ignored. The recipient-side expansion is therefore equivalent to:         |
-// |                                                                           |
-// |  #element = [ element ] *( OWS "," OWS [ element ] )                      |
-// |                                                                           |
-// | Commas occurring inside a quoted-string are part of that quoted-string    |
-// | and MUST NOT be interpreted as list separators.                           |
+// | IMPORTANT: Content-Type is a singleton field, not a "#rule" list.         |
+// | A comma is therefore not a media-type separator and is only valid when it |
+// | occurs inside quoted-string as qdtext or by means of quoted-pair.         |
 // +---------------------------------------------------------------------------+
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-class transfer_encoding {
+class content_type {
  public:
-  // +=========================================================================+
-  // | [>] check                                                    ( public ) |
-  // +=========================================================================+
   static constexpr bool check(std::string_view sv) {
-    bool follows_separator = false;
-    std::size_t i = 0;
-    std::size_t last = 0;
-    bool inside_string = false;
-    while (i < sv.size()) {
-      // We need to handle quoted strings and escaped characters properly.
-      if (sv[i] == '"') {
-        inside_string = !inside_string;
-        i++;
-        continue;
-      }
-      // Handle escaped characters inside quoted strings.
-      if (sv[i] == '\\') {
-        if (!inside_string || i + 1 >= sv.size()) return false;
-        i += 2;
-        continue;
-      }
-      if (sv[i] == ',' && !inside_string) {
-        // We found a transfer coding, let's consume it.
-        std::string_view tc = sv.substr(last, i++ - last);
-        if (follows_separator) helpers::ows_ltrim(tc);
-        helpers::ows_rtrim(tc);
-        if (!tc.empty() && !consume_transfer_coding(tc)) return false;
-        follows_separator = true;
-        last = i;
-        continue;
-      }
-      i++;
-    }
-    // Check if we ended inside a quoted string, which would be invalid.
-    if (inside_string) return false;
-    // Last transfer coding after the last comma (or the only one if no commas).
-    std::string_view tc = sv.substr(last);
-    if (follows_separator) helpers::ows_ltrim(tc);
-    if (!tc.empty() && !consume_transfer_coding(tc)) return false;
-    return true;
+    std::size_t off = 0;
+    const std::string_view type = helpers::consume_token(sv);
+    if (type.empty()) return false;
+    off += type.size();
+    if (off >= sv.size() || sv[off++] != '/') return false;
+    const std::string_view subtype = helpers::consume_token(sv.substr(off));
+    if (subtype.empty()) return false;
+    off += subtype.size();
+    if (off >= sv.size()) return true;
+    return consume_parameters(sv.substr(off));
   }
 
  private:
   // +=========================================================================+
-  // | [>] consume_transfer_coding                                 ( private ) |
+  // | [>] consume_parameters                                      ( private ) |
   // +=========================================================================+
-  static constexpr bool consume_transfer_coding(std::string_view sv) {
-    std::size_t off = 0;
-    const std::string_view token = helpers::consume_token(sv);
-    if (token.empty()) return false;
-    off += token.size();
-    if (off >= sv.size()) return true;
-    return consume_transfer_parameters(sv.substr(off));
-  }
-  // +=========================================================================+
-  // | [>] consume_transfer_parameters                             ( private ) |
-  // +=========================================================================+
-  static constexpr bool consume_transfer_parameters(std::string_view sv) {
+  static constexpr bool consume_parameters(std::string_view sv) {
     std::size_t i = 0;
     while (i < sv.size()) {
       // OWS before ';'.
       while (i < sv.size() && helpers::is_ows(sv[i])) i++;
-      // A ';' is mandatory before every transfer-parameter.
-      if (i >= sv.size()) return false;
-      if (sv[i++] != ';') return false;
+      // A ';' is mandatory before every parameter.
+      if (i >= sv.size() || sv[i++] != ';') return false;
       // OWS after ';'.
       while (i < sv.size() && helpers::is_ows(sv[i])) i++;
-      // A transfer-parameter is mandatory after every ';'.
-      if (i >= sv.size()) return false;
+      // A parameter is not andatory after every ';'.
+      if (i >= sv.size()) return true;
+      if (sv[i] == ';') continue;  // Empty parameter slot is allowed.
       std::size_t bytes = 0;
       if (!consume_parameter(sv.substr(i), bytes)) return false;
       if (bytes == 0 || bytes > sv.size() - i) {
@@ -235,13 +216,9 @@ class transfer_encoding {
     const std::string_view name = helpers::consume_token(sv);
     if (name.empty()) return false;
     i += name.size();
-    // OWS/BWS before '='.
-    while (i < sv.size() && helpers::is_ows(sv[i])) i++;
     // A '=' is mandatory before every transfer-parameter.
     if (i >= sv.size()) return false;
     if (sv[i++] != '=') return false;
-    // OWS/BWS after '='.
-    while (i < sv.size() && helpers::is_ows(sv[i])) i++;
     // A transfer-parameter value is mandatory after every '='.
     if (i >= sv.size()) return false;
     // The value can be either a token or a quoted-string.

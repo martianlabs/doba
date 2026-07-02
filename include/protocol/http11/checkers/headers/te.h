@@ -143,39 +143,129 @@ class te {
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
   // +=========================================================================+
-  static bool check(std::string_view sv) {
+  static constexpr bool check(std::string_view sv) {
     bool follows_separator = false;
-    while (true) {
-
-      /*
-      pepe
-      */
-
-      /*
-      std::size_t separator = std::string_view::npos;
-      if (!helpers::find_list_separator(sv, separator)) return false;
-      const bool has_separator = separator != std::string_view::npos;
-      std::string_view t_codings = has_separator ? sv.substr(0, separator) : sv;
-      // OWS after the previous comma belongs to the list separator.
-      if (follows_separator) helpers::ows_ltrim(t_codings);
-      // OWS before the current comma belongs to the list separator.
-      if (has_separator) helpers::ows_rtrim(t_codings);
-      // Empty list elements are ignored by recipients.
-      if (!t_codings.empty() && !try_to_parse_t_codings(t_codings)) {
+    std::size_t i = 0;
+    std::size_t last = 0;
+    bool inside_string = false;
+    while (i < sv.size()) {
+      // We need to handle quoted strings and escaped characters properly.
+      if (sv[i] == '"') {
+        inside_string = !inside_string;
+        i++;
+        continue;
+      }
+      // Handle escaped characters inside quoted strings.
+      if (sv[i] == '\\') {
+        if (!inside_string || i + 1 >= sv.size()) return false;
+        i += 2;
+        continue;
+      }
+      if (sv[i] == ',' && !inside_string) {
+        // We found a transfer coding, let's consume it.
+        std::string_view tcs = sv.substr(last, i++ - last);
+        if (follows_separator) helpers::ows_ltrim(tcs);
+        helpers::ows_rtrim(tcs);
+        if (!tcs.empty() && !consume_t_codings(tcs)) return false;
+        follows_separator = true;
+        last = i;
+        continue;
+      }
+      i++;
+    }
+    // Check if we ended inside a quoted string, which would be invalid.
+    if (inside_string) return false;
+    // Last transfer coding after the last comma (or the only one if no commas).
+    std::string_view tcs = sv.substr(last);
+    if (follows_separator) helpers::ows_ltrim(tcs);
+    if (!tcs.empty() && !consume_t_codings(tcs)) return false;
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] consume_t_codings                                       ( private ) |
+  // +=========================================================================+
+  static constexpr bool consume_t_codings(std::string_view sv) {
+    if (sv.size() == 8 && helpers::iequals(sv, "trailers")) return true;
+    return consume_transfer_coding(sv);
+  }
+  // +=========================================================================+
+  // | [>] consume_transfer_coding                                 ( private ) |
+  // +=========================================================================+
+  static constexpr bool consume_transfer_coding(std::string_view sv) {
+    std::size_t off = 0;
+    const std::string_view token = helpers::consume_token(sv);
+    if (token.empty()) return false;
+    off += token.size();
+    if (off >= sv.size()) return true;
+    return consume_transfer_parameters(sv.substr(off));
+  }
+  // +=========================================================================+
+  // | [>] consume_transfer_parameters                             ( private ) |
+  // +=========================================================================+
+  static constexpr bool consume_transfer_parameters(std::string_view sv) {
+    std::size_t i = 0;
+    bool q_found = false;
+    while (i < sv.size()) {
+      while (i < sv.size() && helpers::is_ows(sv[i])) i++; // OWS before ';'
+      // A ';' is mandatory before every transfer-parameter.
+      if (i >= sv.size()) return false;
+      if (sv[i++] != ';') return false;
+      while (i < sv.size() && helpers::is_ows(sv[i])) i++; // OWS after ';'
+      // A transfer-parameter is mandatory after every ';'.
+      if (i >= sv.size()) return false;
+      std::size_t bytes = 0;
+      if (!consume_parameter(sv.substr(i), bytes, q_found)) return false;
+      if (bytes == 0 || bytes > sv.size() - i) {
         return false;
       }
-      if (!has_separator) return true;
-      sv.remove_prefix(separator + 1);
-      follows_separator = true;
-      */
-
-      /*
-      pepe fin
-      */
+      i += bytes;
     }
+    return true;
   }
-
- private:
+  // +=========================================================================+
+  // | [>] consume_parameter                                       ( private ) |
+  // +=========================================================================+
+  static constexpr bool consume_parameter(std::string_view sv,
+                                          std::size_t& bytes_used,
+                                          bool& q_found) {
+    bytes_used = 0;
+    std::size_t i = 0;
+    const std::string_view name = helpers::consume_token(sv);
+    if (name.empty()) return false;
+    i += name.size();
+    if (helpers::iequals(name, "q")) {
+      if (q_found) return false;  // "q" parameter can only appear once.
+      if (i >= sv.size()) return false;
+      if (sv[i++] != '=') return false;
+      if (i >= sv.size()) return false;
+      if (!helpers::is_qvalue(sv.substr(i))) return false;
+      bytes_used = sv.size();
+      q_found = true;
+    } else {
+      if (q_found) return false;  // "q" parameter must be last if present.
+      while (i < sv.size() && helpers::is_ows(sv[i])) i++; // OWS before '='
+      // A '=' is mandatory before every transfer-parameter.
+      if (i >= sv.size()) return false;
+      if (sv[i++] != '=') return false;
+      while (i < sv.size() && helpers::is_ows(sv[i])) i++; // OWS after '='
+      // A transfer-parameter value is mandatory after every '='.
+      if (i >= sv.size()) return false;
+      // The value can be either a token or a quoted-string.
+      if (sv[i] == '"') {
+        // Consume the quoted-string.
+        const std::string_view qs =
+            helpers::consume_quoted_string(sv.substr(i));
+        if (qs.empty()) return false;
+        bytes_used = i + qs.size();
+        return true;
+      }
+      // Consume the token.
+      const std::string_view tk = helpers::consume_token(sv.substr(i));
+      if (tk.empty()) return false;
+      bytes_used = i + tk.size();
+    }
+    return true;
+  }
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers::headers
 

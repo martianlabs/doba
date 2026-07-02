@@ -110,12 +110,12 @@ class tcpip {
     context& operator=(context&&) noexcept = delete;
     ~context() = default;
     // [push_pending_response]
-    void push_pending_response(std::unique_ptr<std::string> buffer) {
+    INLINE void push_pending_response(std::unique_ptr<std::string> buffer) {
       if (!buffer || buffer->empty()) return;
       responses.push(std::move(buffer));
     }
     // [pop_pending_response]
-    std::unique_ptr<std::string> pop_pending_response() {
+    INLINE std::unique_ptr<std::string> pop_pending_response() {
       if (responses.empty()) return nullptr;
       std::unique_ptr<std::string> response = std::move(responses.front());
       responses.pop();
@@ -136,8 +136,8 @@ class tcpip {
   struct overlapped_base : OVERLAPPED {
     overlapped_base(io_type in_type, std::shared_ptr<context> in_ctx = nullptr)
         : OVERLAPPED{}, type{in_type}, ctx{in_ctx} {}
-    io_type get_type() const { return type; }
-    std::shared_ptr<context> get_context() const { return ctx; }
+    INLINE io_type get_type() const { return type; }
+    INLINE std::shared_ptr<context> get_context() const { return ctx; }
 
    private:
     const io_type type;
@@ -152,14 +152,14 @@ class tcpip {
   struct overlapped_receive : overlapped_base {
     overlapped_receive(std::shared_ptr<context> in_ctx)
         : overlapped_base(io_type::kReceive, in_ctx) {}
-    CHAR buffer[BFsz]{0};
-    WSABUF wsa{0};
+    WSABUF wsa;
+    CHAR buffer[BFsz];
   };
   struct overlapped_send : overlapped_base {
     overlapped_send(std::shared_ptr<context> in_ctx)
         : overlapped_base(io_type::kSend, in_ctx) {}
+    WSABUF wsa;
     std::unique_ptr<std::string> buffer;
-    WSABUF wsa{0};
   };
   struct overlapped_stop : overlapped_base {
     overlapped_stop() : overlapped_base(io_type::kStop) {}
@@ -347,7 +347,7 @@ class tcpip {
   // +=========================================================================+
   // | [>] handle_accept                                           ( private ) |
   // +=========================================================================+
-  void handle_accept(overlapped_accept* ova) {
+  INLINE void handle_accept(overlapped_accept* ova) {
     if (!post_accept()) return;
     // Let's create a new context for this accepted socket!
     std::shared_ptr<context> ctx = std::make_shared<context>(ova->socket);
@@ -396,7 +396,7 @@ class tcpip {
   // +=========================================================================+
   // | [>] handle_receive                                          ( private ) |
   // +=========================================================================+
-  void handle_receive(overlapped_receive* ovr, DWORD bytes_received) {
+  INLINE void handle_receive(overlapped_receive* ovr, DWORD bytes_received) {
     // If the associated context is in 'closing' status then the operation is
     // discarded and no actions are performed!
     if (ovr->get_context()->closing.load()) return;
@@ -497,7 +497,7 @@ class tcpip {
   // +=========================================================================+
   // | [>] handle_send                                             ( private ) |
   // +=========================================================================+
-  void handle_send(overlapped_send* ovs, DWORD bytes) {
+  INLINE void handle_send(overlapped_send* ovs, DWORD bytes) {
     if (!arm_pending_send_operation(ovs, bytes)) {
       arm_next_send_operation(ovs->get_context());
     }
@@ -505,11 +505,11 @@ class tcpip {
   // +=========================================================================+
   // | [>] handle_stop                                             ( private ) |
   // +=========================================================================+
-  void handle_stop(bool& stopping) { stopping = true; }
+  INLINE void handle_stop(bool& stopping) { stopping = true; }
   // +=========================================================================+
   // | [>] handle_error                                            ( private ) |
   // +=========================================================================+
-  void handle_error(overlapped_base* ovb) {
+  INLINE void handle_error(overlapped_base* ovb) {
     switch (ovb->get_type()) {
       case io_type::kAccept:
         break;
@@ -524,7 +524,7 @@ class tcpip {
   // +=========================================================================+
   // | [>] handle_overlapped                                       ( private ) |
   // +=========================================================================+
-  void handle_overlapped(overlapped_base* ovb) {
+  INLINE void handle_overlapped(overlapped_base* ovb) {
     switch (ovb->get_type()) {
       case io_type::kAccept:
         delete reinterpret_cast<overlapped_accept*>(ovb);
@@ -541,10 +541,28 @@ class tcpip {
     }
   }
   // +=========================================================================+
+  // | [>] post_accept                                             ( private ) |
+  // +=========================================================================+
+  INLINE bool post_accept() {
+    SOCKET soc = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0,
+                            WSA_FLAG_OVERLAPPED);
+    if (soc == INVALID_SOCKET) return false;
+    overlapped_accept* ova = new overlapped_accept(soc);
+    DWORD received = 0;
+    BOOL accepted =
+        accept_ex_(accept_socket_, ova->socket, ova->addresses, 0,
+                   kAcceptAddressBytes, kAcceptAddressBytes, &received, ova);
+    if (accepted == FALSE && WSAGetLastError() != ERROR_IO_PENDING) {
+      delete ova;
+      return false;
+    }
+    return true;
+  }
+  // +=========================================================================+
   // | [>] send_error_and_mark_context_for_closing                 ( private ) |
   // +=========================================================================+
-  void send_error_and_mark_context_for_closing(std::shared_ptr<context> ctx,
-                                               std::shared_ptr<RSty> response) {
+  INLINE void send_error_and_mark_context_for_closing(
+      std::shared_ptr<context> ctx, std::shared_ptr<RSty> response) {
     if (response) {
       std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
       std::unique_ptr<std::string> out = std::make_unique<std::string>();
@@ -557,7 +575,7 @@ class tcpip {
   // +=========================================================================+
   // | [>] mark_context_for_closing                                ( private ) |
   // +=========================================================================+
-  void mark_context_for_closing(std::shared_ptr<context> ctx) {
+  INLINE void mark_context_for_closing(std::shared_ptr<context> ctx) {
     // Let's prepare this context for closing!
     bool expected = false;
     if (ctx->closing.compare_exchange_strong(expected, true)) {
@@ -576,7 +594,7 @@ class tcpip {
   // +=========================================================================+
   // | [>] arm_pending_send_operation                              ( private ) |
   // +=========================================================================+
-  bool arm_pending_send_operation(overlapped_send* ovs, DWORD bytes) {
+  INLINE bool arm_pending_send_operation(overlapped_send* ovs, DWORD bytes) {
     // If the associated context is in 'closing' status then the operation is
     // not dispatched and no actions are performed!
     if (ovs->get_context()->closing.load()) return false;
@@ -596,7 +614,7 @@ class tcpip {
   // +=========================================================================+
   // | [>] arm_next_send_operation                                 ( private ) |
   // +=========================================================================+
-  void arm_next_send_operation(std::shared_ptr<context> ctx) {
+  INLINE void arm_next_send_operation(std::shared_ptr<context> ctx) {
     // If the associated context is in 'closing' status then the operation is
     // not dispatched and no actions are performed!
     if (ctx->closing.load()) return;
@@ -621,7 +639,7 @@ class tcpip {
   // +=========================================================================+
   // | [>] arm_next_receive_operation                              ( private ) |
   // +=========================================================================+
-  void arm_next_receive_operation(std::shared_ptr<context> ctx) {
+  INLINE void arm_next_receive_operation(std::shared_ptr<context> ctx) {
     // If the associated context is in 'closing' status then the operation is
     if (ctx->closing.load()) return;
     // Let's arm next receive operation!
@@ -630,19 +648,20 @@ class tcpip {
   // +=========================================================================+
   // | [>] enqueue                                                 ( private ) |
   // +=========================================================================+
-  void enqueue(std::shared_ptr<context> ctx, std::unique_ptr<std::string> bf) {
+  INLINE void enqueue(std::shared_ptr<context> ctx,
+                      std::unique_ptr<std::string> bf) {
     ctx->push_pending_response(std::move(bf));
   }
   // +=========================================================================+
   // | [>] dequeue                                                 ( private ) |
   // +=========================================================================+
-  std::unique_ptr<std::string> dequeue(std::shared_ptr<context> ctx) {
+  INLINE std::unique_ptr<std::string> dequeue(std::shared_ptr<context> ctx) {
     return ctx->pop_pending_response();
   }
   // +=========================================================================+
   // | [>] receive                                                 ( private ) |
   // +=========================================================================+
-  bool receive(std::shared_ptr<context> ctx) {
+  INLINE bool receive(std::shared_ptr<context> ctx) {
     DWORD f = 0, r = 0;
     overlapped_receive* ovr = new overlapped_receive(ctx);
     std::memset(&ovr->wsa, 0, sizeof(WSABUF));
@@ -659,7 +678,8 @@ class tcpip {
   // | [>] send                                s                    ( private )
   // |
   // +=========================================================================+
-  bool send(std::shared_ptr<context> ctx, std::unique_ptr<std::string> buffer) {
+  INLINE bool send(std::shared_ptr<context> ctx,
+                   std::unique_ptr<std::string> buffer) {
     DWORD f = 0, s = 0;
     overlapped_send* ovs = new overlapped_send(ctx);
     std::memset(&ovs->wsa, 0, sizeof(WSABUF));
@@ -669,24 +689,6 @@ class tcpip {
     ovs->wsa.len = ovs->buffer->size();
     int res = WSASend(ctx->socket, &ovs->wsa, 1, &s, f, ovs, 0);
     if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-      return false;
-    }
-    return true;
-  }
-  // +=========================================================================+
-  // | [>] post_accept                                             ( private ) |
-  // +=========================================================================+
-  bool post_accept() {
-    SOCKET soc = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0,
-                            WSA_FLAG_OVERLAPPED);
-    if (soc == INVALID_SOCKET) return false;
-    overlapped_accept* ova = new overlapped_accept(soc);
-    DWORD received = 0;
-    BOOL accepted =
-        accept_ex_(accept_socket_, ova->socket, ova->addresses, 0,
-                   kAcceptAddressBytes, kAcceptAddressBytes, &received, ova);
-    if (accepted == FALSE && WSAGetLastError() != ERROR_IO_PENDING) {
-      delete ova;
       return false;
     }
     return true;

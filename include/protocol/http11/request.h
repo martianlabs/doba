@@ -84,12 +84,18 @@
 #include "headers.h"
 #include "common/hash_map.h"
 #include "protocol/deserialization.h"
-#include "checkers/headers/connection.h"
 #include "checkers/headers/host.h"
 #include "checkers/headers/content_length.h"
 #include "checkers/headers/transfer_encoding.h"
+#include "checkers/headers/connection.h"
+#include "checkers/headers/te.h"
+#include "checkers/headers/trailer.h"
 #include "checkers/headers/expect.h"
+#include "checkers/headers/upgrade.h"
+#include "checkers/headers/content_type.h"
+#include "checkers/headers/content_encoding.h"
 #include "checkers/headers/date.h"
+#include "checkers/headers/range.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -159,19 +165,19 @@ class request {
     deserialization_status status;
     std::size_t bytes_used = 0;
     if (method_tmp == methods::kConnect) {
-      status = helpers::consume_authority_form(sv);
+      status = helpers::try_to_deserialize_as_authority_form(sv);
     } else if (method_tmp == methods::kOptions && sv.front() == '*') {
-      status = helpers::consume_asterisk_form(sv, bytes_used);
+      status = helpers::try_to_deserialize_as_asterisk_form(sv, bytes_used);
       if (status == deserialization_status::kSucceeded) {
         target_tmp = target::kAsteriskForm;
       }
     } else {
-      status = helpers::consume_origin_form(sv.substr(i), absolute_path_tmp,
-                                            query_tmp, bytes_used);
+      status = helpers::try_to_deserialize_as_origin_form(
+          sv.substr(i), absolute_path_tmp, query_tmp, bytes_used);
       if (status == deserialization_status::kSucceeded) {
         target_tmp = target::kOriginForm;
       } else {
-        status = helpers::consume_absolute_form(sv);
+        status = helpers::try_to_deserialize_as_absolute_form(sv);
       }
     }
     if (status != deserialization_status::kSucceeded) return status;
@@ -296,19 +302,19 @@ class request {
   // | Content-Length                                             |     [x]    |
   // | Transfer-Encoding                                          |     [x]    |
   // | Connection                                                 |     [x]    |
-  // | TE                                                         |     [ ]    |
-  // | Trailer                                                    |     [ ]    |
+  // | TE                                                         |     [x]    |
+  // | Trailer                                                    |     [x]    |
   // | Expect                                                     |     [x]    |
-  // | Upgrade                                                    |     [ ]    |
-  // | Content-Type                                               |     [ ]    |
-  // | Content-Encoding                                           |     [ ]    |
+  // | Upgrade                                                    |     [x]    |
+  // | Content-Type                                               |     [x]    |
+  // | Content-Encoding                                           |     [x]    |
   // | Date                                                       |     [x]    |
   // | Accept                                                     |     [ ]    |
   // | Accept-Encoding                                            |     [ ]    |
   // | Accept-Language                                            |     [ ]    |
   // | Content-Language                                           |     [ ]    |
   // | Content-Location                                           |     [ ]    |
-  // | Range                                                      |     [ ]    |
+  // | Range                                                      |     [x]    |
   // | Content-Range                                              |     [ ]    |
   // | Accept-Ranges                                              |     [ ]    |
   // | If-Range                                                   |     [ ]    |
@@ -358,7 +364,7 @@ class request {
   // | X-Forwarded-Proto                                          |     [ ]    |
   // | Keep-Alive                                                 |     [ ]    |
   // | Proxy-Connection                                           |     [ ]    |
-  // +-------------------------------------------------------------------------+
+  // +------------------------------------------------------------+------------+
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
   // +=========================================================================+
@@ -372,8 +378,14 @@ class request {
           {"Content-Length", checkers::headers::content_length::check},
           {"Transfer-Encoding", checkers::headers::transfer_encoding::check},
           {"Connection", checkers::headers::connection::check},
+          {"TE", checkers::headers::te::check},
+          {"Trailer", checkers::headers::trailer::check},
           {"Expect", checkers::headers::expect::check},
+          {"Upgrade", checkers::headers::upgrade::check},
+          {"Content-Type", checkers::headers::content_type::check},
+          {"Content-Encoding", checkers::headers::content_encoding::check},
           {"Date", checkers::headers::date::check},
+          {"Range", checkers::headers::range::check},
   };
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |

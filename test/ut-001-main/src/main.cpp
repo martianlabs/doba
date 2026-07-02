@@ -71,7 +71,7 @@
 
 #include "network/environment.h"
 #include "protocol/http11/server.h"
-#include "protocol/http11/checkers/headers/te.h"
+#include "protocol/http11/checkers/headers/range.h"
 
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http11;
@@ -83,10 +83,10 @@ int main(int argc, char* argv[]) {
 
 
 
-  std::string test_01 = "gzip; window=15 ; q=0.8, trailers";
-  bool result_01 = martianlabs::doba::protocol::http11::checkers::headers::
-      transfer_encoding::check(test_01);
-
+  std::string test_01 = "items=chapter-one,chapter-three";
+  bool result_01 =
+      martianlabs::doba::protocol::http11::checkers::headers::range::check(
+          test_01);
 
 
 

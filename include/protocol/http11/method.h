@@ -67,62 +67,45 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#ifndef martianlabs_doba_platform_h
-#define martianlabs_doba_platform_h
+#ifndef martianlabs_doba_protocol_http11_method_h
+#define martianlabs_doba_protocol_http11_method_h
 
+namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] PLATFORM-INDEPENDENT-INCLUDEs                             ( section ) |
+// | [>] methods                                                    ( struct ) |
+// +---------------------------------------------------------------------------+
+// | This struct holds for the http 1.1 methods specification.                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-#include <limits>
-#include <mutex>
-#include <optional>
-#include <queue>
-#include <system_error>
-#include <thread>
-#include <vector>
-#include <memory>
-#include <cstring>
-#include <sstream>
-#include <string>
-#include <variant>
-#include <inttypes.h>
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] PLATFORM-DEPENDENT-INCLUDEs [windowsTM]                   ( section ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-#ifdef _WIN32
-#define _WIN32_DCOM
-#define NOMINMAX
-#define INLINE __forceinline
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <mswsock.h>
-#include <mstcpip.h>
-#include <iostream>
-#include <wbemidl.h>
-#pragma warning(disable : 4996)
-#pragma comment(lib, "Ws2_32.lib")
-#pragma comment(lib, "wbemuuid.lib")
-#pragma comment(lib, "Mswsock.lib")
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] PLATFORM-DEPENDENT-INCLUDEs [linux]                       ( section ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-#elif __linux__
-#define INLINE inline __attribute__((always_inline))
-#include <fcntl.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/epoll.h>
-#include <sys/ioctl.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#endif
+struct methods {
+  // +=========================================================================+
+  // | [>] CONSTANTs                                                ( public ) |
+  // +=========================================================================+
+  // +---------+---------------------------------------------------------------+
+  // | Method  | Description                                                   |
+  // +---------+---------------------------------------------------------------+
+  // | GET     | Transfer a current representation of the target resource.     |
+  // | HEAD    | Same as GET, but do not transfer the response content.        |
+  // | POST    | Perform resource-specific processing on the request content.  |
+  // | PUT     | Replace all current representations of the target resource    |
+  // |         | with the request content.                                     |
+  // | DELETE  | Remove all current representations of the target resource.    |
+  // | CONNECT | Establish a tunnel to the server identified by the            |
+  // |         | target resource.                                              |
+  // | OPTIONS | Describe the communication options for the target resource.   |
+  // | TRACE   | Perform a message loop-back test along the path to the        |
+  // |         | target resource.                                              |
+  // +---------+---------------------------------------------------------------+
+  static constexpr char kGet[] = "GET";
+  static constexpr char kHead[] = "HEAD";
+  static constexpr char kPost[] = "POST";
+  static constexpr char kPut[] = "PUT";
+  static constexpr char kDelete[] = "DELETE";
+  static constexpr char kConnect[] = "CONNECT";
+  static constexpr char kOptions[] = "OPTIONS";
+  static constexpr char kTrace[] = "TRACE";
+};
+}  // namespace martianlabs::doba::protocol::http11
 
 #endif

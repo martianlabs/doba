@@ -115,7 +115,7 @@ class content_length {
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
   // +=========================================================================+
-  static bool check(std::string_view sv) {
+  static constexpr bool check(std::string_view sv) {
     if (sv.empty()) return false;
     for (auto const& c : sv) {
       if (!helpers::is_digit(c)) return false;

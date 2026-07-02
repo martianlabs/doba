@@ -145,23 +145,11 @@ class connection {
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
   // +=========================================================================+
-  static bool check(std::string_view sv) {
+  static constexpr bool check(std::string_view sv) {
     for (auto token : sv | std::views::split(',')) {
       if (token.begin() == token.end()) continue;
       std::string_view value(&*token.begin(), std::ranges::distance(token));
-
-      /*
-      pepe
-      */
-
-      /*
       helpers::ows_trim(value);
-      */
-
-      /*
-      pepe fin
-      */
-
       if (value.empty()) continue;
       for (auto const& c : value) {
         if (!helpers::is_token(c)) return false;
