@@ -89,33 +89,33 @@ namespace martianlabs::doba::protocol::http11 {
 // | This class holds for the http 1.1 server implementation.                  |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
+// |   RQty - request being used (http11::request by default).                 |
+// |   RSty - response being used (http11::response by default).               |
 // |   TRty - transport being used (tcp/ip by default).                        |
+// |   ROty - router being used (http11::router by default).                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <template <typename, typename, std::size_t> class TRty =
-              transport::server::tcpip>
+template <typename RQty = request, typename RSty = response,
+          template <typename, typename, std::size_t> class TRty =
+              transport::server::tcpip,
+          typename FNty = std::function<void(const RQty&, RSty&)>,
+          template <typename> class ROty = router>
 class server {
-  // +=========================================================================+
-  // | [>] USINGs                                                   ( public ) |
-  // +=========================================================================+
-  using router_fn = std::function<void(const request&, response&)>;
-
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   server() {
     transport_.on_request =
-        [this](std::shared_ptr<const request> req,
-               std::shared_ptr<response> res,
-               transport::server::types::on_send_delegate<response> on_send) {
+        [this](std::shared_ptr<const RQty> req, std::shared_ptr<RSty> res,
+               transport::server::types::on_send_delegate<RSty> on_send) {
           switch (req->get_target()) {
             case target::kOriginForm:
             case target::kAbsoluteForm: {
               // The request is either in origin-form (RFC 9110 §9.3.5) or
               // absolute-form (RFC 9110 §9.3.4); in either case, the request is
               // routed to a handler based on the method and absolute path.
-              std::optional<router<router_fn>::data> router_entry =
+              std::optional<typename ROty<FNty>::data> router_entry =
                   router_.match(req->get_method(), req->get_absolute_path());
               if (!router_entry.has_value()) {
                 res->not_found_404();
@@ -161,7 +161,7 @@ class server {
           }
         };
     transport_.on_bad_request = [](std::string_view reason,
-                                   std::shared_ptr<response> res) {
+                                   std::shared_ptr<RSty> res) {
       res->bad_request_400().set_body(reason);
     };
     transport_.on_connection = [this]() { connections_++; };
@@ -195,7 +195,7 @@ class server {
   // | [>] add_route                                                ( public ) |
   // +=========================================================================+
   server& add_route(
-      const std::string& method, const std::string& route, router_fn fn,
+      const std::string& method, const std::string& route, FNty fn,
       common::execution_policy policy = common::execution_policy::kSync) {
     router_.add(method, route, fn, policy);
     return *this;
@@ -206,9 +206,9 @@ class server {
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   std::shared_ptr<common::thread_pool> thread_pool_;
-  TRty<request, response, 4096> transport_;
   std::atomic<uint32_t> connections_{0};
-  router<router_fn> router_;
+  TRty<RQty, RSty, 4096> transport_;
+  ROty<FNty> router_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

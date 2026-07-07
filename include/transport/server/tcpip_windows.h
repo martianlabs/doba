@@ -227,29 +227,22 @@ class tcpip {
     bool close_after_sending{false};
     std::mutex sending_mutex;
     bool sending{false};
-#ifndef NDEBUG
-    // Debug-only owner tracking to enforce the "sending_mutex held" contract of
-    // the response-queue helpers
-    // (push_pending_response/drain_pending_responses) and the ordering helpers.
-    // Set while a sending_guard holds the lock; used by assert_sending_held().
-    // Has zero effect in release builds.
+    // Owner tracking to enforce the "sending_mutex held" contract of the
+    // response-queue helpers (push_pending_response/drain_pending_responses)
+    // and the ordering helpers. Set while a sending_guard holds the lock;
+    // checked by assert_sending_held(), whose assert() already becomes a
+    // no-op in release builds (NDEBUG) via <cassert>, so no manual
+    // conditional compilation is needed here.
     std::atomic<std::thread::id> sending_owner_dbg{std::thread::id{}};
-#endif
     // RAII lock over sending_mutex. Always acquire the mutex through this guard
-    // (instead of a raw std::lock_guard) so the debug owner is recorded and the
-    // "held" contract of the queue/ordering helpers is checkable. In release
-    // builds it is exactly a std::lock_guard with no extra cost.
+    // (instead of a raw std::lock_guard) so the owner is recorded and the
+    // "held" contract of the queue/ordering helpers is checkable via
+    // assert_sending_held().
     struct sending_guard {
       explicit sending_guard(context& c) : ctx_(c), lock_(c.sending_mutex) {
-#ifndef NDEBUG
         ctx_.sending_owner_dbg.store(std::this_thread::get_id());
-#endif
       }
-      ~sending_guard() {
-#ifndef NDEBUG
-        ctx_.sending_owner_dbg.store(std::thread::id{});
-#endif
-      }
+      ~sending_guard() { ctx_.sending_owner_dbg.store(std::thread::id{}); }
       sending_guard(const sending_guard&) = delete;
       sending_guard& operator=(const sending_guard&) = delete;
 
@@ -257,14 +250,13 @@ class tcpip {
       context& ctx_;
       std::lock_guard<std::mutex> lock_;
     };
-    // Asserts (debug-only) that the calling thread currently holds
-    // sending_mutex through a sending_guard. Documents and enforces the
-    // precondition of the response-queue and ordering helpers below.
+    // Asserts that the calling thread currently holds sending_mutex through a
+    // sending_guard. Documents and enforces the precondition of the
+    // response-queue and ordering helpers below. No-ops in release builds
+    // (NDEBUG) because assert() itself expands to nothing there.
     INLINE void assert_sending_held() const {
-#ifndef NDEBUG
       assert(sending_owner_dbg.load() == std::this_thread::get_id() &&
              "sending_mutex must be held (via sending_guard) by the caller");
-#endif
     }
   };
   enum class io_type : uint8_t { kAccept, kSend, kReceive, kStop };
@@ -341,27 +333,31 @@ class tcpip {
     closesocket(accept_socket_);
     accept_socket_ = INVALID_SOCKET;
     for (std::size_t i = 0; i < workers_.size(); i++) {
-      if (!PostQueuedCompletionStatus(io_h_, 0, 0, new overlapped_stop())) {
-        /*
-        pepe
-        */
-
-        /*
-        pepe fin
-        */
+      overlapped_stop* ovp = new overlapped_stop();
+      if (!PostQueuedCompletionStatus(io_h_, 0, 0, ovp)) {
+        // PostQueuedCompletionStatus() only fails when 'io_h_' is no longer a
+        // valid completion port handle, so retrying it here would not help.
+        // Free the un-posted overlapped_stop() to avoid leaking it (it would
+        // otherwise never reach handle_overlapped()). The affected worker's
+        // own in-flight GetQueuedCompletionStatus() call will then fail too
+        // (lpo == NULL), which the worker loop already treats as
+        // 'stopping = true' (see setup_workers()), so it still exits cleanly
+        // instead of leaving workers_.clear() below blocked on join() forever.
+        delete ovp;
+        assert(false && "PostQueuedCompletionStatus() failed in stop()!");
       }
     }
     workers_.clear();
     accept_ex_ = nullptr;
     accept_depth_ = 0;
     if (!CloseHandle(io_h_)) {
-      /*
-      pepe
-      */
-
-      /*
-      pepe fin
-      */
+      // CloseHandle() only fails here if 'io_h_' were already invalid, which
+      // should not happen given the guard at the top of this method; there is
+      // no meaningful recovery action available. 'io_h_' is reset to nullptr
+      // right below regardless, so this object's internal state remains
+      // consistent (considered stopped) even if the OS handle was not
+      // released.
+      assert(false && "CloseHandle() failed in stop()!");
     }
     io_h_ = nullptr;
   }
@@ -471,10 +467,16 @@ class tcpip {
                 handle_stop(stopping);
                 break;
             }
-          } else {
+          } else if (ovb != nullptr) {
             handle_error(ovb);
+          } else {
+            // GetQueuedCompletionStatus failed without dequeuing any packet
+            // (lpo == NULL): there is nothing to inspect or free, and the
+            // completion port itself is no longer usable by this worker, so
+            // let it exit its loop cleanly instead of spinning.
+            stopping = true;
           }
-          handle_overlapped(ovb);
+          if (ovb != nullptr) handle_overlapped(ovb);
         }
       }));
     }
@@ -902,6 +904,7 @@ class tcpip {
     ovr->wsa.len = BFsz;
     int res = WSARecv(s, &ovr->wsa, 1, &r, &f, ovr, 0);
     if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      delete ovr;
       return false;
     }
     return true;
@@ -925,6 +928,7 @@ class tcpip {
     ovs->wsa.len = ovs->buffer->size();
     int res = WSASend(s, &ovs->wsa, 1, &snt, f, ovs, 0);
     if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      delete ovs;
       return false;
     }
     return true;

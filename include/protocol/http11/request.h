@@ -231,11 +231,11 @@ class request {
     std::vector<std::pair<std::string, std::string>> headers_tmp;
     // +-----------------------------------------------------------------------+
     // | The semantic state built during the single header pass. HTTP/1.1      |
-    // | self-describes the connection/policies per request, so they live here;
-    // | | the transport only ever sees the neutral channel_intent, never these
-    // | | types. Every parsed_T captured into ctx is zero-copy over sv, which |
-    // | outlives ctx because the transversal rules run before deserialize | |
-    // returns.                                                              |
+    // | self-describes the connection/policies per request, so they live here;|
+    // | the transport only ever sees the neutral channel_intent, never these  |
+    // | types. Every parsed_T captured into ctx is zero-copy over sv, which   |
+    // | outlives ctx because the transversal rules run before deserialize     |
+    // | returns.                                                              |
     // +-----------------------------------------------------------------------+
     connection connection_tmp;
     policies policies_tmp;
@@ -542,12 +542,6 @@ class request {
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
   // +=========================================================================+
-  // | A header dispatcher receives an already OWS-trimmed field value plus    |
-  // | the interpretation context being built during the single header pass.   |
-  // | It parses the value exactly once and returns the semantic verdict. This |
-  // | is a plain function pointer (no std::function) so the registry stays a  |
-  // | zero-allocation, O(1) lookup with no per-entry type erasure overhead.   |
-  // +=========================================================================+
   using header_dispatch = verdict (*)(std::string_view, context&);
   // +=========================================================================+
   // | [>] dispatch                                                ( private ) |
@@ -732,11 +726,6 @@ class request {
   }
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
-  // +=========================================================================+
-  // | Upper bound on the number of query parameters extracted from the raw    |
-  // | query component during deserialize(). query_parameters_ itself is an    |
-  // | unbounded std::vector; this cap only sizes the transient parsing arrays |
-  // | and drops any excess pairs (same fixed-capacity policy used elsewhere). |
   // +=========================================================================+
   static constexpr std::size_t kMaxQueryParameters = 128;
   static const inline common::hash_map<std::string_view, header_dispatch>
