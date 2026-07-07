@@ -178,62 +178,13 @@ class content_type {
     if (subtype.empty()) return false;
     off += subtype.size();
     if (off >= sv.size()) return true;
-    return consume_parameters(sv.substr(off));
-  }
-
- private:
-  // +=========================================================================+
-  // | [>] consume_parameters                                      ( private ) |
-  // +=========================================================================+
-  static constexpr bool consume_parameters(std::string_view sv) {
-    std::size_t i = 0;
-    while (i < sv.size()) {
-      // OWS before ';'.
-      while (i < sv.size() && helpers::is_ows(sv[i])) i++;
-      // A ';' is mandatory before every parameter.
-      if (i >= sv.size() || sv[i++] != ';') return false;
-      // OWS after ';'.
-      while (i < sv.size() && helpers::is_ows(sv[i])) i++;
-      // A parameter is not andatory after every ';'.
-      if (i >= sv.size()) return true;
-      if (sv[i] == ';') continue;  // Empty parameter slot is allowed.
-      std::size_t bytes = 0;
-      if (!consume_parameter(sv.substr(i), bytes)) return false;
-      if (bytes == 0 || bytes > sv.size() - i) {
-        return false;
-      }
-      i += bytes;
-    }
-    return true;
-  }
-  // +=========================================================================+
-  // | [>] consume_parameter                                       ( private ) |
-  // +=========================================================================+
-  static constexpr bool consume_parameter(std::string_view sv,
-                                          std::size_t& bytes_used) {
-    bytes_used = 0;
-    std::size_t i = 0;
-    const std::string_view name = helpers::consume_token(sv);
-    if (name.empty()) return false;
-    i += name.size();
-    // A '=' is mandatory before every transfer-parameter.
-    if (i >= sv.size()) return false;
-    if (sv[i++] != '=') return false;
-    // A transfer-parameter value is mandatory after every '='.
-    if (i >= sv.size()) return false;
-    // The value can be either a token or a quoted-string.
-    if (sv[i] == '"') {
-      // Consume the quoted-string.
-      const std::string_view qs = helpers::consume_quoted_string(sv.substr(i));
-      if (qs.empty()) return false;
-      bytes_used = i + qs.size();
-      return true;
-    }
-    // Consume the token.
-    const std::string_view tk = helpers::consume_token(sv.substr(i));
-    if (tk.empty()) return false;
-    bytes_used = i + tk.size();
-    return true;
+    // parameters = *( OWS ";" OWS [ parameter ] ) — empty slots allowed and no
+    // whitespace is permitted around the "=" of a media-type parameter.
+    return helpers::for_each_parameter(
+        sv.substr(off), /*require_parameter=*/false,
+        [](std::string_view rest, std::size_t& bytes) {
+          return helpers::consume_parameter(rest, bytes, /*allow_bws=*/false);
+        });
   }
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers::headers

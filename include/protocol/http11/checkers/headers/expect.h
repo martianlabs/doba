@@ -73,6 +73,7 @@
 #include <ranges>
 
 #include "protocol/http11/helpers.h"
+#include "protocol/http11/parsed_types.h"
 
 namespace martianlabs::doba::protocol::http11::checkers::headers {
 // /////////////////////////////////////////////////////////////////////////////
@@ -165,47 +166,16 @@ class expect {
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
   // +=========================================================================+
-  static constexpr bool check(std::string_view sv) {
-    bool follows_separator = false;
-    std::size_t i = 0;
-    std::size_t last = 0;
-    bool inside_string = false;
-    while (i < sv.size()) {
-      // We need to handle quoted strings and escaped characters properly.
-      if (sv[i] == '"') {
-        inside_string = !inside_string;
-        i++;
-        continue;
-      }
-      // Handle escaped characters inside quoted strings.
-      if (sv[i] == '\\') {
-        if (!inside_string || i + 1 >= sv.size()) return false;
-        i += 2;
-        continue;
-      }
-      if (sv[i] == ',' && !inside_string) {
-        // We found an expectation, let's parse it.
-        std::string_view expectation = sv.substr(last, i++ - last);
-        if (follows_separator) helpers::ows_ltrim(expectation);
-        helpers::ows_rtrim(expectation);
-        if (!expectation.empty() && !consume_expectation(expectation)) {
-          return false;
-        }
-        follows_separator = true;
-        last = i;
-        continue;
-      }
-      i++;
-    }
-    // Check if we ended inside a quoted string, which would be invalid.
-    if (inside_string) return false;
-    // Last expectation after the last comma (or the only one if no commas).
-    std::string_view expectation = sv.substr(last);
-    if (follows_separator) helpers::ows_ltrim(expectation);
-    if (!expectation.empty() && !consume_expectation(expectation)) {
-      return false;
-    }
-    return true;
+  static bool check(std::string_view sv, parsed_parameter_list& out) {
+    // The producer overload validates each expectation exactly as the pure
+    // check() does and captures every non-empty element (its token plus any
+    // value and parameters) as raw text, in order.
+    return helpers::for_each_list_element(
+        sv, [&out](std::string_view element) {
+          if (!consume_expectation(element)) return false;
+          out.elements.push_back(element);
+          return true;
+        });
   }
   // +=========================================================================+
   // | [>] consume_expectation                                     ( private ) |
@@ -219,72 +189,17 @@ class expect {
     if (sv[i++] != '=') return false;
     if (i >= sv.size()) return false;
     // The value can be either a token or a quoted-string.
-    if (sv[i] == '"') {
-      // Parse the quoted-string.
-      const std::string_view qs = helpers::consume_quoted_string(sv.substr(i));
-      if (qs.empty()) return false;
-      i += qs.size();
-    } else {
-      // Parse the token.
-      const std::string_view tk = helpers::consume_token(sv.substr(i));
-      if (tk.empty()) return false;
-      i += tk.size();
-    }
-    return consume_expectation_parameters(sv.substr(i));
-  }
-  // +=========================================================================+
-  // | [>] consume_expectation_parameters                          ( private ) |
-  // +=========================================================================+
-  static constexpr bool consume_expectation_parameters(std::string_view sv) {
-    std::size_t i = 0;
-    while (i < sv.size()) {
-      // OWS before ';'.
-      while (i < sv.size() && helpers::is_ows(sv[i])) i++;
-      // A ';' is mandatory before every parameter.
-      if (i >= sv.size()) return false;
-      if (sv[i++] != ';') return false;
-      // OWS after ';'.
-      while (i < sv.size() && helpers::is_ows(sv[i])) i++;
-      // A parameter is not mandatory after every ';'.
-      if (i >= sv.size()) return true;
-      if (sv[i] == ';') continue;
-      std::size_t bytes = 0;
-      if (!consume_parameter(sv.substr(i), bytes)) return false;
-      if (bytes == 0 || bytes > sv.size() - i) {
-        return false;
-      }
-      i += bytes;
-    }
-    return true;
-  }
-  // +=========================================================================+
-  // | [>] consume_parameter                                       ( private ) |
-  // +=========================================================================+
-  static constexpr bool consume_parameter(std::string_view sv,
-                                          std::size_t& bytes_used) {
-    bytes_used = 0;
-    std::size_t i = 0;
-    const std::string_view name = helpers::consume_token(sv);
-    if (name.empty()) return false;
-    i += name.size();
-    // A '=' is mandatory after every parameter name.
-    if (i >= sv.size()) return false;
-    if (sv[i++] != '=') return false;
-    // A parameter value is mandatory after every '='.
-    if (i >= sv.size()) return false;
-    // The value can be either a token or a quoted-string.
-    if (sv[i] == '"') {
-      // Parse the quoted-string.
-      const std::string_view qs = helpers::consume_quoted_string(sv.substr(i));
-      if (qs.empty()) return false;
-      bytes_used = i + qs.size();
-      return true;
-    }
-    // Parse the token.
-    const std::string_view tk = helpers::consume_token(sv.substr(i));
-    if (tk.empty()) return false;
-    bytes_used = i + tk.size();
-    return true;
+    const std::string_view value =
+        helpers::consume_token_or_quoted_string(sv.substr(i));
+    if (value.empty()) return false;
+    i += value.size();
+    // parameters = *( OWS ";" OWS [ parameter ] ) — empty slots allowed and no
+    // whitespace is permitted around the "=" of an expectation parameter.
+    return helpers::for_each_parameter(
+        sv.substr(i), /*require_parameter=*/false,
+        [](std::string_view rest, std::size_t& bytes) {
+          return helpers::consume_parameter(rest, bytes, /*allow_bws=*/false);
+        });
   }
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers::headers

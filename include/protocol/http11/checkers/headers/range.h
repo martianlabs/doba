@@ -249,10 +249,16 @@ class range {
   // +=========================================================================+
   // | [>] consume_other_range                                     ( private ) |
   // +=========================================================================+
+  // | other-range = 1*( %x21-2B / %x2D-7E )                                   |
+  // +-------------------------------------------------------------------------+
+  // | This is VCHAR excluding "," (%x2C), because the comma is reserved as    |
+  // | the range-set list separator (range-set = 1#range-spec).                |
+  // +-------------------------------------------------------------------------+
   static constexpr bool consume_other_range(std::string_view sv) {
     if (sv.empty()) return false;
     for (const auto c : sv) {
-      if (!helpers::is_vchar(c)) return false;
+      const unsigned char uc = static_cast<unsigned char>(c);
+      if (uc < 0x21 || uc > 0x7E || uc == 0x2C) return false;
     }
     return true;
   }

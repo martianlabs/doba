@@ -112,10 +112,13 @@ class server {
           switch (req->get_target()) {
             case target::kOriginForm:
             case target::kAbsoluteForm: {
+              // The request is either in origin-form (RFC 9110 §9.3.5) or
+              // absolute-form (RFC 9110 §9.3.4); in either case, the request is
+              // routed to a handler based on the method and absolute path.
               std::optional<router<router_fn>::data> router_entry =
                   router_.match(req->get_method(), req->get_absolute_path());
               if (!router_entry.has_value()) {
-                res->not_found_404().add_header(headers::kContentLength, 0);
+                res->not_found_404();
                 on_send(res);
                 return;
               }
@@ -134,20 +137,32 @@ class server {
               break;
             }
             case target::kAuthorityForm:
-              // [to-do] -> add support for this!
+              // CONNECT tunnelling (RFC 9110 §9.3.6) is deliberately deferred
+              // to Doba's future client (dial-out) module: it will open the
+              // outbound connection to the target authority already owned by
+              // the request (req->get_target_authority_host()/_port()) and
+              // drive the raw-byte relay, keeping this server-side transport
+              // agnostic of CONNECT. Until that module exists, the request
+              // must not be left unanswered.
+              res->not_implemented_501();
+              on_send(res);
+              return;
             case target::kAsteriskForm:
-              // [to-do] -> add support for this!
-              break;
+              // OPTIONS * (RFC 9110 §9.3.7) addresses the server in general
+              // rather than a specific resource; acknowledge it without
+              // routing to a handler.
+              res->ok_200();
+              on_send(res);
+              return;
             default:
-              res->bad_request_400().add_header(headers::kContentLength, 0);
+              res->bad_request_400();
               on_send(res);
               return;
           }
         };
     transport_.on_bad_request = [](std::string_view reason,
                                    std::shared_ptr<response> res) {
-      res->bad_request_400().set_body(reason).add_header(
-          headers::kContentLength, reason.size());
+      res->bad_request_400().set_body(reason);
     };
     transport_.on_connection = [this]() { connections_++; };
     transport_.on_disconnection = [this]() { connections_--; };
@@ -166,7 +181,7 @@ class server {
   void start(const char port[]) {
     common::date_server::get().start();
     thread_pool_ = std::make_shared<common::thread_pool>(
-        std::thread::hardware_concurrency() / 2);
+        std::thread::hardware_concurrency());
     transport_.start(port);
   }
   // +=========================================================================+

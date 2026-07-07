@@ -72,7 +72,13 @@
 
 #include <mswsock.h>
 
+#include <array>
+#include <atomic>
+#include <cassert>
+#include <cstdint>
 #include <functional>
+#include <mutex>
+#include <thread>
 #include <unordered_set>
 
 #include "protocol/deserialization.h"
@@ -97,10 +103,23 @@ class tcpip {
   // +=========================================================================+
   static constexpr DWORD kAcceptAddressBytes =
       static_cast<DWORD>(sizeof(sockaddr_storage) + 16);
+  // Maximum number of in-flight (assigned but not-yet-sent) responses that a
+  // single connection may hold out-of-order before they are drained in
+  // request-arrival order. Bounds the per-connection reorder buffer and caps
+  // the pipelining/async-concurrency depth we buffer; if exceeded the
+  // connection is defensively closed instead of growing without bound (see
+  // context::deposit_and_drain). Kept as an internal constant for now; exposing
+  // it as a configurable property is a planned future evolution.
+  static constexpr std::uint64_t kReorderWindow = 256;
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
   // +=========================================================================+
   struct context {
+    // [types]
+    // Outcome of depositing a response into the reorder buffer: either it was
+    // accepted (and drained as far as the send cursor allows) or the reorder
+    // window was exceeded and the connection must be defensively closed.
+    enum class deposit_result : std::uint8_t { kOk, kOverflow };
     // [constructors/destructors]
     context(SOCKET in_socket) : socket{in_socket} {}
     context(const context&) = delete;
@@ -110,27 +129,143 @@ class tcpip {
     context& operator=(context&&) noexcept = delete;
     ~context() = default;
     // [push_pending_response]
+    // PRECONDITION: sending_mutex MUST already be held by the caller (through a
+    // sending_guard). This helper does NOT lock — locking here would deadlock,
+    // as every caller (enqueue<-send_error, deposit_and_drain) already holds
+    // it.
     INLINE void push_pending_response(std::unique_ptr<std::string> buffer) {
+      assert_sending_held();
       if (!buffer || buffer->empty()) return;
       responses.push(std::move(buffer));
     }
-    // [pop_pending_response]
-    INLINE std::unique_ptr<std::string> pop_pending_response() {
+    // [drain_pending_responses]
+    // PRECONDITION: sending_mutex MUST already be held by the caller (through a
+    // sending_guard). This helper does NOT lock (the caller, dequeue<-arm_next_
+    // send_operation, already holds it; locking here would deadlock).
+    // Coalesces EVERY currently-queued response into a single buffer,
+    // preserving strict FIFO (arrival) order. This is what restores send
+    // batching: instead of one WSASend per response, a single WSASend carries
+    // all responses that are ready at this moment. Returns nullptr when the
+    // queue is empty. The common single-response case is moved out without any
+    // copy; only when two or more responses are pending do we concatenate them
+    // into one buffer.
+    INLINE std::unique_ptr<std::string> drain_pending_responses() {
+      assert_sending_held();
       if (responses.empty()) return nullptr;
-      std::unique_ptr<std::string> response = std::move(responses.front());
+      std::unique_ptr<std::string> merged = std::move(responses.front());
       responses.pop();
-      return response;
+      // Fast path: a single response was queued, hand it over untouched.
+      if (responses.empty()) return merged;
+      // Slow path: several responses are ready; concatenate them in FIFO order
+      // so they travel in one send, exactly like the pre-ordering batching did.
+      while (!responses.empty()) {
+        std::unique_ptr<std::string> next = std::move(responses.front());
+        responses.pop();
+        if (next && !next->empty()) merged->append(*next);
+      }
+      return merged;
+    }
+    // [assign_sequence]
+    // Stamps the caller with the next arrival-order sequence number. Invoked
+    // from the single-in-flight receive loop, in strict request order.
+    INLINE std::uint64_t assign_sequence() {
+      sending_guard guard(*this);
+      return next_seq_to_assign++;
+    }
+    // [deposit_and_drain]
+    // Places 'payload' (already-serialized response bytes) at its sequence slot
+    // and, starting from the send cursor, drains every contiguous ready slot
+    // onto the outgoing 'responses' queue in request-arrival order. This is the
+    // single place that enforces global response ordering across sync/async
+    // completions. Returns kOverflow when the sequence would alias a still
+    // in-flight slot (reorder window exceeded) so the caller can close the
+    // connection instead of buffering unbounded or overwriting a pending slot.
+    INLINE deposit_result
+    deposit_and_drain(std::uint64_t seq, std::unique_ptr<std::string> payload) {
+      sending_guard guard(*this);
+      if (seq >= next_seq_to_send + kReorderWindow) {
+        return deposit_result::kOverflow;
+      }
+      reorder[seq % kReorderWindow] = std::move(payload);
+      // Cascade-drain contiguous ready slots from the send cursor. A slot holds
+      // a non-null unique_ptr once its response has been deposited (the handler
+      // contract guarantees exactly one deposit per assigned sequence). If that
+      // deposited payload is empty, it still advances the cursor but is not
+      // pushed, so ordering is preserved without emitting empty data. A null
+      // slot means the response for that sequence has not arrived yet and stops
+      // the drain (head-of-line), which is exactly the ordering guarantee.
+      while (reorder[next_seq_to_send % kReorderWindow] != nullptr) {
+        std::unique_ptr<std::string> ready =
+            std::move(reorder[next_seq_to_send % kReorderWindow]);
+        if (ready && !ready->empty()) responses.push(std::move(ready));
+        next_seq_to_send++;
+      }
+      return deposit_result::kOk;
     }
     // [general] attributes
-    SOCKET socket{INVALID_SOCKET};
+    // socket is atomic because it is read (WSARecv/WSASend) on send/receive
+    // paths while it may be concurrently closed and reset to INVALID_SOCKET by
+    // mark_context_for_closing running on another IOCP worker. Making it a
+    // std::atomic<SOCKET> turns those concurrent accesses into well-defined
+    // atomic loads/stores (no C++ data race) without needing to hold
+    // sending_mutex around every syscall.
+    std::atomic<SOCKET> socket{INVALID_SOCKET};
     std::atomic<bool> closing{false};
     // [responses] attributes
-    std::unique_ptr<std::string> response_in_flight{nullptr};
     std::queue<std::unique_ptr<std::string>> responses;
+    // [ordering] attributes (all guarded by sending_mutex)
+    // next_seq_to_assign: monotonic counter; every request parsed off this
+    // connection is stamped with the next value (in strict arrival order, from
+    // the single-in-flight receive loop) so its response can be re-sequenced.
+    // next_seq_to_send: cursor of the next sequence allowed onto 'responses';
+    // responses completed out of order wait in 'reorder' until it is their
+    // turn, then drain in cascade. A slot holding nullptr means "not ready".
+    std::uint64_t next_seq_to_assign{0};
+    std::uint64_t next_seq_to_send{0};
+    std::array<std::unique_ptr<std::string>, kReorderWindow> reorder{};
     // [sending] attributes
     bool close_after_sending{false};
     std::mutex sending_mutex;
     bool sending{false};
+#ifndef NDEBUG
+    // Debug-only owner tracking to enforce the "sending_mutex held" contract of
+    // the response-queue helpers
+    // (push_pending_response/drain_pending_responses) and the ordering helpers.
+    // Set while a sending_guard holds the lock; used by assert_sending_held().
+    // Has zero effect in release builds.
+    std::atomic<std::thread::id> sending_owner_dbg{std::thread::id{}};
+#endif
+    // RAII lock over sending_mutex. Always acquire the mutex through this guard
+    // (instead of a raw std::lock_guard) so the debug owner is recorded and the
+    // "held" contract of the queue/ordering helpers is checkable. In release
+    // builds it is exactly a std::lock_guard with no extra cost.
+    struct sending_guard {
+      explicit sending_guard(context& c) : ctx_(c), lock_(c.sending_mutex) {
+#ifndef NDEBUG
+        ctx_.sending_owner_dbg.store(std::this_thread::get_id());
+#endif
+      }
+      ~sending_guard() {
+#ifndef NDEBUG
+        ctx_.sending_owner_dbg.store(std::thread::id{});
+#endif
+      }
+      sending_guard(const sending_guard&) = delete;
+      sending_guard& operator=(const sending_guard&) = delete;
+
+     private:
+      context& ctx_;
+      std::lock_guard<std::mutex> lock_;
+    };
+    // Asserts (debug-only) that the calling thread currently holds
+    // sending_mutex through a sending_guard. Documents and enforces the
+    // precondition of the response-queue and ordering helpers below.
+    INLINE void assert_sending_held() const {
+#ifndef NDEBUG
+      assert(sending_owner_dbg.load() == std::this_thread::get_id() &&
+             "sending_mutex must be held (via sending_guard) by the caller");
+#endif
+    }
   };
   enum class io_type : uint8_t { kAccept, kSend, kReceive, kStop };
   struct overlapped_base : OVERLAPPED {
@@ -407,7 +542,19 @@ class tcpip {
     }
     // Now, we'll try to decode as many requests as possible..
     DWORD oin = 0;
-    std::unique_ptr<std::string> out = std::make_unique<std::string>();
+    bool close_channel = false;
+    // Per-frame receive-batch gate (NOT shared context state): true while THIS
+    // handle_receive invocation is still decoding its batch of pipelined
+    // requests off one WSARecv. Sync route callbacks fire inline below, see it
+    // as 'true' and only DEPOSIT their responses (deferring the send) so the
+    // whole batch is flushed as one coalesced WSASend after the loop. Because
+    // this state is local to the frame (a fresh shared_ptr per call), it can
+    // never be observed by an unrelated concurrent handle_receive of a later
+    // batch, which is exactly the TOCTOU hazard a context-wide flag had. Each
+    // callback captures this shared_ptr by value; the atomic<bool> outlives the
+    // frame while any deferred async callback still references it. The store to
+    // false happens right before the final flush below.
+    auto batch = std::make_shared<std::atomic<bool>>(true);
     while (oin < bytes_received) {
       std::shared_ptr<RSty> res = std::make_shared<RSty>();
       std::size_t space_left_in = bytes_received - oin;
@@ -471,12 +618,42 @@ class tcpip {
       // Let's call user handler!
       try {
         std::shared_ptr<context> ctx = ovr->get_context();
-        on_request(result.request, res, [this, ctx, &out](auto res) {
+        // Stamp this request with its arrival-order sequence number BEFORE the
+        // handler runs. The completion callback (which may fire inline for sync
+        // routes or much later on a worker thread for async routes) captures
+        // 'seq' and 'ctx' by value only, so it never aliases this frame's local
+        // state. deposit_and_drain re-sequences the response into arrival order
+        // regardless of when/where the callback executes.
+        std::uint64_t seq = ctx->assign_sequence();
+        on_request(result.request, res, [this, ctx, seq, batch](auto res) {
           // If the associated context is in 'closing' status then
           // the operation is discarded and no actions are performed!
           if (ctx->closing.load()) return;
-          // Let's append this response to the outgoing buffer!
-          out->append(res->serialize());
+          // Deposit this response at its sequence slot and drain any
+          // contiguous ready responses onto the outgoing queue,
+          // preserving arrival order.
+          std::unique_ptr<std::string> payload =
+              std::make_unique<std::string>(res->serialize());
+          if (ctx->deposit_and_drain(seq, std::move(payload)) ==
+              context::deposit_result::kOverflow) {
+            // Reorder window exceeded: too many responses are
+            // outstanding out of order. Defensively close instead of
+            // buffering without bound.
+            mark_context_for_closing(ctx);
+            return;
+          }
+          // Batching: while THIS frame's receive loop is still
+          // decoding its batch (batch == true, captured
+          // per-frame), sync callbacks (which run inline here) only
+          // deposit; the single arm_next_send_operation at the end
+          // of the batch flushes everything coalesced into one
+          // WSASend. Async callbacks run after the frame has stored
+          // batch = false, so they must arm the send
+          // themselves. batch is local to this handle_receive
+          // call, so an unrelated concurrent handle_receive of a
+          // later batch can never flip our decision (no cross-frame
+          // TOCTOU).
+          if (!batch->load()) arm_next_send_operation(ctx);
         });
       } catch (const std::exception& ex) {
         mark_context_for_closing(ovr->get_context());
@@ -486,12 +663,37 @@ class tcpip {
         return;
       }
       oin += result.bytes_used;
+      // The protocol tells us, through the neutral channel_intent, what to do
+      // with the channel after this message. We never inspect protocol types
+      // here: we only act on this closed, universal vocabulary.
+      if (result.channel == protocol::channel_intent::kClose) {
+        // Close once the pending response has been flushed, and stop serving
+        // any further pipelined requests on this channel.
+        typename context::sending_guard snd_lock(*ovr->get_context());
+        ovr->get_context()->close_after_sending = true;
+        close_channel = true;
+        break;
+      }
+      // kUpgrade is reserved for a later phase (e.g. WebSocket hand-off); for
+      // now it behaves like kKeep and the channel keeps being served.
     }
-    // Let's add batched responses buffer to pending queue!
-    enqueue(ovr->get_context(), std::move(out));
-    // Let's arm next receive operation!
-    arm_next_receive_operation(ovr->get_context());
-    // Let's arm send operation!
+    // Let's arm next receive operation only when the channel is to be kept;
+    // if the protocol asked to close, we must not keep reading on it (the
+    // socket is closed once the pending response has been flushed).
+    if (!close_channel) {
+      arm_next_receive_operation(ovr->get_context());
+    }
+    // Close this frame's receive-batch window: from now on any (async) callback
+    // that runs will arm the send itself. Storing false BEFORE the flush below
+    // guarantees no async response can get stranded: if it deposited during the
+    // batch it is flushed here; if it runs after this point it observes
+    // batch == false and arms its own send (idempotent via the 'sending'
+    // flag). Because batch is per-frame, this store is invisible to any
+    // other concurrent handle_receive.
+    batch->store(false);
+    // Flush the batch: this single arm_next_send_operation coalesces every sync
+    // response deposited above into one WSASend (restoring send batching). Any
+    // async route will flush its own response via arm_next_send_operation.
     arm_next_send_operation(ovr->get_context());
   }
   // +=========================================================================+
@@ -564,10 +766,17 @@ class tcpip {
   INLINE void send_error_and_mark_context_for_closing(
       std::shared_ptr<context> ctx, std::shared_ptr<RSty> response) {
     if (response) {
-      std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
+      typename context::sending_guard sending_lock(*ctx);
       std::unique_ptr<std::string> out = std::make_unique<std::string>();
       ctx->close_after_sending = true;
       out->append(response->serialize());
+      // Terminal (protocol-error) path: this response is pushed straight onto
+      // the outgoing queue, intentionally bypassing the sequence/reorder window
+      // (deposit_and_drain). The offending request was never sequence-stamped,
+      // and close_after_sending stops any further reads; once flushed the
+      // socket is closed, so any still-in-flight out-of-order responses are
+      // discarded when the context transitions to 'closing'. This is by design
+      // for a fatal connection error, not an ordering violation.
       enqueue(ctx, std::move(out));
     }
     arm_next_send_operation(ctx);
@@ -579,8 +788,14 @@ class tcpip {
     // Let's prepare this context for closing!
     bool expected = false;
     if (ctx->closing.compare_exchange_strong(expected, true)) {
-      closesocket(ctx->socket);
-      ctx->socket = INVALID_SOCKET;
+      // Atomically take the socket handle and reset it to INVALID_SOCKET so a
+      // concurrent send/receive that loads it either sees the still-valid
+      // handle (its syscall will then fail once we closesocket, handled via the
+      // idempotent closing CAS) or already sees INVALID_SOCKET and bails out.
+      // exchange guarantees a single closesocket even under concurrent close
+      // attempts (only the caller that observes a valid handle closes it).
+      SOCKET s = ctx->socket.exchange(INVALID_SOCKET);
+      if (s != INVALID_SOCKET) closesocket(s);
       // Let's call user's callback to notify for disconnection!
       try {
         on_disconnection();
@@ -598,7 +813,7 @@ class tcpip {
     // If the associated context is in 'closing' status then the operation is
     // not dispatched and no actions are performed!
     if (ovs->get_context()->closing.load()) return false;
-    std::lock_guard<std::mutex> sending_lock(ovs->get_context()->sending_mutex);
+    typename context::sending_guard sending_lock(*ovs->get_context());
     ovs->buffer->erase(0, bytes);
     ovs->get_context()->sending = false;
     if (ovs->buffer->empty()) return false;
@@ -620,12 +835,21 @@ class tcpip {
     if (ctx->closing.load()) return;
     // If the associated context is already sending then the operation is not
     // dispatched and no actions are performed!
-    std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
+    typename context::sending_guard sending_lock(*ctx);
     if (ctx->sending) return;
     std::unique_ptr<std::string> buffer = dequeue(ctx);
     if (!buffer) {
-      // Let's check if we need to close this context after sending!
-      if (ctx->close_after_sending) mark_context_for_closing(ctx);
+      // The outgoing queue is drained. Only close now if a close was requested
+      // AND there is nothing still in flight: every assigned sequence must have
+      // been drained (next_seq_to_send == next_seq_to_assign). Otherwise an
+      // async response for an earlier request is still pending; closing here
+      // would drop it. That pending response's own deposit_and_drain will
+      // re-invoke arm_next_send_operation, which will retry this close once the
+      // queue empties again with the cursor caught up.
+      if (ctx->close_after_sending &&
+          ctx->next_seq_to_send == ctx->next_seq_to_assign) {
+        mark_context_for_closing(ctx);
+      }
       return;
     }
     // Let's arm next send operation!
@@ -656,38 +880,50 @@ class tcpip {
   // | [>] dequeue                                                 ( private ) |
   // +=========================================================================+
   INLINE std::unique_ptr<std::string> dequeue(std::shared_ptr<context> ctx) {
-    return ctx->pop_pending_response();
+    // Coalesce all responses ready right now into a single send. This is the
+    // core of send batching: one WSASend carries every response currently
+    // queued, in arrival order, instead of one syscall per response.
+    return ctx->drain_pending_responses();
   }
   // +=========================================================================+
   // | [>] receive                                                 ( private ) |
   // +=========================================================================+
   INLINE bool receive(std::shared_ptr<context> ctx) {
+    // Load the socket atomically: a concurrent mark_context_for_closing may be
+    // closing it. If it is already gone, don't post a receive on
+    // INVALID_SOCKET.
+    SOCKET s = ctx->socket.load();
+    if (s == INVALID_SOCKET) return false;
     DWORD f = 0, r = 0;
     overlapped_receive* ovr = new overlapped_receive(ctx);
     std::memset(&ovr->wsa, 0, sizeof(WSABUF));
     std::memset(static_cast<OVERLAPPED*>(ovr), 0, sizeof(OVERLAPPED));
     ovr->wsa.buf = ovr->buffer;
     ovr->wsa.len = BFsz;
-    int res = WSARecv(ctx->socket, &ovr->wsa, 1, &r, &f, ovr, 0);
+    int res = WSARecv(s, &ovr->wsa, 1, &r, &f, ovr, 0);
     if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
       return false;
     }
     return true;
   }
   // +=========================================================================+
-  // | [>] send                                s                    ( private )
-  // |
+  // | [>] send                                                    ( private ) |
   // +=========================================================================+
   INLINE bool send(std::shared_ptr<context> ctx,
                    std::unique_ptr<std::string> buffer) {
-    DWORD f = 0, s = 0;
+    // Load the socket atomically: a concurrent mark_context_for_closing may be
+    // closing it. If it is already gone, don't post a send on INVALID_SOCKET
+    // (buffer is released as this returns, callers treat false as a close).
+    SOCKET s = ctx->socket.load();
+    if (s == INVALID_SOCKET) return false;
+    DWORD f = 0, snt = 0;
     overlapped_send* ovs = new overlapped_send(ctx);
     std::memset(&ovs->wsa, 0, sizeof(WSABUF));
     std::memset(static_cast<OVERLAPPED*>(ovs), 0, sizeof(OVERLAPPED));
     ovs->buffer = std::move(buffer);
     ovs->wsa.buf = ovs->buffer->data();
     ovs->wsa.len = ovs->buffer->size();
-    int res = WSASend(ctx->socket, &ovs->wsa, 1, &s, f, ovs, 0);
+    int res = WSASend(s, &ovs->wsa, 1, &snt, f, ovs, 0);
     if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
       return false;
     }

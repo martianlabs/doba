@@ -195,46 +195,7 @@ class accept {
   // | [>] check                                                    ( public ) |
   // +=========================================================================+
   static constexpr bool check(std::string_view sv) {
-    bool follows_separator = false;
-    std::size_t i = 0;
-    std::size_t last = 0;
-    bool inside_string = false;
-    while (i < sv.size()) {
-      // We need to handle quoted strings and escaped characters properly.
-      if (sv[i] == '"') {
-        inside_string = !inside_string;
-        i++;
-        continue;
-      }
-      // Handle escaped characters inside quoted strings.
-      if (sv[i] == '\\') {
-        if (!inside_string || i + 1 >= sv.size()) return false;
-        i += 2;
-        continue;
-      }
-      if (sv[i] == ',' && !inside_string) {
-        // We found a media-range element, let's consume it.
-        std::string_view element = sv.substr(last, i++ - last);
-        if (follows_separator) helpers::ows_ltrim(element);
-        helpers::ows_rtrim(element);
-        if (!element.empty() && !consume_media_range_element(element)) {
-          return false;
-        }
-        follows_separator = true;
-        last = i;
-        continue;
-      }
-      i++;
-    }
-    // Check if we ended inside a quoted string, which would be invalid.
-    if (inside_string) return false;
-    // Last element after the last comma (or the only one if no commas).
-    std::string_view element = sv.substr(last);
-    if (follows_separator) helpers::ows_ltrim(element);
-    if (!element.empty() && !consume_media_range_element(element)) {
-      return false;
-    }
-    return true;
+    return helpers::for_each_list_element(sv, consume_media_range_element);
   }
 
  private:
@@ -253,33 +214,15 @@ class accept {
     if (type == "*" && subtype != "*") return false;
     off += subtype.size();
     if (off >= sv.size()) return true;
-    return consume_parameters(sv.substr(off));
-  }
-  // +=========================================================================+
-  // | [>] consume_parameters                                      ( private ) |
-  // +=========================================================================+
-  static constexpr bool consume_parameters(std::string_view sv) {
-    std::size_t i = 0;
+    // parameters = *( OWS ";" OWS [ parameter ] ) — empty slots allowed and no
+    // whitespace is permitted around the "=" of a media-range parameter. The
+    // "q" weight parameter is handled specially and may appear at most once.
     bool q_found = false;
-    while (i < sv.size()) {
-      // OWS before ';'.
-      while (i < sv.size() && helpers::is_ows(sv[i])) i++;
-      // A ';' is mandatory before every parameter.
-      if (i >= sv.size() || sv[i++] != ';') return false;
-      // OWS after ';'.
-      while (i < sv.size() && helpers::is_ows(sv[i])) i++;
-      // A parameter is not mandatory after every ';'.
-      if (i >= sv.size()) return true;
-      // Empty parameter slot is allowed.
-      if (sv[i] == ';') continue;
-      std::size_t bytes = 0;
-      if (!consume_parameter(sv.substr(i), bytes, q_found)) {
-        return false;
-      }
-      if (bytes == 0 || bytes > sv.size() - i) return false;
-      i += bytes;
-    }
-    return true;
+    return helpers::for_each_parameter(
+        sv.substr(off), /*require_parameter=*/false,
+        [&q_found](std::string_view rest, std::size_t& bytes) {
+          return consume_parameter(rest, bytes, q_found);
+        });
   }
   // +=========================================================================+
   // | [>] consume_parameter                                       ( private ) |
@@ -288,14 +231,13 @@ class accept {
                                           std::size_t& bytes_used,
                                           bool& q_found) {
     bytes_used = 0;
-    std::size_t i = 0;
     const std::string_view name = helpers::consume_token(sv);
     if (name.empty()) return false;
-    i += name.size();
-    // No whitespace is allowed around '='.
-    if (i >= sv.size() || sv[i++] != '=') return false;
-    if (i >= sv.size()) return false;
     if (helpers::iequals(name, "q")) {
+      std::size_t i = name.size();
+      // No whitespace is allowed around '='.
+      if (i >= sv.size() || sv[i++] != '=') return false;
+      if (i >= sv.size()) return false;
       // Only one weight parameter is permitted.
       if (q_found) return false;
       // qvalue is a subset of token. Consume only the qvalue candidate,
@@ -306,17 +248,8 @@ class accept {
       q_found = true;
       return true;
     }
-    // Regular parameter value: token or quoted-string.
-    if (sv[i] == '"') {
-      const std::string_view qs = helpers::consume_quoted_string(sv.substr(i));
-      if (qs.empty()) return false;
-      bytes_used = i + qs.size();
-      return true;
-    }
-    const std::string_view token = helpers::consume_token(sv.substr(i));
-    if (token.empty()) return false;
-    bytes_used = i + token.size();
-    return true;
+    // Regular parameter value: token or quoted-string, no whitespace around '='.
+    return helpers::consume_parameter(sv, bytes_used, /*allow_bws=*/false);
   }
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers::headers

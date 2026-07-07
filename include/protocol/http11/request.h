@@ -1,4 +1,4 @@
-﻿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -76,26 +76,104 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
-#include "target.h"
-#include "helpers.h"
-#include "headers.h"
-#include "common/hash_map.h"
-#include "protocol/deserialization.h"
-#include "checkers/headers/host.h"
-#include "checkers/headers/content_length.h"
-#include "checkers/headers/transfer_encoding.h"
+#include "checkers/headers/accept.h"
+#include "checkers/headers/accept_charset.h"
+#include "checkers/headers/accept_encoding.h"
+#include "checkers/headers/accept_language.h"
+#include "checkers/headers/accept_ranges.h"
+#include "checkers/headers/access_control_allow_credentials.h"
+#include "checkers/headers/access_control_allow_headers.h"
+#include "checkers/headers/access_control_allow_methods.h"
+#include "checkers/headers/access_control_allow_origin.h"
+#include "checkers/headers/access_control_expose_headers.h"
+#include "checkers/headers/access_control_max_age.h"
+#include "checkers/headers/access_control_request_headers.h"
+#include "checkers/headers/access_control_request_method.h"
+#include "checkers/headers/age.h"
+#include "checkers/headers/allow.h"
+#include "checkers/headers/authentication_info.h"
+#include "checkers/headers/authorization.h"
+#include "checkers/headers/cache_control.h"
 #include "checkers/headers/connection.h"
+#include "checkers/headers/content_encoding.h"
+#include "checkers/headers/content_language.h"
+#include "checkers/headers/content_length.h"
+#include "checkers/headers/content_location.h"
+#include "checkers/headers/content_range.h"
+#include "checkers/headers/content_type.h"
+#include "checkers/headers/cookie.h"
+#include "checkers/headers/date.h"
+#include "checkers/headers/etag.h"
+#include "checkers/headers/expect.h"
+#include "checkers/headers/expires.h"
+#include "checkers/headers/forwarded.h"
+#include "checkers/headers/from.h"
+#include "checkers/headers/host.h"
+#include "checkers/headers/if_match.h"
+#include "checkers/headers/if_modified_since.h"
+#include "checkers/headers/if_none_match.h"
+#include "checkers/headers/if_range.h"
+#include "checkers/headers/if_unmodified_since.h"
+#include "checkers/headers/keep_alive.h"
+#include "checkers/headers/last_modified.h"
+#include "checkers/headers/location.h"
+#include "checkers/headers/max_forwards.h"
+#include "checkers/headers/origin.h"
+#include "checkers/headers/pragma.h"
+#include "checkers/headers/proxy_connection.h"
+#include "checkers/headers/range.h"
+#include "checkers/headers/referer.h"
+#include "checkers/headers/retry_after.h"
+#include "checkers/headers/sec_websocket_accept.h"
+#include "checkers/headers/sec_websocket_extensions.h"
+#include "checkers/headers/sec_websocket_key.h"
+#include "checkers/headers/sec_websocket_protocol.h"
+#include "checkers/headers/sec_websocket_version.h"
+#include "checkers/headers/server.h"
+#include "checkers/headers/set_cookie.h"
 #include "checkers/headers/te.h"
 #include "checkers/headers/trailer.h"
-#include "checkers/headers/expect.h"
+#include "checkers/headers/transfer_encoding.h"
 #include "checkers/headers/upgrade.h"
-#include "checkers/headers/content_type.h"
-#include "checkers/headers/content_encoding.h"
-#include "checkers/headers/date.h"
-#include "checkers/headers/range.h"
+#include "checkers/headers/user_agent.h"
+#include "checkers/headers/vary.h"
+#include "checkers/headers/via.h"
+#include "checkers/headers/www_authenticate.h"
+#include "checkers/headers/x_forwarded_for.h"
+#include "checkers/headers/x_forwarded_host.h"
+#include "checkers/headers/x_forwarded_proto.h"
+#include "common/hash_map.h"
+#include "headers.h"
+#include "helpers.h"
+#include "protocol/deserialization.h"
+#include "protocol/http11/connection.h"
+#include "protocol/http11/context.h"
+#include "protocol/http11/interpreters/headers/connection.h"
+#include "protocol/http11/interpreters/headers/content_length.h"
+#include "protocol/http11/interpreters/headers/expect.h"
+#include "protocol/http11/interpreters/headers/forwarded.h"
+#include "protocol/http11/interpreters/headers/host.h"
+#include "protocol/http11/interpreters/headers/max_forwards.h"
+#include "protocol/http11/interpreters/headers/te.h"
+#include "protocol/http11/interpreters/headers/trailer.h"
+#include "protocol/http11/interpreters/headers/transfer_encoding.h"
+#include "protocol/http11/interpreters/headers/upgrade.h"
+#include "protocol/http11/interpreters/headers/via.h"
+#include "protocol/http11/interpreters/headers/x_forwarded_for.h"
+#include "protocol/http11/interpreters/headers/x_forwarded_host.h"
+#include "protocol/http11/interpreters/headers/x_forwarded_proto.h"
+#include "protocol/http11/interpreters/rules/directives.h"
+#include "protocol/http11/interpreters/rules/framing.h"
+#include "protocol/http11/interpreters/rules/policy.h"
+#include "protocol/http11/interpreters/rules/routing.h"
+#include "protocol/http11/parsed_types.h"
+#include "protocol/http11/policies.h"
+#include "protocol/http11/verdict.h"
+#include "target.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -126,6 +204,16 @@ class request {
   auto get_target() const { return target_; }
   auto get_absolute_path() const { return absolute_path_; }
   auto get_query() const { return query_part_; }
+  auto get_query_parameter(std::size_t i) const { return query_parameters_[i]; }
+  auto get_query_parameters_length() const { return query_parameters_.size(); }
+  auto has_host() const { return has_host_; }
+  auto get_host() const { return host_; }
+  auto get_host_port() const { return host_port_; }
+  auto get_host_type() const { return host_type_; }
+  auto has_target_authority() const { return has_target_authority_; }
+  auto get_target_authority_host() const { return target_authority_host_; }
+  auto get_target_authority_port() const { return target_authority_port_; }
+  auto get_target_authority_type() const { return target_authority_type_; }
   auto get_header(std::size_t i) const { return headers_[i]; }
   auto get_headers_length() const { return headers_.size(); }
   auto has_body() const { return false; }
@@ -141,6 +229,17 @@ class request {
     target target_tmp = target::kUnknown;
     const std::size_t sv_size = sv.size();
     std::vector<std::pair<std::string, std::string>> headers_tmp;
+    // +-----------------------------------------------------------------------+
+    // | The semantic state built during the single header pass. HTTP/1.1      |
+    // | self-describes the connection/policies per request, so they live here;
+    // | | the transport only ever sees the neutral channel_intent, never these
+    // | | types. Every parsed_T captured into ctx is zero-copy over sv, which |
+    // | outlives ctx because the transversal rules run before deserialize | |
+    // returns.                                                              |
+    // +-----------------------------------------------------------------------+
+    connection connection_tmp;
+    policies policies_tmp;
+    context ctx{connection_tmp, policies_tmp};
     // +-----------------------------------------------------------------------+
     // | request-line = method SP request-target SP HTTP-version               |
     // +-----------------------------------------------------------------------+
@@ -165,9 +264,19 @@ class request {
     deserialization_status status;
     std::size_t bytes_used = 0;
     if (method_tmp == methods::kConnect) {
-      status = helpers::try_to_deserialize_as_authority_form(sv);
-    } else if (method_tmp == methods::kOptions && sv.front() == '*') {
-      status = helpers::try_to_deserialize_as_asterisk_form(sv, bytes_used);
+      std::string_view authority_host, authority_port;
+      helpers::host_type authority_type;
+      status = helpers::try_to_deserialize_as_authority_form(
+          sv.substr(i), authority_host, authority_port, authority_type,
+          bytes_used);
+      if (status == deserialization_status::kSucceeded) {
+        target_tmp = target::kAuthorityForm;
+        ctx.has_target_authority = true;
+        ctx.target_authority = {authority_host, authority_port, authority_type};
+      }
+    } else if (method_tmp == methods::kOptions && sv[i] == '*') {
+      status = helpers::try_to_deserialize_as_asterisk_form(sv.substr(i),
+                                                            bytes_used);
       if (status == deserialization_status::kSucceeded) {
         target_tmp = target::kAsteriskForm;
       }
@@ -177,7 +286,21 @@ class request {
       if (status == deserialization_status::kSucceeded) {
         target_tmp = target::kOriginForm;
       } else {
-        status = helpers::try_to_deserialize_as_absolute_form(sv);
+        bool has_authority = false;
+        std::string_view authority_host, authority_port, authority_scheme;
+        helpers::host_type authority_type;
+        status = helpers::try_to_deserialize_as_absolute_form(
+            sv.substr(i), absolute_path_tmp, query_tmp, has_authority,
+            authority_host, authority_port, authority_type, authority_scheme,
+            bytes_used);
+        if (status == deserialization_status::kSucceeded) {
+          target_tmp = target::kAbsoluteForm;
+          if (has_authority) {
+            ctx.has_target_authority = true;
+            ctx.target_authority = {authority_host, authority_port,
+                                    authority_type, authority_scheme};
+          }
+        }
       }
     }
     if (status != deserialization_status::kSucceeded) return status;
@@ -244,7 +367,53 @@ class request {
           req->query_part_ = std::move(query_tmp);
           req->headers_ = std::move(headers_tmp);
           req->target_ = target_tmp;
-          return deserialization_result(req, i);
+          // The raw query component is preserved verbatim in query_part_ above;
+          // here we also expose it as structured key/value pairs. The helper
+          // yields zero-copy views over query_part_ (kept alive by req), which
+          // we copy into owned std::string pairs so query_parameters_ survives
+          // past deserialize() independently of the source buffer, exactly like
+          // method_/absolute_path_/query_part_.
+          if (!req->query_part_.empty()) {
+            std::string_view keys_tmp[kMaxQueryParameters];
+            std::string_view values_tmp[kMaxQueryParameters];
+            std::size_t qp_count = helpers::split_query_parameters(
+                req->query_part_, keys_tmp, values_tmp, kMaxQueryParameters);
+            req->query_parameters_.reserve(qp_count);
+            for (std::size_t q = 0; q < qp_count; q++) {
+              req->query_parameters_.emplace_back(std::string(keys_tmp[q]),
+                                                  std::string(values_tmp[q]));
+            }
+          }
+          // ctx.host / ctx.target_authority are zero-copy views over sv, which
+          // does not outlive deserialize(); materialize them into req's own
+          // storage here, exactly like method_/absolute_path_/query_part_
+          // above.
+          req->has_host_ = ctx.has_host;
+          req->host_ = ctx.host.host;
+          req->host_port_ = ctx.host.port;
+          req->host_type_ = ctx.host.type;
+          req->has_target_authority_ = ctx.has_target_authority;
+          req->target_authority_host_ = ctx.target_authority.host;
+          req->target_authority_port_ = ctx.target_authority.port;
+          req->target_authority_type_ = ctx.target_authority.type;
+          // Every modelled header was already parsed once and interpreted in
+          // place during the loop above, populating ctx and the connection
+          // state. All that remains is to apply the transversal rules that no
+          // single header can decide, over the fully populated context. Any
+          // rejection fails the whole deserialization.
+          if (interpreters::rules::framing::apply(ctx) == verdict::kReject ||
+              interpreters::rules::routing::apply(ctx) == verdict::kReject ||
+              interpreters::rules::directives::apply(ctx) == verdict::kReject ||
+              interpreters::rules::policy::apply(ctx) == verdict::kReject) {
+            return deserialization_status::kInvalidSource;
+          }
+          // Translate the HTTP/1.1 connection state into the generic,
+          // closed-vocabulary channel intent the transport understands.
+          // kUpgrade is reserved for a later phase (e.g. WebSocket).
+          channel_intent channel = connection_tmp.close_requested
+                                       ? channel_intent::kClose
+                                       : channel_intent::kKeep;
+          return deserialization_result(req, i, channel);
         }
         if (sv[i] == '\n') return deserialization_status::kInvalidSource;
         // [field-name] decoding..
@@ -261,7 +430,7 @@ class request {
       // [field-value] decoding..
       if (i >= sv_size) return deserialization_status::kMoreBytesNeeded;
       if (sv[i++] != ':') return deserialization_status::kInvalidSource;
-      std::string_view field_name = sv.substr(fn_start, i - fn_start);
+      std::string_view field_name = sv.substr(fn_start, i - 1 - fn_start);
       std::size_t fv_start = i;
       while (i < sv_size) {
         if (sv[i] == '\r') break;
@@ -277,12 +446,17 @@ class request {
       }
       std::string_view field_value = sv.substr(fv_start, i - fv_start);
       helpers::ows_trim(field_value);
-      auto const itr_checker = header_checkers_.find(field_name);
-      if (itr_checker != header_checkers_.end()) {
-        if (!itr_checker->second(field_value)) {
+      // Single pass: the dispatcher validates the field's syntax and, for a
+      // modelled header, produces its parsed_T once and runs the intra-header
+      // interpreter, recording any cross-header signal into ctx. A semantic
+      // rejection fails deserialization.
+      auto const itr_dispatch = header_dispatchers_.find(field_name);
+      if (itr_dispatch != header_dispatchers_.end()) {
+        if (itr_dispatch->second(field_value, ctx) == verdict::kReject) {
           return deserialization_status::kInvalidSource;
         }
       }
+
       headers_tmp.emplace_back(field_name, field_value);
       i += 2;
       fn_start = i;
@@ -309,83 +483,400 @@ class request {
   // | Content-Type                                               |     [x]    |
   // | Content-Encoding                                           |     [x]    |
   // | Date                                                       |     [x]    |
-  // | Accept                                                     |     [ ]    |
-  // | Accept-Encoding                                            |     [ ]    |
-  // | Accept-Language                                            |     [ ]    |
-  // | Content-Language                                           |     [ ]    |
-  // | Content-Location                                           |     [ ]    |
+  // | Accept                                                     |     [x]    |
+  // | Accept-Encoding                                            |     [x]    |
+  // | Accept-Language                                            |     [x]    |
+  // | Content-Language                                           |     [x]    |
+  // | Content-Location                                           |     [x]    |
   // | Range                                                      |     [x]    |
-  // | Content-Range                                              |     [ ]    |
-  // | Accept-Ranges                                              |     [ ]    |
-  // | If-Range                                                   |     [ ]    |
-  // | ETag                                                       |     [ ]    |
-  // | Last-Modified                                              |     [ ]    |
-  // | If-Match                                                   |     [ ]    |
-  // | If-None-Match                                              |     [ ]    |
-  // | If-Modified-Since                                          |     [ ]    |
-  // | If-Unmodified-Since                                        |     [ ]    |
-  // | Cache-Control                                              |     [ ]    |
-  // | Vary                                                       |     [ ]    |
-  // | Age                                                        |     [ ]    |
-  // | Expires                                                    |     [ ]    |
-  // | Pragma                                                     |     [ ]    |
-  // | Location                                                   |     [ ]    |
-  // | Allow                                                      |     [ ]    |
-  // | Retry-After                                                |     [ ]    |
-  // | Authorization                                              |     [ ]    |
-  // | WWW-Authenticate                                           |     [ ]    |
-  // | Authentication-Info                                        |     [ ]    |
-  // | Cookie                                                     |     [ ]    |
-  // | Set-Cookie                                                 |     [ ]    |
-  // | User-Agent                                                 |     [ ]    |
-  // | Server                                                     |     [ ]    |
-  // | Referer                                                    |     [ ]    |
-  // | Max-Forwards                                               |     [ ]    |
-  // | From                                                       |     [ ]    |
-  // | Accept-Charset                                             |     [ ]    |
-  // | Origin                                                     |     [ ]    |
-  // | Access-Control-Request-Method                              |     [ ]    |
-  // | Access-Control-Request-Headers                             |     [ ]    |
-  // | Access-Control-Allow-Origin                                |     [ ]    |
-  // | Access-Control-Allow-Methods                               |     [ ]    |
-  // | Access-Control-Allow-Headers                               |     [ ]    |
-  // | Access-Control-Allow-Credentials                           |     [ ]    |
-  // | Access-Control-Expose-Headers                              |     [ ]    |
-  // | Access-Control-Max-Age                                     |     [ ]    |
-  // | Sec-WebSocket-Key                                          |     [ ]    |
-  // | Sec-WebSocket-Accept                                       |     [ ]    |
-  // | Sec-WebSocket-Version                                      |     [ ]    |
-  // | Sec-WebSocket-Protocol                                     |     [ ]    |
-  // | Sec-WebSocket-Extensions                                   |     [ ]    |
-  // | Via                                                        |     [ ]    |
-  // | Forwarded                                                  |     [ ]    |
-  // | X-Forwarded-For                                            |     [ ]    |
-  // | X-Forwarded-Host                                           |     [ ]    |
-  // | X-Forwarded-Proto                                          |     [ ]    |
-  // | Keep-Alive                                                 |     [ ]    |
-  // | Proxy-Connection                                           |     [ ]    |
+  // | Content-Range                                              |     [x]    |
+  // | Accept-Ranges                                              |     [x]    |
+  // | If-Range                                                   |     [x]    |
+  // | ETag                                                       |     [x]    |
+  // | Last-Modified                                              |     [x]    |
+  // | If-Match                                                   |     [x]    |
+  // | If-None-Match                                              |     [x]    |
+  // | If-Modified-Since                                          |     [x]    |
+  // | If-Unmodified-Since                                        |     [x]    |
+  // | Cache-Control                                              |     [x]    |
+  // | Vary                                                       |     [x]    |
+  // | Age                                                        |     [x]    |
+  // | Expires                                                    |     [x]    |
+  // | Pragma                                                     |     [x]    |
+  // | Location                                                   |     [x]    |
+  // | Allow                                                      |     [x]    |
+  // | Retry-After                                                |     [x]    |
+  // | Authorization                                              |     [x]    |
+  // | WWW-Authenticate                                           |     [x]    |
+  // | Authentication-Info                                        |     [x]    |
+  // | Cookie                                                     |     [x]    |
+  // | Set-Cookie                                                 |     [x]    |
+  // | User-Agent                                                 |     [x]    |
+  // | Server                                                     |     [x]    |
+  // | Referer                                                    |     [x]    |
+  // | Max-Forwards                                               |     [x]    |
+  // | From                                                       |     [x]    |
+  // | Accept-Charset                                             |     [x]    |
+  // | Origin                                                     |     [x]    |
+  // | Access-Control-Request-Method                              |     [x]    |
+  // | Access-Control-Request-Headers                             |     [x]    |
+  // | Access-Control-Allow-Origin                                |     [x]    |
+  // | Access-Control-Allow-Methods                               |     [x]    |
+  // | Access-Control-Allow-Headers                               |     [x]    |
+  // | Access-Control-Allow-Credentials                           |     [x]    |
+  // | Access-Control-Expose-Headers                              |     [x]    |
+  // | Access-Control-Max-Age                                     |     [x]    |
+  // | Sec-WebSocket-Key                                          |     [x]    |
+  // | Sec-WebSocket-Accept                                       |     [x]    |
+  // | Sec-WebSocket-Version                                      |     [x]    |
+  // | Sec-WebSocket-Protocol                                     |     [x]    |
+  // | Sec-WebSocket-Extensions                                   |     [x]    |
+  // | Via                                                        |     [x]    |
+  // | Forwarded                                                  |     [x]    |
+  // | X-Forwarded-For                                            |     [x]    |
+  // | X-Forwarded-Host                                           |     [x]    |
+  // | X-Forwarded-Proto                                          |     [x]    |
+  // | Keep-Alive                                                 |     [x]    |
+  // | Proxy-Connection                                           |     [x]    |
   // +------------------------------------------------------------+------------+
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
   // +=========================================================================+
-  using header_check_delegate = std::function<bool(std::string_view)>;
+  // | A header dispatcher receives an already OWS-trimmed field value plus    |
+  // | the interpretation context being built during the single header pass.   |
+  // | It parses the value exactly once and returns the semantic verdict. This |
+  // | is a plain function pointer (no std::function) so the registry stays a  |
+  // | zero-allocation, O(1) lookup with no per-entry type erasure overhead.   |
+  // +=========================================================================+
+  using header_dispatch = verdict (*)(std::string_view, context&);
+  // +=========================================================================+
+  // | [>] dispatch                                                ( private ) |
+  // +=========================================================================+
+  // | The dispatcher for every header the semantic layer does not model. It   |
+  // | runs the header's single syntactic checker and never touches the        |
+  // | context: a value the checker rejects fails deserialization, otherwise it|
+  // | is accepted as-is. One template instantiation per checker keeps each    |
+  // | registry entry a direct, inlinable call.                                |
+  // +=========================================================================+
+  template <typename CHty>
+  static constexpr verdict dispatch(std::string_view sv, context&) {
+    // Invariant: this generic bridge is reserved for non-modelled headers whose
+    // checker exposes a single-argument, value-only syntactic gate. Modelled
+    // headers must route through their dedicated dispatch_* handler instead of
+    // this template. Enforce the contract at compile time so a checker that
+    // requires additional context can never be silently wired here.
+    static_assert(
+        std::is_same_v<decltype(CHty::check(std::declval<std::string_view>())),
+                       bool>,
+        "dispatch<CHty> requires CHty::check(std::string_view) -> bool; "
+        "context-dependent headers must use a dedicated dispatch_* handler.");
+    return CHty::check(sv) ? verdict::kAccept : verdict::kReject;
+  }
+  // +=========================================================================+
+  // | [>] dispatch_host (modelled header)                         ( private ) |
+  // +=========================================================================+
+  static verdict dispatch_host(std::string_view sv, context& ctx) {
+    if (ctx.has_host) ctx.multiple_host = true;
+    ctx.has_host = true;
+    parsed_host_port parsed;
+    if (!checkers::headers::host::check(sv, parsed)) return verdict::kReject;
+    ctx.host = parsed;
+    return interpreters::headers::host::interpret(parsed, ctx.connection,
+                                                  ctx.policies);
+  }
+  // +=========================================================================+
+  // | [>] dispatch_content_length (modelled header)               ( private ) |
+  // +=========================================================================+
+  static verdict dispatch_content_length(std::string_view sv, context& ctx) {
+    std::size_t parsed = 0;
+    if (!checkers::headers::content_length::check(sv, parsed)) {
+      return verdict::kReject;
+    }
+    if (ctx.has_content_length) ctx.multiple_content_length = true;
+    ctx.has_content_length = true;
+    ctx.content_length = parsed;
+    return interpreters::headers::content_length::interpret(
+        parsed, ctx.connection, ctx.policies);
+  }
+  // +=========================================================================+
+  // | [>] dispatch_transfer_encoding (modelled header)            ( private ) |
+  // +=========================================================================+
+  static verdict dispatch_transfer_encoding(std::string_view sv, context& ctx) {
+    parsed_parameter_list parsed;
+    if (!checkers::headers::transfer_encoding::check(sv, parsed)) {
+      return verdict::kReject;
+    }
+    ctx.has_transfer_encoding = true;
+    return interpreters::headers::transfer_encoding::interpret(
+        parsed, ctx.connection, ctx.policies);
+  }
+  // +=========================================================================+
+  // | [>] dispatch_connection (modelled header)                   ( private ) |
+  // +=========================================================================+
+  static verdict dispatch_connection(std::string_view sv, context& ctx) {
+    parsed_token_list parsed;
+    if (!checkers::headers::connection::check(sv, parsed)) {
+      return verdict::kReject;
+    }
+    return interpreters::headers::connection::interpret(parsed, ctx.connection,
+                                                        ctx.policies);
+  }
+  // +=========================================================================+
+  // | [>] dispatch_te (modelled header)                           ( private ) |
+  // +=========================================================================+
+  static verdict dispatch_te(std::string_view sv, context& ctx) {
+    parsed_parameter_list parsed;
+    if (!checkers::headers::te::check(sv, parsed)) return verdict::kReject;
+    return interpreters::headers::te::interpret(parsed, ctx.connection,
+                                                ctx.policies);
+  }
+  // +=========================================================================+
+  // | [>] dispatch_trailer (modelled header)                      ( private ) |
+  // +=========================================================================+
+  static verdict dispatch_trailer(std::string_view sv, context& ctx) {
+    parsed_token_list parsed;
+    if (!checkers::headers::trailer::check(sv, parsed)) {
+      return verdict::kReject;
+    }
+    return interpreters::headers::trailer::interpret(parsed, ctx.connection,
+                                                     ctx.policies);
+  }
+  // +=========================================================================+
+  // | [>] dispatch_expect (modelled header)                       ( private ) |
+  // +=========================================================================+
+  static verdict dispatch_expect(std::string_view sv, context& ctx) {
+    parsed_parameter_list parsed;
+    if (!checkers::headers::expect::check(sv, parsed)) {
+      return verdict::kReject;
+    }
+    return interpreters::headers::expect::interpret(parsed, ctx.connection,
+                                                    ctx.policies);
+  }
+  // +=========================================================================+
+  // | [>] dispatch_upgrade (modelled header)                      ( private ) |
+  // +=========================================================================+
+  static verdict dispatch_upgrade(std::string_view sv, context& ctx) {
+    parsed_token_list parsed;
+    if (!checkers::headers::upgrade::check(sv, parsed)) {
+      return verdict::kReject;
+    }
+    return interpreters::headers::upgrade::interpret(parsed, ctx.connection,
+                                                     ctx.policies);
+  }
+  // +=========================================================================+
+  // | [>] dispatch_max_forwards (modelled header)                 ( private ) |
+  // +=========================================================================+
+  static verdict dispatch_max_forwards(std::string_view sv, context& ctx) {
+    std::size_t parsed = 0;
+    if (!checkers::headers::max_forwards::check(sv, parsed)) {
+      return verdict::kReject;
+    }
+    return interpreters::headers::max_forwards::interpret(
+        parsed, ctx.connection, ctx.policies);
+  }
+  // +=========================================================================+
+  // | [>] dispatch_via (modelled header)                          ( private ) |
+  // +=========================================================================+
+  static verdict dispatch_via(std::string_view sv, context& ctx) {
+    parsed_via_list parsed;
+    if (!checkers::headers::via::check(sv, parsed)) return verdict::kReject;
+    ctx.forwarding_hops += parsed.elements.size();
+    return interpreters::headers::via::interpret(parsed, ctx.connection,
+                                                 ctx.policies);
+  }
+  // +=========================================================================+
+  // | [>] dispatch_forwarded (modelled header)                    ( private ) |
+  // +=========================================================================+
+  static verdict dispatch_forwarded(std::string_view sv, context& ctx) {
+    parsed_forwarded_list parsed;
+    if (!checkers::headers::forwarded::check(sv, parsed)) {
+      return verdict::kReject;
+    }
+    ctx.forwarding_hops += parsed.elements.size();
+    return interpreters::headers::forwarded::interpret(parsed, ctx.connection,
+                                                       ctx.policies);
+  }
+  // +=========================================================================+
+  // | [>] dispatch_x_forwarded_for (modelled header)              ( private ) |
+  // +=========================================================================+
+  static verdict dispatch_x_forwarded_for(std::string_view sv, context& ctx) {
+    parsed_token_list parsed;
+    if (!checkers::headers::x_forwarded_for::check(sv, parsed)) {
+      return verdict::kReject;
+    }
+    ctx.forwarding_hops += parsed.elements.size();
+    return interpreters::headers::x_forwarded_for::interpret(
+        parsed, ctx.connection, ctx.policies);
+  }
+  // +=========================================================================+
+  // | [>] dispatch_x_forwarded_host (modelled header)             ( private ) |
+  // +=========================================================================+
+  static verdict dispatch_x_forwarded_host(std::string_view sv, context& ctx) {
+    parsed_host_port parsed;
+    if (!checkers::headers::x_forwarded_host::check(sv, parsed)) {
+      return verdict::kReject;
+    }
+    return interpreters::headers::x_forwarded_host::interpret(
+        parsed, ctx.connection, ctx.policies);
+  }
+  // +=========================================================================+
+  // | [>] dispatch_x_forwarded_proto (modelled header)            ( private ) |
+  // +=========================================================================+
+  static verdict dispatch_x_forwarded_proto(std::string_view sv, context& ctx) {
+    parsed_token_list parsed;
+    if (!checkers::headers::x_forwarded_proto::check(sv, parsed)) {
+      return verdict::kReject;
+    }
+    return interpreters::headers::x_forwarded_proto::interpret(
+        parsed, ctx.connection, ctx.policies);
+  }
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
   // +=========================================================================+
-  static const inline common::hash_map<std::string_view, header_check_delegate>
-      header_checkers_ = {
-          {"Host", checkers::headers::host::check},
-          {"Content-Length", checkers::headers::content_length::check},
-          {"Transfer-Encoding", checkers::headers::transfer_encoding::check},
-          {"Connection", checkers::headers::connection::check},
-          {"TE", checkers::headers::te::check},
-          {"Trailer", checkers::headers::trailer::check},
-          {"Expect", checkers::headers::expect::check},
-          {"Upgrade", checkers::headers::upgrade::check},
-          {"Content-Type", checkers::headers::content_type::check},
-          {"Content-Encoding", checkers::headers::content_encoding::check},
-          {"Date", checkers::headers::date::check},
-          {"Range", checkers::headers::range::check},
+  // | Upper bound on the number of query parameters extracted from the raw    |
+  // | query component during deserialize(). query_parameters_ itself is an    |
+  // | unbounded std::vector; this cap only sizes the transient parsing arrays |
+  // | and drops any excess pairs (same fixed-capacity policy used elsewhere). |
+  // +=========================================================================+
+  static constexpr std::size_t kMaxQueryParameters = 128;
+  static const inline common::hash_map<std::string_view, header_dispatch>
+      header_dispatchers_ = {
+          {"Host",  // check & interpret!
+           &request::dispatch_host},
+          {"Content-Length",  // check & interpret!
+           &request::dispatch_content_length},
+          {"Transfer-Encoding",  // check & interpret!
+           &request::dispatch_transfer_encoding},
+          {"Connection",  // check & interpret!
+           &request::dispatch_connection},
+          {"TE",  // check & interpret!
+           &request::dispatch_te},
+          {"Trailer",  // check & interpret!
+           &request::dispatch_trailer},
+          {"Expect",  // check & interpret!
+           &request::dispatch_expect},
+          {"Upgrade",  // check & interpret!
+           &request::dispatch_upgrade},
+          {"Content-Type",  // check only!
+           &request::dispatch<checkers::headers::content_type>},
+          {"Content-Encoding",  // check only!
+           &request::dispatch<checkers::headers::content_encoding>},
+          {"Date",  // check only!
+           &request::dispatch<checkers::headers::date>},
+          {"Accept",  // check only!
+           &request::dispatch<checkers::headers::accept>},
+          {"Accept-Encoding",  // check only!
+           &request::dispatch<checkers::headers::accept_encoding>},
+          {"Accept-Language",  // check only!
+           &request::dispatch<checkers::headers::accept_language>},
+          {"Content-Language",  // check only!
+           &request::dispatch<checkers::headers::content_language>},
+          {"Content-Location",  // check only!
+           &request::dispatch<checkers::headers::content_location>},
+          {"Range",  // check only!
+           &request::dispatch<checkers::headers::range>},
+          {"Content-Range",  // check only!
+           &request::dispatch<checkers::headers::content_range>},
+          {"Accept-Ranges",  // check only!
+           &request::dispatch<checkers::headers::accept_ranges>},
+          {"If-Range",  // check only!
+           &request::dispatch<checkers::headers::if_range>},
+          {"ETag",  // check only!
+           &request::dispatch<checkers::headers::etag>},
+          {"Last-Modified",  // check only!
+           &request::dispatch<checkers::headers::last_modified>},
+          {"If-Match",  // check only!
+           &request::dispatch<checkers::headers::if_match>},
+          {"If-None-Match",  // check only!
+           &request::dispatch<checkers::headers::if_none_match>},
+          {"If-Modified-Since",  // check only!
+           &request::dispatch<checkers::headers::if_modified_since>},
+          {"If-Unmodified-Since",  // check only!
+           &request::dispatch<checkers::headers::if_unmodified_since>},
+          {"Cache-Control",  // check only!
+           &request::dispatch<checkers::headers::cache_control>},
+          {"Vary",  // check only!
+           &request::dispatch<checkers::headers::vary>},
+          {"Age",  // check only!
+           &request::dispatch<checkers::headers::age>},
+          {"Expires",  // check only!
+           &request::dispatch<checkers::headers::expires>},
+          {"Pragma",  // check only!
+           &request::dispatch<checkers::headers::pragma>},
+          {"Location",  // check only!
+           &request::dispatch<checkers::headers::location>},
+          {"Allow",  // check only!
+           &request::dispatch<checkers::headers::allow>},
+          {"Retry-After",  // check only!
+           &request::dispatch<checkers::headers::retry_after>},
+          {"Authorization",  // check only!
+           &request::dispatch<checkers::headers::authorization>},
+          {"WWW-Authenticate",  // check only!
+           &request::dispatch<checkers::headers::www_authenticate>},
+          {"Authentication-Info",  // check only!
+           &request::dispatch<checkers::headers::authentication_info>},
+          {"Cookie",  // check only!
+           &request::dispatch<checkers::headers::cookie>},
+          {"Set-Cookie",  // check only!
+           &request::dispatch<checkers::headers::set_cookie>},
+          {"User-Agent",  // check only!
+           &request::dispatch<checkers::headers::user_agent>},
+          {"Server",  // check only!
+           &request::dispatch<checkers::headers::server>},
+          {"Referer",  // check only!
+           &request::dispatch<checkers::headers::referer>},
+          {"Max-Forwards",  // check only!
+           &request::dispatch_max_forwards},
+          {"From",  // check only!
+           &request::dispatch<checkers::headers::from>},
+          {"Accept-Charset",  // check only!
+           &request::dispatch<checkers::headers::accept_charset>},
+          {"Origin",  // check only!
+           &request::dispatch<checkers::headers::origin>},
+          {"Access-Control-Request-Method",  // check only!
+           &request::dispatch<
+               checkers::headers::access_control_request_method>},
+          {"Access-Control-Request-Headers",  // check only!
+           &request::dispatch<
+               checkers::headers::access_control_request_headers>},
+          {"Access-Control-Allow-Origin",  // check only!
+           &request::dispatch<checkers::headers::access_control_allow_origin>},
+          {"Access-Control-Allow-Methods",  // check only!
+           &request::dispatch<checkers::headers::access_control_allow_methods>},
+          {"Access-Control-Allow-Headers",  // check only!
+           &request::dispatch<checkers::headers::access_control_allow_headers>},
+          {"Access-Control-Allow-Credentials",  // check only!
+           &request::dispatch<
+               checkers::headers::access_control_allow_credentials>},
+          {"Access-Control-Expose-Headers",  // check only!
+           &request::dispatch<
+               checkers::headers::access_control_expose_headers>},
+          {"Access-Control-Max-Age",  // check only!
+           &request::dispatch<checkers::headers::access_control_max_age>},
+          {"Sec-WebSocket-Key",  // check only!
+           &request::dispatch<checkers::headers::sec_websocket_key>},
+          {"Sec-WebSocket-Accept",  // check only!
+           &request::dispatch<checkers::headers::sec_websocket_accept>},
+          {"Sec-WebSocket-Version",  // check only!
+           &request::dispatch<checkers::headers::sec_websocket_version>},
+          {"Sec-WebSocket-Protocol",  // check only!
+           &request::dispatch<checkers::headers::sec_websocket_protocol>},
+          {"Sec-WebSocket-Extensions",  // check only!
+           &request::dispatch<checkers::headers::sec_websocket_extensions>},
+          {"Via",  // check & interpret!
+           &request::dispatch_via},
+          {"Forwarded",  // check & interpret!
+           &request::dispatch_forwarded},
+          {"X-Forwarded-For",  // check & interpret!
+           &request::dispatch_x_forwarded_for},
+          {"X-Forwarded-Host",  // check & interpret!
+           &request::dispatch_x_forwarded_host},
+          {"X-Forwarded-Proto",  // check & interpret!
+           &request::dispatch_x_forwarded_proto},
+          {"Keep-Alive",  // check only!
+           &request::dispatch<checkers::headers::x_keep_alive>},
+          {"Proxy-Connection",  // check only!
+           &request::dispatch<checkers::headers::x_proxy_connection>},
   };
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
@@ -394,6 +885,14 @@ class request {
   std::string query_part_;
   std::string absolute_path_;
   target target_ = target::kUnknown;
+  bool has_host_ = false;
+  std::string host_;
+  std::string host_port_;
+  helpers::host_type host_type_ = helpers::host_type::kUnknown;
+  bool has_target_authority_ = false;
+  std::string target_authority_host_;
+  std::string target_authority_port_;
+  helpers::host_type target_authority_type_ = helpers::host_type::kUnknown;
   std::vector<std::pair<std::string, std::string>> headers_;
   std::vector<std::pair<std::string, std::string>> query_parameters_;
 };

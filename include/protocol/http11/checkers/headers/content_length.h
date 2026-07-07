@@ -74,6 +74,7 @@
 #include <string_view>
 
 #include "protocol/http11/helpers.h"
+#include "protocol/http11/parsed_types.h"
 
 namespace martianlabs::doba::protocol::http11::checkers::headers {
 // /////////////////////////////////////////////////////////////////////////////
@@ -115,12 +116,11 @@ class content_length {
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
   // +=========================================================================+
-  static constexpr bool check(std::string_view sv) {
-    if (sv.empty()) return false;
-    for (auto const& c : sv) {
-      if (!helpers::is_digit(c)) return false;
-    }
-    return true;
+  static constexpr bool check(std::string_view sv, std::size_t& out) {
+    // The producer overload validates the same 1*DIGIT grammar and, on
+    // success, yields the decimal value through the shared parse_size_t, which
+    // rejects a value that would overflow std::size_t.
+    return helpers::parse_size_t(sv, out);
   }
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers::headers

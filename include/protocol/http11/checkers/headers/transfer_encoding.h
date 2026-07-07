@@ -74,6 +74,7 @@
 #include <string_view>
 
 #include "protocol/http11/helpers.h"
+#include "protocol/http11/parsed_types.h"
 
 namespace martianlabs::doba::protocol::http11::checkers::headers {
 // /////////////////////////////////////////////////////////////////////////////
@@ -150,43 +151,16 @@ class transfer_encoding {
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
   // +=========================================================================+
-  static constexpr bool check(std::string_view sv) {
-    bool follows_separator = false;
-    std::size_t i = 0;
-    std::size_t last = 0;
-    bool inside_string = false;
-    while (i < sv.size()) {
-      // We need to handle quoted strings and escaped characters properly.
-      if (sv[i] == '"') {
-        inside_string = !inside_string;
-        i++;
-        continue;
-      }
-      // Handle escaped characters inside quoted strings.
-      if (sv[i] == '\\') {
-        if (!inside_string || i + 1 >= sv.size()) return false;
-        i += 2;
-        continue;
-      }
-      if (sv[i] == ',' && !inside_string) {
-        // We found a transfer coding, let's consume it.
-        std::string_view tc = sv.substr(last, i++ - last);
-        if (follows_separator) helpers::ows_ltrim(tc);
-        helpers::ows_rtrim(tc);
-        if (!tc.empty() && !consume_transfer_coding(tc)) return false;
-        follows_separator = true;
-        last = i;
-        continue;
-      }
-      i++;
-    }
-    // Check if we ended inside a quoted string, which would be invalid.
-    if (inside_string) return false;
-    // Last transfer coding after the last comma (or the only one if no commas).
-    std::string_view tc = sv.substr(last);
-    if (follows_separator) helpers::ows_ltrim(tc);
-    if (!tc.empty() && !consume_transfer_coding(tc)) return false;
-    return true;
+  static bool check(std::string_view sv, parsed_parameter_list& out) {
+    // The producer overload validates each transfer-coding exactly as the pure
+    // check() does and captures every non-empty element (its token plus any
+    // transfer-parameters) as raw text, in order.
+    return helpers::for_each_list_element(
+        sv, [&out](std::string_view element) {
+          if (!consume_transfer_coding(element)) return false;
+          out.elements.push_back(element);
+          return true;
+        });
   }
 
  private:
@@ -199,64 +173,13 @@ class transfer_encoding {
     if (token.empty()) return false;
     off += token.size();
     if (off >= sv.size()) return true;
-    return consume_transfer_parameters(sv.substr(off));
-  }
-  // +=========================================================================+
-  // | [>] consume_transfer_parameters                             ( private ) |
-  // +=========================================================================+
-  static constexpr bool consume_transfer_parameters(std::string_view sv) {
-    std::size_t i = 0;
-    while (i < sv.size()) {
-      // OWS before ';'.
-      while (i < sv.size() && helpers::is_ows(sv[i])) i++;
-      // A ';' is mandatory before every transfer-parameter.
-      if (i >= sv.size()) return false;
-      if (sv[i++] != ';') return false;
-      // OWS after ';'.
-      while (i < sv.size() && helpers::is_ows(sv[i])) i++;
-      // A transfer-parameter is mandatory after every ';'.
-      if (i >= sv.size()) return false;
-      std::size_t bytes = 0;
-      if (!consume_parameter(sv.substr(i), bytes)) return false;
-      if (bytes == 0 || bytes > sv.size() - i) {
-        return false;
-      }
-      i += bytes;
-    }
-    return true;
-  }
-  // +=========================================================================+
-  // | [>] consume_parameter                                       ( private ) |
-  // +=========================================================================+
-  static constexpr bool consume_parameter(std::string_view sv,
-                                          std::size_t& bytes_used) {
-    bytes_used = 0;
-    std::size_t i = 0;
-    const std::string_view name = helpers::consume_token(sv);
-    if (name.empty()) return false;
-    i += name.size();
-    // OWS/BWS before '='.
-    while (i < sv.size() && helpers::is_ows(sv[i])) i++;
-    // A '=' is mandatory before every transfer-parameter.
-    if (i >= sv.size()) return false;
-    if (sv[i++] != '=') return false;
-    // OWS/BWS after '='.
-    while (i < sv.size() && helpers::is_ows(sv[i])) i++;
-    // A transfer-parameter value is mandatory after every '='.
-    if (i >= sv.size()) return false;
-    // The value can be either a token or a quoted-string.
-    if (sv[i] == '"') {
-      // Consume the quoted-string.
-      const std::string_view qs = helpers::consume_quoted_string(sv.substr(i));
-      if (qs.empty()) return false;
-      bytes_used = i + qs.size();
-      return true;
-    }
-    // Consume the token.
-    const std::string_view tk = helpers::consume_token(sv.substr(i));
-    if (tk.empty()) return false;
-    bytes_used = i + tk.size();
-    return true;
+    // transfer-parameters = *( OWS ";" OWS transfer-parameter ) — a parameter
+    // is mandatory after every ";" and OWS/BWS is permitted around the "=".
+    return helpers::for_each_parameter(
+        sv.substr(off), /*require_parameter=*/true,
+        [](std::string_view rest, std::size_t& bytes) {
+          return helpers::consume_parameter(rest, bytes, /*allow_bws=*/true);
+        });
   }
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers::headers

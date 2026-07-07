@@ -73,6 +73,9 @@
 #include <array>
 #include <string_view>
 
+#include "protocol/http11/helpers.h"
+#include "protocol/http11/parsed_types.h"
+
 namespace martianlabs::doba::protocol::http11::checkers::headers {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -151,34 +154,12 @@ class host {
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
   // +=========================================================================+
-  static constexpr bool check(std::string_view sv) {
-    std::size_t off = 0;
-    if (sv.empty()) return true;  // reg-name!
-    std::string_view sv_uri_host;
-    std::string_view sv_port;
-    if (sv.front() == '[') {
-      std::size_t clb = sv.find_first_of(']');
-      if (clb == std::string_view::npos) return false;  // pre-check!
-      sv_uri_host = sv.substr(0, clb + 1);
-      sv_port = sv.substr(clb + 1);
-    } else {
-      sv_uri_host = sv;
-      std::size_t col = sv.find_last_of(':');
-      if (col != std::string_view::npos) {
-        sv_uri_host = sv.substr(0, col);
-        sv_port = sv.substr(col);
-      }
-    }
-    if (helpers::check_uri_host(sv_uri_host) == helpers::host_type::kUnknown) {
-      return false;
-    }
-    if (sv_port.empty()) return true;
-    if (sv_port.front() != ':') return false;
-    sv_port.remove_prefix(1);
-    return helpers::is_port(sv_port);
+  static constexpr bool check(std::string_view sv, parsed_host_port& out) {
+    // The producer overload validates exactly as the pure check() does and, on
+    // success, fills the parsed uri-host, port, and host type through the same
+    // shared helpers::check_host_port so both paths never diverge.
+    return helpers::check_host_port(sv, out.host, out.port, out.type);
   }
-
- private:
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers::headers
 

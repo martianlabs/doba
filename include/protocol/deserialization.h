@@ -85,6 +85,26 @@ enum class deserialization_status {
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
+// | [>] channel_intent                                         ( enum-class ) |
+// +---------------------------------------------------------------------------+
+// | The closed, protocol-agnostic vocabulary a protocol uses to tell the      |
+// | transport what to do with the underlying channel after a message has been |
+// | processed. These are the only things any transport can physically do with |
+// | a channel, so they are universal: they belong to the channel, not to any  |
+// | particular protocol or transport.                                         |
+// +---------------------------------------------------------------------------+
+// | kKeep    - keep the channel open (the transport arms another receive).    |
+// | kClose   - close the channel once the pending response has been sent.     |
+// | kUpgrade - hand the channel off (the transport stops governing it as-is). |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+enum class channel_intent {
+  kKeep,     // keep the channel open (arm another receive).
+  kClose,    // close the channel once the response has been sent.
+  kUpgrade,  // hand the channel off (stop governing it as-is).
+};
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] deserialization_result                                     ( struct ) |
 // +---------------------------------------------------------------------------+
 // | This struct holds the overall result on protocol deserialization.         |
@@ -96,13 +116,16 @@ enum class deserialization_status {
 template <typename RQty>
 struct deserialization_result {
   deserialization_result(deserialization_status code) : code(code) {}
-  deserialization_result(std::shared_ptr<RQty> request, std::size_t bytes_used)
+  deserialization_result(std::shared_ptr<RQty> request, std::size_t bytes_used,
+                         channel_intent channel = channel_intent::kKeep)
       : code(deserialization_status::kSucceeded),
         request(request),
-        bytes_used(bytes_used) {}
+        bytes_used(bytes_used),
+        channel(channel) {}
   deserialization_status code = deserialization_status::kInvalidSource;
   std::shared_ptr<RQty> request = nullptr;
   std::size_t bytes_used = 0;
+  channel_intent channel = channel_intent::kKeep;
 };
 }  // namespace martianlabs::doba::protocol
 

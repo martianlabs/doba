@@ -157,7 +157,116 @@ namespace martianlabs::doba::protocol::http11::checkers::headers {
 // /////////////////////////////////////////////////////////////////////////////
 class content_range {
  public:
-  static constexpr bool check(std::string_view sv) { return false; }
+  // +=========================================================================+
+  // | [>] check                                                    ( public ) |
+  // +=========================================================================+
+  static constexpr bool check(std::string_view sv) {
+    std::size_t off = 0;
+    // -------------------------------------------------------------------------
+    // range-unit = token
+    // -------------------------------------------------------------------------
+    const std::string_view range_unit = helpers::consume_token(sv);
+    if (range_unit.empty()) return false;
+    off += range_unit.size();
+    // -------------------------------------------------------------------------
+    // SP
+    //
+    // Exactly one ASCII space is required after range-unit. OWS and HTAB are
+    // not permitted by the ABNF.
+    // -------------------------------------------------------------------------
+    if (off >= sv.size() || sv[off++] != ' ') return false;
+    // -------------------------------------------------------------------------
+    // range-resp / unsatisfied-range
+    // -------------------------------------------------------------------------
+    if (off >= sv.size()) return false;
+    const std::string_view remainder = sv.substr(off);
+    // -------------------------------------------------------------------------
+    // unsatisfied-range starts with '*':
+    //
+    //   unsatisfied-range = "*/" complete-length
+    // -------------------------------------------------------------------------
+    if (remainder.front() == '*') {
+      return consume_unsatisfied_range(remainder);
+    }
+    // -------------------------------------------------------------------------
+    // Otherwise, the value must be:
+    //
+    //   range-resp = incl-range "/" ( complete-length / "*" )
+    // -------------------------------------------------------------------------
+    return consume_range_resp(remainder);
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] consume_unsatisfied_range                               ( private ) |
+  // +=========================================================================+
+  // | unsatisfied-range = "*/" complete-length                                |
+  // | complete-length   = 1*DIGIT                                             |
+  // +-------------------------------------------------------------------------+
+  static constexpr bool consume_unsatisfied_range(std::string_view sv) {
+    // Minimum valid value: "*/0"
+    if (sv.size() < 3) return false;
+    // -------------------------------------------------------------------------
+    // "*/"
+    // -------------------------------------------------------------------------
+    if (sv[0] != '*' || sv[1] != '/') return false;
+    // -------------------------------------------------------------------------
+    // complete-length = 1*DIGIT
+    // -------------------------------------------------------------------------
+    return helpers::is_digits(sv.substr(2));
+  }
+  // +=========================================================================+
+  // | [>] consume_range_resp                                      ( private ) |
+  // +=========================================================================+
+  // | range-resp = incl-range "/" ( complete-length / "*" )                   |
+  // | incl-range = first-pos "-" last-pos                                     |
+  // | first-pos  = 1*DIGIT                                                    |
+  // | last-pos   = 1*DIGIT                                                    |
+  // +-------------------------------------------------------------------------+
+  static constexpr bool consume_range_resp(std::string_view sv) {
+    std::size_t off = 0;
+    // -------------------------------------------------------------------------
+    // first-pos = 1*DIGIT
+    // -------------------------------------------------------------------------
+    if (off >= sv.size() || !helpers::is_digit(sv[off])) return false;
+    do {
+      off++;
+    } while (off < sv.size() && helpers::is_digit(sv[off]));
+    // -------------------------------------------------------------------------
+    // "-"
+    // -------------------------------------------------------------------------
+    if (off >= sv.size() || sv[off++] != '-') return false;
+    // -------------------------------------------------------------------------
+    // last-pos = 1*DIGIT
+    // -------------------------------------------------------------------------
+    if (off >= sv.size() || !helpers::is_digit(sv[off])) return false;
+    do {
+      off++;
+    } while (off < sv.size() && helpers::is_digit(sv[off]));
+    // -------------------------------------------------------------------------
+    // "/"
+    // -------------------------------------------------------------------------
+    if (off >= sv.size() || sv[off++] != '/') return false;
+    // -------------------------------------------------------------------------
+    // complete-length / "*"
+    // -------------------------------------------------------------------------
+    if (off >= sv.size()) return false;
+    if (sv[off] == '*') {
+      off++;
+    } else {
+      // -----------------------------------------------------------------------
+      // complete-length = 1*DIGIT
+      // -----------------------------------------------------------------------
+      if (!helpers::is_digit(sv[off])) return false;
+      do {
+        off++;
+      } while (off < sv.size() && helpers::is_digit(sv[off]));
+    }
+    // -------------------------------------------------------------------------
+    // No trailing characters are permitted.
+    // -------------------------------------------------------------------------
+    return off == sv.size();
+  }
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers::headers
 

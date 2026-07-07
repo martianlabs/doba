@@ -169,29 +169,7 @@ namespace martianlabs::doba::protocol::http11::checkers::headers {
 class content_encoding {
  public:
   static constexpr bool check(std::string_view sv) {
-    bool follows_separator = false;
-    std::size_t i = 0;
-    std::size_t last = 0;
-    while (i < sv.size()) {
-      if (sv[i] == ',') {
-        // We found a content coding, let's parse it.
-        std::string_view ce = sv.substr(last, i++ - last);
-        if (follows_separator) helpers::ows_ltrim(ce);
-        helpers::ows_rtrim(ce);
-        if (!ce.empty() && !consume_content_coding(ce)) return false;
-        follows_separator = true;
-        last = i;
-        continue;
-      }
-      i++;
-    }
-    // Last content coding after the last comma (or the only one if no commas).
-    std::string_view ce = sv.substr(last);
-    if (follows_separator) helpers::ows_ltrim(ce);
-    if (!ce.empty() && !consume_content_coding(ce)) {
-      return false;
-    }
-    return true;
+    return helpers::for_each_list_element(sv, consume_content_coding);
   }
 
  private:
@@ -199,9 +177,7 @@ class content_encoding {
   // | [>] consume_content_coding                                  ( private ) |
   // +=========================================================================+
   static constexpr bool consume_content_coding(std::string_view sv) {
-    const std::string_view name = helpers::consume_token(sv);
-    if (name.empty()) return false;
-    return name.size() == sv.size();
+    return helpers::is_token(sv);
   }
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers::headers

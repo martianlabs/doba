@@ -70,9 +70,8 @@
 #ifndef martianlabs_doba_protocol_http11_checkers_h_trailer_h
 #define martianlabs_doba_protocol_http11_checkers_h_trailer_h
 
-#include <ranges>
-
 #include "protocol/http11/helpers.h"
+#include "protocol/http11/parsed_types.h"
 
 namespace martianlabs::doba::protocol::http11::checkers::headers {
 // /////////////////////////////////////////////////////////////////////////////
@@ -146,17 +145,26 @@ namespace martianlabs::doba::protocol::http11::checkers::headers {
 // /////////////////////////////////////////////////////////////////////////////
 class trailer {
  public:
-  static constexpr bool check(std::string_view sv) {
-    for (auto token : sv | std::views::split(',')) {
-      if (token.begin() == token.end()) continue;
-      std::string_view value(&*token.begin(), std::ranges::distance(token));
-      helpers::ows_trim(value);
-      if (value.empty()) continue;
-      for (auto const& c : value) {
-        if (!helpers::is_token(c)) return false;
-      }
-    }
-    return true;
+  // +=========================================================================+
+  // | [>] check                                                    ( public ) |
+  // +=========================================================================+
+  static bool check(std::string_view sv, parsed_token_list& out) {
+    // The producer overload validates each field-name exactly as the pure
+    // check() does and captures every non-empty element in order.
+    return helpers::for_each_list_element(
+        sv, [&out](std::string_view element) {
+          if (!consume_field_name(element)) return false;
+          out.elements.push_back(element);
+          return true;
+        });
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] consume_field_name                                      ( private ) |
+  // +=========================================================================+
+  static constexpr bool consume_field_name(std::string_view sv) {
+    return helpers::is_token(sv);
   }
 };
 }  // namespace martianlabs::doba::protocol::http11::checkers::headers

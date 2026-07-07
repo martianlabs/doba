@@ -67,31 +67,14 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#include <csignal>
-
 #include "network/environment.h"
 #include "protocol/http11/server.h"
-#include "protocol/http11/checkers/headers/range.h"
 
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http11;
 
 int main(int argc, char* argv[]) {
   martianlabs::doba::network::startup();
-
-
-
-
-
-  std::string test_01 = "items=chapter-one,chapter-three";
-  bool result_01 =
-      martianlabs::doba::protocol::http11::checkers::headers::range::check(
-          test_01);
-
-
-
-
-
   server srv;
   srv.add_route(
          "GET", "/pipeline",
@@ -100,7 +83,6 @@ int main(int argc, char* argv[]) {
                .add_header("Server", "doba")
                .add_header("Date", date_server::get().current())
                .add_header("Content-Type", "text/plain; charset=utf-8")
-               .add_header("Content-Length", 2)
                .set_body("ok");
          },
          execution_policy::kSync)

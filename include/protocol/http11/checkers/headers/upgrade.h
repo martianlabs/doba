@@ -73,6 +73,7 @@
 #include <ranges>
 
 #include "protocol/http11/helpers.h"
+#include "protocol/http11/parsed_types.h"
 
 namespace martianlabs::doba::protocol::http11::checkers::headers {
 // /////////////////////////////////////////////////////////////////////////////
@@ -148,32 +149,19 @@ namespace martianlabs::doba::protocol::http11::checkers::headers {
 // /////////////////////////////////////////////////////////////////////////////
 class upgrade {
  public:
-  static constexpr bool check(std::string_view sv) {
-    bool follows_separator = false;
-    std::size_t i = 0;
-    std::size_t last = 0;
-    while (i < sv.size()) {
-      if (sv[i] == ',') {
-        // We found a protocol, let's parse it.
-        std::string_view protocol = sv.substr(last, i++ - last);
-        if (follows_separator) helpers::ows_ltrim(protocol);
-        helpers::ows_rtrim(protocol);
-        if (!protocol.empty() && !consume_protocol(protocol)) {
-          return false;
-        }
-        follows_separator = true;
-        last = i;
-        continue;
-      }
-      i++;
-    }
-    // Last protocol after the last comma (or the only one if no commas).
-    std::string_view protocol = sv.substr(last);
-    if (follows_separator) helpers::ows_ltrim(protocol);
-    if (!protocol.empty() && !consume_protocol(protocol)) {
-      return false;
-    }
-    return true;
+  // +=========================================================================+
+  // | [>] check                                                    ( public ) |
+  // +=========================================================================+
+  static bool check(std::string_view sv, parsed_token_list& out) {
+    // The producer overload validates each protocol exactly as the pure
+    // check() does and captures every non-empty element (protocol-name with
+    // its optional "/" protocol-version) in order.
+    return helpers::for_each_list_element(
+        sv, [&out](std::string_view element) {
+          if (!consume_protocol(element)) return false;
+          out.elements.push_back(element);
+          return true;
+        });
   }
 
  private:
