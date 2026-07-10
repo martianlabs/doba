@@ -1,4 +1,4 @@
-ï»¿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -70,12 +70,114 @@
 #ifndef martianlabs_doba_protocol_http11_helpers_h
 #define martianlabs_doba_protocol_http11_helpers_h
 
+#include <array>
 #include <cstdint>
 #include <algorithm>
 #include <limits>
 #include <string_view>
 
 namespace martianlabs::doba::protocol::http11 {
+namespace detail {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] CONSTANTs                                                  ( public ) |
+// +---------------------------------------------------------------------------+
+// | This struct holds for the http 1.1 helper functions.                      |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | Each bit encodes one RFC character-class predicate for a byte value.      |
+// | kCharFlags[c] is a bitmask; is_X(c) reduces to a single table lookup and  |
+// | a bitmask test (2 instructions) instead of a chain of comparisons.        |
+// | The table is 256 × 2 = 512 bytes — fits in one L1 cache line group and    |
+// | is shared across all hot parse loops in helpers, request and checkers.    |
+// +---------------------------------------------------------------------------+
+static constexpr std::uint16_t kF_token = 0x0001;
+static constexpr std::uint16_t kF_vchar = 0x0002;
+static constexpr std::uint16_t kF_obs_text = 0x0004;
+static constexpr std::uint16_t kF_ows = 0x0008;
+static constexpr std::uint16_t kF_pchar = 0x0010;
+static constexpr std::uint16_t kF_qdtext = 0x0020;
+static constexpr std::uint16_t kF_ctext = 0x0040;
+static constexpr std::uint16_t kF_etagc = 0x0080;
+static constexpr std::uint16_t kF_cookie = 0x0100;
+static constexpr std::uint16_t kF_cookie_av = 0x0200;
+static constexpr std::uint16_t kF_atext = 0x0400;
+static constexpr std::uint16_t kF_dtext = 0x0800;
+static constexpr std::uint16_t kF_hexdig = 0x1000;
+static constexpr std::uint16_t kF_unreserv = 0x2000;
+// +---------------------------------------------------------------------------+
+// | The table is built at compile time, so the compiler can                   |
+// | optimize it into a static data segment.                                   |
+// +---------------------------------------------------------------------------+
+static constexpr std::array<std::uint16_t, 256> build_char_flags() noexcept {
+  std::array<std::uint16_t, 256> t{};
+  for (int c = 0; c < 256; ++c) {
+    const auto u = static_cast<unsigned char>(c);
+    // token = tchar: !#$%&'*+-.^_`|~ / DIGIT / ALPHA
+    if (u == '!' || u == '#' || u == '$' || u == '%' || u == '&' || u == '\'' ||
+        u == '*' || u == '+' || u == '-' || u == '.' || u == '^' || u == '_' ||
+        u == '`' || u == '|' || u == '~' || (u >= '0' && u <= '9') ||
+        (u >= 'A' && u <= 'Z') || (u >= 'a' && u <= 'z'))
+      t[c] |= kF_token;
+    // vchar: 0x21-0x7E
+    if (u >= 0x21 && u <= 0x7E) t[c] |= kF_vchar;
+    // obs_text: 0x80-0xFF
+    if (u >= 0x80) t[c] |= kF_obs_text;
+    // ows: SP (0x20) / HTAB (0x09)
+    if (u == 0x20 || u == 0x09) t[c] |= kF_ows;
+    // pchar = unreserved / sub-delims / ":" / "@"
+    //   unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
+    //   sub-delims = "!" / "$" / "&" / "'" / "(" / ")" /
+    //                "*" / "+" / "," / ";" / "="
+    if ((u >= 'A' && u <= 'Z') || (u >= 'a' && u <= 'z') ||
+        (u >= '0' && u <= '9') || u == '-' || u == '.' || u == '_' ||
+        u == '~' || u == '!' || u == '$' || u == '&' || u == '\'' || u == '(' ||
+        u == ')' || u == '*' || u == '+' || u == ',' || u == ';' || u == '=' ||
+        u == ':' || u == '@')
+      t[c] |= kF_pchar;
+    // qdtext = HTAB / SP / "!" / %x23-5B / %x5D-7E / obs-text
+    if (u == 0x09 || u == 0x20 || u == '!' || (u >= 0x23 && u <= 0x5B) ||
+        (u >= 0x5D && u <= 0x7E) || u >= 0x80)
+      t[c] |= kF_qdtext;
+    // ctext = HTAB / SP / %x21-27 / %x2A-5B / %x5D-7E / obs-text
+    if (u == 0x09 || u == 0x20 || (u >= 0x21 && u <= 0x27) ||
+        (u >= 0x2A && u <= 0x5B) || (u >= 0x5D && u <= 0x7E) || u >= 0x80)
+      t[c] |= kF_ctext;
+    // etagc = %x21 / %x23-7E / obs-text
+    if (u == 0x21 || (u >= 0x23 && u <= 0x7E) || u >= 0x80) t[c] |= kF_etagc;
+    // cookie-octet = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E
+    if (u == 0x21 || (u >= 0x23 && u <= 0x2B) || (u >= 0x2D && u <= 0x3A) ||
+        (u >= 0x3C && u <= 0x5B) || (u >= 0x5D && u <= 0x7E))
+      t[c] |= kF_cookie;
+    // cookie-av-octet = %x20-7E except %x3B (";")
+    if (u >= 0x20 && u <= 0x7E && u != 0x3B) t[c] |= kF_cookie_av;
+    // atext = ALPHA / DIGIT / "!" / "#" / "$" / "%" / "&" / "'" /
+    //         "*" / "+" / "-" / "/" / "=" / "?" / "^" / "_" /
+    //         "`" / "{" / "|" / "}" / "~"
+    if ((u >= 'A' && u <= 'Z') || (u >= 'a' && u <= 'z') ||
+        (u >= '0' && u <= '9') || u == '!' || u == '#' || u == '$' ||
+        u == '%' || u == '&' || u == '\'' || u == '*' || u == '+' || u == '-' ||
+        u == '/' || u == '=' || u == '?' || u == '^' || u == '_' || u == '`' ||
+        u == '{' || u == '|' || u == '}' || u == '~')
+      t[c] |= kF_atext;
+    // dtext = %x21-5A / %x5E-7E / obs-text
+    if ((u >= 0x21 && u <= 0x5A) || (u >= 0x5E && u <= 0x7E) || u >= 0x80)
+      t[c] |= kF_dtext;
+    // hex-digit = DIGIT / "A"-"F" / "a"-"f"
+    if ((u >= '0' && u <= '9') || (u >= 'A' && u <= 'F') ||
+        (u >= 'a' && u <= 'f'))
+      t[c] |= kF_hexdig;
+    // unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
+    if ((u >= 'A' && u <= 'Z') || (u >= 'a' && u <= 'z') ||
+        (u >= '0' && u <= '9') || u == '-' || u == '.' || u == '_' || u == '~')
+      t[c] |= kF_unreserv;
+  }
+  return t;
+}
+static constexpr auto kCharFlags = build_char_flags();
+}  // namespace detail
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] helpers                                                    ( struct ) |
@@ -91,7 +193,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_digit                                                 ( public ) |
   // +=========================================================================+
-  // | RFC 5234 (ABNF Core Rules) â€” DIGIT                                      |
+  // | RFC 5234 (ABNF Core Rules) — DIGIT                                      |
   // +-------------------------------------------------------------------------+
   // | DIGIT = %x30-39    ; "0" - "9"                                          |
   // +-------------------------------------------------------------------------+
@@ -104,13 +206,13 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_digits                                                ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§5.6.1 / RFC 9111 Â§1.2.2 â€” 1*DIGIT (delta-seconds)             |
+  // | RFC 9110 §5.6.1 / RFC 9111 §1.2.2 — 1*DIGIT (delta-seconds)             |
   // +-------------------------------------------------------------------------+
   // | 1*DIGIT                                                                 |
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is a non-empty run of decimal digits.    |
-  // | This is the syntactic shape shared by delta-seconds (RFC 9111 Â§1.2.2)   |
-  // | and Content-Length (RFC 9110 Â§8.6). Any overflow handling is semantic   |
+  // | This is the syntactic shape shared by delta-seconds (RFC 9111 §1.2.2)   |
+  // | and Content-Length (RFC 9110 §8.6). Any overflow handling is semantic   |
   // | processing and does not affect this purely syntactic predicate.         |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_digits(std::string_view sv) noexcept {
@@ -123,13 +225,13 @@ struct helpers {
   // +=========================================================================+
   // | [>] parse_size_t                                             ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§5.6.1 â€” 1*DIGIT                                               |
+  // | RFC 9110 §5.6.1 — 1*DIGIT                                               |
   // +-------------------------------------------------------------------------+
   // | Validates that sv is a non-empty run of decimal digits (exactly like    |
   // | is_digits) and, on success, converts it to a std::size_t in out. This   |
   // | is the producing counterpart of the purely syntactic is_digits and is   |
-  // | shared by the Content-Length (RFC 9110 Â§8.6) and Max-Forwards (RFC 9110 |
-  // | Â§7.6.2) producer overloads. Returns false on a non-1*DIGIT value or     |
+  // | shared by the Content-Length (RFC 9110 §8.6) and Max-Forwards (RFC 9110 |
+  // | §7.6.2) producer overloads. Returns false on a non-1*DIGIT value or     |
   // | when the value would overflow std::size_t, in which case out is left    |
   // | unspecified; the overflow guard is the one place where a syntactically  |
   // | valid number is rejected for representability.                          |
@@ -150,7 +252,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_hex_digit                                             ( public ) |
   // +=========================================================================+
-  // | RFC 5234 (ABNF Core Rules) â€” HEXDIG                                     |
+  // | RFC 5234 (ABNF Core Rules) — HEXDIG                                     |
   // +-------------------------------------------------------------------------+
   // | HEXDIG = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"                      |
   // |                                                                         |
@@ -161,7 +263,7 @@ struct helpers {
   // | lowercase "a" - "f" (i.e., %x61-66).                                    |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_hex_digit(unsigned char c) noexcept {
-    return is_digit(c) || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+    return (detail::kCharFlags[c] & detail::kF_hexdig) != 0;
   }
   static constexpr bool is_hex_digit(char c) noexcept {
     return is_hex_digit(static_cast<unsigned char>(c));
@@ -169,7 +271,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_alpha                                                 ( public ) |
   // +=========================================================================+
-  // | RFC 5234 (ABNF Core Rules) â€” ALPHA                                      |
+  // | RFC 5234 (ABNF Core Rules) — ALPHA                                      |
   // +-------------------------------------------------------------------------+
   // | ALPHA = %x41-5A / %x61-7A                                               |
   // |        ; A-Z / a-z                                                      |
@@ -183,7 +285,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_token                                                 ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§5.6.2 â€” token                                                 |
+  // | RFC 9110 §5.6.2 — token                                                 |
   // +-------------------------------------------------------------------------+
   // | token  = 1*tchar                                                        |
   // |                                                                         |
@@ -194,10 +296,7 @@ struct helpers {
   // | ALPHA  = %x41-5A / %x61-7A   ; A-Z / a-z                                |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_token(unsigned char c) noexcept {
-    return c == '!' || c == '#' || c == '$' || c == '%' || c == '&' ||
-           c == '\'' || c == '*' || c == '+' || c == '-' || c == '.' ||
-           c == '^' || c == '_' || c == '`' || c == '|' || c == '~' ||
-           is_digit(c) || is_alpha(c);
+    return (detail::kCharFlags[c] & detail::kF_token) != 0;
   }
   static constexpr bool is_token(char c) noexcept {
     return is_token(static_cast<unsigned char>(c));
@@ -205,7 +304,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_token                                                 ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§5.6.2 â€” token (whole-value predicate)                         |
+  // | RFC 9110 §5.6.2 — token (whole-value predicate)                         |
   // +-------------------------------------------------------------------------+
   // | token = 1*tchar                                                         |
   // +-------------------------------------------------------------------------+
@@ -224,7 +323,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_unreserved                                            ( public ) |
   // +=========================================================================+
-  // | RFC 3986 Â§2.3 â€” unreserved                                              |
+  // | RFC 3986 §2.3 — unreserved                                              |
   // +-------------------------------------------------------------------------+
   // | unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"                      |
   // +-------------------------------------------------------------------------+
@@ -232,8 +331,7 @@ struct helpers {
   // | DIGIT      = %x30-39             ; 0-9                                  |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_unreserved(unsigned char c) noexcept {
-    return is_alpha(c) || is_digit(c) || c == '-' || c == '.' || c == '_' ||
-           c == '~';
+    return (detail::kCharFlags[c] & detail::kF_unreserv) != 0;
   }
   static constexpr bool is_unreserved(char c) noexcept {
     return is_unreserved(static_cast<unsigned char>(c));
@@ -241,7 +339,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_sub_delim                                             ( public ) |
   // +=========================================================================+
-  // | RFC 3986 Â§2.2 â€” sub-delims                                              |
+  // | RFC 3986 §2.2 — sub-delims                                              |
   // +-------------------------------------------------------------------------+
   // | sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," /      |
   // |              ";" / "="                                                  |
@@ -256,7 +354,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_pchar                                                 ( public ) |
   // +=========================================================================+
-  // | RFC 3986 Â§3.3 â€” pchar                                                   |
+  // | RFC 3986 §3.3 — pchar                                                   |
   // +-------------------------------------------------------------------------+
   // | pchar = unreserved / pct-encoded / sub-delims / ":" / "@"               |
   // +-------------------------------------------------------------------------+
@@ -270,7 +368,7 @@ struct helpers {
   // | HEXDIG = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"                      |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_pchar(unsigned char c) noexcept {
-    return is_unreserved(c) || is_sub_delim(c) || c == ':' || c == '@';
+    return (detail::kCharFlags[c] & detail::kF_pchar) != 0;
   }
   static constexpr bool is_pchar(char c) noexcept {
     return is_pchar(static_cast<unsigned char>(c));
@@ -278,13 +376,13 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_vchar                                                 ( public ) |
   // +=========================================================================+
-  // | RFC 5234 (ABNF Core Rules) â€” VCHAR                                      |
+  // | RFC 5234 (ABNF Core Rules) — VCHAR                                      |
   // +-------------------------------------------------------------------------+
   // | VCHAR = %x21-7E                                                         |
   // |        ; visible (printing) characters                                  |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_vchar(unsigned char c) noexcept {
-    return c >= 0x21 && c <= 0x7E;
+    return (detail::kCharFlags[c] & detail::kF_vchar) != 0;
   }
   static constexpr bool is_vchar(char c) noexcept {
     return is_vchar(static_cast<unsigned char>(c));
@@ -292,7 +390,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_qdtext                                                ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§5.6.4 â€” qdtext                                                |
+  // | RFC 9110 §5.6.4 — qdtext                                                |
   // +-------------------------------------------------------------------------+
   // | qdtext = HTAB / SP / "!" / %x23-5B / %x5D-7E / obs-text                 |
   // +-------------------------------------------------------------------------+
@@ -304,8 +402,7 @@ struct helpers {
   // |       via quoted-pair.                                                  |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_qdtext(unsigned char c) noexcept {
-    return c == '\t' || c == ' ' || c == '!' || (c >= 0x23 && c <= 0x5B) ||
-           (c >= 0x5D && c <= 0x7E) || is_obs_text(c);
+    return (detail::kCharFlags[c] & detail::kF_qdtext) != 0;
   }
   static constexpr bool is_qdtext(char c) noexcept {
     return is_qdtext(static_cast<unsigned char>(c));
@@ -313,7 +410,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_obs_text                                              ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§5.6.4 â€” obs-text                                              |
+  // | RFC 9110 §5.6.4 — obs-text                                              |
   // +-------------------------------------------------------------------------+
   // | obs-text = %x80-FF                                                      |
   // +-------------------------------------------------------------------------+
@@ -321,7 +418,7 @@ struct helpers {
   // |       compatibility with legacy implementations.                        |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_obs_text(unsigned char c) noexcept {
-    return c >= 0x80 && c <= 0xFF;
+    return (detail::kCharFlags[c] & detail::kF_obs_text) != 0;
   }
   static constexpr bool is_obs_text(char c) noexcept {
     return is_obs_text(static_cast<unsigned char>(c));
@@ -329,7 +426,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_ctext                                                 ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§5.6.5 â€” ctext                                                 |
+  // | RFC 9110 §5.6.5 — ctext                                                 |
   // +-------------------------------------------------------------------------+
   // | ctext = HTAB / SP / %x21-27 / %x2A-5B / %x5D-7E / obs-text              |
   // +-------------------------------------------------------------------------+
@@ -342,9 +439,7 @@ struct helpers {
   // |       via quoted-pair.                                                  |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_ctext(unsigned char c) noexcept {
-    return c == '\t' || c == ' ' || (c >= 0x21 && c <= 0x27) ||
-           (c >= 0x2A && c <= 0x5B) || (c >= 0x5D && c <= 0x7E) ||
-           is_obs_text(c);
+    return (detail::kCharFlags[c] & detail::kF_ctext) != 0;
   }
   static constexpr bool is_ctext(char c) noexcept {
     return is_ctext(static_cast<unsigned char>(c));
@@ -352,20 +447,16 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_atext                                                 ( public ) |
   // +=========================================================================+
-  // | RFC 5322 Â§3.2.3 â€” atext                                                 |
+  // | RFC 5322 §3.2.3 — atext                                                 |
   // +-------------------------------------------------------------------------+
   // | atext = ALPHA / DIGIT / "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / |
   // |         "-" / "/" / "=" / "?" / "^" / "_" / "`" / "{" / "|" / "}" / "~" |
   // +-------------------------------------------------------------------------+
-  // | The atom character set used by dot-atom-text and atom (RFC 5322 Â§3.2.3),|
-  // | imported into HTTP via the From "mailbox" grammar (RFC 9110 Â§10.1.2).   |
+  // | The atom character set used by dot-atom-text and atom (RFC 5322 §3.2.3),|
+  // | imported into HTTP via the From "mailbox" grammar (RFC 9110 §10.1.2).   |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_atext(unsigned char c) noexcept {
-    return is_alpha(c) || is_digit(c) || c == '!' || c == '#' || c == '$' ||
-           c == '%' || c == '&' || c == '\'' || c == '*' || c == '+' ||
-           c == '-' || c == '/' || c == '=' || c == '?' || c == '^' ||
-           c == '_' || c == '`' || c == '{' || c == '|' || c == '}' ||
-           c == '~';
+    return (detail::kCharFlags[c] & detail::kF_atext) != 0;
   }
   static constexpr bool is_atext(char c) noexcept {
     return is_atext(static_cast<unsigned char>(c));
@@ -373,7 +464,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_dtext                                                 ( public ) |
   // +=========================================================================+
-  // | RFC 5322 Â§3.4.1 â€” dtext                                                 |
+  // | RFC 5322 §3.4.1 — dtext                                                 |
   // +-------------------------------------------------------------------------+
   // | dtext = %d33-90 / %d94-126 / obs-dtext                                  |
   // +-------------------------------------------------------------------------+
@@ -384,8 +475,7 @@ struct helpers {
   // | parsing context.                                                        |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_dtext(unsigned char c) noexcept {
-    return (c >= 0x21 && c <= 0x5A) || (c >= 0x5E && c <= 0x7E) ||
-           is_obs_text(c);
+    return (detail::kCharFlags[c] & detail::kF_dtext) != 0;
   }
   static constexpr bool is_dtext(char c) noexcept {
     return is_dtext(static_cast<unsigned char>(c));
@@ -393,7 +483,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_etagc                                                 ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§8.8.3 â€” etagc                                                 |
+  // | RFC 9110 §8.8.3 — etagc                                                 |
   // +-------------------------------------------------------------------------+
   // | etagc = %x21 / %x23-7E / obs-text                                       |
   // |       ; VCHAR except DQUOTE, plus obs-text                              |
@@ -403,7 +493,7 @@ struct helpers {
   // | obs-text = %x80-FF                                                      |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_etagc(unsigned char c) noexcept {
-    return c == 0x21 || (c >= 0x23 && c <= 0x7E) || is_obs_text(c);
+    return (detail::kCharFlags[c] & detail::kF_etagc) != 0;
   }
   static constexpr bool is_etagc(char c) noexcept {
     return is_etagc(static_cast<unsigned char>(c));
@@ -411,15 +501,14 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_cookie_octet                                          ( public ) |
   // +=========================================================================+
-  // | RFC 6265 Â§4.1.1 â€” cookie-octet                                          |
+  // | RFC 6265 §4.1.1 — cookie-octet                                          |
   // +-------------------------------------------------------------------------+
   // | cookie-octet = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E             |
   // |              ; US-ASCII characters excluding CTLs, whitespace, DQUOTE,  |
   // |              ; comma, semicolon, and backslash                          |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_cookie_octet(unsigned char c) noexcept {
-    return c == 0x21 || (c >= 0x23 && c <= 0x2B) || (c >= 0x2D && c <= 0x3A) ||
-           (c >= 0x3C && c <= 0x5B) || (c >= 0x5D && c <= 0x7E);
+    return (detail::kCharFlags[c] & detail::kF_cookie) != 0;
   }
   static constexpr bool is_cookie_octet(char c) noexcept {
     return is_cookie_octet(static_cast<unsigned char>(c));
@@ -427,7 +516,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_cookie_av_octet                                       ( public ) |
   // +=========================================================================+
-  // | RFC 6265 Â§4.1.1 â€” <any CHAR except CTLs or ";">                         |
+  // | RFC 6265 §4.1.1 — <any CHAR except CTLs or ";">                         |
   // +-------------------------------------------------------------------------+
   // | Both path-value and extension-av are defined as any CHAR except CTLs or |
   // | a ";". CHAR is %x01-7F and CTLs are %x00-1F / %x7F, so the octet class  |
@@ -436,7 +525,7 @@ struct helpers {
   // | "Wed, 09 Jun 2021 10:18:14 GMT" is a syntactically valid cookie-av.     |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_cookie_av_octet(unsigned char c) noexcept {
-    return c >= 0x20 && c <= 0x7E && c != 0x3B;
+    return (detail::kCharFlags[c] & detail::kF_cookie_av) != 0;
   }
   static constexpr bool is_cookie_av_octet(char c) noexcept {
     return is_cookie_av_octet(static_cast<unsigned char>(c));
@@ -444,7 +533,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_entity_tag                                            ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§8.8.3 â€” entity-tag                                            |
+  // | RFC 9110 §8.8.3 — entity-tag                                            |
   // +-------------------------------------------------------------------------+
   // | entity-tag = [ weak ] opaque-tag                                        |
   // | weak       = %s"W/"                                                     |
@@ -474,7 +563,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_ows                                                   ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§5.6.3 â€” OWS (Optional Whitespace)                             |
+  // | RFC 9110 §5.6.3 — OWS (Optional Whitespace)                             |
   // +-------------------------------------------------------------------------+
   // | OWS = *( SP / HTAB )                                                    |
   // +-------------------------------------------------------------------------+
@@ -484,7 +573,7 @@ struct helpers {
   // | Note: OWS is allowed only where explicitly defined by the ABNF.         |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_ows(unsigned char c) noexcept {
-    return c == ' ' || c == '\t';
+    return (detail::kCharFlags[c] & detail::kF_ows) != 0;
   }
   static constexpr bool is_ows(char c) noexcept {
     return is_ows(static_cast<unsigned char>(c));
@@ -508,7 +597,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_weight                                           ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§12.4.2 â€” weight                                               |
+  // | RFC 9110 §12.4.2 — weight                                               |
   // +-------------------------------------------------------------------------+
   // | weight = OWS ";" OWS "q=" qvalue                                        |
   // +-------------------------------------------------------------------------+
@@ -650,7 +739,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_dec_octet                                             ( public ) |
   // +=========================================================================+
-  // | RFC 3986 Â§3.2.2 â€” dec-octet (whole-value predicate)                     |
+  // | RFC 3986 §3.2.2 — dec-octet (whole-value predicate)                     |
   // +-------------------------------------------------------------------------+
   // | dec-octet = DIGIT                 ; 0-9                                 |
   // |           / %x31-39 DIGIT         ; 10-99                               |
@@ -661,7 +750,7 @@ struct helpers {
   // | Validates that sv, as a whole, is exactly one canonical dec-octet: a    |
   // | decimal integer in the range 0..255 with no leading zeroes (except the  |
   // | single value "0"). This is the RFC 3986 IPv4 octet shape and is also    |
-  // | the syntactic shape of a Sec-WebSocket-Version value (RFC 6455 Â§11.3.5).|
+  // | the syntactic shape of a Sec-WebSocket-Version value (RFC 6455 §11.3.5).|
   // | Unlike the positional overload, this checks digit-ness of every byte    |
   // | and rejects any value outside 0..255 or with a leading zero.            |
   // +-------------------------------------------------------------------------+
@@ -862,7 +951,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_token68                                               ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§11.2 â€” token68                                                |
+  // | RFC 9110 §11.2 — token68                                                |
   // +-------------------------------------------------------------------------+
   // | token68 = 1*( ALPHA / DIGIT / "-" / "." / "_" / "~" / "+" / "/" ) *"="  |
   // +-------------------------------------------------------------------------+
@@ -888,7 +977,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_base64_char                                           ( public ) |
   // +=========================================================================+
-  // | RFC 4648 Â§4 / RFC 6455 Â§4.3 â€” base64-character                          |
+  // | RFC 4648 §4 / RFC 6455 §4.3 — base64-character                          |
   // +-------------------------------------------------------------------------+
   // | base64-character = ALPHA / DIGIT / "+" / "/"                            |
   // +-------------------------------------------------------------------------+
@@ -898,7 +987,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] check_base64_value                                       ( public ) |
   // +=========================================================================+
-  // | RFC 6455 Â§4.3 â€” base64-value-non-empty                                  |
+  // | RFC 6455 §4.3 — base64-value-non-empty                                  |
   // +-------------------------------------------------------------------------+
   // | base64-value-non-empty = ( 1*base64-data [ base64-padding ] )           |
   // |                          / base64-padding                               |
@@ -912,8 +1001,8 @@ struct helpers {
   // | group except possibly the last is pure base64-character data, and the   |
   // | last group is either pure base64-character data or a single padding     |
   // | group ("??==" or "???="). "=" may appear only in the final group. This  |
-  // | is the standard-alphabet base64 shape (no URL-safe "-"/"_") shared by    |
-  // | WebSocket handshake fields such as Sec-WebSocket-Key (RFC 6455 Â§4.1).   |
+  // | is the standard-alphabet base64 shape (no URL-safe "-"/"_") shared by   |
+  // | WebSocket handshake fields such as Sec-WebSocket-Key (RFC 6455 §4.1).   |
   // | The decoded byte length is a semantic concern and is not checked here.  |
   // +-------------------------------------------------------------------------+
   static constexpr bool check_base64_value(std::string_view sv) noexcept {
@@ -961,7 +1050,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_quoted_string                                    ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§5.6.4 â€” quoted-string                                         |
+  // | RFC 9110 §5.6.4 — quoted-string                                         |
   // +-------------------------------------------------------------------------+
   // | quoted-string = DQUOTE *( qdtext / quoted-pair ) DQUOTE                 |
   // | quoted-pair   = "\" ( HTAB / SP / VCHAR / obs-text )                    |
@@ -998,7 +1087,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_comment                                          ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§5.6.5 â€” comment                                               |
+  // | RFC 9110 §5.6.5 — comment                                               |
   // +-------------------------------------------------------------------------+
   // | comment     = "(" *( ctext / quoted-pair / comment ) ")"                |
   // | quoted-pair = "\" ( HTAB / SP / VCHAR / obs-text )                      |
@@ -1046,7 +1135,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_cfws                                             ( public ) |
   // +=========================================================================+
-  // | RFC 5322 Â§3.2.2 â€” CFWS (in the HTTP field-value context)                |
+  // | RFC 5322 §3.2.2 — CFWS (in the HTTP field-value context)                |
   // +-------------------------------------------------------------------------+
   // | CFWS = (1*([FWS] comment) [FWS]) / FWS                                  |
   // | FWS  = ([*WSP CRLF] 1*WSP) / obs-FWS                                    |
@@ -1079,7 +1168,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_dot_atom                                         ( public ) |
   // +=========================================================================+
-  // | RFC 5322 Â§3.2.3 â€” dot-atom (in the HTTP field-value context)            |
+  // | RFC 5322 §3.2.3 — dot-atom (in the HTTP field-value context)            |
   // +-------------------------------------------------------------------------+
   // | dot-atom      = [CFWS] dot-atom-text [CFWS]                             |
   // | dot-atom-text = 1*atext *( "." 1*atext )                                |
@@ -1110,7 +1199,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_domain_literal                                   ( public ) |
   // +=========================================================================+
-  // | RFC 5322 Â§3.4.1 â€” domain-literal (in the HTTP field-value context)      |
+  // | RFC 5322 §3.4.1 — domain-literal (in the HTTP field-value context)      |
   // +-------------------------------------------------------------------------+
   // | domain-literal = [CFWS] "[" *([FWS] dtext) [FWS] "]" [CFWS]             |
   // +-------------------------------------------------------------------------+
@@ -1135,7 +1224,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_addr_spec                                        ( public ) |
   // +=========================================================================+
-  // | RFC 5322 Â§3.4.1 â€” addr-spec (in the HTTP field-value context)           |
+  // | RFC 5322 §3.4.1 — addr-spec (in the HTTP field-value context)           |
   // +-------------------------------------------------------------------------+
   // | addr-spec  = local-part "@" domain                                      |
   // | local-part = dot-atom / quoted-string / obs-local-part                  |
@@ -1176,7 +1265,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_word                                             ( public ) |
   // +=========================================================================+
-  // | RFC 5322 Â§3.2.5 â€” word (in the HTTP field-value context)                |
+  // | RFC 5322 §3.2.5 — word (in the HTTP field-value context)                |
   // +-------------------------------------------------------------------------+
   // | word          = atom / quoted-string                                    |
   // | atom          = [CFWS] 1*atext [CFWS]                                   |
@@ -1206,7 +1295,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] check_mailbox                                            ( public ) |
   // +=========================================================================+
-  // | RFC 5322 Â§3.4 â€” mailbox (imported by RFC 9110 Â§10.1.2 From)             |
+  // | RFC 5322 §3.4 — mailbox (imported by RFC 9110 §10.1.2 From)             |
   // +-------------------------------------------------------------------------+
   // | mailbox      = name-addr / addr-spec                                    |
   // | name-addr    = [display-name] angle-addr                                |
@@ -1216,7 +1305,7 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is exactly one mailbox. This is the      |
   // | single-mailbox value form imported by the From header (RFC 9110         |
-  // | Â§10.1.2); From is not a list field, so no comma-separated mailboxes are |
+  // | §10.1.2); From is not a list field, so no comma-separated mailboxes are |
   // | accepted. Two forms are tried, each of which must consume the entire    |
   // | input: (1) name-addr, an optional display-name (zero or more words via  |
   // | consume_word) followed by an angle-addr ([CFWS] "<" addr-spec ">"       |
@@ -1254,7 +1343,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_token_or_quoted_string                           ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§5.6.6 â€” parameter-value (and equivalent value productions)    |
+  // | RFC 9110 §5.6.6 — parameter-value (and equivalent value productions)    |
   // +-------------------------------------------------------------------------+
   // | value = token / quoted-string                                           |
   // +-------------------------------------------------------------------------+
@@ -1271,13 +1360,13 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_cookie_value                                          ( public ) |
   // +=========================================================================+
-  // | RFC 6265 Â§4.1.1 â€” cookie-value                                          |
+  // | RFC 6265 §4.1.1 — cookie-value                                          |
   // +-------------------------------------------------------------------------+
   // | cookie-value = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )          |
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is exactly one cookie-value, the shared  |
-  // | value form of the Cookie (RFC 6265 Â§4.2.1) and Set-Cookie (RFC 6265     |
-  // | Â§4.1.1) cookie-pair. The value is either a (possibly empty) run of      |
+  // | value form of the Cookie (RFC 6265 §4.2.1) and Set-Cookie (RFC 6265     |
+  // | §4.1.1) cookie-pair. The value is either a (possibly empty) run of      |
   // | cookie-octets, or the same run wrapped in a pair of DQUOTE delimiters.  |
   // | The surrounding DQUOTEs are literal cookie-value syntax rather than an  |
   // | HTTP quoted-string, so no backslash escaping is recognised and the      |
@@ -1301,15 +1390,15 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_cookie_pair                                           ( public ) |
   // +=========================================================================+
-  // | RFC 6265 Â§4.1.1 â€” cookie-pair                                           |
+  // | RFC 6265 §4.1.1 — cookie-pair                                           |
   // +-------------------------------------------------------------------------+
   // | cookie-pair  = cookie-name "=" cookie-value                             |
   // | cookie-name  = token                                                    |
   // | cookie-value = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )          |
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is exactly one cookie-pair, the shared   |
-  // | pair form of the Cookie (RFC 6265 Â§4.2.1) and Set-Cookie (RFC 6265      |
-  // | Â§4.1.1) fields. A non-empty token cookie-name and a mandatory "=" (with |
+  // | pair form of the Cookie (RFC 6265 §4.2.1) and Set-Cookie (RFC 6265      |
+  // | §4.1.1) fields. A non-empty token cookie-name and a mandatory "=" (with |
   // | no surrounding whitespace) are required, and the remainder must be a    |
   // | valid cookie-value (which may be empty). Any trailing bytes after the   |
   // | cookie-value cause rejection.                                           |
@@ -1326,18 +1415,18 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_cookie_av                                             ( public ) |
   // +=========================================================================+
-  // | RFC 6265 Â§4.1.1 â€” cookie-av                                             |
+  // | RFC 6265 §4.1.1 — cookie-av                                             |
   // +-------------------------------------------------------------------------+
   // | cookie-av    = expires-av / max-age-av / domain-av / path-av /          |
   // |                secure-av / httponly-av / extension-av                   |
   // | extension-av = <any CHAR except CTLs or ";">                            |
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is exactly one cookie-av of a Set-Cookie |
-  // | field (RFC 6265 Â§4.1.1). Every named alternative (Expires, Max-Age,     |
+  // | field (RFC 6265 §4.1.1). Every named alternative (Expires, Max-Age,     |
   // | Domain, Path, Secure, HttpOnly) is subsumed by extension-av, which is   |
   // | the catch-all "any CHAR except CTLs or ';'"; at the syntactic ABNF      |
   // | level a cookie-av is therefore just a non-empty run of cookie-av-       |
-  // | octets. Per-attribute semantics (RFC 6265 Â§5.2) are applied by the      |
+  // | octets. Per-attribute semantics (RFC 6265 §5.2) are applied by the      |
   // | recipient after parsing and are intentionally outside this check, so a  |
   // | value such as "Max-Age=abc" remains a valid extension-av. Every cookie- |
   // | av alternative is non-empty, so an empty sv is rejected.                |
@@ -1352,15 +1441,15 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_directive                                             ( public ) |
   // +=========================================================================+
-  // | RFC 9111 Â§5.2 / Â§5.4 â€” parameterized directive                          |
+  // | RFC 9111 §5.2 / §5.4 — parameterized directive                          |
   // +-------------------------------------------------------------------------+
   // | directive = token [ "=" ( token / quoted-string ) ]                     |
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is exactly one parameterized directive:  |
   // | a non-empty token optionally followed by "=" and a token or quoted-     |
   // | string argument, with no surrounding whitespace around "=". This is the |
-  // | shared shape of cache-directive (RFC 9111 Â§5.2) and extension-pragma    |
-  // | (RFC 9111 Â§5.4); "no-cache" is itself a token and is therefore covered  |
+  // | shared shape of cache-directive (RFC 9111 §5.2) and extension-pragma    |
+  // | (RFC 9111 §5.4); "no-cache" is itself a token and is therefore covered  |
   // | by the token alternative. Since directive and extension-param share the |
   // | same grammar, validation delegates to consume_extension_parameter and   |
   // | then requires that the whole sv was consumed. Any trailing bytes after  |
@@ -1374,7 +1463,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_parameter                                        ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§5.6.6 â€” parameter                                             |
+  // | RFC 9110 §5.6.6 — parameter                                             |
   // +-------------------------------------------------------------------------+
   // | parameter       = parameter-name "=" parameter-value                    |
   // | parameter-name  = token                                                 |
@@ -1416,7 +1505,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_extension_parameter                              ( public ) |
   // +=========================================================================+
-  // | RFC 6455 Â§9.1 â€” extension-param                                         |
+  // | RFC 6455 §9.1 — extension-param                                         |
   // +-------------------------------------------------------------------------+
   // | extension-param = token [ "=" ( token / quoted-string ) ]               |
   // +-------------------------------------------------------------------------+
@@ -1426,7 +1515,7 @@ struct helpers {
   // | optional: when a "=" follows the name (with no surrounding whitespace)  |
   // | a non-empty token-or-quoted-string value is required, otherwise the     |
   // | parameter is just the bare name. This is the shared shape of extension- |
-  // | param (RFC 6455 Â§9.1) and directive (RFC 9111 Â§5.2 / Â§5.4). bytes_used  |
+  // | param (RFC 6455 §9.1) and directive (RFC 9111 §5.2 / §5.4). bytes_used  |
   // | is set to 0 and false is returned on any failure.                       |
   // +-------------------------------------------------------------------------+
   static constexpr bool consume_extension_parameter(
@@ -1451,7 +1540,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] for_each_parameter                                       ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§5.6.6 â€” parameters                                            |
+  // | RFC 9110 §5.6.6 — parameters                                            |
   // +-------------------------------------------------------------------------+
   // | parameters = *( OWS ";" OWS [ parameter ] )                             |
   // +-------------------------------------------------------------------------+
@@ -1499,12 +1588,12 @@ struct helpers {
   // +=========================================================================+
   // | [>] for_each_forwarded_pair                                  ( public ) |
   // +=========================================================================+
-  // | RFC 7239 Â§4 â€” forwarded-element                                         |
+  // | RFC 7239 §4 — forwarded-element                                         |
   // +-------------------------------------------------------------------------+
   // | forwarded-element = [ forwarded-pair ] *( ";" [ forwarded-pair ] )      |
   // +-------------------------------------------------------------------------+
   // | Iterates the ";"-delimited pairs of a single forwarded-element. Unlike  |
-  // | for_each_parameter (RFC 9110 Â§5.6.6 parameters), no OWS is permitted    |
+  // | for_each_parameter (RFC 9110 §5.6.6 parameters), no OWS is permitted    |
   // | around ";" and the first pair is not preceded by ";", matching the      |
   // | RFC 7239 grammar exactly. Every pair slot is optional, so empty slots   |
   // | (a leading ";", consecutive ";;", or a trailing ";") are tolerated and  |
@@ -1539,14 +1628,14 @@ struct helpers {
   // +=========================================================================+
   // | [>] for_each_list_element                                    ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§5.6.1 â€” Lists (#rule ABNF extension)                          |
+  // | RFC 9110 §5.6.1 — Lists (#rule ABNF extension)                          |
   // +-------------------------------------------------------------------------+
   // | #element = [ element ] *( OWS "," OWS [ element ] )                     |
   // +-------------------------------------------------------------------------+
   // | Iterates the comma-separated elements of a list-based field value,      |
   // | trimming OWS around each element and skipping empty list elements, as   |
-  // | recipients are required to do (RFC 9110 Â§5.6.1). A comma occurring      |
-  // | inside a quoted-string (RFC 9110 Â§5.6.4) is treated as part of that     |
+  // | recipients are required to do (RFC 9110 §5.6.1). A comma occurring      |
+  // | inside a quoted-string (RFC 9110 §5.6.4) is treated as part of that     |
   // | quoted-string rather than as a list separator; an unterminated quoted-  |
   // | string or a dangling escape at the end of sv is rejected.               |
   // | For every non-empty trimmed element, invokes consume_element(element).  |
@@ -1596,16 +1685,16 @@ struct helpers {
   // +=========================================================================+
   // | [>] check_auth_param_list                                    ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§11.6.3 / Â§11.4 â€” #auth-param                                  |
+  // | RFC 9110 §11.6.3 / §11.4 — #auth-param                                  |
   // +-------------------------------------------------------------------------+
   // | Authentication-Info = #auth-param                                       |
   // | auth-param          = token BWS "=" BWS ( token / quoted-string )       |
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is a "#auth-param" list: a comma-        |
   // | separated sequence of auth-param name/value pairs. This is the shared   |
-  // | shape of the Authentication-Info (RFC 9110 Â§11.6.3) header field value  |
+  // | shape of the Authentication-Info (RFC 9110 §11.6.3) header field value  |
   // | and of the "#auth-param" argument of a single credentials/challenge     |
-  // | (RFC 9110 Â§11.4 / Â§11.6.1). Every non-empty list element must be a      |
+  // | (RFC 9110 §11.4 / §11.6.1). Every non-empty list element must be a      |
   // | complete auth-param, with BWS tolerated around "=". Since the rule is   |
   // | "#auth-param" (not "1#auth-param"), an empty list is permitted and      |
   // | empty list elements are ignored.                                        |
@@ -1623,15 +1712,15 @@ struct helpers {
   // +=========================================================================+
   // | [>] check_credentials                                        ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§11.4 / Â§11.6.2 â€” credentials                                  |
+  // | RFC 9110 §11.4 / §11.6.2 — credentials                                  |
   // +-------------------------------------------------------------------------+
   // | credentials = auth-scheme [ 1*SP ( token68 / #auth-param ) ]            |
   // | auth-scheme = token                                                     |
   // | auth-param  = token BWS "=" BWS ( token / quoted-string )               |
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is exactly one credentials production,   |
-  // | the shared shape of the Authorization (RFC 9110 Â§11.6.2) and Proxy-     |
-  // | Authorization (RFC 9110 Â§11.7.1) header field values. A mandatory       |
+  // | the shared shape of the Authorization (RFC 9110 §11.6.2) and Proxy-     |
+  // | Authorization (RFC 9110 §11.7.1) header field values. A mandatory       |
   // | auth-scheme token is consumed first; when nothing follows, the optional |
   // | group is absent and the credentials consist of the bare scheme.         |
   // | Otherwise exactly one or more SP (%x20, never HTAB) separates the       |
@@ -1663,7 +1752,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] challenge_opens_param_list                               ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§11.6.1 â€” helper for #challenge parsing                        |
+  // | RFC 9110 §11.6.1 — helper for #challenge parsing                        |
   // +-------------------------------------------------------------------------+
   // | Given a single, already-trimmed challenge element that is known to be a |
   // | valid challenge (i.e. check_credentials(element) is true), reports      |
@@ -1687,7 +1776,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] check_challenge_list                                     ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§11.6.1 / Â§11.7.2 â€” #challenge                                 |
+  // | RFC 9110 §11.6.1 / §11.7.2 — #challenge                                 |
   // +-------------------------------------------------------------------------+
   // | WWW-Authenticate  = #challenge                                          |
   // | Proxy-Authenticate = #challenge                                         |
@@ -1696,8 +1785,8 @@ struct helpers {
   // | auth-param        = token BWS "=" BWS ( token / quoted-string )         |
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is a "#challenge" list, the shared shape |
-  // | of the WWW-Authenticate (RFC 9110 Â§11.6.1) and Proxy-Authenticate (RFC  |
-  // | 9110 Â§11.7.2) header field values. The list is comma-separated, but so  |
+  // | of the WWW-Authenticate (RFC 9110 §11.6.1) and Proxy-Authenticate (RFC  |
+  // | 9110 §11.7.2) header field values. The list is comma-separated, but so  |
   // | is the inner "#auth-param" list of each challenge, which makes commas   |
   // | ambiguous; the field is therefore scanned left-to-right, resolving each |
   // | top-level (quoted-string-aware) element greedily. Every non-empty       |
@@ -1733,7 +1822,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_product                                          ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§10.1.5 / Â§10.2.4 â€” product                                    |
+  // | RFC 9110 §10.1.5 / §10.2.4 — product                                    |
   // +-------------------------------------------------------------------------+
   // | product         = token [ "/" product-version ]                         |
   // | product-version = token                                                 |
@@ -1760,18 +1849,18 @@ struct helpers {
   // +=========================================================================+
   // | [>] check_product_list                                       ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§10.1.5 / Â§10.2.4 â€” product list                               |
+  // | RFC 9110 §10.1.5 / §10.2.4 — product list                               |
   // +-------------------------------------------------------------------------+
   // | product-list = product *( RWS ( product / comment ) )                   |
   // | RWS          = 1*( SP / HTAB )                                          |
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is exactly one product list, the shared  |
-  // | shape of the User-Agent (RFC 9110 Â§10.1.5) and Server (RFC 9110         |
-  // | Â§10.2.4) header field values. The value MUST begin with a product, so   |
+  // | shape of the User-Agent (RFC 9110 §10.1.5) and Server (RFC 9110         |
+  // | §10.2.4) header field values. The value MUST begin with a product, so   |
   // | an empty value, a leading comment, or leading whitespace is rejected.   |
   // | Each subsequent product or comment MUST be preceded by RWS (at least    |
   // | one SP/HTAB); adjacent items with no RWS, and trailing RWS with no      |
-  // | following item, are rejected. This is not an RFC 9110 Â§5.6.1 "#" list:  |
+  // | following item, are rejected. This is not an RFC 9110 §5.6.1 "#" list:  |
   // | commas carry no structural meaning and are only valid inside token or   |
   // | comment syntax.                                                         |
   // +-------------------------------------------------------------------------+
@@ -1821,13 +1910,13 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_uri_scheme                                            ( public ) |
   // +=========================================================================+
-  // | RFC 3986 Â§3.1 â€” scheme                                                  |
+  // | RFC 3986 §3.1 — scheme                                                  |
   // +-------------------------------------------------------------------------+
   // | scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )                     |
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is a bare URI scheme name (no trailing   |
-  // | ":"). This is the shared shape of a URI scheme (RFC 3986 Â§3.1), of the  |
-  // | "proto" parameter value of the Forwarded header (RFC 7239 Â§5.4), and of |
+  // | ":"). This is the shared shape of a URI scheme (RFC 3986 §3.1), of the  |
+  // | "proto" parameter value of the Forwarded header (RFC 7239 §5.4), and of |
   // | an X-Forwarded-Proto list element. Returns false on an empty value, a   |
   // | non-ALPHA first character, or any subsequent character outside          |
   // | ALPHA / DIGIT / "+" / "-" / ".".                                        |
@@ -1845,7 +1934,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_uri_scheme                                       ( public ) |
   // +=========================================================================+
-  // | RFC 3986 Â§3.1 â€” scheme                                                  |
+  // | RFC 3986 §3.1 — scheme                                                  |
   // +-------------------------------------------------------------------------+
   // | scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )                     |
   // +-------------------------------------------------------------------------+
@@ -1866,7 +1955,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_uri_pct_encoded                                  ( public ) |
   // +=========================================================================+
-  // | RFC 3986 Â§2.1 â€” pct-encoded                                             |
+  // | RFC 3986 §2.1 — pct-encoded                                             |
   // +-------------------------------------------------------------------------+
   // | pct-encoded = "%" HEXDIG HEXDIG                                         |
   // +-------------------------------------------------------------------------+
@@ -1883,7 +1972,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] check_uri_userinfo                                       ( public ) |
   // +=========================================================================+
-  // | RFC 3986 Â§3.2.1 â€” userinfo                                              |
+  // | RFC 3986 §3.2.1 — userinfo                                              |
   // +-------------------------------------------------------------------------+
   // | userinfo = *( unreserved / pct-encoded / sub-delims / ":" )             |
   // +-------------------------------------------------------------------------+
@@ -1904,15 +1993,15 @@ struct helpers {
   // +=========================================================================+
   // | [>] check_host_port                                          ( public ) |
   // +=========================================================================+
-  // | RFC 3986 Â§3.2.2 / Â§3.2.3 â€” host [ ":" port ]                            |
+  // | RFC 3986 §3.2.2 / §3.2.3 — host [ ":" port ]                            |
   // +-------------------------------------------------------------------------+
   // | host = IP-literal / IPv4address / reg-name                              |
   // | port = *DIGIT                                                           |
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is a uri-host optionally followed by a   |
   // | ":" port. This is the userinfo-free portion of an authority, shared by  |
-  // | the Host header (RFC 9110 Â§7.2), an authority-form request-target, and  |
-  // | the serialized-origin of the Origin header (RFC 6454 Â§7). An IP-literal |
+  // | the Host header (RFC 9110 §7.2), an authority-form request-target, and  |
+  // | the serialized-origin of the Origin header (RFC 6454 §7). An IP-literal |
   // | host keeps its bracketed colons intact (via split_authority_host_port), |
   // | and both an empty reg-name host and an empty port are syntactically     |
   // | valid because each uses the "*" repetition operator. Returns false only |
@@ -1953,7 +2042,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] check_serialized_origin                                  ( public ) |
   // +=========================================================================+
-  // | RFC 6454 Â§6.1 / WHATWG Fetch Â§3.2 â€” serialized-origin                   |
+  // | RFC 6454 §6.1 / WHATWG Fetch §3.2 — serialized-origin                   |
   // +-------------------------------------------------------------------------+
   // | serialized-origin = scheme "://" host [ ":" port ]                      |
   // +-------------------------------------------------------------------------+
@@ -1961,8 +2050,8 @@ struct helpers {
   // | scheme, the literal "://", and a userinfo-free "host [ ":" port ]". A   |
   // | serialized origin has no path, query, fragment, trailing slash, or      |
   // | userinfo. This is the shared shape of an Origin list element (RFC 6454  |
-  // | Â§7) and of the non-"*"/"null" alternative of Access-Control-Allow-      |
-  // | Origin (WHATWG Fetch Â§3.3.4). Returns false on a missing/invalid        |
+  // | §7) and of the non-"*"/"null" alternative of Access-Control-Allow-      |
+  // | Origin (WHATWG Fetch §3.3.4). Returns false on a missing/invalid        |
   // | scheme, a scheme not followed by "//", or an invalid host/port.         |
   // +-------------------------------------------------------------------------+
   static constexpr bool check_serialized_origin(std::string_view sv) noexcept {
@@ -1978,7 +2067,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] check_uri_authority                                      ( public ) |
   // +=========================================================================+
-  // | RFC 3986 Â§3.2 â€” authority                                               |
+  // | RFC 3986 §3.2 — authority                                               |
   // +-------------------------------------------------------------------------+
   // | authority = [ userinfo "@" ] host [ ":" port ]                          |
   // +-------------------------------------------------------------------------+
@@ -1995,7 +2084,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] check_uri_reference                                      ( public ) |
   // +=========================================================================+
-  // | RFC 3986 Â§4.1 â€” URI-reference                                           |
+  // | RFC 3986 §4.1 — URI-reference                                           |
   // +-------------------------------------------------------------------------+
   // | URI-reference = URI / relative-ref                                      |
   // | URI           = scheme ":" hier-part [ "?" query ] [ "#" fragment ]     |
@@ -2050,7 +2139,7 @@ struct helpers {
       if (sv[i] != '/' && !is_pchar(sv[i])) return false;
       i++;
     }
-    // RFC 3986 Â§3.3: when neither a scheme nor an authority is present, the
+    // RFC 3986 §3.3: when neither a scheme nor an authority is present, the
     // first path segment MUST NOT contain a colon (path-noscheme); otherwise
     // it would be indistinguishable from a scheme-prefixed reference.
     if (!has_scheme && !has_authority) {
@@ -2243,8 +2332,8 @@ struct helpers {
   // +=========================================================================+
   // | [>] default_port_for_scheme                                  ( public ) |
   // +=========================================================================+
-  // | RFC 9110 Â§4.2.1 / Â§4.2.2 â€” returns the default port a scheme normalizes |
-  // | to when the authority omits one ("80" for "http", "443" for "https",   |
+  // | RFC 9110 §4.2.1 / §4.2.2 — returns the default port a scheme normalizes |
+  // | to when the authority omits one ("80" for "http", "443" for "https",    |
   // | matched case-insensitively). Any other (or empty) scheme has no known   |
   // | default and yields an empty view.                                       |
   // +=========================================================================+
@@ -2304,13 +2393,13 @@ struct helpers {
   // |                | "," / ";" / "="                                        |
   // +----------------+--------------------------------------------------------+
   // +-------------------------------------------------------------------------+
-  // | When the "//" authority path-abempty branch is taken, has_authority is |
+  // | When the "//" authority path-abempty branch is taken, has_authority is  |
   // | set and uri_host, port, and type additionally expose the parsed         |
   // | authority pieces (mirroring check_host_port), so the caller never has   |
   // | to re-parse them; otherwise has_authority is left false and uri_host /  |
   // | port / type are left unspecified. "scheme" always exposes the parsed    |
   // | scheme substring (lower/upper-case as received), enabling default-port  |
-  // | normalization of the authority against the scheme.                     |
+  // | normalization of the authority against the scheme.                      |
   // +-------------------------------------------------------------------------+
   static constexpr deserialization_status try_to_deserialize_as_absolute_form(
       std::string_view sv, std::string_view& consumed_path,
@@ -2550,19 +2639,19 @@ struct helpers {
   // | [>] split_query_parameters                                   ( public ) |
   // +=========================================================================+
   // | Splits a raw query string (the query component already stripped of its  |
-  // | leading '?') into key/value pairs following the application/x-www-form-  |
-  // | urlencoded convention:                                                   |
-  // |   query      = pair *( "&" pair )                                        |
-  // |   pair       = key [ "=" value ]                                         |
-  // |   key/value  = *( any char except "&" ; value also except the first "=" )|
-  // | Rules: pairs are separated by '&'; the first '=' inside a pair separates |
-  // | key from value; a pair without '=' yields an empty value; empty pairs    |
-  // | (e.g. produced by "a&&b" or a leading/trailing '&') are skipped. Every   |
-  // | emitted view is zero-copy over 'query', so the caller must keep the      |
-  // | backing buffer alive (or copy the spans, as request.h does). Writes at   |
-  // | most 'max_pairs' entries into the caller-provided output arrays and      |
-  // | returns the number of pairs written (excess pairs are dropped, matching  |
-  // | the fixed-capacity policy already used for headers).                     |
+  // | leading '?') into key/value pairs following the application/x-www-form- |
+  // | urlencoded convention:                                                  |
+  // |   query      = pair *( "&" pair )                                       |
+  // |   pair       = key [ "=" value ]                                        |
+  // |   key/value  = *( any char except "&" ; value also except first "=" )   |
+  // | Rules: pairs are separated by '&'; the first '=' inside a pair separates|
+  // | key from value; a pair without '=' yields an empty value; empty pairs   |
+  // | (e.g. produced by "a&&b" or a leading/trailing '&') are skipped. Every  |
+  // | emitted view is zero-copy over 'query', so the caller must keep the     |
+  // | backing buffer alive (or copy the spans, as request.h does). Writes at  |
+  // | most 'max_pairs' entries into the caller-provided output arrays and     |
+  // | returns the number of pairs written (excess pairs are dropped, matching |
+  // | the fixed-capacity policy already used for headers).                    |
   // +=========================================================================+
   static constexpr std::size_t split_query_parameters(
       std::string_view query, std::string_view* out_keys,

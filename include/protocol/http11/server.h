@@ -74,12 +74,13 @@
 #include "common/thread_pool.h"
 #include "common/date_server.h"
 #include "transport/server/tcpip.h"
-#include "protocol/http11/methods.h"
+#include "protocol/http11/method_names.h"
 #include "protocol/http11/helpers.h"
 #include "protocol/http11/request.h"
 #include "protocol/http11/response.h"
 #include "protocol/http11/router.h"
-#include "protocol/http11/headers.h"
+#include "protocol/http11/header_names.h"
+#include "protocol/http11/body_writer.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////

@@ -70,14 +70,16 @@
 #ifndef martianlabs_doba_protocol_http11_response_h
 #define martianlabs_doba_protocol_http11_response_h
 
+#include <optional>
 #include <stdexcept>
 #include <utility>
 
+#include "protocol/http11/body_reader.h"
+#include "protocol/http11/body_serializer.h"
 #include "status_codes.h"
 #include "status_lines.h"
 
 namespace martianlabs::doba::protocol::http11 {
-// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] response                                                    ( class ) |
 // +---------------------------------------------------------------------------+
@@ -100,13 +102,25 @@ class response {
   response& operator=(response&& in) noexcept = delete;
   // +=========================================================================+
   // | [>] serialize                                                ( public ) |
+  // +---------------------------------------------------------------------------
+  // | Serializes the response by invoking sink(std::string_view) one or more  |
+  // | times, in wire order:                                                    |
+  // |   1. The header block (status-line + headers + CRLF terminator).        |
+  // |   2. The body, if any:                                                   |
+  // |      - inline body (set_body(string_view)): single zero-copy sink call  |
+  // |        over the fixed internal buffer region.                            |
+  // |      - streaming body (set_body(body_reader&&)): repeated sink
+  // |        calls, one per kMaxBodySizeInMemory-sized chunk until eof(). The  |
+  // |        inline body region of memory_[] is reused as the read buffer      |
+  // |        (inline and streaming bodies are mutually exclusive).             |
+  // |   If no body has been set, only the header block is delivered.           |
+  // | SNfn must be callable as void(std::string_view).                        |
   // +=========================================================================+
-  std::string_view serialize() {
+  template <typename SNfn>
+  void serialize(SNfn&& sink) {
     std::size_t sln_plus_hdr_len = sln_len_ + hdr_len_;
-    // Reserve space for the header-terminating CRLF (and the extra CRLF that
-    // closes an empty header block). Bail out safely if the fixed buffer cannot
-    // hold it: never write past the body region start (invariant: the core
-    // section must stay within [0, bdy_beg_)).
+    // Write the header-terminating CRLF (plus an extra CRLF when there are no
+    // headers). The core section must always stay within [0, bdy_beg_).
     std::size_t crlf_bytes = hdr_len_ ? 2 : 4;
     if (sln_plus_hdr_len + crlf_bytes > bdy_beg_) {
       throw std::out_of_range("not enough space to serialize response!");
@@ -117,16 +131,25 @@ class response {
       memory_[sln_plus_hdr_len++] = '\r';
       memory_[sln_plus_hdr_len++] = '\n';
     }
-    std::size_t end_of_core = sln_plus_hdr_len;
-    // Compact the body right after the core section. Guard against overflowing
-    // the fixed buffer before moving the (possibly binary) body bytes.
-    if (end_of_core + bdy_len_ > kMaxSizeInMemory) {
-      throw std::out_of_range("not enough space to serialize response!");
+    // 1. Header block — always a single zero-copy call into memory_.
+    sink(std::string_view(memory_, sln_plus_hdr_len));
+    // 2a. Inline body — single zero-copy call over memory_[bdy_beg_].
+    if (bdy_len_ > 0) {
+      sink(std::string_view(&memory_[bdy_beg_], bdy_len_));
+      return;
     }
-    std::memmove(&memory_[end_of_core], &memory_[bdy_beg_], bdy_len_);
-    // Return the exact serialized length. Do NOT rely on strlen(): the body may
-    // legitimately contain NUL bytes and the buffer is fixed-size.
-    return std::string_view(memory_, end_of_core + bdy_len_);
+    // 2b. Streaming body — chunk-by-chunk until the source is exhausted.
+    // memory_[bdy_beg_] is unused in this path (inline and streaming bodies
+    // are mutually exclusive), so it serves as the read buffer at zero extra
+    // cost: no stack allocation, no heap allocation.
+    if (body_reader_) {
+      while (!body_reader_->eof() && !body_reader_->failed()) {
+        std::size_t n = body_reader_->read(std::span<std::byte>(
+            reinterpret_cast<std::byte*>(&memory_[bdy_beg_]),
+            kMaxBodySizeInMemory));
+        if (n > 0) sink(std::string_view(&memory_[bdy_beg_], n));
+      }
+    }
   }
   // +=========================================================================+
   // | [>] add_header                                               ( public ) |
@@ -135,15 +158,17 @@ class response {
     std::size_t k_size = k.size();
     std::size_t v_size = v.size();
     std::size_t space_left = bdy_beg_ - sln_len_ - hdr_len_;
-    // Bytes written by this call: key + ':' + value + '\r' + '\n' = k + v + 3.
-    // Reserve, in addition, the 2 bytes of the header-terminating CRLF that
-    // serialize() appends, so we never overrun into the body region.
-    if (k_size + v_size + 3 + 2 > space_left) {
+    // Bytes written by this call: key + ':' + ' ' + value + '\r' + '\n' = k + v
+    // + 4. Reserve, in addition, the 2 bytes of the header-terminating CRLF
+    // that serialize() appends, so we never overrun into the body region.
+    if (k_size + v_size + 4 + 2 > space_left) {
       throw std::out_of_range("not enough space to add header!");
     }
     std::memcpy(&memory_[sln_len_ + hdr_len_], k.data(), k.size());
     hdr_len_ += k.size();
     memory_[sln_len_ + hdr_len_] = ':';
+    hdr_len_++;
+    memory_[sln_len_ + hdr_len_] = ' ';
     hdr_len_++;
     std::memcpy(&memory_[sln_len_ + hdr_len_], v.data(), v.size());
     hdr_len_ += v.size();
@@ -241,7 +266,7 @@ class response {
       std::size_t colon = pos;
       while (colon < end && memory_[colon] != ':') colon++;
       if (colon >= end) break;
-      std::size_t val_beg = colon + 1;
+      std::size_t val_beg = colon + 2;
       std::size_t cr = val_beg;
       while (cr < end && memory_[cr] != '\r') cr++;
       if (cr >= end) break;
@@ -306,7 +331,8 @@ class response {
     }
     std::memcpy(&memory_[bdy_beg_], sv.data(), body_size);
     bdy_len_ = body_size;
-    // Keep Content-Length in sync with the actual body size. set_header()
+    body_reader_.reset();
+    // Keep Content-Length in sync with the actual body size.
     // both overwrites the bodiless default set by sln() and updates any
     // value the caller may have set explicitly beforehand.
     set_header("Content-Length", body_size);
@@ -321,6 +347,30 @@ class response {
     return set_body(std::to_string(val));
   }
   // +=========================================================================+
+  // | [>] set_body                                                 ( public ) |
+  // +---------------------------------------------------------------------------
+  // | Assigns a streaming body from a body_reader (obtained via              |
+  // | body_serializer::release_reader()). The inline body buffer is cleared. |
+  // | If the reader reports a known size, Content-Length is set; otherwise   |
+  // | Transfer-Encoding: chunked is used (RFC 9112 §6.1).                    |
+  // +=========================================================================+
+  response& set_body(body_reader&& src) {
+    if (src.failed()) {
+      // Reader has a storage I/O error; do not corrupt the response wire format.
+      return *this;
+    }
+    bdy_len_ = 0;
+    body_reader_ = std::move(src);
+    if (auto sz = body_reader_->size()) {
+      remove_header("Transfer-Encoding");
+      set_header("Content-Length", *sz);
+    } else {
+      remove_header("Content-Length");
+      set_header("Transfer-Encoding", "chunked");
+    }
+    return *this;
+  }
+  // +=========================================================================+
   // | [>] STATUS-LINE-METHODs                                      ( public ) |
   // +=========================================================================+
   response& continue_100() { return sln(status_lines::k100, SC_100_CONTINUE); }
@@ -333,7 +383,9 @@ class response {
   response& non_authoritative_info_203() {
     return sln(status_lines::k203, SC_203_NON_AUTHORITATIVE_INFORMATION);
   }
-  response& no_content_204() { return sln(status_lines::k204, SC_204_NO_CONTENT); }
+  response& no_content_204() {
+    return sln(status_lines::k204, SC_204_NO_CONTENT);
+  }
   response& reset_content_205() {
     return sln(status_lines::k205, SC_205_RESET_CONTENT);
   }
@@ -347,11 +399,15 @@ class response {
     return sln(status_lines::k301, SC_301_MOVED_PERMANENTLY);
   }
   response& found_302() { return sln(status_lines::k302, SC_302_FOUND); }
-  response& see_other_303() { return sln(status_lines::k303, SC_303_SEE_OTHER); }
+  response& see_other_303() {
+    return sln(status_lines::k303, SC_303_SEE_OTHER);
+  }
   response& not_modified_304() {
     return sln(status_lines::k304, SC_304_NOT_MODIFIED);
   }
-  response& use_proxy_305() { return sln(status_lines::k305, SC_305_USE_PROXY); }
+  response& use_proxy_305() {
+    return sln(status_lines::k305, SC_305_USE_PROXY);
+  }
   response& unused_306() { return sln(status_lines::k306, SC_306_UNUSED); }
   response& temporary_redirect_307() {
     return sln(status_lines::k307, SC_307_TEMPORARY_REDIRECT);
@@ -359,15 +415,21 @@ class response {
   response& permanent_redirect_308() {
     return sln(status_lines::k308, SC_308_PERMANENT_REDIRECT);
   }
-  response& bad_request_400() { return sln(status_lines::k400, SC_400_BAD_REQUEST); }
+  response& bad_request_400() {
+    return sln(status_lines::k400, SC_400_BAD_REQUEST);
+  }
   response& unauthorized_401() {
     return sln(status_lines::k401, SC_401_UNAUTHORIZED);
   }
   response& payment_required_402() {
     return sln(status_lines::k402, SC_402_PAYMENT_REQUIRED);
   }
-  response& forbidden_403() { return sln(status_lines::k403, SC_403_FORBIDDEN); }
-  response& not_found_404() { return sln(status_lines::k404, SC_404_NOT_FOUND); }
+  response& forbidden_403() {
+    return sln(status_lines::k403, SC_403_FORBIDDEN);
+  }
+  response& not_found_404() {
+    return sln(status_lines::k404, SC_404_NOT_FOUND);
+  }
   response& method_not_allowed_405() {
     return sln(status_lines::k405, SC_405_METHOD_NOT_ALLOWED);
   }
@@ -391,7 +453,9 @@ class response {
   response& content_too_large_413() {
     return sln(status_lines::k413, SC_413_CONTENT_TOO_LARGE);
   }
-  response& uri_too_long_414() { return sln(status_lines::k414, SC_414_URI_TOO_LONG); }
+  response& uri_too_long_414() {
+    return sln(status_lines::k414, SC_414_URI_TOO_LONG);
+  }
   response& unsupported_media_type_415() {
     return sln(status_lines::k415, SC_415_UNSUPPORTED_MEDIA_TYPE);
   }
@@ -417,7 +481,9 @@ class response {
   response& not_implemented_501() {
     return sln(status_lines::k501, SC_501_NOT_IMPLEMENTED);
   }
-  response& bad_gateway_502() { return sln(status_lines::k502, SC_502_BAD_GATEWAY); }
+  response& bad_gateway_502() {
+    return sln(status_lines::k502, SC_502_BAD_GATEWAY);
+  }
   response& service_unavailable_503() {
     return sln(status_lines::k503, SC_503_SERVICE_UNAVAILABLE);
   }
@@ -468,7 +534,7 @@ class response {
       std::size_t colon = pos;
       while (colon < end && memory_[colon] != ':') colon++;
       if (colon >= end) break;
-      std::size_t val_beg = colon + 1;
+      std::size_t val_beg = colon + 2;
       std::size_t cr = val_beg;
       while (cr < end && memory_[cr] != '\r') cr++;
       if (cr >= end) break;
@@ -495,6 +561,7 @@ class response {
     // if an oversized status line is ever supplied.
     hdr_len_ = 0;
     bdy_len_ = 0;
+    body_reader_.reset();
     if (len > bdy_beg_) {
       sln_len_ = 0;
       throw std::out_of_range("not enough space to set status line!");
@@ -521,7 +588,7 @@ class response {
   std::size_t hdr_len_{0};
   std::size_t bdy_beg_{kMaxSizeInMemory - kMaxBodySizeInMemory};
   std::size_t bdy_len_{0};
-  std::shared_ptr<std::istream> body_stream_;
+  std::optional<body_reader> body_reader_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

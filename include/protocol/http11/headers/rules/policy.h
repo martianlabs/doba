@@ -67,28 +67,45 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#include "network/environment.h"
-#include "protocol/http11/server.h"
 
-using namespace martianlabs::doba::common;
-using namespace martianlabs::doba::protocol::http11;
+#ifndef martianlabs_doba_protocol_http11_headers_rules_policy_h
+#define martianlabs_doba_protocol_http11_headers_rules_policy_h
 
-int main(int argc, char* argv[]) {
-  martianlabs::doba::network::startup();
-  server srv;
-  srv.add_route(
-         "GET", "/pipeline",
-         [](const request& req, response& res) {
-           res.ok_200()
-               .add_header("Server", "doba.")
-               .add_header("Date", date_server::get().current())
-               .add_header("Content-Type", "text/plain; charset=utf-8")
-               .set_body("ok");
-         },
-         execution_policy::kSync)
-      .start("8080");
-  std::cin.get();
-  date_server::get().stop();
-  martianlabs::doba::network::cleanup();
-  return 0;
-}
+#include "protocol/http11/context.h"
+#include "protocol/http11/verdict.h"
+
+namespace martianlabs::doba::protocol::http11::headers::rules {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] policy                                                      ( class ) |
+// +---------------------------------------------------------------------------+
+// | Inbound policy limits that span several headers                           |
+// +---------------------------------------------------------------------------+
+// | Transversal policy rules that enforce limits no single intra-header       |
+// | interpreter can, because the quantity being limited is an aggregate of    |
+// | several headers. Applied by deserialize() after the single header pass    |
+// | has populated the context.                                                |
+// |                                                                           |
+// | 1. Aggregate forwarding hops: an intermediary chain is described jointly  |
+// |    by Via, Forwarded, and X-Forwarded-For. Each intra-header interpreter  |
+// |    checks its own element count, but the combined hop count (accumulated  |
+// |    into the context) is checked here against policies.max_forwarding_hops |
+// |    to bound the total forwarding depth. A limit of 0 means "unlimited".   |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+class policy {
+ public:
+  // +=========================================================================+
+  // | [>] apply                                                    ( public ) |
+  // +=========================================================================+
+  static constexpr verdict apply(const context& ctx) {
+    if (ctx.policies.max_forwarding_hops != 0 &&
+        ctx.forwarding_hops > ctx.policies.max_forwarding_hops) {
+      return verdict::kReject;
+    }
+    return verdict::kAccept;
+  }
+};
+}  // namespace martianlabs::doba::protocol::http11::headers::rules
+
+#endif

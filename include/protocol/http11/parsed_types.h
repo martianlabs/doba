@@ -97,11 +97,11 @@ namespace martianlabs::doba::protocol::http11 {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] parsed_host_port                                            ( struct ) |
+// | [>] parsed_host_port                                           ( struct ) |
 // +---------------------------------------------------------------------------+
 // | RFC 3986 §3.2.2 / §3.2.3 — host [ ":" port ]                              |
 // +---------------------------------------------------------------------------+
-// | The zero-copy product of a "host [ ":" port ]" value (the shape shared by  |
+// | The zero-copy product of a "host [ ":" port ]" value (the shape shared by |
 // | the Host header and an authority-form request-target). "host" is the      |
 // | uri-host substring (bracketed colons of an IP-literal are kept intact);   |
 // | "type" classifies it; "port" is the raw *DIGIT run after the ":" (empty   |

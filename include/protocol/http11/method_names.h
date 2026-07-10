@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -67,28 +67,45 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the Apache License Version 2.0.
 
-#include "network/environment.h"
-#include "protocol/http11/server.h"
+#ifndef martianlabs_doba_protocol_http11_method_names_h
+#define martianlabs_doba_protocol_http11_method_names_h
 
-using namespace martianlabs::doba::common;
-using namespace martianlabs::doba::protocol::http11;
+namespace martianlabs::doba::protocol::http11 {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] method_names                                               ( struct ) |
+// +---------------------------------------------------------------------------+
+// | This struct holds for the http 1.1 method names specification.            |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct method_names {
+  // +=========================================================================+
+  // | [>] CONSTANTs                                                ( public ) |
+  // +=========================================================================+
+  // +---------+---------------------------------------------------------------+
+  // | Method  | Description                                                   |
+  // +---------+---------------------------------------------------------------+
+  // | GET     | Transfer a current representation of the target resource.     |
+  // | HEAD    | Same as GET, but do not transfer the response content.        |
+  // | POST    | Perform resource-specific processing on the request content.  |
+  // | PUT     | Replace all current representations of the target resource    |
+  // |         | with the request content.                                     |
+  // | DELETE  | Remove all current representations of the target resource.    |
+  // | CONNECT | Establish a tunnel to the server identified by the            |
+  // |         | target resource.                                              |
+  // | OPTIONS | Describe the communication options for the target resource.   |
+  // | TRACE   | Perform a message loop-back test along the path to the        |
+  // |         | target resource.                                              |
+  // +---------+---------------------------------------------------------------+
+  static constexpr char kGet[] = "GET";
+  static constexpr char kHead[] = "HEAD";
+  static constexpr char kPost[] = "POST";
+  static constexpr char kPut[] = "PUT";
+  static constexpr char kDelete[] = "DELETE";
+  static constexpr char kConnect[] = "CONNECT";
+  static constexpr char kOptions[] = "OPTIONS";
+  static constexpr char kTrace[] = "TRACE";
+};
+}  // namespace martianlabs::doba::protocol::http11
 
-int main(int argc, char* argv[]) {
-  martianlabs::doba::network::startup();
-  server srv;
-  srv.add_route(
-         "GET", "/pipeline",
-         [](const request& req, response& res) {
-           res.ok_200()
-               .add_header("Server", "doba.")
-               .add_header("Date", date_server::get().current())
-               .add_header("Content-Type", "text/plain; charset=utf-8")
-               .set_body("ok");
-         },
-         execution_policy::kSync)
-      .start("8080");
-  std::cin.get();
-  date_server::get().stop();
-  martianlabs::doba::network::cleanup();
-  return 0;
-}
+#endif
