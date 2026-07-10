@@ -98,6 +98,9 @@ protocol/
   body_codec_chunked.h      → codec chunked: framing en encode + máquina de estados en decode
   body_writer.h             → construcción de body (parametrizado solo por codec CDty; storage fijo)
   body_reader.h             → lectura secuencial de body (parametrizado solo por codec CDty; storage fijo)
+  body_serializer.h         → orchestrador de escritura de body (write/finish/release_reader); factories raw()/chunked()
+  body_deserializer.h       → orchestrador de lectura de body; factories raw(max_size)/chunked(); expone
+                              get_body_deserializer() como const con estado interno mutable
   body_source.h             → interfaz type-erased `body_source` + factory `body_source::make<CDty>()`;
   checkers/headers/*.h       → verificadores SINTÁCTICOS (1 fichero por header)
   interpreters/
@@ -177,13 +180,31 @@ respuesta pendiente o rearmar otro receive. **No conoce nada de HTTP/1.1.**
 7. **Se eliminó `request_interpreter`** (el antiguo coordinador semántico). Agrupar 4 reglas
    en una clase era excesivo; ahora las reglas se aplican explícitamente inline en
    `deserialize`.
-8. **Storage de body fijo e interno (`body_storage`), no inyectado por plantilla.** El caller
-   elige solo el codec (`raw`/`chunked`); `body_writer<CDty>` y `body_reader<CDty>` usan
-   internamente un único `body_storage` que empieza en memoria y derrama a fichero temporal
-   cuando supera `spill_threshold`. El caller nunca selecciona ni conoce la estrategia de
-   almacenamiento — la transición es automática y transparente. Los tres backends anteriores
-   (`body_storage_memory`, `body_storage_memory_view`, `body_storage_file`) han sido eliminados
-   como API pública; toda su funcionalidad queda unificada en `body_storage.h`.
+8. **Storage de body fijo e interno (`body_storage`), no inyectado por plantilla; API de alto
+   nivel vía `body_serializer`/`body_deserializer`.** El caller elige solo el codec (`raw`/`chunked`);
+   `body_writer<CDty>` y `body_reader<CDty>` usan internamente un único `body_storage` que empieza
+   en memoria y derrama a fichero temporal cuando supera `spill_threshold`. La transición es
+   automática y transparente. Los tres backends anteriores (`body_storage_memory`,
+   `body_storage_memory_view`, `body_storage_file`) han sido eliminados como API pública; toda su
+   funcionalidad queda unificada en `body_storage.h`.
+   - `body_serializer<CDty>`: interfaz de escritura de alto nivel. `write(string_view)`/
+     `write(span<byte>)` son encadenables; `finish()` cierra el codec (añade el chunk final
+     `0\r\n\r\n` en chunked); `release_reader()` llama a `finish()` internamente y devuelve un
+     `body_reader` listo para consumir — es el puente entre la escritura del handler y el
+     `set_body(body_reader&&)` de `response`. Factories: `raw(opts, max_size)` y `chunked(opts)`.
+   - `body_deserializer<CDty>`: interfaz de lectura de alto nivel, complemento del reader.
+     `get_body_deserializer()` es `const` (el estado del codec es `mutable`). Factories:
+     `raw(opts, content_length)` y `chunked(opts)`. Wiring en `request::deserialize()`:
+     construye `body_deserializer<body_codec_chunked>` si `connection_tmp.chunked`, o
+     `body_deserializer<body_codec_raw>` con `max_raw_size = content_length` si
+     `ctx.has_content_length && content_length > 0`; de lo contrario, sin body. El result
+     vive en `mutable std::optional<body_deserializer_t>` (alias público
+     `request::body_deserializer_t = std::variant<body_deserializer<body_codec_raw>,
+     body_deserializer<body_codec_chunked>>`); `has_body()` y `get_body_deserializer()` lo exponen.
+   - **Wiring en `response`:** `set_body(body_reader&&)` acepta el reader producido por
+     `body_serializer::release_reader()`; `serialize(SNfn&&)` lo drena chunk a chunk usando
+     `memory_[bdy_beg_]` como buffer de paso — el transporte nunca necesita distinguir si el
+     body es inline o streaming, el contrato es uniforme: una llamada a `serialize(sink)`.
 
 ### Estado de datos (referencia rápida)
 
@@ -508,52 +529,48 @@ respuesta pendiente o rearmar otro receive. **No conoce nada de HTTP/1.1.**
       ninguna función. Ambos presets (`msvc-debug`, `msvc-release`) recompilados y enlazados
       limpio tras el fix.
 
-- **Módulo de body HTTP/1.1 — arquitectura final (`body_writer.h` + `body_reader.h` + `body_storage.h`, OBLIGATORIO #1 cerrado).** El módulo está descompuesto en dos responsabilidades ortogonales:
-  - **Tipos/contrato compartido** en `include/protocol/http11/body_common.h`: enums
-    (`body_status`, `body_error`), la constante `kDefaultBufferSize`, los
-    structs de resultado (`encode_result` con `stored`/`has_error`/`error`, `decode_result`
-    con `produced`/`complete`/`has_error`/`error`), y la documentación de los dos contratos
-    (storage y codec).
-  - **Storage unificado** en `body_storage.h`: un único backend interno que empieza en memoria
-    (`std::string`) y derrama automáticamente a un fichero temporal único cuando
-    `body_storage_options::spill_threshold` se supera. La transición es transparente para
-    codecs y callers. El fichero se elimina en el destructor. Ya no existen backends separados
-    (`body_storage_memory`, `body_storage_memory_view`, `body_storage_file` — eliminados).
-  - **Codecs** (parámetro `CDty`): `body_codec_raw.h` (identidad/passthrough, por defecto) y
-    `body_codec_chunked.h` (framing chunked en encode + máquina de estados por pasos `step_*`
-    sin `goto` en decode). Encapsulan la estructura de cable; no conocen almacenamiento.
+- **Módulo de body HTTP/1.1 — arquitectura final cerrada (`body_common.h` + `body_storage.h` +
+  `body_codec_raw.h` + `body_codec_chunked.h` + `body_writer.h` + `body_reader.h` +
+  `body_serializer.h` + `body_deserializer.h` + wiring en `request`/`response`).**
+  - **Tipos/contrato compartido** en `body_common.h`: enums (`body_status`, `body_error`),
+    la constante `kDefaultBufferSize`, los structs de resultado (`encode_result` con
+    `stored`/`has_error`/`error`, `decode_result` con `produced`/`complete`/`has_error`/`error`)
+    y la documentación de los contratos de storage y codec.
+  - **Storage unificado** en `body_storage.h`: único backend que empieza en memoria (`std::string`)
+    y derrama a fichero temporal cuando supera `body_storage_options::spill_threshold`. La
+    transición es transparente para codecs y callers. El fichero se elimina en el destructor.
+    Backends anteriores eliminados (`body_storage_memory`, `body_storage_memory_view`,
+    `body_storage_file`).
+  - **Codecs** (`CDty`): `body_codec_raw.h` (identidad/passthrough) y `body_codec_chunked.h`
+    (framing chunked en encode + máquina de estados por pasos `step_*` sin `goto` en decode).
+    No conocen almacenamiento.
+  - **`body_writer<CDty>`** / **`body_reader<CDty>`**: capas de orquestación con storage fijo;
+    el caller solo elige el codec. `body_writer_options` / `body_reader_options` exponen
+    `spill_threshold` / `spill_dir`.
+  - **`body_serializer<CDty>`** (alto nivel, escritura): `write(string_view)` /
+    `write(span<byte>)` encadenables; `finish()` cierra el codec (añade `0\r\n\r\n` en chunked);
+    `release_reader()` llama a `finish()` internamente y devuelve `body_reader` listo.
+    Factories: `raw(opts, max_size)` / `chunked(opts)`.
+  - **`body_deserializer<CDty>`** (alto nivel, lectura): `get_body_deserializer() const`
+    (estado del codec `mutable`). Factories: `raw(opts, content_length)` / `chunked(opts)`.
 
-  `body_writer<CDty>` y `body_reader<CDty>` son capas de orquestación con storage fijo. El
-  caller elige solo el codec; storage es un detalle de implementación interno. Las factorías
-  `raw()` / `chunked()` fijan el `CDty` concreto. `body_reader_options` y `body_writer_options`
-  incluyen `spill_threshold` / `spill_dir` para configurar el umbral de spill.
+  **Wiring en `request`:** `request::deserialize()` construye automáticamente el deserializador
+  correcto: `body_deserializer<body_codec_chunked>` si `connection_tmp.chunked`,
+  `body_deserializer<body_codec_raw>` con `max_raw_size = content_length` si
+  `ctx.has_content_length && content_length > 0`, o ninguno. Vive en
+  `mutable std::optional<body_deserializer_t>` (alias público
+  `request::body_deserializer_t = std::variant<body_deserializer<body_codec_raw>,
+  body_deserializer<body_codec_chunked>>`). API pública: `has_body()`, `get_body_deserializer()`.
 
-  **Wiring en `request`:** `request::deserialize()` construye automáticamente el reader
-  correcto tras parsear los headers: `body_reader<body_codec_chunked>` si
-  `connection_tmp.chunked`, `body_reader<body_codec_raw>` con `max_raw_size=content_length`
-  si `ctx.has_content_length && content_length > 0`, o ninguno si no hay framing. El reader
-  vive en `std::optional<body_reader_t>` (alias público `request::body_reader_t`); `has_body()`
-  devuelve si hay reader, `get_body_reader()` devuelve referencia a la variante concreta
-  (útil cuando el handler necesita distinguir codec), y `get_body_source()` devuelve un
-  `shared_ptr<body_source>` type-erased sobre el mismo reader (útil cuando el handler solo
-  quiere consumir bytes sin conocer el codec — misma interfaz que el lado `response`).
-
-  **Wiring en `response`:** El body de la respuesta se entrega al transporte mediante
-  `response::serialize(SNfn&&)`, un template que invoca el callable `SNfn` una o más veces
-  con fragmentos `std::string_view` en orden de cable:
-  1. El bloque de cabeceras (status-line + headers + CRLF terminador) — siempre un único
-     call, zero-copy sobre `memory_[]`.
-  2. El body, si lo hay:
-     - **Body inline** (`set_body(string_view)`): un único call zero-copy sobre la zona
-       reservada `memory_[bdy_beg_]`. No hay allocations extras.
-     - **Body streaming** (`set_body(shared_ptr<body_source>)`): calls repetidos chunk a
-       chunk hasta `eof()`, usando la misma zona `memory_[bdy_beg_]` como buffer de lectura
-       (inline y streaming son mutuamente excluyentes, por lo que la zona es siempre libre).
-  El transporte nunca necesita preguntar `has_body_source()`; el patrón es uniforme:
-  `resp.serialize([&](std::string_view chunk){ conn.send(chunk); });`.
-  `response::make_body_source<CDty>(body_reader<CDty>)` es el factory para construir el
-  `shared_ptr<body_source>` desde un reader concreto antes de llamar a `set_body()`. Ambos
-  presets (`msvc-debug`, `msvc-release`) compilados y enlazados limpio.
+  **Wiring en `response`:** `set_body(body_reader&&)` acepta el reader producido por
+  `body_serializer::release_reader()`. `serialize(SNfn&&)` invoca el callable una o más veces:
+  1. Un único call zero-copy con el bloque headers (status-line + headers + CRLF terminador).
+  2. Si hay body inline (`set_body(string_view)`): un único call zero-copy sobre
+     `memory_[bdy_beg_]`. Si hay body reader: calls repetidos chunk a chunk usando
+     `memory_[bdy_beg_]` como buffer de paso, hasta agotar el reader.
+  El patrón es uniforme para el transporte: `resp.serialize([&](sv){ send(sv); })` sin
+  necesidad de distinguir inline vs streaming. Ambos presets (`msvc-debug`, `msvc-release`)
+  compilados y enlazados limpio.
 
 ### Convenciones a respetar al continuar
 
@@ -606,7 +623,17 @@ respuesta pendiente o rearmar otro receive. **No conoce nada de HTTP/1.1.**
 
 ### 🔴 OBLIGATORIO (bloqueante — orden de mayor a menor importancia)
 
-1. ✅ **Soporte de body HTTP/1.1 — arquitectura final cerrada (`body_storage.h` + `body_writer.h` + `body_reader.h` + wiring en `request`).** El módulo usa storage unificado automático (`body_storage`, sin inyección por plantilla) y codecs intercambiables como único parámetro de plantilla (`CDty`). El storage empieza en memoria y derrama a fichero temporal si supera `spill_threshold`; la transición es transparente para el caller. `body_writer<CDty>` y `body_reader<CDty>` son las únicas entidades de orquestación. Los tres backends anteriores eliminados. `request::deserialize()` construye automáticamente el reader correcto (`body_codec_raw` con límite de content-length, o `body_codec_chunked`) según el framing detectado y lo expone vía `has_body()` / `get_body_reader()`. Ambos presets (`msvc-debug`, `msvc-release`) compilados y enlazados limpio. — Ver §4 para el detalle completo.
+1. ✅ **Soporte de body HTTP/1.1 — arquitectura final cerrada (`body_common.h` + `body_storage.h` +
+   `body_codec_raw.h` + `body_codec_chunked.h` + `body_writer.h` + `body_reader.h` +
+   `body_serializer.h` + `body_deserializer.h` + wiring en `request`/`response`).** Storage
+   unificado automático (sin inyección por plantilla); codecs intercambiables como único parámetro
+   de plantilla (`CDty`). API de alto nivel: `body_serializer` para construir bodies salientes
+   (`write` / `finish` / `release_reader`); `body_deserializer` para consumir bodies entrantes
+   (`get_body_deserializer() const`, estado de codec `mutable`). `request::deserialize()` construye
+   automáticamente el deserializador correcto según el framing detectado y lo expone vía `has_body()`
+   / `get_body_deserializer()`. `response::set_body(body_reader&&)` + `serialize(sink)` cierran el
+   ciclo hacia el transporte de forma uniforme. Ambos presets (`msvc-debug`, `msvc-release`)
+   compilados y enlazados limpio. — Ver §4 para el detalle completo.
 2. **Una excepción de un handler `kAsync` termina el proceso completo.** El worker de
    `thread_pool.h` ejecuta `task();` (línea 109) sin `try/catch`. La ruta síncrona sí está
    protegida (el `try/catch` de `tcpip_windows.h` ~L621-666 envuelve la llamada a `on_request`,
@@ -664,10 +691,34 @@ respuesta pendiente o rearmar otro receive. **No conoce nada de HTTP/1.1.**
    resolverá cuando exista el módulo cliente de Doba (dial-out): `server` delegará en él para abrir
    la conexión saliente y gestionar el relay, sin que el transporte de servidor (`tcpip_windows.h`,
    accept-only vía IOCP) necesite conocer nada de CONNECT ni de conexiones salientes.
-7. ✅ **Transporte Linux implementado.** `tcpip_linux.h` fue reescrito como backend epoll completo
-   con semántica equivalente al transporte Windows: `EPOLLET` + `EPOLLONESHOT` por conexión,
-   batching y pipelining de respuestas, ventana de reordenamiento, carry-over de fragmentos de
-   recepción, envíos parciales con `EPOLLOUT`, y shutdown cooperativo vía `jthread::request_stop()`.
+7. ✅ **Transporte Linux implementado y refactorizado (`tcpip_linux.h`).** Backend epoll completo
+   con semántica equivalente al transporte Windows. Detalles del diseño final:
+   - **`EPOLLET` + `EPOLLONESHOT` por conexión** (socket de escucha incluido). Un único fd epoll
+     compartido por todos los workers; `epoll_wait` con timeout de 200 ms para chequeo periódico
+     del stop-token. `kEpollMaxEvents = 128` eventos por llamada.
+   - **`fd_token`** (heap, `epoll_event.data.ptr`): tag de tipo fuerte para distinguir el
+     listening socket de los sockets de conexión sin necesidad de comparar fds. Lifetime gestionado
+     por `handle_accept` (alloc) y `mark_context_for_closing` (dealloc tras `epoll_ctl(DEL)`).
+   - **`context`** (por conexión, `shared_ptr`): contiene `recv_buf[BFsz]` + `recv_off` (carry-over
+     de recepción, campo `off` — nombre explícito del proyecto), ventana de reordenamiento
+     `reorder[kReorderWindow]` (`kReorderWindow = 256`), `send_pending_` +
+     `send_pending_off_` (envíos parciales), y los delegates `on_request`/`on_bad_request`.
+   - **Carry-over de recepción**: al salir del bucle de `handle_receive` por `kMoreBytesNeeded`,
+     los bytes residuales se mueven al inicio de `recv_buf` con `memmove` y se actualiza
+     `recv_off`; el siguiente `recv()` apunta a `recv_buf + recv_off`. Si el residuo llena el
+     buffer completo se cierra la conexión (petición demasiado grande).
+   - **Envíos parciales**: si `send()` devuelve menos bytes que el buffer, el tail se almacena en
+     `send_pending_` (offset `send_pending_off_`) y el fd se re-arma con `EPOLLOUT`;
+     `handle_send_resume` continúa el envío cuando el socket vuelve a estar disponible.
+   - **Pipelining y reordenamiento**: `deposit_and_drain` usa un array circular de
+     `kReorderWindow` slots; `deposit_result::kOverflow` cierra la conexión si la distancia de
+     secuencia supera la ventana.
+   - **Shutdown cooperativo**: workers son `std::jthread`; `stop()` llama a
+     `w.request_stop()` en todos y luego `workers_.clear()` los joinea. No hay IOCP ni
+     `PostQueuedCompletionStatus` — el mecanismo de parada es puramente el stop-token de
+     `jthread`.
+   - **`send_error_and_mark_context_for_closing`**: path de error compartido por todos los
+     puntos de `handle_receive` que deben responder con un error HTTP antes de cerrar.
    El selector de plataforma `tcpip.h` incluye automáticamente el backend correcto.
 8. **Funcionalidades avanzadas de body** (el soporte básico del punto OBLIGATORIO #1 ya está
    cerrado — ver §4): trailers declarados en el request (wiring `connection.accepts_trailers`
@@ -787,16 +838,19 @@ respuesta pendiente o rearmar otro receive. **No conoce nada de HTTP/1.1.**
 > `parsed_types.h`, `response.h`, `date_server.h`, `router.h`, y el bloque de bind/listen de
 > `tcpip_windows.h` ~L379-403/751): **no han aparecido bloqueantes nuevos** más allá de los ya
 > listados arriba. De los 12 puntos OBLIGATORIO originales (7 transporte + 5 API), el #1 de
-> transporte (soporte de body) quedó **cerrado** con la implementación de `body_writer`/`body_reader`
-> — quedan **11 bloqueantes** (6 transporte + 5 API). El trabajo pendiente completo
-> (bloqueante y diferible) vive en este §5.
+> transporte (soporte de body) quedó **cerrado** con la implementación completa de
+> `body_serializer`/`body_deserializer` (más `body_writer`/`body_reader`/`body_storage`/codecs),
+> y el OPCIONAL #7 (transporte Linux) quedó **cerrado** con el refactor completo de
+> `tcpip_linux.h` — quedan **11 bloqueantes** (6 transporte + 5 API). El trabajo pendiente
+> completo (bloqueante y diferible) vive en este §5.
 
 - **Bloqueantes reales: 11** (6 transporte + 5 API). Se agrupan así por causa raíz/dependencia,
   para poder secuenciar el esfuerzo de estimación en bloques en vez de 11 ítems sueltos:
   - **Framing por-conexión** (transporte #5 — `max_content_length` sin aplicar): ahora es el
     único ítem de este grupo; el soporte de body (antiguo transporte #1) ya está cerrado.
-    *(Los bytes parciales de `WSARecv` y el body básico ya están cerrados — ver §4.)*
-  - **Contención de fallos de handler** (transporte #3 + #7): excepción `kAsync` derriba el
+    *(Los bytes parciales de `WSARecv`, el body básico y el transporte Linux ya están cerrados
+    — ver §4 y OPCIONAL #7.)*
+  - **Contención de fallos de handler** (transporte #2 + #6): excepción `kAsync` derriba el
     proceso; excepción `kSync` pierde la respuesta (y las de un batch pipelined ya listas). Es
     el mismo problema de fondo (falta manejo de error end-to-end) en dos rutas de código
     distintas (async vs sync).
