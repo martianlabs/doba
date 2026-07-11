@@ -74,6 +74,7 @@
 #include <stdexcept>
 #include <utility>
 
+#include "platform.h"
 #include "protocol/http11/body_reader.h"
 #include "protocol/http11/body_serializer.h"
 #include "status_codes.h"
@@ -104,17 +105,16 @@ class response {
   // | [>] serialize                                                ( public ) |
   // +---------------------------------------------------------------------------
   // | Serializes the response by invoking sink(std::string_view) one or more  |
-  // | times, in wire order:                                                    |
-  // |   1. The header block (status-line + headers + CRLF terminator).        |
-  // |   2. The body, if any:                                                   |
-  // |      - inline body (set_body(string_view)): single zero-copy sink call  |
-  // |        over the fixed internal buffer region.                            |
-  // |      - streaming body (set_body(body_reader&&)): repeated sink
-  // |        calls, one per kMaxBodySizeInMemory-sized chunk until eof(). The  |
-  // |        inline body region of memory_[] is reused as the read buffer      |
-  // |        (inline and streaming bodies are mutually exclusive).             |
-  // |   If no body has been set, only the header block is delivered.           |
-  // | SNfn must be callable as void(std::string_view).                        |
+  // | times, in wire order: | |   1. The header block (status-line + headers +
+  // CRLF terminator).        | |   2. The body, if any: | |      - inline body
+  // (set_body(string_view)): single zero-copy sink call  | |        over the
+  // fixed internal buffer region.                            | |      -
+  // streaming body (set_body(body_reader&&)): repeated sink |        calls, one
+  // per kMaxBodySizeInMemory-sized chunk until eof(). The  | |        inline
+  // body region of memory_[] is reused as the read buffer      | | (inline and
+  // streaming bodies are mutually exclusive).             | |   If no body has
+  // been set, only the header block is delivered.           | | SNfn must be
+  // callable as void(std::string_view).                        |
   // +=========================================================================+
   template <typename SNfn>
   void serialize(SNfn&& sink) {
@@ -183,7 +183,7 @@ class response {
   // +=========================================================================+
   template <typename T>
     requires std::is_arithmetic_v<T>
-  response& add_header(std::string_view key, const T& val) {
+  INLINE response& add_header(std::string_view key, const T& val) {
     return add_header(key, std::to_string(val));
   }
   // +=========================================================================+
@@ -221,7 +221,7 @@ class response {
   // +=========================================================================+
   template <typename T>
     requires std::is_arithmetic_v<T>
-  response& set_header(std::string_view key, const T& val) {
+  INLINE response& set_header(std::string_view key, const T& val) {
     return set_header(key, std::to_string(val));
   }
   // +=========================================================================+
@@ -231,7 +231,7 @@ class response {
   // | present. Lets callers probe for a header without incurring the cost (or |
   // | control flow) of catching the exception thrown by get_header.           |
   // +-------------------------------------------------------------------------+
-  bool has_header(std::string_view k) const {
+  INLINE bool has_header(std::string_view k) const {
     std::size_t line_off, val_off, val_len, line_len;
     return find_header(k, line_off, val_off, val_len, line_len);
   }
@@ -356,7 +356,8 @@ class response {
   // +=========================================================================+
   response& set_body(body_reader&& src) {
     if (src.failed()) {
-      // Reader has a storage I/O error; do not corrupt the response wire format.
+      // Reader has a storage I/O error; do not corrupt the response wire
+      // format.
       return *this;
     }
     bdy_len_ = 0;
@@ -373,125 +374,189 @@ class response {
   // +=========================================================================+
   // | [>] STATUS-LINE-METHODs                                      ( public ) |
   // +=========================================================================+
-  response& continue_100() { return sln(status_lines::k100, SC_100_CONTINUE); }
-  response& switching_protocols_101() {
-    return sln(status_lines::k101, SC_101_SWITCHING_PROTOCOLS);
+  INLINE response& continue_100() {
+    return sln(status_lines::k100,  // RFC 9112 §6.2.1
+               SC_100_CONTINUE);
   }
-  response& ok_200() { return sln(status_lines::k200, SC_200_OK); }
-  response& created_201() { return sln(status_lines::k201, SC_201_CREATED); }
-  response& accepted_202() { return sln(status_lines::k202, SC_202_ACCEPTED); }
-  response& non_authoritative_info_203() {
-    return sln(status_lines::k203, SC_203_NON_AUTHORITATIVE_INFORMATION);
+  INLINE response& switching_protocols_101() {
+    return sln(status_lines::k101,  // RFC 9112 §6.2.2
+               SC_101_SWITCHING_PROTOCOLS);
   }
-  response& no_content_204() {
-    return sln(status_lines::k204, SC_204_NO_CONTENT);
+  INLINE response& ok_200() {
+    return sln(status_lines::k200,  // RFC 9112 §6.3.1
+               SC_200_OK);
   }
-  response& reset_content_205() {
-    return sln(status_lines::k205, SC_205_RESET_CONTENT);
+  INLINE response& created_201() {
+    return sln(status_lines::k201,  // RFC 9112 §6.3.2
+               SC_201_CREATED);
   }
-  response& partial_content_206() {
-    return sln(status_lines::k206, SC_206_PARTIAL_CONTENT);
+  INLINE response& accepted_202() {
+    return sln(status_lines::k202,  // RFC 9112 §6.3.3
+               SC_202_ACCEPTED);
   }
-  response& multiple_choices_300() {
-    return sln(status_lines::k300, SC_300_MULTIPLE_CHOICES);
+  INLINE response& non_authoritative_info_203() {
+    return sln(status_lines::k203,  // RFC 9112 §6.3.4
+               SC_203_NON_AUTHORITATIVE_INFORMATION);
   }
-  response& moved_permanently_301() {
-    return sln(status_lines::k301, SC_301_MOVED_PERMANENTLY);
+  INLINE response& no_content_204() {
+    return sln(status_lines::k204,  // RFC 9112 §6.3.5
+               SC_204_NO_CONTENT);
   }
-  response& found_302() { return sln(status_lines::k302, SC_302_FOUND); }
-  response& see_other_303() {
-    return sln(status_lines::k303, SC_303_SEE_OTHER);
+  INLINE response& reset_content_205() {
+    return sln(status_lines::k205,  // RFC 9112 §6.3.6
+               SC_205_RESET_CONTENT);
   }
-  response& not_modified_304() {
-    return sln(status_lines::k304, SC_304_NOT_MODIFIED);
+  INLINE response& partial_content_206() {
+    return sln(status_lines::k206,  // RFC 9112 §6.3.7
+               SC_206_PARTIAL_CONTENT);
   }
-  response& use_proxy_305() {
-    return sln(status_lines::k305, SC_305_USE_PROXY);
+  INLINE response& multiple_choices_300() {
+    return sln(status_lines::k300,  // RFC 9112 §6.4.1
+               SC_300_MULTIPLE_CHOICES);
   }
-  response& unused_306() { return sln(status_lines::k306, SC_306_UNUSED); }
-  response& temporary_redirect_307() {
-    return sln(status_lines::k307, SC_307_TEMPORARY_REDIRECT);
+  INLINE response& moved_permanently_301() {
+    return sln(status_lines::k301,  // RFC 9112 §6.4.2
+               SC_301_MOVED_PERMANENTLY);
   }
-  response& permanent_redirect_308() {
-    return sln(status_lines::k308, SC_308_PERMANENT_REDIRECT);
+  INLINE response& found_302() {
+    return sln(status_lines::k302,  // RFC 9112 §6.4.3
+               SC_302_FOUND);
   }
-  response& bad_request_400() {
-    return sln(status_lines::k400, SC_400_BAD_REQUEST);
+  INLINE response& see_other_303() {
+    return sln(status_lines::k303,  // RFC 9112 §6.4.4
+               SC_303_SEE_OTHER);
   }
-  response& unauthorized_401() {
-    return sln(status_lines::k401, SC_401_UNAUTHORIZED);
+  INLINE response& not_modified_304() {
+    return sln(status_lines::k304,  // RFC 9112 §6.4.5
+               SC_304_NOT_MODIFIED);
   }
-  response& payment_required_402() {
-    return sln(status_lines::k402, SC_402_PAYMENT_REQUIRED);
+  INLINE response& use_proxy_305() {
+    return sln(status_lines::k305,  // RFC 9112 §6.4.6
+               SC_305_USE_PROXY);
   }
-  response& forbidden_403() {
-    return sln(status_lines::k403, SC_403_FORBIDDEN);
+  INLINE response& unused_306() {
+    return sln(status_lines::k306,  // RFC 9112 §6.4.7
+               SC_306_UNUSED);
   }
-  response& not_found_404() {
-    return sln(status_lines::k404, SC_404_NOT_FOUND);
+  INLINE response& temporary_redirect_307() {
+    return sln(status_lines::k307,  // RFC 9112 §6.4.8
+               SC_307_TEMPORARY_REDIRECT);
   }
-  response& method_not_allowed_405() {
-    return sln(status_lines::k405, SC_405_METHOD_NOT_ALLOWED);
+  INLINE response& permanent_redirect_308() {
+    return sln(status_lines::k308,  // RFC 9112 §6.4.9
+               SC_308_PERMANENT_REDIRECT);
   }
-  response& not_acceptable_406() {
-    return sln(status_lines::k406, SC_406_NOT_ACCEPTABLE);
+  INLINE response& bad_request_400() {
+    return sln(status_lines::k400,  // RFC 9112 §6.5.1
+               SC_400_BAD_REQUEST);
   }
-  response& proxy_auth_required_407() {
-    return sln(status_lines::k407, SC_407_PROXY_AUTHENTICATION_REQUIRED);
+  INLINE response& unauthorized_401() {
+    return sln(status_lines::k401,  // RFC 9112 §6.5.2
+               SC_401_UNAUTHORIZED);
   }
-  response& request_timeout_408() {
-    return sln(status_lines::k408, SC_408_REQUEST_TIMEOUT);
+  INLINE response& payment_required_402() {
+    return sln(status_lines::k402,  // RFC 9112 §6.5.3
+               SC_402_PAYMENT_REQUIRED);
   }
-  response& conflict_409() { return sln(status_lines::k409, SC_409_CONFLICT); }
-  response& gone_410() { return sln(status_lines::k410, SC_410_GONE); }
-  response& length_required_411() {
-    return sln(status_lines::k411, SC_411_LENGTH_REQUIRED);
+  INLINE response& forbidden_403() {
+    return sln(status_lines::k403,  // RFC 9112 §6.5.4
+               SC_403_FORBIDDEN);
   }
-  response& precondition_failed_412() {
-    return sln(status_lines::k412, SC_412_PRECONDITION_FAILED);
+  INLINE response& not_found_404() {
+    return sln(status_lines::k404,  // RFC 9112 §6.5.5
+               SC_404_NOT_FOUND);
   }
-  response& content_too_large_413() {
-    return sln(status_lines::k413, SC_413_CONTENT_TOO_LARGE);
+  INLINE response& method_not_allowed_405() {
+    return sln(status_lines::k405,  // RFC 9112 §6.5.6
+               SC_405_METHOD_NOT_ALLOWED);
   }
-  response& uri_too_long_414() {
-    return sln(status_lines::k414, SC_414_URI_TOO_LONG);
+  INLINE response& not_acceptable_406() {
+    return sln(status_lines::k406,  // RFC 9112 §6.5.7
+               SC_406_NOT_ACCEPTABLE);
   }
-  response& unsupported_media_type_415() {
-    return sln(status_lines::k415, SC_415_UNSUPPORTED_MEDIA_TYPE);
+  INLINE response& proxy_auth_required_407() {
+    return sln(status_lines::k407,  // RFC 9112 §6.5.8
+               SC_407_PROXY_AUTHENTICATION_REQUIRED);
   }
-  response& range_not_satisfiable_416() {
-    return sln(status_lines::k416, SC_416_RANGE_NOT_SATISFIABLE);
+  INLINE response& request_timeout_408() {
+    return sln(status_lines::k408,  // RFC 9112 §6.5.9
+               SC_408_REQUEST_TIMEOUT);
   }
-  response& expectation_failed_417() {
-    return sln(status_lines::k417, SC_417_EXPECTATION_FAILED);
+  INLINE response& conflict_409() {
+    return sln(status_lines::k409,  // RFC 9112 §6.5.10
+               SC_409_CONFLICT);
   }
-  response& unused_418() { return sln(status_lines::k418, SC_418_IM_A_TEAPOT); }
-  response& misdirected_request_421() {
-    return sln(status_lines::k421, SC_421_MISDIRECTED_REQUEST);
+  INLINE response& gone_410() {
+    return sln(status_lines::k410,  // RFC 9112 §6.5.11
+               SC_410_GONE);
   }
-  response& unprocessable_content_422() {
-    return sln(status_lines::k422, SC_422_UNPROCESSABLE_CONTENT);
+  INLINE response& length_required_411() {
+    return sln(status_lines::k411,  // RFC 9112 §6.5.12
+               SC_411_LENGTH_REQUIRED);
   }
-  response& upgrade_required_426() {
-    return sln(status_lines::k426, SC_426_UPGRADE_REQUIRED);
+  INLINE response& precondition_failed_412() {
+    return sln(status_lines::k412,  // RFC 9112 §6.5.13
+               SC_412_PRECONDITION_FAILED);
   }
-  response& internal_server_error_500() {
-    return sln(status_lines::k500, SC_500_INTERNAL_SERVER_ERROR);
+  INLINE response& content_too_large_413() {
+    return sln(status_lines::k413,  // RFC 9112 §6.5.14
+               SC_413_CONTENT_TOO_LARGE);
   }
-  response& not_implemented_501() {
-    return sln(status_lines::k501, SC_501_NOT_IMPLEMENTED);
+  INLINE response& uri_too_long_414() {
+    return sln(status_lines::k414,  // RFC 9112 §6.5.15
+               SC_414_URI_TOO_LONG);
   }
-  response& bad_gateway_502() {
-    return sln(status_lines::k502, SC_502_BAD_GATEWAY);
+  INLINE response& unsupported_media_type_415() {
+    return sln(status_lines::k415,  // RFC 9112 §6.5.16
+               SC_415_UNSUPPORTED_MEDIA_TYPE);
   }
-  response& service_unavailable_503() {
-    return sln(status_lines::k503, SC_503_SERVICE_UNAVAILABLE);
+  INLINE response& range_not_satisfiable_416() {
+    return sln(status_lines::k416,  // RFC 9112 §6.5.17
+               SC_416_RANGE_NOT_SATISFIABLE);
   }
-  response& gateway_timeout_504() {
-    return sln(status_lines::k504, SC_504_GATEWAY_TIMEOUT);
+  INLINE response& expectation_failed_417() {
+    return sln(status_lines::k417,  // RFC 9112 §6.5.18
+               SC_417_EXPECTATION_FAILED);
   }
-  response& http_version_not_supported_505() {
-    return sln(status_lines::k505, SC_505_HTTP_VERSION_NOT_SUPPORTED);
+  INLINE response& unused_418() {
+    return sln(status_lines::k418,  // RFC 9112 §6.5.19
+               SC_418_IM_A_TEAPOT);
+  }
+  INLINE response& misdirected_request_421() {
+    return sln(status_lines::k421,  // RFC 9112 §6.5.20
+               SC_421_MISDIRECTED_REQUEST);
+  }
+  INLINE response& unprocessable_content_422() {
+    return sln(status_lines::k422,  // RFC 9112 §6.5.21
+               SC_422_UNPROCESSABLE_CONTENT);
+  }
+  INLINE response& upgrade_required_426() {
+    return sln(status_lines::k426,  // RFC 9112 §6.5.22
+               SC_426_UPGRADE_REQUIRED);
+  }
+  INLINE response& internal_server_error_500() {
+    return sln(status_lines::k500,  // RFC 9112 §6.6.1
+               SC_500_INTERNAL_SERVER_ERROR);
+  }
+  INLINE response& not_implemented_501() {
+    return sln(status_lines::k501,  // RFC 9112 §6.6.2
+               SC_501_NOT_IMPLEMENTED);
+  }
+  INLINE response& bad_gateway_502() {
+    return sln(status_lines::k502,  // RFC 9112 §6.6.3
+               SC_502_BAD_GATEWAY);
+  }
+  INLINE response& service_unavailable_503() {
+    return sln(status_lines::k503,  // RFC 9112 §6.6.4
+               SC_503_SERVICE_UNAVAILABLE);
+  }
+  INLINE response& gateway_timeout_504() {
+    return sln(status_lines::k504,  // RFC 9112 §6.6.5
+               SC_504_GATEWAY_TIMEOUT);
+  }
+  INLINE response& http_version_not_supported_505() {
+    return sln(status_lines::k505,  // RFC 9112 §6.6.6
+               SC_505_HTTP_VERSION_NOT_SUPPORTED);
   }
 
  private:

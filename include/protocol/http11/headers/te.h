@@ -127,12 +127,11 @@ class te {
     // The producer overload validates each t-codings element exactly as the
     // pure check() does and captures every non-empty element ("trailers" or a
     // transfer-coding with its optional parameters/weight) as raw text.
-    return helpers::for_each_list_element(
-        sv, [&out](std::string_view element) {
-          if (!consume_t_codings(element)) return false;
-          out.elements.push_back(element);
-          return true;
-        });
+    return helpers::for_each_list_element(sv, [&out](std::string_view element) {
+      if (!consume_t_codings(element)) return false;
+      out.elements.push_back(element);
+      return true;
+    });
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |

@@ -120,12 +120,11 @@ class upgrade {
     // The producer overload validates each protocol exactly as the pure
     // check() does and captures every non-empty element (protocol-name with
     // its optional "/" protocol-version) in order.
-    return helpers::for_each_list_element(
-        sv, [&out](std::string_view element) {
-          if (!consume_protocol(element)) return false;
-          out.elements.push_back(element);
-          return true;
-        });
+    return helpers::for_each_list_element(sv, [&out](std::string_view element) {
+      if (!consume_protocol(element)) return false;
+      out.elements.push_back(element);
+      return true;
+    });
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |

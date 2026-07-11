@@ -115,13 +115,12 @@ class via {
     // The producer overload validates each via-member exactly as the pure
     // check() does and captures its received-protocol, received-by, and
     // optional comment for every non-empty element, in order.
-    return helpers::for_each_list_element(
-        sv, [&out](std::string_view element) {
-          parsed_via_element parsed;
-          if (!consume_via_member(element, &parsed)) return false;
-          out.elements.push_back(parsed);
-          return true;
-        });
+    return helpers::for_each_list_element(sv, [&out](std::string_view element) {
+      parsed_via_element parsed;
+      if (!consume_via_member(element, &parsed)) return false;
+      out.elements.push_back(parsed);
+      return true;
+    });
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
@@ -148,14 +147,16 @@ class via {
     // received-protocol = [ protocol-name "/" ] protocol-version.
     const std::size_t protocol_start = off;
     if (!consume_received_protocol(sv, off)) return false;
-    if (out) out->received_protocol = sv.substr(protocol_start, off - protocol_start);
+    if (out)
+      out->received_protocol = sv.substr(protocol_start, off - protocol_start);
     // RWS = 1*( SP / HTAB ) is mandatory between received-protocol and
     // received-by.
     if (!consume_rws(sv, off)) return false;
     // received-by = pseudonym [ ":" port ].
     const std::size_t received_by_start = off;
     if (!consume_received_by(sv, off)) return false;
-    if (out) out->received_by = sv.substr(received_by_start, off - received_by_start);
+    if (out)
+      out->received_by = sv.substr(received_by_start, off - received_by_start);
     if (off >= sv.size()) return true;
     // [ RWS comment ] is optional, but when a comment is present it MUST be
     // preceded by RWS.

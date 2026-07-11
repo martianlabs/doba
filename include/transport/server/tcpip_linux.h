@@ -83,6 +83,7 @@
 #include <thread>
 #include <vector>
 
+#include "platform.h"
 #include "protocol/deserialization.h"
 
 namespace martianlabs::doba::transport::server {
@@ -145,12 +146,12 @@ class tcpip {
     context& operator=(context&&) noexcept = delete;
     ~context() = default;
     // [push_pending_response]
-    void push_pending_response(std::unique_ptr<std::string> buffer) {
+    INLINE void push_pending_response(std::unique_ptr<std::string> buffer) {
       if (!buffer || buffer->empty()) return;
       responses.push(std::move(buffer));
     }
     // [drain_pending_responses]
-    std::unique_ptr<std::string> drain_pending_responses() {
+    INLINE std::unique_ptr<std::string> drain_pending_responses() {
       if (responses.empty()) return nullptr;
       std::unique_ptr<std::string> merged = std::move(responses.front());
       responses.pop();
@@ -163,8 +164,8 @@ class tcpip {
       return merged;
     }
     // [deposit_and_drain]
-    deposit_result deposit_and_drain(std::uint64_t seq,
-                                     std::unique_ptr<std::string> payload) {
+    INLINE deposit_result
+    deposit_and_drain(std::uint64_t seq, std::unique_ptr<std::string> payload) {
       sending_guard guard(*this);
       if (seq - next_seq_to_send >= kReorderWindow) {
         return deposit_result::kOverflow;
@@ -195,8 +196,8 @@ class tcpip {
     std::queue<std::unique_ptr<std::string>> responses;
     // [ordering] attributes
     // next_seq_to_assign: atomic because the receive frame writes it without a
-    // lock while arm_next_send_operation reads it under sending_mutex on another
-    // thread.
+    // lock while arm_next_send_operation reads it under sending_mutex on
+    // another thread.
     std::atomic<std::uint64_t> next_seq_to_assign{0};
     std::uint64_t next_seq_to_send{0};
     std::array<std::unique_ptr<std::string>, kReorderWindow> reorder{};
@@ -225,7 +226,7 @@ class tcpip {
       ~batch_receiving_guard() {
         if (!released_) ctx_.batch_receiving.store(false);
       }
-      void release() { released_ = true; }
+      INLINE void release() { released_ = true; }
 
      private:
       context& ctx_;
@@ -285,13 +286,12 @@ class tcpip {
   // | [>] setup_listener                                          ( private ) |
   // +=========================================================================+
   std::size_t setup_listener(const char port[]) {
-    // Suppress SIGPIPE process-wide: broken-pipe errors surface as EPIPE instead
-    // of delivering a fatal signal to the process.
+    // Suppress SIGPIPE process-wide: broken-pipe errors surface as EPIPE
+    // instead of delivering a fatal signal to the process.
     ::signal(SIGPIPE, SIG_IGN);
     // hardware_concurrency() returns 0 when the value is not computable;
     // guarantee at least one worker so the server can always process events.
-    std::size_t workers =
-        std::max(1u, std::thread::hardware_concurrency());
+    std::size_t workers = std::max(1u, std::thread::hardware_concurrency());
     int efd = ::epoll_create1(EPOLL_CLOEXEC);
     if (efd < 0) throw std::runtime_error("epoll_create1 failed!");
     int sock = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
@@ -374,7 +374,8 @@ class tcpip {
               continue;
             }
             std::shared_ptr<context> ctx = tok->spp;
-            if (!ctx) continue;  // stale event (should not occur with EPOLLONESHOT)
+            if (!ctx)
+              continue;  // stale event (should not occur with EPOLLONESHOT)
             if (ev.events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
               mark_context_for_closing(ctx);
               continue;
@@ -417,8 +418,8 @@ class tcpip {
         fd_token* tok = new fd_token{fd_kind::kConnection, ctx};
         ctx->epoll_token_.store(tok);
         epoll_event ev{};
-        ev.events = EPOLLIN | EPOLLET | EPOLLONESHOT | EPOLLRDHUP | EPOLLHUP |
-                    EPOLLERR;
+        ev.events =
+            EPOLLIN | EPOLLET | EPOLLONESHOT | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
         ev.data.ptr = tok;
         if (::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) < 0) {
           ctx->epoll_token_.store(nullptr);
@@ -471,8 +472,7 @@ class tcpip {
         std::size_t space_left_in = total - oin;
         protocol::deserialization_result<RQty> result = RQty::deserialize(
             std::string_view(&ctx->recv_buf[oin], space_left_in));
-        if (result.code ==
-            protocol::deserialization_status::kMoreBytesNeeded) {
+        if (result.code == protocol::deserialization_status::kMoreBytesNeeded) {
           if (result.bytes_used > 0) {
             report_error_and_close(ctx, "Inconsistent deserialization status!");
             return;
@@ -552,14 +552,14 @@ class tcpip {
   // +=========================================================================+
   // | [>] handle_send_resume                                      ( private ) |
   // +=========================================================================+
-  void handle_send_resume(std::shared_ptr<context> ctx) {
+  INLINE void handle_send_resume(std::shared_ptr<context> ctx) {
     if (ctx->closing.load()) return;
     arm_pending_send_operation(ctx);
   }
   // +=========================================================================+
   // | [>] rearm_accept                                            ( private ) |
   // +=========================================================================+
-  void rearm_accept() {
+  INLINE void rearm_accept() {
     int as = accept_socket_.load();
     if (as == -1) return;
     epoll_event ev{};
@@ -574,7 +574,7 @@ class tcpip {
   // marks the connection for closing. Centralises the try/catch boilerplate
   // shared by all protocol-error paths in handle_receive.
   void report_error_and_close(std::shared_ptr<context> ctx,
-                               const char* message) {
+                              const char* message) {
     try {
       std::shared_ptr<RSty> res = std::make_shared<RSty>();
       on_bad_request(message, res);
@@ -639,8 +639,7 @@ class tcpip {
     {
       typename context::sending_guard sending_lock(*ctx);
       if (ctx->send_pending_) {
-        const char* data =
-            ctx->send_pending_->data() + ctx->send_pending_off_;
+        const char* data = ctx->send_pending_->data() + ctx->send_pending_off_;
         std::size_t remaining =
             ctx->send_pending_->size() - ctx->send_pending_off_;
         std::size_t sent = 0;
@@ -717,8 +716,9 @@ class tcpip {
     }
     if (would_block || sent < buffer->size()) {
       // Partial send: store the buffer and track the offset; wait for EPOLLOUT.
-      // Do NOT erase() the sent prefix — that is O(N). arm_pending_send_operation
-      // uses send_pending_off_ to skip the already-sent bytes on resume.
+      // Do NOT erase() the sent prefix — that is O(N).
+      // arm_pending_send_operation uses send_pending_off_ to skip the
+      // already-sent bytes on resume.
       ctx->send_pending_ = std::move(buffer);
       ctx->send_pending_off_ = sent;
       rearm_send_with_out(ctx);
@@ -729,8 +729,8 @@ class tcpip {
   // +=========================================================================+
   // | [>] do_send_raw                                             ( private ) |
   // +=========================================================================+
-  bool do_send_raw(int fd, const char* data, std::size_t len,
-                   std::size_t& sent, bool& would_block) {
+  bool do_send_raw(int fd, const char* data, std::size_t len, std::size_t& sent,
+                   bool& would_block) {
     sent = 0;
     would_block = false;
     if (fd == -1 || !data) return false;
@@ -753,7 +753,7 @@ class tcpip {
   // +=========================================================================+
   // | [>] rearm_recv_only                                         ( private ) |
   // +=========================================================================+
-  void rearm_recv_only(const std::shared_ptr<context>& ctx) {
+  INLINE void rearm_recv_only(const std::shared_ptr<context>& ctx) {
     int fd = ctx->fd.load();
     fd_token* tok = ctx->epoll_token_.load();
     if (fd == -1 || tok == nullptr) return;
@@ -766,7 +766,7 @@ class tcpip {
   // +=========================================================================+
   // | [>] rearm_send_with_out                                     ( private ) |
   // +=========================================================================+
-  void rearm_send_with_out(const std::shared_ptr<context>& ctx) {
+  INLINE void rearm_send_with_out(const std::shared_ptr<context>& ctx) {
     int fd = ctx->fd.load();
     fd_token* tok = ctx->epoll_token_.load();
     if (fd == -1 || tok == nullptr) return;

@@ -106,7 +106,7 @@ inline constexpr std::size_t kDefaultBufferSize = 8192;
 // /////////////////////////////////////////////////////////////////////////////
 // +===========================================================================+
 // | [>] BODY STORAGE                                                          |
-// +--------------------------------------------------------------------------+
+// +---------------------------------------------------------------------------+
 // | body_storage is the single, fixed storage backend used by body_writer and |
 // | body_reader. It is not a template parameter: callers never choose the     |
 // | storage type. Storage always starts in memory (std::string) and           |
@@ -118,28 +118,7 @@ inline constexpr std::size_t kDefaultBufferSize = 8192;
 // | The decode cursor (fetch()/read()) and the wire cursor (wire_read()) are  |
 // | independent and can be driven simultaneously without interfering.         |
 // |                                                                           |
-// | The internal interface honoured by body_storage (reproduced here for      |
-// | reference; body_storage.h is the authoritative source):                  |
-// |                                                                           |
-// | sink (body_writer, driven by body_serializer<CDty>):                      |
-// |   bool write(const char* ptr, std::size_t len)                            |
-// |     -> append len wire bytes; return false on I/O failure.               |
-// |   void on_finish(std::uint64_t stored)                                    |
-// |     -> finalise the backend (flush if spilled, record readable size).    |
-// |                                                                           |
-// | source (body_reader, driven by body_deserializer<CDty>):                  |
-// |   bool fetch(std::byte& b)                                                |
-// |     -> read one byte at the decode cursor and advance it; false at EOF.  |
-// |   std::size_t read(char* out, std::size_t want)                           |
-// |     -> bulk read at the decode cursor; advance it; return count.         |
-// |   std::size_t wire_read(char* out, std::size_t want)                      |
-// |     -> read at the independent wire cursor; advance it; return count.    |
-// |   std::optional<std::uint64_t> total_size() const noexcept               |
-// |     -> known total wire size, or nullopt if not yet finalised.           |
-// |   bool exhausted() const noexcept                                         |
-// |     -> true when the decode cursor has reached the end.                  |
-// |   bool ok() const noexcept                                                |
-// |     -> false once the backend has hit an unrecoverable I/O error.        |
+// | The internal interface honoured by body_storage.                          |
 // +===========================================================================+
 // /////////////////////////////////////////////////////////////////////////////
 // +===========================================================================+
@@ -173,41 +152,6 @@ struct decode_result {
   bool has_error = false;
   body_error error = body_error::none;
 };
-// /////////////////////////////////////////////////////////////////////////////
-// +===========================================================================+
-// | [>] BODY CODEC CONTRACT                                                    |
-// +--------------------------------------------------------------------------+
-// | A body codec (CDty) is the wire-structure transformer plugged into        |
-// | body_serializer<CDty> (encode side) and body_deserializer<CDty> (decode  |
-// | side). It moves the raw/chunked framing decision to a compile-time        |
-// | template parameter so extra encodings can be added without touching the   |
-// | serializer/deserializer orchestration. The bundled codecs live in         |
-// | body_codec_raw.h and body_codec_chunked.h.                                |
-// |                                                                           |
-// | The codec owns any framing/decoding state (e.g. the chunked decoder state |
-// | machine); the serializer/deserializer own their public byte counters,     |
-// | their size limits and the storage. The codec only drives the decode       |
-// | cursor (fetch()/read()) of the storage, never the wire cursor.            |
-// |                                                                           |
-// | encode side (body_serializer<CDty>):                                      |
-// |   bool encode(body_writer& sink, const char* data, std::size_t len,      |
-// |               encode_result& out)                                         |
-// |     -> frame len bytes into sink; report bytes stored in out.stored;      |
-// |        return false on failure. On a framing failure set out.has_error/   |
-// |        out.error; on a sink I/O failure leave out.has_error false (the    |
-// |        serializer maps it to io_error). Empty writes are ok.              |
-// |   bool finish(body_writer& sink, encode_result& out)                      |
-// |     -> emit any trailing framing (raw: none; chunked: "0\r\n\r\n");       |
-// |        report bytes stored in out.stored; same failure convention.        |
-// |                                                                           |
-// | decode side (body_deserializer<CDty>):                                    |
-// |   decode_result decode(body_reader& src, std::span<std::byte> output,    |
-// |                        std::uint64_t& source_consumed)                    |
-// |     -> pull encoded bytes from src, decode into output, advance internal  |
-// |        state; add the number of source bytes read to source_consumed;     |
-// |        report produced/complete/has_error/error in the result.            |
-// +===========================================================================+
-// /////////////////////////////////////////////////////////////////////////////
 }  // namespace martianlabs::doba::protocol::http11
 
 #endif

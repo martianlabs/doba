@@ -80,15 +80,15 @@
 namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
 // +===========================================================================+
-// | [>] body_codec_chunked                                           ( class ) |
+// | [>] body_codec_chunked                                          ( class ) |
 // +---------------------------------------------------------------------------+
-// | HTTP/1.1 chunked transfer-coding body codec. Fulfils the BODY CODEC        |
-// | CONTRACT declared in body_common.h so it can be plugged into               |
-// | body_writer<body_codec_chunked> and body_reader<body_codec_chunked>.        |
+// | HTTP/1.1 chunked transfer-coding body codec. Fulfils the BODY CODEC       |
+// | CONTRACT declared in body_common.h so it can be plugged into              |
+// | body_writer<body_codec_chunked> and body_reader<body_codec_chunked>.      |
 // |                                                                           |
-// | encode : each encode() call frames the input as one complete chunk         |
-// |          "<hex-size>\r\n<data>\r\n"; finish() appends the last-chunk        |
-// |          terminator "0\r\n\r\n" exactly once.                              |
+// | encode : each encode() call frames the input as one complete chunk        |
+// |          "<hex-size>\r\n<data>\r\n"; finish() appends the last-chunk      |
+// |          terminator "0\r\n\r\n" exactly once.                             |
 // | decode : owns the chunked decoder state machine (chunk size, extensions,  |
 // |          data, trailers) and returns only the logical payload bytes.      |
 // |                                                                           |
@@ -143,7 +143,8 @@ class body_codec_chunked {
       out.error = body_error::chunk_size_overflow;
       return false;
     }
-    std::uint64_t chunk_bytes = frame_overhead + static_cast<std::uint64_t>(len);
+    std::uint64_t chunk_bytes =
+        frame_overhead + static_cast<std::uint64_t>(len);
     if (!sink.write(size_line, static_cast<std::size_t>(size_line_len))) {
       return false;
     }
@@ -174,7 +175,7 @@ class body_codec_chunked {
   // +=========================================================================+
   template <typename BDty>
   decode_result decode(BDty& src, std::span<std::byte> output,
-                       std::uint64_t& source_consumed) {
+                       std::size_t& source_consumed) {
     decode_result r;
     if (cstate_ == chunked_state::complete) {
       r.complete = true;
@@ -242,7 +243,7 @@ class body_codec_chunked {
   // | error (io_error when the backend faulted, chunked_incomplete otherwise).|
   // +=========================================================================+
   template <typename BDty>
-  bool fetch_byte(BDty& src, std::uint64_t& source_consumed, std::byte& b) {
+  bool fetch_byte(BDty& src, std::size_t& source_consumed, std::byte& b) {
     if (!src.fetch(b)) {
       if (cstate_ != chunked_state::complete &&
           cstate_ != chunked_state::error) {
@@ -257,7 +258,7 @@ class body_codec_chunked {
   // | [>] step_chunk_size                                         ( private ) |
   // +=========================================================================+
   template <typename BDty>
-  bool step_chunk_size(BDty& src, std::uint64_t& source_consumed) {
+  bool step_chunk_size(BDty& src, std::size_t& source_consumed) {
     std::byte b;
     if (!fetch_byte(src, source_consumed, b)) return false;
     char c = static_cast<char>(b);
@@ -287,7 +288,7 @@ class body_codec_chunked {
   // | [>] step_chunk_extension                                    ( private ) |
   // +=========================================================================+
   template <typename BDty>
-  bool step_chunk_extension(BDty& src, std::uint64_t& source_consumed) {
+  bool step_chunk_extension(BDty& src, std::size_t& source_consumed) {
     std::byte b;
     if (!fetch_byte(src, source_consumed, b)) return false;
     char c = static_cast<char>(b);
@@ -307,7 +308,7 @@ class body_codec_chunked {
   // | [>] step_chunk_size_lf                                      ( private ) |
   // +=========================================================================+
   template <typename BDty>
-  bool step_chunk_size_lf(BDty& src, std::uint64_t& source_consumed) {
+  bool step_chunk_size_lf(BDty& src, std::size_t& source_consumed) {
     std::byte b;
     if (!fetch_byte(src, source_consumed, b)) return false;
     if (static_cast<char>(b) != '\n') {
@@ -330,10 +331,10 @@ class body_codec_chunked {
   // | [>] step_chunk_data                                         ( private ) |
   // +=========================================================================+
   template <typename BDty>
-  bool step_chunk_data(BDty& src, std::uint64_t& source_consumed,
+  bool step_chunk_data(BDty& src, std::size_t& source_consumed,
                        std::span<std::byte> output, std::size_t& out_pos) {
-    std::size_t want = static_cast<std::size_t>(std::min(
-        chunk_remaining_, static_cast<std::uint64_t>(output.size() - out_pos)));
+    std::size_t want = std::min(static_cast<std::size_t>(chunk_remaining_),
+                                output.size() - out_pos);
     if (want == 0) return false;  // output full
     std::size_t got = src.read(output.subspan(out_pos, want));
     if (got == 0) {
@@ -351,7 +352,7 @@ class body_codec_chunked {
   // | [>] step_chunk_data_cr                                      ( private ) |
   // +=========================================================================+
   template <typename BDty>
-  bool step_chunk_data_cr(BDty& src, std::uint64_t& source_consumed) {
+  bool step_chunk_data_cr(BDty& src, std::size_t& source_consumed) {
     std::byte b;
     if (!fetch_byte(src, source_consumed, b)) return false;
     if (static_cast<char>(b) != '\r') {
@@ -365,7 +366,7 @@ class body_codec_chunked {
   // | [>] step_chunk_data_lf                                      ( private ) |
   // +=========================================================================+
   template <typename BDty>
-  bool step_chunk_data_lf(BDty& src, std::uint64_t& source_consumed) {
+  bool step_chunk_data_lf(BDty& src, std::size_t& source_consumed) {
     std::byte b;
     if (!fetch_byte(src, source_consumed, b)) return false;
     if (static_cast<char>(b) != '\n') {
@@ -381,7 +382,7 @@ class body_codec_chunked {
   // | [>] step_trailers                                           ( private ) |
   // +=========================================================================+
   template <typename BDty>
-  bool step_trailers(BDty& src, std::uint64_t& source_consumed) {
+  bool step_trailers(BDty& src, std::size_t& source_consumed) {
     // RFC 9112: trailer-section = *( field-line CRLF ) CRLF
     // trailer_eol_count_ starts at 1 (last-chunk's CRLF already seen).
     // Reaching 2 means the blank-line terminator has been consumed.

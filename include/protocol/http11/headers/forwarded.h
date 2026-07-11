@@ -159,8 +159,8 @@ class forwarded {
     // The producer overload validates each forwarded-element exactly as the
     // pure check() does and captures every non-empty element's name=value
     // pairs, in order. It preserves the same 1#forwarded-element minimum.
-    const bool result = helpers::for_each_list_element(
-        sv, [&out](std::string_view element) {
+    const bool result =
+        helpers::for_each_list_element(sv, [&out](std::string_view element) {
           parsed_forwarded_element parsed;
           if (!consume_forwarded_element(element, &parsed)) return false;
           out.elements.push_back(std::move(parsed));
@@ -171,9 +171,9 @@ class forwarded {
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
   // +=========================================================================+
-  static constexpr verdict interpret(const parsed_forwarded_list& forwarded_list,
-                                     http11::connection&,
-                                     const policies& pol) {
+  static constexpr verdict interpret(
+      const parsed_forwarded_list& forwarded_list, http11::connection&,
+      const policies& pol) {
     if (pol.max_forwarding_hops != 0 &&
         forwarded_list.elements.size() > pol.max_forwarding_hops) {
       return verdict::kReject;
@@ -195,8 +195,8 @@ class forwarded {
   // | consume_parameter (allow_bws=false) has already validated, so no        |
   // | additional parsing is performed.                                        |
   // +=========================================================================+
-  static bool consume_forwarded_element(std::string_view sv,
-                                        parsed_forwarded_element* out = nullptr) {
+  static bool consume_forwarded_element(
+      std::string_view sv, parsed_forwarded_element* out = nullptr) {
     return helpers::for_each_forwarded_pair(
         sv, [out](std::string_view rest, std::size_t& bytes) {
           // forwarded-pair = token "=" value with a mandatory "=" and no
@@ -207,8 +207,7 @@ class forwarded {
           if (out) {
             const std::string_view pair = rest.substr(0, bytes);
             const std::size_t eq = pair.find('=');
-            out->pairs.push_back(
-                {pair.substr(0, eq), pair.substr(eq + 1)});
+            out->pairs.push_back({pair.substr(0, eq), pair.substr(eq + 1)});
           }
           return true;
         });

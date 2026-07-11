@@ -79,11 +79,11 @@
 namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
 // +===========================================================================+
-// | [>] body_codec_raw                                               ( class ) |
+// | [>] body_codec_raw                                              ( class ) |
 // +---------------------------------------------------------------------------+
-// | Identity body codec: bytes cross unchanged in both directions. Fulfils the |
-// | BODY CODEC CONTRACT declared in body_common.h so it can be plugged into    |
-// | body_writer<body_codec_raw> and body_reader<body_codec_raw>.                |
+// | Identity body codec: bytes cross unchanged in both directions. Fulfils the|
+// | BODY CODEC CONTRACT declared in body_common.h so it can be plugged into   |
+// | body_writer<body_codec_raw> and body_reader<body_codec_raw>.              |
 // |                                                                           |
 // | encode : input bytes are stored verbatim (stored == input length).        |
 // |          finish() is a no-op (raw bodies carry no trailing framing).      |
@@ -126,7 +126,7 @@ class body_codec_raw {
   // +=========================================================================+
   template <typename BDty>
   decode_result decode(BDty& src, std::span<std::byte> output,
-                       std::uint64_t& source_consumed) {
+                       std::size_t& source_consumed) {
     decode_result r;
     std::size_t n = src.read(output);
     if (n == 0) {

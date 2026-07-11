@@ -78,6 +78,7 @@
 #include <thread>
 #include <unordered_set>
 
+#include "platform.h"
 #include "protocol/deserialization.h"
 
 namespace martianlabs::doba::transport::server {
@@ -592,9 +593,8 @@ class tcpip {
           // preserving arrival order.
           std::unique_ptr<std::string> payload =
               std::make_unique<std::string>();
-          res->serialize([&](std::string_view chunk) {
-            payload->append(chunk);
-          });
+          res->serialize(
+              [&](std::string_view chunk) { payload->append(chunk); });
           if (ctx->deposit_and_drain(seq, std::move(payload)) ==
               context::deposit_result::kOverflow) {
             // Reorder window exceeded: too many responses are
@@ -654,17 +654,17 @@ class tcpip {
   // +=========================================================================+
   // | [>] handle_send                                             ( private ) |
   // +=========================================================================+
-  void handle_send(overlapped_send* ovs, DWORD bytes) {
+  INLINE void handle_send(overlapped_send* ovs, DWORD bytes) {
     arm_pending_send_operation(ovs, bytes);
   }
   // +=========================================================================+
   // | [>] handle_stop                                             ( private ) |
   // +=========================================================================+
-  void handle_stop(bool& stopping) { stopping = true; }
+  INLINE void handle_stop(bool& stopping) { stopping = true; }
   // +=========================================================================+
   // | [>] handle_error                                            ( private ) |
   // +=========================================================================+
-  void handle_error(overlapped_base* ovb) {
+  INLINE void handle_error(overlapped_base* ovb) {
     switch (ovb->get_type()) {
       case io_type::kAccept:
         break;
@@ -679,7 +679,7 @@ class tcpip {
   // +=========================================================================+
   // | [>] handle_overlapped                                       ( private ) |
   // +=========================================================================+
-  void handle_overlapped(overlapped_base* ovb) {
+  INLINE void handle_overlapped(overlapped_base* ovb) {
     switch (ovb->get_type()) {
       case io_type::kAccept:
         delete reinterpret_cast<overlapped_accept*>(ovb);
@@ -698,7 +698,7 @@ class tcpip {
   // +=========================================================================+
   // | [>] post_accept                                             ( private ) |
   // +=========================================================================+
-  bool post_accept() {
+  INLINE bool post_accept() {
     SOCKET soc = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0,
                             WSA_FLAG_OVERLAPPED);
     if (soc == INVALID_SOCKET) return false;
@@ -723,9 +723,7 @@ class tcpip {
       std::unique_ptr<std::string> out = std::make_unique<std::string>();
       ctx->close_after_sending = true;
       out->reserve(512);
-      response->serialize([&](std::string_view chunk) {
-        out->append(chunk);
-      });
+      response->serialize([&](std::string_view chunk) { out->append(chunk); });
       // Terminal (protocol-error) path: this response is pushed straight onto
       // the outgoing queue, intentionally bypassing the sequence/reorder window
       // (deposit_and_drain). The offending request was never sequence-stamped,
@@ -841,7 +839,7 @@ class tcpip {
   // +=========================================================================+
   // | [>] arm_next_receive_operation                              ( private ) |
   // +=========================================================================+
-  void arm_next_receive_operation(std::shared_ptr<context> ctx) {
+  INLINE void arm_next_receive_operation(std::shared_ptr<context> ctx) {
     // If the associated context is in 'closing' status then the operation is
     // not dispatched and no actions are performed!
     if (ctx->closing.load()) return;
@@ -851,13 +849,14 @@ class tcpip {
   // +=========================================================================+
   // | [>] enqueue                                                 ( private ) |
   // +=========================================================================+
-  void enqueue(std::shared_ptr<context> ctx, std::unique_ptr<std::string> bf) {
+  INLINE void enqueue(std::shared_ptr<context> ctx,
+                      std::unique_ptr<std::string> bf) {
     ctx->push_pending_response(std::move(bf));
   }
   // +=========================================================================+
   // | [>] dequeue                                                 ( private ) |
   // +=========================================================================+
-  std::unique_ptr<std::string> dequeue(std::shared_ptr<context> ctx) {
+  INLINE std::unique_ptr<std::string> dequeue(std::shared_ptr<context> ctx) {
     // Coalesce all responses ready right now into a single send. This is the
     // core of send batching: one WSASend carries every response currently
     // queued, in arrival order, instead of one syscall per response.
@@ -866,7 +865,7 @@ class tcpip {
   // +=========================================================================+
   // | [>] receive                                                 ( private ) |
   // +=========================================================================+
-  bool receive(std::shared_ptr<context> ctx) {
+  INLINE bool receive(std::shared_ptr<context> ctx) {
     // Load the socket atomically: a concurrent mark_context_for_closing may be
     // closing it. If it is already gone, don't post a receive on
     // INVALID_SOCKET.
@@ -889,7 +888,8 @@ class tcpip {
   // +=========================================================================+
   // | [>] send                                                    ( private ) |
   // +=========================================================================+
-  bool send(std::shared_ptr<context> ctx, std::unique_ptr<std::string> buffer) {
+  INLINE bool send(std::shared_ptr<context> ctx,
+                   std::unique_ptr<std::string> buffer) {
     // Load the socket atomically: a concurrent mark_context_for_closing may be
     // closing it. If it is already gone, don't post a send on INVALID_SOCKET
     // (buffer is released as this returns, callers treat false as a close).

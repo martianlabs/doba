@@ -117,19 +117,17 @@ class x_forwarded_for {
   static bool check(std::string_view sv, parsed_token_list& out) {
     // The producer overload validates each xff-node exactly as the pure
     // check() does and captures every non-empty node in order.
-    return helpers::for_each_list_element(
-        sv, [&out](std::string_view element) {
-          if (!consume_xff_node(element)) return false;
-          out.elements.push_back(element);
-          return true;
-        });
+    return helpers::for_each_list_element(sv, [&out](std::string_view element) {
+      if (!consume_xff_node(element)) return false;
+      out.elements.push_back(element);
+      return true;
+    });
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
   // +=========================================================================+
   static constexpr verdict interpret(const parsed_token_list& token_list,
-                                     http11::connection&,
-                                     const policies& pol) {
+                                     http11::connection&, const policies& pol) {
     if (pol.max_forwarding_hops != 0 &&
         token_list.elements.size() > pol.max_forwarding_hops) {
       return verdict::kReject;

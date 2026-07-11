@@ -173,9 +173,10 @@
 #include "protocol/http11/headers/rules/framing.h"
 #include "protocol/http11/headers/rules/policy.h"
 #include "protocol/http11/headers/rules/routing.h"
-#include "protocol/http11/parsed_types.h"
-#include "protocol/http11/policies.h"
-#include "protocol/http11/verdict.h"
+#include "parsed_types.h"
+#include "platform.h"
+#include "policies.h"
+#include "verdict.h"
 #include "target.h"
 
 namespace martianlabs::doba::protocol::http11 {
@@ -209,24 +210,36 @@ class request {
   // +=========================================================================+
   // | [>] GETTERs                                                  ( public ) |
   // +=========================================================================+
-  auto get_method() const { return method_; }
-  auto get_target() const { return target_; }
-  auto get_absolute_path() const { return absolute_path_; }
-  auto get_query() const { return query_part_; }
-  auto get_query_parameter(std::size_t i) const { return query_parameters_[i]; }
-  auto get_query_parameters_length() const { return query_parameters_.size(); }
-  auto has_host() const { return has_host_; }
-  auto get_host() const { return host_; }
-  auto get_host_port() const { return host_port_; }
-  auto get_host_type() const { return host_type_; }
-  auto has_target_authority() const { return has_target_authority_; }
-  auto get_target_authority_host() const { return target_authority_host_; }
-  auto get_target_authority_port() const { return target_authority_port_; }
-  auto get_target_authority_type() const { return target_authority_type_; }
-  auto get_header(std::size_t i) const { return headers_[i]; }
-  auto get_headers_length() const { return headers_.size(); }
-  auto has_body() const { return body_.has_value(); }
-  auto get_body_deserializer() const -> body_deserializer_t& { return *body_; }
+  INLINE auto get_method() const { return method_; }
+  INLINE auto get_target() const { return target_; }
+  INLINE auto get_absolute_path() const { return absolute_path_; }
+  INLINE auto get_query() const { return query_part_; }
+  INLINE auto get_query_parameter(std::size_t i) const {
+    return query_parameters_[i];
+  }
+  INLINE auto get_query_parameters_length() const {
+    return query_parameters_.size();
+  }
+  INLINE auto has_host() const { return has_host_; }
+  INLINE auto get_host() const { return host_; }
+  INLINE auto get_host_port() const { return host_port_; }
+  INLINE auto get_host_type() const { return host_type_; }
+  INLINE auto has_target_authority() const { return has_target_authority_; }
+  INLINE auto get_target_authority_host() const {
+    return target_authority_host_;
+  }
+  INLINE auto get_target_authority_port() const {
+    return target_authority_port_;
+  }
+  INLINE auto get_target_authority_type() const {
+    return target_authority_type_;
+  }
+  INLINE auto get_header(std::size_t i) const { return headers_[i]; }
+  INLINE auto get_headers_length() const { return headers_.size(); }
+  INLINE auto has_body() const { return body_.has_value(); }
+  INLINE auto get_body_deserializer() const -> body_deserializer_t& {
+    return *body_;
+  }
   // +=========================================================================+
   // | [>] deserialize                                              ( public ) |
   // +=========================================================================+
@@ -372,10 +385,10 @@ class request {
           // past deserialize() independently of the source buffer, exactly like
           // method_/absolute_path_/query_part_.
           if (!req->query_part_.empty()) {
-            std::string_view keys_tmp[kMaxQueryParameters];
-            std::string_view values_tmp[kMaxQueryParameters];
+            std::array<std::string_view, kMaxQueryParameters> keys_tmp;
+            std::array<std::string_view, kMaxQueryParameters> values_tmp;
             std::size_t qp_count = helpers::split_query_parameters(
-                req->query_part_, keys_tmp, values_tmp, kMaxQueryParameters);
+                req->query_part_, keys_tmp, values_tmp);
             req->query_parameters_.reserve(qp_count);
             for (std::size_t q = 0; q < qp_count; q++) {
               req->query_parameters_.emplace_back(std::string(keys_tmp[q]),
@@ -572,8 +585,7 @@ class request {
     parsed_host_port parsed;
     if (!headers::host::check(sv, parsed)) return verdict::kReject;
     ctx.host = parsed;
-    return headers::host::interpret(parsed, ctx.connection,
-                                                  ctx.policies);
+    return headers::host::interpret(parsed, ctx.connection, ctx.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_content_length (modelled header)               ( private ) |
@@ -586,8 +598,8 @@ class request {
     if (ctx.has_content_length) ctx.multiple_content_length = true;
     ctx.has_content_length = true;
     ctx.content_length = parsed;
-    return headers::content_length::interpret(
-        parsed, ctx.connection, ctx.policies);
+    return headers::content_length::interpret(parsed, ctx.connection,
+                                              ctx.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_transfer_encoding (modelled header)            ( private ) |
@@ -598,8 +610,8 @@ class request {
       return verdict::kReject;
     }
     ctx.has_transfer_encoding = true;
-    return headers::transfer_encoding::interpret(
-        parsed, ctx.connection, ctx.policies);
+    return headers::transfer_encoding::interpret(parsed, ctx.connection,
+                                                 ctx.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_connection (modelled header)                   ( private ) |
@@ -609,8 +621,7 @@ class request {
     if (!headers::connection::check(sv, parsed)) {
       return verdict::kReject;
     }
-    return headers::connection::interpret(parsed, ctx.connection,
-                                                        ctx.policies);
+    return headers::connection::interpret(parsed, ctx.connection, ctx.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_te (modelled header)                           ( private ) |
@@ -618,8 +629,7 @@ class request {
   static verdict dispatch_te(std::string_view sv, context& ctx) {
     parsed_parameter_list parsed;
     if (!headers::te::check(sv, parsed)) return verdict::kReject;
-    return headers::te::interpret(parsed, ctx.connection,
-                                                ctx.policies);
+    return headers::te::interpret(parsed, ctx.connection, ctx.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_trailer (modelled header)                      ( private ) |
@@ -629,8 +639,7 @@ class request {
     if (!headers::trailer::check(sv, parsed)) {
       return verdict::kReject;
     }
-    return headers::trailer::interpret(parsed, ctx.connection,
-                                                     ctx.policies);
+    return headers::trailer::interpret(parsed, ctx.connection, ctx.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_expect (modelled header)                       ( private ) |
@@ -640,8 +649,7 @@ class request {
     if (!headers::expect::check(sv, parsed)) {
       return verdict::kReject;
     }
-    return headers::expect::interpret(parsed, ctx.connection,
-                                                    ctx.policies);
+    return headers::expect::interpret(parsed, ctx.connection, ctx.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_upgrade (modelled header)                      ( private ) |
@@ -651,8 +659,7 @@ class request {
     if (!headers::upgrade::check(sv, parsed)) {
       return verdict::kReject;
     }
-    return headers::upgrade::interpret(parsed, ctx.connection,
-                                                     ctx.policies);
+    return headers::upgrade::interpret(parsed, ctx.connection, ctx.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_max_forwards (modelled header)                 ( private ) |
@@ -662,8 +669,8 @@ class request {
     if (!headers::max_forwards::check(sv, parsed)) {
       return verdict::kReject;
     }
-    return headers::max_forwards::interpret(
-        parsed, ctx.connection, ctx.policies);
+    return headers::max_forwards::interpret(parsed, ctx.connection,
+                                            ctx.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_via (modelled header)                          ( private ) |
@@ -672,8 +679,7 @@ class request {
     parsed_via_list parsed;
     if (!headers::via::check(sv, parsed)) return verdict::kReject;
     ctx.forwarding_hops += parsed.elements.size();
-    return headers::via::interpret(parsed, ctx.connection,
-                                                 ctx.policies);
+    return headers::via::interpret(parsed, ctx.connection, ctx.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_forwarded (modelled header)                    ( private ) |
@@ -684,8 +690,7 @@ class request {
       return verdict::kReject;
     }
     ctx.forwarding_hops += parsed.elements.size();
-    return headers::forwarded::interpret(parsed, ctx.connection,
-                                                       ctx.policies);
+    return headers::forwarded::interpret(parsed, ctx.connection, ctx.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_x_forwarded_for (modelled header)              ( private ) |
@@ -696,8 +701,8 @@ class request {
       return verdict::kReject;
     }
     ctx.forwarding_hops += parsed.elements.size();
-    return headers::x_forwarded_for::interpret(
-        parsed, ctx.connection, ctx.policies);
+    return headers::x_forwarded_for::interpret(parsed, ctx.connection,
+                                               ctx.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_x_forwarded_host (modelled header)             ( private ) |
@@ -707,8 +712,8 @@ class request {
     if (!headers::x_forwarded_host::check(sv, parsed)) {
       return verdict::kReject;
     }
-    return headers::x_forwarded_host::interpret(
-        parsed, ctx.connection, ctx.policies);
+    return headers::x_forwarded_host::interpret(parsed, ctx.connection,
+                                                ctx.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_x_forwarded_proto (modelled header)            ( private ) |
@@ -718,8 +723,8 @@ class request {
     if (!headers::x_forwarded_proto::check(sv, parsed)) {
       return verdict::kReject;
     }
-    return headers::x_forwarded_proto::interpret(
-        parsed, ctx.connection, ctx.policies);
+    return headers::x_forwarded_proto::interpret(parsed, ctx.connection,
+                                                 ctx.policies);
   }
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
@@ -820,11 +825,9 @@ class request {
           {"Origin",  // check only!
            &request::dispatch<headers::origin>},
           {"Access-Control-Request-Method",  // check only!
-           &request::dispatch<
-               headers::access_control_request_method>},
+           &request::dispatch<headers::access_control_request_method>},
           {"Access-Control-Request-Headers",  // check only!
-           &request::dispatch<
-               headers::access_control_request_headers>},
+           &request::dispatch<headers::access_control_request_headers>},
           {"Access-Control-Allow-Origin",  // check only!
            &request::dispatch<headers::access_control_allow_origin>},
           {"Access-Control-Allow-Methods",  // check only!
@@ -832,11 +835,9 @@ class request {
           {"Access-Control-Allow-Headers",  // check only!
            &request::dispatch<headers::access_control_allow_headers>},
           {"Access-Control-Allow-Credentials",  // check only!
-           &request::dispatch<
-               headers::access_control_allow_credentials>},
+           &request::dispatch<headers::access_control_allow_credentials>},
           {"Access-Control-Expose-Headers",  // check only!
-           &request::dispatch<
-               headers::access_control_expose_headers>},
+           &request::dispatch<headers::access_control_expose_headers>},
           {"Access-Control-Max-Age",  // check only!
            &request::dispatch<headers::access_control_max_age>},
           {"Sec-WebSocket-Key",  // check only!

@@ -162,12 +162,11 @@ class expect {
     // The producer overload validates each expectation exactly as the pure
     // check() does and captures every non-empty element (its token plus any
     // value and parameters) as raw text, in order.
-    return helpers::for_each_list_element(
-        sv, [&out](std::string_view element) {
-          if (!consume_expectation(element)) return false;
-          out.elements.push_back(element);
-          return true;
-        });
+    return helpers::for_each_list_element(sv, [&out](std::string_view element) {
+      if (!consume_expectation(element)) return false;
+      out.elements.push_back(element);
+      return true;
+    });
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
