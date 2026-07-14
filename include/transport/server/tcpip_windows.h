@@ -1,4 +1,4 @@
-﻿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -8,78 +8,36 @@
 //                        Version 2.0, January 2004
 //                     http://www.apache.org/licenses/
 //
-//        --- martianLabs Anti-AI Usage and Model-Training Addendum ---
-//
-// TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
-//
 // Copyright 2025 martianLabs
 //
-// Except as otherwise stated in this Addendum, this software is licensed
-// under the Apache License, Version 2.0 (the "License"); you may not use
-// this file except in compliance with the License.
-//
-// The following additional terms are hereby added to the Apache License for
-// the purpose of restricting the use of this software by Artificial
-// Intelligence systems, machine learning models, data-scraping bots, and
-// automated systems.
-//
-// 1.  MACHINE LEARNING AND AI RESTRICTIONS
-//     1.1. No entity, organization, or individual may use this software,
-//          its source code, object code, or any derivative work for the
-//          purpose of training, fine-tuning, evaluating, or improving any
-//          machine learning model, artificial intelligence system, large
-//          language model, or similar automated system.
-//     1.2. No automated system may copy, parse, analyze, index, or
-//          otherwise process this software for any AI-related purpose.
-//     1.3. Use of this software as input, prompt material, reference
-//          material, or evaluation data for AI systems is expressly
-//          prohibited.
-//
-// 2.  SCRAPING AND AUTOMATED ACCESS RESTRICTIONS
-//     2.1. No automated crawler, training pipeline, or data-extraction
-//          system may collect, store, or incorporate any portion of this
-//          software in any dataset used for machine learning or AI
-//          training.
-//     2.2. Any automated access must comply with this License and with
-//          applicable copyright law.
-//
-// 3.  PROHIBITION ON DERIVATIVE DATASETS
-//     3.1. You may not create datasets, corpora, embeddings, vector
-//          stores, or similar derivative data intended for use by
-//          automated systems, AI models, or machine learning algorithms.
-//
-// 4.  NO WAIVER OF RIGHTS
-//     4.1. These restrictions apply in addition to, and do not limit,
-//          the rights and protections provided to the copyright holder
-//          under the Apache License Version 2.0 and applicable law.
-//
-// 5.  ACCEPTANCE
-//     5.1. Any use of this software constitutes acceptance of both the
-//          Apache License Version 2.0 and this Anti-AI Addendum.
-//
-// You may obtain a copy of the Apache License at:
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied.  See the License for the specific language governing
-// permissions and limitations under the Apache License Version 2.0.
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
 
 #ifndef martianlabs_doba_transport_server_tcpip_windows_h
 #define martianlabs_doba_transport_server_tcpip_windows_h
 
 #include <array>
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <mutex>
+#include <span>
 #include <thread>
 #include <unordered_set>
 
 #include "platform.h"
 #include "protocol/deserialization.h"
+#include "protocol/serialization.h"
 
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
@@ -109,6 +67,7 @@ class tcpip {
   // context::deposit_and_drain). Kept as an internal constant for now; exposing
   // it as a configurable property is a planned future evolution.
   static constexpr std::uint64_t kReorderWindow = 256;
+  using serialization_result_type = protocol::serialization_result;
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
   // +=========================================================================+
@@ -124,38 +83,42 @@ class tcpip {
     context& operator=(context&&) noexcept = delete;
     ~context() = default;
     // [push_pending_response]
-    void push_pending_response(std::unique_ptr<std::string> buffer) {
-      if (!buffer || buffer->empty()) return;
-      responses.push(std::move(buffer));
+    void push_pending_response(
+        std::unique_ptr<serialization_result_type> response) {
+      if (!response) return;
+      responses.push(std::move(response));
     }
     // [drain_pending_responses]
-    std::unique_ptr<std::string> drain_pending_responses() {
+    std::unique_ptr<serialization_result_type> drain_pending_responses() {
       if (responses.empty()) return nullptr;
-      std::unique_ptr<std::string> merged = std::move(responses.front());
+      std::unique_ptr<serialization_result_type> merged =
+          std::move(responses.front());
       responses.pop();
-      // fast path: a single response was queued, hand it over untouched.
-      if (responses.empty()) return merged;
-      // slow path: several responses are ready; concatenate them in FIFO order
-      // so they travel in one send, exactly like the pre-ordering batching did.
-      while (!responses.empty()) {
-        std::unique_ptr<std::string> next = std::move(responses.front());
+      // fast path: a single response was queued, or the head has a streaming
+      // body (source != nullopt) — hand it over untouched.
+      if (responses.empty() || merged->source) return merged;
+      // slow path: coalesce all contiguous prefix-only responses into one
+      // buffer so they travel in a single WSASend (send batching).
+      while (!responses.empty() && !responses.front()->source) {
+        std::unique_ptr<serialization_result_type> next =
+            std::move(responses.front());
         responses.pop();
-        if (next && !next->empty()) merged->append(*next);
+        if (!next->prefix.empty()) merged->prefix.append(next->prefix);
       }
       return merged;
     }
     // [deposit_and_drain]
-    deposit_result deposit_and_drain(std::uint64_t seq,
-                                     std::unique_ptr<std::string> payload) {
+    deposit_result deposit_and_drain(
+        std::uint64_t seq, std::unique_ptr<serialization_result_type> payload) {
       sending_guard guard(*this);
       if (seq >= next_seq_to_send + kReorderWindow) {
         return deposit_result::kOverflow;
       }
       reorder[seq % kReorderWindow] = std::move(payload);
       while (reorder[next_seq_to_send % kReorderWindow] != nullptr) {
-        std::unique_ptr<std::string> ready =
+        std::unique_ptr<serialization_result_type> ready =
             std::move(reorder[next_seq_to_send % kReorderWindow]);
-        if (ready && !ready->empty()) responses.push(std::move(ready));
+        if (ready) responses.push(std::move(ready));
         next_seq_to_send++;
       }
       return deposit_result::kOk;
@@ -174,11 +137,12 @@ class tcpip {
     CHAR recv_buf[BFsz];
     DWORD recv_off{0};
     // [responses] attributes
-    std::queue<std::unique_ptr<std::string>> responses;
+    std::queue<std::unique_ptr<serialization_result_type>> responses;
     // [ordering] attributes (all guarded by sending_mutex)
     std::uint64_t next_seq_to_assign{0};
     std::uint64_t next_seq_to_send{0};
-    std::array<std::unique_ptr<std::string>, kReorderWindow> reorder{};
+    std::array<std::unique_ptr<serialization_result_type>, kReorderWindow>
+        reorder{};
     // [sending] attributes
     bool close_after_sending{false};
     std::mutex sending_mutex;
@@ -221,6 +185,7 @@ class tcpip {
         : overlapped_base(io_type::kSend, in_ctx) {}
     WSABUF wsa;
     std::unique_ptr<std::string> buffer;
+    std::unique_ptr<serialization_result_type> response;
   };
   struct overlapped_stop : overlapped_base {
     overlapped_stop() : overlapped_base(io_type::kStop) {}
@@ -591,10 +556,8 @@ class tcpip {
           // Deposit this response at its sequence slot and drain any
           // contiguous ready responses onto the outgoing queue,
           // preserving arrival order.
-          std::unique_ptr<std::string> payload =
-              std::make_unique<std::string>();
-          res->serialize(
-              [&](std::string_view chunk) { payload->append(chunk); });
+          std::unique_ptr<serialization_result_type> payload =
+              std::make_unique<serialization_result_type>(res->serialize());
           if (ctx->deposit_and_drain(seq, std::move(payload)) ==
               context::deposit_result::kOverflow) {
             // Reorder window exceeded: too many responses are
@@ -720,10 +683,9 @@ class tcpip {
                                                std::shared_ptr<RSty> response) {
     if (response) {
       typename context::sending_guard sending_lock(*ctx);
-      std::unique_ptr<std::string> out = std::make_unique<std::string>();
+      std::unique_ptr<serialization_result_type> out =
+          std::make_unique<serialization_result_type>(response->serialize());
       ctx->close_after_sending = true;
-      out->reserve(512);
-      response->serialize([&](std::string_view chunk) { out->append(chunk); });
       // Terminal (protocol-error) path: this response is pushed straight onto
       // the outgoing queue, intentionally bypassing the sequence/reorder window
       // (deposit_and_drain). The offending request was never sequence-stamped,
@@ -775,19 +737,33 @@ class tcpip {
       // The previous WSASend did not consume all bytes (partial send): re-arm
       // with the remaining tail of the same buffer without consulting the
       // queue.
-      if (!send(ctx, std::move(ovs->buffer))) {
+      if (!send(ctx, std::move(ovs->response), std::move(ovs->buffer))) {
         mark_context_for_closing(ctx);
         return;
       }
       ctx->sending = true;
       return;
     }
-    // Buffer fully consumed. Drain the outgoing queue under the same lock,
+    // Current buffer fully consumed. Continue the same response body before
+    // dequeuing another response, preserving HTTP pipelining order.
+    if (load_next_buffer(*ovs)) {
+      if (!send(ctx, std::move(ovs->response), std::move(ovs->buffer))) {
+        mark_context_for_closing(ctx);
+        return;
+      }
+      ctx->sending = true;
+      return;
+    }
+    if (ovs->response->source && ovs->response->source->failed()) {
+      mark_context_for_closing(ctx);
+      return;
+    }
+    // Response fully consumed. Drain the outgoing queue under the same lock,
     // avoiding a second lock acquisition that arm_next_send_operation would
     // otherwise require (the unlock+relock that existed when handle_send called
     // arm_next_send_operation as a separate step).
-    std::unique_ptr<std::string> buffer = dequeue(ctx);
-    if (!buffer) {
+    std::unique_ptr<serialization_result_type> response = dequeue(ctx);
+    if (!response) {
       // Queue is empty. Close now if requested and all responses are in-flight.
       if (ctx->close_after_sending &&
           ctx->next_seq_to_send == ctx->next_seq_to_assign) {
@@ -795,7 +771,7 @@ class tcpip {
       }
       return;
     }
-    if (!send(ctx, std::move(buffer))) {
+    if (!send(ctx, std::move(response))) {
       mark_context_for_closing(ctx);
       ctx->sending = false;
       return;
@@ -813,8 +789,8 @@ class tcpip {
     // dispatched and no actions are performed!
     typename context::sending_guard sending_lock(*ctx);
     if (ctx->sending) return;
-    std::unique_ptr<std::string> buffer = dequeue(ctx);
-    if (!buffer) {
+    std::unique_ptr<serialization_result_type> response = dequeue(ctx);
+    if (!response) {
       // The outgoing queue is drained. Only close now if a close was requested
       // AND there is nothing still in flight: every assigned sequence must have
       // been drained (next_seq_to_send == next_seq_to_assign). Otherwise an
@@ -829,7 +805,7 @@ class tcpip {
       return;
     }
     // Let's arm next send operation!
-    if (!send(ctx, std::move(buffer))) {
+    if (!send(ctx, std::move(response))) {
       mark_context_for_closing(ctx);
       ctx->sending = false;
       return;
@@ -850,17 +826,39 @@ class tcpip {
   // | [>] enqueue                                                 ( private ) |
   // +=========================================================================+
   INLINE void enqueue(std::shared_ptr<context> ctx,
-                      std::unique_ptr<std::string> bf) {
+                      std::unique_ptr<serialization_result_type> bf) {
     ctx->push_pending_response(std::move(bf));
   }
   // +=========================================================================+
   // | [>] dequeue                                                 ( private ) |
   // +=========================================================================+
-  INLINE std::unique_ptr<std::string> dequeue(std::shared_ptr<context> ctx) {
-    // Coalesce all responses ready right now into a single send. This is the
-    // core of send batching: one WSASend carries every response currently
-    // queued, in arrival order, instead of one syscall per response.
+  INLINE std::unique_ptr<serialization_result_type> dequeue(
+      std::shared_ptr<context> ctx) {
     return ctx->drain_pending_responses();
+  }
+  // +=========================================================================+
+  // | [>] load_next_buffer                                        ( private ) |
+  // +---------------------------------------------------------------------------
+  // | Selects the next bounded wire segment from an outgoing response. The    |
+  // | prefix is sent first; subsequent segments are read lazily from body.    |
+  // +=========================================================================+
+  bool load_next_buffer(overlapped_send& ovs) {
+    if (!ovs.response) return false;
+    if (!ovs.response->prefix.empty()) {
+      ovs.buffer =
+          std::make_unique<std::string>(std::move(ovs.response->prefix));
+      return true;
+    }
+    if (!ovs.response->source || ovs.response->source->eof() ||
+        ovs.response->source->failed()) {
+      return false;
+    }
+    ovs.buffer = std::make_unique<std::string>();
+    ovs.buffer->resize(BFsz);
+    std::size_t bytes = ovs.response->source->read(std::span<std::byte>(
+        reinterpret_cast<std::byte*>(ovs.buffer->data()), ovs.buffer->size()));
+    ovs.buffer->resize(bytes);
+    return bytes > 0;
   }
   // +=========================================================================+
   // | [>] receive                                                 ( private ) |
@@ -888,15 +886,24 @@ class tcpip {
   // +=========================================================================+
   // | [>] send                                                    ( private ) |
   // +=========================================================================+
-  INLINE bool send(std::shared_ptr<context> ctx,
-                   std::unique_ptr<std::string> buffer) {
+  bool send(std::shared_ptr<context> ctx,
+            std::unique_ptr<serialization_result_type> response,
+            std::unique_ptr<std::string> buffer = nullptr) {
     // Load the socket atomically: a concurrent mark_context_for_closing may be
     // closing it. If it is already gone, don't post a send on INVALID_SOCKET
     // (buffer is released as this returns, callers treat false as a close).
     SOCKET s = ctx->socket.load();
     if (s == INVALID_SOCKET) return false;
+    if (!buffer) {
+      overlapped_send pending(ctx);
+      pending.response = std::move(response);
+      if (!load_next_buffer(pending))
+        return !pending.response->source || !pending.response->source->failed();
+      return send(ctx, std::move(pending.response), std::move(pending.buffer));
+    }
     DWORD f = 0, snt = 0;
     overlapped_send* ovs = new overlapped_send(ctx);
+    ovs->response = std::move(response);
     ovs->buffer = std::move(buffer);
     ovs->wsa.buf = ovs->buffer->data();
     ovs->wsa.len = ovs->buffer->size();

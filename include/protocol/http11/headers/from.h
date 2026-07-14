@@ -8,64 +8,19 @@
 //                        Version 2.0, January 2004
 //                     http://www.apache.org/licenses/
 //
-//        --- martianLabs Anti-AI Usage and Model-Training Addendum ---
-//
-// TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
-//
 // Copyright 2025 martianLabs
 //
-// Except as otherwise stated in this Addendum, this software is licensed
-// under the Apache License, Version 2.0 (the "License"); you may not use
-// this file except in compliance with the License.
-//
-// The following additional terms are hereby added to the Apache License for
-// the purpose of restricting the use of this software by Artificial
-// Intelligence systems, machine learning models, data-scraping bots, and
-// automated systems.
-//
-// 1.  MACHINE LEARNING AND AI RESTRICTIONS
-//     1.1. No entity, organization, or individual may use this software,
-//          its source code, object code, or any derivative work for the
-//          purpose of training, fine-tuning, evaluating, or improving any
-//          machine learning model, artificial intelligence system, large
-//          language model, or similar automated system.
-//     1.2. No automated system may copy, parse, analyze, index, or
-//          otherwise process this software for any AI-related purpose.
-//     1.3. Use of this software as input, prompt material, reference
-//          material, or evaluation data for AI systems is expressly
-//          prohibited.
-//
-// 2.  SCRAPING AND AUTOMATED ACCESS RESTRICTIONS
-//     2.1. No automated crawler, training pipeline, or data-extraction
-//          system may collect, store, or incorporate any portion of this
-//          software in any dataset used for machine learning or AI
-//          training.
-//     2.2. Any automated access must comply with this License and with
-//          applicable copyright law.
-//
-// 3.  PROHIBITION ON DERIVATIVE DATASETS
-//     3.1. You may not create datasets, corpora, embeddings, vector
-//          stores, or similar derivative data intended for use by
-//          automated systems, AI models, or machine learning algorithms.
-//
-// 4.  NO WAIVER OF RIGHTS
-//     4.1. These restrictions apply in addition to, and do not limit,
-//          the rights and protections provided to the copyright holder
-//          under the Apache License Version 2.0 and applicable law.
-//
-// 5.  ACCEPTANCE
-//     5.1. Any use of this software constitutes acceptance of both the
-//          Apache License Version 2.0 and this Anti-AI Addendum.
-//
-// You may obtain a copy of the Apache License at:
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied.  See the License for the specific language governing
-// permissions and limitations under the Apache License Version 2.0.
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
 
 #ifndef martianlabs_doba_protocol_http11_headers_from_h
 #define martianlabs_doba_protocol_http11_headers_from_h
@@ -77,11 +32,11 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                                      from |
 // +===========================================================================+
-// | RFC 9110 §10.1.2 From                                                     |
+// | RFC 9110 ï¿½10.1.2 From                                                     |
 // +---------------------------------------------------------------------------+
 // | The "From" header field contains an Internet email address for a human    |
 // | user who controls the requesting user agent. The address ought to be      |
-// | machine-usable, as defined by "mailbox" in RFC 5322 §3.4.                 |
+// | machine-usable, as defined by "mailbox" in RFC 5322 ï¿½3.4.                 |
 // |                                                                           |
 // | Non-robotic user agents rarely send From. A user agent SHOULD NOT send a  |
 // | From header field without explicit configuration by the user, since that  |
@@ -99,7 +54,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | Example:                                                                  |
 // |   From: spider-admin@example.org                                          |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §10.1.2 From (ABNF summary)                                      |
+// | RFC 9110 ï¿½10.1.2 From (ABNF summary)                                      |
 // +---------------------------------------------------------------------------+
 // +----------------+----------------------------------------------------------+
 // | Field          | Definition                                               |
@@ -131,7 +86,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | RFC 5322 imported mailbox syntax                                          |
 // +---------------------------------------------------------------------------+
 // | HTTP does not define an independent email-address grammar for From.       |
-// | Instead, it imports "mailbox" from RFC 5322 §3.4. A mailbox can be either |
+// | Instead, it imports "mailbox" from RFC 5322 ï¿½3.4. A mailbox can be either |
 // | a name-address form with angle brackets or a bare addr-spec.              |
 // |                                                                           |
 // | Valid shapes include:                                                     |
@@ -157,7 +112,7 @@ class from {
   // +=========================================================================+
   static constexpr bool check(std::string_view sv) {
     // From = mailbox. HTTP does not define its own email-address grammar; it
-    // imports "mailbox" from RFC 5322 §3.4, which is either a name-addr (an
+    // imports "mailbox" from RFC 5322 ï¿½3.4, which is either a name-addr (an
     // optional display-name followed by an angle-addressed addr-spec) or a
     // bare addr-spec. From is not a list field, so a single mailbox must span
     // the whole (already normalized) field-value.

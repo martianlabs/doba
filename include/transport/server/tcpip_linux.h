@@ -8,76 +8,33 @@
 //                        Version 2.0, January 2004
 //                     http://www.apache.org/licenses/
 //
-//        --- martianLabs Anti-AI Usage and Model-Training Addendum ---
-//
-// TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
-//
 // Copyright 2025 martianLabs
 //
-// Except as otherwise stated in this Addendum, this software is licensed
-// under the Apache License, Version 2.0 (the "License"); you may not use
-// this file except in compliance with the License.
-//
-// The following additional terms are hereby added to the Apache License for
-// the purpose of restricting the use of this software by Artificial
-// Intelligence systems, machine learning models, data-scraping bots, and
-// automated systems.
-//
-// 1.  MACHINE LEARNING AND AI RESTRICTIONS
-//     1.1. No entity, organization, or individual may use this software,
-//          its source code, object code, or any derivative work for the
-//          purpose of training, fine-tuning, evaluating, or improving any
-//          machine learning model, artificial intelligence system, large
-//          language model, or similar automated system.
-//     1.2. No automated system may copy, parse, analyze, index, or
-//          otherwise process this software for any AI-related purpose.
-//     1.3. Use of this software as input, prompt material, reference
-//          material, or evaluation data for AI systems is expressly
-//          prohibited.
-//
-// 2.  SCRAPING AND AUTOMATED ACCESS RESTRICTIONS
-//     2.1. No automated crawler, training pipeline, or data-extraction
-//          system may collect, store, or incorporate any portion of this
-//          software in any dataset used for machine learning or AI
-//          training.
-//     2.2. Any automated access must comply with this License and with
-//          applicable copyright law.
-//
-// 3.  PROHIBITION ON DERIVATIVE DATASETS
-//     3.1. You may not create datasets, corpora, embeddings, vector
-//          stores, or similar derivative data intended for use by
-//          automated systems, AI models, or machine learning algorithms.
-//
-// 4.  NO WAIVER OF RIGHTS
-//     4.1. These restrictions apply in addition to, and do not limit,
-//          the rights and protections provided to the copyright holder
-//          under the Apache License Version 2.0 and applicable law.
-//
-// 5.  ACCEPTANCE
-//     5.1. Any use of this software constitutes acceptance of both the
-//          Apache License Version 2.0 and this Anti-AI Addendum.
-//
-// You may obtain a copy of the Apache License at:
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied.  See the License for the specific language governing
-// permissions and limitations under the Apache License Version 2.0.
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
 
 #ifndef martianlabs_doba_transport_server_tcpip_linux_h
 #define martianlabs_doba_transport_server_tcpip_linux_h
 
 #include <array>
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -85,6 +42,7 @@
 
 #include "platform.h"
 #include "protocol/deserialization.h"
+#include "protocol/serialization.h"
 
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
@@ -118,6 +76,7 @@ class tcpip {
   // +=========================================================================+
   static constexpr int kEpollMaxEvents = 128;
   static constexpr std::uint64_t kReorderWindow = 256;
+  using serialization_result_type = protocol::serialization_result;
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
   // +=========================================================================+
@@ -146,35 +105,43 @@ class tcpip {
     context& operator=(context&&) noexcept = delete;
     ~context() = default;
     // [push_pending_response]
-    INLINE void push_pending_response(std::unique_ptr<std::string> buffer) {
-      if (!buffer || buffer->empty()) return;
-      responses.push(std::move(buffer));
+    INLINE void push_pending_response(
+        std::unique_ptr<serialization_result_type> response) {
+      if (!response) return;
+      responses.push(std::move(response));
     }
     // [drain_pending_responses]
-    INLINE std::unique_ptr<std::string> drain_pending_responses() {
+    INLINE std::unique_ptr<serialization_result_type> drain_pending_responses() {
       if (responses.empty()) return nullptr;
-      std::unique_ptr<std::string> merged = std::move(responses.front());
+      std::unique_ptr<serialization_result_type> merged =
+          std::move(responses.front());
       responses.pop();
-      if (responses.empty()) return merged;
-      while (!responses.empty()) {
-        std::unique_ptr<std::string> next = std::move(responses.front());
+      // fast path: single response, or head has a streaming body — hand over
+      // untouched.
+      if (responses.empty() || merged->source) return merged;
+      // slow path: coalesce all contiguous prefix-only responses into one
+      // buffer so they travel in a single send() call (send batching).
+      while (!responses.empty() && !responses.front()->source) {
+        std::unique_ptr<serialization_result_type> next =
+            std::move(responses.front());
         responses.pop();
-        if (next && !next->empty()) merged->append(*next);
+        if (!next->prefix.empty()) merged->prefix.append(next->prefix);
       }
       return merged;
     }
     // [deposit_and_drain]
     INLINE deposit_result
-    deposit_and_drain(std::uint64_t seq, std::unique_ptr<std::string> payload) {
+    deposit_and_drain(std::uint64_t seq,
+                      std::unique_ptr<serialization_result_type> payload) {
       sending_guard guard(*this);
       if (seq - next_seq_to_send >= kReorderWindow) {
         return deposit_result::kOverflow;
       }
       reorder[seq % kReorderWindow] = std::move(payload);
       while (reorder[next_seq_to_send % kReorderWindow] != nullptr) {
-        std::unique_ptr<std::string> ready =
+        std::unique_ptr<serialization_result_type> ready =
             std::move(reorder[next_seq_to_send % kReorderWindow]);
-        if (ready && !ready->empty()) responses.push(std::move(ready));
+        if (ready) responses.push(std::move(ready));
         next_seq_to_send++;
       }
       return deposit_result::kOk;
@@ -193,20 +160,22 @@ class tcpip {
     char recv_buf[BFsz];
     std::size_t recv_off{0};
     // [responses] attributes
-    std::queue<std::unique_ptr<std::string>> responses;
+    std::queue<std::unique_ptr<serialization_result_type>> responses;
     // [ordering] attributes
-    // next_seq_to_assign: atomic because the receive frame writes it without a
-    // lock while arm_next_send_operation reads it under sending_mutex on
-    // another thread.
-    std::atomic<std::uint64_t> next_seq_to_assign{0};
+    // next_seq_to_assign: written only from the receive path; EPOLLONESHOT
+    // guarantees at most one worker is active per fd at a time, so no atomic
+    // or lock is needed here (matches the Windows transport).
+    std::uint64_t next_seq_to_assign{0};
     std::uint64_t next_seq_to_send{0};
-    std::array<std::unique_ptr<std::string>, kReorderWindow> reorder{};
+    std::array<std::unique_ptr<serialization_result_type>, kReorderWindow>
+        reorder{};
     // [sending] attributes (all guarded by sending_mutex)
     bool close_after_sending{false};
     std::mutex sending_mutex;
     bool sending{false};
     std::unique_ptr<std::string> send_pending_;
     std::size_t send_pending_off_{0};
+    std::unique_ptr<serialization_result_type> active_response_;
     // [sending] types
     struct sending_guard {
       explicit sending_guard(context& c) : lock_(c.sending_mutex) {}
@@ -509,8 +478,8 @@ class tcpip {
             std::uint64_t seq = ctx->next_seq_to_assign++;
             on_request(result.request, res, [this, ctx, seq](auto res) {
               if (ctx->closing.load()) return;
-              std::unique_ptr<std::string> payload =
-                  std::make_unique<std::string>(res->serialize());
+              std::unique_ptr<serialization_result_type> payload =
+                  std::make_unique<serialization_result_type>(res->serialize());
               if (ctx->deposit_and_drain(seq, std::move(payload)) ==
                   context::deposit_result::kOverflow) {
                 mark_context_for_closing(ctx);
@@ -589,10 +558,8 @@ class tcpip {
   void send_error_and_mark_context_for_closing(std::shared_ptr<context> ctx,
                                                std::shared_ptr<RSty> response) {
     if (response) {
-      // Serialise outside the lock: serialize() may drain a body_reader and
-      // can be arbitrarily expensive. Only the queue mutation needs the mutex.
-      std::unique_ptr<std::string> out =
-          std::make_unique<std::string>(response->serialize());
+      std::unique_ptr<serialization_result_type> out =
+          std::make_unique<serialization_result_type>(response->serialize());
       {
         typename context::sending_guard sending_lock(*ctx);
         ctx->close_after_sending = true;
@@ -662,15 +629,37 @@ class tcpip {
       }
       if (!need_close) {
         ctx->sending = false;
-        std::unique_ptr<std::string> buffer = ctx->drain_pending_responses();
-        if (!buffer) {
+        if (!load_next_buffer(*ctx)) {
+          if (ctx->active_response_ && ctx->active_response_->source &&
+              ctx->active_response_->source->failed()) {
+            need_close = true;
+          } else {
+            ctx->active_response_.reset();
+          }
+        }
+        if (!need_close && !ctx->send_pending_) {
+          std::unique_ptr<serialization_result_type> response =
+              ctx->drain_pending_responses();
+          if (response) {
+            ctx->active_response_ = std::move(response);
+            if (!load_next_buffer(*ctx)) {
+              if (ctx->active_response_->source &&
+                  ctx->active_response_->source->failed()) {
+                need_close = true;
+              } else {
+                ctx->active_response_.reset();
+              }
+            }
+          }
+        }
+        if (!need_close && !ctx->send_pending_) {
           if (ctx->close_after_sending &&
               ctx->next_seq_to_send == ctx->next_seq_to_assign) {
             need_close = true;
           } else {
             rearm_recv_only(ctx);
           }
-        } else if (!send(ctx, std::move(buffer))) {
+        } else if (!need_close && !send_pending(ctx)) {
           need_close = true;
         } else {
           ctx->sending = true;
@@ -678,6 +667,40 @@ class tcpip {
       }
     }  // sending_lock released
     if (need_close) mark_context_for_closing(ctx);
+  }
+  // +=========================================================================+
+  // | [>] load_next_buffer                                        ( private ) |
+  // +---------------------------------------------------------------------------
+  // | Materializes at most one transport-sized segment from the active        |
+  // | response. Headers/inline bytes are sent first; body chunks are read     |
+  // | lazily so no complete streaming body is accumulated in memory.          |
+  // +=========================================================================+
+  bool load_next_buffer(context& ctx) {
+    if (!ctx.active_response_) return false;
+    if (!ctx.active_response_->prefix.empty()) {
+      ctx.send_pending_ = std::make_unique<std::string>(
+          std::move(ctx.active_response_->prefix));
+      ctx.send_pending_off_ = 0;
+      return true;
+    }
+    if (!ctx.active_response_->source || ctx.active_response_->source->eof() ||
+        ctx.active_response_->source->failed()) {
+      return false;
+    }
+    ctx.send_pending_ = std::make_unique<std::string>(BFsz, '\0');
+    std::size_t bytes = ctx.active_response_->source->read(std::span<std::byte>(
+        reinterpret_cast<std::byte*>(ctx.send_pending_->data()), BFsz));
+    ctx.send_pending_->resize(bytes);
+    ctx.send_pending_off_ = 0;
+    return bytes > 0;
+  }
+  // +=========================================================================+
+  // | [>] send_pending                                            ( private ) |
+  // +=========================================================================+
+  bool send_pending(std::shared_ptr<context> ctx) {
+    std::unique_ptr<std::string> buffer = std::move(ctx->send_pending_);
+    ctx->send_pending_off_ = 0;
+    return send(ctx, std::move(buffer));
   }
   // +=========================================================================+
   // | [>] arm_next_send_operation                                 ( private ) |
@@ -688,13 +711,25 @@ class tcpip {
     {
       typename context::sending_guard sending_lock(*ctx);
       if (ctx->sending) return;
-      std::unique_ptr<std::string> buffer = ctx->drain_pending_responses();
-      if (!buffer) {
+      while (!ctx->send_pending_ && !need_close) {
+        if (!ctx->active_response_) {
+          ctx->active_response_ = ctx->drain_pending_responses();
+          if (!ctx->active_response_) break;
+        }
+        if (load_next_buffer(*ctx)) break;
+        if (ctx->active_response_->source &&
+            ctx->active_response_->source->failed()) {
+          need_close = true;
+        } else {
+          ctx->active_response_.reset();
+        }
+      }
+      if (!ctx->active_response_ && !ctx->send_pending_) {
         if (ctx->close_after_sending &&
             ctx->next_seq_to_send == ctx->next_seq_to_assign) {
           need_close = true;
         }
-      } else if (!send(ctx, std::move(buffer))) {
+      } else if (!need_close && !send_pending(ctx)) {
         need_close = true;
       } else {
         ctx->sending = true;
@@ -724,6 +759,9 @@ class tcpip {
       rearm_send_with_out(ctx);
       return true;
     }
+    // Defer the next body chunk (or response) to a fresh EPOLLOUT event rather
+    // than draining a large source while this worker still owns the fd.
+    rearm_send_with_out(ctx);
     return true;
   }
   // +=========================================================================+

@@ -1,4 +1,4 @@
-﻿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -8,64 +8,19 @@
 //                        Version 2.0, January 2004
 //                     http://www.apache.org/licenses/
 //
-//        --- martianLabs Anti-AI Usage and Model-Training Addendum ---
-//
-// TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
-//
 // Copyright 2025 martianLabs
 //
-// Except as otherwise stated in this Addendum, this software is licensed
-// under the Apache License, Version 2.0 (the "License"); you may not use
-// this file except in compliance with the License.
-//
-// The following additional terms are hereby added to the Apache License for
-// the purpose of restricting the use of this software by Artificial
-// Intelligence systems, machine learning models, data-scraping bots, and
-// automated systems.
-//
-// 1.  MACHINE LEARNING AND AI RESTRICTIONS
-//     1.1. No entity, organization, or individual may use this software,
-//          its source code, object code, or any derivative work for the
-//          purpose of training, fine-tuning, evaluating, or improving any
-//          machine learning model, artificial intelligence system, large
-//          language model, or similar automated system.
-//     1.2. No automated system may copy, parse, analyze, index, or
-//          otherwise process this software for any AI-related purpose.
-//     1.3. Use of this software as input, prompt material, reference
-//          material, or evaluation data for AI systems is expressly
-//          prohibited.
-//
-// 2.  SCRAPING AND AUTOMATED ACCESS RESTRICTIONS
-//     2.1. No automated crawler, training pipeline, or data-extraction
-//          system may collect, store, or incorporate any portion of this
-//          software in any dataset used for machine learning or AI
-//          training.
-//     2.2. Any automated access must comply with this License and with
-//          applicable copyright law.
-//
-// 3.  PROHIBITION ON DERIVATIVE DATASETS
-//     3.1. You may not create datasets, corpora, embeddings, vector
-//          stores, or similar derivative data intended for use by
-//          automated systems, AI models, or machine learning algorithms.
-//
-// 4.  NO WAIVER OF RIGHTS
-//     4.1. These restrictions apply in addition to, and do not limit,
-//          the rights and protections provided to the copyright holder
-//          under the Apache License Version 2.0 and applicable law.
-//
-// 5.  ACCEPTANCE
-//     5.1. Any use of this software constitutes acceptance of both the
-//          Apache License Version 2.0 and this Anti-AI Addendum.
-//
-// You may obtain a copy of the Apache License at:
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied.  See the License for the specific language governing
-// permissions and limitations under the Apache License Version 2.0.
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
 
 #ifndef martianlabs_doba_protocol_http11_response_h
 #define martianlabs_doba_protocol_http11_response_h
@@ -75,8 +30,8 @@
 #include <utility>
 
 #include "platform.h"
-#include "protocol/http11/body_reader.h"
-#include "protocol/http11/body_serializer.h"
+#include "protocol/http11/body/serializer.h"
+#include "protocol/serialization.h"
 #include "status_codes.h"
 #include "status_lines.h"
 
@@ -89,6 +44,10 @@ namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
 class response {
  public:
+  // +=========================================================================+
+  // | [>] TYPEs                                                    ( public ) |
+  // +=========================================================================+
+  using serialized_type = protocol::serialization_result;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
@@ -104,20 +63,20 @@ class response {
   // +=========================================================================+
   // | [>] serialize                                                ( public ) |
   // +---------------------------------------------------------------------------
-  // | Serializes the response by invoking sink(std::string_view) one or more  |
-  // | times, in wire order: | |   1. The header block (status-line + headers +
-  // CRLF terminator).        | |   2. The body, if any: | |      - inline body
-  // (set_body(string_view)): single zero-copy sink call  | |        over the
-  // fixed internal buffer region.                            | |      -
-  // streaming body (set_body(body_reader&&)): repeated sink |        calls, one
-  // per kMaxBodySizeInMemory-sized chunk until eof(). The  | |        inline
-  // body region of memory_[] is reused as the read buffer      | | (inline and
-  // streaming bodies are mutually exclusive).             | |   If no body has
-  // been set, only the header block is delivered.           | | SNfn must be
-  // callable as void(std::string_view).                        |
+  // | Finalizes and transfers the wire prefix plus an optional streaming body |
+  // | to the transport. It never drains a streaming body; the receiver owns   |
+  // | the reader and controls bounded reads after response is destroyed.      |
   // +=========================================================================+
-  template <typename SNfn>
-  void serialize(SNfn&& sink) {
+  [[nodiscard]] protocol::serialization_result serialize() {
+    if (reader_) {
+      if (body_chunked_) {
+        remove_header("Content-Length");
+        set_header("Transfer-Encoding", "chunked");
+      } else {
+        remove_header("Transfer-Encoding");
+        set_header("Content-Length", body_content_length_);
+      }
+    }
     std::size_t sln_plus_hdr_len = sln_len_ + hdr_len_;
     // Write the header-terminating CRLF (plus an extra CRLF when there are no
     // headers). The core section must always stay within [0, bdy_beg_).
@@ -131,25 +90,13 @@ class response {
       memory_[sln_plus_hdr_len++] = '\r';
       memory_[sln_plus_hdr_len++] = '\n';
     }
-    // 1. Header block — always a single zero-copy call into memory_.
-    sink(std::string_view(memory_, sln_plus_hdr_len));
-    // 2a. Inline body — single zero-copy call over memory_[bdy_beg_].
-    if (bdy_len_ > 0) {
-      sink(std::string_view(&memory_[bdy_beg_], bdy_len_));
-      return;
+    protocol::serialization_result result;
+    result.prefix.assign(memory_, sln_plus_hdr_len);
+    if (bdy_len_ > 0) result.prefix.append(&memory_[bdy_beg_], bdy_len_);
+    if (reader_) {
+      result.source = std::move(reader_);
     }
-    // 2b. Streaming body — chunk-by-chunk until the source is exhausted.
-    // memory_[bdy_beg_] is unused in this path (inline and streaming bodies
-    // are mutually exclusive), so it serves as the read buffer at zero extra
-    // cost: no stack allocation, no heap allocation.
-    if (body_reader_) {
-      while (!body_reader_->eof() && !body_reader_->failed()) {
-        std::size_t n = body_reader_->read(std::span<std::byte>(
-            reinterpret_cast<std::byte*>(&memory_[bdy_beg_]),
-            kMaxBodySizeInMemory));
-        if (n > 0) sink(std::string_view(&memory_[bdy_beg_], n));
-      }
-    }
+    return result;
   }
   // +=========================================================================+
   // | [>] add_header                                               ( public ) |
@@ -331,10 +278,13 @@ class response {
     }
     std::memcpy(&memory_[bdy_beg_], sv.data(), body_size);
     bdy_len_ = body_size;
-    body_reader_.reset();
+    reader_.reset();
+    body_chunked_ = false;
+    body_content_length_ = body_size;
     // Keep Content-Length in sync with the actual body size.
     // both overwrites the bodiless default set by sln() and updates any
     // value the caller may have set explicitly beforehand.
+    remove_header("Transfer-Encoding");
     set_header("Content-Length", body_size);
     return *this;
   }
@@ -349,26 +299,46 @@ class response {
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
   // +---------------------------------------------------------------------------
-  // | Assigns a streaming body from a body_reader (obtained via              |
-  // | body_serializer::release_reader()). The inline body buffer is cleared. |
-  // | If the reader reports a known size, Content-Length is set; otherwise   |
-  // | Transfer-Encoding: chunked is used (RFC 9112 §6.1).                    |
+  // | Assigns a raw streaming body. The serializer is finalized and consumed; |
+  // | its stored bytes are the payload bytes and are announced with           |
+  // | Content-Length.                                                         |
   // +=========================================================================+
-  response& set_body(body_reader&& src) {
-    if (src.failed()) {
-      // Reader has a storage I/O error; do not corrupt the response wire
-      // format.
+  response& set_body(body::serializer<body::encoder_raw>&& serializer) {
+    serializer.finish();
+    if (serializer.failed()) {
       return *this;
     }
+    std::optional<std::size_t> stored_size = serializer.stored_size();
+    common::reader src = serializer.release_reader();
+    if (src.failed() || !stored_size) return *this;
     bdy_len_ = 0;
-    body_reader_ = std::move(src);
-    if (auto sz = body_reader_->size()) {
-      remove_header("Transfer-Encoding");
-      set_header("Content-Length", *sz);
-    } else {
-      remove_header("Content-Length");
-      set_header("Transfer-Encoding", "chunked");
+    reader_ = std::move(src);
+    body_chunked_ = false;
+    body_content_length_ = *stored_size;
+    remove_header("Transfer-Encoding");
+    set_header("Content-Length", *stored_size);
+    return *this;
+  }
+  // +=========================================================================+
+  // | [>] set_body                                                 ( public ) |
+  // +---------------------------------------------------------------------------
+  // | Assigns a chunked streaming body. The serializer is finalized and       |
+  // | consumed; its reader contains already-framed chunked wire bytes, so     |
+  // | the response must announce Transfer-Encoding rather than Content-Length. |
+  // +=========================================================================+
+  response& set_body(body::serializer<body::encoder_chunked>&& serializer) {
+    serializer.finish();
+    if (serializer.failed()) {
+      return *this;
     }
+    common::reader src = serializer.release_reader();
+    if (src.failed()) return *this;
+    bdy_len_ = 0;
+    reader_ = std::move(src);
+    body_chunked_ = true;
+    body_content_length_ = 0;
+    remove_header("Content-Length");
+    set_header("Transfer-Encoding", "chunked");
     return *this;
   }
   // +=========================================================================+
@@ -626,7 +596,9 @@ class response {
     // if an oversized status line is ever supplied.
     hdr_len_ = 0;
     bdy_len_ = 0;
-    body_reader_.reset();
+    reader_.reset();
+    body_chunked_ = false;
+    body_content_length_ = 0;
     if (len > bdy_beg_) {
       sln_len_ = 0;
       throw std::out_of_range("not enough space to set status line!");
@@ -653,7 +625,9 @@ class response {
   std::size_t hdr_len_{0};
   std::size_t bdy_beg_{kMaxSizeInMemory - kMaxBodySizeInMemory};
   std::size_t bdy_len_{0};
-  std::optional<body_reader> body_reader_;
+  std::optional<common::reader> reader_;
+  bool body_chunked_{false};
+  std::size_t body_content_length_{0};
 };
 }  // namespace martianlabs::doba::protocol::http11
 

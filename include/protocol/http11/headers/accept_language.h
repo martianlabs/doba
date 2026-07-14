@@ -8,64 +8,19 @@
 //                        Version 2.0, January 2004
 //                     http://www.apache.org/licenses/
 //
-//        --- martianLabs Anti-AI Usage and Model-Training Addendum ---
-//
-// TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
-//
 // Copyright 2025 martianLabs
 //
-// Except as otherwise stated in this Addendum, this software is licensed
-// under the Apache License, Version 2.0 (the "License"); you may not use
-// this file except in compliance with the License.
-//
-// The following additional terms are hereby added to the Apache License for
-// the purpose of restricting the use of this software by Artificial
-// Intelligence systems, machine learning models, data-scraping bots, and
-// automated systems.
-//
-// 1.  MACHINE LEARNING AND AI RESTRICTIONS
-//     1.1. No entity, organization, or individual may use this software,
-//          its source code, object code, or any derivative work for the
-//          purpose of training, fine-tuning, evaluating, or improving any
-//          machine learning model, artificial intelligence system, large
-//          language model, or similar automated system.
-//     1.2. No automated system may copy, parse, analyze, index, or
-//          otherwise process this software for any AI-related purpose.
-//     1.3. Use of this software as input, prompt material, reference
-//          material, or evaluation data for AI systems is expressly
-//          prohibited.
-//
-// 2.  SCRAPING AND AUTOMATED ACCESS RESTRICTIONS
-//     2.1. No automated crawler, training pipeline, or data-extraction
-//          system may collect, store, or incorporate any portion of this
-//          software in any dataset used for machine learning or AI
-//          training.
-//     2.2. Any automated access must comply with this License and with
-//          applicable copyright law.
-//
-// 3.  PROHIBITION ON DERIVATIVE DATASETS
-//     3.1. You may not create datasets, corpora, embeddings, vector
-//          stores, or similar derivative data intended for use by
-//          automated systems, AI models, or machine learning algorithms.
-//
-// 4.  NO WAIVER OF RIGHTS
-//     4.1. These restrictions apply in addition to, and do not limit,
-//          the rights and protections provided to the copyright holder
-//          under the Apache License Version 2.0 and applicable law.
-//
-// 5.  ACCEPTANCE
-//     5.1. Any use of this software constitutes acceptance of both the
-//          Apache License Version 2.0 and this Anti-AI Addendum.
-//
-// You may obtain a copy of the Apache License at:
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied.  See the License for the specific language governing
-// permissions and limitations under the Apache License Version 2.0.
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
 
 #ifndef martianlabs_doba_protocol_http11_headers_accept_language_h
 #define martianlabs_doba_protocol_http11_headers_accept_language_h
@@ -77,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                           accept-language |
 // +===========================================================================+
-// | RFC 9110 §12.5.4 Accept-Language                                          |
+// | RFC 9110 ï¿½12.5.4 Accept-Language                                          |
 // +---------------------------------------------------------------------------+
 // | The "Accept-Language" request header field allows a user agent to         |
 // | indicate the natural languages preferred for response content.            |
@@ -108,7 +63,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Accept-Language: da, en-GB;q=0.8, en;q=0.7                              |
 // |   Accept-Language: es-ES, es;q=0.9, *;q=0.1                               |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §12.5.4 Accept-Language (ABNF summary)                           |
+// | RFC 9110 ï¿½12.5.4 Accept-Language (ABNF summary)                           |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -121,7 +76,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |                  | ( "1" [ "." 0*3("0") ] )                               |
 // | OWS              | *( SP / HTAB )                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 4647 §2.1 Basic Language Range                                        |
+// | RFC 4647 ï¿½2.1 Basic Language Range                                        |
 // +---------------------------------------------------------------------------+
 // | The first subtag contains 1 to 8 letters. Every subsequent subtag         |
 // | contains 1 to 8 letters or digits and is introduced by "-". The wildcard  |
@@ -132,7 +87,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | or well-formed BCP 47 language tag. Such a range might simply match no    |
 // | available language tag. Comparisons are case-insensitive.                 |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §12.4.2 Quality Values                                           |
+// | RFC 9110 ï¿½12.4.2 Quality Values                                           |
 // +---------------------------------------------------------------------------+
 // | The qvalue range is 0 through 1. Senders MUST NOT generate more than      |
 // | three digits after the decimal point. The ABNF permits "0", "0.",         |
@@ -142,7 +97,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | OWS is permitted before ";" and between ";" and "q", but not around the   |
 // | "=" character or between "=" and the qvalue.                              |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.1 list expansion                                            |
+// | RFC 9110 ï¿½5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |
