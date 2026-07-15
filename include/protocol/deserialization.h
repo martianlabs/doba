@@ -70,12 +70,13 @@ enum class channel_intent {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty>
 struct deserialization_result {
-  deserialization_result(deserialization_status code) : code(code) {}
-  deserialization_result(std::shared_ptr<RQty> request, std::size_t bytes_used,
+  deserialization_result(deserialization_status code, std::size_t used = 0)
+      : code(code), bytes_used(used) {}
+  deserialization_result(std::shared_ptr<RQty> request, std::size_t used,
                          channel_intent channel = channel_intent::kKeep)
       : code(deserialization_status::kSucceeded),
         request(request),
-        bytes_used(bytes_used),
+        bytes_used(used),
         channel(channel) {}
   deserialization_status code = deserialization_status::kInvalidSource;
   std::shared_ptr<RQty> request = nullptr;

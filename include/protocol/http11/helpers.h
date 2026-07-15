@@ -32,6 +32,8 @@
 #include <span>
 #include <string_view>
 
+#include "protocol/deserialization.h"
+
 namespace martianlabs::doba::protocol::http11 {
 namespace detail {
 // /////////////////////////////////////////////////////////////////////////////

@@ -86,6 +86,7 @@ protocol/
     reader.h / writer.h         → helpers move-only genéricos sobre byte_storage
   http11/
   request.h                  → deserializador principal (single-pass) + registro de dispatchers
+  request_plus.h             → variante paralela fixed-buffer con vistas propias y body inline/source
   connection.h               → estado hop-by-hop de la conexión (mutable)
   context.h                  → estado transversal cross-header (MOVIDO aquí desde interpreters/rules)
   policies.h                 → límites de política inbound (read-only)
@@ -193,7 +194,10 @@ respuesta pendiente o rearmar otro receive. **No conoce nada de HTTP/1.1.**
       chunked para preservar su framing. Factories: `raw(opts)` y `chunked(opts)`.
     - `body::deserializer<DEty>`: interfaz de lectura de alto nivel, complemento del reader.
       `get_body_deserializer()` es `const` (el estado del decoder es `mutable`). Factories:
-     `raw(opts, content_length)` y `chunked(opts)`. Wiring en `request::deserialize()`:
+     `raw(opts, content_length)` y `chunked(opts)`; `raw_source(reader, limit)` y
+     `chunked_source(reader)` conservan el mismo tipo público cuando el source ya existe.
+     `common::reader::borrowed(span)` añade el camino no propietario usado exclusivamente
+     mientras el almacenamiento fijo que respalda el span sigue vivo. Wiring en `request::deserialize()`:
      construye `body::deserializer<body::decoder_chunked>` si `connection_tmp.chunked`, o
      `body::deserializer<body::decoder_raw>` con `max_raw_size = content_length` si
      `ctx.has_content_length && content_length > 0`; de lo contrario, sin body. El result
@@ -224,11 +228,22 @@ respuesta pendiente o rearmar otro receive. **No conoce nada de HTTP/1.1.**
    `target_authority_*`, `headers_`, **`body_` (`std::optional<body_deserializer_t>`, presente
   cuando el request lleva body — raw con `max_raw_size=content_length`, o chunked)**.
 
-  > ⚠️ **Corrección (dejó de existir):** este documento mencionaba antes un segundo modelo
-  > `request_other` (variante *fixed-buffer* que "espejaba" `request` con offsets `(off,len)`).
-  > Verificado por listado de directorio: **ese fichero no existe** en
-  > `include/protocol/http11/` — solo hay un modelo de `request` (el de arriba). Referencia
-  > obsoleta eliminada; no hay dos modelos que mantener en paralelo.
+- **`request_plus` (implementación paralela, no sustituye aún a `request`)**: posee un
+  `memory_[4096]` dividido como `response`: 2048 bytes para request-line + headers y 2048
+  para el body wire inline. Internamente, método, target, host y headers son vistas sobre ese
+  almacenamiento propio; **la API pública conserva exactamente los tipos owned de
+  `request`** y materializa `std::string`/`pair<string,string>` en los getters. También
+  conserva el alias exacto
+  `variant<body::deserializer<decoder_raw>, body::deserializer<decoder_chunked>>`, por lo
+  que los consumidores basados en `std::visit` son intercambiables. Los headers y parámetros
+  de query se recorren bajo demanda, sin contenedores dinámicos por request. El overload
+  `deserialize(string_view)` consume también el body completo y devuelve un `bytes_used`
+  exacto, preservando pipelining. Bodies que no caben en la mitad inline pasan a un
+  `common::reader`; el overload
+  `deserialize(head, common::reader&&)` permite inyectar directamente un source body
+  move-only. Para el body inline, `common::reader::borrowed(span)` lee directamente de la
+  mitad fija (la `request_plus` debe seguir viva mientras se consume). Raw y chunked comparten
+  `get_body_deserializer()`; el decoder es stateful y su contrato es de un solo consumidor.
 
 ---
 

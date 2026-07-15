@@ -42,6 +42,214 @@
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
+// | [>] context [windowsTM]                                         ( class ) |
+// +---------------------------------------------------------------------------+
+// | This specification holds for the WindowsTM server transport context.      |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   RQty - request being used.                                              |
+// |   RSty - response being used.                                             |
+// |   DEty - decoder (deserializer) being used.                               |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename RQty, typename RSty,
+          template <typename, typename> class DEty>
+struct context {
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
+  context(SOCKET in_socket) : socket{in_socket} {}
+  context(const context&) = delete;
+  context(context&&) noexcept = delete;
+  ~context() = default;
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +=========================================================================+
+  context& operator=(const context&) = delete;
+  context& operator=(context&&) noexcept = delete;
+  // +=========================================================================+
+  // | [>] TYPEs                                                   ( private ) |
+  // +=========================================================================+
+  enum class deposit_result : std::uint8_t { kOk, kOverflow };
+  // +=========================================================================+
+  // | [>] push_pending_response                                    ( public ) |
+  // +=========================================================================+
+  void push_pending_response(
+      std::unique_ptr<protocol::serialization_result> response) {
+    if (!response) return;
+    responses.push(std::move(response));
+  }
+  // +=========================================================================+
+  // | [>] drain_pending_responses                                  ( public ) |
+  // +=========================================================================+
+  std::unique_ptr<protocol::serialization_result> drain_pending_responses() {
+    if (responses.empty()) return nullptr;
+    std::unique_ptr<protocol::serialization_result> merged =
+        std::move(responses.front());
+    responses.pop();
+    // fast path: a single response was queued, or the head has a streaming
+    // body (source != nullopt) — hand it over untouched.
+    if (responses.empty() || merged->source) return merged;
+    // slow path: coalesce all contiguous prefix-only responses into one
+    // buffer so they travel in a single WSASend (send batching).
+    while (!responses.empty() && !responses.front()->source) {
+      std::unique_ptr<protocol::serialization_result> next =
+          std::move(responses.front());
+      responses.pop();
+      if (!next->prefix.empty()) merged->prefix.append(next->prefix);
+    }
+    return merged;
+  }
+  // +=========================================================================+
+  // | [>] deposit_and_drain                                        ( public ) |
+  // +=========================================================================+
+  deposit_result deposit_and_drain(
+      std::uint64_t seq,
+      std::unique_ptr<protocol::serialization_result> payload) {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex);
+    if (seq >= next_seq_to_send + kReorderWindow) {
+      return deposit_result::kOverflow;
+    }
+    reorder[seq % kReorderWindow] = std::move(payload);
+    while (reorder[next_seq_to_send % kReorderWindow] != nullptr) {
+      std::unique_ptr<protocol::serialization_result> ready =
+          std::move(reorder[next_seq_to_send % kReorderWindow]);
+      if (ready) responses.push(std::move(ready));
+      next_seq_to_send++;
+    }
+    return deposit_result::kOk;
+  }
+  // +=========================================================================+
+  // | [>] CONSTANTS                                               ( private ) |
+  // +=========================================================================+
+  static constexpr std::uint64_t kReorderWindow = 256;
+  static constexpr inline std::size_t BFsz = 8192;
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
+  std::atomic<SOCKET> socket{INVALID_SOCKET};
+  std::atomic<bool> closing{false};
+  std::atomic<bool> batch_receiving{false};
+  DEty<RQty, RSty> decoder{};
+  CHAR recv_buf[BFsz]{0};
+  DWORD recv_off{0};
+  std::queue<std::unique_ptr<protocol::serialization_result>> responses;
+  std::uint64_t next_seq_to_assign{0};
+  std::uint64_t next_seq_to_send{0};
+  std::array<std::unique_ptr<protocol::serialization_result>, kReorderWindow>
+      reorder{};
+  bool close_after_sending{false};
+  std::mutex sending_mutex;
+  bool sending{false};
+};
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] CONSTANTs                                                  ( public ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+static constexpr DWORD kAcceptAddressBytes =
+    static_cast<DWORD>(sizeof(sockaddr_storage) + 16);
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] io_type                                                ( enum-class ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+enum class io_type : uint8_t { kAccept, kSend, kReceive, kStop };
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] overlapped_base                                            ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   RQty - request being used.                                              |
+// |   RSty - response being used.                                             |
+// |   DEty - decoder (deserializer) being used.                               |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename RQty, typename RSty,
+          template <typename, typename> class DEty>
+struct overlapped_base : OVERLAPPED {
+  overlapped_base(io_type in_type,
+                  std::shared_ptr<context<RQty, RSty, DEty>> in_ctx = nullptr)
+      : OVERLAPPED{}, type{in_type}, ctx{in_ctx} {}
+  io_type get_type() const { return type; }
+  std::shared_ptr<context<RQty, RSty, DEty>> get_context() const { return ctx; }
+
+ private:
+  const io_type type;
+  std::shared_ptr<context<RQty, RSty, DEty>> ctx;
+};
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] overlapped_accept                                          ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   RQty - request being used.                                              |
+// |   RSty - response being used.                                             |
+// |   DEty - decoder (deserializer) being used.                               |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename RQty, typename RSty,
+          template <typename, typename> class DEty>
+struct overlapped_accept : overlapped_base<RQty, RSty, DEty> {
+  overlapped_accept(SOCKET in_socket)
+      : overlapped_base<RQty, RSty, DEty>(io_type::kAccept),
+        socket{in_socket} {}
+  SOCKET socket{INVALID_SOCKET};
+  CHAR addresses[(kAcceptAddressBytes * 2)]{0};
+};
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] overlapped_receive                                         ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   RQty - request being used.                                              |
+// |   RSty - response being used.                                             |
+// |   DEty - decoder (deserializer) being used.                               |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename RQty, typename RSty,
+          template <typename, typename> class DEty>
+struct overlapped_receive : overlapped_base<RQty, RSty, DEty> {
+  overlapped_receive(std::shared_ptr<context<RQty, RSty, DEty>> in_ctx)
+      : overlapped_base<RQty, RSty, DEty>(io_type::kReceive, in_ctx) {}
+  WSABUF wsa{0};
+};
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] overlapped_send                                            ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   RQty - request being used.                                              |
+// |   RSty - response being used.                                             |
+// |   DEty - decoder (deserializer) being used.                               |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename RQty, typename RSty,
+          template <typename, typename> class DEty>
+struct overlapped_send : overlapped_base<RQty, RSty, DEty> {
+  overlapped_send(std::shared_ptr<context<RQty, RSty, DEty>> in_ctx)
+      : overlapped_base<RQty, RSty, DEty>(io_type::kSend, in_ctx) {}
+  WSABUF wsa{0};
+  std::unique_ptr<std::string> buffer;
+  std::unique_ptr<protocol::serialization_result> response;
+};
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] overlapped_stop                                            ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   RQty - request being used.                                              |
+// |   RSty - response being used.                                             |
+// |   DEty - decoder (deserializer) being used.                               |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename RQty, typename RSty,
+          template <typename, typename> class DEty>
+struct overlapped_stop : overlapped_base<RQty, RSty, DEty> {
+  overlapped_stop() : overlapped_base<RQty, RSty, DEty>(io_type::kStop) {}
+};
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] tcpip [windowsTM]                                           ( class ) |
 // +---------------------------------------------------------------------------+
 // | This specification holds for the WindowsTM server transport.              |
@@ -49,148 +257,12 @@ namespace martianlabs::doba::transport::server {
 // | Template parameters:                                                      |
 // |   RQty - request being used.                                              |
 // |   RSty - response being used.                                             |
-// |   BFsz - buffer size for I/O operations.                                  |
+// |   DEty - decoder (deserializer) being used.                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <typename RQty, typename RSty, std::size_t BFsz>
+template <typename RQty, typename RSty,
+          template <typename, typename> class DEty>
 class tcpip {
-  // +=========================================================================+
-  // | [>] CONSTANTS                                               ( private ) |
-  // +=========================================================================+
-  static constexpr DWORD kAcceptAddressBytes =
-      static_cast<DWORD>(sizeof(sockaddr_storage) + 16);
-  // Maximum number of in-flight (assigned but not-yet-sent) responses that a
-  // single connection may hold out-of-order before they are drained in
-  // request-arrival order. Bounds the per-connection reorder buffer and caps
-  // the pipelining/async-concurrency depth we buffer; if exceeded the
-  // connection is defensively closed instead of growing without bound (see
-  // context::deposit_and_drain). Kept as an internal constant for now; exposing
-  // it as a configurable property is a planned future evolution.
-  static constexpr std::uint64_t kReorderWindow = 256;
-  using serialization_result_type = protocol::serialization_result;
-  // +=========================================================================+
-  // | [>] TYPEs                                                   ( private ) |
-  // +=========================================================================+
-  struct context {
-    // [types]
-    enum class deposit_result : std::uint8_t { kOk, kOverflow };
-    // [constructors/destructors]
-    context(SOCKET in_socket) : socket{in_socket} {}
-    context(const context&) = delete;
-    context(context&&) noexcept = delete;
-    // [operators]
-    context& operator=(const context&) = delete;
-    context& operator=(context&&) noexcept = delete;
-    ~context() = default;
-    // [push_pending_response]
-    void push_pending_response(
-        std::unique_ptr<serialization_result_type> response) {
-      if (!response) return;
-      responses.push(std::move(response));
-    }
-    // [drain_pending_responses]
-    std::unique_ptr<serialization_result_type> drain_pending_responses() {
-      if (responses.empty()) return nullptr;
-      std::unique_ptr<serialization_result_type> merged =
-          std::move(responses.front());
-      responses.pop();
-      // fast path: a single response was queued, or the head has a streaming
-      // body (source != nullopt) — hand it over untouched.
-      if (responses.empty() || merged->source) return merged;
-      // slow path: coalesce all contiguous prefix-only responses into one
-      // buffer so they travel in a single WSASend (send batching).
-      while (!responses.empty() && !responses.front()->source) {
-        std::unique_ptr<serialization_result_type> next =
-            std::move(responses.front());
-        responses.pop();
-        if (!next->prefix.empty()) merged->prefix.append(next->prefix);
-      }
-      return merged;
-    }
-    // [deposit_and_drain]
-    deposit_result deposit_and_drain(
-        std::uint64_t seq, std::unique_ptr<serialization_result_type> payload) {
-      sending_guard guard(*this);
-      if (seq >= next_seq_to_send + kReorderWindow) {
-        return deposit_result::kOverflow;
-      }
-      reorder[seq % kReorderWindow] = std::move(payload);
-      while (reorder[next_seq_to_send % kReorderWindow] != nullptr) {
-        std::unique_ptr<serialization_result_type> ready =
-            std::move(reorder[next_seq_to_send % kReorderWindow]);
-        if (ready) responses.push(std::move(ready));
-        next_seq_to_send++;
-      }
-      return deposit_result::kOk;
-    }
-    // [general] attributes
-    std::atomic<SOCKET> socket{INVALID_SOCKET};
-    std::atomic<bool> closing{false};
-    // True while a handle_receive frame is still decoding its batch of
-    // pipelined requests. Async callbacks that complete after the frame exits
-    // observe false and arm the send themselves (same semantics as the former
-    // per-frame make_shared<atomic<bool>>, but without the heap allocation).
-    std::atomic<bool> batch_receiving{false};
-    // [receive] attributes: single in-flight receive buffer and carry-over
-    // offset. Because only one WSARecv is active at a time per connection,
-    // these live here rather than in the transient overlapped_receive object.
-    CHAR recv_buf[BFsz];
-    DWORD recv_off{0};
-    // [responses] attributes
-    std::queue<std::unique_ptr<serialization_result_type>> responses;
-    // [ordering] attributes (all guarded by sending_mutex)
-    std::uint64_t next_seq_to_assign{0};
-    std::uint64_t next_seq_to_send{0};
-    std::array<std::unique_ptr<serialization_result_type>, kReorderWindow>
-        reorder{};
-    // [sending] attributes
-    bool close_after_sending{false};
-    std::mutex sending_mutex;
-    bool sending{false};
-    // [sending] types
-    struct sending_guard {
-      // RAII lock over sending_mutex!
-      explicit sending_guard(context& c) : lock_(c.sending_mutex) {}
-      sending_guard(const sending_guard&) = delete;
-      sending_guard& operator=(const sending_guard&) = delete;
-
-     private:
-      std::lock_guard<std::mutex> lock_;
-    };
-  };
-  enum class io_type : uint8_t { kAccept, kSend, kReceive, kStop };
-  struct overlapped_base : OVERLAPPED {
-    overlapped_base(io_type in_type, std::shared_ptr<context> in_ctx = nullptr)
-        : OVERLAPPED{}, type{in_type}, ctx{in_ctx} {}
-    io_type get_type() const { return type; }
-    std::shared_ptr<context> get_context() const { return ctx; }
-
-   private:
-    const io_type type;
-    std::shared_ptr<context> ctx;
-  };
-  struct overlapped_accept : overlapped_base {
-    overlapped_accept(SOCKET in_socket)
-        : overlapped_base(io_type::kAccept), socket{in_socket} {}
-    SOCKET socket{INVALID_SOCKET};
-    CHAR addresses[(kAcceptAddressBytes * 2)]{0};
-  };
-  struct overlapped_receive : overlapped_base {
-    overlapped_receive(std::shared_ptr<context> in_ctx)
-        : overlapped_base(io_type::kReceive, in_ctx) {}
-    WSABUF wsa;
-  };
-  struct overlapped_send : overlapped_base {
-    overlapped_send(std::shared_ptr<context> in_ctx)
-        : overlapped_base(io_type::kSend, in_ctx) {}
-    WSABUF wsa;
-    std::unique_ptr<std::string> buffer;
-    std::unique_ptr<serialization_result_type> response;
-  };
-  struct overlapped_stop : overlapped_base {
-    overlapped_stop() : overlapped_base(io_type::kStop) {}
-  };
-
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
@@ -232,7 +304,8 @@ class tcpip {
     closesocket(accept_socket_);
     accept_socket_ = INVALID_SOCKET;
     for (std::size_t i = 0; i < workers_.size(); i++) {
-      overlapped_stop* ovp = new overlapped_stop();
+      overlapped_stop<RQty, RSty, DEty>* ovp =
+          new overlapped_stop<RQty, RSty, DEty>();
       if (!PostQueuedCompletionStatus(io_h_, 0, 0, ovp)) {
         // PostQueuedCompletionStatus() only fails when 'io_h_' is no longer a
         // valid completion port handle, so retrying it here would not help.
@@ -348,17 +421,25 @@ class tcpip {
           DWORD tout = INFINITE;
           BOOL st = GetQueuedCompletionStatus(io_h_, &n, &key, &lpo, tout);
           DWORD err = st ? ERROR_SUCCESS : GetLastError();
-          overlapped_base* ovb = reinterpret_cast<overlapped_base*>(lpo);
+          overlapped_base<RQty, RSty, DEty>* ovb =
+              reinterpret_cast<overlapped_base<RQty, RSty, DEty>*>(lpo);
           if (st == TRUE) {
             switch (ovb->get_type()) {
               case io_type::kAccept:
-                handle_accept(reinterpret_cast<overlapped_accept*>(ovb));
+                handle_accept(
+                    reinterpret_cast<overlapped_accept<RQty, RSty, DEty>*>(
+                        ovb));
                 break;
               case io_type::kReceive:
-                handle_receive(reinterpret_cast<overlapped_receive*>(ovb), n);
+                handle_receive(
+                    reinterpret_cast<overlapped_receive<RQty, RSty, DEty>*>(
+                        ovb),
+                    n);
                 break;
               case io_type::kSend:
-                handle_send(reinterpret_cast<overlapped_send*>(ovb), n);
+                handle_send(
+                    reinterpret_cast<overlapped_send<RQty, RSty, DEty>*>(ovb),
+                    n);
                 break;
               case io_type::kStop:
                 handle_stop(stopping);
@@ -381,10 +462,11 @@ class tcpip {
   // +=========================================================================+
   // | [>] handle_accept                                           ( private ) |
   // +=========================================================================+
-  void handle_accept(overlapped_accept* ova) {
+  void handle_accept(overlapped_accept<RQty, RSty, DEty>* ova) {
     if (!post_accept()) return;
     // Let's create a new context for this accepted socket!
-    std::shared_ptr<context> ctx = std::make_shared<context>(ova->socket);
+    std::shared_ptr<context<RQty, RSty, DEty>> ctx =
+        std::make_shared<context<RQty, RSty, DEty>>(ova->socket);
     // Let's set the accepted socket to be associated with the listening socket!
     int result = setsockopt(ova->socket, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
                             reinterpret_cast<const char*>(&accept_socket_),
@@ -430,8 +512,9 @@ class tcpip {
   // +=========================================================================+
   // | [>] handle_receive                                          ( private ) |
   // +=========================================================================+
-  void handle_receive(overlapped_receive* ovr, DWORD bytes_received) {
-    std::shared_ptr<context> ctx = ovr->get_context();
+  void handle_receive(overlapped_receive<RQty, RSty, DEty>* ovr,
+                      DWORD bytes_received) {
+    std::shared_ptr<context<RQty, RSty, DEty>> ctx = ovr->get_context();
     // If the associated context is in 'closing' status then the operation is
     // discarded and no actions are performed!
     if (ctx->closing.load()) return;
@@ -458,7 +541,7 @@ class tcpip {
     while (oin < total) {
       // space_left_in is always >= 1 here because oin < total.
       std::size_t space_left_in = total - oin;
-      protocol::deserialization_result<RQty> result = RQty::deserialize(
+      protocol::deserialization_result<RQty> result = ctx->decoder.parse(
           std::string_view(&ctx->recv_buf[oin], space_left_in));
       if (result.code == protocol::deserialization_status::kMoreBytesNeeded) {
         // In case of 'failed' operation, bytes can NOT be greater than zero!
@@ -480,7 +563,7 @@ class tcpip {
         // room for the kernel to write more data, so the request is too large:
         // close the connection defensively.
         DWORD m = total - oin;
-        if (m == BFsz) {
+        if (m == context<RQty, RSty, DEty>::BFsz) {
           mark_context_for_closing(ctx);
           return;
         }
@@ -556,10 +639,11 @@ class tcpip {
           // Deposit this response at its sequence slot and drain any
           // contiguous ready responses onto the outgoing queue,
           // preserving arrival order.
-          std::unique_ptr<serialization_result_type> payload =
-              std::make_unique<serialization_result_type>(res->serialize());
+          std::unique_ptr<protocol::serialization_result> payload =
+              std::make_unique<protocol::serialization_result>(
+                  res->serialize());
           if (ctx->deposit_and_drain(seq, std::move(payload)) ==
-              context::deposit_result::kOverflow) {
+              context<RQty, RSty, DEty>::deposit_result::kOverflow) {
             // Reorder window exceeded: too many responses are
             // outstanding out of order. Defensively close instead of
             // buffering without bound.
@@ -585,7 +669,7 @@ class tcpip {
       if (result.channel == protocol::channel_intent::kClose) {
         // Close once the pending response has been flushed, and stop serving
         // any further pipelined requests on this channel.
-        typename context::sending_guard snd_lock(*ctx);
+        std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
         ctx->close_after_sending = true;
         close_channel = true;
         break;
@@ -617,17 +701,17 @@ class tcpip {
   // +=========================================================================+
   // | [>] handle_send                                             ( private ) |
   // +=========================================================================+
-  INLINE void handle_send(overlapped_send* ovs, DWORD bytes) {
+  void handle_send(overlapped_send<RQty, RSty, DEty>* ovs, DWORD bytes) {
     arm_pending_send_operation(ovs, bytes);
   }
   // +=========================================================================+
   // | [>] handle_stop                                             ( private ) |
   // +=========================================================================+
-  INLINE void handle_stop(bool& stopping) { stopping = true; }
+  void handle_stop(bool& stopping) { stopping = true; }
   // +=========================================================================+
   // | [>] handle_error                                            ( private ) |
   // +=========================================================================+
-  INLINE void handle_error(overlapped_base* ovb) {
+  void handle_error(overlapped_base<RQty, RSty, DEty>* ovb) {
     switch (ovb->get_type()) {
       case io_type::kAccept:
         break;
@@ -642,30 +726,31 @@ class tcpip {
   // +=========================================================================+
   // | [>] handle_overlapped                                       ( private ) |
   // +=========================================================================+
-  INLINE void handle_overlapped(overlapped_base* ovb) {
+  void handle_overlapped(overlapped_base<RQty, RSty, DEty>* ovb) {
     switch (ovb->get_type()) {
       case io_type::kAccept:
-        delete reinterpret_cast<overlapped_accept*>(ovb);
+        delete reinterpret_cast<overlapped_accept<RQty, RSty, DEty>*>(ovb);
         break;
       case io_type::kReceive:
-        delete reinterpret_cast<overlapped_receive*>(ovb);
+        delete reinterpret_cast<overlapped_receive<RQty, RSty, DEty>*>(ovb);
         break;
       case io_type::kSend:
-        delete reinterpret_cast<overlapped_send*>(ovb);
+        delete reinterpret_cast<overlapped_send<RQty, RSty, DEty>*>(ovb);
         break;
       case io_type::kStop:
-        delete reinterpret_cast<overlapped_stop*>(ovb);
+        delete reinterpret_cast<overlapped_stop<RQty, RSty, DEty>*>(ovb);
         break;
     }
   }
   // +=========================================================================+
   // | [>] post_accept                                             ( private ) |
   // +=========================================================================+
-  INLINE bool post_accept() {
+  bool post_accept() {
     SOCKET soc = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0,
                             WSA_FLAG_OVERLAPPED);
     if (soc == INVALID_SOCKET) return false;
-    overlapped_accept* ova = new overlapped_accept(soc);
+    overlapped_accept<RQty, RSty, DEty>* ova =
+        new overlapped_accept<RQty, RSty, DEty>(soc);
     DWORD received = 0;
     BOOL accepted =
         accept_ex_(accept_socket_, ova->socket, ova->addresses, 0,
@@ -679,12 +764,14 @@ class tcpip {
   // +=========================================================================+
   // | [>] send_error_and_mark_context_for_closing                 ( private ) |
   // +=========================================================================+
-  void send_error_and_mark_context_for_closing(std::shared_ptr<context> ctx,
-                                               std::shared_ptr<RSty> response) {
+  void send_error_and_mark_context_for_closing(
+      std::shared_ptr<context<RQty, RSty, DEty>> ctx,
+      std::shared_ptr<RSty> response) {
     if (response) {
-      typename context::sending_guard sending_lock(*ctx);
-      std::unique_ptr<serialization_result_type> out =
-          std::make_unique<serialization_result_type>(response->serialize());
+      std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
+      std::unique_ptr<protocol::serialization_result> out =
+          std::make_unique<protocol::serialization_result>(
+              response->serialize());
       ctx->close_after_sending = true;
       // Terminal (protocol-error) path: this response is pushed straight onto
       // the outgoing queue, intentionally bypassing the sequence/reorder window
@@ -700,7 +787,8 @@ class tcpip {
   // +=========================================================================+
   // | [>] mark_context_for_closing                                ( private ) |
   // +=========================================================================+
-  void mark_context_for_closing(std::shared_ptr<context> ctx) {
+  void mark_context_for_closing(
+      std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
     // Let's prepare this context for closing!
     bool expected = false;
     if (ctx->closing.compare_exchange_strong(expected, true)) {
@@ -725,12 +813,13 @@ class tcpip {
   // +=========================================================================+
   // | [>] arm_pending_send_operation                              ( private ) |
   // +=========================================================================+
-  void arm_pending_send_operation(overlapped_send* ovs, DWORD bytes) {
+  void arm_pending_send_operation(overlapped_send<RQty, RSty, DEty>* ovs,
+                                  DWORD bytes) {
     // If the associated context is in 'closing' status then the operation is
     // not dispatched and no actions are performed!
-    std::shared_ptr<context> ctx = ovs->get_context();
+    std::shared_ptr<context<RQty, RSty, DEty>> ctx = ovs->get_context();
     if (ctx->closing.load()) return;
-    typename context::sending_guard sending_lock(*ctx);
+    std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
     ovs->buffer->erase(0, bytes);
     ctx->sending = false;
     if (!ovs->buffer->empty()) {
@@ -762,7 +851,7 @@ class tcpip {
     // avoiding a second lock acquisition that arm_next_send_operation would
     // otherwise require (the unlock+relock that existed when handle_send called
     // arm_next_send_operation as a separate step).
-    std::unique_ptr<serialization_result_type> response = dequeue(ctx);
+    std::unique_ptr<protocol::serialization_result> response = dequeue(ctx);
     if (!response) {
       // Queue is empty. Close now if requested and all responses are in-flight.
       if (ctx->close_after_sending &&
@@ -781,15 +870,15 @@ class tcpip {
   // +=========================================================================+
   // | [>] arm_next_send_operation                                 ( private ) |
   // +=========================================================================+
-  void arm_next_send_operation(std::shared_ptr<context> ctx) {
+  void arm_next_send_operation(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
     // If the associated context is in 'closing' status then the operation is
     // not dispatched and no actions are performed!
     if (ctx->closing.load()) return;
     // If the associated context is already sending then the operation is not
     // dispatched and no actions are performed!
-    typename context::sending_guard sending_lock(*ctx);
+    std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
     if (ctx->sending) return;
-    std::unique_ptr<serialization_result_type> response = dequeue(ctx);
+    std::unique_ptr<protocol::serialization_result> response = dequeue(ctx);
     if (!response) {
       // The outgoing queue is drained. Only close now if a close was requested
       // AND there is nothing still in flight: every assigned sequence must have
@@ -815,7 +904,8 @@ class tcpip {
   // +=========================================================================+
   // | [>] arm_next_receive_operation                              ( private ) |
   // +=========================================================================+
-  INLINE void arm_next_receive_operation(std::shared_ptr<context> ctx) {
+  void arm_next_receive_operation(
+      std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
     // If the associated context is in 'closing' status then the operation is
     // not dispatched and no actions are performed!
     if (ctx->closing.load()) return;
@@ -825,15 +915,15 @@ class tcpip {
   // +=========================================================================+
   // | [>] enqueue                                                 ( private ) |
   // +=========================================================================+
-  INLINE void enqueue(std::shared_ptr<context> ctx,
-                      std::unique_ptr<serialization_result_type> bf) {
+  void enqueue(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
+               std::unique_ptr<protocol::serialization_result> bf) {
     ctx->push_pending_response(std::move(bf));
   }
   // +=========================================================================+
   // | [>] dequeue                                                 ( private ) |
   // +=========================================================================+
-  INLINE std::unique_ptr<serialization_result_type> dequeue(
-      std::shared_ptr<context> ctx) {
+  std::unique_ptr<protocol::serialization_result> dequeue(
+      std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
     return ctx->drain_pending_responses();
   }
   // +=========================================================================+
@@ -842,7 +932,7 @@ class tcpip {
   // | Selects the next bounded wire segment from an outgoing response. The    |
   // | prefix is sent first; subsequent segments are read lazily from body.    |
   // +=========================================================================+
-  bool load_next_buffer(overlapped_send& ovs) {
+  bool load_next_buffer(overlapped_send<RQty, RSty, DEty>& ovs) {
     if (!ovs.response) return false;
     if (!ovs.response->prefix.empty()) {
       ovs.buffer =
@@ -854,7 +944,7 @@ class tcpip {
       return false;
     }
     ovs.buffer = std::make_unique<std::string>();
-    ovs.buffer->resize(BFsz);
+    ovs.buffer->resize(context<RQty, RSty, DEty>::BFsz);
     std::size_t bytes = ovs.response->source->read(std::span<std::byte>(
         reinterpret_cast<std::byte*>(ovs.buffer->data()), ovs.buffer->size()));
     ovs.buffer->resize(bytes);
@@ -863,19 +953,21 @@ class tcpip {
   // +=========================================================================+
   // | [>] receive                                                 ( private ) |
   // +=========================================================================+
-  INLINE bool receive(std::shared_ptr<context> ctx) {
+  bool receive(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
     // Load the socket atomically: a concurrent mark_context_for_closing may be
     // closing it. If it is already gone, don't post a receive on
     // INVALID_SOCKET.
     SOCKET s = ctx->socket.load();
     if (s == INVALID_SOCKET) return false;
     DWORD f = 0, r = 0;
-    overlapped_receive* ovr = new overlapped_receive(ctx);
+    overlapped_receive<RQty, RSty, DEty>* ovr =
+        new overlapped_receive<RQty, RSty, DEty>(ctx);
     // Buffer and carry-over offset live in context; wsa always points at the
     // first free byte so the kernel writes new data contiguously after any
     // residual bytes already present in recv_buf[0..recv_off-1].
     ovr->wsa.buf = ctx->recv_buf + ctx->recv_off;
-    ovr->wsa.len = static_cast<ULONG>(BFsz - ctx->recv_off);
+    ovr->wsa.len =
+        static_cast<ULONG>(context<RQty, RSty, DEty>::BFsz - ctx->recv_off);
     int res = WSARecv(s, &ovr->wsa, 1, &r, &f, ovr, 0);
     if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
       delete ovr;
@@ -886,8 +978,8 @@ class tcpip {
   // +=========================================================================+
   // | [>] send                                                    ( private ) |
   // +=========================================================================+
-  bool send(std::shared_ptr<context> ctx,
-            std::unique_ptr<serialization_result_type> response,
+  bool send(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
+            std::unique_ptr<protocol::serialization_result> response,
             std::unique_ptr<std::string> buffer = nullptr) {
     // Load the socket atomically: a concurrent mark_context_for_closing may be
     // closing it. If it is already gone, don't post a send on INVALID_SOCKET
@@ -895,14 +987,15 @@ class tcpip {
     SOCKET s = ctx->socket.load();
     if (s == INVALID_SOCKET) return false;
     if (!buffer) {
-      overlapped_send pending(ctx);
+      overlapped_send<RQty, RSty, DEty> pending(ctx);
       pending.response = std::move(response);
       if (!load_next_buffer(pending))
         return !pending.response->source || !pending.response->source->failed();
       return send(ctx, std::move(pending.response), std::move(pending.buffer));
     }
     DWORD f = 0, snt = 0;
-    overlapped_send* ovs = new overlapped_send(ctx);
+    overlapped_send<RQty, RSty, DEty>* ovs =
+        new overlapped_send<RQty, RSty, DEty>(ctx);
     ovs->response = std::move(response);
     ovs->buffer = std::move(buffer);
     ovs->wsa.buf = ovs->buffer->data();

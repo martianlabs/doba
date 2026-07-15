@@ -67,6 +67,18 @@ class deserializer {
     return result;
   }
   // +=========================================================================+
+  // | [>] raw_source                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Builds a raw decoder over an already prepared generic reader. This is   |
+  // | used when the request owns inline bytes or receives a source directly.  |
+  // +=========================================================================+
+  static deserializer<decoder_raw> raw_source(
+      common::reader source, std::size_t max_raw_size = 0) {
+    deserializer<decoder_raw> result(decoder_raw{}, std::move(source));
+    result.set_raw_size_limit(max_raw_size);
+    return result;
+  }
+  // +=========================================================================+
   // | [>] chunked                                                  ( public ) |
   // +=========================================================================+
   static deserializer<decoder_chunked> chunked(
@@ -76,6 +88,17 @@ class deserializer {
     return deserializer<decoder_chunked>(
         decoder_chunked(max_chunk_extension_size, max_trailer_size),
         common::reader(std::move(source)));
+  }
+  // +=========================================================================+
+  // | [>] chunked_source                                           ( public ) |
+  // +=========================================================================+
+  static deserializer<decoder_chunked> chunked_source(
+      common::reader source,
+      std::size_t max_chunk_extension_size = kDefaultBufferSize,
+      std::size_t max_trailer_size = kDefaultBufferSize) {
+    return deserializer<decoder_chunked>(
+        decoder_chunked(max_chunk_extension_size, max_trailer_size),
+        std::move(source));
   }
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |

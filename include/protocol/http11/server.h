@@ -35,6 +35,7 @@
 #include "protocol/http11/response.h"
 #include "protocol/http11/router.h"
 #include "protocol/http11/header_names.h"
+#include "protocol/http11/decoder.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -46,12 +47,15 @@ namespace martianlabs::doba::protocol::http11 {
 // | Template parameters:                                                      |
 // |   RQty - request being used (http11::request by default).                 |
 // |   RSty - response being used (http11::response by default).               |
+// |   DEty - decoder being used (http11::decoder by default).                 |
 // |   TRty - transport being used (tcp/ip by default).                        |
 // |   ROty - router being used (http11::router by default).                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty = request, typename RSty = response,
-          template <typename, typename, std::size_t> class TRty =
+          template <typename, typename> class DEty = decoder,
+          template <typename, typename,
+                    template <typename, typename> typename> class TRty =
               transport::server::tcpip,
           typename FNty = std::function<void(const RQty&, RSty&)>,
           template <typename> class ROty = router>
@@ -162,7 +166,7 @@ class server {
   // +=========================================================================+
   std::shared_ptr<common::thread_pool> thread_pool_;
   std::atomic<uint32_t> connections_{0};
-  TRty<RQty, RSty, 4096> transport_;
+  TRty<RQty, RSty, DEty> transport_;
   ROty<FNty> router_;
 };
 }  // namespace martianlabs::doba::protocol::http11
