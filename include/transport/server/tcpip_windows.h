@@ -523,12 +523,7 @@ class tcpip {
       mark_context_for_closing(ctx);
       return;
     }
-    // total is the number of valid bytes in recv_buf[0..total-1]: the
-    // carry-over residual already sitting at recv_buf[0..recv_off-1] plus
-    // the bytes just written by the kernel at recv_buf[recv_off..total-1].
-    // Invariant: recv_off in [0, BFsz-1]; bytes_received in [1, BFsz-recv_off]
-    // (the kernel cannot write past wsa.len = BFsz-recv_off); total in [1,
-    // BFsz].
+    // total is the number of valid bytes in recv_buf[0..total-1]!
     DWORD total = ctx->recv_off + bytes_received;
     // Now, we'll try to decode as many requests as possible..
     DWORD oin = 0;
@@ -544,34 +539,10 @@ class tcpip {
       protocol::deserialization_result<RQty> result = ctx->decoder.parse(
           std::string_view(&ctx->recv_buf[oin], space_left_in));
       if (result.code == protocol::deserialization_status::kMoreBytesNeeded) {
-        // In case of 'failed' operation, bytes can NOT be greater than zero!
-        if (result.bytes_used > 0) {
-          // In this case we'll mark this context as 'closing'..
-          try {
-            std::shared_ptr<RSty> res = std::make_shared<RSty>();
-            on_bad_request("Inconsistent deserialization status!", res);
-            send_error_and_mark_context_for_closing(ctx, res);
-          } catch (const std::exception&) {
-            mark_context_for_closing(ctx);
-          } catch (...) {
-            mark_context_for_closing(ctx);
-          }
-          return;
-        }
-        // m bytes are an incomplete message fragment sitting at
-        // recv_buf[oin..total-1]. If they fill the entire buffer there is no
-        // room for the kernel to write more data, so the request is too large:
-        // close the connection defensively.
-        DWORD m = total - oin;
-        if (m == context<RQty, RSty, DEty>::BFsz) {
-          mark_context_for_closing(ctx);
-          return;
-        }
-        // Slide the residual bytes to recv_buf[0..m-1] so the next WSARecv
-        // writes contiguously after them. memmove handles the overlap-safe case
-        // when oin == 0 (no-op) and the common case when oin > 0 (shift left).
-        if (oin > 0) std::memmove(ctx->recv_buf, ctx->recv_buf + oin, m);
-        ctx->recv_off = m;
+        // All bytes in the current window were consumed and the decoder still
+        // needs more data to complete the message. Reset the receive offset and
+        // rearm; the decoder retains its internal state across calls.
+        ctx->recv_off = 0;
         ctx->batch_receiving.store(false);
         arm_next_receive_operation(ctx);
         return;
@@ -589,9 +560,11 @@ class tcpip {
         }
         return;
       }
-      // In case of 'succeeded' operation, consumed bytes can NOT be zero!
-      // Also, used bytes in deserialization must be within valid memory range!
-      if (result.bytes_used == 0 || result.bytes_used > (space_left_in)) {
+      // Decoder contract: bytes_used must be in (0, space_left_in]. It counts
+      // only the bytes consumed from the sv passed to this parse() call —
+      // never an accumulated cross-window total. bytes_used == 0 on kSucceeded
+      // or bytes_used > space_left_in both indicate a decoder bug.
+      if (result.bytes_used == 0 || result.bytes_used > space_left_in) {
         // In this case we'll mark this context as 'closing'..
         try {
           std::shared_ptr<RSty> res = std::make_shared<RSty>();

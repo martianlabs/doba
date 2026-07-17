@@ -271,7 +271,7 @@ class decoder {
             body_writer_ = body::writer_raw(ctx_.content_length);
           }
           // Mount the request object and keep the result!
-          decoded_ = mount_request(i);
+          decoded_ = std::move(mount_request(i));
           // In case of error, we return the error code and stop parsing.
           // Otherwise, we continue parsing the body if there is a body writer,
           // or we return the request if there is no body writer.
@@ -284,7 +284,7 @@ class decoder {
           // continue parsing the body.
           if (!body_writer_) {
             reset();
-            return decoded_;
+            return std::move(decoded_);
           }
           sv.remove_prefix(i);
           return parse(sv);
@@ -350,9 +350,12 @@ class decoder {
         body_writer_.value());
     if (state.has_error) return deserialization_status::kInvalidSource;
     decoded_.bytes_used += state.consumed;
-    if (!state.complete) return deserialization_status::kMoreBytesNeeded;
+    if (!state.complete) {
+      decoded_.bytes_used = 0;  // reset for subsequent calls!
+      return deserialization_status::kMoreBytesNeeded;
+    }
     reset();
-    return decoded_;
+    return std::move(decoded_);
   }
   // +=========================================================================+
   // | [>] mount_request                                            ( public ) |
@@ -390,13 +393,15 @@ class decoder {
     }
     // Check if the request has a host set it in the request.
     if (ctx_.has_host) {
-      req->set_host(ctx_.host.host, ctx_.host.port, ctx_.host.type);
+      req->set_host(ctx_.host.host);
+      req->set_host_port(ctx_.host.port);
+      req->set_host_type(ctx_.host.type);
     }
     // Check if the request has a target authority and set it in the request.
     if (ctx_.has_target_authority) {
-      req->set_target_authority(ctx_.target_authority.host,
-                                ctx_.target_authority.port,
-                                ctx_.target_authority.type);
+      req->set_target_authority(ctx_.target_authority.host);
+      req->set_target_authority_port(ctx_.target_authority.port);
+      req->set_target_authority_type(ctx_.target_authority.type);
     }
     return deserialization_result<request>(req, bytes_used,
                                            ctx_.connection.close_requested
