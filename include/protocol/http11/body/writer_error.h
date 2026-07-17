@@ -22,48 +22,31 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_protocol_http11_body_decoder_raw_h
-#define martianlabs_doba_protocol_http11_body_decoder_raw_h
+#ifndef martianlabs_doba_protocol_http11_writer_error_h
+#define martianlabs_doba_protocol_http11_writer_error_h
 
 #include <cstddef>
-#include <span>
-
-#include "protocol/http11/body/decoder.h"
+#include <cstdint>
 
 namespace martianlabs::doba::protocol::http11::body {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] decoder_raw                                                 ( class ) |
+// | [>] writer_error                                           ( enum-class ) |
 // +---------------------------------------------------------------------------+
-// | This class represents the HTTP/1.1 raw body decoder.                      |
-// | It handles the decoding of raw transfer encoding, managing the            |
-// | state transitions and error handling.                                     |
+// | Error codes shared by body_raw_writer and body_chunked_writer.            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-class decoder_raw {
- public:
-  // +=========================================================================+
-  // | [>] decode                                                   ( public ) |
-  // +=========================================================================+
-  template <typename RDty>
-  decode_result decode(RDty& source, std::span<std::byte> output,
-                       std::size_t& consumed) {
-    decode_result result;
-    std::size_t bytes = source.read(output);
-    if (bytes == 0) {
-      if (!source.ok()) {
-        result.has_error = true;
-        result.error = decoder_error::io_error;
-      } else {
-        result.complete = true;
-      }
-      return result;
-    }
-    result.produced = bytes;
-    consumed += bytes;
-    result.complete = source.exhausted();
-    return result;
-  }
+enum class writer_error : std::uint8_t {
+  none,
+  io_error,
+  invalid_chunk_size,
+  chunk_size_overflow,
+  invalid_chunk_crlf,
+  invalid_trailer,
+  chunked_incomplete,
+  raw_size_limit_exceeded,
+  chunk_extension_size_limit_exceeded,
+  trailer_size_limit_exceeded
 };
 }  // namespace martianlabs::doba::protocol::http11::body
 

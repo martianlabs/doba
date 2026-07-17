@@ -56,33 +56,27 @@ namespace martianlabs::doba::protocol::http11 {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct context {
-  // The hop-by-hop transport state derived by the intra-header interpreters.
-  http11::connection& connection;
-  // The read-only inbound policy configuration.
-  const policies& policies;
-  // Whether a Content-Length header was present, and its parsed value. When
-  // more than one Content-Length header field is seen, multiple_content_length
-  // is set and framing::apply rejects the message regardless of whether the
-  // values agree (RFC 9112 §6.3 bullet 4), mirroring how multiple_host is
-  // handled below.
+  // Policies coming from the inbound configuration; 
+  // they are not derived from the request.
+  policies policies;
+  // The mutable hop-by-hop connection state derived from the request.
+  http11::connection connection;
+  // Content-Length and Transfer-Encoding are mutually exclusive; the rules
+  // check for their presence and the number of Content-Length headers. The
+  // parsed Content-Length value is stored for the rules to reason about it.
   bool has_content_length = false;
   bool multiple_content_length = false;
   std::size_t content_length = 0;
-  // Whether a Transfer-Encoding header was present (its codings, including
-  // whether the final one is chunked, live on the connection state).
   bool has_transfer_encoding = false;
-  // Whether a Host header was present and whether more than one was seen.
+  // Host and Target-Authority are mutually exclusive; the rules check for their
+  // presence and the number of Host headers. The parsed values are stored for
+  // the rules to reason about them.
   bool has_host = false;
   bool multiple_host = false;
-  // The parsed Host value (valid only when has_host is true).
   parsed_host_port host;
-  // The request-target authority, when the target carried one (absolute-form
-  // or authority-form); used to reconcile against Host.
   bool has_target_authority = false;
   parsed_host_port target_authority;
-  // The aggregate number of forwarding hops seen across Via, Forwarded, and
-  // X-Forwarded-For. Each intra-header interpreter checks its own list against
-  // the limit; the policy rule checks their sum, which no single header sees.
+  // The number of forwarding hops across Via / Forwarded / X-Forwarded-For.
   std::size_t forwarding_hops = 0;
 };
 }  // namespace martianlabs::doba::protocol::http11

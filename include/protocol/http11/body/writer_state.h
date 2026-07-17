@@ -22,45 +22,37 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_protocol_http11_body_encoder_raw_h
-#define martianlabs_doba_protocol_http11_body_encoder_raw_h
+#ifndef martianlabs_doba_protocol_http11_body_writer_state_h
+#define martianlabs_doba_protocol_http11_body_writer_state_h
 
 #include <cstddef>
 #include <cstdint>
 
-#include "protocol/http11/body/encoder.h"
+#include "protocol/http11/body/writer_error.h"
 
 namespace martianlabs::doba::protocol::http11::body {
 // /////////////////////////////////////////////////////////////////////////////
-// +===========================================================================+
-// | [>] encoder_raw                                                 ( class ) |
 // +---------------------------------------------------------------------------+
-// | Represents a raw encoder.                                                 |
-// +===========================================================================+
+// | [>] writer_state                                               ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Result of a body writer write() call.                                     |
+// |   consumed  - bytes taken from the input span (wire bytes, including any  |
+// |               chunked framing). Caller advances its buffer by this        |
+// |               amount; the remainder belongs to the next request.          |
+// |   complete  - body fully accumulated; no further write() calls needed.    |
+// |   has_error - a protocol or size-limit error was detected.                |
+// |   error     - error code, if has_error is true.                           |
+// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-class encoder_raw {
- public:
-  // +=========================================================================+
-  // | [>] encode                                                   ( public ) |
-  // +=========================================================================+
-  template <typename WRty>
-  bool encode(WRty& sink, const char* data, std::size_t len,
-              encode_result& out) {
-    out.stored = 0;
-    if (len == 0) return true;
-    if (!sink.write(data, len)) return false;
-    out.stored = len;
-    return true;
-  }
-  // +=========================================================================+
-  // | [>] finish                                                   ( public ) |
-  // +=========================================================================+
-  template <typename WRty>
-  bool finish(WRty& sink, encode_result& out) {
-    (void)sink;
-    out.stored = 0;
-    return true;
-  }
+struct writer_state {
+  // Consumed bytes from the input span (wire bytes, including framing).
+  std::size_t consumed = 0;
+  // Body fully accumulated; no further write() calls needed.
+  bool complete = false;
+  // A protocol or size-limit error was detected.
+  bool has_error = false;
+  // Error code, if has_error is true.
+  writer_error error = writer_error::none;
 };
 }  // namespace martianlabs::doba::protocol::http11::body
 

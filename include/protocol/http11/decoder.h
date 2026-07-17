@@ -25,10 +25,15 @@
 #ifndef martianlabs_doba_protocol_http11_decoder_h
 #define martianlabs_doba_protocol_http11_decoder_h
 
+#include <algorithm>
+
 #include "protocol/http11/helpers.h"
 #include "protocol/http11/request.h"
 #include "protocol/http11/response.h"
 #include "protocol/http11/context.h"
+#include "protocol/http11/query_parameter.h"
+#include "protocol/http11/body/writer_chunked.h"
+#include "protocol/http11/body/writer_raw.h"
 #include "protocol/http11/headers/accept.h"
 #include "protocol/http11/headers/accept_charset.h"
 #include "protocol/http11/headers/accept_encoding.h"
@@ -119,9 +124,9 @@ class decoder {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   decoder() = default;
-  ~decoder() = default;
   decoder(const decoder&) = delete;
   decoder(decoder&&) noexcept = delete;
+  ~decoder() = default;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +=========================================================================+
@@ -131,18 +136,16 @@ class decoder {
   // | [>] parse                                                    ( public ) |
   // +=========================================================================+
   deserialization_result<request> parse(std::string_view sv) {
+    return body_writer_ ? parse_body(sv) : parse_core(sv);
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] parse_core                                               ( public ) |
+  // +=========================================================================+
+  deserialization_result<request> parse_core(std::string_view sv) {
     std::size_t i = 0;
     const std::size_t sv_size = sv.size();
-    // [first] pass..
-    std::string_view query_tmp;
-    std::string_view method_tmp;
-    std::string_view absolute_path_tmp;
-    target target_tmp = target::kUnknown;
-    std::vector<std::pair<std::string, std::string>> headers_tmp;
-    // [second] pass..
-    policies policies_tmp;
-    connection connection_tmp;
-    context ctx{connection_tmp, policies_tmp};
     // +-----------------------------------------------------------------------+
     // | request-line = method SP request-target SP HTTP-version               |
     // +-----------------------------------------------------------------------+
@@ -150,9 +153,9 @@ class decoder {
     // | [method] part!                                                        |
     // +-----------------------------------------------------------------------+
     if (!sv_size) return deserialization_status::kMoreBytesNeeded;
-    method_tmp = helpers::consume_token(sv);
-    if (method_tmp.empty()) return deserialization_status::kInvalidSource;
-    i += method_tmp.size();
+    method_ = helpers::consume_token(sv);
+    if (method_.empty()) return deserialization_status::kInvalidSource;
+    i += method_.size();
     if (i >= sv_size) return deserialization_status::kMoreBytesNeeded;
     if (sv[i++] != ' ') return deserialization_status::kInvalidSource;
     // +-----------------------------------------------------------------------+
@@ -166,42 +169,42 @@ class decoder {
     if (i >= sv_size) return deserialization_status::kMoreBytesNeeded;
     deserialization_status status;
     std::size_t bytes_used = 0;
-    if (method_tmp == method_names::kConnect) {
+    if (method_ == method_names::kConnect) {
       std::string_view authority_host, authority_port;
       helpers::host_type authority_type;
       status = helpers::try_to_deserialize_as_authority_form(
           sv.substr(i), authority_host, authority_port, authority_type,
           bytes_used);
       if (status == deserialization_status::kSucceeded) {
-        target_tmp = target::kAuthorityForm;
-        ctx.has_target_authority = true;
-        ctx.target_authority = {authority_host, authority_port, authority_type};
+        target_ = target::kAuthorityForm;
+        ctx_.has_target_authority = true;
+        ctx_.target_authority = {authority_host, authority_port,
+                                 authority_type};
       }
-    } else if (method_tmp == method_names::kOptions && sv[i] == '*') {
+    } else if (method_ == method_names::kOptions && sv[i] == '*') {
       status = helpers::try_to_deserialize_as_asterisk_form(sv.substr(i),
                                                             bytes_used);
       if (status == deserialization_status::kSucceeded) {
-        target_tmp = target::kAsteriskForm;
+        target_ = target::kAsteriskForm;
       }
     } else {
       status = helpers::try_to_deserialize_as_origin_form(
-          sv.substr(i), absolute_path_tmp, query_tmp, bytes_used);
+          sv.substr(i), absolute_path_, query_, bytes_used);
       if (status == deserialization_status::kSucceeded) {
-        target_tmp = target::kOriginForm;
+        target_ = target::kOriginForm;
       } else {
         bool has_authority = false;
         std::string_view authority_host, authority_port, authority_scheme;
         helpers::host_type authority_type;
         status = helpers::try_to_deserialize_as_absolute_form(
-            sv.substr(i), absolute_path_tmp, query_tmp, has_authority,
-            authority_host, authority_port, authority_type, authority_scheme,
-            bytes_used);
+            sv.substr(i), absolute_path_, query_, has_authority, authority_host,
+            authority_port, authority_type, authority_scheme, bytes_used);
         if (status == deserialization_status::kSucceeded) {
-          target_tmp = target::kAbsoluteForm;
+          target_ = target::kAbsoluteForm;
           if (has_authority) {
-            ctx.has_target_authority = true;
-            ctx.target_authority = {authority_host, authority_port,
-                                    authority_type, authority_scheme};
+            ctx_.has_target_authority = true;
+            ctx_.target_authority = {authority_host, authority_port,
+                                     authority_type, authority_scheme};
           }
         }
       }
@@ -216,7 +219,7 @@ class decoder {
     // | HTTP-version   | HTTP-name "/" DIGIT "." DIGIT                        |
     // | HTTP-name      | %s"HTTP"                                             |
     // +----------------+------------------------------------------------------+
-    if (i + 8 > sv_size) return deserialization_status::kMoreBytesNeeded;
+    if (i + 7 >= sv_size) return deserialization_status::kMoreBytesNeeded;
     if (sv[i + 0] != 'H' || sv[i + 1] != 'T' || sv[i + 2] != 'T' ||
         sv[i + 3] != 'P' || sv[i + 4] != '/' || !helpers::is_digit(sv[i + 5]) ||
         sv[i + 6] != '.' || !helpers::is_digit(sv[i + 7])) {
@@ -257,89 +260,34 @@ class decoder {
           if (i + 1 >= sv_size) return deserialization_status::kMoreBytesNeeded;
           if (sv[i + 1] != '\n') return deserialization_status::kInvalidSource;
           i += 2;
-          // Let's build the request to return it!
-          req_ = std::make_shared<request>();
-
-          /*
-          pepe
-          */
-
-          /*
-          req->method_ = std::move(method_tmp);
-          req->absolute_path_ = std::move(absolute_path_tmp);
-          req->query_part_ = std::move(query_tmp);
-          req->headers_ = std::move(headers_tmp);
-          req->target_ = target_tmp;
-          // The raw query component is preserved verbatim in query_part_ above;
-          // here we also expose it as structured key/value pairs. The helper
-          // yields zero-copy views over query_part_ (kept alive by req), which
-          // we copy into owned std::string pairs so query_parameters_ survives
-          // past deserialize() independently of the source buffer, exactly like
-          // method_/absolute_path_/query_part_.
-          if (!req->query_part_.empty()) {
-            std::array<std::string_view, kMaxQueryParameters> keys_tmp;
-            std::array<std::string_view, kMaxQueryParameters> values_tmp;
-            std::size_t qp_count = helpers::split_query_parameters(
-                req->query_part_, keys_tmp, values_tmp);
-            req->query_parameters_.reserve(qp_count);
-            for (std::size_t q = 0; q < qp_count; q++) {
-              req->query_parameters_.emplace_back(std::string(keys_tmp[q]),
-                                                  std::string(values_tmp[q]));
-            }
+          // Check for the presence of a body and build the body writer for this
+          // request. We only support chunked and raw framing, and only if the
+          // request has a body.
+          if (ctx_.connection.chunked) {
+            body_buffer_ = common::writer();
+            body_writer_ = body::writer_chunked();
+          } else if (ctx_.has_content_length && ctx_.content_length > 0) {
+            body_buffer_ = common::writer();
+            body_writer_ = body::writer_raw(ctx_.content_length);
           }
-          // ctx.host / ctx.target_authority are zero-copy views over sv, which
-          // does not outlive deserialize(); materialize them into req's own
-          // storage here, exactly like method_/absolute_path_/query_part_
-          // above.
-          req->has_host_ = ctx.has_host;
-          req->host_ = ctx.host.host;
-          req->host_port_ = ctx.host.port;
-          req->host_type_ = ctx.host.type;
-          req->has_target_authority_ = ctx.has_target_authority;
-          req->target_authority_host_ = ctx.target_authority.host;
-          req->target_authority_port_ = ctx.target_authority.port;
-          req->target_authority_type_ = ctx.target_authority.type;
-          // Every modelled header was already parsed once and interpreted in
-          // place during the loop above, populating ctx and the connection
-          // state. All that remains is to apply the transversal rules that no
-          // single header can decide, over the fully populated context. Any
-          // rejection fails the whole deserialization.
-          if (headers::rules::framing::apply(ctx) == verdict::kReject ||
-              headers::rules::routing::apply(ctx) == verdict::kReject ||
-              headers::rules::directives::apply(ctx) == verdict::kReject ||
-              headers::rules::policy::apply(ctx) == verdict::kReject) {
-            return deserialization_status::kInvalidSource;
+          // Mount the request object and keep the result!
+          decoded_ = mount_request(i);
+          // In case of error, we return the error code and stop parsing.
+          // Otherwise, we continue parsing the body if there is a body writer,
+          // or we return the request if there is no body writer.
+          if (decoded_.code != deserialization_status::kSucceeded) {
+            return decoded_.code;
           }
-          // Build the body reader for this request.  Framing is already
-          // resolved: chunked (Transfer-Encoding: chunked) takes precedence
-          // over Content-Length (RFC 9112 §6.3).  Methods with no framing
-          // signal carry no body.
-          if (connection_tmp.chunked) {
-            req->body_ = body::deserializer<body::decoder_chunked>::chunked();
-          } else if (ctx.has_content_length && ctx.content_length > 0) {
-            req->body_ = body::deserializer<body::decoder_raw>::raw(
-                {}, ctx.content_length);
+          // In case of no body writer, we are done and can return the request.
+          // Otherwise, we need to continue parsing the body, so we remove the
+          // already consumed bytes from the input and call parse() again to
+          // continue parsing the body.
+          if (!body_writer_) {
+            reset();
+            return decoded_;
           }
-          // Translate the HTTP/1.1 connection state into the generic,
-          // closed-vocabulary channel intent the transport understands.
-          // kUpgrade is reserved for a later phase (e.g. WebSocket).
-          channel_intent channel = connection_tmp.close_requested
-                                       ? channel_intent::kClose
-                                       : channel_intent::kKeep;
-          */
-
-          channel_intent channel = connection_tmp.close_requested
-                                       ? channel_intent::kClose
-                                       : channel_intent::kKeep;
-          req_->set_method(method_names::kGet);
-          req_->set_absolute_path("/pipeline");
-          req_->set_target(target::kOriginForm);
-
-          /*
-          pepe fin
-          */
-
-          return deserialization_result(std::move(req_), i, channel);
+          sv.remove_prefix(i);
+          return parse(sv);
         }
         if (sv[i] == '\n') return deserialization_status::kInvalidSource;
         // [field-name] decoding..
@@ -378,19 +326,96 @@ class decoder {
       // rejection fails deserialization.
       auto const itr_dispatch = header_dispatchers_.find(field_name);
       if (itr_dispatch != header_dispatchers_.end()) {
-        if (itr_dispatch->second(field_value, ctx) == verdict::kReject) {
+        if (itr_dispatch->second(field_value, ctx_) == verdict::kReject) {
           return deserialization_status::kInvalidSource;
         }
       }
-      headers_tmp.emplace_back(field_name, field_value);
+      headers_.emplace_back(field_name, field_value);
       i += 2;
       fn_start = i;
       field_name_decoded = false;
     }
     return deserialization_status::kMoreBytesNeeded;
   }
-
- private:
+  // +=========================================================================+
+  // | [>] parse_body                                               ( public ) |
+  // +=========================================================================+
+  deserialization_result<request> parse_body(std::string_view sv) {
+    body::writer_state state = std::visit(
+        [&sv, this](auto& arg) -> body::writer_state {
+          std::span<const std::byte> byte_span{
+              reinterpret_cast<const std::byte*>(sv.data()), sv.size()};
+          return arg.write(byte_span, body_buffer_.value());
+        },
+        body_writer_.value());
+    if (state.has_error) return deserialization_status::kInvalidSource;
+    decoded_.bytes_used += state.consumed;
+    if (!state.complete) return deserialization_status::kMoreBytesNeeded;
+    reset();
+    return decoded_;
+  }
+  // +=========================================================================+
+  // | [>] mount_request                                            ( public ) |
+  // +=========================================================================+
+  deserialization_result<request> mount_request(std::size_t bytes_used) {
+    // Every modelled header was already parsed once and interpreted in
+    // place during the loop above, populating ctx and the connection
+    // state. All that remains is to apply the transversal rules that no
+    // single header can decide, over the fully populated context. Any
+    // rejection fails the whole deserialization.
+    if (headers::rules::framing::apply(ctx_) == verdict::kReject ||
+        headers::rules::routing::apply(ctx_) == verdict::kReject ||
+        headers::rules::directives::apply(ctx_) == verdict::kReject ||
+        headers::rules::policy::apply(ctx_) == verdict::kReject) {
+      return deserialization_status::kInvalidSource;
+    }
+    // Now that the request is fully validated, we can build the request object
+    std::shared_ptr<request> req = std::make_shared<request>();
+    req->set_method(method_);
+    req->set_absolute_path(absolute_path_);
+    req->set_target(target_);
+    req->set_headers(headers_);
+    // Only if the query part is not empty, we will split it into key-value
+    // pairs and set it in the request.
+    if (!query_.empty()) {
+      std::array<std::string_view, kMaxQueryParameters> keys;
+      std::array<std::string_view, kMaxQueryParameters> values;
+      std::size_t qc = helpers::split_query_parameters(query_, keys, values);
+      std::vector<query_parameter_view> query_parameters;
+      query_parameters.reserve(qc);
+      for (std::size_t q = 0; q < qc; q++) {
+        query_parameters.emplace_back(keys[q], values[q]);
+      }
+      req->set_query_parameters(query_parameters);
+    }
+    // Check if the request has a host set it in the request.
+    if (ctx_.has_host) {
+      req->set_host(ctx_.host.host, ctx_.host.port, ctx_.host.type);
+    }
+    // Check if the request has a target authority and set it in the request.
+    if (ctx_.has_target_authority) {
+      req->set_target_authority(ctx_.target_authority.host,
+                                ctx_.target_authority.port,
+                                ctx_.target_authority.type);
+    }
+    return deserialization_result<request>(req, bytes_used,
+                                           ctx_.connection.close_requested
+                                               ? channel_intent::kClose
+                                               : channel_intent::kKeep);
+  }
+  // +=========================================================================+
+  // | [>] reset                                                   ( private ) |
+  // +=========================================================================+
+  void reset() {
+    method_ = {};
+    target_ = target::kUnknown;
+    absolute_path_ = {};
+    query_ = {};
+    headers_ = {};
+    ctx_ = {};
+    body_writer_ = std::nullopt;
+    body_buffer_ = std::nullopt;
+  }
   // +=========================================================================+
   // |                      HTTP/1.1 SERVER HEADER CHECKLIST                   |
   // +=========================================================================+
@@ -772,9 +797,21 @@ class decoder {
            &dispatch<headers::x_proxy_connection>},
   };
   // +=========================================================================+
+  // | [>] USINGs                                                  ( private ) |
+  // +=========================================================================+
+  using body_writer_t = std::variant<body::writer_chunked, body::writer_raw>;
+  // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  std::shared_ptr<request> req_;
+  context ctx_{};
+  std::string_view query_;
+  std::string_view method_;
+  std::string_view absolute_path_;
+  target target_ = target::kUnknown;
+  std::vector<std::pair<std::string_view, std::string_view>> headers_;
+  std::optional<body_writer_t> body_writer_ = std::nullopt;
+  std::optional<common::writer> body_buffer_;
+  deserialization_result<request> decoded_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

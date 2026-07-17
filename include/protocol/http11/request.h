@@ -34,19 +34,19 @@
 #include <string_view>
 #include <type_traits>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include "platform.h"
 #include "common/hash_map.h"
 #include "protocol/http11/method_names.h"
 #include "protocol/http11/header_names.h"
+#include "protocol/http11/header.h"
+#include "protocol/http11/query_parameter.h"
 #include "protocol/http11/helpers.h"
 #include "protocol/http11/parsed_types.h"
 #include "protocol/http11/policies.h"
 #include "protocol/http11/verdict.h"
 #include "protocol/http11/target.h"
-#include "protocol/http11/body/deserializer.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -71,24 +71,41 @@ class request {
   request& operator=(const request&) = delete;
   request& operator=(request&&) noexcept = delete;
   // +=========================================================================+
-  // | [>] TYPEs                                                    ( public ) |
-  // +=========================================================================+
-  using body_deserializer_t =
-      std::variant<body::deserializer<body::decoder_raw>,
-                   body::deserializer<body::decoder_chunked>>;
-  // +=========================================================================+
   // | [>] SETTERs                                                  ( public ) |
   // +=========================================================================+
-  void set_method(const std::string& method) { method_ = method; }
+  void set_method(std::string_view method) { method_ = method; }
   void set_target(target target) { target_ = target; }
-  void set_absolute_path(const std::string& abs_path) { abs_path_ = abs_path ; }
+  void set_absolute_path(std::string_view abs_path) { abs_path_ = abs_path; }
+  void set_headers(std::vector<header_view> headers) {
+    for (auto const& header : headers) {
+      headers_.emplace_back(header.first, header.second);
+    }
+  }
+  void set_query_parameters(std::vector<query_parameter_view> parameters) {
+    for (auto const& parameter : parameters) {
+      query_parameters_.emplace_back(parameter.first, parameter.second);
+    }
+  }
+  void set_host(std::string_view host, std::string_view port,
+                helpers::host_type type) {
+    has_host_ = true;
+    host_ = host;
+    host_port_ = port;
+    host_type_ = type;
+  }
+  void set_target_authority(std::string_view host, std::string_view port,
+                            helpers::host_type type) {
+    has_target_authority_ = true;
+    target_authority_host_ = host;
+    target_authority_port_ = port;
+    target_authority_type_ = type;
+  }
   // +=========================================================================+
   // | [>] GETTERs                                                  ( public ) |
   // +=========================================================================+
   auto get_method() const { return method_; }
   auto get_target() const { return target_; }
-  auto get_absolute_path() const { return abs_path_  ; }
-  auto get_query() const { return query_part_; }
+  auto get_absolute_path() const { return abs_path_; }
   auto get_query_parameter(std::size_t i) const { return query_parameters_[i]; }
   auto get_query_parameters_length() const { return query_parameters_.size(); }
   auto has_host() const { return has_host_; }
@@ -101,15 +118,12 @@ class request {
   auto get_target_authority_type() const { return target_authority_type_; }
   auto get_header(std::size_t i) const { return headers_[i]; }
   auto get_headers_length() const { return headers_.size(); }
-  auto has_body() const { return body_.has_value(); }
-  auto get_body_deserializer() const -> body_deserializer_t& { return *body_; }
 
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   std::string method_;
-  std::string query_part_;
   std::string abs_path_;
   target target_ = target::kUnknown;
   bool has_host_ = false;
@@ -120,9 +134,8 @@ class request {
   std::string target_authority_host_;
   std::string target_authority_port_;
   helpers::host_type target_authority_type_ = helpers::host_type::kUnknown;
-  std::vector<std::pair<std::string, std::string>> headers_;
-  std::vector<std::pair<std::string, std::string>> query_parameters_;
-  mutable std::optional<body_deserializer_t> body_;
+  std::vector<header> headers_;
+  std::vector<query_parameter> query_parameters_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 
