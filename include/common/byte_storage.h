@@ -67,19 +67,18 @@ class byte_storage {
       : spill_threshold_(opts.spill_threshold),
         spill_dir_(std::move(opts.spill_dir)) {}
   byte_storage(const byte_storage&) = delete;
-  byte_storage(byte_storage&&) noexcept = default;
-  ~byte_storage() {
-    if (spilled_ && file_.is_open()) file_.close();
-    if (!spill_path_.empty()) {
-      std::error_code ec;
-      std::filesystem::remove(spill_path_, ec);
-    }
-  }
+  byte_storage(byte_storage&& in) noexcept { move_from(std::move(in)); }
+  ~byte_storage() { reset(); }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +=========================================================================+
   byte_storage& operator=(const byte_storage&) = delete;
-  byte_storage& operator=(byte_storage&&) noexcept = default;
+  byte_storage& operator=(byte_storage&& in) noexcept {
+    if (this == &in) return *this;
+    reset();
+    move_from(std::move(in));
+    return *this;
+  }
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
   // +=========================================================================+
@@ -155,6 +154,38 @@ class byte_storage {
   [[nodiscard]] bool ok() const noexcept { return !io_error_; }
 
  private:
+  // +=========================================================================+
+  // | [>] reset                                                   ( private ) |
+  // +=========================================================================+
+  void reset() noexcept {
+    if (file_.is_open()) file_.close();
+    if (!spill_path_.empty()) {
+      std::error_code ec;
+      std::filesystem::remove(spill_path_, ec);
+    }
+  }
+  // +=========================================================================+
+  // | [>] move_from                                               ( private ) |
+  // +=========================================================================+
+  void move_from(byte_storage&& in) noexcept {
+    mem_ = std::move(in.mem_);
+    file_ = std::move(in.file_);
+    spill_path_ = std::move(in.spill_path_);
+    spill_threshold_ = in.spill_threshold_;
+    spill_dir_ = std::move(in.spill_dir_);
+    total_bytes_ = in.total_bytes_;
+    read_pos_ = in.read_pos_;
+    spilled_ = in.spilled_;
+    finished_ = in.finished_;
+    io_error_ = in.io_error_;
+    in.spill_path_.clear();
+    in.spill_threshold_ = 0;
+    in.total_bytes_ = 0;
+    in.read_pos_ = 0;
+    in.spilled_ = false;
+    in.finished_ = false;
+    in.io_error_ = false;
+  }
   // +=========================================================================+
   // | [>] spill_to_file                                           ( private ) |
   // +=========================================================================+

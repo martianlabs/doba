@@ -63,7 +63,11 @@ class writer_raw {
     std::size_t remaining = expected_ - accumulated_;
     std::size_t to_consume = std::min(remaining, input.size());
     if (to_consume > 0) {
-      dst.write(input.subspan(0, to_consume));
+      if (!dst.write(input.subspan(0, to_consume))) {
+        result.has_error = true;
+        result.error = writer_error::io_error;
+        return result;
+      }
       accumulated_ += to_consume;
       result.consumed = to_consume;
     }

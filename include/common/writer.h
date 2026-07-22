@@ -61,25 +61,29 @@ class writer {
   // | [>] write                                                    ( public ) |
   // +=========================================================================+
   bool write(const char* ptr, std::size_t len) {
-    return storage_.write(ptr, len);
+    if (!storage_.write(ptr, len)) return false;
+    bytes_ += len;
+    return true;
   }
   // +=========================================================================+
   // | [>] write                                                    ( public ) |
   // +=========================================================================+
   bool write(std::string_view bytes) {
-    return storage_.write(bytes.data(), bytes.size());
+    return write(bytes.data(), bytes.size());
   }
   // +=========================================================================+
   // | [>] write                                                    ( public ) |
   // +=========================================================================+
   bool write(std::span<const std::byte> bytes) {
-    return storage_.write(reinterpret_cast<const char*>(bytes.data()),
-                          bytes.size());
+    return write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
   }
   // +=========================================================================+
   // | [>] finish                                                   ( public ) |
   // +=========================================================================+
-  void finish(std::size_t bytes) { storage_.finish(bytes); }
+  void finish(std::size_t bytes) {
+    storage_.finish(bytes);
+    finished_ = true;
+  }
   // +=========================================================================+
   // | [>] ok                                                       ( public ) |
   // +=========================================================================+
@@ -87,13 +91,18 @@ class writer {
   // +=========================================================================+
   // | [>] release                                                  ( public ) |
   // +=========================================================================+
-  [[nodiscard]] byte_storage release() { return std::move(storage_); }
+  [[nodiscard]] byte_storage release() {
+    if (!finished_) finish(bytes_);
+    return std::move(storage_);
+  }
 
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   byte_storage storage_;
+  std::size_t bytes_{0};
+  bool finished_{false};
 };
 }  // namespace martianlabs::doba::common
 

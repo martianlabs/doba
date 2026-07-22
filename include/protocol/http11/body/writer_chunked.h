@@ -143,7 +143,9 @@ class writer_chunked {
         // --------------------------------------------------------------------
         case state::data: {
           std::size_t to_take = std::min(chunk_remaining_, input.size() - i);
-          dst.write(input.subspan(i, to_take));
+          if (!dst.write(input.subspan(i, to_take))) {
+            return fail(result, writer_error::io_error);
+          }
           result.consumed += to_take;
           i += to_take;
           chunk_remaining_ -= to_take;
@@ -174,7 +176,9 @@ class writer_chunked {
             if (trailer_cr_seen_ && trailer_line_start_) {
               // Terminating empty CRLF â€” body complete. Write final byte
               // and return with the exact consumed count.
-              dst.write(input.subspan(i, 1));
+              if (!dst.write(input.subspan(i, 1))) {
+                return fail(result, writer_error::io_error);
+              }
               result.consumed += 1;
               state_ = state::complete;
               result.complete = true;
@@ -196,7 +200,9 @@ class writer_chunked {
           break;
       }
       // Single-byte write for all non-data, non-complete paths.
-      dst.write(input.subspan(i, 1));
+      if (!dst.write(input.subspan(i, 1))) {
+        return fail(result, writer_error::io_error);
+      }
       result.consumed += 1;
       i++;
     }

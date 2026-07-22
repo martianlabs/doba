@@ -200,6 +200,17 @@ class decoder {
           if (i + 1 >= off_) return deserialization_status::kMoreBytesNeeded;
           if (sv[i + 1] != '\n') return deserialization_status::kInvalidSource;
           i += 2;
+          // Every modelled header was already parsed once and interpreted in
+          // place during the loop above, populating ctx and the connection
+          // state. All that remains is to apply the transversal rules that no
+          // single header can decide, over the fully populated context. Any
+          // rejection fails the whole deserialization.
+          if (headers::rules::framing::apply(context_) == verdict::kReject ||
+              headers::rules::routing::apply(context_) == verdict::kReject ||
+              headers::rules::directives::apply(context_) == verdict::kReject ||
+              headers::rules::policy::apply(context_) == verdict::kReject) {
+            return deserialization_status::kInvalidSource;
+          }
           // Check for the presence of a body and build the body writer for this
           // request. We only support chunked and raw framing, and only if the
           // request has a body.
@@ -217,21 +228,17 @@ class decoder {
             }
           }
           // Mount the request object and keep the result!
-          decoded_ = std::move(mount_request(i));
-          // In case of error, we return the error code and stop parsing.
-          // Otherwise, we continue parsing the body if there is a body writer,
-          // or we return the request if there is no body writer.
-          if (decoded_.code != deserialization_status::kSucceeded) {
-            return decoded_.code;
-          }
+          mount_request_getter(i);
           // In case of no body writer, we are done and can return the request.
           // Otherwise, we need to continue parsing the body, so we remove the
           // already consumed bytes from the input and call parse() again to
           // continue parsing the body.
           if (!body_writer_) {
-            reset();
-            return std::move(decoded_);
+            return dispatch(std::nullopt);
           }
+          // In case of a body writer, we need to continue parsing the body, so
+          // we remove the already consumed bytes from the input and call
+          // parse() again to continue parsing the body.
           return deserialize();
         }
         if (sv[i] == '\n') return deserialization_status::kInvalidSource;
@@ -290,32 +297,20 @@ class decoder {
         [this](auto& arg) -> body::writer_state {
           std::span<const std::byte> byte_span{
               reinterpret_cast<const std::byte*>(buffer_), off_};
-          return arg.write(byte_span, body_buffer_.value());
+          return arg.write(byte_span, *body_buffer_);
         },
-        body_writer_.value());
+        *body_writer_);
     if (state.has_error) return deserialization_status::kInvalidSource;
     std::memcpy(buffer_, buffer_ + state.consumed, off_ - state.consumed);
     if (state.consumed > off_) return deserialization_status::kInvalidSource;
     off_ -= state.consumed;
     if (!state.complete) return deserialization_status::kMoreBytesNeeded;
-    reset();
-    return std::move(decoded_);
+    return dispatch(body_buffer_->release());
   }
   // +=========================================================================+
   // | [>] mount_request                                            ( public ) |
   // +=========================================================================+
-  deserialization_result<request> mount_request(std::size_t bytes_used) {
-    // Every modelled header was already parsed once and interpreted in
-    // place during the loop above, populating ctx and the connection
-    // state. All that remains is to apply the transversal rules that no
-    // single header can decide, over the fully populated context. Any
-    // rejection fails the whole deserialization.
-    if (headers::rules::framing::apply(context_) == verdict::kReject ||
-        headers::rules::routing::apply(context_) == verdict::kReject ||
-        headers::rules::directives::apply(context_) == verdict::kReject ||
-        headers::rules::policy::apply(context_) == verdict::kReject) {
-      return deserialization_status::kInvalidSource;
-    }
+  void mount_request_getter(std::size_t bytes_used) {
     // Only if the query part is not empty, we will split it into key-value
     // pairs and set it in the request.
     std::vector<query_parameter_view> query_parameters;
@@ -348,22 +343,31 @@ class decoder {
     }
     // Now that the request is fully validated, we can build the request object
     std::string_view buffer_view(buffer_, bytes_used);
-    std::shared_ptr<request> req = request::from(
+    request_getter_ = request::from(
         buffer_view, method_, absolute_path_, target_, headers_,
         query_parameters, host_host, host_port, host_type,
         target_authority_host, target_authority_port, target_authority_type);
     // Let's adjust the buffer to remove the bytes that were used!
     std::memcpy(buffer_, buffer_ + bytes_used, off_ - bytes_used);
     off_ -= bytes_used;
-    // Let's return the request object!
-    return deserialization_result<request>(
-        req, context_.connection.close_requested ? channel_intent::kClose
-                                                 : channel_intent::kKeep);
   }
   // +=========================================================================+
-  // | [>] reset                                                   ( private ) |
+  // | [>] dispatch                                                ( private ) |
   // +=========================================================================+
-  void reset() {
+  deserialization_result<request> dispatch(
+      std::optional<common::byte_storage> byte_storage) {
+    // Let's return the request object!
+    deserialization_result<request> result = deserialization_result<request>(
+        request_getter_(std::move(byte_storage)),
+        context_.connection.close_requested ? channel_intent::kClose
+                                            : channel_intent::kKeep);
+    reset_decoding_attributes();
+    return result;
+  }
+  // +=========================================================================+
+  // | [>] reset_decoding_attributes                               ( private ) |
+  // +=========================================================================+
+  void reset_decoding_attributes() {
     method_ = {};
     target_ = target::kUnknown;
     absolute_path_ = {};
@@ -789,7 +793,7 @@ class decoder {
   std::string_view absolute_path_;
   target target_ = target::kUnknown;
   std::vector<header_view> headers_;
-  deserialization_result<request> decoded_;
+  request_getter<request> request_getter_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

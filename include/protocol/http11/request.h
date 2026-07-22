@@ -39,6 +39,7 @@
 #include "platform.h"
 #include "common/hash_map.h"
 #include "protocol/http11/context.h"
+#include "protocol/http11/request_getter.h"
 #include "protocol/http11/query_parameter.h"
 #include "protocol/http11/method_names.h"
 #include "protocol/http11/header_names.h"
@@ -164,7 +165,7 @@ class request {
   // | target_authority_port  | optional port substring from the authority     |
   // | target_authority_type  | optional host_type from the authority          |
   // +=========================================================================+
-  static std::shared_ptr<request> from(
+  static request_getter<request> from(
       std::string_view full_buffer, std::string_view method,
       std::string_view abs_path, target target_form,
       std::vector<header_view> headers,
@@ -190,7 +191,14 @@ class request {
     if (target_authority_host) req->ta_host_ = *target_authority_host;
     if (target_authority_port) req->ta_port_ = *target_authority_port;
     if (target_authority_type) req->ta_type_ = *target_authority_type;
-    return req;
+    return [req](std::optional<common::byte_storage> byte_storage)
+               -> std::shared_ptr<request> {
+      if (byte_storage) {
+        req->body_reader_ = std::shared_ptr<common::reader>(
+            new common::reader(std::move(*byte_storage)));
+      }
+      return req;
+    };
   }
   // +=========================================================================+
   // | [>] GETTERs                                                  ( public ) |
@@ -210,6 +218,7 @@ class request {
   auto get_target_authority_host() const { return ta_host_; }
   auto get_target_authority_port() const { return ta_port_; }
   auto get_target_authority_type() const { return ta_type_; }
+  auto get_body_reader() const { return body_reader_; }
 
  private:
   // +=========================================================================+
@@ -231,6 +240,7 @@ class request {
   helpers::host_type ta_type_ = helpers::host_type::kUnknown;
   std::vector<header_view> headers_;                    // vector of headers
   std::vector<query_parameter_view> query_parameters_;  // query parameters
+  std::shared_ptr<common::reader> body_reader_;         // body reader
 };
 }  // namespace martianlabs::doba::protocol::http11
 
