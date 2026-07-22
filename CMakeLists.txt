@@ -27,4 +27,3 @@ source_group(
 )
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test/ut-001-main)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test/ut-002-request-plus-contract)

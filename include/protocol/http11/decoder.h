@@ -29,81 +29,6 @@
 
 #include "protocol/http11/helpers.h"
 #include "protocol/http11/request.h"
-#include "protocol/http11/response.h"
-#include "protocol/http11/context.h"
-#include "protocol/http11/query_parameter.h"
-#include "protocol/http11/body/writer_chunked.h"
-#include "protocol/http11/body/writer_raw.h"
-#include "protocol/http11/headers/accept.h"
-#include "protocol/http11/headers/accept_charset.h"
-#include "protocol/http11/headers/accept_encoding.h"
-#include "protocol/http11/headers/accept_language.h"
-#include "protocol/http11/headers/accept_ranges.h"
-#include "protocol/http11/headers/access_control_allow_credentials.h"
-#include "protocol/http11/headers/access_control_allow_headers.h"
-#include "protocol/http11/headers/access_control_allow_methods.h"
-#include "protocol/http11/headers/access_control_allow_origin.h"
-#include "protocol/http11/headers/access_control_expose_headers.h"
-#include "protocol/http11/headers/access_control_max_age.h"
-#include "protocol/http11/headers/access_control_request_headers.h"
-#include "protocol/http11/headers/access_control_request_method.h"
-#include "protocol/http11/headers/age.h"
-#include "protocol/http11/headers/allow.h"
-#include "protocol/http11/headers/authentication_info.h"
-#include "protocol/http11/headers/authorization.h"
-#include "protocol/http11/headers/cache_control.h"
-#include "protocol/http11/headers/connection.h"
-#include "protocol/http11/headers/content_encoding.h"
-#include "protocol/http11/headers/content_language.h"
-#include "protocol/http11/headers/content_length.h"
-#include "protocol/http11/headers/content_location.h"
-#include "protocol/http11/headers/content_range.h"
-#include "protocol/http11/headers/content_type.h"
-#include "protocol/http11/headers/cookie.h"
-#include "protocol/http11/headers/date.h"
-#include "protocol/http11/headers/etag.h"
-#include "protocol/http11/headers/expect.h"
-#include "protocol/http11/headers/expires.h"
-#include "protocol/http11/headers/forwarded.h"
-#include "protocol/http11/headers/from.h"
-#include "protocol/http11/headers/host.h"
-#include "protocol/http11/headers/if_match.h"
-#include "protocol/http11/headers/if_modified_since.h"
-#include "protocol/http11/headers/if_none_match.h"
-#include "protocol/http11/headers/if_range.h"
-#include "protocol/http11/headers/if_unmodified_since.h"
-#include "protocol/http11/headers/keep_alive.h"
-#include "protocol/http11/headers/last_modified.h"
-#include "protocol/http11/headers/location.h"
-#include "protocol/http11/headers/max_forwards.h"
-#include "protocol/http11/headers/origin.h"
-#include "protocol/http11/headers/pragma.h"
-#include "protocol/http11/headers/proxy_connection.h"
-#include "protocol/http11/headers/range.h"
-#include "protocol/http11/headers/referer.h"
-#include "protocol/http11/headers/retry_after.h"
-#include "protocol/http11/headers/sec_websocket_accept.h"
-#include "protocol/http11/headers/sec_websocket_extensions.h"
-#include "protocol/http11/headers/sec_websocket_key.h"
-#include "protocol/http11/headers/sec_websocket_protocol.h"
-#include "protocol/http11/headers/sec_websocket_version.h"
-#include "protocol/http11/headers/server.h"
-#include "protocol/http11/headers/set_cookie.h"
-#include "protocol/http11/headers/te.h"
-#include "protocol/http11/headers/trailer.h"
-#include "protocol/http11/headers/transfer_encoding.h"
-#include "protocol/http11/headers/upgrade.h"
-#include "protocol/http11/headers/user_agent.h"
-#include "protocol/http11/headers/vary.h"
-#include "protocol/http11/headers/via.h"
-#include "protocol/http11/headers/www_authenticate.h"
-#include "protocol/http11/headers/x_forwarded_for.h"
-#include "protocol/http11/headers/x_forwarded_host.h"
-#include "protocol/http11/headers/x_forwarded_proto.h"
-#include "protocol/http11/headers/rules/directives.h"
-#include "protocol/http11/headers/rules/framing.h"
-#include "protocol/http11/headers/rules/policy.h"
-#include "protocol/http11/headers/rules/routing.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -119,6 +44,11 @@ namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty = request, typename RSty = response>
 class decoder {
+  // +=========================================================================+
+  // | [>] USINGs                                                  ( private ) |
+  // +=========================================================================+
+  using body_writer_t = std::variant<body::writer_chunked, body::writer_raw>;
+
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
@@ -133,30 +63,40 @@ class decoder {
   decoder& operator=(const decoder&) = delete;
   decoder& operator=(decoder&&) noexcept = delete;
   // +=========================================================================+
-  // | [>] parse                                                    ( public ) |
+  // | [>] accumulate                                               ( public ) |
   // +=========================================================================+
-  deserialization_result<request> parse(std::string_view sv) {
-    return body_writer_ ? parse_body(sv) : parse_core(sv);
+  std::size_t accumulate(char* const buffer, std::size_t size) {
+    std::size_t space_left = RQty::kMaxHeadSize - off_;
+    std::size_t bytes_to_copy = std::min(space_left, size);
+    std::memcpy(buffer_ + off_, buffer, bytes_to_copy);
+    off_ += bytes_to_copy;
+    return bytes_to_copy;
+  }
+  // +=========================================================================+
+  // | [>] deserialize                                              ( public ) |
+  // +=========================================================================+
+  deserialization_result<request> deserialize() {
+    return body_writer_ ? parse_body() : parse_core();
   }
 
  private:
   // +=========================================================================+
   // | [>] parse_core                                               ( public ) |
   // +=========================================================================+
-  deserialization_result<request> parse_core(std::string_view sv) {
+  deserialization_result<request> parse_core() {
+    std::string_view sv(buffer_, off_);
     std::size_t i = 0;
-    const std::size_t sv_size = sv.size();
     // +-----------------------------------------------------------------------+
     // | request-line = method SP request-target SP HTTP-version               |
     // +-----------------------------------------------------------------------+
     // +-----------------------------------------------------------------------+
     // | [method] part!                                                        |
     // +-----------------------------------------------------------------------+
-    if (!sv_size) return deserialization_status::kMoreBytesNeeded;
+    if (!off_) return deserialization_status::kMoreBytesNeeded;
     method_ = helpers::consume_token(sv);
     if (method_.empty()) return deserialization_status::kInvalidSource;
     i += method_.size();
-    if (i >= sv_size) return deserialization_status::kMoreBytesNeeded;
+    if (i >= off_) return deserialization_status::kMoreBytesNeeded;
     if (sv[i++] != ' ') return deserialization_status::kInvalidSource;
     // +-----------------------------------------------------------------------+
     // | [request-target] part!                                                |
@@ -166,7 +106,7 @@ class decoder {
     // |                / authority-form                                       |
     // |                / asterisk-form                                        |
     // +-----------------------------------------------------------------------+
-    if (i >= sv_size) return deserialization_status::kMoreBytesNeeded;
+    if (i >= off_) return deserialization_status::kMoreBytesNeeded;
     deserialization_status status;
     std::size_t bytes_used = 0;
     if (method_ == method_names::kConnect) {
@@ -177,9 +117,9 @@ class decoder {
           bytes_used);
       if (status == deserialization_status::kSucceeded) {
         target_ = target::kAuthorityForm;
-        ctx_.has_target_authority = true;
-        ctx_.target_authority = {authority_host, authority_port,
-                                 authority_type};
+        context_.has_target_authority = true;
+        context_.target_authority = {authority_host, authority_port,
+                                     authority_type};
       }
     } else if (method_ == method_names::kOptions && sv[i] == '*') {
       status = helpers::try_to_deserialize_as_asterisk_form(sv.substr(i),
@@ -202,16 +142,16 @@ class decoder {
         if (status == deserialization_status::kSucceeded) {
           target_ = target::kAbsoluteForm;
           if (has_authority) {
-            ctx_.has_target_authority = true;
-            ctx_.target_authority = {authority_host, authority_port,
-                                     authority_type, authority_scheme};
+            context_.has_target_authority = true;
+            context_.target_authority = {authority_host, authority_port,
+                                         authority_type, authority_scheme};
           }
         }
       }
     }
     if (status != deserialization_status::kSucceeded) return status;
     i += bytes_used;
-    if (i >= sv_size) return deserialization_status::kMoreBytesNeeded;
+    if (i >= off_) return deserialization_status::kMoreBytesNeeded;
     if (sv[i++] != ' ') return deserialization_status::kInvalidSource;
     // +-----------------------------------------------------------------------+
     // | [HTTP-version] part!                                                  |
@@ -219,7 +159,7 @@ class decoder {
     // | HTTP-version   | HTTP-name "/" DIGIT "." DIGIT                        |
     // | HTTP-name      | %s"HTTP"                                             |
     // +----------------+------------------------------------------------------+
-    if (i + 7 >= sv_size) return deserialization_status::kMoreBytesNeeded;
+    if (i + 7 >= off_) return deserialization_status::kMoreBytesNeeded;
     if (sv[i + 0] != 'H' || sv[i + 1] != 'T' || sv[i + 2] != 'T' ||
         sv[i + 3] != 'P' || sv[i + 4] != '/' || !helpers::is_digit(sv[i + 5]) ||
         sv[i + 6] != '.' || !helpers::is_digit(sv[i + 7])) {
@@ -229,7 +169,7 @@ class decoder {
       return deserialization_status::kInvalidSource;
     }
     i += 8;
-    if (i + 1 >= sv_size) return deserialization_status::kMoreBytesNeeded;
+    if (i + 1 >= off_) return deserialization_status::kMoreBytesNeeded;
     if (sv[i + 0] != '\r' || sv[i + 1] != '\n') {
       return deserialization_status::kInvalidSource;
     }
@@ -253,22 +193,28 @@ class decoder {
     // +-----------------+-----------------------------------------------------+
     bool field_name_decoded = false;
     std::size_t fn_start = i;
-    while (i < sv_size) {
+    while (i < off_) {
       if (!field_name_decoded) {
         if (sv[i] == '\r') {
           if (i != fn_start) return deserialization_status::kInvalidSource;
-          if (i + 1 >= sv_size) return deserialization_status::kMoreBytesNeeded;
+          if (i + 1 >= off_) return deserialization_status::kMoreBytesNeeded;
           if (sv[i + 1] != '\n') return deserialization_status::kInvalidSource;
           i += 2;
           // Check for the presence of a body and build the body writer for this
           // request. We only support chunked and raw framing, and only if the
           // request has a body.
-          if (ctx_.connection.chunked) {
-            body_buffer_ = common::writer();
-            body_writer_ = body::writer_chunked();
-          } else if (ctx_.has_content_length && ctx_.content_length > 0) {
-            body_buffer_ = common::writer();
-            body_writer_ = body::writer_raw(ctx_.content_length);
+          bool body_expected =
+              context_.connection.chunked ||
+              (context_.has_content_length && context_.content_length > 0);
+          if (body_expected) {
+            body_buffer_ = common::writer(common::byte_storage_options{
+                .spill_threshold = 65535,  // 64 KiB!
+            });
+            if (context_.connection.chunked) {
+              body_writer_ = body::writer_chunked();
+            } else {
+              body_writer_ = body::writer_raw(context_.content_length);
+            }
           }
           // Mount the request object and keep the result!
           decoded_ = std::move(mount_request(i));
@@ -286,8 +232,7 @@ class decoder {
             reset();
             return std::move(decoded_);
           }
-          sv.remove_prefix(i);
-          return parse(sv);
+          return deserialize();
         }
         if (sv[i] == '\n') return deserialization_status::kInvalidSource;
         // [field-name] decoding..
@@ -302,11 +247,11 @@ class decoder {
         continue;
       }
       // [field-value] decoding..
-      if (i >= sv_size) return deserialization_status::kMoreBytesNeeded;
+      if (i >= off_) return deserialization_status::kMoreBytesNeeded;
       if (sv[i++] != ':') return deserialization_status::kInvalidSource;
       std::string_view field_name = sv.substr(fn_start, i - 1 - fn_start);
       std::size_t fv_start = i;
-      while (i < sv_size) {
+      while (i < off_) {
         if (sv[i] == '\r') break;
         if (!helpers::is_vchar(sv[i]) && !helpers::is_obs_text(sv[i]) &&
             !helpers::is_ows(sv[i])) {
@@ -314,7 +259,7 @@ class decoder {
         }
         i++;
       }
-      if (i + 1 >= sv_size) return deserialization_status::kMoreBytesNeeded;
+      if (i + 1 >= off_) return deserialization_status::kMoreBytesNeeded;
       if (sv[i + 0] != '\r' || sv[i + 1] != '\n') {
         return deserialization_status::kInvalidSource;
       }
@@ -326,7 +271,7 @@ class decoder {
       // rejection fails deserialization.
       auto const itr_dispatch = header_dispatchers_.find(field_name);
       if (itr_dispatch != header_dispatchers_.end()) {
-        if (itr_dispatch->second(field_value, ctx_) == verdict::kReject) {
+        if (itr_dispatch->second(field_value, context_) == verdict::kReject) {
           return deserialization_status::kInvalidSource;
         }
       }
@@ -340,20 +285,19 @@ class decoder {
   // +=========================================================================+
   // | [>] parse_body                                               ( public ) |
   // +=========================================================================+
-  deserialization_result<request> parse_body(std::string_view sv) {
+  deserialization_result<request> parse_body() {
     body::writer_state state = std::visit(
-        [&sv, this](auto& arg) -> body::writer_state {
+        [this](auto& arg) -> body::writer_state {
           std::span<const std::byte> byte_span{
-              reinterpret_cast<const std::byte*>(sv.data()), sv.size()};
+              reinterpret_cast<const std::byte*>(buffer_), off_};
           return arg.write(byte_span, body_buffer_.value());
         },
         body_writer_.value());
     if (state.has_error) return deserialization_status::kInvalidSource;
-    decoded_.bytes_used += state.consumed;
-    if (!state.complete) {
-      decoded_.bytes_used = 0;  // reset for subsequent calls!
-      return deserialization_status::kMoreBytesNeeded;
-    }
+    std::memcpy(buffer_, buffer_ + state.consumed, off_ - state.consumed);
+    if (state.consumed > off_) return deserialization_status::kInvalidSource;
+    off_ -= state.consumed;
+    if (!state.complete) return deserialization_status::kMoreBytesNeeded;
     reset();
     return std::move(decoded_);
   }
@@ -366,47 +310,55 @@ class decoder {
     // state. All that remains is to apply the transversal rules that no
     // single header can decide, over the fully populated context. Any
     // rejection fails the whole deserialization.
-    if (headers::rules::framing::apply(ctx_) == verdict::kReject ||
-        headers::rules::routing::apply(ctx_) == verdict::kReject ||
-        headers::rules::directives::apply(ctx_) == verdict::kReject ||
-        headers::rules::policy::apply(ctx_) == verdict::kReject) {
+    if (headers::rules::framing::apply(context_) == verdict::kReject ||
+        headers::rules::routing::apply(context_) == verdict::kReject ||
+        headers::rules::directives::apply(context_) == verdict::kReject ||
+        headers::rules::policy::apply(context_) == verdict::kReject) {
       return deserialization_status::kInvalidSource;
     }
-    // Now that the request is fully validated, we can build the request object
-    std::shared_ptr<request> req = std::make_shared<request>();
-    req->set_method(method_);
-    req->set_absolute_path(absolute_path_);
-    req->set_target(target_);
-    req->set_headers(headers_);
     // Only if the query part is not empty, we will split it into key-value
     // pairs and set it in the request.
+    std::vector<query_parameter_view> query_parameters;
     if (!query_.empty()) {
       std::array<std::string_view, kMaxQueryParameters> keys;
       std::array<std::string_view, kMaxQueryParameters> values;
       std::size_t qc = helpers::split_query_parameters(query_, keys, values);
-      std::vector<query_parameter_view> query_parameters;
       query_parameters.reserve(qc);
       for (std::size_t q = 0; q < qc; q++) {
         query_parameters.emplace_back(keys[q], values[q]);
       }
-      req->set_query_parameters(query_parameters);
     }
     // Check if the request has a host set it in the request.
-    if (ctx_.has_host) {
-      req->set_host(ctx_.host.host);
-      req->set_host_port(ctx_.host.port);
-      req->set_host_type(ctx_.host.type);
+    std::optional<std::string_view> host_host;
+    std::optional<std::string_view> host_port;
+    std::optional<helpers::host_type> host_type;
+    if (context_.has_host) {
+      host_host = context_.host.host;
+      host_port = context_.host.port;
+      host_type = context_.host.type;
     }
     // Check if the request has a target authority and set it in the request.
-    if (ctx_.has_target_authority) {
-      req->set_target_authority(ctx_.target_authority.host);
-      req->set_target_authority_port(ctx_.target_authority.port);
-      req->set_target_authority_type(ctx_.target_authority.type);
+    std::optional<std::string_view> target_authority_host;
+    std::optional<std::string_view> target_authority_port;
+    std::optional<helpers::host_type> target_authority_type;
+    if (context_.has_target_authority) {
+      target_authority_host = context_.target_authority.host;
+      target_authority_port = context_.target_authority.port;
+      target_authority_type = context_.target_authority.type;
     }
-    return deserialization_result<request>(req, bytes_used,
-                                           ctx_.connection.close_requested
-                                               ? channel_intent::kClose
-                                               : channel_intent::kKeep);
+    // Now that the request is fully validated, we can build the request object
+    std::string_view buffer_view(buffer_, bytes_used);
+    std::shared_ptr<request> req = request::from(
+        buffer_view, method_, absolute_path_, target_, headers_,
+        query_parameters, host_host, host_port, host_type,
+        target_authority_host, target_authority_port, target_authority_type);
+    // Let's adjust the buffer to remove the bytes that were used!
+    std::memcpy(buffer_, buffer_ + bytes_used, off_ - bytes_used);
+    off_ -= bytes_used;
+    // Let's return the request object!
+    return deserialization_result<request>(
+        req, context_.connection.close_requested ? channel_intent::kClose
+                                                 : channel_intent::kKeep);
   }
   // +=========================================================================+
   // | [>] reset                                                   ( private ) |
@@ -417,7 +369,7 @@ class decoder {
     absolute_path_ = {};
     query_ = {};
     headers_ = {};
-    ctx_ = {};
+    context_ = {};
     body_writer_ = std::nullopt;
     body_buffer_ = std::nullopt;
   }
@@ -515,152 +467,175 @@ class decoder {
   // +=========================================================================+
   // | [>] dispatch_host (modelled header)                         ( private ) |
   // +=========================================================================+
-  static verdict dispatch_host(std::string_view sv, context& ctx) {
-    if (ctx.has_host) ctx.multiple_host = true;
-    ctx.has_host = true;
+  static verdict dispatch_host(std::string_view host_content,
+                               context& context_rules) {
+    if (context_rules.has_host) context_rules.multiple_host = true;
+    context_rules.has_host = true;
     parsed_host_port parsed;
-    if (!headers::host::check(sv, parsed)) return verdict::kReject;
-    ctx.host = parsed;
-    return headers::host::interpret(parsed, ctx.connection, ctx.policies);
+    if (!headers::host::check(host_content, parsed)) return verdict::kReject;
+    context_rules.host = parsed;
+    return headers::host::interpret(parsed, context_rules.connection,
+                                    context_rules.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_content_length (modelled header)               ( private ) |
   // +=========================================================================+
-  static verdict dispatch_content_length(std::string_view sv, context& ctx) {
+  static verdict dispatch_content_length(
+      std::string_view content_length_content, context& context_rules) {
     std::size_t parsed = 0;
-    if (!headers::content_length::check(sv, parsed)) {
+    if (!headers::content_length::check(content_length_content, parsed)) {
       return verdict::kReject;
     }
-    if (ctx.has_content_length) ctx.multiple_content_length = true;
-    ctx.has_content_length = true;
-    ctx.content_length = parsed;
-    return headers::content_length::interpret(parsed, ctx.connection,
-                                              ctx.policies);
+    if (context_rules.has_content_length)
+      context_rules.multiple_content_length = true;
+    context_rules.has_content_length = true;
+    context_rules.content_length = parsed;
+    return headers::content_length::interpret(parsed, context_rules.connection,
+                                              context_rules.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_transfer_encoding (modelled header)            ( private ) |
   // +=========================================================================+
-  static verdict dispatch_transfer_encoding(std::string_view sv, context& ctx) {
+  static verdict dispatch_transfer_encoding(
+      std::string_view transfer_encoding_content, context& context_rules) {
     parsed_parameter_list parsed;
-    if (!headers::transfer_encoding::check(sv, parsed)) {
+    if (!headers::transfer_encoding::check(transfer_encoding_content, parsed)) {
       return verdict::kReject;
     }
-    ctx.has_transfer_encoding = true;
-    return headers::transfer_encoding::interpret(parsed, ctx.connection,
-                                                 ctx.policies);
+    context_rules.has_transfer_encoding = true;
+    return headers::transfer_encoding::interpret(
+        parsed, context_rules.connection, context_rules.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_connection (modelled header)                   ( private ) |
   // +=========================================================================+
-  static verdict dispatch_connection(std::string_view sv, context& ctx) {
+  static verdict dispatch_connection(std::string_view connection_content,
+                                     context& context_rules) {
     parsed_token_list parsed;
-    if (!headers::connection::check(sv, parsed)) {
+    if (!headers::connection::check(connection_content, parsed)) {
       return verdict::kReject;
     }
-    return headers::connection::interpret(parsed, ctx.connection, ctx.policies);
+    return headers::connection::interpret(parsed, context_rules.connection,
+                                          context_rules.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_te (modelled header)                           ( private ) |
   // +=========================================================================+
-  static verdict dispatch_te(std::string_view sv, context& ctx) {
+  static verdict dispatch_te(std::string_view te_content,
+                             context& context_rules) {
     parsed_parameter_list parsed;
-    if (!headers::te::check(sv, parsed)) return verdict::kReject;
-    return headers::te::interpret(parsed, ctx.connection, ctx.policies);
+    if (!headers::te::check(te_content, parsed)) return verdict::kReject;
+    return headers::te::interpret(parsed, context_rules.connection,
+                                  context_rules.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_trailer (modelled header)                      ( private ) |
   // +=========================================================================+
-  static verdict dispatch_trailer(std::string_view sv, context& ctx) {
+  static verdict dispatch_trailer(std::string_view trailer_content,
+                                  context& context_rules) {
     parsed_token_list parsed;
-    if (!headers::trailer::check(sv, parsed)) {
+    if (!headers::trailer::check(trailer_content, parsed)) {
       return verdict::kReject;
     }
-    return headers::trailer::interpret(parsed, ctx.connection, ctx.policies);
+    return headers::trailer::interpret(parsed, context_rules.connection,
+                                       context_rules.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_expect (modelled header)                       ( private ) |
   // +=========================================================================+
-  static verdict dispatch_expect(std::string_view sv, context& ctx) {
+  static verdict dispatch_expect(std::string_view expect_content,
+                                 context& context_rules) {
     parsed_parameter_list parsed;
-    if (!headers::expect::check(sv, parsed)) {
+    if (!headers::expect::check(expect_content, parsed)) {
       return verdict::kReject;
     }
-    return headers::expect::interpret(parsed, ctx.connection, ctx.policies);
+    return headers::expect::interpret(parsed, context_rules.connection,
+                                      context_rules.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_upgrade (modelled header)                      ( private ) |
   // +=========================================================================+
-  static verdict dispatch_upgrade(std::string_view sv, context& ctx) {
-    parsed_token_list parsed;
-    if (!headers::upgrade::check(sv, parsed)) {
+  static verdict dispatch_upgrade(std::string_view upgrade_content,
+                                  context& context_rules) {
+    parsed_token_list parsed_content;
+    if (!headers::upgrade::check(upgrade_content, parsed_content)) {
       return verdict::kReject;
     }
-    return headers::upgrade::interpret(parsed, ctx.connection, ctx.policies);
+    return headers::upgrade::interpret(parsed_content, context_rules.connection,
+                                       context_rules.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_max_forwards (modelled header)                 ( private ) |
   // +=========================================================================+
-  static verdict dispatch_max_forwards(std::string_view sv, context& ctx) {
+  static verdict dispatch_max_forwards(std::string_view max_forwards_content,
+                                       context& context_rules) {
     std::size_t parsed = 0;
-    if (!headers::max_forwards::check(sv, parsed)) {
+    if (!headers::max_forwards::check(max_forwards_content, parsed)) {
       return verdict::kReject;
     }
-    return headers::max_forwards::interpret(parsed, ctx.connection,
-                                            ctx.policies);
+    return headers::max_forwards::interpret(parsed, context_rules.connection,
+                                            context_rules.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_via (modelled header)                          ( private ) |
   // +=========================================================================+
-  static verdict dispatch_via(std::string_view sv, context& ctx) {
+  static verdict dispatch_via(std::string_view via_content,
+                              context& context_rules) {
     parsed_via_list parsed;
-    if (!headers::via::check(sv, parsed)) return verdict::kReject;
-    ctx.forwarding_hops += parsed.elements.size();
-    return headers::via::interpret(parsed, ctx.connection, ctx.policies);
+    if (!headers::via::check(via_content, parsed)) return verdict::kReject;
+    context_rules.forwarding_hops += parsed.elements.size();
+    return headers::via::interpret(parsed, context_rules.connection,
+                                   context_rules.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_forwarded (modelled header)                    ( private ) |
   // +=========================================================================+
-  static verdict dispatch_forwarded(std::string_view sv, context& ctx) {
+  static verdict dispatch_forwarded(std::string_view forwarded_content,
+                                    context& context_rules) {
     parsed_forwarded_list parsed;
-    if (!headers::forwarded::check(sv, parsed)) {
+    if (!headers::forwarded::check(forwarded_content, parsed)) {
       return verdict::kReject;
     }
-    ctx.forwarding_hops += parsed.elements.size();
-    return headers::forwarded::interpret(parsed, ctx.connection, ctx.policies);
+    context_rules.forwarding_hops += parsed.elements.size();
+    return headers::forwarded::interpret(parsed, context_rules.connection,
+                                         context_rules.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_x_forwarded_for (modelled header)              ( private ) |
   // +=========================================================================+
-  static verdict dispatch_x_forwarded_for(std::string_view sv, context& ctx) {
+  static verdict dispatch_x_forwarded_for(
+      std::string_view x_forwarded_for_content, context& context_rules) {
     parsed_token_list parsed;
-    if (!headers::x_forwarded_for::check(sv, parsed)) {
+    if (!headers::x_forwarded_for::check(x_forwarded_for_content, parsed)) {
       return verdict::kReject;
     }
-    ctx.forwarding_hops += parsed.elements.size();
-    return headers::x_forwarded_for::interpret(parsed, ctx.connection,
-                                               ctx.policies);
+    context_rules.forwarding_hops += parsed.elements.size();
+    return headers::x_forwarded_for::interpret(parsed, context_rules.connection,
+                                               context_rules.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_x_forwarded_host (modelled header)             ( private ) |
   // +=========================================================================+
-  static verdict dispatch_x_forwarded_host(std::string_view sv, context& ctx) {
+  static verdict dispatch_x_forwarded_host(
+      std::string_view x_forwarded_host_content, context& context_rules) {
     parsed_host_port parsed;
-    if (!headers::x_forwarded_host::check(sv, parsed)) {
+    if (!headers::x_forwarded_host::check(x_forwarded_host_content, parsed)) {
       return verdict::kReject;
     }
-    return headers::x_forwarded_host::interpret(parsed, ctx.connection,
-                                                ctx.policies);
+    return headers::x_forwarded_host::interpret(
+        parsed, context_rules.connection, context_rules.policies);
   }
   // +=========================================================================+
   // | [>] dispatch_x_forwarded_proto (modelled header)            ( private ) |
   // +=========================================================================+
-  static verdict dispatch_x_forwarded_proto(std::string_view sv, context& ctx) {
+  static verdict dispatch_x_forwarded_proto(
+      std::string_view x_forwarded_proto_content, context& context_rules) {
     parsed_token_list parsed;
-    if (!headers::x_forwarded_proto::check(sv, parsed)) {
+    if (!headers::x_forwarded_proto::check(x_forwarded_proto_content, parsed)) {
       return verdict::kReject;
     }
-    return headers::x_forwarded_proto::interpret(parsed, ctx.connection,
-                                                 ctx.policies);
+    return headers::x_forwarded_proto::interpret(
+        parsed, context_rules.connection, context_rules.policies);
   }
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
@@ -802,20 +777,18 @@ class decoder {
            &dispatch<headers::x_proxy_connection>},
   };
   // +=========================================================================+
-  // | [>] USINGs                                                  ( private ) |
-  // +=========================================================================+
-  using body_writer_t = std::variant<body::writer_chunked, body::writer_raw>;
-  // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  context ctx_{};
+  char buffer_[request::kMaxHeadSize]{0};
+  std::optional<common::writer> body_buffer_ = std::nullopt;
+  std::optional<body_writer_t> body_writer_ = std::nullopt;
+  std::size_t off_ = 0;
+  context context_;
   std::string_view query_;
   std::string_view method_;
   std::string_view absolute_path_;
   target target_ = target::kUnknown;
-  std::vector<std::pair<std::string_view, std::string_view>> headers_;
-  std::optional<body_writer_t> body_writer_ = std::nullopt;
-  std::optional<common::writer> body_buffer_;
+  std::vector<header_view> headers_;
   deserialization_result<request> decoded_;
 };
 }  // namespace martianlabs::doba::protocol::http11

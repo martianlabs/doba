@@ -65,7 +65,7 @@ class response {
   // | to the transport. It never drains a streaming body; the receiver owns   |
   // | the reader and controls bounded reads after response is destroyed.      |
   // +=========================================================================+
-  [[nodiscard]] protocol::serialization_result serialize() {
+  [[nodiscard]] std::unique_ptr<protocol::serialization_result> serialize() {
     std::size_t sln_plus_hdr_len = sln_len_ + hdr_len_;
     // Write the header-terminating CRLF (plus an extra CRLF when there are no
     // headers). The core section must always stay within [0, bdy_beg_).
@@ -79,9 +79,9 @@ class response {
       memory_[sln_plus_hdr_len++] = '\r';
       memory_[sln_plus_hdr_len++] = '\n';
     }
-    protocol::serialization_result result;
-    result.prefix.assign(memory_, sln_plus_hdr_len);
-    if (bdy_len_ > 0) result.prefix.append(&memory_[bdy_beg_], bdy_len_);
+    auto result = std::make_unique<protocol::serialization_result>();
+    result->prefix.assign(memory_, sln_plus_hdr_len);
+    if (bdy_len_ > 0) result->prefix.append(&memory_[bdy_beg_], bdy_len_);
     return result;
   }
   // +=========================================================================+

@@ -77,16 +77,15 @@ int main(int argc, char* argv[]) {
   martianlabs::doba::network::startup();
   server srv;
   srv.add_route(
-         "GET", "/pipeline",
-         [](const request& req, response& res) {
-           res.ok_200()
-               .add_header("Server", "doba.")
-               .add_header("Date", date_server::get().current())
-               .add_header("Content-Type", "text/plain; charset=utf-8")
-               .set_body("ok");
-         },
-         execution_policy::kSync)
-      .start("8080");
+      "GET", "/pipeline",
+      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+        res->ok_200()
+            .add_header("Server", "doba.")
+            .add_header("Date", date_server::get().current())
+            .add_header("Content-Type", "text/plain; charset=utf-8")
+            .set_body("ok");
+      });
+  srv.start("8080");
   std::cin.get();
   date_server::get().stop();
   martianlabs::doba::network::cleanup();

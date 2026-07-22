@@ -70,42 +70,28 @@ enum class channel_intent {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty>
 struct deserialization_result {
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
   deserialization_result() : code(deserialization_status::kInvalidSource) {}
-  deserialization_result(const deserialization_result&) = delete;
-  deserialization_result(deserialization_result&& in) {
-    if (this != &in) {
-      code = in.code;
-      bytes_used = in.bytes_used;
-      channel = in.channel;
-      request = std::move(in.request);
-      in.code = deserialization_status::kInvalidSource;
-      in.bytes_used = 0;
-      in.channel = channel_intent::kKeep;
-    }
-  }
   deserialization_result(deserialization_status code) : code(code) {}
-  deserialization_result(std::shared_ptr<RQty> request, std::size_t bytes_used,
+  deserialization_result(std::shared_ptr<RQty> request,
                          channel_intent channel = channel_intent::kKeep)
       : code(deserialization_status::kSucceeded),
         request(request),
-        bytes_used(bytes_used),
         channel(channel) {}
-  deserialization_result& operator=(const deserialization_result&) = delete;
-  deserialization_result& operator=(deserialization_result&& in) {
-    if (this != &in) {
-      code = in.code;
-      bytes_used = in.bytes_used;
-      channel = in.channel;
-      request = std::move(in.request);
-      in.code = deserialization_status::kInvalidSource;
-      in.bytes_used = 0;
-      in.channel = channel_intent::kKeep;
-    }
-    return *this;
-  }
-  deserialization_status code = deserialization_status::kInvalidSource;
+  deserialization_result(const deserialization_result&) = default;
+  deserialization_result(deserialization_result&&) = default;
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +=========================================================================+
+  deserialization_result& operator=(const deserialization_result&) = default;
+  deserialization_result& operator=(deserialization_result&&) = default;
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                                ( public ) |
+  // +=========================================================================+
+  deserialization_status code = deserialization_status::kInvalidSourBce;
   std::shared_ptr<RQty> request = nullptr;
-  std::size_t bytes_used = 0;
   channel_intent channel = channel_intent::kKeep;
 };
 }  // namespace martianlabs::doba::protocol

@@ -25,6 +25,8 @@
 #ifndef martianlabs_doba_transport_server_tcpip_h
 #define martianlabs_doba_transport_server_tcpip_h
 
+#include <functional>
+
 #include "platform.h"
 
 // /////////////////////////////////////////////////////////////////////////////

@@ -34,24 +34,6 @@
 namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] parsed types                                                          |
-// +---------------------------------------------------------------------------+
-// | The structures below are the neutral, protocol-agnostic products of the   |
-// | syntactic layer. A syntactic checker's producer overload                  |
-// | (check(std::string_view, parsed_T&)) validates a field value exactly as   |
-// | the pure check(std::string_view) overload does and, on success, fills the |
-// | matching parsed_T so that the semantic layer never has to re-parse.       |
-// |                                                                           |
-// | Every member is a zero-copy std::string_view (or a std::vector of them)   |
-// | that points back into the original field-value buffer; the buffer MUST    |
-// | outlive any parsed_T that references it. No normalization, decoding, or   |
-// | ownership transfer happens here: interpretation is the semantic layer's   |
-// | responsibility.                                                           |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
 // | [>] parsed_host_port                                           ( struct ) |
 // +---------------------------------------------------------------------------+
 // | RFC 3986 §3.2.2 / §3.2.3 — host [ ":" port ]                              |

@@ -26,7 +26,6 @@
 #define martianlabs_doba_protocol_http11_router_h
 
 #include "common/hash_map.h"
-#include "common/execution_policy.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -43,10 +42,6 @@ template <typename FNty>
 class router {
  public:
   // +=========================================================================+
-  // | [>] USINGs                                                   ( public ) |
-  // +=========================================================================+
-  using data = std::pair<FNty, common::execution_policy>;
-  // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   router() = default;
@@ -61,16 +56,15 @@ class router {
   // +=========================================================================+
   // | [>] add                                                      ( public ) |
   // +=========================================================================+
-  void add(const std::string& method, const std::string& route, FNty fn,
-           common::execution_policy policy) {
+  void add(const std::string& method, const std::string& route, FNty fn) {
     auto& map = routes_.try_emplace(method).first->second;
-    map.emplace(route, std::make_pair(fn, policy));
+    map.emplace(route, fn);
   }
   // +=========================================================================+
   // | [>] match                                                    ( public ) |
   // +=========================================================================+
-  std::optional<data> match(std::string_view method, std::string_view path) {
-    std::optional<data> res = std::nullopt;
+  std::optional<FNty> match(std::string_view method, std::string_view path) {
+    std::optional<FNty> res = std::nullopt;
     if (auto it_m = routes_.find(method); it_m != routes_.end()) {
       if (auto it_h = it_m->second.find(path); it_h != it_m->second.end()) {
         res = it_h->second;
@@ -83,7 +77,7 @@ class router {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +=========================================================================+
-  common::hash_map<std::string, common::hash_map<std::string, data>> routes_;
+  common::hash_map<std::string, common::hash_map<std::string, FNty>> routes_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

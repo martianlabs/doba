@@ -25,8 +25,6 @@
 #ifndef martianlabs_doba_protocol_http11_server_h
 #define martianlabs_doba_protocol_http11_server_h
 
-#include "common/execution_policy.h"
-#include "common/thread_pool.h"
 #include "common/date_server.h"
 #include "transport/server/tcpip.h"
 #include "protocol/http11/method_names.h"
@@ -57,9 +55,14 @@ template <typename RQty = request, typename RSty = response,
           template <typename, typename,
                     template <typename, typename> typename> class TRty =
               transport::server::tcpip,
-          typename FNty = std::function<void(const RQty&, RSty&)>,
           template <typename> class ROty = router>
 class server {
+  // +=========================================================================+
+  // | [>] USINGs                                                  ( private ) |
+  // +=========================================================================+
+  using router_handler =
+      std::function<void(std::shared_ptr<const RQty>, std::shared_ptr<RSty>)>;
+
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
@@ -74,25 +77,15 @@ class server {
               // The request is either in origin-form (RFC 9110 §9.3.5) or
               // absolute-form (RFC 9110 §9.3.4); in either case, the request is
               // routed to a handler based on the method and absolute path.
-              std::optional<typename ROty<FNty>::data> router_entry =
+              std::optional<router_handler> handler =
                   router_.match(req->get_method(), req->get_absolute_path());
-              if (!router_entry.has_value()) {
+              if (!handler.has_value()) {
                 res->not_found_404();
                 on_send(res);
                 return;
               }
-              switch (router_entry->second) {
-                case common::execution_policy::kSync:
-                  router_entry->first(*req, *res);
-                  on_send(res);
-                  break;
-                case common::execution_policy::kAsync:
-                  thread_pool_->enqueue([req, res, on_send, router_entry]() {
-                    router_entry->first(*req, *res);
-                    on_send(res);
-                  });
-                  break;
-              }
+              (*handler)(req, res);
+              on_send(res);
               break;
             }
             case target::kAuthorityForm:
@@ -139,24 +132,18 @@ class server {
   // +=========================================================================+
   void start(const char port[]) {
     common::date_server::get().start();
-    thread_pool_ = std::make_shared<common::thread_pool>(
-        std::thread::hardware_concurrency());
     transport_.start(port);
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
-  void stop() {
-    if (thread_pool_) thread_pool_->stop();
-    transport_.stop();
-  }
+  void stop() { transport_.stop(); }
   // +=========================================================================+
   // | [>] add_route                                                ( public ) |
   // +=========================================================================+
-  server& add_route(
-      const std::string& method, const std::string& route, FNty fn,
-      common::execution_policy policy = common::execution_policy::kSync) {
-    router_.add(method, route, fn, policy);
+  server& add_route(const std::string& method, const std::string& route,
+                    router_handler handler) {
+    router_.add(method, route, handler);
     return *this;
   }
 
@@ -164,10 +151,9 @@ class server {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  std::shared_ptr<common::thread_pool> thread_pool_;
   std::atomic<uint32_t> connections_{0};
   TRty<RQty, RSty, DEty> transport_;
-  ROty<FNty> router_;
+  ROty<router_handler> router_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 
