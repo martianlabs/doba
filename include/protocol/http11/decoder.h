@@ -53,10 +53,10 @@ class decoder {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  decoder() = default;
+  decoder() { buffer_ = new char[kDecodingBufferSize]; }
   decoder(const decoder&) = delete;
   decoder(decoder&&) noexcept = delete;
-  ~decoder() = default;
+  ~decoder() { delete[] buffer_; }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +=========================================================================+
@@ -66,7 +66,7 @@ class decoder {
   // | [>] accumulate                                               ( public ) |
   // +=========================================================================+
   std::size_t accumulate(char* const buffer, std::size_t size) {
-    std::size_t space_left = RQty::kMaxHeadSize - off_;
+    std::size_t space_left = kDecodingBufferSize - off_;
     std::size_t bytes_to_copy = std::min(space_left, size);
     std::memcpy(buffer_ + off_, buffer, bytes_to_copy);
     off_ += bytes_to_copy;
@@ -781,9 +781,13 @@ class decoder {
            &dispatch<headers::x_proxy_connection>},
   };
   // +=========================================================================+
+  // | [>] CONSTANTs                                               ( private ) |
+  // +=========================================================================+
+  static constexpr std::size_t kDecodingBufferSize = 16384;
+  // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  char buffer_[request::kMaxHeadSize]{0};
+  char* buffer_ = nullptr;
   std::optional<common::writer> body_buffer_ = std::nullopt;
   std::optional<body_writer_t> body_writer_ = std::nullopt;
   std::size_t off_ = 0;

@@ -137,16 +137,12 @@ class request {
   // +=========================================================================+
   request(const request&) = delete;
   request(request&&) noexcept = delete;
-  ~request() = default;
+  ~request() { delete[] buffer_; }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +=========================================================================+
   request& operator=(const request&) = delete;
   request& operator=(request&&) noexcept = delete;
-  // +=========================================================================+
-  // | [>] CONSTANTs                                                ( public ) |
-  // +=========================================================================+
-  static constexpr std::size_t kMaxHeadSize = 4096;
   // +=========================================================================+
   // | [>] from                                                     ( public ) |
   // +-------------------------------------------------------------------------+
@@ -176,23 +172,11 @@ class request {
       std::optional<std::string_view> target_authority_host,
       std::optional<std::string_view> target_authority_port,
       std::optional<helpers::host_type> target_authority_type) {
-    std::shared_ptr<request> req = std::shared_ptr<request>(new request());
-    std::memcpy(req->buffer_, full_buffer.data(), full_buffer.size());
-    char* method_at = req->buffer_ + (method.data() - full_buffer.data());
-    req->method_ = std::string_view(method_at, method.size());
-    char* abs_path_at = req->buffer_ + (abs_path.data() - full_buffer.data());
-    req->abs_path_ = std::string_view(abs_path_at, abs_path.size());
-    req->target_ = target_form;
-    req->headers_ = std::move(headers);
-    req->query_parameters_ = std::move(query_parameters);
-    if (host) req->host_ = *host;
-    if (port) req->host_port_ = *port;
-    if (type) req->host_type_ = *type;
-    if (target_authority_host) req->ta_host_ = *target_authority_host;
-    if (target_authority_port) req->ta_port_ = *target_authority_port;
-    if (target_authority_type) req->ta_type_ = *target_authority_type;
-    return [req](std::optional<common::byte_storage> byte_storage)
-               -> std::shared_ptr<request> {
+    std::shared_ptr<request> req = std::shared_ptr<request>(new request(
+        full_buffer, method, abs_path, target_form, std::move(headers),
+        std::move(query_parameters), host, port, type, target_authority_host,
+        target_authority_port, target_authority_type));
+    return [req](std::optional<common::byte_storage> byte_storage) -> auto {
       if (byte_storage) {
         req->body_reader_ = std::shared_ptr<common::reader>(
             new common::reader(std::move(*byte_storage)));
@@ -222,13 +206,42 @@ class request {
 
  private:
   // +=========================================================================+
+  // | [>] CONSTANTs                                               ( private ) |
+  // +=========================================================================+
+  static constexpr std::size_t kMaxHeadSize = 4096;
+  // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                ( private ) |
   // +=========================================================================+
-  request() = default;
+  request(std::string_view full_buffer, std::string_view method,
+          std::string_view abs_path, target target_form,
+          std::vector<header_view> headers,
+          std::vector<query_parameter_view> query_parameters,
+          std::optional<std::string_view> host,
+          std::optional<std::string_view> port,
+          std::optional<helpers::host_type> type,
+          std::optional<std::string_view> target_authority_host,
+          std::optional<std::string_view> target_authority_port,
+          std::optional<helpers::host_type> target_authority_type) {
+    buffer_ = new char[full_buffer.size()];
+    std::memcpy(buffer_, full_buffer.data(), full_buffer.size());
+    char* method_at = buffer_ + (method.data() - full_buffer.data());
+    method_ = std::string_view(method_at, method.size());
+    char* abs_path_at = buffer_ + (abs_path.data() - full_buffer.data());
+    abs_path_ = std::string_view(abs_path_at, abs_path.size());
+    target_ = target_form;
+    headers_ = std::move(headers);
+    query_parameters_ = std::move(query_parameters);
+    if (host) host_ = *host;
+    if (port) host_port_ = *port;
+    if (type) host_type_ = *type;
+    if (target_authority_host) ta_host_ = *target_authority_host;
+    if (target_authority_port) ta_port_ = *target_authority_port;
+    if (target_authority_type) ta_type_ = *target_authority_type;
+  }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  char buffer_[kMaxHeadSize];         // buffer holding the serialized request
+  char* buffer_ = nullptr;            // buffer holding the serialized request
   std::string_view method_;           // HTTP method (e.g., GET, POST, etc.)
   std::string_view abs_path_;         // absolute path from the request-target
   target target_ = target::kUnknown;  // request-target form

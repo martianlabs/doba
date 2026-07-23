@@ -31,9 +31,6 @@
 #include <cstdint>
 #include <functional>
 #include <mutex>
-#include <span>
-#include <thread>
-#include <unordered_set>
 
 #include "platform.h"
 #include "protocol/deserialization.h"
@@ -105,8 +102,6 @@ struct overlapped_receive : overlapped_base {
   overlapped_receive(std::shared_ptr<context<RQty, RSty, DEty>> context)
       : overlapped_base(io_type::kReceive), ctx{context} {}
   std::shared_ptr<context<RQty, RSty, DEty>> ctx;
-  CHAR rcv_buf[kReceiveBufferSz]{0};
-  WSABUF wsa{0};
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -118,9 +113,8 @@ template <typename RQty, typename RSty,
 struct overlapped_send : overlapped_base {
   overlapped_send(std::shared_ptr<context<RQty, RSty, DEty>> context)
       : overlapped_base(io_type::kSend), ctx{context} {}
-  std::unique_ptr<protocol::serialization_result> response;
   std::shared_ptr<context<RQty, RSty, DEty>> ctx;
-  WSABUF wsa{0};
+  std::unique_ptr<protocol::serialization_result> response;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -165,6 +159,11 @@ struct context {
   SOCKET socket{INVALID_SOCKET};
   // [decoder] section!
   DEty<RQty, RSty> decoder{};
+  // [overlapped-receive] section!
+  CHAR ovr_buf[kReceiveBufferSz]{0};
+  WSABUF ovr_wsa{0};
+  // [overlapped-send] section!
+  WSABUF ovs_wsa{0};
   // [responses] section!
   std::vector<response_data> responses;
   std::atomic<uint64_t> expected_response_id{0};
@@ -454,7 +453,8 @@ class tcpip {
       // -----------------------------------------------------------------------
       // Let's try to accumulate the maximum number of received bytes!
       // -----------------------------------------------------------------------
-      bytes_added += ovr->ctx->decoder.accumulate(ovr->wsa.buf, bytes_received);
+      bytes_added +=
+          ovr->ctx->decoder.accumulate(ovr->ctx->ovr_wsa.buf, bytes_received);
       // -----------------------------------------------------------------------
       // Let's try to deserialize some requests!
       // -----------------------------------------------------------------------
@@ -604,7 +604,23 @@ class tcpip {
     auto itr = ctx->responses.begin();
     while (itr != ctx->responses.end()) {
       if (itr->id != ctx->expected_response_id) {
-        printf(">>>>>>>>>> AKI!!!!!!!!!!!!\n");  // pepe
+        /*
+        pepe
+        */
+
+        /*
+        necesitamos añadir el soporte para cuando una response no esta
+        en orden, es decir, cuando el id de la response no es el esperado. Esto
+        puede ocurrir si el usuario envia responses fuera de orden. En este
+        caso, debemos decidir si queremos esperar a que llegue la response con
+        el id esperado o si queremos cerrar la conexion. Por ahora, vamos a
+        imprimir un mensaje de error y cerrar la conexion.
+        */
+
+        /*
+        pepe fin
+        */
+
         break;
       }
       ctx->sending_buffer.append(itr->response->prefix);
@@ -716,10 +732,11 @@ class tcpip {
   bool receive(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
     DWORD f = 0, r = 0;
     auto ovr = new overlapped_receive<RQty, RSty, DEty>(ctx);
-    ovr->wsa.buf = ovr->rcv_buf;
-    ovr->wsa.len = kReceiveBufferSz;
-    int res = WSARecv(ctx->socket, &ovr->wsa, 1, &r, &f, ovr, 0);
+    ctx->ovr_wsa.buf = ctx->ovr_buf;
+    ctx->ovr_wsa.len = kReceiveBufferSz;
+    int res = WSARecv(ctx->socket, &ctx->ovr_wsa, 1, &r, &f, ovr, 0);
     if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      delete ovr;
       return false;
     }
     return true;
@@ -730,10 +747,11 @@ class tcpip {
   bool send(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
     DWORD f = 0, snt = 0;
     auto ovs = new overlapped_send<RQty, RSty, DEty>(ctx);
-    ovs->wsa.buf = ctx->sending_buffer.data();
-    ovs->wsa.len = ctx->sending_buffer.size();
-    int res = WSASend(ctx->socket, &ovs->wsa, 1, &snt, f, ovs, 0);
+    ctx->ovs_wsa.buf = ctx->sending_buffer.data();
+    ctx->ovs_wsa.len = ctx->sending_buffer.size();
+    int res = WSASend(ctx->socket, &ctx->ovs_wsa, 1, &snt, f, ovs, 0);
     if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      delete ovs;
       return false;
     }
     return true;
