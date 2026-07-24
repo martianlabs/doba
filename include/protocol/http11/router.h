@@ -95,20 +95,6 @@ class router {
     }
   }
   // +=========================================================================+
-  // | [>] add [static-handlers]                                    ( public ) |
-  // +=========================================================================+
-  void add_route(std::string_view method, std::string_view route,
-                 router_handler_static<RQty, RSty> handler) {
-    static_handler_data data{std::string(route), std::move(handler)};
-    for (auto& [static_method, handlers] : static_handlers_) {
-      if (static_method == method) {
-        handlers.push_back(std::move(data));
-        return;
-      }
-    }
-    static_handlers_.push_back({std::string(method), {std::move(data)}});
-  }
-  // +=========================================================================+
   // | [>] match_route                                              ( public ) |
   // +=========================================================================+
   [[nodiscard]]
@@ -169,6 +155,20 @@ class router {
       std::pair<std::string, std::vector<static_handler_data>>;
   using parametrized_handler_pair =
       std::pair<std::string, std::vector<parametrized_handler_data>>;
+  // +=========================================================================+
+  // | [>] add [static-handlers]                                   ( private ) |
+  // +=========================================================================+
+  void add_route(std::string_view method, std::string_view route,
+                 router_handler_static<RQty, RSty> handler) {
+    static_handler_data data{std::string(route), std::move(handler)};
+    for (auto& [static_method, handlers] : static_handlers_) {
+      if (static_method == method) {
+        handlers.push_back(std::move(data));
+        return;
+      }
+    }
+    static_handlers_.push_back({std::string(method), {std::move(data)}});
+  }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +=========================================================================+

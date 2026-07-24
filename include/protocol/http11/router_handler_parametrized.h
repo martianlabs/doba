@@ -146,8 +146,7 @@ class router_handler_parametrized final
     }
     std::apply(
         [this, &req, &res](const auto&... values) {
-          callback_(std::forward<const std::shared_ptr<const RQty>>(req),
-                    std::forward<const std::shared_ptr<RSty>>(res), values...);
+          callback_(req, res, values...);
         },
         values);
     return true;
