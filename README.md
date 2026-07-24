@@ -1,4 +1,4 @@
-![doba](resources/doba-color.png)
+![doba](resources/doba.png)
 
 **A protocol-agnostic, header-only C++20 server framework. Zero-copy. Zero-allocation. Zero excuses.**
 
