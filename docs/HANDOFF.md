@@ -40,7 +40,14 @@ include/
       request_getter.h   callback que termina de construir la request
       response.h         respuesta de buffer fijo
       server.h           composición HTTP/1.1 de router y transporte
-      router.h           router de coincidencia exacta
+      router.h           selección de rutas estáticas y parametrizadas
+      router_types.h     resultados de match y conversión de parámetros
+      router_handler_static.h
+                         contrato del handler de ruta estática
+      router_handler_parametrized.h
+                         handler tipado para parámetros de path
+      router_handler_parametrized_base.h
+                         interfaz interna de handlers parametrizados
       body/
         writer_raw.h     acumulación de body con Content-Length
         writer_chunked.h validación/acumulación del wire chunked
@@ -165,14 +172,24 @@ server<RQty, RSty, DEty, TRty, ROty>
 ```
 
 Sus valores por defecto son `request`, `response`, `decoder`,
-`transport::server::tcpip` y `router`. `add_route` registra un handler de tipo
-`void(std::shared_ptr<const RQty>, std::shared_ptr<RSty>)` y `start` recibe el
-puerto. Origin-form y absolute-form se enrutan; authority-form responde 501 y
+`transport::server::tcpip` y `router`. `server` hereda de
+`ROty<RQty, RSty>`: `add_route` pertenece al router y `start` recibe el puerto.
+Origin-form y absolute-form se enrutan; authority-form responde 501 y
 asterisk-form responde 200.
 
-El router actual realiza coincidencia exacta de método y ruta. No documentar
-políticas de ejecución por ruta: `server::add_route` no recibe ese parámetro en
-la API actual.
+El router registra rutas estáticas y parametrizadas mediante
+`add_route(method, path, lambda)`. El handler recibe
+`std::shared_ptr<const RQty>` y `std::shared_ptr<RSty>` como sus dos primeros
+argumentos. El patrón parametrizado usa segmentos `:nombre`, por ejemplo
+`/users/:id`, y sus parámetros se declaran a continuación en la lambda. Se
+convierten en orden y soportan `std::string`, `bool`, tipos integrales y tipos
+de punto flotante.
+
+`match_route` evalúa primero las rutas estáticas y después las parametrizadas;
+una coincidencia estática tiene prioridad. Devuelve `kMatched`, `kNotFound` o
+`kMethodNotAllowed`; `server` traduce los dos últimos a 404 y 405,
+respectivamente. No documentar políticas de ejecución por ruta: la API actual
+no recibe ese parámetro.
 
 ## Transporte
 

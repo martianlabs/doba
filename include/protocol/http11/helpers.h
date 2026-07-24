@@ -30,7 +30,10 @@
 #include <algorithm>
 #include <limits>
 #include <span>
+#include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 #include "protocol/deserialization.h"
 
@@ -2620,6 +2623,51 @@ struct helpers {
            std::equal(a.begin(), a.end(), b.begin(), [](char ac, char bc) {
              return tolower_ascii(ac) == tolower_ascii(bc);
            });
+  }
+  // +=========================================================================+
+  // | [>] get_parameters                                          ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Matches route path segments against a pattern. A colon-prefixed pattern |
+  // | segment is a parameter; its name and matching path segment are stored  |
+  // | as views in parameters and must not outlive pattern or path. The vector |
+  // | is cleared before matching.                                             |
+  // +=========================================================================+
+  [[nodiscard]]
+  static bool get_parameters(
+      std::string_view pattern, std::string_view path,
+      std::vector<std::pair<std::string_view, std::string_view>>& parameters) {
+    parameters.clear();
+    std::size_t pattern_pos = 0;
+    std::size_t path_pos = 0;
+    while (pattern_pos < pattern.size() && path_pos < path.size()) {
+      if (pattern[pattern_pos] == '/') pattern_pos++;
+      if (path[path_pos] == '/') path_pos++;
+      const auto pattern_end = pattern.find('/', pattern_pos);
+      const auto path_end = path.find('/', path_pos);
+      const auto pattern_segment =
+          pattern.substr(pattern_pos, pattern_end == std::string_view::npos
+                                          ? pattern.size() - pattern_pos
+                                          : pattern_end - pattern_pos);
+      const auto path_segment = path.substr(
+          path_pos, path_end == std::string_view::npos ? path.size() - path_pos
+                                                        : path_end - path_pos);
+      if (pattern_segment.empty() || path_segment.empty()) return false;
+      if (pattern_segment.front() == ':') {
+        auto name = pattern_segment.substr(1);
+        if (!name.empty() && name.back() == ':') name.remove_suffix(1);
+        if (name.empty()) return false;
+        parameters.emplace_back(name, path_segment);
+      } else if (pattern_segment != path_segment) {
+        return false;
+      }
+      if (pattern_end == std::string_view::npos ||
+          path_end == std::string_view::npos) {
+        return pattern_end == path_end;
+      }
+      pattern_pos = pattern_end;
+      path_pos = path_end;
+    }
+    return pattern_pos == pattern.size() && path_pos == path.size();
   }
   // +=========================================================================+
   // | [>] split_query_parameters                                   ( public ) |

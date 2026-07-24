@@ -22,75 +22,6 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include "platform.h"
-
-#include <concepts>
-#include <cstddef>
-#include <functional>
-#include <tuple>
-#include <type_traits>
-#include <utility>
-
-template <typename... Args>
-class parameter_store {
- private:
-  using tuple_type = std::tuple<std::decay_t<Args>...>;
-
-  using callback_type = std::function<void(const std::decay_t<Args>&...)>;
-
-  template <std::size_t Index = 0, typename T>
-  bool set_impl(std::size_t index, T&& value) {
-    if constexpr (Index < sizeof...(Args)) {
-      if (index == Index) {
-        using element_type = std::tuple_element_t<Index, tuple_type>;
-
-        if constexpr (std::assignable_from<element_type&, T&&>) {
-          std::get<Index>(parameters_) = std::forward<T>(value);
-
-          return true;
-        }
-
-        return false;
-      }
-
-      return set_impl<Index + 1>(index, std::forward<T>(value));
-    }
-
-    return false;
-  }
-
- public:
-  explicit parameter_store(Args&&... args)
-      : parameters_(std::forward<Args>(args)...) {}
-
-  template <typename T>
-  bool set(std::size_t index, T&& value) {
-    return set_impl(index, std::forward<T>(value));
-  }
-
-  template <typename Callable>
-  void set_callback(Callable&& callback) {
-    callback_ = std::forward<Callable>(callback);
-  }
-
-  void invoke() const { std::apply(callback_, parameters_); }
-
- private:
-  tuple_type parameters_;
-  callback_type callback_;
-};
-
-template <typename... Args>
-parameter_store(Args&&...) -> parameter_store<Args...>;
-
-int main(int argc, char* argv[]) {
-  parameter_store pepe(42, 3.14);
-  pepe.set(0, 42);
-  pepe.set(1, 3.14);
-  return 0;
-}
-
-/*
 #include "network/environment.h"
 #include "protocol/http11/server.h"
 
@@ -101,6 +32,7 @@ int main(int argc, char* argv[]) {
   martianlabs::doba::network::startup();
   date_server::get().start();
   server http_server;
+
   http_server.add_route(
       "GET", "/pipeline",
       [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
@@ -110,10 +42,30 @@ int main(int argc, char* argv[]) {
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body("ok");
       });
+
+  /*
+  pepe
+  */
+
+  http_server.add_route(
+      "GET", "/pipelineplus/:param/:param_2",
+      [](std::shared_ptr<const request> req, std::shared_ptr<response> res,
+         int param, std::string param_2) {
+        res->ok_200()
+            .add_header("Server", "doba.")
+            .add_header("Date", date_server::get().current())
+            .add_header("Content-Type", "text/plain; charset=utf-8")
+            .set_body("ok with param: " + std::to_string(param) +
+                      " and param_2: " + param_2);
+      });
+
+  /*
+  pepe fin
+  */
+
   http_server.start("8080");
   std::cin.get();
   date_server::get().stop();
   martianlabs::doba::network::cleanup();
   return 0;
 }
-*/

@@ -55,14 +55,8 @@ template <typename RQty = request, typename RSty = response,
           template <typename, typename,
                     template <typename, typename> typename> class TRty =
               transport::server::tcpip,
-          template <typename> class ROty = router>
-class server {
-  // +=========================================================================+
-  // | [>] USINGs                                                  ( private ) |
-  // +=========================================================================+
-  using router_handler =
-      std::function<void(std::shared_ptr<const RQty>, std::shared_ptr<RSty>)>;
-
+          template <typename, typename> class ROty = router>
+class server : public ROty<RQty, RSty> {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
@@ -77,14 +71,18 @@ class server {
               // The request is either in origin-form (RFC 9110 §9.3.5) or
               // absolute-form (RFC 9110 §9.3.4); in either case, the request is
               // routed to a handler based on the method and absolute path.
-              std::optional<router_handler> handler =
-                  router_.match(req->get_method(), req->get_absolute_path());
-              if (!handler.has_value()) {
-                res->not_found_404();
-                on_send(res);
-                return;
+              std::string_view method = req->get_method();
+              std::string_view abs_path = req->get_absolute_path();
+              switch (this->match_route(method, abs_path, req, res)) {
+                case router_match_result::kMatched:
+                  break;
+                case router_match_result::kNotFound:
+                  res->not_found_404();
+                  break;
+                case router_match_result::kMethodNotAllowed:
+                  res->method_not_allowed_405();
+                  break;
               }
-              (*handler)(req, res);
               on_send(res);
               break;
             }
@@ -135,14 +133,6 @@ class server {
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
   void stop() { transport_.stop(); }
-  // +=========================================================================+
-  // | [>] add_route                                                ( public ) |
-  // +=========================================================================+
-  server& add_route(const std::string& method, const std::string& route,
-                    router_handler handler) {
-    router_.add(method, route, handler);
-    return *this;
-  }
 
  private:
   // +=========================================================================+
@@ -150,7 +140,6 @@ class server {
   // +=========================================================================+
   std::atomic<uint32_t> connections_{0};
   TRty<RQty, RSty, DEty> transport_;
-  ROty<router_handler> router_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 
