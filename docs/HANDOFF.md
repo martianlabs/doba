@@ -40,7 +40,7 @@ include/
       request_getter.h   callback que termina de construir la request
       response.h         respuesta de buffer fijo
       server.h           composición HTTP/1.1 de router y transporte
-      router.h           selección de rutas estáticas y parametrizadas
+      router.h           selección de rutas estáticas, parametrizadas y wildcard
       router_types.h     resultados de match y conversión de parámetros
       router_handler_static.h
                          contrato del handler de ruta estática
@@ -177,7 +177,7 @@ Sus valores por defecto son `request`, `response`, `decoder`,
 Origin-form y absolute-form se enrutan; authority-form responde 501 y
 asterisk-form responde 200.
 
-El router registra rutas estáticas y parametrizadas mediante
+El router registra rutas estáticas, parametrizadas y wildcard mediante
 `add_route(method, path, lambda)`. El handler recibe
 `std::shared_ptr<const RQty>` y `std::shared_ptr<RSty>` como sus dos primeros
 argumentos. El patrón parametrizado usa segmentos `:nombre`, por ejemplo
@@ -192,8 +192,15 @@ respectivamente. No documentar políticas de ejecución por ruta: la API actual
 no recibe ese parámetro.
 
 Los paths son sensibles a mayúsculas. Una ruta parametrizada con barra final
-solo coincide con un path que también la tenga. Cuando se devuelve 405, el
-router añade `Allow` con los métodos aplicables.
+solo coincide con un path que también la tenga. Un patrón que termina en `/*`
+coincide con cualquier path que empiece por su prefijo, incluida la porción
+vacía: `/assets/*` coincide con `/assets/` y con `/assets/a/b`, pero no con
+`/assets`. La ruta wildcard no entrega esa porción como argumento: el handler
+puede consultarla en la request. La prioridad es estática, parametrizada y
+wildcard. Cuando se devuelve 405, el router añade `Allow` con los métodos
+aplicables, incluidos los wildcard. Una wildcard contiene un único `*` como
+segmento final y su handler no admite parámetros tipados; cualquier otra
+combinación con `*` se rechaza durante `add_route`.
 
 ## Transporte
 

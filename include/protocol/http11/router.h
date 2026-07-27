@@ -25,6 +25,8 @@
 #ifndef martianlabs_doba_protocol_http11_router_h
 #define martianlabs_doba_protocol_http11_router_h
 
+#include <stdexcept>
+
 #include "protocol/http11/router_handler_parametrized.h"
 #include "protocol/http11/router_handler_static.h"
 #include "protocol/http11/router_types.h"
@@ -75,12 +77,30 @@ class router {
         std::same_as<std::decay_t<typename signature::response_type>,
                      std::shared_ptr<RSty>>,
         "The second route handler argument must be std::shared_ptr<RSty>");
+    const auto wildcard_position = route.find('*');
+    const bool is_wildcard =
+        wildcard_position != std::string_view::npos &&
+        wildcard_position == route.size() - 1 && wildcard_position > 0 &&
+        route[wildcard_position - 1] == '/' &&
+        route.find('*', wildcard_position + 1) == std::string_view::npos;
+    if (wildcard_position != std::string_view::npos && !is_wildcard) {
+      throw std::invalid_argument(
+          "The wildcard must be the final route segment");
+    }
     // Let's check if the handler has parameters or not, and add it to the
     // appropriate list of handlers
     if constexpr (signature::parameter_count == 0) {
-      add_route(method, route,
-                router_handler_static<RQty, RSty>(std::move(handler)));
+      router_handler_static<RQty, RSty> static_handler(std::move(handler));
+      if (is_wildcard) {
+        add_wildcard_route(method, route, std::move(static_handler));
+      } else {
+        add_route(method, route, std::move(static_handler));
+      }
     } else {
+      if (is_wildcard) {
+        throw std::invalid_argument(
+            "The wildcard route handler cannot have typed parameters");
+      }
       auto handler_parametrized =
           signature::template make_parametrized<RQty, RSty>(std::move(handler));
       parametrized_handler_data data{
@@ -123,11 +143,23 @@ class router {
     for (const auto& [param_method, handlers] : parametrized_handlers_) {
       if (param_method != method) continue;
       for (const auto& handler_data : handlers) {
-        std::vector<std::pair<std::string_view, std::string_view>> parameters;
+        route_parameters parameters;
         if (helpers::get_parameters(handler_data.path, path, parameters)) {
           if (handler_data.handler->invoke(req, res, parameters)) {
             return router_match_result::kMatched;
           }
+        }
+      }
+    }
+    // -------------------------------------------------------------------------
+    // Let's third check if we have a [wildcard] route match for this method
+    // -------------------------------------------------------------------------
+    for (const auto& [wildcard_method, handlers] : wildcard_handlers_) {
+      if (wildcard_method != method) continue;
+      for (const auto& handler_data : handlers) {
+        if (matches_wildcard_route(handler_data.path, path)) {
+          handler_data.handler(req, res);
+          return router_match_result::kMatched;
         }
       }
     }
@@ -151,10 +183,18 @@ class router {
     for (const auto& [param_method, handlers] : parametrized_handlers_) {
       if (param_method == method) continue;
       for (const auto& handler_data : handlers) {
-        std::vector<std::pair<std::string_view, std::string_view>> parameters;
+        route_parameters parameters;
         if (helpers::get_parameters(handler_data.path, path, parameters) &&
             handler_data.handler->matches(parameters)) {
           add_allowed_method(param_method);
+        }
+      }
+    }
+    for (const auto& [wildcard_method, handlers] : wildcard_handlers_) {
+      if (wildcard_method == method) continue;
+      for (const auto& handler_data : handlers) {
+        if (matches_wildcard_route(handler_data.path, path)) {
+          add_allowed_method(wildcard_method);
         }
       }
     }
@@ -182,6 +222,8 @@ class router {
   };
   using static_handler_pair =
       std::pair<std::string, std::vector<static_handler_data>>;
+  using wildcard_handler_pair =
+      std::pair<std::string, std::vector<static_handler_data>>;
   using parametrized_handler_pair =
       std::pair<std::string, std::vector<parametrized_handler_data>>;
   // +=========================================================================+
@@ -199,10 +241,32 @@ class router {
     static_handlers_.push_back({std::string(method), {std::move(data)}});
   }
   // +=========================================================================+
+  // | [>] add [wildcard-handlers]                                 ( private ) |
+  // +=========================================================================+
+  void add_wildcard_route(std::string_view method, std::string_view route,
+                          router_handler_static<RQty, RSty> handler) {
+    static_handler_data data{std::string(route), std::move(handler)};
+    for (auto& [wildcard_method, handlers] : wildcard_handlers_) {
+      if (wildcard_method == method) {
+        handlers.push_back(std::move(data));
+        return;
+      }
+    }
+    wildcard_handlers_.push_back({std::string(method), {std::move(data)}});
+  }
+  // +=========================================================================+
+  // | [>] match [wildcard-routes]                                 ( private ) |
+  // +=========================================================================+
+  static bool matches_wildcard_route(std::string_view route,
+                                     std::string_view path) {
+    return path.starts_with(route.substr(0, route.size() - 1));
+  }
+  // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +=========================================================================+
   std::vector<static_handler_pair> static_handlers_;
   std::vector<parametrized_handler_pair> parametrized_handlers_;
+  std::vector<wildcard_handler_pair> wildcard_handlers_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

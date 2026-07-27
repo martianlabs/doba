@@ -50,7 +50,7 @@ namespace detail {
 // | Each bit encodes one RFC character-class predicate for a byte value.      |
 // | kCharFlags[c] is a bitmask; is_X(c) reduces to a single table lookup and  |
 // | a bitmask test (2 instructions) instead of a chain of comparisons.        |
-// | The table is 256 * 2 = 512 bytes; fits in one L1 cache line group and    |
+// | The table is 256 * 2 = 512 bytes; fits in one L1 cache line group and     |
 // | is shared across all hot parse loops in helpers, request and checkers.    |
 // +---------------------------------------------------------------------------+
 static constexpr std::uint16_t kF_token = 0x0001;
@@ -1248,7 +1248,9 @@ struct helpers {
     // domain = dot-atom / domain-literal
     peek = i;
     if (!consume_cfws(sv, peek)) return false;
-    if (peek < sv.size() && sv[peek] == '[') return consume_domain_literal(sv, i);
+    if (peek < sv.size() && sv[peek] == '[') {
+      return consume_domain_literal(sv, i);
+    }
     return consume_dot_atom(sv, i);
   }
   // +=========================================================================+
@@ -1793,20 +1795,21 @@ struct helpers {
     // in_param_list tracks whether the current challenge still accepts
     // trailing auth-param elements (i.e. it opened a "#auth-param" list).
     bool in_param_list = false;
-    return for_each_list_element(sv, [&in_param_list](std::string_view element) {
-      // An element that fully parses as an auth-param continues the current
-      // challenge, but only when that challenge opened an auth-param list.
-      std::size_t bytes_used = 0;
-      if (consume_parameter(element, bytes_used, /*allow_bws=*/true) &&
-          bytes_used == element.size()) {
-        return in_param_list;
-      }
-      // Otherwise the element must itself be a complete challenge, which
-      // starts a new challenge and may (re)open an auth-param list.
-      if (!check_credentials(element)) return false;
-      in_param_list = challenge_opens_param_list(element);
-      return true;
-    });
+    return for_each_list_element(
+        sv, [&in_param_list](std::string_view element) {
+          // An element that fully parses as an auth-param continues the current
+          // challenge, but only when that challenge opened an auth-param list.
+          std::size_t bytes_used = 0;
+          if (consume_parameter(element, bytes_used, /*allow_bws=*/true) &&
+              bytes_used == element.size()) {
+            return in_param_list;
+          }
+          // Otherwise the element must itself be a complete challenge, which
+          // starts a new challenge and may (re)open an auth-param list.
+          if (!check_credentials(element)) return false;
+          in_param_list = challenge_opens_param_list(element);
+          return true;
+        });
   }
   // +=========================================================================+
   // | [>] consume_product                                          ( public ) |
@@ -2113,7 +2116,8 @@ struct helpers {
       while (i < sv.size() && sv[i] != '/' && sv[i] != '?' && sv[i] != '#') {
         i++;
       }
-      if (!check_uri_authority(sv.substr(authority_start, i - authority_start))) {
+      if (!check_uri_authority(
+              sv.substr(authority_start, i - authority_start))) {
         return false;
       }
       has_authority = true;
@@ -2625,10 +2629,10 @@ struct helpers {
            });
   }
   // +=========================================================================+
-  // | [>] get_parameters                                          ( public ) |
+  // | [>] get_parameters                                           ( public ) |
   // +-------------------------------------------------------------------------+
   // | Matches route path segments against a pattern. A colon-prefixed pattern |
-  // | segment is a parameter; its name and matching path segment are stored  |
+  // | segment is a parameter; its name and matching path segment are stored   |
   // | as views in parameters and must not outlive pattern or path. The vector |
   // | is cleared before matching.                                             |
   // +=========================================================================+
@@ -2692,8 +2696,8 @@ struct helpers {
   // | (e.g. produced by "a&&b" or a leading/trailing '&') are skipped. Every  |
   // | emitted view is zero-copy over 'query', so the caller must keep the     |
   // | backing buffer alive (or copy the spans, as request.h does). Writes at  |
-  // | most out_keys.size() entries into the caller-provided spans and returns  |
-  // | the number of pairs written (excess pairs are dropped, matching the      |
+  // | most out_keys.size() entries into the caller-provided spans and returns |
+  // | the number of pairs written (excess pairs are dropped, matching the     |
   // | fixed-capacity policy already used for headers).                        |
   // +=========================================================================+
   static constexpr std::size_t split_query_parameters(

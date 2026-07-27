@@ -56,7 +56,7 @@ template <typename RQty = request, typename RSty = response,
                     template <typename, typename> typename> class TRty =
               transport::server::tcpip,
           template <typename, typename> class ROty = router>
-class server : public ROty<RQty, RSty> {
+class server {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
@@ -73,7 +73,7 @@ class server : public ROty<RQty, RSty> {
               // routed to a handler based on the method and absolute path.
               std::string_view method = req->get_method();
               std::string_view abs_path = req->get_absolute_path();
-              switch (this->match_route(method, abs_path, req, res)) {
+              switch (router_.match_route(method, abs_path, req, res)) {
                 case router_match_result::kMatched:
                   break;
                 case router_match_result::kNotFound:
@@ -128,11 +128,32 @@ class server : public ROty<RQty, RSty> {
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
   // +=========================================================================+
-  void start(const char port[]) { transport_.start(port); }
+  void start(const char port[]) {
+    std::lock_guard<std::mutex> lock(locked_mutex_);
+    transport_.start(port);
+    locked_ = true;
+  }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
-  void stop() { transport_.stop(); }
+  void stop() {
+    std::lock_guard<std::mutex> lock(locked_mutex_);
+    transport_.stop();
+    locked_ = false;
+  }
+  // +=========================================================================+
+  // | [>] add_route                                                ( public ) |
+  // +=========================================================================+
+  template <router_handler_lambda Hty>
+  server& add_route(std::string_view method, std::string_view route,
+                    Hty handler) {
+    std::lock_guard<std::mutex> lock(locked_mutex_);
+    if (locked_) {
+      throw std::runtime_error("Cannot add route when the server is running");
+    }
+    router_.add_route(method, route, std::move(handler));
+    return *this;
+  }
 
  private:
   // +=========================================================================+
@@ -140,6 +161,9 @@ class server : public ROty<RQty, RSty> {
   // +=========================================================================+
   std::atomic<uint32_t> connections_{0};
   TRty<RQty, RSty, DEty> transport_;
+  std::mutex locked_mutex_;
+  ROty<RQty, RSty> router_;
+  bool locked_{false};
 };
 }  // namespace martianlabs::doba::protocol::http11
 

@@ -30,6 +30,8 @@
 #include <utility>
 #include <vector>
 
+#include "protocol/http11/router_types.h"
+
 namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -50,14 +52,11 @@ class router_handler_parametrized_base {
   // | [>] CONTRACT                                                 ( public ) |
   // +=========================================================================+
   [[nodiscard]]
-  virtual bool matches(
-      const std::vector<std::pair<std::string_view, std::string_view>>&
-          parameters) const = 0;
+  virtual bool matches(const route_parameters& parameters) const = 0;
   [[nodiscard]]
-  virtual bool invoke(
-      std::shared_ptr<const RQty> req, std::shared_ptr<RSty> res,
-      const std::vector<std::pair<std::string_view, std::string_view>>&
-          parameters) const = 0;
+  virtual bool invoke(std::shared_ptr<const RQty> req,
+                      std::shared_ptr<RSty> res,
+                      const route_parameters& parameters) const = 0;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

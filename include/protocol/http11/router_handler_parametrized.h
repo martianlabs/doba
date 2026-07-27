@@ -177,8 +177,7 @@ class router_handler_parametrized final
   // | [>] matches                                                  ( public ) |
   // +=========================================================================+
   [[nodiscard]]
-  bool matches(const std::vector<std::pair<std::string_view, std::string_view>>&
-                   parameters) const override {
+  bool matches(const route_parameters& parameters) const override {
     tuple_type values;
     return parse_parameters(parameters, values);
   }
@@ -187,8 +186,7 @@ class router_handler_parametrized final
   // +=========================================================================+
   [[nodiscard]]
   bool invoke(std::shared_ptr<const RQty> req, std::shared_ptr<RSty> res,
-              const std::vector<std::pair<std::string_view, std::string_view>>&
-                  parameters) const override {
+              const route_parameters& parameters) const override {
     tuple_type values;
     if (!parse_parameters(parameters, values)) return false;
     std::apply([this, &req, &res](
@@ -201,10 +199,8 @@ class router_handler_parametrized final
   // +=========================================================================+
   // | [>] parse_parameters                                      ( private ) |
   // +=========================================================================+
-  bool parse_parameters(
-      const std::vector<std::pair<std::string_view, std::string_view>>&
-          parameters,
-      tuple_type& values) const {
+  bool parse_parameters(const route_parameters& parameters,
+                        tuple_type& values) const {
     if (parameters.size() != sizeof...(Args)) return false;
     for (std::size_t i = 0; i < parameters.size(); i++) {
       if (!set_impl(values, i, parameters[i].second)) return false;
