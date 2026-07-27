@@ -82,10 +82,6 @@ $RECYCLE.BIN/
 # Project-specific
 # ============================================================================
 
-# Copilot working directories (snapshots, indices, chat history)
-.copilot/
-CopilotSnapshots/
-
 # Temporary backup files
 *.bak
 *.orig
