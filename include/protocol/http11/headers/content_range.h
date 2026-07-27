@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                             content-range |
 // +===========================================================================+
-// | RFC 9110 �14.4 Content-Range                                              |
+// | RFC 9110 §14.4 Content-Range                                              |
 // +---------------------------------------------------------------------------+
 // | The "Content-Range" header field identifies which range of a selected     |
 // | representation is enclosed in a message or body part.                     |
@@ -71,7 +71,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Content-Range: bytes 500-1233/*                                         |
 // |   Content-Range: bytes */1234                                             |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 ��14.1 and 14.4 Content-Range (ABNF summary)                     |
+// | RFC 9110 §§14.1 and 14.4 Content-Range (ABNF summary)                     |
 // +---------------------------------------------------------------------------+
 // +--------------------+------------------------------------------------------+
 // | Field              | Definition                                           |

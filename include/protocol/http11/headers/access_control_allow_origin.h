@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                               access-control-allow-origin |
 // +===========================================================================+
-// | WHATWG Fetch �3.3.3 Access-Control-Allow-Origin                           |
+// | WHATWG Fetch §3.3.3 Access-Control-Allow-Origin                           |
 // +---------------------------------------------------------------------------+
 // | The "Access-Control-Allow-Origin" response header field indicates whether |
 // | a response can be shared with requesting code from the given origin.      |
@@ -61,7 +61,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Access-Control-Allow-Origin: http://localhost:8080                      |
 // |   Access-Control-Allow-Origin: null                                       |
 // +---------------------------------------------------------------------------+
-// | WHATWG Fetch �3.3.4 HTTP new-header syntax                                |
+// | WHATWG Fetch §3.3.4 HTTP new-header syntax                                |
 // +---------------------------------------------------------------------------+
 // +-----------------------------+---------------------------------------------+
 // | Field                       | Definition                                  |
@@ -77,7 +77,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |                             | / serialized-domain                         |
 // | serialized-port             | 1*5 DIGIT                                   |
 // +---------------------------------------------------------------------------+
-// | WHATWG Fetch �3.2 Origin header serialization ABNF                        |
+// | WHATWG Fetch §3.2 Origin header serialization ABNF                        |
 // +---------------------------------------------------------------------------+
 // +-------------------+-------------------------------------------------------+
 // | Field             | Definition                                            |
@@ -108,7 +108,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +---------------------------------------------------------------------------+
 // | IMPORTANT: this field is not a #rule list.                                |
 // +---------------------------------------------------------------------------+
-// | There is no RFC 9110 �5.6.1 list expansion for this header field.         |
+// | There is no RFC 9110 §5.6.1 list expansion for this header field.         |
 // | A comma-separated sequence of origins is not valid syntactic input for    |
 // | Access-Control-Allow-Origin.                                              |
 // |                                                                           |

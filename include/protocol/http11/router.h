@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -57,12 +57,14 @@ class router {
   router& operator=(const router&) = delete;
   router& operator=(router&&) noexcept = delete;
   // +=========================================================================+
-  // | [>] add [lambda-handlers]                                     ( public ) |
+  // | [>] add [lambda-handlers]                                     ( public )
+  // |
   // +=========================================================================+
-  template <detail::router_handler_lambda Hty>
+  template <router_handler_lambda Hty>
   void add_route(std::string_view method, std::string_view route, Hty handler) {
-    using signature = detail::router_handler_signature<
-        decltype(&std::decay_t<Hty>::operator())>;
+    using signature =
+        router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
+    // Let's ensure that the handler has the correct signature!
     static_assert(std::same_as<typename signature::return_type, void>,
                   "The route handler must return void");
     static_assert(
@@ -73,17 +75,17 @@ class router {
         std::same_as<std::decay_t<typename signature::response_type>,
                      std::shared_ptr<RSty>>,
         "The second route handler argument must be std::shared_ptr<RSty>");
+    // Let's check if the handler has parameters or not, and add it to the
+    // appropriate list of handlers
     if constexpr (signature::parameter_count == 0) {
       add_route(method, route,
                 router_handler_static<RQty, RSty>(std::move(handler)));
     } else {
       auto handler_parametrized =
-          signature::template make_parametrized<RQty, RSty>(
-              std::move(handler));
+          signature::template make_parametrized<RQty, RSty>(std::move(handler));
       parametrized_handler_data data{
-          std::string(route),
-          std::make_shared<decltype(handler_parametrized)>(
-              std::move(handler_parametrized))};
+          std::string(route), std::make_shared<decltype(handler_parametrized)>(
+                                  std::move(handler_parametrized))};
       for (auto& [param_method, handlers] : parametrized_handlers_) {
         if (param_method == method) {
           handlers.push_back(std::move(data));
@@ -102,41 +104,68 @@ class router {
                                   std::string_view path,
                                   std::shared_ptr<const RQty> req,
                                   std::shared_ptr<RSty> res) {
-    bool path_exists = false;  // Flag to track if path exists for any method
     // -------------------------------------------------------------------------
-    // Let's first check if we have a [static] route match
+    // Let's first check if we have a [static] route match for this method
     // -------------------------------------------------------------------------
     for (const auto& [static_method, handlers] : static_handlers_) {
+      if (static_method != method) continue;
       for (const auto& handler_data : handlers) {
-        // case insensitive comparison for path
-        if (helpers::iequals(handler_data.path, path)) {
-          path_exists = true;
-          // case sensitive comparison for method
-          if (static_method == method) {
-            handler_data.handler(req, res);
+        if (handler_data.path == path) {
+          handler_data.handler(req, res);
+          return router_match_result::kMatched;
+        }
+      }
+    }
+    // -------------------------------------------------------------------------
+    // Let's second check if we have a [parametrized] route match for this
+    // method
+    // -------------------------------------------------------------------------
+    for (const auto& [param_method, handlers] : parametrized_handlers_) {
+      if (param_method != method) continue;
+      for (const auto& handler_data : handlers) {
+        std::vector<std::pair<std::string_view, std::string_view>> parameters;
+        if (helpers::get_parameters(handler_data.path, path, parameters)) {
+          if (handler_data.handler->invoke(req, res, parameters)) {
             return router_match_result::kMatched;
           }
         }
       }
     }
     // -------------------------------------------------------------------------
-    // Let's second check if we have a [parametrized] route match
+    // Build Allow only after a route match for this method has failed
     // -------------------------------------------------------------------------
-    for (const auto& [param_method, handlers] : parametrized_handlers_) {
-      for (const auto& handler_data : handlers) {
-        // case sensitive comparison for method
-        if (param_method == method) {
-          std::vector<std::pair<std::string_view, std::string_view>> parameters;
-          if (helpers::get_parameters(handler_data.path, path, parameters)) {
-            if (handler_data.handler->invoke(req, res, parameters)) {
-              return router_match_result::kMatched;
-            }
+    std::vector<std::string_view> allowed_methods;
+    auto add_allowed_method =
+        [&allowed_methods](std::string_view allowed_method) {
+          for (const auto registered_method : allowed_methods) {
+            if (registered_method == allowed_method) return;
           }
+          allowed_methods.push_back(allowed_method);
+        };
+    for (const auto& [static_method, handlers] : static_handlers_) {
+      if (static_method == method) continue;
+      for (const auto& handler_data : handlers) {
+        if (handler_data.path == path) add_allowed_method(static_method);
+      }
+    }
+    for (const auto& [param_method, handlers] : parametrized_handlers_) {
+      if (param_method == method) continue;
+      for (const auto& handler_data : handlers) {
+        std::vector<std::pair<std::string_view, std::string_view>> parameters;
+        if (helpers::get_parameters(handler_data.path, path, parameters) &&
+            handler_data.handler->matches(parameters)) {
+          add_allowed_method(param_method);
         }
       }
     }
-    return path_exists ? router_match_result::kMethodNotAllowed
-                       : router_match_result::kNotFound;
+    if (allowed_methods.empty()) return router_match_result::kNotFound;
+    std::string allow;
+    for (const auto allowed_method : allowed_methods) {
+      if (!allow.empty()) allow += ", ";
+      allow += allowed_method;
+    }
+    res->set_header(header_names::kAllow, allow);
+    return router_match_result::kMethodNotAllowed;
   }
 
  private:

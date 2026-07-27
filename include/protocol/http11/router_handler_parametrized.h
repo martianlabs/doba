@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -40,49 +40,93 @@
 #include "protocol/http11/router_handler_parametrized_base.h"
 
 namespace martianlabs::doba::protocol::http11 {
-template <typename RQty, typename RSty, typename... Args>
-class router_handler_parametrized;
-
-namespace detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] router_handler_signature                                   ( struct ) |
+// | [>] router_handler_parametrized                    ( forward-declaration) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename RQty, typename RSty, typename... Args>
+class router_handler_parametrized;
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] router_handler_signature                       ( forward-declaration) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename>
 struct router_handler_signature;
-
-template <typename OUty, typename RQty, typename RSty,
-          typename... Args>
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] router_handler_signature_base                              ( struct ) |
+// +---------------------------------------------------------------------------+
+// | This struct serves as a base for extracting the signature of a router     |
+// | handler function. It defines the return type, request type,               |
+// | response type, and the number of parameters for the handler function.     |
+// | It also provides a static method to create a parametrized router handler  |
+// | based on the extracted types.                                             |
+// /////////////////////////////////////////////////////////////////////////////
+template <typename LOty, typename LQty, typename LSty, typename... Args>
 struct router_handler_signature_base {
-  using return_type = OUty;
-  using request_type = RQty;
-  using response_type = RSty;
-  static constexpr std::size_t parameter_count = sizeof...(Args);
-
+  // +=========================================================================+
+  // | [>] USINGs                                                   ( public ) |
+  // +=========================================================================+
+  using return_type = LOty;    // The return type of the handler function
+  using request_type = LQty;   // The request type of the handler function
+  using response_type = LSty;  //  The response type of the handler function
+  static constexpr std::size_t parameter_count =
+      sizeof...(Args);  // # of params
+  // +=========================================================================+
+  // | [>] make_parametrized                                        ( public ) |
+  // +=========================================================================+
   template <typename RQty, typename RSty, typename Hty>
   static auto make_parametrized(Hty&& handler) {
+    // Create a parametrized router handler based on the extracted types
     return router_handler_parametrized<RQty, RSty, std::decay_t<Args>...>(
         std::forward<Hty>(handler));
   }
 };
-
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] router_handler_signature [const]                           ( struct ) |
+// +---------------------------------------------------------------------------+
+// | This struct specializes the router_handler_signature_base for member      |
+// | function pointers. It extracts the return type, request type,             |
+// | response type, and the number of parameters for the handler function.     |
+// | It also provides a static method to create a parametrized router handler  |
+// | based on the extracted types.                                             |
+// /////////////////////////////////////////////////////////////////////////////
 template <typename Cty, typename Retty, typename Reqty, typename Resty,
           typename... Args>
 struct router_handler_signature<Retty (Cty::*)(Reqty, Resty, Args...) const>
     : router_handler_signature_base<Retty, Reqty, Resty, Args...> {};
-
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] router_handler_signature                                   ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Same as above but for non-const member function pointers. It extracts the |
+// | return type, request type, response type, and the number of               |
+// | parameters for the handler function. It also provides a static method to  |
+// | create a parametrized router handler based on the extracted types.        |
+// /////////////////////////////////////////////////////////////////////////////
 template <typename Cty, typename Retty, typename Reqty, typename Resty,
           typename... Args>
 struct router_handler_signature<Retty (Cty::*)(Reqty, Resty, Args...)>
     : router_handler_signature_base<Retty, Reqty, Resty, Args...> {};
-
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] router_handler_lambda                                      ( struct ) |
+// +---------------------------------------------------------------------------+
+// | This concept checks if a given type Hty is a lambda function that can be  |
+// | used as a router handler. It does this by checking if the type has an     |
+// | operator() member function and if the signature of that                   |
+// | operator() matches the expected signature for a router handler.           |
+// | If the type meets these criteria, it is considered a valid                |
+// | router handler lambda.                                                    |
+// /////////////////////////////////////////////////////////////////////////////
 template <typename Hty>
 concept router_handler_lambda = requires {
   typename router_handler_signature<
       decltype(&std::decay_t<Hty>::operator())>::request_type;
 };
-}  // namespace detail
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] dependent_false_v                                            ( type ) |
@@ -130,29 +174,43 @@ class router_handler_parametrized final
     callback_ = std::move(callback);
   }
   // +=========================================================================+
+  // | [>] matches                                                  ( public ) |
+  // +=========================================================================+
+  [[nodiscard]]
+  bool matches(const std::vector<std::pair<std::string_view, std::string_view>>&
+                   parameters) const override {
+    tuple_type values;
+    return parse_parameters(parameters, values);
+  }
+  // +=========================================================================+
   // | [>] invoke                                                   ( public ) |
   // +=========================================================================+
   [[nodiscard]]
-  bool invoke(
-      std::shared_ptr<const RQty> req, std::shared_ptr<RSty> res,
-      const std::vector<std::pair<std::string_view, std::string_view>>&
-          parameters) const override {
-    if (parameters.size() != sizeof...(Args)) return false;
+  bool invoke(std::shared_ptr<const RQty> req, std::shared_ptr<RSty> res,
+              const std::vector<std::pair<std::string_view, std::string_view>>&
+                  parameters) const override {
     tuple_type values;
-    for (std::size_t i = 0; i < parameters.size(); i++) {
-      if (!set_impl(values, i, parameters[i].second)) {
-        return false;
-      }
-    }
-    std::apply(
-        [this, &req, &res](const auto&... values) {
-          callback_(req, res, values...);
-        },
-        values);
+    if (!parse_parameters(parameters, values)) return false;
+    std::apply([this, &req, &res](
+                   const auto&... values) { callback_(req, res, values...); },
+               values);
     return true;
   }
 
  private:
+  // +=========================================================================+
+  // | [>] parse_parameters                                      ( private ) |
+  // +=========================================================================+
+  bool parse_parameters(
+      const std::vector<std::pair<std::string_view, std::string_view>>&
+          parameters,
+      tuple_type& values) const {
+    if (parameters.size() != sizeof...(Args)) return false;
+    for (std::size_t i = 0; i < parameters.size(); i++) {
+      if (!set_impl(values, i, parameters[i].second)) return false;
+    }
+    return true;
+  }
   // +=========================================================================+
   // | [>] parse                                                   ( private ) |
   // +-------------------------------------------------------------------------+

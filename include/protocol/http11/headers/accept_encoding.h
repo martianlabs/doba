@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                           accept-encoding |
 // +===========================================================================+
-// | RFC 9110 �12.5.3 Accept-Encoding                                          |
+// | RFC 9110 §12.5.3 Accept-Encoding                                          |
 // +---------------------------------------------------------------------------+
 // | The "Accept-Encoding" header field indicates preferences regarding the    |
 // | use of content codings.                                                   |
@@ -69,7 +69,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Accept-Encoding: compress;q=0.5, gzip;q=1.0                             |
 // |   Accept-Encoding: gzip;q=1.0, identity; q=0.5, *;q=0                     |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �12.5.3 Accept-Encoding (ABNF summary)                           |
+// | RFC 9110 §12.5.3 Accept-Encoding (ABNF summary)                           |
 // +---------------------------------------------------------------------------+
 // +-----------------+---------------------------------------------------------+
 // | Field           | Definition                                              |
@@ -86,7 +86,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |                 | ALPHA                                                   |
 // | OWS             | *( SP / HTAB )                                          |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.1 list expansion                                            |
+// | RFC 9110 §5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | element = codings [ weight ]                                              |
 // |                                                                           |

@@ -191,6 +191,10 @@ una coincidencia estática tiene prioridad. Devuelve `kMatched`, `kNotFound` o
 respectivamente. No documentar políticas de ejecución por ruta: la API actual
 no recibe ese parámetro.
 
+Los paths son sensibles a mayúsculas. Una ruta parametrizada con barra final
+solo coincide con un path que también la tenga. Cuando se devuelve 405, el
+router añade `Allow` con los métodos aplicables.
+
 ## Transporte
 
 `transport/server/tcpip.h` selecciona `tcpip_windows.h` o `tcpip_linux.h` según

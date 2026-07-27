@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                                       age |
 // +===========================================================================+
-// | RFC 9111 �5.1 Age                                                         |
+// | RFC 9111 §5.1 Age                                                         |
 // +---------------------------------------------------------------------------+
 // | The "Age" response header field conveys the sender's estimate of the time |
 // | since the response was generated or successfully validated at the origin  |
@@ -58,7 +58,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Age: 60                                                                 |
 // |   Age: 3600                                                               |
 // +---------------------------------------------------------------------------+
-// | RFC 9111 �5.1 Age (ABNF summary)                                          |
+// | RFC 9111 §5.1 Age (ABNF summary)                                          |
 // +---------------------------------------------------------------------------+
 // +---------------+-----------------------------------------------------------+
 // | Field         | Definition                                                |
@@ -67,7 +67,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | delta-seconds | 1*DIGIT                                                   |
 // | DIGIT         | %x30-39                                                   |
 // +---------------------------------------------------------------------------+
-// | RFC 9111 �1.2.2 Delta Seconds                                             |
+// | RFC 9111 §1.2.2 Delta Seconds                                             |
 // +---------------------------------------------------------------------------+
 // | The delta-seconds rule specifies a non-negative integer, representing     |
 // | time in seconds.                                                          |

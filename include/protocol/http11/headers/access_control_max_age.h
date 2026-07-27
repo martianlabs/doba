@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                    access-control-max-age |
 // +===========================================================================+
-// | Fetch Standard �3.3.3 HTTP responses                                      |
+// | Fetch Standard §3.3.3 HTTP responses                                      |
 // +---------------------------------------------------------------------------+
 // | The "Access-Control-Max-Age" response header field indicates the number   |
 // | of seconds for which the information provided by the                      |
@@ -63,7 +63,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Access-Control-Max-Age: 600                                             |
 // |   Access-Control-Max-Age: 86400                                           |
 // +---------------------------------------------------------------------------+
-// | Fetch Standard �3.3.4 HTTP new-header syntax (ABNF summary)               |
+// | Fetch Standard §3.3.4 HTTP new-header syntax (ABNF summary)               |
 // +---------------------------------------------------------------------------+
 // +------------------------+--------------------------------------------------+
 // | Field                  | Definition                                       |
@@ -72,7 +72,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | delta-seconds          | 1*DIGIT                                          |
 // | DIGIT                  | %x30-39                                          |
 // +---------------------------------------------------------------------------+
-// | RFC 9111 �1.2.2 Delta Seconds                                             |
+// | RFC 9111 §1.2.2 Delta Seconds                                             |
 // +---------------------------------------------------------------------------+
 // | The "delta-seconds" rule specifies a non-negative integer, representing   |
 // | time in seconds:                                                          |

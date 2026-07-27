@@ -42,8 +42,8 @@ namespace martianlabs::doba::protocol::http11::body {
 // | common::writer.                                                           |
 // |                                                                           |
 // | The caller pushes incoming transport spans via write(). Each call         |
-// | validates the chunked framing and writes ALL wire bytes â€” including     |
-// | chunk-size lines, extensions, trailers and terminating CRLF â€” verbatim  |
+// | validates the chunked framing and writes ALL wire bytes — including     |
+// | chunk-size lines, extensions, trailers and terminating CRLF — verbatim  |
 // | into dst. No decoding is performed here; decoding is deferred to a        |
 // | reader pass over the completed buffer.                                    |
 // |                                                                           |
@@ -150,7 +150,7 @@ class writer_chunked {
           i += to_take;
           chunk_remaining_ -= to_take;
           if (chunk_remaining_ == 0) state_ = state::data_cr;
-          continue;  // i already advanced â€” skip the single-byte path below
+          continue;  // i already advanced — skip the single-byte path below
         }
         // --------------------------------------------------------------------
         // Post-data CRLF
@@ -174,7 +174,7 @@ class writer_chunked {
             trailer_cr_seen_ = true;
           } else if (c == '\n') {
             if (trailer_cr_seen_ && trailer_line_start_) {
-              // Terminating empty CRLF â€” body complete. Write final byte
+              // Terminating empty CRLF — body complete. Write final byte
               // and return with the exact consumed count.
               if (!dst.write(input.subspan(i, 1))) {
                 return fail(result, writer_error::io_error);

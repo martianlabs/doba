@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                                user-agent |
 // +===========================================================================+
-// | RFC 9110 �10.1.5 User-Agent                                               |
+// | RFC 9110 §10.1.5 User-Agent                                               |
 // +---------------------------------------------------------------------------+
 // | The "User-Agent" request header field contains information about the user |
 // | agent originating the request. It can be used by servers to identify the  |
@@ -56,7 +56,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   User-Agent: curl/8.5.0                                                  |
 // |   User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)                   |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �10.1.5 User-Agent (ABNF summary)                                |
+// | RFC 9110 §10.1.5 User-Agent (ABNF summary)                                |
 // +---------------------------------------------------------------------------+
 // +-----------------+---------------------------------------------------------+
 // | Field           | Definition                                              |
@@ -76,7 +76,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +---------------------------------------------------------------------------+
 // | Notes for syntactic validation                                            |
 // +---------------------------------------------------------------------------+
-// | User-Agent is not a list-based field: it does not use the RFC 9110 �5.6.1 |
+// | User-Agent is not a list-based field: it does not use the RFC 9110 §5.6.1 |
 // | "#" list extension. Commas have no structural meaning in this field value |
 // | and are only valid where allowed by token/comment syntax.                 |
 // |                                                                           |
@@ -101,9 +101,9 @@ class user_agent {
   // +=========================================================================+
   static constexpr bool check(std::string_view sv) {
     // User-Agent = product *( RWS ( product / comment ) ). It is not an RFC
-    // 9110 �5.6.1 "#" list: the value MUST begin with a product, items are
+    // 9110 §5.6.1 "#" list: the value MUST begin with a product, items are
     // separated by RWS (not commas), and this is the same product-list shape
-    // shared with the Server header field (RFC 9110 �10.2.4).
+    // shared with the Server header field (RFC 9110 §10.2.4).
     return helpers::check_product_list(sv);
   }
 };

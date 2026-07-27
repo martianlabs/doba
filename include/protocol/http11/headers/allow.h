@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                                     allow |
 // +===========================================================================+
-// | RFC 9110 �10.2.1 Allow                                                    |
+// | RFC 9110 §10.2.1 Allow                                                    |
 // +---------------------------------------------------------------------------+
 // | The "Allow" header field lists the set of methods advertised as supported |
 // | by the target resource. Its purpose is strictly to inform the recipient   |
@@ -59,7 +59,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Allow: OPTIONS, GET, HEAD, POST, DELETE                                 |
 // |   Allow:                                                                  |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �10.2.1 Allow (ABNF summary)                                     |
+// | RFC 9110 §10.2.1 Allow (ABNF summary)                                     |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -71,7 +71,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |                  | "." / "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA      |
 // | OWS              | *( SP / HTAB )                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.1 list expansion                                            |
+// | RFC 9110 §5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

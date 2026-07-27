@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                                    accept |
 // +===========================================================================+
-// | RFC 9110 �12.5.1 Accept                                                   |
+// | RFC 9110 §12.5.1 Accept                                                   |
 // +---------------------------------------------------------------------------+
 // | The "Accept" header field allows a user agent to specify its preferences  |
 // | regarding the media types of the response representation. It can be used  |
@@ -79,7 +79,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Accept: text/html, application/xhtml+xml                                |
 // |   Accept: text/plain;format=flowed;q=0.8, text/*;q=0.5, */*;q=0.1         |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �12.5.1 Accept (ABNF summary)                                    |
+// | RFC 9110 §12.5.1 Accept (ABNF summary)                                    |
 // +---------------------------------------------------------------------------+
 // +-----------------+---------------------------------------------------------+
 // | Field           | Definition                                              |
@@ -118,7 +118,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | semicolon because "parameter" is optional. Thus, values such as           |
 // | "text/html;" are accepted by the recipient-side ABNF.                     |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.1 list expansion                                            |
+// | RFC 9110 §5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | In this field, the list element is:                                       |
 // |                                                                           |
@@ -166,7 +166,7 @@ class accept {
     if (type == "*" && subtype != "*") return false;
     off += subtype.size();
     if (off >= sv.size()) return true;
-    // parameters = *( OWS ";" OWS [ parameter ] ) � empty slots allowed and no
+    // parameters = *( OWS ";" OWS [ parameter ] ) -- empty slots allowed and no
     // whitespace is permitted around the "=" of a media-range parameter. The
     // "q" weight parameter is handled specially and may appear at most once.
     bool q_found = false;

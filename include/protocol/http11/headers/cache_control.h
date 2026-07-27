@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                             cache-control |
 // +===========================================================================+
-// | RFC 9111 �5.2 Cache-Control                                               |
+// | RFC 9111 §5.2 Cache-Control                                               |
 // +---------------------------------------------------------------------------+
 // | The "Cache-Control" header field carries a comma-separated list of cache  |
 // | directives along a request/response chain.                                |
@@ -76,7 +76,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Cache-Control: private, max-age=0, must-revalidate                      |
 // |   Cache-Control: no-cache="Set-Cookie, Authorization"                     |
 // +---------------------------------------------------------------------------+
-// | RFC 9111 �5.2 Cache-Control (ABNF summary)                                |
+// | RFC 9111 §5.2 Cache-Control (ABNF summary)                                |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -94,7 +94,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | VCHAR            | %x21-7E                                                |
 // | OWS              | *( SP / HTAB )                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.1 list expansion                                            |
+// | RFC 9110 §5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

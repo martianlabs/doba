@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -49,6 +49,10 @@ class router_handler_parametrized_base {
   // +=========================================================================+
   // | [>] CONTRACT                                                 ( public ) |
   // +=========================================================================+
+  [[nodiscard]]
+  virtual bool matches(
+      const std::vector<std::pair<std::string_view, std::string_view>>&
+          parameters) const = 0;
   [[nodiscard]]
   virtual bool invoke(
       std::shared_ptr<const RQty> req, std::shared_ptr<RSty> res,

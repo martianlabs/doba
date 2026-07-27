@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -34,7 +34,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                          content-language |
 // +===========================================================================+
-// | RFC 9110 �8.5 Content-Language                                            |
+// | RFC 9110 §8.5 Content-Language                                            |
 // +---------------------------------------------------------------------------+
 // | The "Content-Language" header field identifies the natural language(s) of |
 // | the intended audience for a representation. It does not necessarily list  |
@@ -62,13 +62,13 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Content-Language: en-CA                                                 |
 // |   Content-Language: zh-Hant-TW                                            |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �8.5 and �8.5.1 (ABNF summary)                                   |
+// | RFC 9110 §8.5 and §8.5.1 (ABNF summary)                                   |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
 // +------------------+--------------------------------------------------------+
 // | Content-Language | #language-tag                                          |
-// | language-tag     | <Language-Tag, RFC 5646 �2.1>                          |
+// | language-tag     | <Language-Tag, RFC 5646 §2.1>                          |
 // | Language-Tag     | langtag / privateuse / grandfathered                   |
 // | langtag          | language [ "-" script ] [ "-" region ]                 |
 // |                  | *("-" variant) *("-" extension)                        |
@@ -86,7 +86,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | alphanum         | ALPHA / DIGIT                                          |
 // | OWS              | *( SP / HTAB )                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 5646 �2.1 grandfathered tags                                          |
+// | RFC 5646 §2.1 grandfathered tags                                          |
 // +---------------------------------------------------------------------------+
 // | The grandfathered production is a fixed set of literal tags. A complete   |
 // | checker needs to recognize these values in addition to langtag and        |
@@ -101,7 +101,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |                                                                           |
 // | ABNF string literals are case-insensitive unless explicitly marked.       |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.1 list expansion                                            |
+// | RFC 9110 §5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |
@@ -284,7 +284,7 @@ class content_language {
   // +=========================================================================+
   static constexpr bool consume_langtag(std::string_view sv) {
     // -------------------------------------------------------------------------
-    // RFC 5646 �2.1:
+    // RFC 5646 §2.1:
     // -------------------------------------------------------------------------
     // langtag = language
     //           ["-" script]
@@ -385,7 +385,7 @@ class content_language {
   // +=========================================================================+
   static constexpr bool consume_language_tag(std::string_view sv) {
     // -------------------------------------------------------------------------
-    // RFC 5646 �2.1:
+    // RFC 5646 §2.1:
     // -------------------------------------------------------------------------
     // Language-Tag = langtag / privateuse / grandfathered
     //

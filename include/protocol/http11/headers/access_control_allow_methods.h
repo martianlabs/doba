@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                              access-control-allow-methods |
 // +===========================================================================+
-// | Fetch Standard �3.3.3 HTTP responses                                      |
+// | Fetch Standard §3.3.3 HTTP responses                                      |
 // +---------------------------------------------------------------------------+
 // | The "Access-Control-Allow-Methods" response header field indicates which  |
 // | HTTP methods are supported by the response URL for the purposes of the    |
@@ -60,7 +60,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Access-Control-Allow-Methods: PUT, DELETE                               |
 // |   Access-Control-Allow-Methods: *                                         |
 // +---------------------------------------------------------------------------+
-// | Fetch Standard �3.3.4 HTTP new-header syntax (ABNF summary)               |
+// | Fetch Standard §3.3.4 HTTP new-header syntax (ABNF summary)               |
 // +---------------------------------------------------------------------------+
 // +------------------------------+--------------------------------------------+
 // | Field                        | Definition                                 |
@@ -73,7 +73,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |                              | "~" / DIGIT / ALPHA                        |
 // | OWS                          | *( SP / HTAB )                             |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.1 list expansion                                            |
+// | RFC 9110 §5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

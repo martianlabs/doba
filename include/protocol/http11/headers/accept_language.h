@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                           accept-language |
 // +===========================================================================+
-// | RFC 9110 �12.5.4 Accept-Language                                          |
+// | RFC 9110 §12.5.4 Accept-Language                                          |
 // +---------------------------------------------------------------------------+
 // | The "Accept-Language" request header field allows a user agent to         |
 // | indicate the natural languages preferred for response content.            |
@@ -63,7 +63,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Accept-Language: da, en-GB;q=0.8, en;q=0.7                              |
 // |   Accept-Language: es-ES, es;q=0.9, *;q=0.1                               |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �12.5.4 Accept-Language (ABNF summary)                           |
+// | RFC 9110 §12.5.4 Accept-Language (ABNF summary)                           |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -76,7 +76,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |                  | ( "1" [ "." 0*3("0") ] )                               |
 // | OWS              | *( SP / HTAB )                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 4647 �2.1 Basic Language Range                                        |
+// | RFC 4647 §2.1 Basic Language Range                                        |
 // +---------------------------------------------------------------------------+
 // | The first subtag contains 1 to 8 letters. Every subsequent subtag         |
 // | contains 1 to 8 letters or digits and is introduced by "-". The wildcard  |
@@ -87,7 +87,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | or well-formed BCP 47 language tag. Such a range might simply match no    |
 // | available language tag. Comparisons are case-insensitive.                 |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �12.4.2 Quality Values                                           |
+// | RFC 9110 §12.4.2 Quality Values                                           |
 // +---------------------------------------------------------------------------+
 // | The qvalue range is 0 through 1. Senders MUST NOT generate more than      |
 // | three digits after the decimal point. The ABNF permits "0", "0.",         |
@@ -97,7 +97,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | OWS is permitted before ";" and between ";" and "q", but not around the   |
 // | "=" character or between "=" and the qvalue.                              |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.1 list expansion                                            |
+// | RFC 9110 §5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

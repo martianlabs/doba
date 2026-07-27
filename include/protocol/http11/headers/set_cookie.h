@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                               set-cookie  |
 // +===========================================================================+
-// | RFC 6265 �4.1 Set-Cookie                                                  |
+// | RFC 6265 §4.1 Set-Cookie                                                  |
 // +---------------------------------------------------------------------------+
 // | The "Set-Cookie" response header field is used to send a cookie from the  |
 // | server to the user agent. The user agent stores the cookie together with  |
@@ -65,7 +65,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Set-Cookie: lang=en-US; Expires=Wed, 09 Jun 2021 10:18:14 GMT           |
 // |   Set-Cookie: theme=light; Path=/; SameSite=Lax                           |
 // +---------------------------------------------------------------------------+
-// | RFC 6265 �4.1.1 Set-Cookie (ABNF summary)                                 |
+// | RFC 6265 §4.1.1 Set-Cookie (ABNF summary)                                 |
 // +---------------------------------------------------------------------------+
 // +-------------------+-------------------------------------------------------+
 // | Field             | Definition                                            |
@@ -97,7 +97,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | SP                | %x20                                                  |
 // | DQUOTE            | %x22                                                  |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.3 Set-Cookie field-line exception                             |
+// | RFC 9110 §5.3 Set-Cookie field-line exception                             |
 // +---------------------------------------------------------------------------+
 // | Set-Cookie is a well-known exception to the normal HTTP field combination |
 // | rule. Multiple Set-Cookie field lines cannot be safely combined into a    |

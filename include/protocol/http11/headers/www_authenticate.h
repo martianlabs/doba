@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                          www-authenticate |
 // +===========================================================================+
-// | RFC 9110 �11.6.1 WWW-Authenticate                                         |
+// | RFC 9110 §11.6.1 WWW-Authenticate                                         |
 // +---------------------------------------------------------------------------+
 // | The "WWW-Authenticate" response header field indicates the authentication |
 // | scheme(s) and parameters applicable to the target resource.               |
@@ -73,7 +73,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   WWW-Authenticate: Basic realm="simple", Newauth realm="apps",           |
 // |                     type=1, title="Login to \"apps\""                     |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �11.6.1 WWW-Authenticate (ABNF summary)                          |
+// | RFC 9110 §11.6.1 WWW-Authenticate (ABNF summary)                          |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -98,7 +98,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | obs-text         | %x80-FF                                                |
 // | DQUOTE           | %x22                                                   |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.1 list expansion                                            |
+// | RFC 9110 §5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax for the outer #challenge rule:                              |
 // |                                                                           |

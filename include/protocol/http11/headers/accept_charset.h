@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                            accept-charset |
 // +===========================================================================+
-// | RFC 9110 �12.5.2 Accept-Charset                                           |
+// | RFC 9110 §12.5.2 Accept-Charset                                           |
 // +---------------------------------------------------------------------------+
 // | The "Accept-Charset" header field can be sent by a user agent to indicate |
 // | what charsets are preferred for textual response content.                 |
@@ -57,7 +57,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Accept-Charset: utf-8                                                   |
 // |   Accept-Charset: utf-8, iso-8859-1;q=0.5, *;q=0.1                        |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �12.5.2 Accept-Charset (ABNF summary)                            |
+// | RFC 9110 §12.5.2 Accept-Charset (ABNF summary)                            |
 // +---------------------------------------------------------------------------+
 // +----------------+----------------------------------------------------------+
 // | Field          | Definition                                               |
@@ -70,7 +70,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |                | "." / "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA        |
 // | OWS            | *( SP / HTAB )                                           |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.1 list expansion                                            |
+// | RFC 9110 §5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

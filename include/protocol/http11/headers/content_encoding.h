@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                          content-encoding |
 // +===========================================================================+
-// | RFC 9110 �8.4 Content-Encoding                                            |
+// | RFC 9110 §8.4 Content-Encoding                                            |
 // +---------------------------------------------------------------------------+
 // | The "Content-Encoding" header field indicates which content codings have  |
 // | been applied to a representation beyond those inherent in its media type. |
@@ -81,7 +81,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | Recipients SHOULD treat "x-compress" as equivalent to "compress" and      |
 // | "x-gzip" as equivalent to "gzip".                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �8.4 and �8.4.1 (ABNF summary)                                   |
+// | RFC 9110 §8.4 and §8.4.1 (ABNF summary)                                   |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -93,7 +93,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |                  | "." / "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA      |
 // | OWS              | *( SP / HTAB )                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.1 list expansion                                            |
+// | RFC 9110 §5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

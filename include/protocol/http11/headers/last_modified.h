@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -36,7 +36,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                             last-modified |
 // +===========================================================================+
-// | RFC 9110 �8.8.2 Last-Modified                                             |
+// | RFC 9110 §8.8.2 Last-Modified                                             |
 // +---------------------------------------------------------------------------+
 // | The "Last-Modified" header field in a response provides the date and time |
 // | at which the origin server believes the selected representation was last  |
@@ -63,12 +63,12 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | with a clock.                                                             |
 // |                                                                           |
 // | When used as a validator, Last-Modified is implicitly weak unless the     |
-// | conditions in RFC 9110 �8.8.2.2 allow it to be treated as strong.         |
+// | conditions in RFC 9110 §8.8.2.2 allow it to be treated as strong.         |
 // |                                                                           |
 // | Example:                                                                  |
 // |   Last-Modified: Tue, 15 Nov 1994 12:45:26 GMT                            |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �8.8.2 Last-Modified (ABNF summary)                              |
+// | RFC 9110 §8.8.2 Last-Modified (ABNF summary)                              |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -100,7 +100,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | SP               | %x20                                                   |
 // | DIGIT            | %x30-39                                                |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.7 HTTP-date requirements                                    |
+// | RFC 9110 §5.6.7 HTTP-date requirements                                    |
 // +---------------------------------------------------------------------------+
 // | A recipient that parses an HTTP timestamp MUST accept all three formats:  |
 // | IMF-fixdate, rfc850-date, and asctime-date.                               |

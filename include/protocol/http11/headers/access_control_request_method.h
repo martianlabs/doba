@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                             access-control-request-method |
 // +===========================================================================+
-// | Fetch �3.3.2 Access-Control-Request-Method                                |
+// | Fetch §3.3.2 Access-Control-Request-Method                                |
 // +---------------------------------------------------------------------------+
 // | The "Access-Control-Request-Method" request header field is used by a     |
 // | user agent in a CORS-preflight request to indicate which HTTP method a    |
@@ -58,7 +58,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Access-Control-Request-Method: PUT                                      |
 // |   Access-Control-Request-Method: DELETE                                   |
 // +---------------------------------------------------------------------------+
-// | Fetch �3.3.4 HTTP new-header syntax + RFC 9110 �9.1 Method (ABNF summary) |
+// | Fetch §3.3.4 HTTP new-header syntax + RFC 9110 §9.1 Method (ABNF summary) |
 // +---------------------------------------------------------------------------+
 // +-------------------------------+-------------------------------------------+
 // | Field                         | Definition                                |

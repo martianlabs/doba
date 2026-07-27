@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                       authentication-info |
 // +===========================================================================+
-// | RFC 9110 �11.6.3 Authentication-Info                                      |
+// | RFC 9110 §11.6.3 Authentication-Info                                      |
 // +---------------------------------------------------------------------------+
 // | The "Authentication-Info" response header field allows an HTTP            |
 // | authentication scheme to communicate information after the client's       |
@@ -71,7 +71,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Authentication-Info: rspauth="ea40f60335c427b5527b84dbabcdfffd"         |
 // |   Authentication-Info: qop=auth, cnonce="0a4f113b", nc=00000001           |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �11.6.3 Authentication-Info (ABNF summary)                       |
+// | RFC 9110 §11.6.3 Authentication-Info (ABNF summary)                       |
 // +---------------------------------------------------------------------------+
 // +---------------------+-----------------------------------------------------+
 // | Field               | Definition                                          |
@@ -89,7 +89,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | OWS                 | *( SP / HTAB )                                      |
 // | BWS                 | OWS                                                 |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.1 list expansion                                            |
+// | RFC 9110 §5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |
@@ -105,7 +105,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | Since the rule is "#auth-param", rather than "1#auth-param", zero         |
 // | non-empty auth-param elements are permitted by the purely syntactic ABNF. |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.3 BWS                                                       |
+// | RFC 9110 §5.6.3 BWS                                                       |
 // +---------------------------------------------------------------------------+
 // | BWS is "bad" whitespace. A sender MUST NOT generate BWS in messages. A    |
 // | recipient MUST parse BWS and remove it before interpreting the protocol   |

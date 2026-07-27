@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                                    cookie |
 // +===========================================================================+
-// | RFC 6265 �4.2 Cookie                                                      |
+// | RFC 6265 §4.2 Cookie                                                      |
 // +---------------------------------------------------------------------------+
 // | The "Cookie" header field is sent by a user agent in an HTTP request to   |
 // | return stored cookies to the origin server. The field contains cookies    |
@@ -59,7 +59,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Cookie: SID=31d4d96e407aad42; lang=en-US                                |
 // |   Cookie: theme=light; sessionToken=abc123                                |
 // +---------------------------------------------------------------------------+
-// | RFC 6265 �4.2.1 Cookie (ABNF summary)                                     |
+// | RFC 6265 §4.2.1 Cookie (ABNF summary)                                     |
 // +---------------------------------------------------------------------------+
 // +---------------+-----------------------------------------------------------+
 // | Field         | Definition                                                |

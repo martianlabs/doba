@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                             access-control-expose-headers |
 // +===========================================================================+
-// | Fetch Standard �3.3.3 Access-Control-Expose-Headers                       |
+// | Fetch Standard §3.3.3 Access-Control-Expose-Headers                       |
 // +---------------------------------------------------------------------------+
 // | The "Access-Control-Expose-Headers" response header indicates which       |
 // | response headers can be exposed to frontend JavaScript as part of a CORS  |
@@ -61,7 +61,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Access-Control-Expose-Headers: Content-Encoding, X-Request-Id           |
 // |   Access-Control-Expose-Headers: *                                        |
 // +---------------------------------------------------------------------------+
-// | Fetch Standard �3.3.4 HTTP new-header syntax (ABNF summary)               |
+// | Fetch Standard §3.3.4 HTTP new-header syntax (ABNF summary)               |
 // +---------------------------------------------------------------------------+
 // +--------------------------------+------------------------------------------+
 // | Field                          | Definition                               |
@@ -74,7 +74,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |                                | "`" / "|" / "~" / DIGIT / ALPHA          |
 // | OWS                            | *( SP / HTAB )                           |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.1 list expansion                                            |
+// | RFC 9110 §5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

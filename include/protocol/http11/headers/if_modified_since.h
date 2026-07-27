@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -36,7 +36,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                         if-modified-since |
 // +===========================================================================+
-// | RFC 9110 �13.1.3 If-Modified-Since                                        |
+// | RFC 9110 §13.1.3 If-Modified-Since                                        |
 // +---------------------------------------------------------------------------+
 // | The "If-Modified-Since" header field makes a GET or HEAD request          |
 // | conditional on the selected representation having been modified after     |
@@ -72,7 +72,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // | Example:                                                                  |
 // |   If-Modified-Since: Sat, 29 Oct 1994 19:43:31 GMT                        |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �13.1.3 and �5.6.7 (ABNF summary)                                |
+// | RFC 9110 §13.1.3 and §5.6.7 (ABNF summary)                                |
 // +---------------------------------------------------------------------------+
 // +---------------------+-----------------------------------------------------+
 // | Field               | Definition                                          |

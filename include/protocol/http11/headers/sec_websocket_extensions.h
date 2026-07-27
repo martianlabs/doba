@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // +===========================================================================+
 // |                                                 sec-websocket-extensions  |
 // +===========================================================================+
-// | RFC 6455 �9.1 Sec-WebSocket-Extensions                                    |
+// | RFC 6455 §9.1 Sec-WebSocket-Extensions                                    |
 // +---------------------------------------------------------------------------+
 // | The "Sec-WebSocket-Extensions" header field is used during the WebSocket  |
 // | opening handshake to negotiate protocol-level extensions.                 |
@@ -62,7 +62,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |   Sec-WebSocket-Extensions: foo; bar=baz; qux="quux"                      |
 // |   Sec-WebSocket-Extensions: foo, bar; baz=qux                             |
 // +---------------------------------------------------------------------------+
-// | RFC 6455 �9.1 Sec-WebSocket-Extensions (ABNF summary)                     |
+// | RFC 6455 §9.1 Sec-WebSocket-Extensions (ABNF summary)                     |
 // +---------------------------------------------------------------------------+
 // +--------------------------+------------------------------------------------+
 // | Field                    | Definition                                     |
@@ -82,7 +82,7 @@ namespace martianlabs::doba::protocol::http11::headers {
 // |                          | / DIGIT / ALPHA                                |
 // | OWS                      | *( SP / HTAB )                                 |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 �5.6.1 list expansion                                            |
+// | RFC 9110 §5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |
@@ -131,7 +131,7 @@ class sec_websocket_extensions {
     if (token.empty()) return false;
     const std::size_t off = token.size();
     if (off >= sv.size()) return true;
-    // *( ";" extension-param ) � a ";" is mandatory before each parameter and
+    // *( ";" extension-param ) -- a ";" is mandatory before each parameter and
     // empty parameter slots are tolerated, matching parameters syntax. Each
     // extension-param is token [ "=" ( token / quoted-string ) ].
     return helpers::for_each_parameter(
