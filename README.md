@@ -1,6 +1,6 @@
 ![doba](resources/doba.png)
 
-**A protocol-agnostic, header-only C++20 server framework. Zero-copy. Zero-allocation. Zero excuses.**
+**A high-performance, transport- and protocol-agnostic C++20 server framework. HTTP/1.1 is its first protocol, not its limit.**
 
 ---
 
@@ -12,15 +12,21 @@ It ships as **pure headers**. No build step, no binary to link, no dependencies 
 
 ## Features
 
-- 🔌 **Genuinely protocol-agnostic core.** Transport and protocol communicate through one narrow contract. Change protocols without touching transport code; change transports without touching protocol code.
-- ⚡ **Single-pass, zero-copy parsing.** Every byte is read once. Semantic state is captured directly over the original buffer — no re-scans, no intermediate copies.
-- 🚀 **Zero-allocation dispatch.** Routing runs through a hash map of raw function pointers — no `std::function`, no vtables, no per-request heap churn. O(1), fully inlinable.
-- 🧩 **A memory model that fits the job.** `response` is allocation-free on a fixed buffer, built for a latency-critical write path. `request` uses container-backed storage because inbound data is variable-length and survives past parsing. Each shape earned by what the type has to do.
-- 🛡️ **RFC-correct HTTP/1.1 out of the box.** All 5 request-target forms. 66 headers checked syntactically. 14 headers modeled semantically with dedicated interpreters. Cross-header correctness — framing, routing, connection directives — enforced in a single post-parse pass.
-- 🎯 **Full body support.** `body_writer` and `body_reader` handle raw and chunked encoding over memory or file-backed storage, with configurable limits and lazy decoding.
-- 🔀 **Sync or async, per route.** Each route independently chooses inline execution or hand-off to the built-in thread pool — no framework-wide trade-off forced on every endpoint.
-- 🖥️ **Native async I/O on every platform.** IOCP on Windows, epoll on Linux — edge-triggered, one-shot, with response pipelining, reorder windowing, and carry-over of partial receives built in.
-- ⚙️ **Fully parameterized.** `server<RQty, RSty, TRty, FNty, ROty>` — swap out the request, response, transport, function type, or router without modifying the framework.
+- **Transport and protocol stay separate.** The transport never needs to know about headers, methods, or status lines. Protocols remain free to define their own semantics, and transports remain free to focus on moving bytes efficiently.
+
+- **Built for the hot path.** Parsing is single-pass and works directly over the received data wherever lifetime permits it. No re-scans, no unnecessary intermediate representations.
+
+- **Direct dispatch.** Header dispatch uses raw function pointers and the routing path stays deliberately simple: no framework machinery, no virtual dispatch, and no per-request indirection for its own sake.
+
+- **Memory where it earns its place.** Responses use a fixed buffer for the latency-sensitive write path. Requests retain only the storage they need because inbound data is variable-sized and may outlive parsing.
+
+- **HTTP/1.1 is serious, not incidental.** It is the first protocol implemented on doba’s generic foundation: strict request parsing, all request-target forms, header validation, framing rules, connection directives, and body handling.
+
+- **Bodies scale beyond RAM.** Raw and chunked bodies use memory or file-backed storage according to configured limits, while preserving the original wire representation when required.
+
+- **Native asynchronous I/O.** The transport layer uses the platform backend directly: IOCP on Windows and epoll on Linux, with pipelined responses and partial-receive handling.
+
+- **Keep control.** Request, response, decoder, transport, and router remain template parameters, so the framework can be adapted without rewriting its core.
 
 ## Quick look
 
