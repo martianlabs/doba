@@ -1,4 +1,4 @@
-![doba](resources/doba.png)
+![doba](resources/doba-small.png)
 
 **A high-performance, transport- and protocol-agnostic C++20 server framework. HTTP/1.1 is its first protocol, not its limit.**
 
