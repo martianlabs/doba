@@ -1,4 +1,4 @@
-﻿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -37,8 +37,10 @@
 #include <mutex>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <sys/eventfd.h>
 #include <unordered_map>
+#include <utility>
 
 #include "platform.h"
 #include "protocol/deserialization.h"
@@ -64,7 +66,14 @@ template <typename RQty, typename RSty,
 struct context;
 template <typename RQty, typename RSty,
           template <typename, typename> class DEty>
+struct worker;
+template <typename RQty, typename RSty,
+          template <typename, typename> class DEty>
 struct epoll_registration;
+template <typename RQty, typename RSty,
+          template <typename, typename> class DEty>
+void notify_worker(worker<RQty, RSty, DEty>* owner,
+                   std::shared_ptr<context<RQty, RSty, DEty>> ctx);
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] response_data                                              ( struct ) |
@@ -92,7 +101,11 @@ struct context {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  context(int in_socket, uint64_t in_id) : socket{in_socket}, id{in_id} {}
+  context(int in_socket, worker<RQty, RSty, DEty>* in_owner,
+          types::on_client_disconnected_delegate on_disconnection)
+      : socket{in_socket},
+        owner{in_owner},
+        on_disconnection_{std::move(on_disconnection)} {}
   context(const context&) = delete;
   context(context&&) noexcept = delete;
   ~context() = default;
@@ -102,23 +115,192 @@ struct context {
   context& operator=(const context&) = delete;
   context& operator=(context&&) noexcept = delete;
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( private ) |
+  // | [>] accumulate                                               ( public ) |
   // +=========================================================================+
-  // [common] section!
-  bool closing{false};
-  bool close_requested{false};
-  bool processing{false};
-  bool read_closed{false};
-  int socket{-1};
+  std::size_t accumulate(char* buffer, std::size_t size) {
+    return decoder.accumulate(buffer, size);
+  }
+  // +=========================================================================+
+  // | [>] deserialize                                              ( public ) |
+  // +=========================================================================+
+  protocol::deserialization_result<RQty> deserialize() {
+    return decoder.deserialize();
+  }
+  // +=========================================================================+
+  // | [>] receive                                                  ( public ) |
+  // +=========================================================================+
+  ssize_t receive(char* buffer, std::size_t size) {
+    return ::recv(socket, buffer, size, MSG_DONTWAIT);
+  }
+  // +=========================================================================+
+  // | [>] get_socket                                               ( public ) |
+  // +=========================================================================+
+  int get_socket() const { return socket; }
+  // +=========================================================================+
+  // | [>] get_next_response_id                                     ( public ) |
+  // +=========================================================================+
+  uint64_t get_next_response_id() { return next_response_id++; }
+  // +=========================================================================+
+  // | [>] add_response_to_queue                                    ( public ) |
+  // +=========================================================================+
+  void add_response_to_queue(
+      std::unique_ptr<protocol::serialization_result> response,
+      uint64_t response_id, bool close_this_context_after_sending = false) {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex);
+    if (!response || closing ||
+        (close_after_sending && response_id > close_after_response_id)) {
+      return;
+    }
+    response_data data{response_id, std::move(response)};
+    auto itr = responses.begin();
+    while (itr != responses.end() && itr->id < data.id) itr++;
+    responses.insert(itr, std::move(data));
+    if (close_this_context_after_sending) {
+      close_after_sending = true;
+      close_after_response_id = response_id;
+      receiving = false;
+    }
+  }
+  // +=========================================================================+
+  // | [>] send_error_and_mark_for_closing                          ( public ) |
+  // +=========================================================================+
+  void send_error_and_mark_for_closing(std::shared_ptr<RSty> error_response) {
+    if (!error_response) {
+      request_context_closing();
+      return;
+    }
+    uint64_t id = get_next_response_id();
+    add_response_to_queue(std::move(error_response->serialize()), id, true);
+  }
+  // +=========================================================================+
+  // | [>] request_context_closing                                 ( public ) |
+  // +=========================================================================+
+  void request_context_closing() { close_requested.store(true); }
+  // +=========================================================================+
+  // | [>] can_receive                                              ( public ) |
+  // +=========================================================================+
+  bool can_receive() const {
+    return !closing.load() && !close_requested.load() && receiving;
+  }
+  // +=========================================================================+
+  // | [>] is_closing                                              ( public ) |
+  // +=========================================================================+
+  bool is_closing() const { return closing.load(); }
+  // +=========================================================================+
+  // | [>] flush_send                                               ( public ) |
+  // +=========================================================================+
+  bool flush_send() {
+    while (true) {
+      const char* data = nullptr;
+      std::size_t size = 0;
+      {
+        std::lock_guard<std::mutex> sending_lock(sending_mutex);
+        if (closing || close_requested) return false;
+        if (sending_offset == sending_buffer.size()) {
+          sending_buffer.clear();
+          sending_offset = 0;
+          append_sendable_responses_locked();
+        }
+        if (should_close_locked()) return false;
+        if (sending_buffer.empty()) return true;
+        data = sending_buffer.data() + sending_offset;
+        size = sending_buffer.size() - sending_offset;
+      }
+      ssize_t sent = ::send(socket, data, size, MSG_NOSIGNAL);
+      if (sent > 0) {
+        std::lock_guard<std::mutex> sending_lock(sending_mutex);
+        sending_offset += static_cast<std::size_t>(sent);
+        continue;
+      }
+      if (sent == -1 && errno == EINTR) continue;
+      if (sent == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) return true;
+      return false;
+    }
+  }
+  // +=========================================================================+
+  // | [>] should_close                                             ( public ) |
+  // +=========================================================================+
+  bool should_close() {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex);
+    return close_requested || should_close_locked();
+  }
+  // +=========================================================================+
+  // | [>] has_sendable_response                                    ( public ) |
+  // +=========================================================================+
+  bool has_sendable_response() {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex);
+    return has_sendable_response_locked();
+  }
+  // +=========================================================================+
+  // | [>] mark_context_for_closing                                 ( public ) |
+  // +=========================================================================+
+  int mark_context_for_closing() {
+    if (closing.exchange(true)) return -1;
+    receiving = false;
+    int result = socket;
+    socket = -1;
+    return result;
+  }
+  // +=========================================================================+
+  // | [>] notify_disconnection                                     ( public ) |
+  // +=========================================================================+
+  void notify_disconnection() {
+    try {
+      on_disconnection_();
+    } catch (...) {
+    }
+  }
+  // +=========================================================================+
+  // | ATTRIBUTEs                                                   ( public ) |
+  // +=========================================================================+
+  worker<RQty, RSty, DEty>* owner{nullptr};
   epoll_registration<RQty, RSty, DEty>* registration{nullptr};
-  uint64_t id{0};
-  // [decoder] section!
+
+ private:
+  // +=========================================================================+
+  // | [>] has_sendable_response_locked                            ( private ) |
+  // +=========================================================================+
+  bool has_sendable_response_locked() {
+    if (sending_offset < sending_buffer.size()) return true;
+    return std::any_of(
+        responses.begin(), responses.end(), [this](const response_data& r) {
+          return r.id == expected_response_id;
+        });
+  }
+  // +=========================================================================+
+  // | [>] append_sendable_responses_locked                        ( private ) |
+  // +=========================================================================+
+  void append_sendable_responses_locked() {
+    while (true) {
+      auto itr = std::find_if(responses.begin(), responses.end(),
+                              [this](const response_data& response) {
+                                return response.id == expected_response_id;
+                              });
+      if (itr == responses.end()) return;
+      sending_buffer.append(itr->response->prefix);
+      expected_response_id++;
+      responses.erase(itr);
+    }
+  }
+  // +=========================================================================+
+  // | [>] should_close_locked                                    ( private ) |
+  // +=========================================================================+
+  bool should_close_locked() {
+    return close_after_sending && sending_offset == sending_buffer.size() &&
+           expected_response_id > close_after_response_id;
+  }
+  // +=========================================================================+
+  // | ATTRIBUTEs                                                  ( private ) |
+  // +=========================================================================+
+  types::on_client_disconnected_delegate on_disconnection_;
+  std::atomic<bool> closing{false};
+  std::atomic<bool> close_requested{false};
+  bool receiving{true};
+  int socket{-1};
   DEty<RQty, RSty> decoder{};
-  // [responses] section!
-  uint64_t next_request_id{0};
+  uint64_t next_response_id{0};
   std::vector<response_data> responses;
   uint64_t expected_response_id{0};
-  std::size_t pending_responses{0};
   bool close_after_sending{false};
   uint64_t close_after_response_id{0};
   std::string sending_buffer;
@@ -138,6 +320,428 @@ struct epoll_registration {
 
   std::shared_ptr<context<RQty, RSty, DEty>> ctx;
 };
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] worker [linux]                                             ( struct ) |
+// +---------------------------------------------------------------------------+
+// | This specification holds for a Linux server transport worker.            |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   RQty - request being used.                                              |
+// |   RSty - response being used.                                             |
+// |   DEty - decoder (deserializer) being used.                               |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename RQty, typename RSty,
+          template <typename, typename> class DEty>
+struct worker {
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
+  worker(types::on_request_delegate<RQty, RSty> on_request,
+         types::on_bad_request_delegate<RSty> on_bad_request,
+         types::on_client_connected_delegate on_connection,
+         types::on_client_disconnected_delegate on_disconnection)
+      : on_request_{std::move(on_request)},
+        on_bad_request_{std::move(on_bad_request)},
+        on_connection_{std::move(on_connection)},
+        on_disconnection_{std::move(on_disconnection)} {}
+  worker(const worker&) = delete;
+  worker(worker&&) noexcept = delete;
+  ~worker() { stop(); }
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +=========================================================================+
+  worker& operator=(const worker&) = delete;
+  worker& operator=(worker&&) noexcept = delete;
+  // +=========================================================================+
+  // | [>] setup                                                    ( public ) |
+  // +=========================================================================+
+  void setup(uint16_t port) {
+    epoll_fd_ = ::epoll_create1(EPOLL_CLOEXEC);
+    if (epoll_fd_ == -1) {
+      throw std::runtime_error("Epoll instance could not be created!");
+    }
+    wake_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE);
+    if (wake_fd_ == -1) {
+      ::close(epoll_fd_);
+      epoll_fd_ = -1;
+      throw std::runtime_error("Stop event could not be created!");
+    }
+    listener_fd_ =
+        ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
+                 IPPROTO_TCP);
+    if (listener_fd_ == -1) {
+      ::close(wake_fd_);
+      ::close(epoll_fd_);
+      wake_fd_ = -1;
+      epoll_fd_ = -1;
+      throw std::runtime_error("Socket could not be created!");
+    }
+    int reuse_address = 1;
+    if (::setsockopt(listener_fd_, SOL_SOCKET, SO_REUSEADDR, &reuse_address,
+                     sizeof(reuse_address)) == -1 ||
+        ::setsockopt(listener_fd_, SOL_SOCKET, SO_REUSEPORT, &reuse_address,
+                     sizeof(reuse_address)) == -1) {
+      close_resources();
+      throw std::runtime_error("Listener socket could not be configured!");
+    }
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_ANY);
+    address.sin_port = htons(port);
+    if (::bind(listener_fd_, reinterpret_cast<const sockaddr*>(&address),
+               sizeof(address)) == -1 ||
+        ::listen(listener_fd_, SOMAXCONN) == -1) {
+      close_resources();
+      throw std::runtime_error("Listener socket could not be started!");
+    }
+    epoll_event wake_event{};
+    wake_event.events = EPOLLIN;
+    wake_event.data.u64 = kWakeEventId;
+    epoll_event listener_event{};
+    listener_event.events = EPOLLIN | EPOLLET;
+    listener_event.data.u64 = kListenerEventId;
+    if (::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, wake_fd_, &wake_event) == -1 ||
+        ::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, listener_fd_, &listener_event) ==
+            -1) {
+      close_resources();
+      throw std::runtime_error("Listener could not be registered!");
+    }
+  }
+  // +=========================================================================+
+  // | [>] start                                                    ( public ) |
+  // +=========================================================================+
+  void start() { thread_ = std::jthread([this]() { run(); }); }
+  // +=========================================================================+
+  // | [>] stop                                                     ( public ) |
+  // +=========================================================================+
+  void stop() {
+    if (epoll_fd_ == -1) return;
+    stopping_.store(true);
+    uint64_t wake = 1;
+    while (::write(wake_fd_, &wake, sizeof(wake)) == -1 && errno == EINTR) {
+    }
+    if (thread_.joinable()) thread_.join();
+    close_contexts();
+    close_resources();
+    stopping_.store(false);
+  }
+  // +=========================================================================+
+  // | [>] notify                                                   ( public ) |
+  // +=========================================================================+
+  void notify(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
+    if (stopping_.load()) return;
+    {
+      std::lock_guard<std::mutex> pending_lock(pending_mutex_);
+      pending_contexts_.emplace_back(std::move(ctx));
+    }
+    uint64_t wake = 1;
+    while (::write(wake_fd_, &wake, sizeof(wake)) == -1 && errno == EINTR) {
+    }
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] run                                                      ( private ) |
+  // +=========================================================================+
+  void run() {
+    std::array<epoll_event, 64> events{};
+    while (!stopping_.load()) {
+      int ready = ::epoll_wait(epoll_fd_, events.data(), events.size(), -1);
+      if (ready == -1) {
+        if (errno == EINTR) continue;
+        return;
+      }
+      for (int i = 0; i < ready; i++) {
+        if (events[i].data.u64 == kWakeEventId) {
+          handle_wake();
+          continue;
+        }
+        if (events[i].data.u64 == kListenerEventId) {
+          handle_listener();
+          continue;
+        }
+        epoll_registration<RQty, RSty, DEty>* registration =
+            static_cast<epoll_registration<RQty, RSty, DEty>*>(
+                events[i].data.ptr);
+        handle_context(registration->ctx, events[i].events);
+      }
+    }
+  }
+  // +=========================================================================+
+  // | [>] handle_wake                                             ( private ) |
+  // +=========================================================================+
+  void handle_wake() {
+    uint64_t wake = 0;
+    while (::read(wake_fd_, &wake, sizeof(wake)) != -1 || errno == EINTR) {
+      if (stopping_.load()) return;
+    }
+    std::vector<std::shared_ptr<context<RQty, RSty, DEty>>> contexts;
+    {
+      std::lock_guard<std::mutex> pending_lock(pending_mutex_);
+      contexts.swap(pending_contexts_);
+    }
+    for (const auto& ctx : contexts) {
+      if (ctx->is_closing()) continue;
+      if (!ctx->flush_send()) {
+        close_context(ctx);
+      } else {
+        rearm_context(ctx);
+      }
+    }
+  }
+  // +=========================================================================+
+  // | [>] handle_listener                                         ( private ) |
+  // +=========================================================================+
+  void handle_listener() {
+    while (!stopping_.load()) {
+      int socket = ::accept4(listener_fd_, nullptr, nullptr,
+                             SOCK_NONBLOCK | SOCK_CLOEXEC);
+      if (socket == -1) {
+        if (errno == EINTR) continue;
+        return;
+      }
+      int no_delay = 1;
+      if (::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &no_delay,
+                       sizeof(no_delay)) == -1) {
+        ::close(socket);
+        continue;
+      }
+      register_context(socket);
+    }
+  }
+  // +=========================================================================+
+  // | [>] register_context                                        ( private ) |
+  // +=========================================================================+
+  void register_context(int socket) {
+    std::shared_ptr<context<RQty, RSty, DEty>> ctx =
+        std::make_shared<context<RQty, RSty, DEty>>(
+            socket, this, on_disconnection_);
+    std::unique_ptr<epoll_registration<RQty, RSty, DEty>> registration =
+        std::make_unique<epoll_registration<RQty, RSty, DEty>>(ctx);
+    ctx->registration = registration.get();
+    epoll_event event{};
+    event.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+    event.data.ptr = ctx->registration;
+    if (::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket, &event) == -1) {
+      int failed_socket = ctx->mark_context_for_closing();
+      if (failed_socket != -1) ::close(failed_socket);
+      return;
+    }
+    registrations_.emplace(ctx->registration, std::move(registration));
+    try {
+      on_connection_();
+    } catch (...) {
+      close_context(ctx);
+    }
+  }
+  // +=========================================================================+
+  // | [>] handle_context                                          ( private ) |
+  // +=========================================================================+
+  void handle_context(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
+                      uint32_t events) {
+    if (ctx->is_closing()) return;
+    if (events & EPOLLERR) {
+      close_context(ctx);
+      return;
+    }
+    if (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP)) handle_receive(ctx);
+    if (ctx->is_closing()) return;
+    if (!ctx->flush_send()) {
+      close_context(ctx);
+      return;
+    }
+    rearm_context(ctx);
+  }
+  // +=========================================================================+
+  // | [>] handle_receive                                          ( private ) |
+  // +=========================================================================+
+  void handle_receive(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
+    std::array<char, kReceiveBufferSz> buffer{};
+    while (ctx->can_receive()) {
+      ssize_t received = ctx->receive(buffer.data(), buffer.size());
+      if (received > 0) {
+        consume_received(ctx, buffer.data(), static_cast<std::size_t>(received));
+        continue;
+      }
+      if (received == 0) {
+        ctx->request_context_closing();
+        return;
+      }
+      if (errno == EINTR) continue;
+      if (errno == EAGAIN || errno == EWOULDBLOCK) return;
+      ctx->request_context_closing();
+      return;
+    }
+  }
+  // +=========================================================================+
+  // | [>] consume_received                                        ( private ) |
+  // +=========================================================================+
+  void consume_received(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
+                        char* buffer, std::size_t size) {
+    std::size_t consumed = 0;
+    while (consumed < size && ctx->can_receive()) {
+      std::size_t accepted =
+          ctx->accumulate(buffer + consumed, size - consumed);
+      if (accepted == 0) {
+        handle_deserialized_requests(ctx);
+        if (!ctx->can_receive()) return;
+        accepted = ctx->accumulate(buffer + consumed, size - consumed);
+        if (accepted == 0) {
+          send_error_and_mark_for_closing(
+              ctx, "Invalid source deserialization content!");
+          return;
+        }
+      }
+      consumed += accepted;
+      handle_deserialized_requests(ctx);
+    }
+  }
+  // +=========================================================================+
+  // | [>] handle_deserialized_requests                            ( private ) |
+  // +=========================================================================+
+  void handle_deserialized_requests(
+      std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
+    while (ctx->can_receive()) {
+      protocol::deserialization_result<RQty> result = ctx->deserialize();
+      if (result.code == protocol::deserialization_status::kMoreBytesNeeded) {
+        return;
+      }
+      if (result.code == protocol::deserialization_status::kInvalidSource) {
+        send_error_and_mark_for_closing(
+            ctx, "Invalid source deserialization content!");
+        return;
+      }
+      if (result.request == nullptr) {
+        send_error_and_mark_for_closing(ctx,
+                                        "Inconsistent deserialization status!");
+        return;
+      }
+      try {
+        std::thread::id tid = std::this_thread::get_id();
+        uint64_t id = ctx->get_next_response_id();
+        on_request_(result.request, std::make_shared<RSty>(),
+                    [ctx, id, tid](std::shared_ptr<RSty> response) {
+                      if (!response) {
+                        ctx->request_context_closing();
+                      } else {
+                        try {
+                          ctx->add_response_to_queue(
+                              std::move(response->serialize()), id);
+                        } catch (...) {
+                          ctx->request_context_closing();
+                        }
+                      }
+                      if (std::this_thread::get_id() != tid) {
+                        notify_worker(ctx->owner, ctx);
+                      }
+                    });
+      } catch (...) {
+        ctx->request_context_closing();
+        return;
+      }
+    }
+  }
+  // +=========================================================================+
+  // | [>] send_error_and_mark_for_closing                          ( private ) |
+  // +=========================================================================+
+  void send_error_and_mark_for_closing(
+      std::shared_ptr<context<RQty, RSty, DEty>> ctx, std::string_view reason) {
+    try {
+      std::shared_ptr<RSty> response = std::make_shared<RSty>();
+      on_bad_request_(reason, response);
+      ctx->send_error_and_mark_for_closing(response);
+    } catch (...) {
+      ctx->request_context_closing();
+    }
+  }
+  // +=========================================================================+
+  // | [>] rearm_context                                           ( private ) |
+  // +=========================================================================+
+  void rearm_context(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
+    if (ctx->should_close()) {
+      close_context(ctx);
+      return;
+    }
+    uint32_t events = EPOLLRDHUP | EPOLLET;
+    if (ctx->can_receive()) events |= EPOLLIN;
+    if (ctx->has_sendable_response()) events |= EPOLLOUT;
+    epoll_event event{};
+    event.events = events;
+    event.data.ptr = ctx->registration;
+    if (::epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, ctx->get_socket(), &event) ==
+        -1) {
+      close_context(ctx);
+    }
+  }
+  // +=========================================================================+
+  // | [>] close_context                                           ( private ) |
+  // +=========================================================================+
+  void close_context(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
+    epoll_registration<RQty, RSty, DEty>* registration = ctx->registration;
+    int socket = ctx->mark_context_for_closing();
+    if (socket == -1) return;
+    ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket, nullptr);
+    ::close(socket);
+    registrations_.erase(registration);
+    ctx->notify_disconnection();
+  }
+  // +=========================================================================+
+  // | [>] close_contexts                                          ( private ) |
+  // +=========================================================================+
+  void close_contexts() {
+    for (auto& [registration, entry] : registrations_) {
+      int socket = entry->ctx->mark_context_for_closing();
+      if (socket != -1) {
+        ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket, nullptr);
+        ::close(socket);
+        entry->ctx->notify_disconnection();
+      }
+    }
+    registrations_.clear();
+  }
+  // +=========================================================================+
+  // | [>] close_resources                                         ( private ) |
+  // +=========================================================================+
+  void close_resources() {
+    if (listener_fd_ != -1) ::close(listener_fd_);
+    if (wake_fd_ != -1) ::close(wake_fd_);
+    if (epoll_fd_ != -1) ::close(epoll_fd_);
+    listener_fd_ = -1;
+    wake_fd_ = -1;
+    epoll_fd_ = -1;
+  }
+  // +=========================================================================+
+  // | ATTRIBUTEs                                                  ( private ) |
+  // +=========================================================================+
+  int epoll_fd_{-1};
+  int wake_fd_{-1};
+  int listener_fd_{-1};
+  std::atomic<bool> stopping_{false};
+  std::jthread thread_;
+  std::unordered_map<
+      epoll_registration<RQty, RSty, DEty>*,
+      std::unique_ptr<epoll_registration<RQty, RSty, DEty>>>
+      registrations_;
+  std::vector<std::shared_ptr<context<RQty, RSty, DEty>>> pending_contexts_;
+  std::mutex pending_mutex_;
+  types::on_request_delegate<RQty, RSty> on_request_;
+  types::on_bad_request_delegate<RSty> on_bad_request_;
+  types::on_client_connected_delegate on_connection_;
+  types::on_client_disconnected_delegate on_disconnection_;
+};
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] notify_worker                                         ( function ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename RQty, typename RSty,
+          template <typename, typename> class DEty>
+void notify_worker(worker<RQty, RSty, DEty>* owner,
+                   std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
+  owner->notify(std::move(ctx));
+}
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tcpip [linux]                                              ( class ) |
@@ -167,63 +771,68 @@ class tcpip {
   tcpip& operator=(const tcpip&) = delete;
   tcpip& operator=(tcpip&&) noexcept = delete;
   // +=========================================================================+
-  // | [>] PROPERTIEs                                               ( public ) |
-  // +=========================================================================+
-  types::on_request_delegate<RQty, RSty> on_request;
-  types::on_bad_request_delegate<RSty> on_bad_request;
-  types::on_client_connected_delegate on_connection;
-  types::on_client_disconnected_delegate on_disconnection;
-  // +=========================================================================+
   // | [>] start                                                    ( public ) |
   // +=========================================================================+
   void start(const char port[]) {
-    if (epoll_fd_.load() != -1) return;
+    if (!workers_.empty()) return;
+    uint16_t port_number = get_port(port);
+    std::size_t number_of_workers =
+        std::max<std::size_t>(1, std::thread::hardware_concurrency());
     try {
-      setup_workers(setup_listener(port));
+      for (std::size_t i = 0; i < number_of_workers; i++) {
+        std::unique_ptr<worker<RQty, RSty, DEty>> entry =
+            std::make_unique<worker<RQty, RSty, DEty>>(
+                on_request_, on_bad_request_, on_connection_, on_disconnection_);
+        entry->setup(port_number);
+        workers_.emplace_back(std::move(entry));
+      }
+      for (const auto& worker : workers_) worker->start();
     } catch (...) {
       stop();
       throw;
     }
   }
-
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
   void stop() {
-    int epoll_fd = epoll_fd_.load();
-    if (epoll_fd == -1) return;
-    if (!stopping_.exchange(true)) {
-      int listener_fd = listener_fd_.exchange(-1);
-      if (listener_fd != -1) {
-        ::epoll_ctl(epoll_fd, EPOLL_CTL_DEL, listener_fd, nullptr);
-        ::close(listener_fd);
-      }
-      uint64_t workers = workers_.size();
-      if (workers > 0) {
-        while (::write(wake_fd_.load(), &workers, sizeof(workers)) == -1 &&
-               errno == EINTR) {
-        }
-      }
-    }
+    for (const auto& worker : workers_) worker->stop();
     workers_.clear();
-    close_contexts();
-    int wake_fd = wake_fd_.exchange(-1);
-    if (wake_fd != -1) ::close(wake_fd);
-    epoll_fd = epoll_fd_.exchange(-1);
-    if (epoll_fd != -1) ::close(epoll_fd);
-    stopping_.store(false);
   }
-
   // +=========================================================================+
-  // | [>] is_running                                               ( public ) |
+  // | [>] set_on_request                                           ( public ) |
   // +=========================================================================+
-  [[nodiscard]] bool is_running() const { return epoll_fd_.load() != -1; }
+  template <typename FNty>
+  void set_on_request(FNty&& fn) {
+    on_request_ = std::forward<FNty>(fn);
+  }
+  // +=========================================================================+
+  // | [>] set_on_bad_request                                       ( public ) |
+  // +=========================================================================+
+  template <typename FNty>
+  void set_on_bad_request(FNty&& fn) {
+    on_bad_request_ = std::forward<FNty>(fn);
+  }
+  // +=========================================================================+
+  // | [>] set_on_connection                                        ( public ) |
+  // +=========================================================================+
+  template <typename FNty>
+  void set_on_connection(FNty&& fn) {
+    on_connection_ = std::forward<FNty>(fn);
+  }
+  // +=========================================================================+
+  // | [>] set_on_disconnection                                     ( public ) |
+  // +=========================================================================+
+  template <typename FNty>
+  void set_on_disconnection(FNty&& fn) {
+    on_disconnection_ = std::forward<FNty>(fn);
+  }
 
  private:
   // +=========================================================================+
-  // | [>] setup_listener                                          ( private ) |
+  // | [>] get_port                                                 ( private ) |
   // +=========================================================================+
-  std::size_t setup_listener(const char port[]) {
+  static uint16_t get_port(const char port[]) {
     if (port == nullptr || *port == '\0') {
       throw std::runtime_error("Invalid port (range from 1 to 65535)!");
     }
@@ -235,640 +844,17 @@ class tcpip {
         port_number < 1 || port_number > 65535) {
       throw std::runtime_error("Invalid port (range from 1 to 65535)!");
     }
-    int epoll_fd = ::epoll_create1(EPOLL_CLOEXEC);
-    if (epoll_fd == -1) {
-      throw std::runtime_error("Epoll instance could not be created!");
-    }
-    int wake_fd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE);
-    if (wake_fd == -1) {
-      ::close(epoll_fd);
-      throw std::runtime_error("Stop event could not be created!");
-    }
-    int listener_fd =
-        ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
-                 IPPROTO_TCP);
-    if (listener_fd == -1) {
-      ::close(wake_fd);
-      ::close(epoll_fd);
-      throw std::runtime_error("Socket could not be created!");
-    }
-    int reuse_address = 1;
-    if (::setsockopt(listener_fd, SOL_SOCKET, SO_REUSEADDR, &reuse_address,
-                     sizeof(reuse_address)) == -1) {
-      ::close(listener_fd);
-      ::close(wake_fd);
-      ::close(epoll_fd);
-      throw std::runtime_error("Listener socket could not be configured!");
-    }
-    sockaddr_in address{};
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = htonl(INADDR_ANY);
-    address.sin_port = htons(static_cast<uint16_t>(port_number));
-    if (::bind(listener_fd, reinterpret_cast<const sockaddr*>(&address),
-               sizeof(address)) == -1 ||
-        ::listen(listener_fd, SOMAXCONN) == -1) {
-      ::close(listener_fd);
-      ::close(wake_fd);
-      ::close(epoll_fd);
-      throw std::runtime_error("Listener socket could not be started!");
-    }
-    epoll_event wake_event{};
-    wake_event.events = EPOLLIN;
-    wake_event.data.u64 = kWakeEventId;
-    epoll_event listener_event{};
-    listener_event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
-    listener_event.data.u64 = kListenerEventId;
-    if (::epoll_ctl(epoll_fd, EPOLL_CTL_ADD, wake_fd, &wake_event) == -1 ||
-        ::epoll_ctl(epoll_fd, EPOLL_CTL_ADD, listener_fd, &listener_event) ==
-            -1) {
-      ::close(listener_fd);
-      ::close(wake_fd);
-      ::close(epoll_fd);
-      throw std::runtime_error("Listener could not be registered!");
-    }
-    stopping_.store(false);
-    wake_fd_.store(wake_fd);
-    listener_fd_.store(listener_fd);
-    epoll_fd_.store(epoll_fd);
-    return std::max<std::size_t>(1, std::thread::hardware_concurrency());
+    return static_cast<uint16_t>(port_number);
   }
-
   // +=========================================================================+
-  // | [>] setup_workers                                           ( private ) |
+  // | ATTRIBUTEs                                                  ( private ) |
   // +=========================================================================+
-  void setup_workers(std::size_t number_of_workers) {
-    for (std::size_t i = 0; i < number_of_workers; i++) {
-      workers_.emplace_back(std::jthread([this]() { worker_loop(); }));
-    }
-  }
-
-  // +=========================================================================+
-  // | [>] worker_loop                                             ( private ) |
-  // +=========================================================================+
-  void worker_loop() {
-    std::array<epoll_event, 64> events{};
-    while (!stopping_.load()) {
-      const int epoll_fd = epoll_fd_.load();
-      if (epoll_fd == -1) return;
-      const int ready =
-          ::epoll_wait(epoll_fd, events.data(), events.size(), -1);
-      if (ready == -1) {
-        if (errno == EINTR) continue;
-        return;
-      }
-      for (int i = 0; i < ready; i++) {
-        const uint64_t event_id = events[i].data.u64;
-        if (event_id == kWakeEventId) {
-          handle_wake();
-          if (stopping_.load()) return;
-        } else if (event_id == kListenerEventId) {
-          handle_listener();
-        } else {
-          epoll_registration<RQty, RSty, DEty>* registration =
-              static_cast<epoll_registration<RQty, RSty, DEty>*>(
-                  events[i].data.ptr);
-          std::shared_ptr<context<RQty, RSty, DEty>> ctx = registration->ctx;
-          handle_context(ctx, events[i].events);
-        }
-      }
-    }
-  }
-
-  // +=========================================================================+
-  // | [>] handle_wake                                             ( private ) |
-  // +=========================================================================+
-  void handle_wake() {
-    uint64_t value = 0;
-    while (::read(wake_fd_.load(), &value, sizeof(value)) == -1 &&
-           errno == EINTR) {
-    }
-  }
-
-  // +=========================================================================+
-  // | [>] handle_listener                                         ( private ) |
-  // +=========================================================================+
-  void handle_listener() {
-    const int listener_fd = listener_fd_.load();
-    while (!stopping_.load() && listener_fd != -1) {
-      int socket = ::accept4(listener_fd, nullptr, nullptr,
-                             SOCK_NONBLOCK | SOCK_CLOEXEC);
-      if (socket == -1) {
-        if (errno == EINTR) continue;
-        if (errno == EAGAIN || errno == EWOULDBLOCK) break;
-        break;
-      }
-      int no_delay = 1;
-      if (::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &no_delay,
-                       sizeof(no_delay)) == -1) {
-        ::close(socket);
-        continue;
-      }
-      try {
-        register_context(socket);
-      } catch (...) {
-        ::close(socket);
-      }
-    }
-    rearm_listener();
-  }
-
-  // +=========================================================================+
-  // | [>] register_context                                        ( private ) |
-  // +=========================================================================+
-  void register_context(int socket) {
-    const uint64_t id = next_context_id_.fetch_add(1);
-    std::shared_ptr<context<RQty, RSty, DEty>> ctx =
-        std::make_shared<context<RQty, RSty, DEty>>(socket, id);
-    std::unique_ptr<epoll_registration<RQty, RSty, DEty>> registration =
-        std::make_unique<epoll_registration<RQty, RSty, DEty>>(ctx);
-    ctx->registration = registration.get();
-    {
-      std::lock_guard<std::mutex> registrations_lock(registrations_mutex_);
-      registrations_.emplace(id, std::move(registration));
-    }
-    try {
-      on_connection();
-    } catch (...) {
-      discard_context(ctx);
-      return;
-    }
-    epoll_event event{};
-    event.events = EPOLLIN | EPOLLRDHUP | EPOLLET | EPOLLONESHOT;
-    event.data.ptr = ctx->registration;
-    if (::epoll_ctl(epoll_fd_.load(), EPOLL_CTL_ADD, socket, &event) == -1) {
-      discard_context(ctx);
-      try {
-        on_disconnection();
-      } catch (...) {
-      }
-    }
-  }
-
-  // +=========================================================================+
-  // | [>] handle_context                                          ( private ) |
-  // +=========================================================================+
-  void handle_context(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
-                      uint32_t events) {
-    bool close_context = false;
-    {
-      std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-      if (ctx->closing || ctx->processing) return;
-      ctx->processing = true;
-      close_context = ctx->close_requested || events & EPOLLERR;
-    }
-    if (close_context) {
-      {
-        std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-        ctx->processing = false;
-      }
-      mark_context_for_closing(ctx);
-    } else {
-      if (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP)) handle_receive(ctx);
-      if (!ctx->closing &&
-          ((events & EPOLLOUT) || has_sendable_response(ctx))) {
-        flush_send(ctx);
-      }
-      finish_context(ctx);
-    }
-  }
-
-  // +=========================================================================+
-  // | [>] handle_receive                                          ( private ) |
-  // +=========================================================================+
-  void handle_receive(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    std::array<char, kReceiveBufferSz> buffer{};
-    const int socket = ctx->socket;
-    while (!ctx->closing && !ctx->read_closed) {
-      const ssize_t received =
-          ::recv(socket, buffer.data(), buffer.size(), MSG_DONTWAIT);
-      if (received > 0) {
-        if (!consume_received(ctx, buffer.data(),
-                              static_cast<std::size_t>(received))) {
-          return;
-        }
-        continue;
-      }
-      if (received == 0) {
-        set_context_read_closed(ctx);
-        return;
-      }
-      if (errno == EINTR) continue;
-      if (errno == EAGAIN || errno == EWOULDBLOCK) return;
-      mark_context_for_closing(ctx);
-      return;
-    }
-  }
-
-  // +=========================================================================+
-  // | [>] consume_received                                        ( private ) |
-  // +=========================================================================+
-  bool consume_received(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
-                        char* buffer, std::size_t size) {
-    std::size_t consumed = 0;
-    while (consumed < size) {
-      std::size_t accepted =
-          ctx->decoder.accumulate(buffer + consumed, size - consumed);
-      if (accepted == 0) {
-        if (!handle_deserialized_requests(ctx)) return false;
-        accepted = ctx->decoder.accumulate(buffer + consumed, size - consumed);
-        if (accepted == 0) {
-          queue_error_and_close(ctx, "Invalid source deserialization content!");
-          return false;
-        }
-      }
-      consumed += accepted;
-      if (!handle_deserialized_requests(ctx)) return false;
-    }
-    return true;
-  }
-
-  // +=========================================================================+
-  // | [>] handle_deserialized_requests                            ( private ) |
-  // +=========================================================================+
-  bool handle_deserialized_requests(
-      std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    while (!ctx->closing) {
-      protocol::deserialization_result<RQty> result =
-          ctx->decoder.deserialize();
-      if (result.code == protocol::deserialization_status::kMoreBytesNeeded) {
-        return true;
-      }
-      if (result.code == protocol::deserialization_status::kInvalidSource ||
-          result.request == nullptr) {
-        queue_error_and_close(ctx, "Invalid source deserialization content!");
-        return false;
-      }
-      const uint64_t response_id = ctx->next_request_id++;
-      if (result.channel == protocol::channel_intent::kUpgrade) {
-        mark_context_for_closing(ctx);
-        return false;
-      }
-      const bool close_after_sending =
-          result.channel == protocol::channel_intent::kClose;
-      if (close_after_sending) {
-        set_close_after_response(ctx, response_id);
-        set_context_read_closed(ctx);
-      }
-      std::shared_ptr<RSty> response = std::make_shared<RSty>();
-      std::shared_ptr<std::atomic<bool>> response_sent =
-          std::make_shared<std::atomic<bool>>(false);
-      {
-        std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-        ctx->pending_responses++;
-      }
-      try {
-        on_request(result.request, response,
-                   [this, ctx, response_id, response_sent](
-                       std::shared_ptr<RSty> response) {
-                      if (response_sent->exchange(true)) return;
-                      if (response == nullptr) {
-                        request_context_closing(ctx);
-                        return;
-                     }
-                     try {
-                       add_response_to_queue(ctx, response_id,
-                                             std::move(response->serialize()),
-                                             true);
-                      } catch (...) {
-                        request_context_closing(ctx);
-                     }
-                   });
-      } catch (...) {
-        mark_context_for_closing(ctx);
-        return false;
-      }
-      if (close_after_sending) return false;
-    }
-    return false;
-  }
-
-  // +=========================================================================+
-  // | [>] queue_error_and_close                                  ( private ) |
-  // +=========================================================================+
-  void queue_error_and_close(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
-                             std::string_view reason) {
-    const uint64_t response_id = ctx->next_request_id++;
-    set_close_after_response(ctx, response_id);
-    set_context_read_closed(ctx);
-    std::shared_ptr<RSty> response = std::make_shared<RSty>();
-    try {
-      on_bad_request(reason, response);
-      add_response_to_queue(ctx, response_id, std::move(response->serialize()),
-                            false);
-    } catch (...) {
-      mark_context_for_closing(ctx);
-    }
-  }
-
-  // +=========================================================================+
-  // | [>] set_close_after_response                               ( private ) |
-  // +=========================================================================+
-  void set_close_after_response(
-      std::shared_ptr<context<RQty, RSty, DEty>> ctx, uint64_t response_id) {
-    std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-    ctx->close_after_sending = true;
-    ctx->close_after_response_id = response_id;
-  }
-
-  // +=========================================================================+
-  // | [>] add_response_to_queue                                   ( private ) |
-  // +=========================================================================+
-  void add_response_to_queue(
-      std::shared_ptr<context<RQty, RSty, DEty>> ctx, uint64_t response_id,
-      std::unique_ptr<protocol::serialization_result> response,
-      bool completes_request) {
-    {
-      std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-      if (completes_request) {
-        if (ctx->pending_responses == 0) return;
-        ctx->pending_responses--;
-      }
-      if (response == nullptr || ctx->closing) return;
-      if (ctx->close_after_sending &&
-          response_id > ctx->close_after_response_id) {
-        return;
-      }
-      auto itr = std::lower_bound(
-          ctx->responses.begin(), ctx->responses.end(), response_id,
-          [](const response_data& data, uint64_t id) { return data.id < id; });
-      if (itr != ctx->responses.end() && itr->id == response_id) return;
-      ctx->responses.insert(itr, {response_id, std::move(response)});
-    }
-    notify_output(ctx);
-  }
-
-  // +=========================================================================+
-  // | [>] request_context_closing                                ( private ) |
-  // +=========================================================================+
-  void request_context_closing(
-      std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    {
-      std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-      if (ctx->closing) return;
-      ctx->close_requested = true;
-    }
-    notify_output(ctx);
-  }
-
-  // +=========================================================================+
-  // | [>] notify_output                                           ( private ) |
-  // +=========================================================================+
-  void notify_output(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    {
-      std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-      if (ctx->closing || ctx->processing) return;
-      if (should_close_locked(*ctx)) ctx->close_requested = true;
-      rearm_context_locked(*ctx);
-    }
-  }
-
-  // +=========================================================================+
-  // | [>] has_sendable_response                                  ( private ) |
-  // +=========================================================================+
-  bool has_sendable_response(
-      std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-    return has_sendable_response_locked(*ctx);
-  }
-
-  // +=========================================================================+
-  // | [>] has_sendable_response_locked                            ( private ) |
-  // +=========================================================================+
-  static bool has_sendable_response_locked(context<RQty, RSty, DEty>& ctx) {
-    if (ctx.sending_offset < ctx.sending_buffer.size()) return true;
-    return std::any_of(ctx.responses.begin(), ctx.responses.end(),
-                       [&ctx](const response_data& response) {
-                         return response.id == ctx.expected_response_id;
-                       });
-  }
-
-  // +=========================================================================+
-  // | [>] flush_send                                              ( private ) |
-  // +=========================================================================+
-  void flush_send(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    while (!ctx->closing) {
-      const char* data = nullptr;
-      std::size_t size = 0;
-      bool close_context = false;
-      int socket = -1;
-      {
-        std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-        if (ctx->sending_offset == ctx->sending_buffer.size()) {
-          ctx->sending_buffer.clear();
-          ctx->sending_offset = 0;
-          append_sendable_responses_locked(*ctx);
-        }
-        if (ctx->sending_buffer.empty()) {
-          close_context = should_close_locked(*ctx);
-        } else {
-          data = ctx->sending_buffer.data() + ctx->sending_offset;
-          size = ctx->sending_buffer.size() - ctx->sending_offset;
-          socket = ctx->socket;
-        }
-      }
-      if (close_context) {
-        mark_context_for_closing(ctx);
-        return;
-      }
-      if (data == nullptr) return;
-      const ssize_t sent = ::send(socket, data, size, MSG_NOSIGNAL);
-      if (sent > 0) {
-        std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-        ctx->sending_offset += static_cast<std::size_t>(sent);
-        continue;
-      }
-      if (sent == -1 && errno == EINTR) continue;
-      if (sent == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) return;
-      mark_context_for_closing(ctx);
-      return;
-    }
-  }
-
-  // +=========================================================================+
-  // | [>] append_sendable_responses_locked                        ( private ) |
-  // +=========================================================================+
-  static void append_sendable_responses_locked(context<RQty, RSty, DEty>& ctx) {
-    while (true) {
-      auto itr = std::find_if(
-          ctx.responses.begin(), ctx.responses.end(),
-          [&ctx](const response_data& data) {
-            return data.id == ctx.expected_response_id;
-          });
-      if (itr == ctx.responses.end()) return;
-      ctx.sending_buffer.append(itr->response->prefix);
-      ctx.expected_response_id++;
-      ctx.responses.erase(itr);
-    }
-  }
-
-  // +=========================================================================+
-  // | [>] should_close_locked                                    ( private ) |
-  // +=========================================================================+
-  static bool should_close_locked(context<RQty, RSty, DEty>& ctx) {
-    if (ctx.sending_offset < ctx.sending_buffer.size()) return false;
-    if (ctx.close_after_sending &&
-        ctx.expected_response_id > ctx.close_after_response_id) {
-      return true;
-    }
-    return ctx.read_closed && ctx.pending_responses == 0 &&
-           ctx.responses.empty();
-  }
-
-  // +=========================================================================+
-  // | [>] rearm_listener                                          ( private ) |
-  // +=========================================================================+
-  void rearm_listener() {
-    const int epoll_fd = epoll_fd_.load();
-    const int listener_fd = listener_fd_.load();
-    if (stopping_.load() || epoll_fd == -1 || listener_fd == -1) return;
-    epoll_event event{};
-    event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
-    event.data.u64 = kListenerEventId;
-    ::epoll_ctl(epoll_fd, EPOLL_CTL_MOD, listener_fd, &event);
-  }
-
-  // +=========================================================================+
-  // | [>] set_context_read_closed                                ( private ) |
-  // +=========================================================================+
-  void set_context_read_closed(
-      std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-    ctx->read_closed = true;
-  }
-
-  // +=========================================================================+
-  // | [>] finish_context                                          ( private ) |
-  // +=========================================================================+
-  void finish_context(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    bool close_context = false;
-    {
-      std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-      if (!ctx->closing) {
-        close_context =
-            ctx->close_requested || should_close_locked(*ctx) ||
-            !rearm_context_locked(*ctx);
-      }
-      ctx->processing = false;
-    }
-    if (close_context) mark_context_for_closing(ctx);
-  }
-
-  // +=========================================================================+
-  // | [>] rearm_context_locked                                    ( private ) |
-  // +=========================================================================+
-  bool rearm_context_locked(context<RQty, RSty, DEty>& ctx) {
-    if (ctx.closing) return true;
-    uint32_t events = EPOLLONESHOT | EPOLLRDHUP | EPOLLET;
-    if (ctx.close_requested) {
-      events |= EPOLLOUT;
-    } else if (!ctx.read_closed) {
-      events |= EPOLLIN;
-    }
-    if (has_sendable_response_locked(ctx)) events |= EPOLLOUT;
-    if (!(events & (EPOLLIN | EPOLLOUT))) return true;
-    if (ctx.registration == nullptr || ctx.socket == -1) return false;
-    epoll_event event{};
-    event.events = events;
-    event.data.ptr = ctx.registration;
-    return ::epoll_ctl(epoll_fd_.load(), EPOLL_CTL_MOD, ctx.socket, &event) !=
-           -1;
-  }
-
-  // +=========================================================================+
-  // | [>] discard_context                                         ( private ) |
-  // +=========================================================================+
-  void discard_context(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    int socket = -1;
-    {
-      std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-      ctx->closing = true;
-      ctx->registration = nullptr;
-      socket = ctx->socket;
-      ctx->socket = -1;
-    }
-    if (socket != -1) ::close(socket);
-    std::lock_guard<std::mutex> registrations_lock(registrations_mutex_);
-    registrations_.erase(ctx->id);
-  }
-
-  // +=========================================================================+
-  // | [>] mark_context_for_closing                                ( private ) |
-  // +=========================================================================+
-  void mark_context_for_closing(
-      std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    int socket = -1;
-    {
-      std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-      if (ctx->closing) return;
-      ctx->closing = true;
-      ctx->registration = nullptr;
-      socket = ctx->socket;
-      ctx->socket = -1;
-    }
-    if (socket != -1) {
-      ::epoll_ctl(epoll_fd_.load(), EPOLL_CTL_DEL, socket, nullptr);
-      ::close(socket);
-    }
-    {
-      std::lock_guard<std::mutex> registrations_lock(registrations_mutex_);
-      registrations_.erase(ctx->id);
-    }
-    try {
-      on_disconnection();
-    } catch (...) {
-    }
-  }
-
-  // +=========================================================================+
-  // | [>] close_contexts                                          ( private ) |
-  // +=========================================================================+
-  void close_contexts() {
-    std::vector<std::unique_ptr<epoll_registration<RQty, RSty, DEty>>>
-        registrations;
-    {
-      std::lock_guard<std::mutex> registrations_lock(registrations_mutex_);
-      registrations.reserve(registrations_.size());
-      for (auto& [id, registration] : registrations_) {
-        registrations.push_back(std::move(registration));
-      }
-      registrations_.clear();
-    }
-    for (const auto& registration : registrations) {
-      const std::shared_ptr<context<RQty, RSty, DEty>>& ctx =
-          registration->ctx;
-      int socket = -1;
-      {
-        std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-        if (ctx->closing) continue;
-        ctx->closing = true;
-        ctx->registration = nullptr;
-        socket = ctx->socket;
-        ctx->socket = -1;
-      }
-      if (socket != -1) {
-        ::epoll_ctl(epoll_fd_.load(), EPOLL_CTL_DEL, socket, nullptr);
-        ::close(socket);
-      }
-      try {
-        on_disconnection();
-      } catch (...) {
-      }
-    }
-  }
-
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
-  std::atomic<int> epoll_fd_{-1};
-  std::atomic<int> listener_fd_{-1};
-  std::atomic<int> wake_fd_{-1};
-  std::atomic<bool> stopping_{false};
-  std::atomic<uint64_t> next_context_id_{1};
-  std::unordered_map<
-      uint64_t, std::unique_ptr<epoll_registration<RQty, RSty, DEty>>>
-      registrations_;
-  std::mutex registrations_mutex_;
-  std::vector<std::jthread> workers_;
+  std::vector<std::unique_ptr<worker<RQty, RSty, DEty>>> workers_;
+  types::on_request_delegate<RQty, RSty> on_request_;
+  types::on_bad_request_delegate<RSty> on_bad_request_;
+  types::on_client_connected_delegate on_connection_;
+  types::on_client_disconnected_delegate on_disconnection_;
 };
 }  // namespace martianlabs::doba::transport::server
+
 #endif

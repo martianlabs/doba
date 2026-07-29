@@ -26,6 +26,7 @@
 #define martianlabs_doba_protocol_http11_server_h
 
 #include "common/date_server.h"
+#include "common/execution_policy.h"
 #include "transport/server/tcpip.h"
 #include "protocol/http11/method_names.h"
 #include "protocol/http11/helpers.h"
@@ -75,6 +76,7 @@ class server {
   // +=========================================================================+
   void start(const char port[]) {
     std::lock_guard<std::mutex> lock(locked_mutex_);
+    router_.start();
     transport_.set_on_request(
         [this](std::shared_ptr<const RQty> req, std::shared_ptr<RSty> res,
                transport::server::types::on_send_delegate<RSty> on_send) {
@@ -86,17 +88,18 @@ class server {
               // routed to a handler based on the method and absolute path.
               std::string_view method = req->get_method();
               std::string_view abs_path = req->get_absolute_path();
-              switch (router_.match_route(method, abs_path, req, res)) {
+              switch (router_.match(method, abs_path, req, res, on_send)) {
                 case router_match_result::kMatched:
                   break;
                 case router_match_result::kNotFound:
                   res->not_found_404();
+                  on_send(res);
                   break;
                 case router_match_result::kMethodNotAllowed:
                   res->method_not_allowed_405();
+                  on_send(res);
                   break;
               }
-              on_send(res);
               break;
             }
             case target::kAuthorityForm:
@@ -137,6 +140,7 @@ class server {
   // +=========================================================================+
   void stop() {
     std::lock_guard<std::mutex> lock(locked_mutex_);
+    router_.stop();
     transport_.stop();
     locked_ = false;
   }
@@ -145,12 +149,14 @@ class server {
   // +=========================================================================+
   template <router_handler_lambda Hty>
   server& add_route(std::string_view method, std::string_view route,
-                    Hty handler) {
+                    Hty handler,
+                    common::execution_policy policy =
+                        common::execution_policy::kSynchronous) {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     if (locked_) {
       throw std::runtime_error("Cannot add route when the server is running");
     }
-    router_.add_route(method, route, std::move(handler));
+    router_.add(method, route, std::move(handler), policy);
     return *this;
   }
 

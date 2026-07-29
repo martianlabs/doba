@@ -18,34 +18,40 @@ It ships as **pure headers**. No build step, no binary to link, no dependencies 
 
 - **Direct dispatch.** Header dispatch uses raw function pointers and the routing path stays deliberately simple: no framework machinery, no virtual dispatch, and no per-request indirection for its own sake.
 
+- **Choose how a route runs.** Routes run synchronously by default. Mark one as asynchronous when its handler should leave the transport worker and complete later without blocking the synchronous path.
+
 - **Memory where it earns its place.** Responses use a fixed buffer for the latency-sensitive write path. Requests retain only the storage they need because inbound data is variable-sized and may outlive parsing.
 
 - **HTTP/1.1 is serious, not incidental.** It is the first protocol implemented on doba’s generic foundation: strict request parsing, all request-target forms, header validation, framing rules, connection directives, and body handling.
 
 - **Bodies scale beyond RAM.** Raw and chunked bodies use memory or file-backed storage according to configured limits, while preserving the original wire representation when required.
 
-- **Native asynchronous I/O.** The transport layer uses the platform backend directly: IOCP on Windows and epoll on Linux, with pipelined responses and partial-receive handling.
+- **Native asynchronous I/O.** Windows uses IOCP directly, supports pipelined responses and accepts completions from asynchronous route handlers while preserving response order. The Linux backend is being reworked and is not currently a parity target.
 
 - **Keep control.** Request, response, decoder, transport, and router remain template parameters, so the framework can be adapted without rewriting its core.
 
 ## Quick look
 
 ```cpp
+#include <memory>
+
+#include "common/execution_policy.h"
 #include "protocol/http11/server.h"
 
+using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http11;
 
 int main() {
   server srv;
   srv.add_route(
       "GET", "/hello",
-      [](const request& req, response& res) {
-        res.ok_200()
+      [](std::shared_ptr<const request>, std::shared_ptr<response> res) {
+        res->ok_200()
            .add_header("Content-Type", "text/plain; charset=utf-8")
            .set_body("hello from doba");
       },
-      execution_policy::kSync)
-     .start("8080");
+      execution_policy::kSynchronous);
+  srv.start("8080");
 }
 ```
 

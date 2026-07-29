@@ -208,7 +208,8 @@ struct context
       mark_context_for_closing();
       return;
     }
-    add_response_to_queue(std::move(error_response->serialize()), true);
+    uint64_t id = get_next_response_id();
+    add_response_to_queue(std::move(error_response->serialize()), id, true);
     arm_next_send_operation();
   }
   // +=========================================================================+

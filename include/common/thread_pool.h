@@ -46,10 +46,26 @@ class thread_pool {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  explicit thread_pool(size_t threads = std::thread::hardware_concurrency()) {
+  explicit thread_pool(size_t threads = std::thread::hardware_concurrency())
+      : threads_(threads == 0 ? 1 : threads) {
+    start();
+  }
+  thread_pool(const thread_pool&) = delete;
+  thread_pool(thread_pool&&) noexcept = delete;
+  ~thread_pool() { stop(); }
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +=========================================================================+
+  thread_pool& operator=(const thread_pool&) = delete;
+  thread_pool& operator=(thread_pool&&) noexcept = delete;
+  // +=========================================================================+
+  // | [>] start                                                    ( public ) |
+  // +=========================================================================+
+  void start() {
+    std::lock_guard lock(mtx_);
+    if (running_) return;
     running_ = true;
-    if (threads == 0) threads = 1;
-    for (size_t i = 0; i < threads; ++i) {
+    for (size_t i = 0; i < threads_; ++i) {
       workers_.emplace([this] {
         for (;;) {
           std::function<void()> task;
@@ -73,14 +89,6 @@ class thread_pool {
       });
     }
   }
-  thread_pool(const thread_pool&) = delete;
-  thread_pool(thread_pool&&) noexcept = delete;
-  ~thread_pool() { stop(); }
-  // +=========================================================================+
-  // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
-  thread_pool& operator=(const thread_pool&) = delete;
-  thread_pool& operator=(thread_pool&&) noexcept = delete;
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
@@ -121,6 +129,7 @@ class thread_pool {
   std::queue<std::function<void()>> tasks_;
   std::mutex mtx_;
   std::condition_variable cv_;
+  size_t threads_;
   bool running_ = false;
 };
 }  // namespace martianlabs::doba::common

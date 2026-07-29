@@ -172,24 +172,28 @@ server<RQty, RSty, DEty, TRty, ROty>
 ```
 
 Sus valores por defecto son `request`, `response`, `decoder`,
-`transport::server::tcpip` y `router`. `server` hereda de
-`ROty<RQty, RSty>`: `add_route` pertenece al router y `start` recibe el puerto.
+`transport::server::tcpip` y `router`. `server` almacena
+`ROty<RQty, RSty>` como dependencia interna: `add_route` pertenece al servidor
+y `start` recibe el puerto.
 Origin-form y absolute-form se enrutan; authority-form responde 501 y
 asterisk-form responde 200.
 
 El router registra rutas estáticas, parametrizadas y wildcard mediante
-`add_route(method, path, lambda)`. El handler recibe
+`add_route(method, path, lambda, policy)`, donde `policy` es opcional y por
+defecto `execution_policy::kSynchronous`. El handler recibe
 `std::shared_ptr<const RQty>` y `std::shared_ptr<RSty>` como sus dos primeros
 argumentos. El patrón parametrizado usa segmentos `:nombre`, por ejemplo
 `/users/:id`, y sus parámetros se declaran a continuación en la lambda. Se
 convierten en orden y soportan `std::string`, `bool`, tipos integrales y tipos
 de punto flotante.
 
-`match_route` evalúa primero las rutas estáticas y después las parametrizadas;
-una coincidencia estática tiene prioridad. Devuelve `kMatched`, `kNotFound` o
-`kMethodNotAllowed`; `server` traduce los dos últimos a 404 y 405,
-respectivamente. No documentar políticas de ejecución por ruta: la API actual
-no recibe ese parámetro.
+`match` recibe también `on_send`, evalúa primero las rutas estáticas y después
+las parametrizadas, y da prioridad a una coincidencia estática. Una ruta
+síncrona ejecuta su handler y llama a `on_send` dentro del router. Una ruta
+asíncrona se encola en el pool interno del router y llama a `on_send` al
+completar. Devuelve `kMatched`, `kNotFound` o `kMethodNotAllowed`; `server`
+traduce los dos últimos a 404 y 405, respectivamente. Al detenerse, `server`
+drena el router antes de detener el transporte.
 
 Los paths son sensibles a mayúsculas. Una ruta parametrizada con barra final
 solo coincide con un path que también la tenga. Un patrón que termina en `/*`
@@ -205,8 +209,16 @@ combinación con `*` se rechaza durante `add_route`.
 ## Transporte
 
 `transport/server/tcpip.h` selecciona `tcpip_windows.h` o `tcpip_linux.h` según
-la plataforma. Los dos backends deben seguir usando exclusivamente los tipos
-genéricos de protocolo y conservar el orden de respuestas pipelined.
+la plataforma. El backend Windows usa IOCP y es el backend de referencia
+actual. El backend Linux se rehacerá por completo; no documentar paridad ni
+garantías de comportamiento respecto a Windows.
+
+En Windows, cada request recibe un identificador de respuesta monótono. El
+`on_send` entregado al protocolo conserva el contexto mediante `shared_ptr`,
+encola la respuesta serializada con ese identificador y, cuando la completación
+llega desde otro hilo, arma el siguiente envío. El contexto solo envía la
+siguiente respuesta esperada, por lo que las respuestas de handlers asíncronos
+se entregan en el orden de las requests pipelined.
 
 No modificar la frontera protocolo/transporte para resolver una necesidad
 exclusiva de HTTP. Si un cambio requiere semántica HTTP, debe vivir en la capa

@@ -27,6 +27,8 @@
 
 #include <stdexcept>
 
+#include "common/execution_policy.h"
+#include "common/thread_pool.h"
 #include "protocol/http11/router_handler_parametrized.h"
 #include "protocol/http11/router_handler_static.h"
 #include "protocol/http11/router_types.h"
@@ -59,10 +61,20 @@ class router {
   router& operator=(const router&) = delete;
   router& operator=(router&&) noexcept = delete;
   // +=========================================================================+
-  // | [>] add_route                                                ( public ) |
+  // | [>] start                                                    ( public ) |
+  // +=========================================================================+
+  void start() { thread_pool_.start(); }
+  // +=========================================================================+
+  // | [>] stop                                                     ( public ) |
+  // +=========================================================================+
+  void stop() { thread_pool_.stop(); }
+  // +=========================================================================+
+  // | [>] add                                                      ( public ) |
   // +=========================================================================+
   template <router_handler_lambda Hty>
-  void add_route(std::string_view method, std::string_view route, Hty handler) {
+  void add(std::string_view method, std::string_view route, Hty handler,
+           common::execution_policy policy =
+               common::execution_policy::kSynchronous) {
     perform_checks<Hty>();
     const auto wildcard_position = route.find('*');
     const bool is_wildcard =
@@ -80,9 +92,9 @@ class router {
         router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
     if constexpr (signature::parameter_count == 0) {
       if (is_wildcard) {
-        add_wildcard_route(method, route, std::move(handler));
+        add_wildcard_route(method, route, std::move(handler), policy);
       } else {
-        add_static_route(method, route, std::move(handler));
+        add_static_route(method, route, std::move(handler), policy);
       }
       return;
     }
@@ -90,22 +102,32 @@ class router {
       throw std::invalid_argument(
           "The wildcard route handler cannot have typed parameters");
     }
-    add_parametrized_route(method, route, std::move(handler));
+    add_parametrized_route(method, route, std::move(handler), policy);
   }
   // +=========================================================================+
-  // | [>] match_route                                              ( public ) |
+  // | [>] match                                                    ( public ) |
   // +=========================================================================+
+  template <typename FNty>
   [[nodiscard]]
-  router_match_result match_route(std::string_view method,
-                                  std::string_view path,
-                                  std::shared_ptr<const RQty> req,
-                                  std::shared_ptr<RSty> res) {
+  router_match_result match(std::string_view method, std::string_view path,
+                            std::shared_ptr<const RQty> req,
+                            std::shared_ptr<RSty> res, const FNty& on_send) {
     // Let's check if we have a [static] route match for this method
     for (const auto& [static_method, handlers] : h_static_) {
       if (static_method != method) continue;
       for (const auto& handler_data : handlers) {
         if (handler_data.path == path) {
-          handler_data.handler(req, res);
+          if (handler_data.policy == common::execution_policy::kSynchronous) {
+            handler_data.handler(req, res);
+            on_send(res);
+          } else {
+            thread_pool_.enqueue([handler = handler_data.handler,
+                                  req = std::move(req), res = std::move(res),
+                                  on_send] {
+              handler(req, res);
+              on_send(res);
+            });
+          }
           return router_match_result::kMatched;
         }
       }
@@ -116,9 +138,19 @@ class router {
       for (const auto& handler_data : handlers) {
         route_parameters parameters;
         if (helpers::get_parameters(handler_data.path, path, parameters)) {
-          if (handler_data.handler->invoke(req, res, parameters)) {
+          if (handler_data.policy == common::execution_policy::kSynchronous) {
+            if (!handler_data.handler->invoke(req, res, parameters)) continue;
+            on_send(res);
             return router_match_result::kMatched;
           }
+          if (!handler_data.handler->matches(parameters)) continue;
+          thread_pool_.enqueue([handler = handler_data.handler,
+                                parameters = std::move(parameters),
+                                req = std::move(req), res = std::move(res),
+                                on_send] {
+            if (handler->invoke(req, res, parameters)) on_send(res);
+          });
+          return router_match_result::kMatched;
         }
       }
     }
@@ -127,7 +159,17 @@ class router {
       if (wildcard_method != method) continue;
       for (const auto& handler_data : handlers) {
         if (matches_wildcard_route(handler_data.path, path)) {
-          handler_data.handler(req, res);
+          if (handler_data.policy == common::execution_policy::kSynchronous) {
+            handler_data.handler(req, res);
+            on_send(res);
+          } else {
+            thread_pool_.enqueue([handler = handler_data.handler,
+                                  req = std::move(req), res = std::move(res),
+                                  on_send] {
+              handler(req, res);
+              on_send(res);
+            });
+          }
           return router_match_result::kMatched;
         }
       }
@@ -182,10 +224,12 @@ class router {
   struct static_handler_data {
     std::string path;
     router_handler_static<RQty, RSty> handler;
+    common::execution_policy policy;
   };
   struct parametrized_handler_data {
     std::string path;
     std::shared_ptr<router_handler_parametrized_base<RQty, RSty>> handler;
+    common::execution_policy policy;
   };
   using static_handler_pair =
       std::pair<std::string, std::vector<static_handler_data>>;
@@ -198,9 +242,10 @@ class router {
   // +=========================================================================+
   template <router_handler_lambda Hty>
   void add_static_route(std::string_view method, std::string_view route,
-                        Hty handler) {
+                        Hty handler, common::execution_policy policy) {
     router_handler_static<RQty, RSty> static_handler(std::move(handler));
-    static_handler_data data{std::string(route), std::move(static_handler)};
+    static_handler_data data{std::string(route), std::move(static_handler),
+                             policy};
     for (auto& [static_method, handlers] : h_static_) {
       if (static_method == method) {
         handlers.push_back(std::move(data));
@@ -214,14 +259,16 @@ class router {
   // +=========================================================================+
   template <router_handler_lambda Hty>
   void add_parametrized_route(std::string_view method, std::string_view route,
-                              Hty handler) {
+                              Hty handler, common::execution_policy policy) {
     using signature =
         router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
     auto handler_parametrized =
         signature::template make_parametrized<RQty, RSty>(std::move(handler));
     parametrized_handler_data data{
-        std::string(route), std::make_shared<decltype(handler_parametrized)>(
-                                std::move(handler_parametrized))};
+        std::string(route),
+        std::make_shared<decltype(handler_parametrized)>(
+            std::move(handler_parametrized)),
+        policy};
     for (auto& [param_method, handlers] : h_parametrized_) {
       if (param_method == method) {
         handlers.push_back(std::move(data));
@@ -235,9 +282,10 @@ class router {
   // +=========================================================================+
   template <router_handler_lambda Hty>
   void add_wildcard_route(std::string_view method, std::string_view route,
-                          Hty handler) {
+                          Hty handler, common::execution_policy policy) {
     router_handler_static<RQty, RSty> static_handler(std::move(handler));
-    static_handler_data data{std::string(route), std::move(static_handler)};
+    static_handler_data data{std::string(route), std::move(static_handler),
+                             policy};
     for (auto& [wildcard_method, handlers] : h_wildcard_) {
       if (wildcard_method == method) {
         handlers.push_back(std::move(data));
@@ -277,6 +325,7 @@ class router {
   std::vector<static_handler_pair> h_static_;
   std::vector<parametrized_handler_pair> h_parametrized_;
   std::vector<wildcard_handler_pair> h_wildcard_;
+  common::thread_pool thread_pool_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 
