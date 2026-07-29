@@ -90,7 +90,7 @@ struct deserialization_result {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                                ( public ) |
   // +=========================================================================+
-  deserialization_status code = deserialization_status::kInvalidSourBce;
+  deserialization_status code = deserialization_status::kInvalidSource;
   std::shared_ptr<RQty> request = nullptr;
   channel_intent channel = channel_intent::kKeep;
 };

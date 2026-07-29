@@ -138,11 +138,14 @@ struct overlapped_stop : overlapped_base {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty,
           template <typename, typename> class DEty>
-struct context {
+struct context
+    : public std::enable_shared_from_this<context<RQty, RSty, DEty>> {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  context(SOCKET in_socket) : socket{in_socket} {}
+  context(SOCKET in_socket,
+          types::on_client_disconnected_delegate on_disconnection)
+      : socket{in_socket}, on_disconnection_{on_disconnection} {}
   context(const context&) = delete;
   context(context&&) noexcept = delete;
   ~context() = default;
@@ -152,9 +155,185 @@ struct context {
   context& operator=(const context&) = delete;
   context& operator=(context&&) noexcept = delete;
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( private ) |
+  // | [>] accumulate                                               ( public ) |
+  // +=========================================================================+
+  std::size_t accumulate(std::size_t bytes_received) {
+    return decoder.accumulate(ovr_wsa.buf, bytes_received);
+  }
+  // +=========================================================================+
+  // | [>] deserialize                                              ( public ) |
+  // +=========================================================================+
+  protocol::deserialization_result<RQty> deserialize() {
+    return decoder.deserialize();
+  }
+  // +=========================================================================+
+  // | [>] get_next_response_id                                     ( public ) |
+  // +=========================================================================+
+  uint64_t get_next_response_id() { return next_response_id++; }
+  // +=========================================================================+
+  // | [>] add_response_to_queue                                    ( public ) |
+  // +=========================================================================+
+  void add_response_to_queue(
+      std::unique_ptr<protocol::serialization_result> response,
+      uint64_t response_id, bool close_this_context_after_sending = false) {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex);
+    if (!response || closing || close_after_sending) {
+      // If the response is null, the context is closing, or we already need to
+      // close after sending, we should not add the response to the queue.
+      return;
+    }
+    response_data rdata{response_id, std::move(response)};
+    // We need to keep the responses in order!
+    auto itr = responses.begin();
+    while (itr != responses.end()) {
+      if (itr->id > rdata.id) {
+        // Insert the new response before the current one to maintain order.
+        responses.insert(itr, std::move(rdata));
+        return;
+      }
+      itr++;
+    }
+    // If we reach this point, it means the new response has the highest ID and
+    // should be added at the end.
+    responses.emplace_back(std::move(rdata));
+    close_after_sending = close_this_context_after_sending;
+  }
+  // +=========================================================================+
+  // | [>] send_error_and_mark_for_closing                          ( public ) |
+  // +=========================================================================+
+  void send_error_and_mark_for_closing(std::shared_ptr<RSty> error_response) {
+    if (!error_response) {
+      // If the response is null, we should mark the context for closing without
+      // sending any error response.
+      mark_context_for_closing();
+      return;
+    }
+    add_response_to_queue(std::move(error_response->serialize()), true);
+    arm_next_send_operation();
+  }
+  // +=========================================================================+
+  // | [>] mark_context_for_closing                                 ( public ) |
+  // +=========================================================================+
+  void mark_context_for_closing() {
+    // Let's prepare this context for closing!
+    bool expected = false;
+    if (closing.compare_exchange_strong(expected, true)) {
+      if (socket != INVALID_SOCKET) {
+        closesocket(socket);
+      }
+      try {
+        // Let's call user's callback to notify for disconnection!
+        on_disconnection_();
+      } catch (const std::exception& ex) {
+        // [to-do] -> add support for this!
+      } catch (...) {
+        // [to-do] -> add support for this!
+      }
+    }
+  }
+  // +=========================================================================+
+  // | [>] check_sending_buffer                                     ( public ) |
+  // +=========================================================================+
+  bool check_sending_buffer(std::size_t bytes_sent) {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex);
+    sending_buffer.erase(0, bytes_sent);
+    sending = false;
+    if (close_after_sending && sending_buffer.empty() && responses.empty()) {
+      // If we need to close the channel after sending and there is nothing
+      // left to send, we should mark the context for closing.
+      mark_context_for_closing();
+      return false;
+    }
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] arm_next_receive_operation                               ( public ) |
+  // +=========================================================================+
+  void arm_next_receive_operation() {
+    if (!receive()) mark_context_for_closing();
+  }
+  // +=========================================================================+
+  // | [>] arm_next_send_operation                                  ( public ) |
+  // +=========================================================================+
+  void arm_next_send_operation() {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex);
+    if (sending) return;
+    auto itr = responses.begin();
+    while (itr != responses.end()) {
+      if (itr->id != expected_response_id) {
+        /*
+        pepe
+        */
+
+        /*
+        necesitamos añadir el soporte para cuando una response no esta
+        en orden, es decir, cuando el id de la response no es el esperado. Esto
+        puede ocurrir si el usuario envia responses fuera de orden. En este
+        caso, debemos decidir si queremos esperar a que llegue la response con
+        el id esperado o si queremos cerrar la conexion. Por ahora, vamos a
+        imprimir un mensaje de error y cerrar la conexion.
+        */
+
+        /*
+        pepe fin
+        */
+
+        break;
+      }
+      sending_buffer.append(itr->response->prefix);
+      expected_response_id++;
+      itr = responses.erase(itr);
+    }
+    if (sending_buffer.empty()) {
+      // Let's return if there is nothing to send, we will wait for the next
+      // response to be added to the queue.
+      return;
+    }
+    sending = send();
+    if (!sending) {
+      // Let's mark the context for closing if we failed to send the data.
+      mark_context_for_closing();
+    }
+  }
+  // +=========================================================================+
+  // | [>] receive                                                  ( public ) |
+  // +=========================================================================+
+  bool receive() {
+    DWORD f = 0, r = 0;
+    overlapped_receive<RQty, RSty, DEty>* ovr =
+        new overlapped_receive<RQty, RSty, DEty>(this->shared_from_this());
+    ovr_wsa.buf = ovr_buf;
+    ovr_wsa.len = kReceiveBufferSz;
+    int res = WSARecv(socket, &ovr_wsa, 1, &r, &f, ovr, 0);
+    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      delete ovr;
+      return false;
+    }
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] send                                                    ( private ) |
+  // +=========================================================================+
+  bool send() {
+    DWORD f = 0, snt = 0;
+    overlapped_send<RQty, RSty, DEty>* ovs =
+        new overlapped_send<RQty, RSty, DEty>(this->shared_from_this());
+    ovs_wsa.buf = sending_buffer.data();
+    ovs_wsa.len = sending_buffer.size();
+    int res = WSASend(socket, &ovs_wsa, 1, &snt, f, ovs, 0);
+    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      delete ovs;
+      return false;
+    }
+    return true;
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
   // +=========================================================================+
   // [common] section!
+  types::on_client_disconnected_delegate on_disconnection_;
   std::atomic<bool> closing{false};
   SOCKET socket{INVALID_SOCKET};
   // [decoder] section!
@@ -201,13 +380,6 @@ class tcpip {
   // +=========================================================================+
   tcpip& operator=(const tcpip&) = delete;
   tcpip& operator=(tcpip&&) noexcept = delete;
-  // +=========================================================================+
-  // | [>] PROPERTIEs                                               ( public ) |
-  // +=========================================================================+
-  types::on_request_delegate<RQty, RSty> on_request;
-  types::on_bad_request_delegate<RSty> on_bad_request;
-  types::on_client_connected_delegate on_connection;
-  types::on_client_disconnected_delegate on_disconnection;
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
   // +=========================================================================+
@@ -257,9 +429,33 @@ class tcpip {
     io_h_ = nullptr;
   }
   // +=========================================================================+
-  // | [>] is_running                                               ( public ) |
+  // | [>] set_on_request                                           ( public ) |
   // +=========================================================================+
-  [[nodiscard]] bool is_running() const { return io_h_ != nullptr; }
+  template <typename FNty>
+  void set_on_request(FNty&& fn) {
+    on_request_ = std::forward<FNty>(fn);
+  }
+  // +=========================================================================+
+  // | [>] set_on_bad_request                                       ( public ) |
+  // +=========================================================================+
+  template <typename FNty>
+  void set_on_bad_request(FNty&& fn) {
+    on_bad_request_ = std::forward<FNty>(fn);
+  }
+  // +=========================================================================+
+  // | [>] set_on_connection                                        ( public ) |
+  // +=========================================================================+
+  template <typename FNty>
+  void set_on_connection(FNty&& fn) {
+    on_connection_ = std::forward<FNty>(fn);
+  }
+  // +=========================================================================+
+  // | [>] set_on_disconnection                                     ( public ) |
+  // +=========================================================================+
+  template <typename FNty>
+  void set_on_disconnection(FNty&& fn) {
+    on_disconnection_ = std::forward<FNty>(fn);
+  }
 
  private:
   // +=========================================================================+
@@ -420,7 +616,8 @@ class tcpip {
       return;
     }
     std::shared_ptr<context<RQty, RSty, DEty>> ctx =
-        std::make_shared<context<RQty, RSty, DEty>>(ova->socket);
+        std::make_shared<context<RQty, RSty, DEty>>(ova->socket,
+                                                    on_disconnection_);
     ULONG_PTR key = reinterpret_cast<ULONG_PTR>(ctx.get());
     if (!CreateIoCompletionPort((HANDLE)ova->socket, io_h_, key, 0)) {
       // ((error)) -> Could not associate accepted socket to IOCP!
@@ -428,15 +625,15 @@ class tcpip {
       return;
     }
     // Let's arm next receive operation!
-    arm_next_receive_operation(ctx);
+    ctx->arm_next_receive_operation();
     // Let's call user's callback to notify for new connection!
     try {
-      on_connection();
+      on_connection_();
     } catch (const std::exception& ex) {
-      mark_context_for_closing(ctx);
+      ctx->mark_context_for_closing();
       return;
     } catch (...) {
-      mark_context_for_closing(ctx);
+      ctx->mark_context_for_closing();
       return;
     }
   }
@@ -457,15 +654,14 @@ class tcpip {
       // -----------------------------------------------------------------------
       // Let's try to accumulate the maximum number of received bytes!
       // -----------------------------------------------------------------------
-      bytes_added +=
-          ovr->ctx->decoder.accumulate(ovr->ctx->ovr_wsa.buf, bytes_received);
+      bytes_added += ovr->ctx->accumulate(bytes_received);
       // -----------------------------------------------------------------------
       // Let's try to deserialize some requests!
       // -----------------------------------------------------------------------
       protocol::deserialization_result<RQty> result;
       do {
         // Let's try to deserialize a request!
-        result = ovr->ctx->decoder.deserialize();
+        result = ovr->ctx->deserialize();
         // If the decoder needs more bytes, let's arm another receive operation!
         if (result.code == protocol::deserialization_status::kMoreBytesNeeded) {
           break;
@@ -474,12 +670,12 @@ class tcpip {
         // If the decoder failed to deserialize the request, then error!
         if (result.code == protocol::deserialization_status::kInvalidSource) {
           try {
-            on_bad_request("Invalid source deserialization content!", res);
-            send_error_and_mark_context_for_closing(ovr->ctx, res);
+            on_bad_request_("Invalid source deserialization content!", res);
+            ovr->ctx->send_error_and_mark_for_closing(res);
           } catch (const std::exception&) {
-            mark_context_for_closing(ovr->ctx);
+            ovr->ctx->mark_context_for_closing();
           } catch (...) {
-            mark_context_for_closing(ovr->ctx);
+            ovr->ctx->mark_context_for_closing();
           }
           return;
         }
@@ -487,37 +683,46 @@ class tcpip {
         if (result.request == nullptr) {
           // In this case we'll mark this context as 'closing'..
           try {
-            on_bad_request("Inconsistent deserialization status!", res);
-            send_error_and_mark_context_for_closing(ovr->ctx, res);
+            on_bad_request_("Inconsistent deserialization status!", res);
+            ovr->ctx->send_error_and_mark_for_closing(res);
           } catch (const std::exception&) {
-            mark_context_for_closing(ovr->ctx);
+            ovr->ctx->mark_context_for_closing();
           } catch (...) {
-            mark_context_for_closing(ovr->ctx);
+            ovr->ctx->mark_context_for_closing();
           }
           return;
         }
         // Happy path: allocate response only when deserialization succeeded.
         try {
           // Let's call user handler!
-          on_request(result.request, res, [this, ctx = ovr->ctx](auto res) {
-            add_response_to_queue(ctx, std::move(res->serialize()));
+          std::thread::id tid = std::this_thread::get_id();
+          uint64_t id = ovr->ctx->get_next_response_id();
+          on_request_(result.request, res, [ctx = ovr->ctx, id, tid](auto res) {
+            ctx->add_response_to_queue(std::move(res->serialize()), id);
+            if (std::this_thread::get_id() != tid) {
+              // Let's arm next send operation only if we are not in the same
+              // thread as the worker (delayed operation)!
+              ctx->arm_next_send_operation();
+            }
           });
         } catch (const std::exception& ex) {
-          mark_context_for_closing(ovr->ctx);
+          ovr->ctx->mark_context_for_closing();
           return;
         } catch (...) {
-          mark_context_for_closing(ovr->ctx);
+          ovr->ctx->mark_context_for_closing();
           return;
         }
       } while (result.code == protocol::deserialization_status::kSucceeded);
     } while (bytes_added < bytes_received);
-    // If we reach this point is because we need more bytes to continue!
-    // Let's arm next receive operation (if not closing)!
-    if (!close_channel) {
-      arm_next_receive_operation(ovr->ctx);
+    // Let's check if we need to close the channel!
+    if (close_channel) {
+      ovr->ctx->mark_context_for_closing();
+      return;
     }
-    // Let's arm next send operation (for any pending response to be sent)!
-    arm_next_send_operation(ovr->ctx);
+    // Let's arm next receive op (for any pending request to be received)!
+    ovr->ctx->arm_next_receive_operation();
+    // Let's arm next send op (for any pending response to be sent)!
+    ovr->ctx->arm_next_send_operation();
   }
   // +=========================================================================+
   // | [>] handle_send                                             ( private ) |
@@ -525,19 +730,8 @@ class tcpip {
   void handle_send(overlapped_base* ovb, DWORD bytes_sent) {
     overlapped_send<RQty, RSty, DEty>* ovs =
         reinterpret_cast<overlapped_send<RQty, RSty, DEty>*>(ovb);
-    {
-      std::lock_guard<std::mutex> sending_lock(ovs->ctx->sending_mutex);
-      ovs->ctx->sending_buffer.erase(0, bytes_sent);
-      ovs->ctx->sending = false;
-      if (ovs->ctx->close_after_sending && ovs->ctx->sending_buffer.empty() &&
-          ovs->ctx->responses.empty()) {
-        // If we need to close the channel after sending and there is nothing
-        // left to send, we should mark the context for closing.
-        mark_context_for_closing(ovs->ctx);
-        return;
-      }
-    }
-    arm_next_send_operation(ovs->ctx);
+    if (!ovs->ctx->check_sending_buffer(bytes_sent)) return;
+    ovs->ctx->arm_next_send_operation();
   }
   // +=========================================================================+
   // | [>] handle_stop                                             ( private ) |
@@ -553,13 +747,13 @@ class tcpip {
         break;
       case io_type::kReceive:
         // Let's just mark the context for closing!
-        mark_context_for_closing(
-            reinterpret_cast<overlapped_receive<RQty, RSty, DEty>*>(ovb)->ctx);
+        reinterpret_cast<overlapped_receive<RQty, RSty, DEty>*>(ovb)
+            ->ctx->mark_context_for_closing();
         break;
       case io_type::kSend:
         // Let's just mark the context for closing!
-        mark_context_for_closing(
-            reinterpret_cast<overlapped_send<RQty, RSty, DEty>*>(ovb)->ctx);
+        reinterpret_cast<overlapped_send<RQty, RSty, DEty>*>(ovb)
+            ->ctx->mark_context_for_closing();
         break;
       case io_type::kStop:
         // Let's just ignore it and continue stopping the worker!
@@ -586,129 +780,6 @@ class tcpip {
     }
   }
   // +=========================================================================+
-  // | [>] arm_next_receive_operation                              ( private ) |
-  // +=========================================================================+
-  void arm_next_receive_operation(
-      std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    if (!receive(ctx)) {
-      // If we cannot arm the next receive operation, mark context for closing.
-      mark_context_for_closing(ctx);
-    }
-  }
-  // +=========================================================================+
-  // | [>] arm_next_send_operation                                 ( private ) |
-  // +=========================================================================+
-  void arm_next_send_operation(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-    if (ctx->sending) {
-      // If we are already sending or if we need to close after sending, we
-      // should not arm the next send operation.
-      return;
-    }
-    auto itr = ctx->responses.begin();
-    while (itr != ctx->responses.end()) {
-      if (itr->id != ctx->expected_response_id) {
-        /*
-        pepe
-        */
-
-        /*
-        necesitamos añadir el soporte para cuando una response no esta
-        en orden, es decir, cuando el id de la response no es el esperado. Esto
-        puede ocurrir si el usuario envia responses fuera de orden. En este
-        caso, debemos decidir si queremos esperar a que llegue la response con
-        el id esperado o si queremos cerrar la conexion. Por ahora, vamos a
-        imprimir un mensaje de error y cerrar la conexion.
-        */
-
-        /*
-        pepe fin
-        */
-
-        break;
-      }
-      ctx->sending_buffer.append(itr->response->prefix);
-      ctx->expected_response_id++;
-      itr = ctx->responses.erase(itr);
-    }
-    if (ctx->sending_buffer.empty()) {
-      // If there is nothing to send, we should check if we need to close the
-      // context after sending.
-      return;
-    }
-    ctx->sending = send(ctx);
-    if (!ctx->sending) {
-      // If we cannot arm the next send operation, we should mark the context
-      // for closing.
-      mark_context_for_closing(ctx);
-    }
-  }
-  // +=========================================================================+
-  // | [>] mark_context_for_closing                                ( private ) |
-  // +=========================================================================+
-  void mark_context_for_closing(
-      std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    // Let's prepare this context for closing!
-    bool expected = false;
-    if (ctx->closing.compare_exchange_strong(expected, true)) {
-      if (ctx->socket != INVALID_SOCKET) {
-        closesocket(ctx->socket);
-      }
-      try {
-        // Let's call user's callback to notify for disconnection!
-        on_disconnection();
-      } catch (const std::exception& ex) {
-        // [to-do] -> add support for this!
-      } catch (...) {
-        // [to-do] -> add support for this!
-      }
-    }
-  }
-  // +=========================================================================+
-  // | [>] send_error_and_mark_context_for_closing                 ( private ) |
-  // +=========================================================================+
-  void send_error_and_mark_context_for_closing(
-      std::shared_ptr<context<RQty, RSty, DEty>> ctx,
-      std::shared_ptr<RSty> error_response) {
-    if (!error_response) {
-      // If the response is null, we should mark the context for closing without
-      // sending any error response.
-      mark_context_for_closing(ctx);
-      return;
-    }
-    add_response_to_queue(ctx, std::move(error_response->serialize()), true);
-    arm_next_send_operation(ctx);
-  }
-  // +=========================================================================+
-  // | [>] add_response_to_queue                                   ( private ) |
-  // +=========================================================================+
-  void add_response_to_queue(
-      std::shared_ptr<context<RQty, RSty, DEty>> ctx,
-      std::unique_ptr<protocol::serialization_result> response,
-      bool close_after_sending = false) {
-    std::lock_guard<std::mutex> sending_lock(ctx->sending_mutex);
-    if (!response || ctx->closing || ctx->close_after_sending) {
-      // If the response is null, the context is closing, or we already need to
-      // close after sending, we should not add the response to the queue.
-      return;
-    }
-    response_data rdata{ctx->next_response_id++, std::move(response)};
-    // We need to keep the responses in order!
-    auto itr = ctx->responses.begin();
-    while (itr != ctx->responses.end()) {
-      if (itr->id > rdata.id) {
-        // Insert the new response before the current one to maintain order.
-        ctx->responses.insert(itr, std::move(rdata));
-        return;
-      }
-      itr++;
-    }
-    // If we reach this point, it means the new response has the highest ID and
-    // should be added at the end.
-    ctx->responses.emplace_back(std::move(rdata));
-    ctx->close_after_sending = close_after_sending;
-  }
-  // +=========================================================================+
   // | [>] post_accept                                             ( private ) |
   // +=========================================================================+
   bool post_accept() {
@@ -731,36 +802,6 @@ class tcpip {
     return true;
   }
   // +=========================================================================+
-  // | [>] receive                                                 ( private ) |
-  // +=========================================================================+
-  bool receive(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    DWORD f = 0, r = 0;
-    auto ovr = new overlapped_receive<RQty, RSty, DEty>(ctx);
-    ctx->ovr_wsa.buf = ctx->ovr_buf;
-    ctx->ovr_wsa.len = kReceiveBufferSz;
-    int res = WSARecv(ctx->socket, &ctx->ovr_wsa, 1, &r, &f, ovr, 0);
-    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-      delete ovr;
-      return false;
-    }
-    return true;
-  }
-  // +=========================================================================+
-  // | [>] send                                                    ( private ) |
-  // +=========================================================================+
-  bool send(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    DWORD f = 0, snt = 0;
-    auto ovs = new overlapped_send<RQty, RSty, DEty>(ctx);
-    ctx->ovs_wsa.buf = ctx->sending_buffer.data();
-    ctx->ovs_wsa.len = ctx->sending_buffer.size();
-    int res = WSASend(ctx->socket, &ctx->ovs_wsa, 1, &snt, f, ovs, 0);
-    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-      delete ovs;
-      return false;
-    }
-    return true;
-  }
-  // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
   // +=========================================================================+
   HANDLE io_h_ = nullptr;
@@ -768,6 +809,10 @@ class tcpip {
   LPFN_ACCEPTEX accept_ex_ = nullptr;
   std::size_t accept_depth_ = 0;
   std::vector<std::jthread> workers_;
+  types::on_request_delegate<RQty, RSty> on_request_;
+  types::on_bad_request_delegate<RSty> on_bad_request_;
+  types::on_client_connected_delegate on_connection_;
+  types::on_client_disconnected_delegate on_disconnection_;
 };
 }  // namespace martianlabs::doba::transport::server
 

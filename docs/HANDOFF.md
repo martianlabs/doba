@@ -212,6 +212,24 @@ No modificar la frontera protocolo/transporte para resolver una necesidad
 exclusiva de HTTP. Si un cambio requiere semántica HTTP, debe vivir en la capa
 HTTP o expresarse en el contrato genérico ya existente.
 
+## Pendientes técnicos conocidos
+
+- [ ] Añadir a `response` bodies de salida externos/serializers y establecer
+  el framing HTTP correcto (`Content-Length` o `Transfer-Encoding: chunked`).
+
+- [ ] Hacer que los transportes Windows y Linux consuman
+  `serialization_result::source` después de `prefix`.
+
+- [ ] Hacer que el backend Windows respete `deserialization_result::channel`,
+  especialmente `channel_intent::kClose`.
+
+- [ ] Definir un contrato explícito para transferir el canal cuando un
+  protocolo devuelva `channel_intent::kUpgrade`.
+
+
+- [ ] Definir y auditar el contrato de ciclo de vida de contextos y callbacks
+  de respuesta tardios en los transportes.
+
 ## Estado de pruebas y documentación
 
 El único subproyecto de prueba configurado es `test/ut-001-main`. Su ejecutable

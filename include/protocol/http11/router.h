@@ -59,24 +59,11 @@ class router {
   router& operator=(const router&) = delete;
   router& operator=(router&&) noexcept = delete;
   // +=========================================================================+
-  // | [>] add [lambda-handlers]                                     ( public )
-  // |
+  // | [>] add_route                                                ( public ) |
   // +=========================================================================+
   template <router_handler_lambda Hty>
   void add_route(std::string_view method, std::string_view route, Hty handler) {
-    using signature =
-        router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
-    // Let's ensure that the handler has the correct signature!
-    static_assert(std::same_as<typename signature::return_type, void>,
-                  "The route handler must return void");
-    static_assert(
-        std::same_as<std::decay_t<typename signature::request_type>,
-                     std::shared_ptr<const RQty>>,
-        "The first route handler argument must be std::shared_ptr<const RQty>");
-    static_assert(
-        std::same_as<std::decay_t<typename signature::response_type>,
-                     std::shared_ptr<RSty>>,
-        "The second route handler argument must be std::shared_ptr<RSty>");
+    perform_checks<Hty>();
     const auto wildcard_position = route.find('*');
     const bool is_wildcard =
         wildcard_position != std::string_view::npos &&
@@ -87,34 +74,23 @@ class router {
       throw std::invalid_argument(
           "The wildcard must be the final route segment");
     }
-    // Let's check if the handler has parameters or not, and add it to the
-    // appropriate list of handlers
+    // Let's check (at compile time) if the handler has parameters or not, and
+    // add it to the appropriate list of handlers
+    using signature =
+        router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
     if constexpr (signature::parameter_count == 0) {
-      router_handler_static<RQty, RSty> static_handler(std::move(handler));
       if (is_wildcard) {
-        add_wildcard_route(method, route, std::move(static_handler));
+        add_wildcard_route(method, route, std::move(handler));
       } else {
-        add_route(method, route, std::move(static_handler));
+        add_static_route(method, route, std::move(handler));
       }
-    } else {
-      if (is_wildcard) {
-        throw std::invalid_argument(
-            "The wildcard route handler cannot have typed parameters");
-      }
-      auto handler_parametrized =
-          signature::template make_parametrized<RQty, RSty>(std::move(handler));
-      parametrized_handler_data data{
-          std::string(route), std::make_shared<decltype(handler_parametrized)>(
-                                  std::move(handler_parametrized))};
-      for (auto& [param_method, handlers] : parametrized_handlers_) {
-        if (param_method == method) {
-          handlers.push_back(std::move(data));
-          return;
-        }
-      }
-      parametrized_handlers_.push_back(
-          {std::string(method), {std::move(data)}});
+      return;
     }
+    if (is_wildcard) {
+      throw std::invalid_argument(
+          "The wildcard route handler cannot have typed parameters");
+    }
+    add_parametrized_route(method, route, std::move(handler));
   }
   // +=========================================================================+
   // | [>] match_route                                              ( public ) |
@@ -124,10 +100,8 @@ class router {
                                   std::string_view path,
                                   std::shared_ptr<const RQty> req,
                                   std::shared_ptr<RSty> res) {
-    // -------------------------------------------------------------------------
-    // Let's first check if we have a [static] route match for this method
-    // -------------------------------------------------------------------------
-    for (const auto& [static_method, handlers] : static_handlers_) {
+    // Let's check if we have a [static] route match for this method
+    for (const auto& [static_method, handlers] : h_static_) {
       if (static_method != method) continue;
       for (const auto& handler_data : handlers) {
         if (handler_data.path == path) {
@@ -136,11 +110,8 @@ class router {
         }
       }
     }
-    // -------------------------------------------------------------------------
-    // Let's second check if we have a [parametrized] route match for this
-    // method
-    // -------------------------------------------------------------------------
-    for (const auto& [param_method, handlers] : parametrized_handlers_) {
+    // Let's check if we have a [parametrized] route match for this method
+    for (const auto& [param_method, handlers] : h_parametrized_) {
       if (param_method != method) continue;
       for (const auto& handler_data : handlers) {
         route_parameters parameters;
@@ -151,10 +122,8 @@ class router {
         }
       }
     }
-    // -------------------------------------------------------------------------
-    // Let's third check if we have a [wildcard] route match for this method
-    // -------------------------------------------------------------------------
-    for (const auto& [wildcard_method, handlers] : wildcard_handlers_) {
+    // Let's check if we have a [wildcard] route match for this method
+    for (const auto& [wildcard_method, handlers] : h_wildcard_) {
       if (wildcard_method != method) continue;
       for (const auto& handler_data : handlers) {
         if (matches_wildcard_route(handler_data.path, path)) {
@@ -163,9 +132,7 @@ class router {
         }
       }
     }
-    // -------------------------------------------------------------------------
-    // Build Allow only after a route match for this method has failed
-    // -------------------------------------------------------------------------
+    // Let's build [allow] only after a route match for this method has failed
     std::vector<std::string_view> allowed_methods;
     auto add_allowed_method =
         [&allowed_methods](std::string_view allowed_method) {
@@ -174,13 +141,13 @@ class router {
           }
           allowed_methods.push_back(allowed_method);
         };
-    for (const auto& [static_method, handlers] : static_handlers_) {
+    for (const auto& [static_method, handlers] : h_static_) {
       if (static_method == method) continue;
       for (const auto& handler_data : handlers) {
         if (handler_data.path == path) add_allowed_method(static_method);
       }
     }
-    for (const auto& [param_method, handlers] : parametrized_handlers_) {
+    for (const auto& [param_method, handlers] : h_parametrized_) {
       if (param_method == method) continue;
       for (const auto& handler_data : handlers) {
         route_parameters parameters;
@@ -190,7 +157,7 @@ class router {
         }
       }
     }
-    for (const auto& [wildcard_method, handlers] : wildcard_handlers_) {
+    for (const auto& [wildcard_method, handlers] : h_wildcard_) {
       if (wildcard_method == method) continue;
       for (const auto& handler_data : handlers) {
         if (matches_wildcard_route(handler_data.path, path)) {
@@ -227,46 +194,89 @@ class router {
   using parametrized_handler_pair =
       std::pair<std::string, std::vector<parametrized_handler_data>>;
   // +=========================================================================+
-  // | [>] add [static-handlers]                                   ( private ) |
+  // | [>] add_static_route                                        ( private ) |
   // +=========================================================================+
-  void add_route(std::string_view method, std::string_view route,
-                 router_handler_static<RQty, RSty> handler) {
-    static_handler_data data{std::string(route), std::move(handler)};
-    for (auto& [static_method, handlers] : static_handlers_) {
+  template <router_handler_lambda Hty>
+  void add_static_route(std::string_view method, std::string_view route,
+                        Hty handler) {
+    router_handler_static<RQty, RSty> static_handler(std::move(handler));
+    static_handler_data data{std::string(route), std::move(static_handler)};
+    for (auto& [static_method, handlers] : h_static_) {
       if (static_method == method) {
         handlers.push_back(std::move(data));
         return;
       }
     }
-    static_handlers_.push_back({std::string(method), {std::move(data)}});
+    h_static_.push_back({std::string(method), {std::move(data)}});
   }
   // +=========================================================================+
-  // | [>] add [wildcard-handlers]                                 ( private ) |
+  // | [>] add_parametrized_route                                  ( private ) |
   // +=========================================================================+
+  template <router_handler_lambda Hty>
+  void add_parametrized_route(std::string_view method, std::string_view route,
+                              Hty handler) {
+    using signature =
+        router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
+    auto handler_parametrized =
+        signature::template make_parametrized<RQty, RSty>(std::move(handler));
+    parametrized_handler_data data{
+        std::string(route), std::make_shared<decltype(handler_parametrized)>(
+                                std::move(handler_parametrized))};
+    for (auto& [param_method, handlers] : h_parametrized_) {
+      if (param_method == method) {
+        handlers.push_back(std::move(data));
+        return;
+      }
+    }
+    h_parametrized_.push_back({std::string(method), {std::move(data)}});
+  }
+  // +=========================================================================+
+  // | [>] add_wildcard_route                                      ( private ) |
+  // +=========================================================================+
+  template <router_handler_lambda Hty>
   void add_wildcard_route(std::string_view method, std::string_view route,
-                          router_handler_static<RQty, RSty> handler) {
-    static_handler_data data{std::string(route), std::move(handler)};
-    for (auto& [wildcard_method, handlers] : wildcard_handlers_) {
+                          Hty handler) {
+    router_handler_static<RQty, RSty> static_handler(std::move(handler));
+    static_handler_data data{std::string(route), std::move(static_handler)};
+    for (auto& [wildcard_method, handlers] : h_wildcard_) {
       if (wildcard_method == method) {
         handlers.push_back(std::move(data));
         return;
       }
     }
-    wildcard_handlers_.push_back({std::string(method), {std::move(data)}});
+    h_wildcard_.push_back({std::string(method), {std::move(data)}});
+  }
+  // +=========================================================================+
+  // | [>] perform_checks                                          ( private ) |
+  // +=========================================================================+
+  template <router_handler_lambda Hty>
+  void perform_checks() {
+    using signature =
+        router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
+    // Let's ensure that the handler has the correct signature!
+    static_assert(std::same_as<typename signature::return_type, void>,
+                  "The route handler must return void");
+    static_assert(
+        std::same_as<std::decay_t<typename signature::request_type>,
+                     std::shared_ptr<const RQty>>,
+        "The first route handler argument must be std::shared_ptr<const RQty>");
+    static_assert(
+        std::same_as<std::decay_t<typename signature::response_type>,
+                     std::shared_ptr<RSty>>,
+        "The second route handler argument must be std::shared_ptr<RSty>");
   }
   // +=========================================================================+
   // | [>] match [wildcard-routes]                                 ( private ) |
   // +=========================================================================+
-  static bool matches_wildcard_route(std::string_view route,
-                                     std::string_view path) {
-    return path.starts_with(route.substr(0, route.size() - 1));
+  static bool matches_wildcard_route(std::string_view ro, std::string_view pa) {
+    return pa.starts_with(ro.substr(0, ro.size() - 1));
   }
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
+  // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  std::vector<static_handler_pair> static_handlers_;
-  std::vector<parametrized_handler_pair> parametrized_handlers_;
-  std::vector<wildcard_handler_pair> wildcard_handlers_;
+  std::vector<static_handler_pair> h_static_;
+  std::vector<parametrized_handler_pair> h_parametrized_;
+  std::vector<wildcard_handler_pair> h_wildcard_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

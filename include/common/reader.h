@@ -98,7 +98,7 @@ class reader {
       if (borrowed_pos_ == borrowed_.size()) return 0;
       std::size_t bytes =
           std::min(output.size(), borrowed_.size() - borrowed_pos_);
-      std::memcpy(output.data(), borrowed_.data() + borrowed_pos_, bytes);
+      std::memmove(output.data(), borrowed_.data() + borrowed_pos_, bytes);
       borrowed_pos_ += bytes;
       return bytes;
     }

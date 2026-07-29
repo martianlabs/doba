@@ -300,9 +300,10 @@ class decoder {
           return arg.write(byte_span, *body_buffer_);
         },
         *body_writer_);
-    if (state.has_error) return deserialization_status::kInvalidSource;
-    std::memcpy(buffer_, buffer_ + state.consumed, off_ - state.consumed);
-    if (state.consumed > off_) return deserialization_status::kInvalidSource;
+    if (state.has_error || state.consumed > off_) {
+      return deserialization_status::kInvalidSource;
+    }
+    std::memmove(buffer_, buffer_ + state.consumed, off_ - state.consumed);
     off_ -= state.consumed;
     if (!state.complete) return deserialization_status::kMoreBytesNeeded;
     return dispatch(body_buffer_->release());
@@ -348,7 +349,7 @@ class decoder {
         query_parameters, host_host, host_port, host_type,
         target_authority_host, target_authority_port, target_authority_type);
     // Let's adjust the buffer to remove the bytes that were used!
-    std::memcpy(buffer_, buffer_ + bytes_used, off_ - bytes_used);
+    std::memmove(buffer_, buffer_ + bytes_used, off_ - bytes_used);
     off_ -= bytes_used;
   }
   // +=========================================================================+

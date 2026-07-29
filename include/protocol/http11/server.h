@@ -61,8 +61,21 @@ class server {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  server() {
-    transport_.on_request =
+  server() = default;
+  server(const server&) = delete;
+  server(server&&) noexcept = delete;
+  ~server() { stop(); }
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +=========================================================================+
+  server& operator=(const server&) = delete;
+  server& operator=(server&&) noexcept = delete;
+  // +=========================================================================+
+  // | [>] start                                                    ( public ) |
+  // +=========================================================================+
+  void start(const char port[]) {
+    std::lock_guard<std::mutex> lock(locked_mutex_);
+    transport_.set_on_request(
         [this](std::shared_ptr<const RQty> req, std::shared_ptr<RSty> res,
                transport::server::types::on_send_delegate<RSty> on_send) {
           switch (req->get_target()) {
@@ -109,27 +122,13 @@ class server {
               on_send(res);
               return;
           }
-        };
-    transport_.on_bad_request = [](std::string_view reason,
-                                   std::shared_ptr<RSty> res) {
-      res->bad_request_400().set_body(reason);
-    };
-    transport_.on_connection = [this]() { connections_++; };
-    transport_.on_disconnection = [this]() { connections_--; };
-  }
-  server(const server&) = delete;
-  server(server&&) noexcept = delete;
-  ~server() { stop(); }
-  // +=========================================================================+
-  // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
-  server& operator=(const server&) = delete;
-  server& operator=(server&&) noexcept = delete;
-  // +=========================================================================+
-  // | [>] start                                                    ( public ) |
-  // +=========================================================================+
-  void start(const char port[]) {
-    std::lock_guard<std::mutex> lock(locked_mutex_);
+        });
+    transport_.set_on_bad_request(
+        [](std::string_view reason, std::shared_ptr<RSty> res) {
+          res->bad_request_400().set_body(reason);
+        });
+    transport_.set_on_connection([this]() { connections_++; });
+    transport_.set_on_disconnection([this]() { connections_--; });
     transport_.start(port);
     locked_ = true;
   }

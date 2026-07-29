@@ -36,17 +36,10 @@ namespace martianlabs::doba::protocol::http11 {
 // | This section holds for common-usage macros.                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-#define SP
-#define CRLF \r\n
-#define STR_VALUE(x) #x
-#define CC_RAW(a, b) a##b
-#define CC_EXP(a, b) CC_RAW(a, b)
-#define EAS(x) STR_VALUE(x)
-#define HTTP_HEADER HTTP
-#define SLASH /
-#define ONE_DOT_ONE 1.1
-#define VERSION CC_EXP(HTTP_HEADER, CC_EXP(SLASH, ONE_DOT_ONE))
-#define SL(x) VERSION CC_RAW(SC_, x) CC_EXP(CC_RAW(RP_, x), CRLF)
+#define STR_VALUE_RAW(x) #x
+#define STR_VALUE(x) STR_VALUE_RAW(x)
+#define EAS(x) x
+#define SL(x) "HTTP/1.1 " STR_VALUE(SC_##x) " " STR_VALUE(RP_##x) "\r\n"
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] status_lines                                               ( struct ) |
