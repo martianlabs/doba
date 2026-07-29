@@ -209,9 +209,9 @@ combinación con `*` se rechaza durante `add_route`.
 ## Transporte
 
 `transport/server/tcpip.h` selecciona `tcpip_windows.h` o `tcpip_linux.h` según
-la plataforma. El backend Windows usa IOCP y es el backend de referencia
-actual. El backend Linux se rehacerá por completo; no documentar paridad ni
-garantías de comportamiento respecto a Windows.
+la plataforma. El backend Windows usa IOCP y el Linux usa EPOLL. Ambos
+mantienen el orden de respuestas pipelined mediante identificadores de
+respuesta monótonos.
 
 En Windows, cada request recibe un identificador de respuesta monótono. El
 `on_send` entregado al protocolo conserva el contexto mediante `shared_ptr`,
@@ -219,6 +219,15 @@ encola la respuesta serializada con ese identificador y, cuando la completación
 llega desde otro hilo, arma el siguiente envío. El contexto solo envía la
 siguiente respuesta esperada, por lo que las respuestas de handlers asíncronos
 se entregan en el orden de las requests pipelined.
+
+En Linux, cada worker posee su instancia EPOLL, su listener configurado con
+`SO_REUSEPORT` y todos los contextos aceptados por él. El camino síncrono
+deserializa, ejecuta el handler y envía en ese mismo worker. Una respuesta
+tardía conserva el contexto, se encola en su worker mediante `eventfd` y ese
+worker realiza el envío y cualquier operación EPOLL. No hay mutex ni lookup
+global en el despacho de eventos. Los contextos solo se destruyen desde su
+worker propietario; una respuesta tardía tras `stop()` descarta la notificación
+si el worker ya no existe.
 
 No modificar la frontera protocolo/transporte para resolver una necesidad
 exclusiva de HTTP. Si un cambio requiere semántica HTTP, debe vivir en la capa
@@ -239,8 +248,8 @@ HTTP o expresarse en el contrato genérico ya existente.
   protocolo devuelva `channel_intent::kUpgrade`.
 
 
-- [ ] Definir y auditar el contrato de ciclo de vida de contextos y callbacks
-  de respuesta tardios en los transportes.
+- [ ] Documentar el contrato de ciclo de vida para usuarios que consuman
+  directamente el transporte, fuera de `http11::server`.
 
 ## Estado de pruebas y documentación
 

@@ -72,7 +72,7 @@ template <typename RQty, typename RSty,
 struct epoll_registration;
 template <typename RQty, typename RSty,
           template <typename, typename> class DEty>
-void notify_worker(worker<RQty, RSty, DEty>* owner,
+void notify_worker(std::shared_ptr<worker<RQty, RSty, DEty>> owner,
                    std::shared_ptr<context<RQty, RSty, DEty>> ctx);
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -101,7 +101,7 @@ struct context {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  context(int in_socket, worker<RQty, RSty, DEty>* in_owner,
+  context(int in_socket, std::weak_ptr<worker<RQty, RSty, DEty>> in_owner,
           types::on_client_disconnected_delegate on_disconnection)
       : socket{in_socket},
         owner{in_owner},
@@ -253,7 +253,7 @@ struct context {
   // +=========================================================================+
   // | ATTRIBUTEs                                                   ( public ) |
   // +=========================================================================+
-  worker<RQty, RSty, DEty>* owner{nullptr};
+  std::weak_ptr<worker<RQty, RSty, DEty>> owner;
   epoll_registration<RQty, RSty, DEty>* registration{nullptr};
 
  private:
@@ -334,7 +334,8 @@ struct epoll_registration {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty,
           template <typename, typename> class DEty>
-struct worker {
+struct worker
+    : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
@@ -517,7 +518,7 @@ struct worker {
   void register_context(int socket) {
     std::shared_ptr<context<RQty, RSty, DEty>> ctx =
         std::make_shared<context<RQty, RSty, DEty>>(
-            socket, this, on_disconnection_);
+            socket, this->shared_from_this(), on_disconnection_);
     std::unique_ptr<epoll_registration<RQty, RSty, DEty>> registration =
         std::make_unique<epoll_registration<RQty, RSty, DEty>>(ctx);
     ctx->registration = registration.get();
@@ -634,7 +635,9 @@ struct worker {
                         }
                       }
                       if (std::this_thread::get_id() != tid) {
-                        notify_worker(ctx->owner, ctx);
+                        std::shared_ptr<worker<RQty, RSty, DEty>> owner =
+                            ctx->owner.lock();
+                        if (owner) notify_worker(std::move(owner), ctx);
                       }
                     });
       } catch (...) {
@@ -738,7 +741,7 @@ struct worker {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty,
           template <typename, typename> class DEty>
-void notify_worker(worker<RQty, RSty, DEty>* owner,
+void notify_worker(std::shared_ptr<worker<RQty, RSty, DEty>> owner,
                    std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
   owner->notify(std::move(ctx));
 }
@@ -780,8 +783,8 @@ class tcpip {
         std::max<std::size_t>(1, std::thread::hardware_concurrency());
     try {
       for (std::size_t i = 0; i < number_of_workers; i++) {
-        std::unique_ptr<worker<RQty, RSty, DEty>> entry =
-            std::make_unique<worker<RQty, RSty, DEty>>(
+        std::shared_ptr<worker<RQty, RSty, DEty>> entry =
+            std::make_shared<worker<RQty, RSty, DEty>>(
                 on_request_, on_bad_request_, on_connection_, on_disconnection_);
         entry->setup(port_number);
         workers_.emplace_back(std::move(entry));
@@ -849,7 +852,7 @@ class tcpip {
   // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
   // +=========================================================================+
-  std::vector<std::unique_ptr<worker<RQty, RSty, DEty>>> workers_;
+  std::vector<std::shared_ptr<worker<RQty, RSty, DEty>>> workers_;
   types::on_request_delegate<RQty, RSty> on_request_;
   types::on_bad_request_delegate<RSty> on_bad_request_;
   types::on_client_connected_delegate on_connection_;
