@@ -72,9 +72,7 @@ class thread_pool {
           {
             std::unique_lock lock(this->mtx_);
             cv_.wait(lock, [this] { return !running_ || !tasks_.empty(); });
-            if (!running_ && tasks_.empty()) {
-              return;
-            }
+            if (!running_ && tasks_.empty()) return;
             task = std::move(tasks_.front());
             tasks_.pop();
           }
@@ -98,12 +96,7 @@ class thread_pool {
       running_ = false;
     }
     cv_.notify_all();
-    while (!workers_.empty()) {
-      if (workers_.front().joinable()) {
-        workers_.front().join();
-      }
-      workers_.pop();
-    }
+    while (!workers_.empty()) workers_.pop();
   }
   // +=========================================================================+
   // | [>] enqueue                                                  ( public ) |
@@ -125,7 +118,7 @@ class thread_pool {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +=========================================================================+
-  std::queue<std::thread> workers_;
+  std::queue<std::jthread> workers_;
   std::queue<std::function<void()>> tasks_;
   std::mutex mtx_;
   std::condition_variable cv_;

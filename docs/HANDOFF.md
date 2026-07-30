@@ -226,8 +226,15 @@ deserializa, ejecuta el handler y envía en ese mismo worker. Una respuesta
 tardía conserva el contexto, se encola en su worker mediante `eventfd` y ese
 worker realiza el envío y cualquier operación EPOLL. No hay mutex ni lookup
 global en el despacho de eventos. Los contextos solo se destruyen desde su
-worker propietario; una respuesta tardía tras `stop()` descarta la notificación
-si el worker ya no existe.
+worker propietario; las inscripciones retiradas se conservan hasta completar
+el lote EPOLL que las referencia. Una respuesta tardía tras `stop()` descarta
+la notificación si el worker ya no acepta notificaciones.
+
+Cada `on_send` es de un solo uso: la primera llamada completa la respuesta y
+las posteriores se descartan. Al recibir EOF, Linux deja de leer y drena las
+respuestas ya completadas y las que estén pendientes; un fallo de handler o de
+serialización cierra el contexto. `tcpip::stop()` debe invocarse desde fuera de
+un worker del transporte.
 
 No modificar la frontera protocolo/transporte para resolver una necesidad
 exclusiva de HTTP. Si un cambio requiere semántica HTTP, debe vivir en la capa

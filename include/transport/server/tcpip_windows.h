@@ -177,11 +177,7 @@ struct context
       std::unique_ptr<protocol::serialization_result> response,
       uint64_t response_id, bool close_this_context_after_sending = false) {
     std::lock_guard<std::mutex> sending_lock(sending_mutex);
-    if (!response || closing || close_after_sending) {
-      // If the response is null, the context is closing, or we already need to
-      // close after sending, we should not add the response to the queue.
-      return;
-    }
+    if (!response || closing || close_after_sending) return;
     response_data rdata{response_id, std::move(response)};
     // We need to keep the responses in order!
     auto itr = responses.begin();
@@ -219,9 +215,7 @@ struct context
     // Let's prepare this context for closing!
     bool expected = false;
     if (closing.compare_exchange_strong(expected, true)) {
-      if (socket != INVALID_SOCKET) {
-        closesocket(socket);
-      }
+      if (socket != INVALID_SOCKET) closesocket(socket);
       try {
         // Let's call user's callback to notify for disconnection!
         on_disconnection_();
@@ -261,40 +255,14 @@ struct context
     if (sending) return;
     auto itr = responses.begin();
     while (itr != responses.end()) {
-      if (itr->id != expected_response_id) {
-        /*
-        pepe
-        */
-
-        /*
-        necesitamos añadir el soporte para cuando una response no esta
-        en orden, es decir, cuando el id de la response no es el esperado. Esto
-        puede ocurrir si el usuario envia responses fuera de orden. En este
-        caso, debemos decidir si queremos esperar a que llegue la response con
-        el id esperado o si queremos cerrar la conexion. Por ahora, vamos a
-        imprimir un mensaje de error y cerrar la conexion.
-        */
-
-        /*
-        pepe fin
-        */
-
-        break;
-      }
+      if (itr->id != expected_response_id) break;
       sending_buffer.append(itr->response->prefix);
       expected_response_id++;
       itr = responses.erase(itr);
     }
-    if (sending_buffer.empty()) {
-      // Let's return if there is nothing to send, we will wait for the next
-      // response to be added to the queue.
-      return;
-    }
+    if (sending_buffer.empty()) return;
     sending = send();
-    if (!sending) {
-      // Let's mark the context for closing if we failed to send the data.
-      mark_context_for_closing();
-    }
+    if (!sending) mark_context_for_closing();
   }
   // +=========================================================================+
   // | [>] receive                                                  ( public ) |
@@ -331,7 +299,7 @@ struct context
 
  private:
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
+  // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   // [common] section!
   types::on_client_disconnected_delegate on_disconnection_;
@@ -385,20 +353,14 @@ class tcpip {
   // | [>] start                                                    ( public ) |
   // +=========================================================================+
   void start(const char port[]) {
-    if (io_h_ != nullptr) {
-      // If the i/o completion port is valid then we are already started!
-      return;
-    }
+    if (io_h_ != nullptr) return;
     setup_accept_pipeline(setup_workers(setup_listener(port)));
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
   void stop() {
-    if (io_h_ == nullptr) {
-      // If the i/o completion port is not valid then we are already stopped!
-      return;
-    }
+    if (io_h_ == nullptr) return;
     // Let's close the listening socket and post stop messages to all workers!
     closesocket(accept_socket_);
     accept_socket_ = INVALID_SOCKET;
@@ -786,10 +748,7 @@ class tcpip {
   bool post_accept() {
     SOCKET soc = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0,
                             WSA_FLAG_OVERLAPPED);
-    if (soc == INVALID_SOCKET) {
-      // ((error)) -> Could not create socket for AcceptEx!
-      return false;
-    }
+    if (soc == INVALID_SOCKET) return false;
     overlapped_accept* ova = new overlapped_accept(soc);
     DWORD received = 0;
     BOOL accepted_connection =

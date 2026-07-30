@@ -56,7 +56,7 @@ namespace martianlabs::doba::protocol::http11 {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct context {
-  // Policies coming from the inbound configuration; 
+  // Policies coming from the inbound configuration;
   // they are not derived from the request.
   struct policies policies;
   // The mutable hop-by-hop connection state derived from the request.

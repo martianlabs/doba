@@ -42,8 +42,8 @@ namespace martianlabs::doba::protocol::http11::body {
 // | common::writer.                                                           |
 // |                                                                           |
 // | The caller pushes incoming transport spans via write(). Each call         |
-// | validates the chunked framing and writes ALL wire bytes — including     |
-// | chunk-size lines, extensions, trailers and terminating CRLF — verbatim  |
+// | validates the chunked framing and writes ALL wire bytes — including       |
+// | chunk-size lines, extensions, trailers and terminating CRLF — verbatim    |
 // | into dst. No decoding is performed here; decoding is deferred to a        |
 // | reader pass over the completed buffer.                                    |
 // |                                                                           |
@@ -95,9 +95,9 @@ class writer_chunked {
     while (i < input.size()) {
       const char c = static_cast<char>(input[i]);
       switch (state_) {
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------------------
         // Chunk-size line: accumulate hex digits, handle extension and CR
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------------------
         case state::chunk_size: {
           if (c == ';') {
             state_ = state::extension;
@@ -108,27 +108,36 @@ class writer_chunked {
             break;
           }
           int digit = hex_digit(c);
-          if (digit < 0) return fail(result, writer_error::invalid_chunk_size);
+          if (digit < 0) {
+            // Invalid hex digit in chunk-size line!
+            return fail(result, writer_error::invalid_chunk_size);
+          }
           if (chunk_remaining_ >
               (std::numeric_limits<std::size_t>::max() >> 4)) {
+            // Overflow in chunk size accumulation!
             return fail(result, writer_error::chunk_size_overflow);
           }
           chunk_remaining_ =
               (chunk_remaining_ << 4) | static_cast<std::size_t>(digit);
           break;
         }
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------------------
         // Chunk-extension: discard until CR
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------------------
         case state::extension: {
-          if (c == '\r') state_ = state::size_lf;
+          if (c == '\r') {
+            state_ = state::size_lf;
+          }
           break;
         }
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------------------
         // LF after chunk-size CR: decide data vs last-chunk
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------------------
         case state::size_lf: {
-          if (c != '\n') return fail(result, writer_error::invalid_chunk_crlf);
+          if (c != '\n') {
+            // Invalid LF after chunk-size CR!
+            return fail(result, writer_error::invalid_chunk_crlf);
+          }
           if (chunk_remaining_ == 0) {
             state_ = state::trailer;
             trailer_line_start_ = true;
@@ -138,37 +147,47 @@ class writer_chunked {
           }
           break;
         }
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------------------
         // Chunk data: bulk-write min(remaining, available) bytes
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------------------
         case state::data: {
           std::size_t to_take = std::min(chunk_remaining_, input.size() - i);
           if (!dst.write(input.subspan(i, to_take))) {
+            // An I/O error occurred while writing to the destination!
             return fail(result, writer_error::io_error);
           }
           result.consumed += to_take;
           i += to_take;
           chunk_remaining_ -= to_take;
-          if (chunk_remaining_ == 0) state_ = state::data_cr;
+          if (chunk_remaining_ == 0) {
+            // All chunk data consumed; expect post-data CRLF next.
+            state_ = state::data_cr;
+          }
           continue;  // i already advanced — skip the single-byte path below
         }
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------------------
         // Post-data CRLF
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------------------
         case state::data_cr: {
-          if (c != '\r') return fail(result, writer_error::invalid_chunk_crlf);
+          if (c != '\r') {
+            // Invalid CR after chunk data!
+            return fail(result, writer_error::invalid_chunk_crlf);
+          }
           state_ = state::data_lf;
           break;
         }
         case state::data_lf: {
-          if (c != '\n') return fail(result, writer_error::invalid_chunk_crlf);
+          if (c != '\n') {
+            // Invalid LF after chunk data CR!
+            return fail(result, writer_error::invalid_chunk_crlf);
+          }
           chunk_remaining_ = 0;
           state_ = state::chunk_size;
           break;
         }
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------------------
         // Trailer section: validate lines, detect terminating empty CRLF
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------------------
         case state::trailer: {
           if (c == '\r') {
             trailer_cr_seen_ = true;
@@ -177,6 +196,7 @@ class writer_chunked {
               // Terminating empty CRLF — body complete. Write final byte
               // and return with the exact consumed count.
               if (!dst.write(input.subspan(i, 1))) {
+                // An I/O error occurred while writing to the destination!
                 return fail(result, writer_error::io_error);
               }
               result.consumed += 1;
@@ -201,6 +221,7 @@ class writer_chunked {
       }
       // Single-byte write for all non-data, non-complete paths.
       if (!dst.write(input.subspan(i, 1))) {
+        // An I/O error occurred while writing to the destination!
         return fail(result, writer_error::io_error);
       }
       result.consumed += 1;
@@ -215,9 +236,15 @@ class writer_chunked {
   // | [>] hex_digit                                               ( private ) |
   // +=========================================================================+
   static int hex_digit(char c) noexcept {
-    if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= '0' && c <= '9') {
+      return c - '0';
+    }
+    if (c >= 'a' && c <= 'f') {
+      return c - 'a' + 10;
+    }
+    if (c >= 'A' && c <= 'F') {
+      return c - 'A' + 10;
+    }
     return -1;
   }
   // +=========================================================================+

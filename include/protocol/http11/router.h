@@ -117,16 +117,19 @@ class router {
       if (static_method != method) continue;
       for (const auto& handler_data : handlers) {
         if (handler_data.path == path) {
-          if (handler_data.policy == common::execution_policy::kSynchronous) {
-            handler_data.handler(req, res);
-            on_send(res);
-          } else {
-            thread_pool_.enqueue([handler = handler_data.handler,
-                                  req = std::move(req), res = std::move(res),
-                                  on_send] {
-              handler(req, res);
+          switch (handler_data.policy) {
+            case common::execution_policy::kSynchronous:
+              handler_data.handler(req, res);
               on_send(res);
-            });
+              break;
+            case common::execution_policy::kAsynchronous:
+              thread_pool_.enqueue([handler = handler_data.handler,
+                                    req = std::move(req), res = std::move(res),
+                                    on_send] {
+                handler(req, res);
+                on_send(res);
+              });
+              break;
           }
           return router_match_result::kMatched;
         }
@@ -138,18 +141,28 @@ class router {
       for (const auto& handler_data : handlers) {
         route_parameters parameters;
         if (helpers::get_parameters(handler_data.path, path, parameters)) {
-          if (handler_data.policy == common::execution_policy::kSynchronous) {
-            if (!handler_data.handler->invoke(req, res, parameters)) continue;
-            on_send(res);
-            return router_match_result::kMatched;
+          switch (handler_data.policy) {
+            case common::execution_policy::kSynchronous:
+              if (!handler_data.handler->invoke(req, res, parameters)) {
+                // The handler did not match the parameters, let's continue
+                // searching..
+                continue;
+              }
+              on_send(res);
+              break;
+            case common::execution_policy::kAsynchronous:
+              thread_pool_.enqueue([handler = handler_data.handler,
+                                    parameters = std::move(parameters),
+                                    req = std::move(req), res = std::move(res),
+                                    on_send] {
+                if (handler->invoke(req, res, parameters)) {
+                  // The handler matched the parameters, let's send the
+                  // response!
+                  on_send(res);
+                }
+              });
+              break;
           }
-          if (!handler_data.handler->matches(parameters)) continue;
-          thread_pool_.enqueue([handler = handler_data.handler,
-                                parameters = std::move(parameters),
-                                req = std::move(req), res = std::move(res),
-                                on_send] {
-            if (handler->invoke(req, res, parameters)) on_send(res);
-          });
           return router_match_result::kMatched;
         }
       }
@@ -159,16 +172,19 @@ class router {
       if (wildcard_method != method) continue;
       for (const auto& handler_data : handlers) {
         if (matches_wildcard_route(handler_data.path, path)) {
-          if (handler_data.policy == common::execution_policy::kSynchronous) {
-            handler_data.handler(req, res);
-            on_send(res);
-          } else {
-            thread_pool_.enqueue([handler = handler_data.handler,
-                                  req = std::move(req), res = std::move(res),
-                                  on_send] {
-              handler(req, res);
+          switch (handler_data.policy) {
+            case common::execution_policy::kSynchronous:
+              handler_data.handler(req, res);
               on_send(res);
-            });
+              break;
+            case common::execution_policy::kAsynchronous:
+              thread_pool_.enqueue([handler = handler_data.handler,
+                                    req = std::move(req), res = std::move(res),
+                                    on_send] {
+                handler(req, res);
+                on_send(res);
+              });
+              break;
           }
           return router_match_result::kMatched;
         }

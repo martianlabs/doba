@@ -103,6 +103,7 @@ class byte_storage {
     if (spilled_) {
       file_.write(ptr, static_cast<std::streamsize>(len));
       if (!file_) {
+        // An I/O error occurred while writing to the file!
         io_error_ = true;
         return false;
       }
@@ -119,6 +120,7 @@ class byte_storage {
     if (spilled_) {
       file_.flush();
       if (!file_) {
+        // An I/O error occurred while flushing the file!
         io_error_ = true;
         return;
       }
@@ -222,7 +224,7 @@ class byte_storage {
       return false;
     }
     b = static_cast<std::byte>(static_cast<unsigned char>(c));
-    ++read_pos_;
+    read_pos_++;
     return true;
   }
   // +=========================================================================+

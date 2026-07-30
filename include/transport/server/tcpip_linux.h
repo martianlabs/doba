@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -154,10 +154,17 @@ struct context {
     response_data data{response_id, std::move(response)};
     auto itr = responses.begin();
     while (itr != responses.end() && itr->id < data.id) itr++;
+    if (itr != responses.end() && itr->id == data.id) return;
     responses.insert(itr, std::move(data));
     if (close_this_context_after_sending) {
       close_after_sending = true;
       close_after_response_id = response_id;
+      responses.erase(
+          std::remove_if(responses.begin(), responses.end(),
+                         [response_id](const response_data& response) {
+                           return response.id > response_id;
+                         }),
+          responses.end());
       receiving = false;
     }
   }
@@ -173,9 +180,49 @@ struct context {
     add_response_to_queue(std::move(error_response->serialize()), id, true);
   }
   // +=========================================================================+
-  // | [>] request_context_closing                                 ( public ) |
+  // | [>] request_context_closing                                  ( public ) |
   // +=========================================================================+
   void request_context_closing() { close_requested.store(true); }
+  // +=========================================================================+
+  // | [>] mark_read_closed                                        ( public ) |
+  // +=========================================================================+
+  void mark_read_closed() {
+    read_closed = true;
+    receiving = false;
+  }
+  // +=========================================================================+
+  // | [>] add_pending_completion                                  ( public ) |
+  // +=========================================================================+
+  void add_pending_completion() {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex);
+    pending_completions++;
+  }
+  // +=========================================================================+
+  // | [>] complete_pending_completion                             ( public ) |
+  // +=========================================================================+
+  void complete_pending_completion(
+      std::unique_ptr<protocol::serialization_result> response,
+      uint64_t response_id) {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex);
+    if (pending_completions > 0) pending_completions--;
+    if (!response || closing ||
+        (close_after_sending && response_id > close_after_response_id)) {
+      return;
+    }
+    response_data data{response_id, std::move(response)};
+    auto itr = responses.begin();
+    while (itr != responses.end() && itr->id < data.id) itr++;
+    if (itr != responses.end() && itr->id == data.id) return;
+    responses.insert(itr, std::move(data));
+  }
+  // +=========================================================================+
+  // | [>] abort_pending_completion                                ( public ) |
+  // +=========================================================================+
+  void abort_pending_completion() {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex);
+    if (pending_completions > 0) pending_completions--;
+    close_requested.store(true);
+  }
   // +=========================================================================+
   // | [>] can_receive                                              ( public ) |
   // +=========================================================================+
@@ -183,7 +230,7 @@ struct context {
     return !closing.load() && !close_requested.load() && receiving;
   }
   // +=========================================================================+
-  // | [>] is_closing                                              ( public ) |
+  // | [>] is_closing                                               ( public ) |
   // +=========================================================================+
   bool is_closing() const { return closing.load(); }
   // +=========================================================================+
@@ -272,6 +319,10 @@ struct context {
   // +=========================================================================+
   void append_sendable_responses_locked() {
     while (true) {
+      if (close_after_sending &&
+          expected_response_id > close_after_response_id) {
+        return;
+      }
       auto itr = std::find_if(responses.begin(), responses.end(),
                               [this](const response_data& response) {
                                 return response.id == expected_response_id;
@@ -280,14 +331,21 @@ struct context {
       sending_buffer.append(itr->response->prefix);
       expected_response_id++;
       responses.erase(itr);
+      if (close_after_sending &&
+          expected_response_id > close_after_response_id) {
+        return;
+      }
     }
   }
   // +=========================================================================+
-  // | [>] should_close_locked                                    ( private ) |
+  // | [>] should_close_locked                                     ( private ) |
   // +=========================================================================+
   bool should_close_locked() {
-    return close_after_sending && sending_offset == sending_buffer.size() &&
-           expected_response_id > close_after_response_id;
+    if (sending_offset != sending_buffer.size()) return false;
+    if (close_after_sending) {
+      return expected_response_id > close_after_response_id;
+    }
+    return read_closed && pending_completions == 0 && responses.empty();
   }
   // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
@@ -296,6 +354,7 @@ struct context {
   std::atomic<bool> closing{false};
   std::atomic<bool> close_requested{false};
   bool receiving{true};
+  bool read_closed{false};
   int socket{-1};
   DEty<RQty, RSty> decoder{};
   uint64_t next_response_id{0};
@@ -303,13 +362,14 @@ struct context {
   uint64_t expected_response_id{0};
   bool close_after_sending{false};
   uint64_t close_after_response_id{0};
+  std::size_t pending_completions{0};
   std::string sending_buffer;
   std::size_t sending_offset{0};
   std::mutex sending_mutex;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] epoll_registration                                      ( struct ) |
+// | [>] epoll_registration                                         ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty,
@@ -324,7 +384,7 @@ struct epoll_registration {
 // +---------------------------------------------------------------------------+
 // | [>] worker [linux]                                             ( struct ) |
 // +---------------------------------------------------------------------------+
-// | This specification holds for a Linux server transport worker.            |
+// | This specification holds for a Linux server transport worker.             |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
 // |   RQty - request being used.                                              |
@@ -409,34 +469,51 @@ struct worker
       close_resources();
       throw std::runtime_error("Listener could not be registered!");
     }
+    std::lock_guard<std::mutex> pending_lock(pending_mutex_);
+    accepting_notifications_ = true;
   }
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
   // +=========================================================================+
   void start() { thread_ = std::jthread([this]() { run(); }); }
   // +=========================================================================+
+  // | [>] is_current_thread                                        ( public ) |
+  // +=========================================================================+
+  bool is_current_thread() const {
+    return thread_.joinable() &&
+           thread_.get_id() == std::this_thread::get_id();
+  }
+  // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
   void stop() {
+    if (is_current_thread()) {
+      throw std::runtime_error("Worker cannot be stopped from itself!");
+    }
     if (epoll_fd_ == -1) return;
     stopping_.store(true);
-    uint64_t wake = 1;
-    while (::write(wake_fd_, &wake, sizeof(wake)) == -1 && errno == EINTR) {
+    {
+      std::lock_guard<std::mutex> pending_lock(pending_mutex_);
+      accepting_notifications_ = false;
+      uint64_t wake = 1;
+      while (::write(wake_fd_, &wake, sizeof(wake)) == -1 && errno == EINTR) {
+      }
     }
     if (thread_.joinable()) thread_.join();
     close_contexts();
-    close_resources();
-    stopping_.store(false);
+    {
+      std::lock_guard<std::mutex> pending_lock(pending_mutex_);
+      pending_contexts_.clear();
+      close_resources();
+    }
   }
   // +=========================================================================+
   // | [>] notify                                                   ( public ) |
   // +=========================================================================+
   void notify(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    if (stopping_.load()) return;
-    {
-      std::lock_guard<std::mutex> pending_lock(pending_mutex_);
-      pending_contexts_.emplace_back(std::move(ctx));
-    }
+    std::lock_guard<std::mutex> pending_lock(pending_mutex_);
+    if (!accepting_notifications_) return;
+    pending_contexts_.emplace_back(std::move(ctx));
     uint64_t wake = 1;
     while (::write(wake_fd_, &wake, sizeof(wake)) == -1 && errno == EINTR) {
     }
@@ -444,7 +521,7 @@ struct worker
 
  private:
   // +=========================================================================+
-  // | [>] run                                                      ( private ) |
+  // | [>] run                                                     ( private ) |
   // +=========================================================================+
   void run() {
     std::array<epoll_event, 64> events{};
@@ -466,8 +543,11 @@ struct worker
         epoll_registration<RQty, RSty, DEty>* registration =
             static_cast<epoll_registration<RQty, RSty, DEty>*>(
                 events[i].data.ptr);
-        handle_context(registration->ctx, events[i].events);
+        auto itr = registrations_.find(registration);
+        if (itr == registrations_.end()) continue;
+        handle_context(itr->second->ctx, events[i].events);
       }
+      retired_registrations_.clear();
     }
   }
   // +=========================================================================+
@@ -509,7 +589,10 @@ struct worker
         ::close(socket);
         continue;
       }
-      register_context(socket);
+      try {
+        register_context(socket);
+      } catch (...) {
+      }
     }
   }
   // +=========================================================================+
@@ -522,15 +605,22 @@ struct worker
     std::unique_ptr<epoll_registration<RQty, RSty, DEty>> registration =
         std::make_unique<epoll_registration<RQty, RSty, DEty>>(ctx);
     ctx->registration = registration.get();
+    try {
+      registrations_.emplace(ctx->registration, std::move(registration));
+    } catch (...) {
+      int failed_socket = ctx->mark_context_for_closing();
+      if (failed_socket != -1) ::close(failed_socket);
+      throw;
+    }
     epoll_event event{};
     event.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
     event.data.ptr = ctx->registration;
     if (::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket, &event) == -1) {
+      registrations_.erase(ctx->registration);
       int failed_socket = ctx->mark_context_for_closing();
       if (failed_socket != -1) ::close(failed_socket);
       return;
     }
-    registrations_.emplace(ctx->registration, std::move(registration));
     try {
       on_connection_();
     } catch (...) {
@@ -567,7 +657,7 @@ struct worker
         continue;
       }
       if (received == 0) {
-        ctx->request_context_closing();
+        ctx->mark_read_closed();
         return;
       }
       if (errno == EINTR) continue;
@@ -622,16 +712,26 @@ struct worker
       try {
         std::thread::id tid = std::this_thread::get_id();
         uint64_t id = ctx->get_next_response_id();
+        std::shared_ptr<std::atomic_bool> completed =
+            std::make_shared<std::atomic_bool>(false);
+        ctx->add_pending_completion();
         on_request_(result.request, std::make_shared<RSty>(),
-                    [ctx, id, tid](std::shared_ptr<RSty> response) {
+                    [ctx, id, tid, completed](std::shared_ptr<RSty> response) {
+                      if (completed->exchange(true)) return;
                       if (!response) {
-                        ctx->request_context_closing();
+                        ctx->abort_pending_completion();
                       } else {
                         try {
-                          ctx->add_response_to_queue(
-                              std::move(response->serialize()), id);
+                          std::unique_ptr<protocol::serialization_result>
+                              serialized = response->serialize();
+                          if (serialized) {
+                            ctx->complete_pending_completion(
+                                std::move(serialized), id);
+                          } else {
+                            ctx->abort_pending_completion();
+                          }
                         } catch (...) {
-                          ctx->request_context_closing();
+                          ctx->abort_pending_completion();
                         }
                       }
                       if (std::this_thread::get_id() != tid) {
@@ -641,13 +741,13 @@ struct worker
                       }
                     });
       } catch (...) {
-        ctx->request_context_closing();
+        ctx->abort_pending_completion();
         return;
       }
     }
   }
   // +=========================================================================+
-  // | [>] send_error_and_mark_for_closing                          ( private ) |
+  // | [>] send_error_and_mark_for_closing                         ( private ) |
   // +=========================================================================+
   void send_error_and_mark_for_closing(
       std::shared_ptr<context<RQty, RSty, DEty>> ctx, std::string_view reason) {
@@ -687,7 +787,11 @@ struct worker
     if (socket == -1) return;
     ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket, nullptr);
     ::close(socket);
-    registrations_.erase(registration);
+    auto itr = registrations_.find(registration);
+    if (itr != registrations_.end()) {
+      retired_registrations_.emplace_back(std::move(itr->second));
+      registrations_.erase(itr);
+    }
     ctx->notify_disconnection();
   }
   // +=========================================================================+
@@ -703,6 +807,7 @@ struct worker
       }
     }
     registrations_.clear();
+    retired_registrations_.clear();
   }
   // +=========================================================================+
   // | [>] close_resources                                         ( private ) |
@@ -727,8 +832,11 @@ struct worker
       epoll_registration<RQty, RSty, DEty>*,
       std::unique_ptr<epoll_registration<RQty, RSty, DEty>>>
       registrations_;
+  std::vector<std::unique_ptr<epoll_registration<RQty, RSty, DEty>>>
+      retired_registrations_;
   std::vector<std::shared_ptr<context<RQty, RSty, DEty>>> pending_contexts_;
   std::mutex pending_mutex_;
+  bool accepting_notifications_{false};
   types::on_request_delegate<RQty, RSty> on_request_;
   types::on_bad_request_delegate<RSty> on_bad_request_;
   types::on_client_connected_delegate on_connection_;
@@ -736,7 +844,7 @@ struct worker
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] notify_worker                                         ( function ) |
+// | [>] notify_worker                                            ( function ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty,
@@ -747,9 +855,9 @@ void notify_worker(std::shared_ptr<worker<RQty, RSty, DEty>> owner,
 }
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] tcpip [linux]                                              ( class ) |
+// | [>] tcpip [linux]                                               ( class ) |
 // +---------------------------------------------------------------------------+
-// | This specification holds for the Linux server transport.                 |
+// | This specification holds for the Linux server transport.                  |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
 // |   RQty - request being used.                                              |
@@ -799,6 +907,11 @@ class tcpip {
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
   void stop() {
+    for (const auto& worker : workers_) {
+      if (worker->is_current_thread()) {
+        throw std::runtime_error("Transport cannot be stopped from a worker!");
+      }
+    }
     for (const auto& worker : workers_) worker->stop();
     workers_.clear();
   }
@@ -833,7 +946,7 @@ class tcpip {
 
  private:
   // +=========================================================================+
-  // | [>] get_port                                                 ( private ) |
+  // | [>] get_port                                                ( private ) |
   // +=========================================================================+
   static uint16_t get_port(const char port[]) {
     if (port == nullptr || *port == '\0') {

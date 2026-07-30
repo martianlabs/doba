@@ -77,6 +77,7 @@ class date_server {
     if (!running_.compare_exchange_strong(expected, true,
                                           std::memory_order_acq_rel,
                                           std::memory_order_acquire)) {
+      // Already running, do nothing.
       return;
     }
     jthread_ = std::jthread([this] {
@@ -93,7 +94,10 @@ class date_server {
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
   void stop() {
-    if (!running_.exchange(false, std::memory_order_acq_rel)) return;
+    if (!running_.exchange(false, std::memory_order_acq_rel)) {
+      // Not running, do nothing.
+      return;
+    }
   }
   // +=========================================================================+
   // | [>] current                                                  ( public ) |

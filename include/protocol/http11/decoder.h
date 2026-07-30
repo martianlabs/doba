@@ -110,6 +110,8 @@ class decoder {
     deserialization_status status;
     std::size_t bytes_used = 0;
     if (method_ == method_names::kConnect) {
+      // Let's try to parse the request-target as authority-form, which is the
+      // only valid form for the CONNECT method.
       std::string_view authority_host, authority_port;
       helpers::host_type authority_type;
       status = helpers::try_to_deserialize_as_authority_form(
@@ -122,17 +124,24 @@ class decoder {
                                      authority_type};
       }
     } else if (method_ == method_names::kOptions && sv[i] == '*') {
+      // Let's try to parse the request-target as asterisk-form, which is the
+      // only valid form for the OPTIONS method with "*".
       status = helpers::try_to_deserialize_as_asterisk_form(sv.substr(i),
                                                             bytes_used);
       if (status == deserialization_status::kSucceeded) {
         target_ = target::kAsteriskForm;
       }
     } else {
+      // Let's try to parse the request-target as origin-form, which is the most
+      // common form for all other methods.
       status = helpers::try_to_deserialize_as_origin_form(
           sv.substr(i), absolute_path_, query_, bytes_used);
       if (status == deserialization_status::kSucceeded) {
         target_ = target::kOriginForm;
       } else {
+        // If we couldn't parse the request-target as origin-form, let's try to
+        // parse it as absolute-form, which is the only other valid form for all
+        // other methods.
         bool has_authority = false;
         std::string_view authority_host, authority_port, authority_scheme;
         helpers::host_type authority_type;
@@ -209,6 +218,8 @@ class decoder {
               headers::rules::routing::apply(context_) == verdict::kReject ||
               headers::rules::directives::apply(context_) == verdict::kReject ||
               headers::rules::policy::apply(context_) == verdict::kReject) {
+            // If any of the transversal rules reject the request, then the
+            // source is invalid and we cannot parse the request!
             return deserialization_status::kInvalidSource;
           }
           // Check for the presence of a body and build the body writer for this
@@ -233,9 +244,7 @@ class decoder {
           // Otherwise, we need to continue parsing the body, so we remove the
           // already consumed bytes from the input and call parse() again to
           // continue parsing the body.
-          if (!body_writer_) {
-            return dispatch(std::nullopt);
-          }
+          if (!body_writer_) return dispatch(std::nullopt);
           // In case of a body writer, we need to continue parsing the body, so
           // we remove the already consumed bytes from the input and call
           // parse() again to continue parsing the body.
@@ -262,6 +271,8 @@ class decoder {
         if (sv[i] == '\r') break;
         if (!helpers::is_vchar(sv[i]) && !helpers::is_obs_text(sv[i]) &&
             !helpers::is_ows(sv[i])) {
+          // If the next character is not a valid field-value character, then
+          // the source is invalid because we have an incomplete header field!
           return deserialization_status::kInvalidSource;
         }
         i++;
@@ -477,7 +488,9 @@ class decoder {
     if (context_rules.has_host) context_rules.multiple_host = true;
     context_rules.has_host = true;
     parsed_host_port parsed;
-    if (!headers::host::check(host_content, parsed)) return verdict::kReject;
+    if (!headers::host::check(host_content, parsed)) {
+      return verdict::kReject;
+    }
     context_rules.host = parsed;
     return headers::host::interpret(parsed, context_rules.connection,
                                     context_rules.policies);
@@ -491,8 +504,9 @@ class decoder {
     if (!headers::content_length::check(content_length_content, parsed)) {
       return verdict::kReject;
     }
-    if (context_rules.has_content_length)
+    if (context_rules.has_content_length) {
       context_rules.multiple_content_length = true;
+    }
     context_rules.has_content_length = true;
     context_rules.content_length = parsed;
     return headers::content_length::interpret(parsed, context_rules.connection,
@@ -529,7 +543,9 @@ class decoder {
   static verdict dispatch_te(std::string_view te_content,
                              context& context_rules) {
     parsed_parameter_list parsed;
-    if (!headers::te::check(te_content, parsed)) return verdict::kReject;
+    if (!headers::te::check(te_content, parsed)) {
+      return verdict::kReject;
+    }
     return headers::te::interpret(parsed, context_rules.connection,
                                   context_rules.policies);
   }
@@ -587,7 +603,9 @@ class decoder {
   static verdict dispatch_via(std::string_view via_content,
                               context& context_rules) {
     parsed_via_list parsed;
-    if (!headers::via::check(via_content, parsed)) return verdict::kReject;
+    if (!headers::via::check(via_content, parsed)) {
+      return verdict::kReject;
+    }
     context_rules.forwarding_hops += parsed.elements.size();
     return headers::via::interpret(parsed, context_rules.connection,
                                    context_rules.policies);

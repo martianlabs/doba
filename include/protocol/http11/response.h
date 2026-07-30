@@ -34,6 +34,7 @@
 #include "status_lines.h"
 
 namespace martianlabs::doba::protocol::http11 {
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] response                                                    ( class ) |
 // +---------------------------------------------------------------------------+
@@ -60,7 +61,7 @@ class response {
   response& operator=(response&& in) noexcept = delete;
   // +=========================================================================+
   // | [>] serialize                                                ( public ) |
-  // +---------------------------------------------------------------------------
+  // +=========================================================================+
   // | Finalizes and transfers the wire prefix plus an optional streaming body |
   // | to the transport. It never drains a streaming body; the receiver owns   |
   // | the reader and controls bounded reads after response is destroyed.      |
@@ -95,6 +96,8 @@ class response {
     // + 4. Reserve, in addition, the 2 bytes of the header-terminating CRLF
     // that serialize() appends, so we never overrun into the body region.
     if (k_size + v_size + 4 + 2 > space_left) {
+      // Not enough space to add this header without overrunning the body
+      // region!
       throw std::out_of_range("not enough space to add header!");
     }
     std::memcpy(&memory_[sln_len_ + hdr_len_], k.data(), k.size());
@@ -139,6 +142,7 @@ class response {
       std::size_t grow = new_v_size - val_len;
       std::size_t space_left = bdy_beg_ - sln_len_ - hdr_len_;
       if (grow + 2 > space_left) {
+        // Not enough space to grow this header without overrunning the body!
         throw std::out_of_range("not enough space to set header!");
       }
     }
@@ -241,9 +245,9 @@ class response {
   // | [>] remove_header                                            ( public ) |
   // +=========================================================================+
   // | Removes the first header whose name case-insensitively matches 'k' and  |
-  // | compacts the header block. Removing an absent header is an intentional |
-  // | no-op (idempotent): unlike get_header, it does not throw when 'k' is not
-  // | | present. |
+  // | compacts the header block. Removing an absent header is an intentional  |
+  // | no-op (idempotent): unlike get_header, it does not throw when 'k' is    |
+  // | not present.                                                            |
   // +-------------------------------------------------------------------------+
   response& remove_header(std::string_view k) {
     std::size_t line_off, val_off, val_len, line_len;
@@ -271,144 +275,205 @@ class response {
   // +=========================================================================+
   // | [>] STATUS-LINEs                                             ( public ) |
   // +=========================================================================+
-  response& continue_100() { return sln(status_lines::k100, SC_100_CONTINUE); }
+  response& continue_100() {
+    // 100_CONTINUE
+    return sln(status_lines::k100, SC_100_CONTINUE);
+  }
   response& switching_protocols_101() {
+    // 101_SWITCHING_PROTOCOLS
     return sln(status_lines::k101, SC_101_SWITCHING_PROTOCOLS);
   }
-  response& ok_200() { return sln(status_lines::k200, SC_200_OK); }
-  response& created_201() { return sln(status_lines::k201, SC_201_CREATED); }
-  response& accepted_202() { return sln(status_lines::k202, SC_202_ACCEPTED); }
+  response& ok_200() {
+    // 200_OK
+    return sln(status_lines::k200, SC_200_OK);
+  }
+  response& created_201() {
+    // 201_CREATED
+    return sln(status_lines::k201, SC_201_CREATED);
+  }
+  response& accepted_202() {
+    // 202_ACCEPTED
+    return sln(status_lines::k202, SC_202_ACCEPTED);
+  }
   response& non_authoritative_info_203() {
+    // 203_NON_AUTHORITATIVE_INFORMATION
     return sln(status_lines::k203, SC_203_NON_AUTHORITATIVE_INFORMATION);
   }
   response& no_content_204() {
+    // 204_NO_CONTENT
     return sln(status_lines::k204, SC_204_NO_CONTENT);
   }
   response& reset_content_205() {
+    // 205_RESET_CONTENT
     return sln(status_lines::k205, SC_205_RESET_CONTENT);
   }
   response& partial_content_206() {
+    // 206_PARTIAL_CONTENT
     return sln(status_lines::k206, SC_206_PARTIAL_CONTENT);
   }
   response& multiple_choices_300() {
+    // 300_MULTIPLE_CHOICES
     return sln(status_lines::k300, SC_300_MULTIPLE_CHOICES);
   }
   response& moved_permanently_301() {
+    // 301_MOVED_PERMANENTLY
     return sln(status_lines::k301, SC_301_MOVED_PERMANENTLY);
   }
-  response& found_302() { return sln(status_lines::k302, SC_302_FOUND); }
+  response& found_302() {
+    // 302_FOUND
+    return sln(status_lines::k302, SC_302_FOUND);
+  }
   response& see_other_303() {
+    // 303_SEE_OTHER
     return sln(status_lines::k303, SC_303_SEE_OTHER);
   }
   response& not_modified_304() {
+    // 304_NOT_MODIFIED
     return sln(status_lines::k304, SC_304_NOT_MODIFIED);
   }
   response& use_proxy_305() {
+    // 305_USE_PROXY
     return sln(status_lines::k305, SC_305_USE_PROXY);
   }
-  response& unused_306() { return sln(status_lines::k306, SC_306_UNUSED); }
+  response& unused_306() {
+    // 306_UNUSED
+    return sln(status_lines::k306, SC_306_UNUSED);
+  }
   response& temporary_redirect_307() {
+    // 307_TEMPORARY_REDIRECT
     return sln(status_lines::k307, SC_307_TEMPORARY_REDIRECT);
   }
   response& permanent_redirect_308() {
+    // 308_PERMANENT_REDIRECT
     return sln(status_lines::k308, SC_308_PERMANENT_REDIRECT);
   }
   response& bad_request_400() {
+    // 400_BAD_REQUEST
     return sln(status_lines::k400, SC_400_BAD_REQUEST);
   }
   response& unauthorized_401() {
+    // 401_UNAUTHORIZED
     return sln(status_lines::k401, SC_401_UNAUTHORIZED);
   }
   response& payment_required_402() {
+    // 402_PAYMENT_REQUIRED
     return sln(status_lines::k402, SC_402_PAYMENT_REQUIRED);
   }
   response& forbidden_403() {
+    // 403_FORBIDDEN
     return sln(status_lines::k403, SC_403_FORBIDDEN);
   }
   response& not_found_404() {
+    // 404_NOT_FOUND
     return sln(status_lines::k404, SC_404_NOT_FOUND);
   }
   response& method_not_allowed_405() {
+    // 405_METHOD_NOT_ALLOWED
     return sln(status_lines::k405, SC_405_METHOD_NOT_ALLOWED);
   }
   response& not_acceptable_406() {
+    // 406_NOT_ACCEPTABLE
     return sln(status_lines::k406, SC_406_NOT_ACCEPTABLE);
   }
   response& proxy_auth_required_407() {
+    // 407_PROXY_AUTHENTICATION_REQUIRED
     return sln(status_lines::k407, SC_407_PROXY_AUTHENTICATION_REQUIRED);
   }
   response& request_timeout_408() {
+    // 408_REQUEST_TIMEOUT
     return sln(status_lines::k408, SC_408_REQUEST_TIMEOUT);
   }
-  response& conflict_409() { return sln(status_lines::k409, SC_409_CONFLICT); }
-  response& gone_410() { return sln(status_lines::k410, SC_410_GONE); }
+  response& conflict_409() {
+    // 409_CONFLICT
+    return sln(status_lines::k409, SC_409_CONFLICT);
+  }
+  response& gone_410() {
+    // 410_GONE
+    return sln(status_lines::k410, SC_410_GONE);
+  }
   response& length_required_411() {
+    // 411_LENGTH_REQUIRED
     return sln(status_lines::k411, SC_411_LENGTH_REQUIRED);
   }
   response& precondition_failed_412() {
+    // 412_PRECONDITION_FAILED
     return sln(status_lines::k412, SC_412_PRECONDITION_FAILED);
   }
   response& content_too_large_413() {
+    // 413_CONTENT_TOO_LARGE
     return sln(status_lines::k413, SC_413_CONTENT_TOO_LARGE);
   }
   response& uri_too_long_414() {
+    // 414_URI_TOO_LONG
     return sln(status_lines::k414, SC_414_URI_TOO_LONG);
   }
   response& unsupported_media_type_415() {
+    // 415_UNSUPPORTED_MEDIA_TYPE
     return sln(status_lines::k415, SC_415_UNSUPPORTED_MEDIA_TYPE);
   }
   response& range_not_satisfiable_416() {
+    // 416_RANGE_NOT_SATISFIABLE
     return sln(status_lines::k416, SC_416_RANGE_NOT_SATISFIABLE);
   }
   response& expectation_failed_417() {
+    // 417_EXPECTATION_FAILED
     return sln(status_lines::k417, SC_417_EXPECTATION_FAILED);
   }
-  response& unused_418() { return sln(status_lines::k418, SC_418_IM_A_TEAPOT); }
+  response& unused_418() {
+    // 418_IM_A_TEAPOT
+    return sln(status_lines::k418, SC_418_IM_A_TEAPOT);
+  }
   response& misdirected_request_421() {
+    // 421_MISDIRECTED_REQUEST
     return sln(status_lines::k421, SC_421_MISDIRECTED_REQUEST);
   }
   response& unprocessable_content_422() {
+    // 422_UNPROCESSABLE_CONTENT
     return sln(status_lines::k422, SC_422_UNPROCESSABLE_CONTENT);
   }
   response& upgrade_required_426() {
+    // 426_UPGRADE_REQUIRED
     return sln(status_lines::k426, SC_426_UPGRADE_REQUIRED);
   }
   response& internal_server_error_500() {
+    // 500_INTERNAL_SERVER_ERROR
     return sln(status_lines::k500, SC_500_INTERNAL_SERVER_ERROR);
   }
   response& not_implemented_501() {
+    // 501_NOT_IMPLEMENTED
     return sln(status_lines::k501, SC_501_NOT_IMPLEMENTED);
   }
   response& bad_gateway_502() {
+    // 502_BAD_GATEWAY
     return sln(status_lines::k502, SC_502_BAD_GATEWAY);
   }
   response& service_unavailable_503() {
+    // 503_SERVICE_UNAVAILABLE
     return sln(status_lines::k503, SC_503_SERVICE_UNAVAILABLE);
   }
   response& gateway_timeout_504() {
+    // 504_GATEWAY_TIMEOUT
     return sln(status_lines::k504, SC_504_GATEWAY_TIMEOUT);
   }
   response& http_version_not_supported_505() {
+    // 505_HTTP_VERSION_NOT_SUPPORTED
     return sln(status_lines::k505, SC_505_HTTP_VERSION_NOT_SUPPORTED);
   }
 
  private:
   // +=========================================================================+
-  // | [>] CONSTANTs                                                ( public )
-  // |
+  // | [>] CONSTANTs                                                ( public ) |
   // +=========================================================================+
   static constexpr std::size_t kMaxSizeInMemory = 4096;
   static constexpr std::size_t kMaxBodySizeInMemory = 2048;
   // +=========================================================================+
-  // | [>] tolower_ascii                                           ( private )
-  // |
+  // | [>] tolower_ascii                                           ( private ) |
   // +=========================================================================+
   static constexpr char tolower_ascii(char c) noexcept {
     return (c >= 'A' && c <= 'Z') ? static_cast<char>(c + 32) : c;
   }
   // +=========================================================================+
-  // | [>] iequals                                                 ( private )
-  // |
+  // | [>] iequals                                                 ( private ) |
   // +=========================================================================+
   static constexpr bool iequals(std::string_view a, std::string_view b) {
     if (a.size() != b.size()) return false;
@@ -418,14 +483,12 @@ class response {
     return true;
   }
   // +=========================================================================+
-  // | [>] find_header                                             ( private )
-  // |
+  // | [>] find_header                                             ( private ) |
   // +=========================================================================+
-  // | Scans the serialized header block [sln_len_, sln_len_ + hdr_len_) for |
-  // | the first header whose name case-insensitively matches 'k'. On success
-  // | | reports the line start, value start, value length and full line
-  // length  | | (CRLF included). Reused by
-  // get_header/set_header/remove_header.         |
+  // | Scans the serialized header block [sln_len_, sln_len_ + hdr_len_) for   |
+  // | the first header whose name case-insensitively matches 'k'. On success  |
+  // | reports the line start, value start, value length and full line length  |
+  // | (CRLF included). Reused by get_header/set_header/remove_header.         |
   // +-------------------------------------------------------------------------+
   bool find_header(std::string_view k, std::size_t& line_off,
                    std::size_t& val_off, std::size_t& val_len,
@@ -455,8 +518,7 @@ class response {
     return false;
   }
   // +=========================================================================+
-  // | [>] sln                                                      ( public )
-  // |
+  // | [>] sln                                                      ( public ) |
   // +=========================================================================+
   response& sln(auto&& status_line, int status_code) {
     std::size_t len = strlen(status_line);
@@ -484,8 +546,7 @@ class response {
     return *this;
   }
   // +=========================================================================+
-  // | [>] ATTRIBUTES                                               ( public )
-  // |
+  // | [>] ATTRIBUTES                                               ( public ) |
   // +=========================================================================+
   char memory_[kMaxSizeInMemory]{0};
   std::size_t sln_len_{0};

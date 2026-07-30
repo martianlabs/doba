@@ -250,12 +250,17 @@ class router_handler_parametrized final
   bool set_impl(tuple_type& parameters, std::size_t index,
                 std::string_view value) const {
     if constexpr (Index >= sizeof...(Args)) {
+      // If we reach this point, it means the index is out of bounds for the
+      // tuple. So, return false to indicate that parameter could not be set!
       return false;
     } else {
       if (index == Index) {
         using value_type = std::tuple_element_t<Index, tuple_type>;
         value_type parsed{};
-        if (!parse(value, parsed)) return false;
+        if (!parse(value, parsed)) {
+          // If parsing fails for this parameter, return false!
+          return false;
+        }
         std::get<Index>(parameters) = std::move(parsed);
         return true;
       }

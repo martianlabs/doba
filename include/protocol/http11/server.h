@@ -154,6 +154,8 @@ class server {
                         common::execution_policy::kSynchronous) {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     if (locked_) {
+      // If the server is running, we cannot add a route because the router is
+      // locked and cannot be modified.
       throw std::runtime_error("Cannot add route when the server is running");
     }
     router_.add(method, route, std::move(handler), policy);
