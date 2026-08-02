@@ -22,8 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_protocol_http11_writer_error_h
-#define martianlabs_doba_protocol_http11_writer_error_h
+#ifndef martianlabs_doba_protocol_http11_reader_error_h
+#define martianlabs_doba_protocol_http11_reader_error_h
 
 #include <cstddef>
 #include <cstdint>
@@ -31,29 +31,28 @@
 namespace martianlabs::doba::protocol::http11::body {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] writer_error                                           ( enum-class ) |
+// | [>] reader_error                                            ( enum-class ) |
 // +---------------------------------------------------------------------------+
-// | Error codes shared by writer_raw and writer_chunked.                      |
+// | Error codes shared by reader_raw and reader_chunked.                      |
 // |                                                                           |
 // | Actively produced by these classes:                                       |
-// |   io_error, invalid_chunk_size, chunk_size_overflow, invalid_chunk_crlf,  |
-// |   chunk_extension_size_limit_exceeded, trailer_size_limit_exceeded.       |
+// |   io_error, invalid_chunk_size, chunk_size_overflow, invalid_chunk_crlf,   |
+// |   chunked_incomplete, raw_incomplete, chunk_extension_size_limit_exceeded, |
+// |   trailer_size_limit_exceeded.                                            |
 // |                                                                           |
 // | Reserved (declared for API parity / future use, never produced here):     |
 // |   invalid_trailer     - full trailer field-line syntax validation is not  |
 // |                         implemented; trailers are only framed, not        |
-// |                         validated as header fields.                       |
-// |   chunked_incomplete  - a body that never reaches its terminating CRLF    |
-// |                         simply keeps requesting more bytes (kMoreBytes-   |
-// |                         Needed at the decoder level); premature-EOF       |
-// |                         detection belongs to connection/channel handling, |
-// |                         not to this class.                                |
+// |                         validated as header fields (same scope as         |
+// |                         writer_chunked).                                  |
 // |   raw_size_limit_exceeded - Content-Length vs. policy limits are enforced |
 // |                         (or should be) at the header/policy layer before  |
-// |                         a body writer is ever constructed.                |
+// |                         a body reader is ever constructed, since these    |
+// |                         classes never see more bytes than the already     |
+// |                         agreed-upon Content-Length.                       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-enum class writer_error : std::uint8_t {
+enum class reader_error : std::uint8_t {
   none,
   io_error,
   invalid_chunk_size,
@@ -61,6 +60,7 @@ enum class writer_error : std::uint8_t {
   invalid_chunk_crlf,
   invalid_trailer,
   chunked_incomplete,
+  raw_incomplete,
   raw_size_limit_exceeded,
   chunk_extension_size_limit_exceeded,
   trailer_size_limit_exceeded

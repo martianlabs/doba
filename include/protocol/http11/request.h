@@ -49,6 +49,7 @@
 #include "protocol/http11/policies.h"
 #include "protocol/http11/verdict.h"
 #include "protocol/http11/target.h"
+#include "protocol/http11/body/reader.h"
 #include "protocol/http11/body/writer_chunked.h"
 #include "protocol/http11/body/writer_raw.h"
 #include "protocol/http11/headers/accept.h"
@@ -171,15 +172,22 @@ class request {
       std::optional<helpers::host_type> type,
       std::optional<std::string_view> target_authority_host,
       std::optional<std::string_view> target_authority_port,
-      std::optional<helpers::host_type> target_authority_type) {
+      std::optional<helpers::host_type> target_authority_type,
+      bool body_chunked_encoding = false, std::size_t body_content_length = 0) {
     std::shared_ptr<request> req = std::shared_ptr<request>(new request(
         full_buffer, method, abs_path, target_form, std::move(headers),
         std::move(query_parameters), host, port, type, target_authority_host,
         target_authority_port, target_authority_type));
-    return [req](std::optional<common::byte_storage> byte_storage) -> auto {
+    return [req, body_chunked_encoding, body_content_length](
+               std::optional<common::byte_storage> byte_storage) -> auto {
       if (byte_storage) {
-        req->body_reader_ = std::shared_ptr<common::reader>(
-            new common::reader(std::move(*byte_storage)));
+        common::reader source(std::move(*byte_storage));
+        req->body_reader_ =
+            body_chunked_encoding
+                ? std::make_shared<body::reader>(
+                      body::reader::chunked(std::move(source)))
+                : std::make_shared<body::reader>(body::reader::raw(
+                      std::move(source), body_content_length));
       }
       return req;
     };
@@ -203,6 +211,7 @@ class request {
   auto get_target_authority_port() const { return ta_port_; }
   auto get_target_authority_type() const { return ta_type_; }
   auto get_body_reader() const { return body_reader_; }
+  auto has_body_reader() const { return body_reader_ != nullptr; }
 
  private:
   // +=========================================================================+
@@ -253,7 +262,7 @@ class request {
   helpers::host_type ta_type_ = helpers::host_type::kUnknown;
   std::vector<header_view> headers_;                    // vector of headers
   std::vector<query_parameter_view> query_parameters_;  // query parameters
-  std::shared_ptr<common::reader> body_reader_;         // body reader
+  std::shared_ptr<body::reader> body_reader_;           // body reader
 };
 }  // namespace martianlabs::doba::protocol::http11
 

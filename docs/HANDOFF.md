@@ -53,6 +53,12 @@ include/
         writer_chunked.h validación/acumulación del wire chunked
         writer_state.h   resultado de los body writers
         writer_error.h   errores de chunked
+        reader.h         body::reader: selecciona reader_chunked/reader_raw
+                         según el encoding real de la request
+        reader_chunked.h decodificación del framing chunked al leer
+        reader_raw.h     lectura directa de un body Content-Length
+        reader_state.h   resultado de los body readers
+        reader_error.h   errores de lectura de body
       headers/           checkers e intérpretes de headers y reglas
   transport/server/
     tcpip.h              selector de plataforma
@@ -121,8 +127,13 @@ distinta.
 `common::writer` entrega el resultado como `common::byte_storage`.
 `request_getter<RQty>` es el callback que recibe opcionalmente ese storage y
 termina de devolver una `std::shared_ptr<RQty>`. La implementación actual de
-`request::from` crea un `common::reader` propietario del `byte_storage` y lo
-expone mediante `request::get_body_reader()` cuando hay body.
+`request::from` recibe además si la request usa chunked encoding y su
+Content-Length, crea un `common::reader` propietario del `byte_storage` y lo
+envuelve en un `body::reader` (ver `protocol/http11/body/reader.h`), que
+selecciona internamente `body::reader_chunked` o `body::reader_raw` según el
+encoding real usado por la request. `request::get_body_reader()` expone ese
+`body::reader` ya construido cuando hay body, de forma que el llamador no
+necesita saber qué framing se usó para leer el payload decodificado.
 
 `common::byte_storage` empieza en memoria y puede derramar a fichero cuando
 `spill_threshold` es mayor que cero. `common::reader` es move-only y permite
@@ -149,7 +160,7 @@ decoder.
 
 ### `response`
 
-`response` no es copiable ni movible y usa `char memory_[8192]`:
+`response` no es copiable ni movible y usa `char memory_[4096]`:
 
 - status-line y headers ocupan la parte inicial;
 - el body inline se reserva al final;
@@ -260,9 +271,11 @@ HTTP o expresarse en el contrato genérico ya existente.
 
 ## Estado de pruebas y documentación
 
-El único subproyecto de prueba configurado es `test/ut-001-main`. Su ejecutable
-es un harness/ejemplo de servidor; no debe presentarse como una suite unitaria
-exhaustiva sin revisar sus casos y aserciones concretas.
+Los subproyectos de prueba configurados son `test/ut-001-main` y
+`test/ut-002-common-io`. `ut-001-main` es un harness/ejemplo de servidor; no
+debe presentarse como una suite unitaria exhaustiva sin revisar sus casos y
+aserciones concretas. `ut-002-common-io` cubre `common::reader`/`common::writer`
+sobre `common::byte_storage`.
 
 Los resultados de builds, auditorías y correcciones históricas no se incluyen
 aquí: deben verificarse de nuevo contra el árbol y la toolchain disponibles

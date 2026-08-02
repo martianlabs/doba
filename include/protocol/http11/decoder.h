@@ -358,7 +358,8 @@ class decoder {
     request_getter_ = request::from(
         buffer_view, method_, absolute_path_, target_, headers_,
         query_parameters, host_host, host_port, host_type,
-        target_authority_host, target_authority_port, target_authority_type);
+        target_authority_host, target_authority_port, target_authority_type,
+        context_.connection.chunked, context_.content_length);
     // Let's adjust the buffer to remove the bytes that were used!
     std::memmove(buffer_, buffer_ + bytes_used, off_ - bytes_used);
     off_ -= bytes_used;

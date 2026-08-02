@@ -22,60 +22,69 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_protocol_http11_body_writer_raw_h
-#define martianlabs_doba_protocol_http11_body_writer_raw_h
+#ifndef martianlabs_doba_protocol_http11_body_reader_raw_h
+#define martianlabs_doba_protocol_http11_body_reader_raw_h
 
 #include <algorithm>
 #include <cstddef>
 #include <span>
 
-#include "common/writer.h"
-#include "protocol/http11/body/writer_state.h"
+#include "common/reader.h"
+#include "protocol/http11/body/reader_state.h"
 
 namespace martianlabs::doba::protocol::http11::body {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] writer_raw                                                  ( class ) |
+// | [>] reader_raw                                                   ( class ) |
 // +---------------------------------------------------------------------------+
-// | Accumulates a Content-Length-framed body into a common::writer.           |
+// | Decodes a Content-Length-framed body by pulling wire bytes from a         |
+// | common::reader source and filling the caller-supplied output span.        |
 // |                                                                           |
-// | The caller pushes incoming transport spans via write(); each call         |
-// | returns a feed_result indicating how many bytes were consumed from the    |
-// | span and whether the body is complete. Bytes beyond the declared          |
-// | Content-Length are never touched — they belong to the next request.       |
+// | Since a raw (Content-Length) body carries no wire framing of its own, the |
+// | decoded payload is identical to the source bytes: this reader simply     |
+// | copies bytes from src into output, up to the declared Content-Length. It  |
+// | exists to keep the reader API symmetrical with reader_chunked.           |
 // |                                                                           |
-// | Once write() reports an error, the failure is latched: every subsequent   |
-// | call returns the same has_error/error without touching dst again.         |
+// | If src reaches definitive eof() before Content-Length is satisfied, this  |
+// | is a protocol error reported as reader_error::raw_incomplete. Once an     |
+// | error is reported, it is latched: every subsequent call returns the same  |
+// | has_error/error without touching src again.                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-class writer_raw {
+class reader_raw {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
   // +=========================================================================+
-  explicit writer_raw(std::size_t content_length) : expected_(content_length) {}
+  explicit reader_raw(std::size_t content_length) : expected_(content_length) {}
   // +=========================================================================+
-  // | [>] write                                                    ( public ) |
+  // | [>] read                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Writes up to (expected_ - accumulated_) bytes from input into dst.      |
+  // | Pulls up to (expected_ - accumulated_) bytes from src into output.      |
   // | Returns immediately with complete=true when Content-Length is reached.  |
-  // | A zero Content-Length body completes on the first call with consumed=0. |
+  // | A zero Content-Length body completes on the first call with produced=0. |
   // +=========================================================================+
-  writer_state write(std::span<const std::byte> input, common::writer& dst) {
-    writer_state result;
+  reader_state read(common::reader& src, std::span<std::byte> output) {
+    reader_state result;
     if (has_error_) {
       result.has_error = true;
       result.error = error_;
       return result;
     }
     std::size_t remaining = expected_ - accumulated_;
-    std::size_t to_consume = std::min(remaining, input.size());
-    if (to_consume > 0) {
-      if (!dst.write(input.subspan(0, to_consume))) {
-        return fail(result, writer_error::io_error);
+    std::size_t to_read = std::min(remaining, output.size());
+    if (to_read > 0) {
+      std::size_t got = src.read(output.subspan(0, to_read));
+      if (got == 0) {
+        if (src.failed()) {
+          return fail(result, reader_error::io_error);
+        }
+        if (src.eof()) {
+          return fail(result, reader_error::raw_incomplete);
+        }
       }
-      accumulated_ += to_consume;
-      result.consumed = to_consume;
+      accumulated_ += got;
+      result.produced = got;
     }
     result.complete = (accumulated_ == expected_);
     return result;
@@ -85,7 +94,7 @@ class writer_raw {
   // +=========================================================================+
   // | [>] fail                                                    ( private ) |
   // +=========================================================================+
-  writer_state fail(writer_state& result, writer_error err) {
+  reader_state fail(reader_state& result, reader_error err) {
     has_error_ = true;
     error_ = err;
     result.has_error = true;
@@ -98,7 +107,7 @@ class writer_raw {
   std::size_t expected_;
   std::size_t accumulated_{0};
   bool has_error_{false};
-  writer_error error_{writer_error::none};
+  reader_error error_{reader_error::none};
 };
 }  // namespace martianlabs::doba::protocol::http11::body
 

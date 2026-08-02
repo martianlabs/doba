@@ -30,6 +30,7 @@
 #include <atomic>
 #include <charconv>
 #include <cerrno>
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -147,15 +148,7 @@ struct context {
       std::unique_ptr<protocol::serialization_result> response,
       uint64_t response_id, bool close_this_context_after_sending = false) {
     std::lock_guard<std::mutex> sending_lock(sending_mutex);
-    if (!response || closing ||
-        (close_after_sending && response_id > close_after_response_id)) {
-      return;
-    }
-    response_data data{response_id, std::move(response)};
-    auto itr = responses.begin();
-    while (itr != responses.end() && itr->id < data.id) itr++;
-    if (itr != responses.end() && itr->id == data.id) return;
-    responses.insert(itr, std::move(data));
+    enqueue_response_locked(std::move(response), response_id);
     if (close_this_context_after_sending) {
       close_after_sending = true;
       close_after_response_id = response_id;
@@ -205,15 +198,7 @@ struct context {
       uint64_t response_id) {
     std::lock_guard<std::mutex> sending_lock(sending_mutex);
     if (pending_completions > 0) pending_completions--;
-    if (!response || closing ||
-        (close_after_sending && response_id > close_after_response_id)) {
-      return;
-    }
-    response_data data{response_id, std::move(response)};
-    auto itr = responses.begin();
-    while (itr != responses.end() && itr->id < data.id) itr++;
-    if (itr != responses.end() && itr->id == data.id) return;
-    responses.insert(itr, std::move(data));
+    enqueue_response_locked(std::move(response), response_id);
   }
   // +=========================================================================+
   // | [>] abort_pending_completion                                ( public ) |
@@ -304,6 +289,22 @@ struct context {
   epoll_registration<RQty, RSty, DEty>* registration{nullptr};
 
  private:
+  // +=========================================================================+
+  // | [>] enqueue_response_locked                                  ( private ) |
+  // +=========================================================================+
+  void enqueue_response_locked(
+      std::unique_ptr<protocol::serialization_result> response,
+      uint64_t response_id) {
+    if (!response || closing ||
+        (close_after_sending && response_id > close_after_response_id)) {
+      return;
+    }
+    response_data data{response_id, std::move(response)};
+    auto itr = responses.begin();
+    while (itr != responses.end() && itr->id < data.id) itr++;
+    if (itr != responses.end() && itr->id == data.id) return;
+    responses.insert(itr, std::move(data));
+  }
   // +=========================================================================+
   // | [>] has_sendable_response_locked                            ( private ) |
   // +=========================================================================+
@@ -885,7 +886,8 @@ class tcpip {
   // | [>] start                                                    ( public ) |
   // +=========================================================================+
   void start(const char port[]) {
-    if (!workers_.empty()) return;
+    std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
+    if (!workers_.empty() || stopping_) return;
     uint16_t port_number = get_port(port);
     std::size_t number_of_workers =
         std::max<std::size_t>(1, std::thread::hardware_concurrency());
@@ -899,7 +901,22 @@ class tcpip {
       }
       for (const auto& worker : workers_) worker->start();
     } catch (...) {
-      stop();
+      stopping_ = true;
+      lifecycle_lock.unlock();
+      try {
+        for (const auto& worker : workers_) worker->stop();
+      } catch (...) {
+        lifecycle_lock.lock();
+        stopping_ = false;
+        lifecycle_lock.unlock();
+        lifecycle_condition_.notify_all();
+        throw;
+      }
+      lifecycle_lock.lock();
+      workers_.clear();
+      stopping_ = false;
+      lifecycle_lock.unlock();
+      lifecycle_condition_.notify_all();
       throw;
     }
   }
@@ -907,19 +924,40 @@ class tcpip {
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
   void stop() {
+    std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
     for (const auto& worker : workers_) {
       if (worker->is_current_thread()) {
         throw std::runtime_error("Transport cannot be stopped from a worker!");
       }
     }
-    for (const auto& worker : workers_) worker->stop();
+    if (stopping_) {
+      lifecycle_condition_.wait(lifecycle_lock,
+                                [this]() { return !stopping_; });
+    }
+    if (workers_.empty()) return;
+    stopping_ = true;
+    lifecycle_lock.unlock();
+    try {
+      for (const auto& worker : workers_) worker->stop();
+    } catch (...) {
+      lifecycle_lock.lock();
+      stopping_ = false;
+      lifecycle_lock.unlock();
+      lifecycle_condition_.notify_all();
+      throw;
+    }
+    lifecycle_lock.lock();
     workers_.clear();
+    stopping_ = false;
+    lifecycle_lock.unlock();
+    lifecycle_condition_.notify_all();
   }
   // +=========================================================================+
   // | [>] set_on_request                                           ( public ) |
   // +=========================================================================+
   template <typename FNty>
   void set_on_request(FNty&& fn) {
+    std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
     on_request_ = std::forward<FNty>(fn);
   }
   // +=========================================================================+
@@ -927,6 +965,7 @@ class tcpip {
   // +=========================================================================+
   template <typename FNty>
   void set_on_bad_request(FNty&& fn) {
+    std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
     on_bad_request_ = std::forward<FNty>(fn);
   }
   // +=========================================================================+
@@ -934,6 +973,7 @@ class tcpip {
   // +=========================================================================+
   template <typename FNty>
   void set_on_connection(FNty&& fn) {
+    std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
     on_connection_ = std::forward<FNty>(fn);
   }
   // +=========================================================================+
@@ -941,6 +981,7 @@ class tcpip {
   // +=========================================================================+
   template <typename FNty>
   void set_on_disconnection(FNty&& fn) {
+    std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
     on_disconnection_ = std::forward<FNty>(fn);
   }
 
@@ -966,6 +1007,9 @@ class tcpip {
   // | ATTRIBUTEs                                                  ( private ) |
   // +=========================================================================+
   std::vector<std::shared_ptr<worker<RQty, RSty, DEty>>> workers_;
+  std::mutex lifecycle_mutex_;
+  std::condition_variable lifecycle_condition_;
+  bool stopping_{false};
   types::on_request_delegate<RQty, RSty> on_request_;
   types::on_bad_request_delegate<RSty> on_bad_request_;
   types::on_client_connected_delegate on_connection_;
