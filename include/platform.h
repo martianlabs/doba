@@ -43,6 +43,7 @@
 #include <string>
 #include <variant>
 #include <inttypes.h>
+#include <iostream>
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] PLATFORM-DEPENDENT-INCLUDEs [windowsTM]                   ( section ) |
@@ -56,7 +57,6 @@
 #include <ws2tcpip.h>
 #include <mswsock.h>
 #include <mstcpip.h>
-#include <iostream>
 #include <wbemidl.h>
 #pragma warning(disable : 4996)
 #pragma comment(lib, "Ws2_32.lib")
