@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
             .set_body("ok");
       });
   http_server.start("8080");
-  std::cin.get();
+  while (true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   date_server::get().stop();
   martianlabs::doba::network::cleanup();
   return 0;
