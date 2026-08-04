@@ -25,10 +25,12 @@
 #ifndef martianlabs_doba_protocol_http11_response_h
 #define martianlabs_doba_protocol_http11_response_h
 
+#include <optional>
 #include <stdexcept>
 #include <utility>
 
 #include "platform.h"
+#include "protocol/http11/body/writer.h"
 #include "protocol/serialization.h"
 #include "status_codes.h"
 #include "status_lines.h"
@@ -83,6 +85,13 @@ class response {
     auto result = std::make_unique<protocol::serialization_result>();
     result->prefix.assign(memory_, sln_plus_hdr_len);
     if (bdy_len_ > 0) result->prefix.append(&memory_[bdy_beg_], bdy_len_);
+    if (bdy_writer_.has_value()) {
+      // Finalizes the framing and transfers the accumulated bytes to the
+      // transport; the writer is consumed, so this response no longer owns a
+      // body afterwards.
+      result->source.emplace(bdy_writer_->release());
+      bdy_writer_.reset();
+    }
     return result;
   }
   // +=========================================================================+
@@ -261,15 +270,43 @@ class response {
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
   // +=========================================================================+
+  // | Stores the supplied payload as the response body. Small payloads land   |
+  // | in the in-memory body region (fast path); anything that does not fit is |
+  // | transparently spilled into an internally created raw body::body_writer, |
+  // | which serialize() hands over to the transport as a streaming source.    |
+  // +-------------------------------------------------------------------------+
   response& set_body(std::string_view sv) {
     std::size_t body_size = sv.size();
-    if (body_size > kMaxBodySizeInMemory) {
-      throw std::out_of_range("not enough space to set body!");
+    reset_body();
+    if (body_size <= kMaxBodySizeInMemory) {
+      std::memcpy(&memory_[bdy_beg_], sv.data(), body_size);
+      bdy_len_ = body_size;
+      set_header("Content-Length", body_size);
+      return *this;
     }
-    std::memcpy(&memory_[bdy_beg_], sv.data(), body_size);
-    bdy_len_ = body_size;
-    remove_header("Transfer-Encoding");
-    set_header("Content-Length", body_size);
+    // Payload does not fit in the in-memory body region: spill it into a raw
+    // (Content-Length framed) writer that may itself offload to disk.
+    auto writer = body::body_writer::raw();
+    if (!writer.write(sv)) {
+      throw std::runtime_error("unable to write body!");
+    }
+    bdy_writer_.emplace(std::move(writer));
+    apply_body_framing();
+    return *this;
+  }
+  // +=========================================================================+
+  // | [>] set_body                                                 ( public ) |
+  // +=========================================================================+
+  // | Adopts a caller-built body::body_writer (possibly already written to)   |
+  // | as the response body, replacing any previously set body. Framing        |
+  // | headers are derived from the writer: chunked writers get                |
+  // | 'Transfer-Encoding: chunked', raw ones a 'Content-Length' matching the  |
+  // | bytes written so far.                                                   |
+  // +-------------------------------------------------------------------------+
+  response& set_body(body::body_writer&& writer) {
+    reset_body();
+    bdy_writer_.emplace(std::move(writer));
+    apply_body_framing();
     return *this;
   }
   // +=========================================================================+
@@ -462,10 +499,37 @@ class response {
 
  private:
   // +=========================================================================+
-  // | [>] CONSTANTs                                                ( public ) |
+  // | [>] CONSTANTs                                               ( private ) |
   // +=========================================================================+
   static constexpr std::size_t kMaxSizeInMemory = 4096;
   static constexpr std::size_t kMaxBodySizeInMemory = 2048;
+  // +=========================================================================+
+  // | [>] reset_body                                              ( private ) |
+  // +=========================================================================+
+  // | Drops any previously set body (in-memory payload or adopted writer) and |
+  // | clears the framing headers, so every set_body() call fully replaces the |
+  // | former body instead of accumulating state.                              |
+  // +-------------------------------------------------------------------------+
+  void reset_body() {
+    bdy_len_ = 0;
+    bdy_writer_.reset();
+    remove_header("Transfer-Encoding");
+    remove_header("Content-Length");
+  }
+  // +=========================================================================+
+  // | [>] apply_body_framing                                      ( private ) |
+  // +=========================================================================+
+  // | Emits the framing header matching the currently owned body writer:      |
+  // | 'Transfer-Encoding: chunked' for chunked writers, otherwise a           |
+  // | 'Content-Length' derived from the raw bytes written so far.             |
+  // +-------------------------------------------------------------------------+
+  void apply_body_framing() {
+    if (bdy_writer_->is_chunked()) {
+      set_header("Transfer-Encoding", "chunked");
+    } else {
+      set_header("Content-Length", bdy_writer_->bytes_written());
+    }
+  }
   // +=========================================================================+
   // | [>] tolower_ascii                                           ( private ) |
   // +=========================================================================+
@@ -518,7 +582,7 @@ class response {
     return false;
   }
   // +=========================================================================+
-  // | [>] sln                                                      ( public ) |
+  // | [>] sln                                                     ( private ) |
   // +=========================================================================+
   response& sln(auto&& status_line, int status_code) {
     std::size_t len = strlen(status_line);
@@ -527,6 +591,7 @@ class response {
     // if an oversized status line is ever supplied.
     hdr_len_ = 0;
     bdy_len_ = 0;
+    bdy_writer_.reset();
     if (len > bdy_beg_) {
       sln_len_ = 0;
       throw std::out_of_range("not enough space to set status line!");
@@ -546,13 +611,14 @@ class response {
     return *this;
   }
   // +=========================================================================+
-  // | [>] ATTRIBUTES                                               ( public ) |
+  // | [>] ATTRIBUTES                                              ( private ) |
   // +=========================================================================+
   char memory_[kMaxSizeInMemory]{0};
   std::size_t sln_len_{0};
   std::size_t hdr_len_{0};
   std::size_t bdy_beg_{kMaxSizeInMemory - kMaxBodySizeInMemory};
   std::size_t bdy_len_{0};
+  std::optional<body::body_writer> bdy_writer_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

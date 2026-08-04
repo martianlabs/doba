@@ -31,6 +31,7 @@
 #include <cstdint>
 #include <functional>
 #include <mutex>
+#include <span>
 
 #include "platform.h"
 #include "protocol/deserialization.h"
@@ -45,6 +46,7 @@ namespace martianlabs::doba::transport::server {
 static constexpr DWORD kAcceptAddressBytes =
     static_cast<DWORD>(sizeof(sockaddr_storage) + 16);
 static constexpr inline std::size_t kReceiveBufferSz = 8192;
+static constexpr inline std::size_t kSendBufferMaxSz = 65536;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] io_type                                                ( enum-class ) |
@@ -67,6 +69,7 @@ struct context;
 struct response_data {
   uint64_t id{0};
   std::unique_ptr<protocol::serialization_result> response;
+  bool prefix_written{false};
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -205,7 +208,7 @@ struct context
   // +=========================================================================+
   void arm_next_receive_operation() {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (closing_) return;  
+    if (closing_) return;
     if (!receive_()) closing_ = true;
   }
   // +=========================================================================+
@@ -279,7 +282,28 @@ struct context
     auto itr = responses_.begin();
     while (itr != responses_.end()) {
       if (itr->id != expected_response_id_) break;
-      ovs_buf_.append(itr->response->prefix);
+      if (ovs_buf_.size() >= kSendBufferMaxSz) break;
+      if (!itr->prefix_written) {
+        ovs_buf_.append(itr->response->prefix);
+        itr->prefix_written = true;
+        continue;
+      }
+      auto& source = itr->response->source;
+      if (source.has_value() && !source->eof()) {
+        // Let's pour, at most, the remaining outgoing buffer capacity!
+        std::size_t offset = ovs_buf_.size();
+        std::size_t room = kSendBufferMaxSz - offset;
+        ovs_buf_.resize(offset + room);
+        std::size_t read = source->read(std::span<std::byte>(
+            reinterpret_cast<std::byte*>(ovs_buf_.data() + offset), room));
+        ovs_buf_.resize(offset + read);
+        if (source->failed()) {
+          closing_ = true;
+          return;
+        }
+        if (!read && !source->eof()) break;
+        continue;
+      }
       expected_response_id_++;
       itr = responses_.erase(itr);
     }

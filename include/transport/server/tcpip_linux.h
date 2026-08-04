@@ -36,6 +36,7 @@
 #include <cstring>
 #include <memory>
 #include <mutex>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -54,6 +55,7 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 static constexpr inline std::size_t kReceiveBufferSz = 8192;
+static constexpr inline std::size_t kSendBufferMaxSz = 65536;
 static constexpr uint64_t kWakeEventId = 0;
 static constexpr uint64_t kListenerEventId =
     std::numeric_limits<uint64_t>::max();
@@ -83,6 +85,7 @@ void notify_worker(std::shared_ptr<worker<RQty, RSty, DEty>> owner,
 struct response_data {
   uint64_t id{0};
   std::unique_ptr<protocol::serialization_result> response;
+  bool prefix_written{false};
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -130,9 +133,13 @@ struct context {
   // +=========================================================================+
   // | [>] receive                                                  ( public ) |
   // +=========================================================================+
-  ssize_t receive(char* buffer, std::size_t size) {
-    return ::recv(socket, buffer, size, MSG_DONTWAIT);
+  ssize_t receive() {
+    return ::recv(socket, ovr_buf_, kReceiveBufferSz, MSG_DONTWAIT);
   }
+  // +=========================================================================+
+  // | [>] get_receive_buffer                                       ( public ) |
+  // +=========================================================================+
+  char* get_receive_buffer() { return ovr_buf_; }
   // +=========================================================================+
   // | [>] get_socket                                               ( public ) |
   // +=========================================================================+
@@ -171,6 +178,19 @@ struct context {
     }
     uint64_t id = get_next_response_id();
     add_response_to_queue(std::move(error_response->serialize()), id, true);
+  }
+  // +=========================================================================+
+  // | [>] set_closing_rid                                          ( public ) |
+  // +=========================================================================+
+  // | Marks the last response identifier to be sent before closing; the      |
+  // | context stops receiving but stays alive until that response is fully   |
+  // | flushed.                                                               |
+  // +=========================================================================+
+  void set_closing_rid(uint64_t rid) {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex);
+    close_after_sending = true;
+    close_after_response_id = rid;
+    receiving = false;
   }
   // +=========================================================================+
   // | [>] request_context_closing                                  ( public ) |
@@ -310,10 +330,8 @@ struct context {
   // +=========================================================================+
   bool has_sendable_response_locked() {
     if (sending_offset < sending_buffer.size()) return true;
-    return std::any_of(
-        responses.begin(), responses.end(), [this](const response_data& r) {
-          return r.id == expected_response_id;
-        });
+    // The responses queue is kept ordered, so only its head can be sent!
+    return !responses.empty() && responses.front().id == expected_response_id;
   }
   // +=========================================================================+
   // | [>] append_sendable_responses_locked                        ( private ) |
@@ -324,12 +342,32 @@ struct context {
           expected_response_id > close_after_response_id) {
         return;
       }
-      auto itr = std::find_if(responses.begin(), responses.end(),
-                              [this](const response_data& response) {
-                                return response.id == expected_response_id;
-                              });
-      if (itr == responses.end()) return;
-      sending_buffer.append(itr->response->prefix);
+      if (sending_buffer.size() >= kSendBufferMaxSz) return;
+      // The responses queue is kept ordered, so only its head can be sent!
+      auto itr = responses.begin();
+      if (itr == responses.end() || itr->id != expected_response_id) return;
+      if (!itr->prefix_written) {
+        sending_buffer.append(itr->response->prefix);
+        itr->prefix_written = true;
+        continue;
+      }
+      auto& source = itr->response->source;
+      if (source.has_value() && !source->eof()) {
+        // Let's pour, at most, the remaining outgoing buffer capacity!
+        std::size_t offset = sending_buffer.size();
+        std::size_t room = kSendBufferMaxSz - offset;
+        sending_buffer.resize(offset + room);
+        std::size_t read = source->read(std::span<std::byte>(
+            reinterpret_cast<std::byte*>(sending_buffer.data() + offset),
+            room));
+        sending_buffer.resize(offset + read);
+        if (source->failed()) {
+          close_requested.store(true);
+          return;
+        }
+        if (!read && !source->eof()) return;
+        continue;
+      }
       expected_response_id++;
       responses.erase(itr);
       if (close_after_sending &&
@@ -358,6 +396,7 @@ struct context {
   bool read_closed{false};
   int socket{-1};
   DEty<RQty, RSty> decoder{};
+  char ovr_buf_[kReceiveBufferSz];
   uint64_t next_response_id{0};
   std::vector<response_data> responses;
   uint64_t expected_response_id{0};
@@ -650,11 +689,11 @@ struct worker
   // | [>] handle_receive                                          ( private ) |
   // +=========================================================================+
   void handle_receive(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    std::array<char, kReceiveBufferSz> buffer{};
     while (ctx->can_receive()) {
-      ssize_t received = ctx->receive(buffer.data(), buffer.size());
+      ssize_t received = ctx->receive();
       if (received > 0) {
-        consume_received(ctx, buffer.data(), static_cast<std::size_t>(received));
+        consume_received(ctx, ctx->get_receive_buffer(),
+                         static_cast<std::size_t>(received));
         continue;
       }
       if (received == 0) {
@@ -673,22 +712,24 @@ struct worker
   void consume_received(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
                         char* buffer, std::size_t size) {
     std::size_t consumed = 0;
-    while (consumed < size && ctx->can_receive()) {
-      std::size_t accepted =
-          ctx->accumulate(buffer + consumed, size - consumed);
+    do {
+      // Let's accumulate the received bytes into the decoder!
+      std::size_t accepted = ctx->accumulate(buffer + consumed, size - consumed);
       if (accepted == 0) {
+        // The decoder is full: let's drain the pending requests and retry!
         handle_deserialized_requests(ctx);
         if (!ctx->can_receive()) return;
         accepted = ctx->accumulate(buffer + consumed, size - consumed);
-        if (accepted == 0) {
-          send_error_and_mark_for_closing(
-              ctx, "Invalid source deserialization content!");
-          return;
-        }
       }
-      consumed += accepted;
+      if (accepted == 0 || accepted > (size - consumed)) {
+        send_error_and_mark_for_closing(
+            ctx, "Invalid source deserialization content!");
+        return;
+      }
+      // Let's try to deserialize some requests!
       handle_deserialized_requests(ctx);
-    }
+      consumed += accepted;
+    } while (ctx->can_receive() && consumed < size);
   }
   // +=========================================================================+
   // | [>] handle_deserialized_requests                            ( private ) |
@@ -713,6 +754,11 @@ struct worker
       try {
         std::thread::id tid = std::this_thread::get_id();
         uint64_t id = ctx->get_next_response_id();
+        // When the protocol requests channel closing, this response becomes
+        // the last one to be sent and no more requests must be decoded!
+        bool close_after_this =
+            result.channel == protocol::channel_intent::kClose;
+        if (close_after_this) ctx->set_closing_rid(id);
         std::shared_ptr<std::atomic_bool> completed =
             std::make_shared<std::atomic_bool>(false);
         ctx->add_pending_completion();
@@ -741,6 +787,7 @@ struct worker
                         if (owner) notify_worker(std::move(owner), ctx);
                       }
                     });
+        if (close_after_this) return;
       } catch (...) {
         ctx->abort_pending_completion();
         return;
