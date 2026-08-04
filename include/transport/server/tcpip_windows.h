@@ -47,6 +47,7 @@ static constexpr DWORD kAcceptAddressBytes =
     static_cast<DWORD>(sizeof(sockaddr_storage) + 16);
 static constexpr inline std::size_t kReceiveBufferSz = 8192;
 static constexpr inline std::size_t kSendBufferMaxSz = 65536;
+static constexpr inline std::size_t kSendChunkSz = 8192;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] io_type                                                ( enum-class ) |
@@ -291,17 +292,21 @@ struct context
       auto& source = itr->response->source;
       if (source.has_value() && !source->eof()) {
         // Let's pour, at most, the remaining outgoing buffer capacity!
-        std::size_t offset = ovs_buf_.size();
-        std::size_t room = kSendBufferMaxSz - offset;
-        ovs_buf_.resize(offset + room);
-        std::size_t read = source->read(std::span<std::byte>(
-            reinterpret_cast<std::byte*>(ovs_buf_.data() + offset), room));
-        ovs_buf_.resize(offset + read);
+        std::byte chunk[kSendChunkSz];
+        std::size_t room = kSendBufferMaxSz - ovs_buf_.size();
+        if (room > kSendChunkSz) room = kSendChunkSz;
+        std::size_t read = source->read(std::span<std::byte>(chunk, room));
         if (source->failed()) {
           closing_ = true;
           return;
         }
-        if (!read && !source->eof()) break;
+        if (!read) {
+          // Sources are synchronous readers, so a zero-byte read means there
+          // is nothing else to pour: let's retire this response right below!
+          source.reset();
+          continue;
+        }
+        ovs_buf_.append(reinterpret_cast<const char*>(chunk), read);
         continue;
       }
       expected_response_id_++;

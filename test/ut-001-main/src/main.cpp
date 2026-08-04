@@ -35,12 +35,11 @@ int main(int argc, char* argv[]) {
   http_server.add_route(
       "GET", "/pipeline",
       [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
-        std::string buffer(16384, '*');
         res->ok_200()
             .add_header("Server", "doba.")
             .add_header("Date", date_server::get().current())
             .add_header("Content-Type", "text/plain; charset=utf-8")
-            .set_body(buffer);
+            .set_body("ok");
       });
   http_server.start("8080");
   while (true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
