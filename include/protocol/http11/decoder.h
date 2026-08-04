@@ -29,6 +29,8 @@
 
 #include "protocol/http11/helpers.h"
 #include "protocol/http11/request.h"
+#include "protocol/http11/body/framer_raw.h"
+#include "protocol/http11/body/framer_chunked.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -47,7 +49,7 @@ class decoder {
   // +=========================================================================+
   // | [>] USINGs                                                  ( private ) |
   // +=========================================================================+
-  using body_writer_t = std::variant<body::writer_chunked, body::writer_raw>;
+  using body_framer_t = std::variant<body::framer_chunked, body::framer_raw>;
 
  public:
   // +=========================================================================+
@@ -76,7 +78,7 @@ class decoder {
   // | [>] deserialize                                              ( public ) |
   // +=========================================================================+
   deserialization_result<request> deserialize() {
-    return body_writer_ ? parse_body() : parse_core();
+    return body_framer_ ? parse_body() : parse_core();
   }
 
  private:
@@ -233,9 +235,9 @@ class decoder {
                 .spill_threshold = 65535,  // 64 KiB!
             });
             if (context_.connection.chunked) {
-              body_writer_ = body::writer_chunked();
+              body_framer_ = body::framer_chunked();
             } else {
-              body_writer_ = body::writer_raw(context_.content_length);
+              body_framer_ = body::framer_raw(context_.content_length);
             }
           }
           // Mount the request object and keep the result!
@@ -244,7 +246,7 @@ class decoder {
           // Otherwise, we need to continue parsing the body, so we remove the
           // already consumed bytes from the input and call parse() again to
           // continue parsing the body.
-          if (!body_writer_) return dispatch(std::nullopt);
+          if (!body_framer_) return dispatch(std::nullopt);
           // In case of a body writer, we need to continue parsing the body, so
           // we remove the already consumed bytes from the input and call
           // parse() again to continue parsing the body.
@@ -304,13 +306,13 @@ class decoder {
   // | [>] parse_body                                               ( public ) |
   // +=========================================================================+
   deserialization_result<request> parse_body() {
-    body::writer_state state = std::visit(
-        [this](auto& arg) -> body::writer_state {
+    body::framer_state state = std::visit(
+        [this](auto& arg) -> body::framer_state {
           std::span<const std::byte> byte_span{
               reinterpret_cast<const std::byte*>(buffer_), off_};
           return arg.write(byte_span, *body_buffer_);
         },
-        *body_writer_);
+        *body_framer_);
     if (state.has_error || state.consumed > off_) {
       return deserialization_status::kInvalidSource;
     }
@@ -387,7 +389,7 @@ class decoder {
     query_ = {};
     headers_ = {};
     context_ = {};
-    body_writer_ = std::nullopt;
+    body_framer_ = std::nullopt;
     body_buffer_ = std::nullopt;
   }
   // +=========================================================================+
@@ -809,7 +811,7 @@ class decoder {
   // +=========================================================================+
   char* buffer_ = nullptr;
   std::optional<common::writer> body_buffer_ = std::nullopt;
-  std::optional<body_writer_t> body_writer_ = std::nullopt;
+  std::optional<body_framer_t> body_framer_ = std::nullopt;
   std::size_t off_ = 0;
   context context_;
   std::string_view query_;

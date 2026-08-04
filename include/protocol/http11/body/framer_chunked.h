@@ -22,8 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_protocol_http11_body_reader_chunked_h
-#define martianlabs_doba_protocol_http11_body_reader_chunked_h
+#ifndef martianlabs_doba_protocol_http11_body_framer_chunked_h
+#define martianlabs_doba_protocol_http11_body_framer_chunked_h
 
 #include <algorithm>
 #include <cstddef>
@@ -31,33 +31,29 @@
 #include <limits>
 #include <span>
 
-#include "common/reader.h"
-#include "protocol/http11/body/reader_state.h"
+#include "common/writer.h"
+#include "protocol/http11/body/framer_state.h"
 
 namespace martianlabs::doba::protocol::http11::body {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] reader_chunked                                              ( class ) |
+// | [>] framer_chunked                                                ( class ) |
 // +---------------------------------------------------------------------------+
-// | Decodes a chunked Transfer-Encoding body (as accumulated verbatim by      |
-// | framer_chunked) by pulling wire bytes on demand from a common::reader     |
-// | source and filling the caller-supplied output span.                      |
+// | Validates and accumulates a chunked Transfer-Encoding body into a         |
+// | common::writer.                                                           |
 // |                                                                           |
-// | The caller pulls decoded payload via read(). Each call walks the same     |
-// | chunked framing grammar as framer_chunked, but chunk-size lines,          |
-// | extensions, CRLFs and trailers are wire framing, not payload: they are    |
-// | consumed from src and discarded, never written to output.                 |
+// | The caller pushes incoming transport spans via write(). Each call         |
+// | validates the chunked framing and writes ALL wire bytes — including       |
+// | chunk-size lines, extensions, trailers and terminating CRLF — verbatim    |
+// | into dst. No decoding is performed here; decoding is deferred to a        |
+// | reader pass over the completed buffer.                                    |
 // |                                                                           |
-// | reader_state::produced reports the exact number of decoded payload bytes |
-// | written into output during this call. If src is only temporarily        |
-// | exhausted (more bytes may still arrive), read() returns early with       |
-// | complete=false and no error; the caller may invoke it again once more    |
-// | wire bytes are available in src. If src reaches definitive eof() before  |
-// | the body reaches state::complete, this is a protocol error reported as   |
-// | reader_error::chunked_incomplete.                                        |
+// | framer_state::consumed reports the exact number of bytes belonging to     |
+// | this body that were taken from the input span. Any remaining bytes in the |
+// | span belong to the next request.                                          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-class reader_chunked {
+class framer_chunked {
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
   // +=========================================================================+
@@ -75,24 +71,23 @@ class reader_chunked {
 
  public:
   // +=========================================================================+
-  // | [>] CONSTANTs                                                 ( public ) |
+  // | [>] CONSTANTs                                                ( public ) |
   // +=========================================================================+
   static constexpr std::size_t kMaxExtensionSize = 1024;
   static constexpr std::size_t kMaxTrailerSize = 8192;
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
   // +=========================================================================+
-  reader_chunked() = default;
+  framer_chunked() = default;
   // +=========================================================================+
-  // | [>] read                                                     ( public ) |
+  // | [>] write                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Pulls wire bytes from src, walking the chunked framing, and writes only |
-  // | chunk-data bytes into output. Returns the number of decoded payload     |
-  // | bytes produced and whether the body is complete (last-chunk +           |
-  // | terminating CRLF seen).                                                 |
+  // | Validates the chunked framing in input and writes every wire byte into  |
+  // | dst unchanged. Returns the number of bytes consumed from input and      |
+  // | whether the body is complete (last-chunk + terminating CRLF seen).      |
   // +=========================================================================+
-  reader_state read(common::reader& src, std::span<std::byte> output) {
-    reader_state result;
+  framer_state write(std::span<const std::byte> input, common::writer& dst) {
+    framer_state result;
     if (state_ == state::complete) {
       result.complete = true;
       return result;
@@ -102,56 +97,9 @@ class reader_chunked {
       result.error = error_;
       return result;
     }
-    std::size_t out_pos = 0;
-    while (true) {
-      // -----------------------------------------------------------------------
-      // Chunk-data: bulk-copy payload bytes directly from src into output
-      // -----------------------------------------------------------------------
-      if (state_ == state::data) {
-        std::size_t room = output.size() - out_pos;
-        if (room == 0) break;  // output full — stop here for this call
-        std::size_t to_take = std::min(room, chunk_remaining_);
-        if (to_take > 0) {
-          std::size_t got = src.read(output.subspan(out_pos, to_take));
-          if (got == 0) {
-            if (src.failed()) {
-              result.produced = out_pos;
-              return fail(result, reader_error::io_error);
-            }
-            if (src.eof()) {
-              result.produced = out_pos;
-              return fail(result, reader_error::chunked_incomplete);
-            }
-            break;  // src exhausted for now — resume on next call
-          }
-          out_pos += got;
-          chunk_remaining_ -= got;
-          if (chunk_remaining_ == 0) {
-            // All chunk data consumed; expect post-data CRLF next.
-            state_ = state::data_cr;
-          }
-          continue;
-        }
-        // chunk_remaining_ == 0: move on to the post-data CRLF immediately.
-        state_ = state::data_cr;
-        continue;
-      }
-      // ---------------------------------------------------------------------
-      // All other states consume a single wire byte from src (framing only)
-      // ---------------------------------------------------------------------
-      std::byte b;
-      if (!src.fetch(b)) {
-        if (src.failed()) {
-          result.produced = out_pos;
-          return fail(result, reader_error::io_error);
-        }
-        if (src.eof()) {
-          result.produced = out_pos;
-          return fail(result, reader_error::chunked_incomplete);
-        }
-        break;  // src exhausted for now — resume on next call
-      }
-      const char c = static_cast<char>(b);
+    std::size_t i = 0;
+    while (i < input.size()) {
+      const char c = static_cast<char>(input[i]);
       switch (state_) {
         // ---------------------------------------------------------------------
         // Chunk-size line: accumulate hex digits, handle extension and CR
@@ -168,14 +116,12 @@ class reader_chunked {
           int digit = hex_digit(c);
           if (digit < 0) {
             // Invalid hex digit in chunk-size line!
-            result.produced = out_pos;
-            return fail(result, reader_error::invalid_chunk_size);
+            return fail(result, framer_error::invalid_chunk_size);
           }
           if (chunk_remaining_ >
               (std::numeric_limits<std::size_t>::max() >> 4)) {
             // Overflow in chunk size accumulation!
-            result.produced = out_pos;
-            return fail(result, reader_error::chunk_size_overflow);
+            return fail(result, framer_error::chunk_size_overflow);
           }
           chunk_remaining_ =
               (chunk_remaining_ << 4) | static_cast<std::size_t>(digit);
@@ -191,8 +137,8 @@ class reader_chunked {
           }
           if (++extension_size_ > kMaxExtensionSize) {
             // Chunk-extension section exceeded the configured size limit!
-            result.produced = out_pos;
-            return fail(result, reader_error::chunk_extension_size_limit_exceeded);
+            return fail(result,
+                        framer_error::chunk_extension_size_limit_exceeded);
           }
           break;
         }
@@ -202,8 +148,7 @@ class reader_chunked {
         case state::size_lf: {
           if (c != '\n') {
             // Invalid LF after chunk-size CR!
-            result.produced = out_pos;
-            return fail(result, reader_error::invalid_chunk_crlf);
+            return fail(result, framer_error::invalid_chunk_crlf);
           }
           extension_size_ = 0;
           if (chunk_remaining_ == 0) {
@@ -217,13 +162,30 @@ class reader_chunked {
           break;
         }
         // ---------------------------------------------------------------------
+        // Chunk data: bulk-write min(remaining, available) bytes
+        // ---------------------------------------------------------------------
+        case state::data: {
+          std::size_t to_take = std::min(chunk_remaining_, input.size() - i);
+          if (!dst.write(input.subspan(i, to_take))) {
+            // An I/O error occurred while writing to the destination!
+            return fail(result, framer_error::io_error);
+          }
+          result.consumed += to_take;
+          i += to_take;
+          chunk_remaining_ -= to_take;
+          if (chunk_remaining_ == 0) {
+            // All chunk data consumed; expect post-data CRLF next.
+            state_ = state::data_cr;
+          }
+          continue;  // i already advanced — skip the single-byte path below
+        }
+        // ---------------------------------------------------------------------
         // Post-data CRLF
         // ---------------------------------------------------------------------
         case state::data_cr: {
           if (c != '\r') {
             // Invalid CR after chunk data!
-            result.produced = out_pos;
-            return fail(result, reader_error::invalid_chunk_crlf);
+            return fail(result, framer_error::invalid_chunk_crlf);
           }
           state_ = state::data_lf;
           break;
@@ -231,8 +193,7 @@ class reader_chunked {
         case state::data_lf: {
           if (c != '\n') {
             // Invalid LF after chunk data CR!
-            result.produced = out_pos;
-            return fail(result, reader_error::invalid_chunk_crlf);
+            return fail(result, framer_error::invalid_chunk_crlf);
           }
           chunk_remaining_ = 0;
           state_ = state::chunk_size;
@@ -244,17 +205,20 @@ class reader_chunked {
         case state::trailer: {
           if (++trailer_size_ > kMaxTrailerSize) {
             // Trailer section exceeded the configured size limit!
-            result.produced = out_pos;
-            return fail(result, reader_error::trailer_size_limit_exceeded);
+            return fail(result, framer_error::trailer_size_limit_exceeded);
           }
           if (c == '\r') {
             trailer_cr_seen_ = true;
           } else if (c == '\n') {
             if (trailer_cr_seen_ && trailer_line_start_) {
-              // Terminating empty CRLF — body complete. Trailer bytes are not
-              // payload, so nothing more is written to output.
+              // Terminating empty CRLF — body complete. Write final byte
+              // and return with the exact consumed count.
+              if (!dst.write(input.subspan(i, 1))) {
+                // An I/O error occurred while writing to the destination!
+                return fail(result, framer_error::io_error);
+              }
+              result.consumed += 1;
               state_ = state::complete;
-              result.produced = out_pos;
               result.complete = true;
               return result;
             }
@@ -273,8 +237,14 @@ class reader_chunked {
         default:
           break;
       }
+      // Single-byte write for all non-data, non-complete paths.
+      if (!dst.write(input.subspan(i, 1))) {
+        // An I/O error occurred while writing to the destination!
+        return fail(result, framer_error::io_error);
+      }
+      result.consumed += 1;
+      i++;
     }
-    result.produced = out_pos;
     result.complete = (state_ == state::complete);
     return result;
   }
@@ -298,7 +268,7 @@ class reader_chunked {
   // +=========================================================================+
   // | [>] fail                                                    ( private ) |
   // +=========================================================================+
-  reader_state fail(reader_state& result, reader_error err) {
+  framer_state fail(framer_state& result, framer_error err) {
     state_ = state::error;
     error_ = err;
     result.has_error = true;
@@ -309,7 +279,7 @@ class reader_chunked {
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   state state_{state::chunk_size};
-  reader_error error_{reader_error::none};
+  framer_error error_{framer_error::none};
   std::size_t chunk_remaining_{0};
   std::size_t extension_size_{0};
   std::size_t trailer_size_{0};

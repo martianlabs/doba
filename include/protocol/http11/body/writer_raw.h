@@ -25,80 +25,45 @@
 #ifndef martianlabs_doba_protocol_http11_body_writer_raw_h
 #define martianlabs_doba_protocol_http11_body_writer_raw_h
 
-#include <algorithm>
-#include <cstddef>
 #include <span>
+#include <string_view>
 
 #include "common/writer.h"
-#include "protocol/http11/body/writer_state.h"
 
 namespace martianlabs::doba::protocol::http11::body {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] writer_raw                                                  ( class ) |
+// | [>] writer_raw                                                    ( class )
+// |
 // +---------------------------------------------------------------------------+
-// | Accumulates a Content-Length-framed body into a common::writer.           |
-// |                                                                           |
-// | The caller pushes incoming transport spans via write(); each call         |
-// | returns a feed_result indicating how many bytes were consumed from the    |
-// | span and whether the body is complete. Bytes beyond the declared          |
-// | Content-Length are never touched — they belong to the next request.       |
-// |                                                                           |
-// | Once write() reports an error, the failure is latched: every subsequent   |
-// | call returns the same has_error/error without touching dst again.         |
+// | Encodes an outgoing Content-Length-framed body: the raw framing is a      |
+// | pure passthrough, so this simply forwards the caller-supplied payload     |
+// | bytes verbatim into the destination common::writer.                       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class writer_raw {
  public:
   // +=========================================================================+
-  // | [>] CONSTRUCTORs                                             ( public ) |
-  // +=========================================================================+
-  explicit writer_raw(std::size_t content_length) : expected_(content_length) {}
-  // +=========================================================================+
   // | [>] write                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Writes up to (expected_ - accumulated_) bytes from input into dst.      |
-  // | Returns immediately with complete=true when Content-Length is reached.  |
-  // | A zero Content-Length body completes on the first call with consumed=0. |
+  // | Writes the given raw payload bytes into dst, unchanged.                 |
   // +=========================================================================+
-  writer_state write(std::span<const std::byte> input, common::writer& dst) {
-    writer_state result;
-    if (has_error_) {
-      result.has_error = true;
-      result.error = error_;
-      return result;
-    }
-    std::size_t remaining = expected_ - accumulated_;
-    std::size_t to_consume = std::min(remaining, input.size());
-    if (to_consume > 0) {
-      if (!dst.write(input.subspan(0, to_consume))) {
-        return fail(result, writer_error::io_error);
-      }
-      accumulated_ += to_consume;
-      result.consumed = to_consume;
-    }
-    result.complete = (accumulated_ == expected_);
-    return result;
-  }
-
- private:
-  // +=========================================================================+
-  // | [>] fail                                                    ( private ) |
-  // +=========================================================================+
-  writer_state fail(writer_state& result, writer_error err) {
-    has_error_ = true;
-    error_ = err;
-    result.has_error = true;
-    result.error = err;
-    return result;
+  static bool write(std::span<const std::byte> payload, common::writer& dst) {
+    return dst.write(payload);
   }
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( private ) |
+  // | [>] write                                                    ( public ) |
   // +=========================================================================+
-  std::size_t expected_;
-  std::size_t accumulated_{0};
-  bool has_error_{false};
-  writer_error error_{writer_error::none};
+  static bool write(std::string_view payload, common::writer& dst) {
+    return dst.write(payload);
+  }
+  // +=========================================================================+
+  // | [>] end                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Raw (Content-Length) framing has no terminating sequence; provided for  |
+  // | API symmetry with writer_chunked so callers can treat both uniformly.   |
+  // +=========================================================================+
+  static bool end(common::writer&) { return true; }
 };
 }  // namespace martianlabs::doba::protocol::http11::body
 
