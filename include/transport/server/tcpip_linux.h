@@ -36,6 +36,7 @@
 #include <cstring>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -158,8 +159,7 @@ struct context {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     enqueue_response_(std::move(response), response_id);
     if (close_this_context_after_sending) {
-      close_after_sending_ = true;
-      close_after_response_id_ = response_id;
+      closing_rid_ = response_id;
       responses_.erase(
           std::remove_if(responses_.begin(), responses_.end(),
                          [response_id](const response_data& response) {
@@ -189,8 +189,7 @@ struct context {
   // +=========================================================================+
   void set_closing_rid(uint64_t rid) {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    close_after_sending_ = true;
-    close_after_response_id_ = rid;
+    closing_rid_ = rid;
     receiving_ = false;
   }
   // +=========================================================================+
@@ -317,7 +316,7 @@ struct context {
       std::unique_ptr<protocol::serialization_result> response,
       uint64_t response_id) {
     if (!response || closing_ ||
-        (close_after_sending_ && response_id > close_after_response_id_)) {
+        (closing_rid_ && response_id > *closing_rid_)) {
       return;
     }
     response_data data{response_id, std::move(response)};
@@ -339,10 +338,7 @@ struct context {
   // +=========================================================================+
   void append_sendable_responses_() {
     while (true) {
-      if (close_after_sending_ &&
-          expected_response_id_ > close_after_response_id_) {
-        return;
-      }
+      if (closing_rid_ && expected_response_id_ > *closing_rid_) return;
       if (sending_buffer_.size() >= kSendBufferMaxSz) return;
       // The responses queue is kept ordered, so only its head can be sent!
       auto itr = responses_.begin();
@@ -374,10 +370,7 @@ struct context {
       }
       expected_response_id_++;
       responses_.erase(itr);
-      if (close_after_sending_ &&
-          expected_response_id_ > close_after_response_id_) {
-        return;
-      }
+      if (closing_rid_ && expected_response_id_ > *closing_rid_) return;
     }
   }
   // +=========================================================================+
@@ -385,9 +378,7 @@ struct context {
   // +=========================================================================+
   bool should_close_() {
     if (sending_offset_ != sending_buffer_.size()) return false;
-    if (close_after_sending_) {
-      return expected_response_id_ > close_after_response_id_;
-    }
+    if (closing_rid_) return expected_response_id_ > *closing_rid_;
     return read_closed_ && pending_completions_ == 0 && responses_.empty();
   }
   // +=========================================================================+
@@ -404,8 +395,7 @@ struct context {
   uint64_t next_response_id_{0};
   std::vector<response_data> responses_;
   uint64_t expected_response_id_{0};
-  bool close_after_sending_{false};
-  uint64_t close_after_response_id_{0};
+  std::optional<uint64_t> closing_rid_;
   std::size_t pending_completions_{0};
   std::string sending_buffer_;
   std::size_t sending_offset_{0};
