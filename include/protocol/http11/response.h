@@ -29,8 +29,10 @@
 #include <stdexcept>
 #include <utility>
 
+#include "common/date_server.h"
 #include "platform.h"
 #include "protocol/http11/body/writer.h"
+#include "protocol/http11/header_names.h"
 #include "protocol/serialization.h"
 #include "status_codes.h"
 #include "status_lines.h"
@@ -69,6 +71,9 @@ class response {
   // | the reader and controls bounded reads after response is destroyed.      |
   // +=========================================================================+
   [[nodiscard]] std::unique_ptr<protocol::serialization_result> serialize() {
+    if (!has_date_header_) {
+      add_header(header_names::kDate, common::date_server::get().current());
+    }
     std::size_t sln_plus_hdr_len = sln_len_ + hdr_len_;
     // Write the header-terminating CRLF (plus an extra CRLF when there are no
     // headers). The core section must always stay within [0, bdy_beg_).
@@ -121,6 +126,7 @@ class response {
     hdr_len_++;
     memory_[sln_len_ + hdr_len_] = '\n';
     hdr_len_++;
+    if (iequals(k, header_names::kDate)) has_date_header_ = true;
     return *this;
   }
   // +=========================================================================+
@@ -160,6 +166,7 @@ class response {
     std::memmove(&memory_[val_off + new_v_size], &memory_[tail_off], tail_len);
     std::memcpy(&memory_[val_off], v.data(), new_v_size);
     hdr_len_ = hdr_len_ - val_len + new_v_size;
+    if (iequals(k, header_names::kDate)) has_date_header_ = true;
     return *this;
   }
   // +=========================================================================+
@@ -265,6 +272,7 @@ class response {
     std::size_t tail_len = (sln_len_ + hdr_len_) - tail_off;
     std::memmove(&memory_[line_off], &memory_[tail_off], tail_len);
     hdr_len_ -= line_len;
+    if (iequals(k, header_names::kDate)) has_date_header_ = false;
     return *this;
   }
   // +=========================================================================+
@@ -591,6 +599,7 @@ class response {
     // if an oversized status line is ever supplied.
     hdr_len_ = 0;
     bdy_len_ = 0;
+    has_date_header_ = false;
     bdy_writer_.reset();
     if (len > bdy_beg_) {
       sln_len_ = 0;
@@ -618,6 +627,7 @@ class response {
   std::size_t hdr_len_{0};
   std::size_t bdy_beg_{kMaxSizeInMemory - kMaxBodySizeInMemory};
   std::size_t bdy_len_{0};
+  bool has_date_header_{false};
   std::optional<body::body_writer> bdy_writer_;
 };
 }  // namespace martianlabs::doba::protocol::http11

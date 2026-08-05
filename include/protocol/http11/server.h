@@ -76,6 +76,7 @@ class server {
   // +=========================================================================+
   void start(const char port[]) {
     std::lock_guard<std::mutex> lock(locked_mutex_);
+    common::date_server::get().start();
     router_.start();
     transport_.set_on_request(
         [this](std::shared_ptr<const RQty> req, std::shared_ptr<RSty> res,
@@ -142,6 +143,7 @@ class server {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     router_.stop();
     transport_.stop();
+    common::date_server::get().stop();
     locked_ = false;
   }
   // +=========================================================================+

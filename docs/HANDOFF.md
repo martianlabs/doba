@@ -295,29 +295,22 @@ interna), A = alta (capa nueva, dependencia externa o cambio de contrato).
 
 ### Nivel 1 — Crítico: incumplimiento visible en cada respuesta
 
-1. **`Date` no se emite. (B)** `common::date_server` está implementado y
-   `server.h` lo incluye, pero `date_server::get()` no se invoca en ningún
-   punto del árbol. RFC 9110 §6.6.1 lo exige a un origin server; sin él las
-   caches intermedias no pueden calcular frescura. Decidir si se inyecta en
-   `response::serialize()` (cubre también las respuestas de error del
-   transporte) o en `server`.
-
-2. **`Connection: close` no se refleja en el mensaje. (B)** El protocolo
+1. **`Connection: close` no se refleja en el mensaje. (B)** El protocolo
    calcula `channel_intent::kClose` y el transporte lo honra, pero el header
    nunca se emite: el cliente ve una respuesta aparentemente persistente
    seguida de un FIN inesperado, y reutiliza la conexión.
 
-3. **Semántica de `HEAD`, `204` y `304`. (M)** Nada suprime el cuerpo. Si un
+2. **Semántica de `HEAD`, `204` y `304`. (M)** Nada suprime el cuerpo. Si un
    handler de `HEAD` llama a `set_body`, el cuerpo se envía y la conexión se
    desincroniza. Requiere que el punto de serialización conozca el método, dato
    que hoy no cruza esa frontera.
 
-4. **Ausencia total de timeouts. (A)** Sin deadline de cabeceras, body,
+3. **Ausencia total de timeouts. (A)** Sin deadline de cabeceras, body,
    escritura ni idle de keep-alive en ninguno de los dos backends. Exposición
    directa a slowloris y prerequisito para emitir `408`, cuyo status-line ya
    existe pero nunca se usa.
 
-5. **Todo rechazo colapsa en `400`. (M)** La causa raíz es que `verdict` es
+4. **Todo rechazo colapsa en `400`. (M)** La causa raíz es que `verdict` es
    binario (`kAccept`/`kReject`): ninguna regla puede expresar *por qué*
    rechaza. Impide distinguir `413`, `414`, `431`, `501` y `505`, cuyos
    status-lines ya existen. Ampliar `verdict` toca todos los `interpret()` de
@@ -325,80 +318,80 @@ interna), A = alta (capa nueva, dependencia externa o cambio de contrato).
 
 ### Nivel 2 — Alto: bloquea despliegue real o usabilidad básica
 
-6. **Sin TLS. (A)** Ni Schannel ni OpenSSL ni ALPN. Hoy solo es desplegable
+5. **Sin TLS. (A)** Ni Schannel ni OpenSSL ni ALPN. Hoy solo es desplegable
    detrás de un terminador TLS. Debe encajar sin romper la frontera
    protocolo/transporte.
 
-7. **`100-continue` y respuestas 1xx interinas. (A)** `Expect` se parsea e
+6. **`100-continue` y respuestas 1xx interinas. (A)** `Expect` se parsea e
    interpreta, pero no se emite `100 Continue` ni `417`. El obstáculo
    estructural es que `on_send` es de un solo uso. Sin ello, los clientes que
    envían `Expect` esperan su timeout en cada petición con cuerpo grande.
 
-8. **Una excepción del handler cierra sin `500`. (B)** En ambos transportes el
+7. **Una excepción del handler cierra sin `500`. (B)** En ambos transportes el
    `catch` alrededor de `on_request_` hace `close()` y retorna. Un bug de
    usuario se manifiesta como conexión cortada, indistinguible de un fallo de
    red. Existe `set_on_bad_request` para errores de decodificación; falta el
    simétrico para errores de handler.
 
-9. **`request` sin acceso a headers por nombre. (B)** Solo hay
+8. **`request` sin acceso a headers por nombre. (B)** Solo hay
    `get_header(std::size_t)`. Leer `Authorization` obliga a iterar y comparar
    sin distinguir mayúsculas a mano. Igual para query-parameters y cookies.
 
-10. **Sin percent-decoding ni normalización de path. (M)** No existe ninguna
-    función de decodificación porcentual. Afecta al enrutado de paths
-    codificados y, sobre todo, a la seguridad de cualquier handler que mapee a
-    disco. Debe decodificarse después de segmentar por `/`, nunca antes.
+9. **Sin percent-decoding ni normalización de path. (M)** No existe ninguna
+   función de decodificación porcentual. Afecta al enrutado de paths
+   codificados y, sobre todo, a la seguridad de cualquier handler que mapee a
+   disco. Debe decodificarse después de segmentar por `/`, nunca antes.
 
-11. **Solo se acepta `HTTP/1.1`. (B)** Cualquier otra versión devuelve
+10. **Solo se acepta `HTTP/1.1`. (B)** Cualquier otra versión devuelve
     `kInvalidSource` y acaba en `400`. Falta semántica `HTTP/1.0` (cierre
     implícito, prohibición de chunked) y `505` para versiones superiores; esto
-    último depende del punto 5.
+    último depende del punto 4.
 
 ### Nivel 3 — Medio: paridad funcional esperada
 
-12. **Condicionales y `Range` sin semántica. (A)** `etag`, `if_*` y `range`
+11. **Condicionales y `Range` sin semántica. (A)** `etag`, `if_*` y `range`
     están modelados y validados sintácticamente, pero nadie los evalúa: no se
     genera `304`, `412`, `206` ni `416`. Requiere decidir cómo expone el
     handler sus validadores.
 
-13. **Compresión y negociación de contenido. (A)** Sin gzip/deflate/br ni
+12. **Compresión y negociación de contenido. (A)** Sin gzip/deflate/br ni
     gestión de `Vary`. Introduce dependencia externa, lo que choca con el
     "cero dependencias" del README: es decisión de producto, no solo técnica.
 
-14. **`OPTIONS` por recurso y `TRACE`. (M)** `OPTIONS *` responde `200` sin
+13. **`OPTIONS` por recurso y `TRACE`. (M)** `OPTIONS *` responde `200` sin
     `Allow`. El router ya sabe calcular los métodos aplicables (lo hace para el
     `405`); falta exponerlo.
 
-15. **Sin handler de ficheros estáticos. (M)** El streaming de salida ya
-    funciona, así que la base está. Depende del punto 10 por seguridad e
+14. **Sin handler de ficheros estáticos. (M)** El streaming de salida ya
+    funciona, así que la base está. Depende del punto 9 por seguridad e
     idealmente de `TransmitFile`/`sendfile`.
 
-16. **`channel_intent::kUpgrade` sin contrato de traspaso. (A)** El valor está
+15. **`channel_intent::kUpgrade` sin contrato de traspaso. (A)** El valor está
     definido y los headers `Sec-WebSocket-*` modelados, pero ningún transporte
     lo maneja. Hay que definir quién posee el socket tras el `101`, cómo se
     drena el buffer ya acumulado y cómo se desactiva el pipelining, sin filtrar
     semántica HTTP al transporte.
 
-17. **Trailers de salida. (M)** El lado de entrada los conserva y expone;
+16. **Trailers de salida. (M)** El lado de entrada los conserva y expone;
     `response` no tiene API para emitirlos.
 
 ### Nivel 4 — Operabilidad y confianza
 
-18. **Sin límites de conexión ni backpressure de aceptación. (M)**
+17. **Sin límites de conexión ni backpressure de aceptación. (M)**
     `connections_` es solo un contador observacional: nada lo consulta para
     dejar de aceptar.
 
-19. **Sin logging de acceso, métricas ni trazas. (M)** No hay punto de
+18. **Sin logging de acceso, métricas ni trazas. (M)** No hay punto de
     extensión para observabilidad.
 
-20. **Sin cadena de middleware. (M)** No hay forma de aplicar lógica
+19. **Sin cadena de middleware. (M)** No hay forma de aplicar lógica
     transversal sin duplicarla en cada handler. Requiere diseño cuidadoso para
     no contradecir el principio de "sin maquinaria de framework".
 
-21. **Sin parsing de formularios. (M)** Ni `x-www-form-urlencoded` ni
-    `multipart/form-data`. Comparte primitiva con el punto 10.
+20. **Sin parsing de formularios. (M)** Ni `x-www-form-urlencoded` ni
+    `multipart/form-data`. Comparte primitiva con el punto 9.
 
-22. **Sin suite de conformidad. (M)** Solo un harness de ejemplo. Sin batería
+21. **Sin suite de conformidad. (M)** Solo un harness de ejemplo. Sin batería
     de casos de protocolo (framing, smuggling, pipelining, límites), cada
     cambio en el decoder es una apuesta.
 
@@ -409,12 +402,12 @@ interna), A = alta (capa nueva, dependencia externa o cambio de contrato).
 
 ### Secuencia recomendada
 
-Tanda 1 (complejidad B, alto retorno): 1, 2, 8, 9, 11.
-Tanda 2 (correctitud de framing): 3, luego 5 aislado.
-Tanda 3 (robustez): 4, 18.
-Tanda 4 (despliegue autónomo): 6, 7.
-Tanda 5 (paridad funcional, depende de 5 y/o 10): 12, 17, 14, 21, 10, 15, 16.
-Tanda 6 (producto/observabilidad, sin dependencias bloqueantes): 13, 19, 20, 22.
+Tanda 1 (complejidad B, alto retorno): 1, 7, 8, 10.
+Tanda 2 (correctitud de framing): 2, luego 4 aislado.
+Tanda 3 (robustez): 3, 17.
+Tanda 4 (despliegue autónomo): 5, 6.
+Tanda 5 (paridad funcional, depende de 4 y/o 9): 11, 16, 13, 20, 9, 14, 15.
+Tanda 6 (producto/observabilidad, sin dependencias bloqueantes): 12, 18, 19, 21.
 
 ## Estado de pruebas y documentación
 

@@ -30,7 +30,6 @@ using namespace martianlabs::doba::protocol::http11;
 
 int main(int argc, char* argv[]) {
   martianlabs::doba::network::startup();
-  date_server::get().start();
   server http_server;
   http_server.add_route(
       "GET", "/pipeline",
@@ -43,7 +42,6 @@ int main(int argc, char* argv[]) {
       });
   http_server.start("8080");
   while (true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  date_server::get().stop();
   martianlabs::doba::network::cleanup();
   return 0;
 }
