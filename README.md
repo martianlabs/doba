@@ -26,7 +26,7 @@ It ships as **pure headers**. No build step, no binary to link, no dependencies 
 
 - **Bodies scale beyond RAM.** Raw and chunked bodies use memory or file-backed storage according to configured limits, while preserving the original wire representation when required.
 
-- **Native asynchronous I/O.** Windows uses IOCP directly, supports pipelined responses and accepts completions from asynchronous route handlers while preserving response order. The Linux backend is being reworked and is not currently a parity target.
+- **Native asynchronous I/O.** Windows uses IOCP and Linux uses epoll, each written against the platform primitive directly. Both backends support pipelined responses and accept completions from asynchronous route handlers while preserving response order.
 
 - **Keep control.** Request, response, decoder, transport, and router remain template parameters, so the framework can be adapted without rewriting its core.
 
@@ -65,6 +65,10 @@ cmake --build build
 ```
 
 Requires CMake ≥ 3.20 and a C++20 compiler. MSVC/Ninja presets (`msvc-debug`, `msvc-release`) are provided in `CMakePresets.json`.
+
+## Current scope
+
+doba is under active development. The transport/protocol contract, HTTP/1.1 request decoding, routing, and body handling are in place on both backends. Notably absent today: TLS (deploy behind a terminator), `100-continue`, conditional requests and `Range` evaluation, content negotiation, and connection timeouts. Pending work is tracked in [docs/HANDOFF.md](docs/HANDOFF.md).
 
 ## License
 

@@ -10,7 +10,6 @@ genérica: el transporte no debe conocer tipos ni semántica de HTTP/1.1. El
 protocolo comunica al transporte el resultado genérico de deserialización y la
 intención del canal.
 
-- Raíz de trabajo: `D:\projects\martianlabs\doba`.
 - Build: CMake 3.20 o superior, C++20 y presets `msvc-debug` / `msvc-release`.
 - No realizar operaciones Git sobre este repositorio.
 - Todo archivo C++ nuevo debe llevar la cabecera Apache/doba exacta de un
@@ -49,16 +48,24 @@ include/
       router_handler_parametrized_base.h
                          interfaz interna de handlers parametrizados
       body/
-        writer_raw.h     acumulación de body con Content-Length
-        writer_chunked.h validación/acumulación del wire chunked
-        writer_state.h   resultado de los body writers
-        writer_error.h   errores de chunked
+        (entrada: framing del body recibido)
+        framer_raw.h     framing de un body delimitado por Content-Length
+        framer_chunked.h validación del wire chunked recibido
+        framer_state.h   resultado de los body framers
+        framer_error.h   errores de framing de entrada
+        (entrada: lectura del body ya acumulado)
         reader.h         body::reader: selecciona reader_chunked/reader_raw
                          según el encoding real de la request
         reader_chunked.h decodificación del framing chunked al leer
         reader_raw.h     lectura directa de un body Content-Length
         reader_state.h   resultado de los body readers
         reader_error.h   errores de lectura de body
+        (salida: body de la respuesta)
+        writer.h         body::body_writer: fachada raw/chunked de salida
+        writer_raw.h     codificación de salida con Content-Length
+        writer_chunked.h codificación del wire chunked de salida
+        writer_state.h   resultado de los body writers
+        writer_error.h   errores de escritura de salida
       headers/           checkers e intérpretes de headers y reglas
   transport/server/
     tcpip.h              selector de plataforma
@@ -90,24 +97,29 @@ struct serialization_result {
 ```
 
 `prefix` posee los bytes ya materializados. `source` permite que un protocolo
-entregue una fuente genérica para el resto de bytes; la `response` HTTP actual
-solo rellena el prefijo con su cuerpo inline.
+entregue una fuente genérica para el resto de bytes. La `response` HTTP rellena
+`prefix` con la status-line, los headers y el cuerpo inline cuando lo hay, y
+emplaza `source` con el `common::reader` liberado por su `body::body_writer`
+cuando el cuerpo se entregó como writer. Ambos transportes consumen primero
+`prefix` y después drenan `source`.
 
 ## HTTP/1.1: decodificación de requests
 
 El punto de entrada actual es `decoder<RQty, RSty>` en
 `protocol/http11/decoder.h`:
 
-1. `accumulate(char*, size)` copia hasta `RQty::kMaxHeadSize` en su buffer
-   interno.
+1. `accumulate(char*, size)` copia en su buffer interno hasta agotar
+   `kDecodingBufferSize` (16384 bytes, constante privada del decoder) y
+   devuelve cuántos bytes admitió.
 2. `deserialize()` llama a `parse_core()` mientras no haya body pendiente o a
-   `parse_body()` cuando ya se ha elegido un body writer.
+   `parse_body()` cuando ya se ha elegido un body framer.
 3. `parse_core()` procesa request-line y headers una vez. Usa
    `header_dispatchers_`, un `common::hash_map` con punteros a función.
 4. Los headers modelados actualizan `context_`; al terminar los headers se
    aplican `framing`, `routing`, `directives` y `policy`.
-5. Si hay body, el decoder selecciona `body::writer_chunked` cuando la
-   conexión indica chunked, o `body::writer_raw` cuando hay Content-Length.
+5. Si hay body, el decoder abre un `common::writer` con `spill_threshold` de
+   65535 bytes y selecciona `body::framer_chunked` cuando la conexión indica
+   chunked, o `body::framer_raw(content_length)` en caso contrario.
 6. Al completarse la request, `dispatch()` construye el
    `deserialization_result` y reinicia el estado del decoder.
 
@@ -118,11 +130,12 @@ Expect, Upgrade, Max-Forwards, Via, Forwarded y los tres X-Forwarded.
 
 ### Body de entrada
 
-`body::writer_raw` copia exactamente los bytes delimitados por Content-Length a
-un `common::writer`. `body::writer_chunked` valida el framing chunked y conserva
-en el almacenamiento todos los bytes wire, incluidos tamaño de chunk,
-extensiones, trailers y terminador. No decodifica el payload a una forma
-distinta.
+Las clases de entrada son los `framer`, no los `writer` (estos últimos son de
+salida). `body::framer_raw` delimita exactamente los bytes indicados por
+Content-Length. `body::framer_chunked` valida el framing chunked y conserva
+todos los bytes wire, incluidos tamaño de chunk, extensiones, trailers y
+terminador. Ninguno decodifica el payload a una forma distinta: el decoder
+vuelca lo aceptado a un `common::writer`.
 
 `common::writer` entrega el resultado como `common::byte_storage`.
 `request_getter<RQty>` es el callback que recibe opcionalmente ese storage y
@@ -141,6 +154,22 @@ leer el storage, obtener bytes individuales y vaciarlo a un `std::string` con
 `read_all`. También ofrece `reader::borrowed(span)`: esa variante no posee los
 bytes y exige que el almacenamiento del llamador sobreviva al reader y a todos
 los objetos a los que se mueva.
+
+### Body de salida
+
+`body::body_writer` (`body/writer.h`) es la fachada del cuerpo de respuesta.
+Se construye con `body_writer::raw(opts)` o `body_writer::chunked(opts)` y
+mantiene internamente un `std::variant<writer_chunked, writer_raw>` sobre un
+`common::writer`, por lo que también puede derramar a fichero.
+
+`response::set_body(std::string_view)` copia el payload a la zona inline
+cuando cabe en `kMaxBodySizeInMemory` y fija `Content-Length`; si no cabe,
+crea internamente un writer raw y delega en él.
+`response::set_body(body::body_writer&&)` adopta un writer ya construido por
+el llamador. En ambos casos `apply_body_framing()` emite
+`Transfer-Encoding: chunked` para writers chunked o un `Content-Length`
+derivado de `bytes_written()` para los raw. `serialize()` consume el writer y
+lo entrega como `serialization_result::source`.
 
 ## Objetos HTTP públicos
 
@@ -170,8 +199,8 @@ decoder.
 
 La API incluye `add_header`, `set_header`, `has_header`, `get_header` por clave
 o índice, `get_headers_length`, `remove_header` y los helpers de status-line.
-No hay una sobrecarga actual de `set_body` que acepte un serializer o un source
-de body externo.
+Para el cuerpo existen las dos sobrecargas de `set_body` descritas en "Body de
+salida": una inline y otra que adopta un `body::body_writer`.
 
 ### `server` y `router`
 
@@ -224,6 +253,13 @@ la plataforma. El backend Windows usa IOCP y el Linux usa EPOLL. Ambos
 mantienen el orden de respuestas pipelined mediante identificadores de
 respuesta monótonos.
 
+Ambos backends consumen `serialization_result` de la misma forma: primero
+vuelcan `prefix` una sola vez (marca `prefix_written`) y después drenan
+`source` en trozos acotados por `kSendChunkSz`, deteniéndose cuando el buffer
+de envío alcanza `kSendBufferMaxSz`. Un `failed()` del reader cierra el
+contexto; una lectura de cero bytes retira la respuesta y avanza al siguiente
+identificador esperado.
+
 En Windows, cada request recibe un identificador de respuesta monótono. El
 `on_send` entregado al protocolo conserva el contexto mediante `shared_ptr`,
 encola la respuesta serializada con ese identificador y, cuando la completación
@@ -251,31 +287,139 @@ No modificar la frontera protocolo/transporte para resolver una necesidad
 exclusiva de HTTP. Si un cambio requiere semántica HTTP, debe vivir en la capa
 HTTP o expresarse en el contrato genérico ya existente.
 
-## Pendientes técnicos conocidos
+## Pendientes de compliance HTTP/1.1
 
-- [ ] Añadir a `response` bodies de salida externos/serializers y establecer
-  el framing HTTP correcto (`Content-Length` o `Transfer-Encoding: chunked`).
+Estado verificado por lectura del árbol, no por ejecución contra clientes
+reales. Complejidad: B = baja (localizada), M = media (varios archivos o API
+interna), A = alta (capa nueva, dependencia externa o cambio de contrato).
 
-- [ ] Hacer que los transportes Windows y Linux consuman
-  `serialization_result::source` después de `prefix`.
+### Nivel 1 — Crítico: incumplimiento visible en cada respuesta
 
-- [ ] Hacer que el backend Windows respete `deserialization_result::channel`,
-  especialmente `channel_intent::kClose`.
+1. **`Date` no se emite. (B)** `common::date_server` está implementado y
+   `server.h` lo incluye, pero `date_server::get()` no se invoca en ningún
+   punto del árbol. RFC 9110 §6.6.1 lo exige a un origin server; sin él las
+   caches intermedias no pueden calcular frescura. Decidir si se inyecta en
+   `response::serialize()` (cubre también las respuestas de error del
+   transporte) o en `server`.
 
-- [ ] Definir un contrato explícito para transferir el canal cuando un
-  protocolo devuelva `channel_intent::kUpgrade`.
+2. **`Connection: close` no se refleja en el mensaje. (B)** El protocolo
+   calcula `channel_intent::kClose` y el transporte lo honra, pero el header
+   nunca se emite: el cliente ve una respuesta aparentemente persistente
+   seguida de un FIN inesperado, y reutiliza la conexión.
 
+3. **Semántica de `HEAD`, `204` y `304`. (M)** Nada suprime el cuerpo. Si un
+   handler de `HEAD` llama a `set_body`, el cuerpo se envía y la conexión se
+   desincroniza. Requiere que el punto de serialización conozca el método, dato
+   que hoy no cruza esa frontera.
 
-- [ ] Documentar el contrato de ciclo de vida para usuarios que consuman
+4. **Ausencia total de timeouts. (A)** Sin deadline de cabeceras, body,
+   escritura ni idle de keep-alive en ninguno de los dos backends. Exposición
+   directa a slowloris y prerequisito para emitir `408`, cuyo status-line ya
+   existe pero nunca se usa.
+
+5. **Todo rechazo colapsa en `400`. (M)** La causa raíz es que `verdict` es
+   binario (`kAccept`/`kReject`): ninguna regla puede expresar *por qué*
+   rechaza. Impide distinguir `413`, `414`, `431`, `501` y `505`, cuyos
+   status-lines ya existen. Ampliar `verdict` toca todos los `interpret()` de
+   `headers/` y las cuatro reglas de `rules/`: conviene planificarlo aparte.
+
+### Nivel 2 — Alto: bloquea despliegue real o usabilidad básica
+
+6. **Sin TLS. (A)** Ni Schannel ni OpenSSL ni ALPN. Hoy solo es desplegable
+   detrás de un terminador TLS. Debe encajar sin romper la frontera
+   protocolo/transporte.
+
+7. **`100-continue` y respuestas 1xx interinas. (A)** `Expect` se parsea e
+   interpreta, pero no se emite `100 Continue` ni `417`. El obstáculo
+   estructural es que `on_send` es de un solo uso. Sin ello, los clientes que
+   envían `Expect` esperan su timeout en cada petición con cuerpo grande.
+
+8. **Una excepción del handler cierra sin `500`. (B)** En ambos transportes el
+   `catch` alrededor de `on_request_` hace `close()` y retorna. Un bug de
+   usuario se manifiesta como conexión cortada, indistinguible de un fallo de
+   red. Existe `set_on_bad_request` para errores de decodificación; falta el
+   simétrico para errores de handler.
+
+9. **`request` sin acceso a headers por nombre. (B)** Solo hay
+   `get_header(std::size_t)`. Leer `Authorization` obliga a iterar y comparar
+   sin distinguir mayúsculas a mano. Igual para query-parameters y cookies.
+
+10. **Sin percent-decoding ni normalización de path. (M)** No existe ninguna
+    función de decodificación porcentual. Afecta al enrutado de paths
+    codificados y, sobre todo, a la seguridad de cualquier handler que mapee a
+    disco. Debe decodificarse después de segmentar por `/`, nunca antes.
+
+11. **Solo se acepta `HTTP/1.1`. (B)** Cualquier otra versión devuelve
+    `kInvalidSource` y acaba en `400`. Falta semántica `HTTP/1.0` (cierre
+    implícito, prohibición de chunked) y `505` para versiones superiores; esto
+    último depende del punto 5.
+
+### Nivel 3 — Medio: paridad funcional esperada
+
+12. **Condicionales y `Range` sin semántica. (A)** `etag`, `if_*` y `range`
+    están modelados y validados sintácticamente, pero nadie los evalúa: no se
+    genera `304`, `412`, `206` ni `416`. Requiere decidir cómo expone el
+    handler sus validadores.
+
+13. **Compresión y negociación de contenido. (A)** Sin gzip/deflate/br ni
+    gestión de `Vary`. Introduce dependencia externa, lo que choca con el
+    "cero dependencias" del README: es decisión de producto, no solo técnica.
+
+14. **`OPTIONS` por recurso y `TRACE`. (M)** `OPTIONS *` responde `200` sin
+    `Allow`. El router ya sabe calcular los métodos aplicables (lo hace para el
+    `405`); falta exponerlo.
+
+15. **Sin handler de ficheros estáticos. (M)** El streaming de salida ya
+    funciona, así que la base está. Depende del punto 10 por seguridad e
+    idealmente de `TransmitFile`/`sendfile`.
+
+16. **`channel_intent::kUpgrade` sin contrato de traspaso. (A)** El valor está
+    definido y los headers `Sec-WebSocket-*` modelados, pero ningún transporte
+    lo maneja. Hay que definir quién posee el socket tras el `101`, cómo se
+    drena el buffer ya acumulado y cómo se desactiva el pipelining, sin filtrar
+    semántica HTTP al transporte.
+
+17. **Trailers de salida. (M)** El lado de entrada los conserva y expone;
+    `response` no tiene API para emitirlos.
+
+### Nivel 4 — Operabilidad y confianza
+
+18. **Sin límites de conexión ni backpressure de aceptación. (M)**
+    `connections_` es solo un contador observacional: nada lo consulta para
+    dejar de aceptar.
+
+19. **Sin logging de acceso, métricas ni trazas. (M)** No hay punto de
+    extensión para observabilidad.
+
+20. **Sin cadena de middleware. (M)** No hay forma de aplicar lógica
+    transversal sin duplicarla en cada handler. Requiere diseño cuidadoso para
+    no contradecir el principio de "sin maquinaria de framework".
+
+21. **Sin parsing de formularios. (M)** Ni `x-www-form-urlencoded` ni
+    `multipart/form-data`. Comparte primitiva con el punto 10.
+
+22. **Sin suite de conformidad. (M)** Solo un harness de ejemplo. Sin batería
+    de casos de protocolo (framing, smuggling, pipelining, límites), cada
+    cambio en el decoder es una apuesta.
+
+### Documentación pendiente
+
+- Documentar el contrato de ciclo de vida para usuarios que consuman
   directamente el transporte, fuera de `http11::server`.
+
+### Secuencia recomendada
+
+Tanda 1 (complejidad B, alto retorno): 1, 2, 8, 9, 11.
+Tanda 2 (correctitud de framing): 3, luego 5 aislado.
+Tanda 3 (robustez): 4, 18.
+Tanda 4 (despliegue autónomo): 6, 7.
 
 ## Estado de pruebas y documentación
 
-Los subproyectos de prueba configurados son `test/ut-001-main` y
-`test/ut-002-common-io`. `ut-001-main` es un harness/ejemplo de servidor; no
-debe presentarse como una suite unitaria exhaustiva sin revisar sus casos y
-aserciones concretas. `ut-002-common-io` cubre `common::reader`/`common::writer`
-sobre `common::byte_storage`.
+El único subproyecto de prueba configurado es `test/ut-001-main`, que es un
+harness/ejemplo de servidor; no debe presentarse como una suite unitaria
+exhaustiva sin revisar sus casos y aserciones concretas. No existe una batería
+de conformidad de protocolo.
 
 Los resultados de builds, auditorías y correcciones históricas no se incluyen
 aquí: deben verificarse de nuevo contra el árbol y la toolchain disponibles

@@ -162,21 +162,21 @@ struct context
   // | [>] accumulate                                               ( public ) |
   // +=========================================================================+
   std::size_t accumulate(std::size_t bytes_received) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     return decoder_.accumulate(ovr_wsa_.buf, bytes_received);
   }
   // +=========================================================================+
   // | [>] deserialize                                              ( public ) |
   // +=========================================================================+
   protocol::deserialization_result<RQty> deserialize() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     return decoder_.deserialize();
   }
   // +=========================================================================+
   // | [>] get_next_response_id                                     ( public ) |
   // +=========================================================================+
   uint64_t get_next_response_id() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     return get_next_rid_();
   }
   // +=========================================================================+
@@ -185,22 +185,22 @@ struct context
   void enqueue_response(
       std::unique_ptr<protocol::serialization_result> response,
       uint64_t response_id) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     enqueue_response_(std::move(response), response_id);
   }
   // +=========================================================================+
   // | [>] enqueue_error_response                                   ( public ) |
   // +=========================================================================+
   void enqueue_error_response(std::shared_ptr<RSty> res) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     enqueue_error_response_(std::move(res));
   }
   // +=========================================================================+
   // | [>] check_sending_buffer_and_arm                             ( public ) |
   // +=========================================================================+
   void check_sending_buffer_and_arm(std::size_t bytes_sent) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    ovs_buf_.erase(0, bytes_sent);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    sending_buffer_.erase(0, bytes_sent);
     sending_ = false;
     arm_next_send_operation_();
   }
@@ -208,7 +208,7 @@ struct context
   // | [>] arm_next_receive_operation                               ( public ) |
   // +=========================================================================+
   void arm_next_receive_operation() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     if (closing_) return;
     if (!receive_()) closing_ = true;
   }
@@ -216,21 +216,21 @@ struct context
   // | [>] arm_next_send_operation                                  ( public ) |
   // +=========================================================================+
   void arm_next_send_operation() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     arm_next_send_operation_();
   }
   // +=========================================================================+
   // | [>] set_closing_rid                                          ( public ) |
   // +=========================================================================+
   void set_closing_rid(uint64_t rid) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     set_closing_rid_(rid);
   }
   // +=========================================================================+
   // | [>] close                                                    ( public ) |
   // +=========================================================================+
   void close() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     closing_ = true;
     arm_next_send_operation_();
   }
@@ -283,9 +283,9 @@ struct context
     auto itr = responses_.begin();
     while (itr != responses_.end()) {
       if (itr->id != expected_response_id_) break;
-      if (ovs_buf_.size() >= kSendBufferMaxSz) break;
+      if (sending_buffer_.size() >= kSendBufferMaxSz) break;
       if (!itr->prefix_written) {
-        ovs_buf_.append(itr->response->prefix);
+        sending_buffer_.append(itr->response->prefix);
         itr->prefix_written = true;
         continue;
       }
@@ -293,7 +293,7 @@ struct context
       if (source.has_value() && !source->eof()) {
         // Let's pour, at most, the remaining outgoing buffer capacity!
         std::byte chunk[kSendChunkSz];
-        std::size_t room = kSendBufferMaxSz - ovs_buf_.size();
+        std::size_t room = kSendBufferMaxSz - sending_buffer_.size();
         if (room > kSendChunkSz) room = kSendChunkSz;
         std::size_t read = source->read(std::span<std::byte>(chunk, room));
         if (source->failed()) {
@@ -306,13 +306,13 @@ struct context
           source.reset();
           continue;
         }
-        ovs_buf_.append(reinterpret_cast<const char*>(chunk), read);
+        sending_buffer_.append(reinterpret_cast<const char*>(chunk), read);
         continue;
       }
       expected_response_id_++;
       itr = responses_.erase(itr);
     }
-    if (ovs_buf_.empty()) {
+    if (sending_buffer_.empty()) {
       cleanup_resources_();
       return;
     }
@@ -355,8 +355,8 @@ struct context
     DWORD f = 0, snt = 0;
     overlapped_send<RQty, RSty, DEty>* ovs =
         new overlapped_send<RQty, RSty, DEty>(this->shared_from_this());
-    ovs_wsa_.buf = ovs_buf_.data();
-    ovs_wsa_.len = ovs_buf_.size();
+    ovs_wsa_.buf = sending_buffer_.data();
+    ovs_wsa_.len = sending_buffer_.size();
     int res = WSASend(socket_, &ovs_wsa_, 1, &snt, f, ovs, 0);
     if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
       delete ovs;
@@ -369,7 +369,7 @@ struct context
   // +=========================================================================+
   void cleanup_resources_() {
     if (!closing_) return;
-    if (sending_ || !ovs_buf_.empty() || !responses_.empty()) return;
+    if (sending_ || !sending_buffer_.empty() || !responses_.empty()) return;
     if (closing_rid_ && expected_response_id_ <= *closing_rid_) return;
     if (socket_ != INVALID_SOCKET) {
       closesocket(socket_);
@@ -391,7 +391,7 @@ struct context
   types::on_client_disconnected_delegate on_disconnection_;
   std::optional<uint64_t> closing_rid_;
   SOCKET socket_{INVALID_SOCKET};
-  mutable std::mutex mutex_;
+  mutable std::mutex sending_mutex_;
   bool closing_{false};
   bool sending_{false};
   // [decoder] section!
@@ -400,7 +400,7 @@ struct context
   CHAR ovr_buf_[kReceiveBufferSz]{0};
   WSABUF ovr_wsa_{0};
   // [overlapped-send] section!
-  std::string ovs_buf_;
+  std::string sending_buffer_;
   WSABUF ovs_wsa_{0};
   // [responses] section!
   std::vector<response_data> responses_;

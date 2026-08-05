@@ -1,4 +1,4 @@
-//                              _       _
+﻿//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -156,7 +156,7 @@ struct context {
   void enqueue_response(
       std::unique_ptr<protocol::serialization_result> response,
       uint64_t response_id, bool close_this_context_after_sending = false) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     enqueue_response_(std::move(response), response_id);
     if (close_this_context_after_sending) {
       closing_rid_ = response_id;
@@ -189,7 +189,7 @@ struct context {
   // | flushed.                                                                |
   // +=========================================================================+
   void set_closing_rid(uint64_t rid) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     closing_rid_ = rid;
     close_requested_ = true;
     receiving_ = false;
@@ -201,7 +201,7 @@ struct context {
   // | until every already queued response has been fully flushed.             |
   // +=========================================================================+
   void close() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     close_requested_ = true;
     receiving_ = false;
   }
@@ -221,7 +221,7 @@ struct context {
       const char* data = nullptr;
       std::size_t size = 0;
       {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::mutex> sending_lock(sending_mutex_);
         if (closing_) return false;
         if (sending_offset_ == sending_buffer_.size()) {
           sending_buffer_.clear();
@@ -235,7 +235,7 @@ struct context {
       }
       ssize_t sent = ::send(socket_, data, size, MSG_NOSIGNAL);
       if (sent > 0) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::mutex> sending_lock(sending_mutex_);
         sending_offset_ += static_cast<std::size_t>(sent);
         continue;
       }
@@ -248,14 +248,14 @@ struct context {
   // | [>] should_close                                             ( public ) |
   // +=========================================================================+
   bool should_close() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     return should_close_();
   }
   // +=========================================================================+
   // | [>] has_sendable_response                                    ( public ) |
   // +=========================================================================+
   bool has_sendable_response() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     return has_sendable_response_();
   }
   // +=========================================================================+
@@ -306,7 +306,8 @@ struct context {
   bool has_sendable_response_() {
     if (sending_offset_ < sending_buffer_.size()) return true;
     // The responses queue is kept ordered, so only its head can be sent!
-    return !responses_.empty() && responses_.front().id == expected_response_id_;
+    return !responses_.empty() &&
+           responses_.front().id == expected_response_id_;
   }
   // +=========================================================================+
   // | [>] append_sendable_responses_                              ( private ) |
@@ -377,7 +378,7 @@ struct context {
   std::optional<uint64_t> closing_rid_;
   std::string sending_buffer_;
   std::size_t sending_offset_{0};
-  std::mutex mutex_;
+  std::mutex sending_mutex_;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -405,8 +406,7 @@ struct epoll_registration {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty,
           template <typename, typename> class DEty>
-struct worker
-    : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
+struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
@@ -440,9 +440,8 @@ struct worker
       epoll_fd_ = -1;
       throw std::runtime_error("Stop event could not be created!");
     }
-    listener_fd_ =
-        ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
-                 IPPROTO_TCP);
+    listener_fd_ = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
+                            IPPROTO_TCP);
     if (listener_fd_ == -1) {
       ::close(wake_fd_);
       ::close(epoll_fd_);
@@ -486,13 +485,14 @@ struct worker
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
   // +=========================================================================+
-  void start() { thread_ = std::jthread([this]() { run(); }); }
+  void start() {
+    thread_ = std::jthread([this]() { run(); });
+  }
   // +=========================================================================+
   // | [>] is_current_thread                                        ( public ) |
   // +=========================================================================+
   bool is_current_thread() const {
-    return thread_.joinable() &&
-           thread_.get_id() == std::this_thread::get_id();
+    return thread_.joinable() && thread_.get_id() == std::this_thread::get_id();
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
@@ -685,7 +685,8 @@ struct worker
     std::size_t consumed = 0;
     do {
       // Let's accumulate the received bytes into the decoder!
-      std::size_t accepted = ctx->accumulate(buffer + consumed, size - consumed);
+      std::size_t accepted =
+          ctx->accumulate(buffer + consumed, size - consumed);
       if (accepted == 0) {
         // The decoder is full: let's drain the pending requests and retry!
         handle_deserialized_requests(ctx);
@@ -727,27 +728,28 @@ struct worker
         bool close_after_this =
             result.channel == protocol::channel_intent::kClose;
         if (close_after_this) ctx->set_closing_rid(id);
-        on_request_(result.request, std::make_shared<RSty>(),
-                    [ctx, id, tid](std::shared_ptr<RSty> response) {
-                      if (response) {
-                        try {
-                          std::unique_ptr<protocol::serialization_result>
-                              serialized = response->serialize();
-                          // Duplicated identifiers are dropped downstream, so
-                          // a repeated completion is harmless here!
-                          if (serialized) {
-                            ctx->enqueue_response(std::move(serialized), id);
-                          }
-                        } catch (...) {
-                          ctx->close();
-                        }
-                      }
-                      if (std::this_thread::get_id() != tid) {
-                        std::shared_ptr<worker<RQty, RSty, DEty>> owner =
-                            ctx->owner.lock();
-                        if (owner) notify_worker(std::move(owner), ctx);
-                      }
-                    });
+        on_request_(
+            result.request, std::make_shared<RSty>(),
+            [ctx, id, tid](std::shared_ptr<RSty> response) {
+              if (response) {
+                try {
+                  std::unique_ptr<protocol::serialization_result> serialized =
+                      response->serialize();
+                  // Duplicated identifiers are dropped downstream, so
+                  // a repeated completion is harmless here!
+                  if (serialized) {
+                    ctx->enqueue_response(std::move(serialized), id);
+                  }
+                } catch (...) {
+                  ctx->close();
+                }
+              }
+              if (std::this_thread::get_id() != tid) {
+                std::shared_ptr<worker<RQty, RSty, DEty>> owner =
+                    ctx->owner.lock();
+                if (owner) notify_worker(std::move(owner), ctx);
+              }
+            });
         if (close_after_this) return;
       } catch (...) {
         ctx->close();
@@ -758,8 +760,8 @@ struct worker
   // +=========================================================================+
   // | [>] enqueue_error_response                                  ( private ) |
   // +=========================================================================+
-  void enqueue_error_response(
-      std::shared_ptr<context<RQty, RSty, DEty>> ctx, std::string_view reason) {
+  void enqueue_error_response(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
+                              std::string_view reason) {
     try {
       std::shared_ptr<RSty> response = std::make_shared<RSty>();
       on_bad_request_(reason, response);
@@ -837,9 +839,8 @@ struct worker
   int listener_fd_{-1};
   std::atomic<bool> stopping_{false};
   std::jthread thread_;
-  std::unordered_map<
-      epoll_registration<RQty, RSty, DEty>*,
-      std::unique_ptr<epoll_registration<RQty, RSty, DEty>>>
+  std::unordered_map<epoll_registration<RQty, RSty, DEty>*,
+                     std::unique_ptr<epoll_registration<RQty, RSty, DEty>>>
       registrations_;
   std::vector<std::unique_ptr<epoll_registration<RQty, RSty, DEty>>>
       retired_registrations_;
@@ -903,7 +904,8 @@ class tcpip {
       for (std::size_t i = 0; i < number_of_workers; i++) {
         std::shared_ptr<worker<RQty, RSty, DEty>> entry =
             std::make_shared<worker<RQty, RSty, DEty>>(
-                on_request_, on_bad_request_, on_connection_, on_disconnection_);
+                on_request_, on_bad_request_, on_connection_,
+                on_disconnection_);
         entry->setup(port_number);
         workers_.emplace_back(std::move(entry));
       }
