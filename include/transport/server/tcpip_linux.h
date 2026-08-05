@@ -295,6 +295,12 @@ struct context {
       return;
     }
     response_data data{response_id, std::move(response)};
+    // Fast path: responses usually complete in order, so the incoming id is
+    // typically the new tail; this avoids a linear scan from the beginning.
+    if (responses_.empty() || responses_.back().id < data.id) {
+      responses_.emplace_back(std::move(data));
+      return;
+    }
     auto itr = responses_.begin();
     while (itr != responses_.end() && itr->id < data.id) itr++;
     if (itr != responses_.end() && itr->id == data.id) return;

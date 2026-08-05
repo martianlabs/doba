@@ -413,6 +413,8 @@ Tanda 1 (complejidad B, alto retorno): 1, 2, 8, 9, 11.
 Tanda 2 (correctitud de framing): 3, luego 5 aislado.
 Tanda 3 (robustez): 4, 18.
 Tanda 4 (despliegue autónomo): 6, 7.
+Tanda 5 (paridad funcional, depende de 5 y/o 10): 12, 17, 14, 21, 10, 15, 16.
+Tanda 6 (producto/observabilidad, sin dependencias bloqueantes): 13, 19, 20, 22.
 
 ## Estado de pruebas y documentación
 

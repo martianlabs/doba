@@ -252,6 +252,12 @@ struct context
     if (!response) return;
     // We need to keep the responses in order (and avoid duplicates)!
     response_data rdata{response_id, std::move(response)};
+    // Fast path: responses usually complete in order, so the incoming id is
+    // typically the new tail; this avoids a linear scan from the beginning.
+    if (responses_.empty() || responses_.back().id < rdata.id) {
+      responses_.emplace_back(std::move(rdata));
+      return;
+    }
     auto itr = responses_.begin();
     while (itr != responses_.end()) {
       if (itr->id == rdata.id) return;
