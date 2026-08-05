@@ -1,4 +1,4 @@
-﻿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -156,10 +156,11 @@ struct context {
   void enqueue_response(
       std::unique_ptr<protocol::serialization_result> response,
       uint64_t response_id, bool close_this_context_after_sending = false) {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     enqueue_response_(std::move(response), response_id);
     if (close_this_context_after_sending) {
       closing_rid_ = response_id;
+      close_requested_ = true;
       responses_.erase(
           std::remove_if(responses_.begin(), responses_.end(),
                          [response_id](const response_data& response) {
@@ -188,52 +189,26 @@ struct context {
   // | flushed.                                                                |
   // +=========================================================================+
   void set_closing_rid(uint64_t rid) {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     closing_rid_ = rid;
+    close_requested_ = true;
     receiving_ = false;
   }
   // +=========================================================================+
   // | [>] close                                                    ( public ) |
   // +=========================================================================+
-  void close() { close_requested_.store(true); }
+  // | Requests context closing; the context stops receiving but stays alive   |
+  // | until every already queued response has been fully flushed.             |
   // +=========================================================================+
-  // | [>] mark_read_closed                                         ( public ) |
-  // +=========================================================================+
-  void mark_read_closed() {
-    read_closed_ = true;
+  void close() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    close_requested_ = true;
     receiving_ = false;
-  }
-  // +=========================================================================+
-  // | [>] add_pending_completion                                   ( public ) |
-  // +=========================================================================+
-  void add_pending_completion() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    pending_completions_++;
-  }
-  // +=========================================================================+
-  // | [>] complete_pending_completion                              ( public ) |
-  // +=========================================================================+
-  void complete_pending_completion(
-      std::unique_ptr<protocol::serialization_result> response,
-      uint64_t response_id) {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    if (pending_completions_ > 0) pending_completions_--;
-    enqueue_response_(std::move(response), response_id);
-  }
-  // +=========================================================================+
-  // | [>] abort_pending_completion                                 ( public ) |
-  // +=========================================================================+
-  void abort_pending_completion() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    if (pending_completions_ > 0) pending_completions_--;
-    close_requested_.store(true);
   }
   // +=========================================================================+
   // | [>] can_receive                                              ( public ) |
   // +=========================================================================+
-  bool can_receive() const {
-    return !closing_.load() && !close_requested_.load() && receiving_;
-  }
+  bool can_receive() const { return !closing_.load() && receiving_; }
   // +=========================================================================+
   // | [>] is_closing                                               ( public ) |
   // +=========================================================================+
@@ -246,8 +221,8 @@ struct context {
       const char* data = nullptr;
       std::size_t size = 0;
       {
-        std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-        if (closing_ || close_requested_) return false;
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (closing_) return false;
         if (sending_offset_ == sending_buffer_.size()) {
           sending_buffer_.clear();
           sending_offset_ = 0;
@@ -260,7 +235,7 @@ struct context {
       }
       ssize_t sent = ::send(socket_, data, size, MSG_NOSIGNAL);
       if (sent > 0) {
-        std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         sending_offset_ += static_cast<std::size_t>(sent);
         continue;
       }
@@ -273,14 +248,14 @@ struct context {
   // | [>] should_close                                             ( public ) |
   // +=========================================================================+
   bool should_close() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    return close_requested_ || should_close_();
+    std::lock_guard<std::mutex> lock(mutex_);
+    return should_close_();
   }
   // +=========================================================================+
   // | [>] has_sendable_response                                    ( public ) |
   // +=========================================================================+
   bool has_sendable_response() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return has_sendable_response_();
   }
   // +=========================================================================+
@@ -356,7 +331,7 @@ struct context {
         if (room > kSendChunkSz) room = kSendChunkSz;
         std::size_t read = source->read(std::span<std::byte>(chunk, room));
         if (source->failed()) {
-          close_requested_.store(true);
+          close_requested_ = true;
           return;
         }
         if (!read) {
@@ -376,19 +351,23 @@ struct context {
   // +=========================================================================+
   // | [>] should_close_                                           ( private ) |
   // +=========================================================================+
+  // | Mirrors the WindowsTM cleanup criteria: a closing context is only torn  |
+  // | down once every pending byte and queued response has been flushed.      |
+  // +=========================================================================+
   bool should_close_() {
+    if (!close_requested_) return false;
     if (sending_offset_ != sending_buffer_.size()) return false;
-    if (closing_rid_) return expected_response_id_ > *closing_rid_;
-    return read_closed_ && pending_completions_ == 0 && responses_.empty();
+    if (!responses_.empty()) return false;
+    if (closing_rid_ && expected_response_id_ <= *closing_rid_) return false;
+    return true;
   }
   // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
   // +=========================================================================+
   types::on_client_disconnected_delegate on_disconnection_;
   std::atomic<bool> closing_{false};
-  std::atomic<bool> close_requested_{false};
+  bool close_requested_{false};
   bool receiving_{true};
-  bool read_closed_{false};
   int socket_{-1};
   DEty<RQty, RSty> decoder_{};
   char ovr_buf_[kReceiveBufferSz];
@@ -396,10 +375,9 @@ struct context {
   std::vector<response_data> responses_;
   uint64_t expected_response_id_{0};
   std::optional<uint64_t> closing_rid_;
-  std::size_t pending_completions_{0};
   std::string sending_buffer_;
   std::size_t sending_offset_{0};
-  std::mutex sending_mutex_;
+  std::mutex mutex_;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -690,7 +668,7 @@ struct worker
         continue;
       }
       if (received == 0) {
-        ctx->mark_read_closed();
+        ctx->close();
         return;
       }
       if (errno == EINTR) continue;
@@ -749,26 +727,19 @@ struct worker
         bool close_after_this =
             result.channel == protocol::channel_intent::kClose;
         if (close_after_this) ctx->set_closing_rid(id);
-        std::shared_ptr<std::atomic_bool> completed =
-            std::make_shared<std::atomic_bool>(false);
-        ctx->add_pending_completion();
         on_request_(result.request, std::make_shared<RSty>(),
-                    [ctx, id, tid, completed](std::shared_ptr<RSty> response) {
-                      if (completed->exchange(true)) return;
-                      if (!response) {
-                        ctx->abort_pending_completion();
-                      } else {
+                    [ctx, id, tid](std::shared_ptr<RSty> response) {
+                      if (response) {
                         try {
                           std::unique_ptr<protocol::serialization_result>
                               serialized = response->serialize();
+                          // Duplicated identifiers are dropped downstream, so
+                          // a repeated completion is harmless here!
                           if (serialized) {
-                            ctx->complete_pending_completion(
-                                std::move(serialized), id);
-                          } else {
-                            ctx->abort_pending_completion();
+                            ctx->enqueue_response(std::move(serialized), id);
                           }
                         } catch (...) {
-                          ctx->abort_pending_completion();
+                          ctx->close();
                         }
                       }
                       if (std::this_thread::get_id() != tid) {
@@ -779,7 +750,7 @@ struct worker
                     });
         if (close_after_this) return;
       } catch (...) {
-        ctx->abort_pending_completion();
+        ctx->close();
         return;
       }
     }
