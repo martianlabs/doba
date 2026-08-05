@@ -92,7 +92,7 @@ struct response_data {
 // +---------------------------------------------------------------------------+
 // | [>] context [linux]                                            ( struct ) |
 // +---------------------------------------------------------------------------+
-// | This specification holds for the Linux server transport context.         |
+// | This specification holds for the Linux server transport context.          |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
 // |   RQty - request being used.                                              |
@@ -108,7 +108,7 @@ struct context {
   // +=========================================================================+
   context(int in_socket, std::weak_ptr<worker<RQty, RSty, DEty>> in_owner,
           types::on_client_disconnected_delegate on_disconnection)
-      : socket{in_socket},
+      : socket_{in_socket},
         owner{in_owner},
         on_disconnection_{std::move(on_disconnection)} {}
   context(const context&) = delete;
@@ -123,19 +123,19 @@ struct context {
   // | [>] accumulate                                               ( public ) |
   // +=========================================================================+
   std::size_t accumulate(char* buffer, std::size_t size) {
-    return decoder.accumulate(buffer, size);
+    return decoder_.accumulate(buffer, size);
   }
   // +=========================================================================+
   // | [>] deserialize                                              ( public ) |
   // +=========================================================================+
   protocol::deserialization_result<RQty> deserialize() {
-    return decoder.deserialize();
+    return decoder_.deserialize();
   }
   // +=========================================================================+
   // | [>] receive                                                  ( public ) |
   // +=========================================================================+
   ssize_t receive() {
-    return ::recv(socket, ovr_buf_, kReceiveBufferSz, MSG_DONTWAIT);
+    return ::recv(socket_, ovr_buf_, kReceiveBufferSz, MSG_DONTWAIT);
   }
   // +=========================================================================+
   // | [>] get_receive_buffer                                       ( public ) |
@@ -144,101 +144,101 @@ struct context {
   // +=========================================================================+
   // | [>] get_socket                                               ( public ) |
   // +=========================================================================+
-  int get_socket() const { return socket; }
+  int get_socket() const { return socket_; }
   // +=========================================================================+
   // | [>] get_next_response_id                                     ( public ) |
   // +=========================================================================+
-  uint64_t get_next_response_id() { return next_response_id++; }
+  uint64_t get_next_response_id() { return next_response_id_++; }
   // +=========================================================================+
-  // | [>] add_response_to_queue                                    ( public ) |
+  // | [>] enqueue_response                                         ( public ) |
   // +=========================================================================+
-  void add_response_to_queue(
+  void enqueue_response(
       std::unique_ptr<protocol::serialization_result> response,
       uint64_t response_id, bool close_this_context_after_sending = false) {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex);
-    enqueue_response_locked(std::move(response), response_id);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    enqueue_response_(std::move(response), response_id);
     if (close_this_context_after_sending) {
-      close_after_sending = true;
-      close_after_response_id = response_id;
-      responses.erase(
-          std::remove_if(responses.begin(), responses.end(),
+      close_after_sending_ = true;
+      close_after_response_id_ = response_id;
+      responses_.erase(
+          std::remove_if(responses_.begin(), responses_.end(),
                          [response_id](const response_data& response) {
                            return response.id > response_id;
                          }),
-          responses.end());
-      receiving = false;
+          responses_.end());
+      receiving_ = false;
     }
   }
   // +=========================================================================+
-  // | [>] send_error_and_mark_for_closing                          ( public ) |
+  // | [>] enqueue_error_response                                   ( public ) |
   // +=========================================================================+
-  void send_error_and_mark_for_closing(std::shared_ptr<RSty> error_response) {
+  void enqueue_error_response(std::shared_ptr<RSty> error_response) {
     if (!error_response) {
-      request_context_closing();
+      close();
       return;
     }
     uint64_t id = get_next_response_id();
-    add_response_to_queue(std::move(error_response->serialize()), id, true);
+    enqueue_response(std::move(error_response->serialize()), id, true);
   }
   // +=========================================================================+
   // | [>] set_closing_rid                                          ( public ) |
   // +=========================================================================+
-  // | Marks the last response identifier to be sent before closing; the      |
-  // | context stops receiving but stays alive until that response is fully   |
-  // | flushed.                                                               |
+  // | Marks the last response identifier to be sent before closing; the       |
+  // | context stops receiving but stays alive until that response is fully    |
+  // | flushed.                                                                |
   // +=========================================================================+
   void set_closing_rid(uint64_t rid) {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex);
-    close_after_sending = true;
-    close_after_response_id = rid;
-    receiving = false;
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    close_after_sending_ = true;
+    close_after_response_id_ = rid;
+    receiving_ = false;
   }
   // +=========================================================================+
-  // | [>] request_context_closing                                  ( public ) |
+  // | [>] close                                                    ( public ) |
   // +=========================================================================+
-  void request_context_closing() { close_requested.store(true); }
+  void close() { close_requested_.store(true); }
   // +=========================================================================+
-  // | [>] mark_read_closed                                        ( public ) |
+  // | [>] mark_read_closed                                         ( public ) |
   // +=========================================================================+
   void mark_read_closed() {
-    read_closed = true;
-    receiving = false;
+    read_closed_ = true;
+    receiving_ = false;
   }
   // +=========================================================================+
-  // | [>] add_pending_completion                                  ( public ) |
+  // | [>] add_pending_completion                                   ( public ) |
   // +=========================================================================+
   void add_pending_completion() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex);
-    pending_completions++;
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    pending_completions_++;
   }
   // +=========================================================================+
-  // | [>] complete_pending_completion                             ( public ) |
+  // | [>] complete_pending_completion                              ( public ) |
   // +=========================================================================+
   void complete_pending_completion(
       std::unique_ptr<protocol::serialization_result> response,
       uint64_t response_id) {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex);
-    if (pending_completions > 0) pending_completions--;
-    enqueue_response_locked(std::move(response), response_id);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    if (pending_completions_ > 0) pending_completions_--;
+    enqueue_response_(std::move(response), response_id);
   }
   // +=========================================================================+
-  // | [>] abort_pending_completion                                ( public ) |
+  // | [>] abort_pending_completion                                 ( public ) |
   // +=========================================================================+
   void abort_pending_completion() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex);
-    if (pending_completions > 0) pending_completions--;
-    close_requested.store(true);
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    if (pending_completions_ > 0) pending_completions_--;
+    close_requested_.store(true);
   }
   // +=========================================================================+
   // | [>] can_receive                                              ( public ) |
   // +=========================================================================+
   bool can_receive() const {
-    return !closing.load() && !close_requested.load() && receiving;
+    return !closing_.load() && !close_requested_.load() && receiving_;
   }
   // +=========================================================================+
   // | [>] is_closing                                               ( public ) |
   // +=========================================================================+
-  bool is_closing() const { return closing.load(); }
+  bool is_closing() const { return closing_.load(); }
   // +=========================================================================+
   // | [>] flush_send                                               ( public ) |
   // +=========================================================================+
@@ -247,22 +247,22 @@ struct context {
       const char* data = nullptr;
       std::size_t size = 0;
       {
-        std::lock_guard<std::mutex> sending_lock(sending_mutex);
-        if (closing || close_requested) return false;
-        if (sending_offset == sending_buffer.size()) {
-          sending_buffer.clear();
-          sending_offset = 0;
-          append_sendable_responses_locked();
+        std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+        if (closing_ || close_requested_) return false;
+        if (sending_offset_ == sending_buffer_.size()) {
+          sending_buffer_.clear();
+          sending_offset_ = 0;
+          append_sendable_responses_();
         }
-        if (should_close_locked()) return false;
-        if (sending_buffer.empty()) return true;
-        data = sending_buffer.data() + sending_offset;
-        size = sending_buffer.size() - sending_offset;
+        if (should_close_()) return false;
+        if (sending_buffer_.empty()) return true;
+        data = sending_buffer_.data() + sending_offset_;
+        size = sending_buffer_.size() - sending_offset_;
       }
-      ssize_t sent = ::send(socket, data, size, MSG_NOSIGNAL);
+      ssize_t sent = ::send(socket_, data, size, MSG_NOSIGNAL);
       if (sent > 0) {
-        std::lock_guard<std::mutex> sending_lock(sending_mutex);
-        sending_offset += static_cast<std::size_t>(sent);
+        std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+        sending_offset_ += static_cast<std::size_t>(sent);
         continue;
       }
       if (sent == -1 && errno == EINTR) continue;
@@ -274,24 +274,24 @@ struct context {
   // | [>] should_close                                             ( public ) |
   // +=========================================================================+
   bool should_close() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex);
-    return close_requested || should_close_locked();
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    return close_requested_ || should_close_();
   }
   // +=========================================================================+
   // | [>] has_sendable_response                                    ( public ) |
   // +=========================================================================+
   bool has_sendable_response() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex);
-    return has_sendable_response_locked();
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    return has_sendable_response_();
   }
   // +=========================================================================+
   // | [>] mark_context_for_closing                                 ( public ) |
   // +=========================================================================+
   int mark_context_for_closing() {
-    if (closing.exchange(true)) return -1;
-    receiving = false;
-    int result = socket;
-    socket = -1;
+    if (closing_.exchange(true)) return -1;
+    receiving_ = false;
+    int result = socket_;
+    socket_ = -1;
     return result;
   }
   // +=========================================================================+
@@ -311,44 +311,44 @@ struct context {
 
  private:
   // +=========================================================================+
-  // | [>] enqueue_response_locked                                  ( private ) |
+  // | [>] enqueue_response_                                       ( private ) |
   // +=========================================================================+
-  void enqueue_response_locked(
+  void enqueue_response_(
       std::unique_ptr<protocol::serialization_result> response,
       uint64_t response_id) {
-    if (!response || closing ||
-        (close_after_sending && response_id > close_after_response_id)) {
+    if (!response || closing_ ||
+        (close_after_sending_ && response_id > close_after_response_id_)) {
       return;
     }
     response_data data{response_id, std::move(response)};
-    auto itr = responses.begin();
-    while (itr != responses.end() && itr->id < data.id) itr++;
-    if (itr != responses.end() && itr->id == data.id) return;
-    responses.insert(itr, std::move(data));
+    auto itr = responses_.begin();
+    while (itr != responses_.end() && itr->id < data.id) itr++;
+    if (itr != responses_.end() && itr->id == data.id) return;
+    responses_.insert(itr, std::move(data));
   }
   // +=========================================================================+
-  // | [>] has_sendable_response_locked                            ( private ) |
+  // | [>] has_sendable_response_                                  ( private ) |
   // +=========================================================================+
-  bool has_sendable_response_locked() {
-    if (sending_offset < sending_buffer.size()) return true;
+  bool has_sendable_response_() {
+    if (sending_offset_ < sending_buffer_.size()) return true;
     // The responses queue is kept ordered, so only its head can be sent!
-    return !responses.empty() && responses.front().id == expected_response_id;
+    return !responses_.empty() && responses_.front().id == expected_response_id_;
   }
   // +=========================================================================+
-  // | [>] append_sendable_responses_locked                        ( private ) |
+  // | [>] append_sendable_responses_                              ( private ) |
   // +=========================================================================+
-  void append_sendable_responses_locked() {
+  void append_sendable_responses_() {
     while (true) {
-      if (close_after_sending &&
-          expected_response_id > close_after_response_id) {
+      if (close_after_sending_ &&
+          expected_response_id_ > close_after_response_id_) {
         return;
       }
-      if (sending_buffer.size() >= kSendBufferMaxSz) return;
+      if (sending_buffer_.size() >= kSendBufferMaxSz) return;
       // The responses queue is kept ordered, so only its head can be sent!
-      auto itr = responses.begin();
-      if (itr == responses.end() || itr->id != expected_response_id) return;
+      auto itr = responses_.begin();
+      if (itr == responses_.end() || itr->id != expected_response_id_) return;
       if (!itr->prefix_written) {
-        sending_buffer.append(itr->response->prefix);
+        sending_buffer_.append(itr->response->prefix);
         itr->prefix_written = true;
         continue;
       }
@@ -356,11 +356,11 @@ struct context {
       if (source.has_value() && !source->eof()) {
         // Let's pour, at most, the remaining outgoing buffer capacity!
         std::byte chunk[kSendChunkSz];
-        std::size_t room = kSendBufferMaxSz - sending_buffer.size();
+        std::size_t room = kSendBufferMaxSz - sending_buffer_.size();
         if (room > kSendChunkSz) room = kSendChunkSz;
         std::size_t read = source->read(std::span<std::byte>(chunk, room));
         if (source->failed()) {
-          close_requested.store(true);
+          close_requested_.store(true);
           return;
         }
         if (!read) {
@@ -369,47 +369,47 @@ struct context {
           source.reset();
           continue;
         }
-        sending_buffer.append(reinterpret_cast<const char*>(chunk), read);
+        sending_buffer_.append(reinterpret_cast<const char*>(chunk), read);
         continue;
       }
-      expected_response_id++;
-      responses.erase(itr);
-      if (close_after_sending &&
-          expected_response_id > close_after_response_id) {
+      expected_response_id_++;
+      responses_.erase(itr);
+      if (close_after_sending_ &&
+          expected_response_id_ > close_after_response_id_) {
         return;
       }
     }
   }
   // +=========================================================================+
-  // | [>] should_close_locked                                     ( private ) |
+  // | [>] should_close_                                           ( private ) |
   // +=========================================================================+
-  bool should_close_locked() {
-    if (sending_offset != sending_buffer.size()) return false;
-    if (close_after_sending) {
-      return expected_response_id > close_after_response_id;
+  bool should_close_() {
+    if (sending_offset_ != sending_buffer_.size()) return false;
+    if (close_after_sending_) {
+      return expected_response_id_ > close_after_response_id_;
     }
-    return read_closed && pending_completions == 0 && responses.empty();
+    return read_closed_ && pending_completions_ == 0 && responses_.empty();
   }
   // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
   // +=========================================================================+
   types::on_client_disconnected_delegate on_disconnection_;
-  std::atomic<bool> closing{false};
-  std::atomic<bool> close_requested{false};
-  bool receiving{true};
-  bool read_closed{false};
-  int socket{-1};
-  DEty<RQty, RSty> decoder{};
+  std::atomic<bool> closing_{false};
+  std::atomic<bool> close_requested_{false};
+  bool receiving_{true};
+  bool read_closed_{false};
+  int socket_{-1};
+  DEty<RQty, RSty> decoder_{};
   char ovr_buf_[kReceiveBufferSz];
-  uint64_t next_response_id{0};
-  std::vector<response_data> responses;
-  uint64_t expected_response_id{0};
-  bool close_after_sending{false};
-  uint64_t close_after_response_id{0};
-  std::size_t pending_completions{0};
-  std::string sending_buffer;
-  std::size_t sending_offset{0};
-  std::mutex sending_mutex;
+  uint64_t next_response_id_{0};
+  std::vector<response_data> responses_;
+  uint64_t expected_response_id_{0};
+  bool close_after_sending_{false};
+  uint64_t close_after_response_id_{0};
+  std::size_t pending_completions_{0};
+  std::string sending_buffer_;
+  std::size_t sending_offset_{0};
+  std::mutex sending_mutex_;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -421,7 +421,6 @@ template <typename RQty, typename RSty,
 struct epoll_registration {
   epoll_registration(std::shared_ptr<context<RQty, RSty, DEty>> in_context)
       : ctx{std::move(in_context)} {}
-
   std::shared_ptr<context<RQty, RSty, DEty>> ctx;
 };
 // /////////////////////////////////////////////////////////////////////////////
@@ -706,7 +705,7 @@ struct worker
       }
       if (errno == EINTR) continue;
       if (errno == EAGAIN || errno == EWOULDBLOCK) return;
-      ctx->request_context_closing();
+      ctx->close();
       return;
     }
   }
@@ -726,8 +725,7 @@ struct worker
         accepted = ctx->accumulate(buffer + consumed, size - consumed);
       }
       if (accepted == 0 || accepted > (size - consumed)) {
-        send_error_and_mark_for_closing(
-            ctx, "Invalid source deserialization content!");
+        enqueue_error_response(ctx, "Invalid request content!");
         return;
       }
       // Let's try to deserialize some requests!
@@ -746,13 +744,11 @@ struct worker
         return;
       }
       if (result.code == protocol::deserialization_status::kInvalidSource) {
-        send_error_and_mark_for_closing(
-            ctx, "Invalid source deserialization content!");
+        enqueue_error_response(ctx, "Invalid request content!");
         return;
       }
       if (result.request == nullptr) {
-        send_error_and_mark_for_closing(ctx,
-                                        "Inconsistent deserialization status!");
+        enqueue_error_response(ctx, "Decoder error!");
         return;
       }
       try {
@@ -799,16 +795,16 @@ struct worker
     }
   }
   // +=========================================================================+
-  // | [>] send_error_and_mark_for_closing                         ( private ) |
+  // | [>] enqueue_error_response                                  ( private ) |
   // +=========================================================================+
-  void send_error_and_mark_for_closing(
+  void enqueue_error_response(
       std::shared_ptr<context<RQty, RSty, DEty>> ctx, std::string_view reason) {
     try {
       std::shared_ptr<RSty> response = std::make_shared<RSty>();
       on_bad_request_(reason, response);
-      ctx->send_error_and_mark_for_closing(response);
+      ctx->enqueue_error_response(response);
     } catch (...) {
-      ctx->request_context_closing();
+      ctx->close();
     }
   }
   // +=========================================================================+
