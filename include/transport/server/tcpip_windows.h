@@ -738,13 +738,20 @@ class tcpip {
                         [context = ctx, this_response_id,
                          this_thread_id](std::shared_ptr<RSty> response) {
                           if (!response) return;
-                          context->enqueue_response(
-                              std::move(response->serialize()),
-                              this_response_id);
-                          // Let's arm next send operation only if we are not in
-                          // the same thread as the worker (delayed operation)!
-                          if (std::this_thread::get_id() != this_thread_id) {
-                            context->arm_next_send_operation();
+                          try {
+                            context->enqueue_response(
+                                std::move(response->serialize()),
+                                this_response_id);
+                            // Let's arm next send operation only if we are not
+                            // in the same thread as the worker (delayed
+                            // operation)!
+                            if (std::this_thread::get_id() != this_thread_id) {
+                              context->arm_next_send_operation();
+                            }
+                          } catch (const std::exception&) {
+                            context->close();
+                          } catch (...) {
+                            context->close();
                           }
                         });
           } catch (const std::exception& ex) {

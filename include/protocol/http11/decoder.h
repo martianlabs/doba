@@ -77,7 +77,7 @@ class decoder {
   // +=========================================================================+
   // | [>] deserialize                                              ( public ) |
   // +=========================================================================+
-  deserialization_result<request> deserialize() {
+  deserialization_result<RQty> deserialize() {
     return body_framer_ ? parse_body() : parse_core();
   }
 
@@ -85,7 +85,7 @@ class decoder {
   // +=========================================================================+
   // | [>] parse_core                                               ( public ) |
   // +=========================================================================+
-  deserialization_result<request> parse_core() {
+  deserialization_result<RQty> parse_core() {
     std::string_view sv(buffer_, off_);
     std::size_t i = 0;
     // +-----------------------------------------------------------------------+
@@ -305,7 +305,7 @@ class decoder {
   // +=========================================================================+
   // | [>] parse_body                                               ( public ) |
   // +=========================================================================+
-  deserialization_result<request> parse_body() {
+  deserialization_result<RQty> parse_body() {
     body::framer_state state = std::visit(
         [this](auto& arg) -> body::framer_state {
           std::span<const std::byte> byte_span{
@@ -369,10 +369,10 @@ class decoder {
   // +=========================================================================+
   // | [>] dispatch                                                ( private ) |
   // +=========================================================================+
-  deserialization_result<request> dispatch(
+  deserialization_result<RQty> dispatch(
       std::optional<common::byte_storage> byte_storage) {
     // Let's return the request object!
-    deserialization_result<request> result = deserialization_result<request>(
+    deserialization_result<RQty> result = deserialization_result<RQty>(
         request_getter_(std::move(byte_storage)),
         context_.connection.close_requested ? channel_intent::kClose
                                             : channel_intent::kKeep);
@@ -819,7 +819,7 @@ class decoder {
   std::string_view absolute_path_;
   target target_ = target::kUnknown;
   std::vector<header_view> headers_;
-  request_getter<request> request_getter_;
+  request_getter<RQty> request_getter_;
 };
 }  // namespace martianlabs::doba::protocol::http11
 
