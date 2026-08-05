@@ -34,6 +34,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <deque>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -379,7 +380,7 @@ struct context {
   DEty<RQty, RSty> decoder_{};
   char ovr_buf_[kReceiveBufferSz];
   uint64_t next_response_id_{0};
-  std::vector<response_data> responses_;
+  std::deque<response_data> responses_;
   uint64_t expected_response_id_{0};
   std::optional<uint64_t> closing_rid_;
   std::string sending_buffer_;
@@ -440,7 +441,7 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
     if (epoll_fd_ == -1) {
       throw std::runtime_error("Epoll instance could not be created!");
     }
-    wake_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE);
+    wake_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
     if (wake_fd_ == -1) {
       ::close(epoll_fd_);
       epoll_fd_ = -1;
@@ -512,6 +513,7 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
     {
       std::lock_guard<std::mutex> pending_lock(pending_mutex_);
       accepting_notifications_ = false;
+      wake_pending_.store(true);
       uint64_t wake = 1;
       while (::write(wake_fd_, &wake, sizeof(wake)) == -1 && errno == EINTR) {
       }
@@ -531,6 +533,7 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
     std::lock_guard<std::mutex> pending_lock(pending_mutex_);
     if (!accepting_notifications_) return;
     pending_contexts_.emplace_back(std::move(ctx));
+    if (wake_pending_.exchange(true)) return;
     uint64_t wake = 1;
     while (::write(wake_fd_, &wake, sizeof(wake)) == -1 && errno == EINTR) {
     }
@@ -572,9 +575,13 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   // +=========================================================================+
   void handle_wake() {
     uint64_t wake = 0;
-    while (::read(wake_fd_, &wake, sizeof(wake)) != -1 || errno == EINTR) {
-      if (stopping_.load()) return;
-    }
+    wake_pending_.store(false);
+    // A single read drains the accumulated counter (no EFD_SEMAPHORE), so
+    // one syscall is enough regardless of how many notify() calls coalesced
+    // into it; the pending-contexts queue below is the actual source of
+    // truth, so the outcome of this read is otherwise inconsequential!
+    static_cast<void>(::read(wake_fd_, &wake, sizeof(wake)));
+    if (stopping_.load()) return;
     std::vector<std::shared_ptr<context<RQty, RSty, DEty>>> contexts;
     {
       std::lock_guard<std::mutex> pending_lock(pending_mutex_);
@@ -842,6 +849,7 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   // +=========================================================================+
   int epoll_fd_{-1};
   int wake_fd_{-1};
+  std::atomic<bool> wake_pending_{false};
   int listener_fd_{-1};
   std::atomic<bool> stopping_{false};
   std::jthread thread_;

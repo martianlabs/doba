@@ -29,6 +29,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <mutex>
 #include <span>
@@ -409,7 +410,7 @@ struct context
   std::string sending_buffer_;
   WSABUF ovs_wsa_{0};
   // [responses] section!
-  std::vector<response_data> responses_;
+  std::deque<response_data> responses_;
   uint64_t expected_response_id_{0};
   uint64_t next_response_id_{0};
 };
