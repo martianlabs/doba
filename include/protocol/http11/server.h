@@ -35,6 +35,7 @@
 #include "protocol/http11/router.h"
 #include "protocol/http11/header_names.h"
 #include "protocol/http11/decoder.h"
+#include "protocol/http11/rejection_reason.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -81,6 +82,31 @@ class server {
     transport_.set_on_request(
         [this](std::shared_ptr<const RQty> req, std::shared_ptr<RSty> res,
                transport::server::types::on_send_delegate<RSty> on_send) {
+          auto send = [req, on_send](std::shared_ptr<RSty> res) {
+            if (req->wants_connection_close()) {
+              res->set_header(header_names::kConnection, "close");
+            }
+            if (req->get_method() == method_names::kHead) {
+              // RFC 9110 S9.3.2: a HEAD response must describe the same
+              // headers a matching GET would have produced, but must never
+              // carry a message body. clear_body() also drops the framing
+              // headers, so they are captured beforehand and restored right
+              // after, using only the response's already public API.
+              bool had_cl = res->has_header(header_names::kContentLength);
+              std::string cl =
+                  had_cl ? res->get_header(header_names::kContentLength).second
+                         : std::string();
+              bool had_te = res->has_header(header_names::kTransferEncoding);
+              std::string te =
+                  had_te
+                      ? res->get_header(header_names::kTransferEncoding).second
+                      : std::string();
+              res->clear_body();
+              if (had_cl) res->set_header(header_names::kContentLength, cl);
+              if (had_te) res->set_header(header_names::kTransferEncoding, te);
+            }
+            on_send(res);
+          };
           switch (req->get_target()) {
             case target::kOriginForm:
             case target::kAbsoluteForm: {
@@ -89,16 +115,16 @@ class server {
               // routed to a handler based on the method and absolute path.
               std::string_view method = req->get_method();
               std::string_view abs_path = req->get_absolute_path();
-              switch (router_.match(method, abs_path, req, res, on_send)) {
+              switch (router_.match(method, abs_path, req, res, send)) {
                 case router_match_result::kMatched:
                   break;
                 case router_match_result::kNotFound:
                   res->not_found_404();
-                  on_send(res);
+                  send(res);
                   break;
                 case router_match_result::kMethodNotAllowed:
                   res->method_not_allowed_405();
-                  on_send(res);
+                  send(res);
                   break;
               }
               break;
@@ -112,25 +138,52 @@ class server {
               // agnostic of CONNECT. Until that module exists, the request
               // must not be left unanswered.
               res->not_implemented_501();
-              on_send(res);
+              send(res);
               return;
             case target::kAsteriskForm:
               // OPTIONS * (RFC 9110 §9.3.7) addresses the server in general
               // rather than a specific resource; acknowledge it without
               // routing to a handler.
               res->ok_200();
-              on_send(res);
+              send(res);
               return;
             default:
               res->bad_request_400();
-              on_send(res);
+              send(res);
               return;
           }
         });
-    transport_.set_on_bad_request(
-        [](std::string_view reason, std::shared_ptr<RSty> res) {
+    transport_.set_on_bad_request([](int code, std::string_view reason,
+                                     std::shared_ptr<RSty> res) {
+      // The transport hands back the neutral reason recorded by the
+      // decoder; only the HTTP layer knows how to translate it into a
+      // status code (RFC 9110 semantics live here, not in the transport).
+      switch (static_cast<rejection_reason>(code)) {
+        case rejection_reason::kPayloadTooLarge:
+          res->content_too_large_413().set_body(reason);
+          break;
+        case rejection_reason::kUnsupportedFeature:
+          res->not_implemented_501().set_body(reason);
+          break;
+        case rejection_reason::kVersionNotSupported:
+          res->http_version_not_supported_505().set_body(reason);
+          break;
+        case rejection_reason::kUriTooLong:
+          res->uri_too_long_414().set_body(reason);
+          break;
+        case rejection_reason::kHeaderFieldsTooLarge:
+          res->request_header_fields_too_large_431().set_body(reason);
+          break;
+        case rejection_reason::kHandlerError:
+          res->internal_server_error_500().set_body(reason);
+          break;
+        case rejection_reason::kSyntax:
+        case rejection_reason::kNone:
+        default:
           res->bad_request_400().set_body(reason);
-        });
+          break;
+      }
+    });
     transport_.set_on_connection([this]() { connections_++; });
     transport_.set_on_disconnection([this]() { connections_--; });
     transport_.start(port);

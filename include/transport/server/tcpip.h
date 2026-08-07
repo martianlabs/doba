@@ -44,7 +44,7 @@ struct types {
                          on_send_delegate<RSty>)>;
   template <typename RSty>
   using on_bad_request_delegate =
-      std::function<void(std::string_view, std::shared_ptr<RSty>)>;
+      std::function<void(int, std::string_view, std::shared_ptr<RSty>)>;
   using on_client_connected_delegate = std::function<void()>;
   using on_client_disconnected_delegate = std::function<void()>;
 };

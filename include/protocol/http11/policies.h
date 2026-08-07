@@ -54,6 +54,13 @@ struct policies {
   // Maximum number of transfer-codings accepted in Transfer-Encoding
   // (0 means unlimited).
   std::size_t max_transfer_codings = 0;
+  // Maximum accepted request-target length, in octets (0 means unlimited).
+  // See limits::kDefaultMaxUriLength for a suggested default.
+  std::size_t max_uri_length = 0;
+  // Maximum accepted size of the whole header section, in octets (0 means
+  // unlimited). See limits::kDefaultMaxHeaderSectionSize for a suggested
+  // default.
+  std::size_t max_header_section_size = 0;
   // Whether the server allows requests carrying a chunked Transfer-Encoding.
   bool allow_chunked = true;
   // Whether the server allows protocol upgrades offered via Upgrade.

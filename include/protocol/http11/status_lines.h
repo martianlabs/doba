@@ -91,6 +91,7 @@ struct status_lines {
   static constexpr char k421[] = EAS(SL(421_MISDIRECTED_REQUEST));
   static constexpr char k422[] = EAS(SL(422_UNPROCESSABLE_ENTITY));
   static constexpr char k426[] = EAS(SL(426_UPGRADE_REQUIRED));
+  static constexpr char k431[] = EAS(SL(431_REQUEST_HEADER_FIELDS_TOO_LARGE));
   static constexpr char k500[] = EAS(SL(500_INTERNAL_SERVER_ERROR));
   static constexpr char k501[] = EAS(SL(501_NOT_IMPLEMENTED));
   static constexpr char k502[] = EAS(SL(502_BAD_GATEWAY));
@@ -140,6 +141,7 @@ struct status_lines {
   static constexpr std::size_t k421Sz = sizeof(k421) - 1;
   static constexpr std::size_t k422Sz = sizeof(k422) - 1;
   static constexpr std::size_t k426Sz = sizeof(k426) - 1;
+  static constexpr std::size_t k431Sz = sizeof(k431) - 1;
   static constexpr std::size_t k500Sz = sizeof(k500) - 1;
   static constexpr std::size_t k501Sz = sizeof(k501) - 1;
   static constexpr std::size_t k502Sz = sizeof(k502) - 1;

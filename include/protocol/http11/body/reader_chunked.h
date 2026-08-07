@@ -33,6 +33,7 @@
 
 #include "common/reader.h"
 #include "protocol/http11/body/reader_state.h"
+#include "protocol/http11/limits.h"
 
 namespace martianlabs::doba::protocol::http11::body {
 // /////////////////////////////////////////////////////////////////////////////
@@ -77,8 +78,6 @@ class reader_chunked {
   // +=========================================================================+
   // | [>] CONSTANTs                                                 ( public ) |
   // +=========================================================================+
-  static constexpr std::size_t kMaxExtensionSize = 1024;
-  static constexpr std::size_t kMaxTrailerSize = 8192;
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
   // +=========================================================================+
@@ -189,7 +188,7 @@ class reader_chunked {
             state_ = state::size_lf;
             break;
           }
-          if (++extension_size_ > kMaxExtensionSize) {
+          if (++extension_size_ > limits::kMaxChunkedExtensionSize) {
             // Chunk-extension section exceeded the configured size limit!
             result.produced = out_pos;
             return fail(result, reader_error::chunk_extension_size_limit_exceeded);
@@ -242,7 +241,7 @@ class reader_chunked {
         // Trailer section: validate lines, detect terminating empty CRLF
         // ---------------------------------------------------------------------
         case state::trailer: {
-          if (++trailer_size_ > kMaxTrailerSize) {
+          if (++trailer_size_ > limits::kMaxChunkedTrailerSize) {
             // Trailer section exceeded the configured size limit!
             result.produced = out_pos;
             return fail(result, reader_error::trailer_size_limit_exceeded);

@@ -120,6 +120,7 @@ namespace martianlabs::doba::protocol::http11 {
 #define RP_421_MISDIRECTED_REQUEST Misdirected Request
 #define RP_422_UNPROCESSABLE_CONTENT Unprocessable Content
 #define RP_426_UPGRADE_REQUIRED Upgrade Required
+#define RP_431_REQUEST_HEADER_FIELDS_TOO_LARGE Request Header Fields Too Large
 #define RP_500_INTERNAL_SERVER_ERROR Internal Server Error
 #define RP_501_NOT_IMPLEMENTED Not Implemented
 #define RP_502_BAD_GATEWAY Bad Gateway

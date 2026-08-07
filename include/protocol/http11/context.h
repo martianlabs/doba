@@ -31,6 +31,7 @@
 #include "protocol/http11/connection.h"
 #include "protocol/http11/parsed_types.h"
 #include "protocol/http11/policies.h"
+#include "protocol/http11/rejection_reason.h"
 
 namespace martianlabs::doba::protocol::http11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -78,6 +79,11 @@ struct context {
   parsed_host_port target_authority;
   // The number of forwarding hops across Via / Forwarded / X-Forwarded-For.
   std::size_t forwarding_hops = 0;
+  // Why the last verdict::kReject happened, at the granularity the HTTP/1.1
+  // layer needs to pick a status code. Set by the interpreter/checker that
+  // rejects the request; left at kNone for syntactic errors, which default to
+  // 400 Bad Request.
+  rejection_reason rejection_reason = rejection_reason::kNone;
 };
 }  // namespace martianlabs::doba::protocol::http11
 

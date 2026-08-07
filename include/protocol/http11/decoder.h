@@ -28,6 +28,7 @@
 #include <algorithm>
 
 #include "protocol/http11/helpers.h"
+#include "protocol/http11/limits.h"
 #include "protocol/http11/request.h"
 #include "protocol/http11/body/framer_raw.h"
 #include "protocol/http11/body/framer_chunked.h"
@@ -55,7 +56,7 @@ class decoder {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  decoder() { buffer_ = new char[kDecodingBufferSize]; }
+  decoder() { buffer_ = new char[limits::kDecodingBufferSize]; }
   decoder(const decoder&) = delete;
   decoder(decoder&&) noexcept = delete;
   ~decoder() { delete[] buffer_; }
@@ -68,7 +69,7 @@ class decoder {
   // | [>] accumulate                                               ( public ) |
   // +=========================================================================+
   std::size_t accumulate(char* const buffer, std::size_t size) {
-    std::size_t space_left = kDecodingBufferSize - off_;
+    std::size_t space_left = limits::kDecodingBufferSize - off_;
     std::size_t bytes_to_copy = std::min(space_left, size);
     std::memcpy(buffer_ + off_, buffer, bytes_to_copy);
     off_ += bytes_to_copy;
@@ -78,7 +79,16 @@ class decoder {
   // | [>] deserialize                                              ( public ) |
   // +=========================================================================+
   deserialization_result<RQty> deserialize() {
-    return body_framer_ ? parse_body() : parse_core();
+    deserialization_result<RQty> result =
+        body_framer_ ? parse_body() : parse_core();
+    // Any rejection reason recorded along the way (by a header interpreter,
+    // a transversal rule, or the HTTP-version check) is surfaced here, at the
+    // single point where every parsing path converges, so callers only ever
+    // have to look at the top-level result.
+    if (result.code == deserialization_status::kInvalidSource) {
+      result.reason = static_cast<int>(context_.rejection_reason);
+    }
+    return result;
   }
 
  private:
@@ -161,6 +171,21 @@ class decoder {
       }
     }
     if (status != deserialization_status::kSucceeded) return status;
+    if (context_.policies.max_uri_length &&
+        bytes_used > context_.policies.max_uri_length) {
+      context_.rejection_reason = rejection_reason::kUriTooLong;
+      return deserialization_status::kInvalidSource;
+    }
+    // Validate that every "%HH" triplet in the path decodes to a non-NUL
+    // byte. The decoder never mutates its own source buffer ('buffer_'); the
+    // actual decoding into the resulting path happens later, once ownership
+    // has moved to a buffer the 'request' instance controls (see
+    // 'request::request').
+    if (!absolute_path_.empty() &&
+        !helpers::percent_decode_validate(absolute_path_)) {
+      context_.rejection_reason = rejection_reason::kSyntax;
+      return deserialization_status::kInvalidSource;
+    }
     i += bytes_used;
     if (i >= off_) return deserialization_status::kMoreBytesNeeded;
     if (sv[i++] != ' ') return deserialization_status::kInvalidSource;
@@ -177,6 +202,14 @@ class decoder {
       return deserialization_status::kInvalidSource;
     }
     if (sv[i + 5] != '1' || sv[i + 7] != '1') {
+      // The grammar is well-formed but the version is not HTTP/1.1. A
+      // numerically higher version (e.g. 1.2, 2.0) is a request this server
+      // simply does not speak yet, which maps to 505 HTTP Version Not
+      // Supported. Anything at or below HTTP/1.0 is out of scope for now and
+      // stays a plain 400.
+      if (sv[i + 5] > '1' || (sv[i + 5] == '1' && sv[i + 7] > '1')) {
+        context_.rejection_reason = rejection_reason::kVersionNotSupported;
+      }
       return deserialization_status::kInvalidSource;
     }
     i += 8;
@@ -204,7 +237,13 @@ class decoder {
     // +-----------------+-----------------------------------------------------+
     bool field_name_decoded = false;
     std::size_t fn_start = i;
+    const std::size_t headers_start = i;
     while (i < off_) {
+      if (context_.policies.max_header_section_size &&
+          (i - headers_start) > context_.policies.max_header_section_size) {
+        context_.rejection_reason = rejection_reason::kHeaderFieldsTooLarge;
+        return deserialization_status::kInvalidSource;
+      }
       if (!field_name_decoded) {
         if (sv[i] == '\r') {
           if (i != fn_start) return deserialization_status::kInvalidSource;
@@ -361,7 +400,8 @@ class decoder {
         buffer_view, method_, absolute_path_, target_, headers_,
         query_parameters, host_host, host_port, host_type,
         target_authority_host, target_authority_port, target_authority_type,
-        context_.connection.chunked, context_.content_length);
+        context_.connection.chunked, context_.content_length,
+        context_.connection.close_requested);
     // Let's adjust the buffer to remove the bytes that were used!
     std::memmove(buffer_, buffer_ + bytes_used, off_ - bytes_used);
     off_ -= bytes_used;
@@ -512,8 +552,12 @@ class decoder {
     }
     context_rules.has_content_length = true;
     context_rules.content_length = parsed;
-    return headers::content_length::interpret(parsed, context_rules.connection,
-                                              context_rules.policies);
+    verdict result = headers::content_length::interpret(
+        parsed, context_rules.connection, context_rules.policies);
+    if (result == verdict::kReject) {
+      context_rules.rejection_reason = rejection_reason::kPayloadTooLarge;
+    }
+    return result;
   }
   // +=========================================================================+
   // | [>] dispatch_transfer_encoding (modelled header)            ( private ) |
@@ -525,8 +569,12 @@ class decoder {
       return verdict::kReject;
     }
     context_rules.has_transfer_encoding = true;
-    return headers::transfer_encoding::interpret(
+    verdict result = headers::transfer_encoding::interpret(
         parsed, context_rules.connection, context_rules.policies);
+    if (result == verdict::kReject) {
+      context_rules.rejection_reason = rejection_reason::kUnsupportedFeature;
+    }
+    return result;
   }
   // +=========================================================================+
   // | [>] dispatch_connection (modelled header)                   ( private ) |
@@ -585,8 +633,12 @@ class decoder {
     if (!headers::upgrade::check(upgrade_content, parsed_content)) {
       return verdict::kReject;
     }
-    return headers::upgrade::interpret(parsed_content, context_rules.connection,
-                                       context_rules.policies);
+    verdict result = headers::upgrade::interpret(
+        parsed_content, context_rules.connection, context_rules.policies);
+    if (result == verdict::kReject) {
+      context_rules.rejection_reason = rejection_reason::kUnsupportedFeature;
+    }
+    return result;
   }
   // +=========================================================================+
   // | [>] dispatch_max_forwards (modelled header)                 ( private ) |
@@ -666,7 +718,8 @@ class decoder {
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
   // +=========================================================================+
-  static constexpr std::size_t kMaxQueryParameters = 128;
+  static constexpr std::size_t kMaxQueryParameters =
+      limits::kMaxQueryParameters;
   static const inline common::hash_map<std::string_view, header_dispatch>
       header_dispatchers_ = {
           {"Host",  // check & interpret!
@@ -805,7 +858,6 @@ class decoder {
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
   // +=========================================================================+
-  static constexpr std::size_t kDecodingBufferSize = 16384;
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+

@@ -36,7 +36,6 @@ int main(int argc, char* argv[]) {
       [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
         res->ok_200()
             .add_header("Server", "doba.")
-            .add_header("Date", date_server::get().current())
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body("ok");
       });

@@ -74,7 +74,8 @@ struct deserialization_result {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   deserialization_result() : code(deserialization_status::kInvalidSource) {}
-  deserialization_result(deserialization_status code) : code(code) {}
+  deserialization_result(deserialization_status code, int reason = 0)
+      : code(code), reason(reason) {}
   deserialization_result(std::shared_ptr<RQty> request,
                          channel_intent channel = channel_intent::kKeep)
       : code(deserialization_status::kSucceeded),
@@ -93,6 +94,11 @@ struct deserialization_result {
   deserialization_status code = deserialization_status::kInvalidSource;
   std::shared_ptr<RQty> request = nullptr;
   channel_intent channel = channel_intent::kKeep;
+  // A protocol-specific rejection reason, opaque to the transport. It is 0
+  // when there is no rejection (kSucceeded) or when the reason was not
+  // tracked; any other value is defined and interpreted solely by the
+  // protocol layer that produced it (e.g. http11::rejection_reason).
+  int reason = 0;
 };
 }  // namespace martianlabs::doba::protocol
 

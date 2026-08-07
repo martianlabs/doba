@@ -109,8 +109,8 @@ El punto de entrada actual es `decoder<RQty, RSty>` en
 `protocol/http11/decoder.h`:
 
 1. `accumulate(char*, size)` copia en su buffer interno hasta agotar
-   `kDecodingBufferSize` (16384 bytes, constante privada del decoder) y
-   devuelve cuántos bytes admitió.
+   `kDecodingBufferSize` (16384 bytes, alias privado del decoder que reutiliza
+   `limits::kDecodingBufferSize`) y devuelve cuántos bytes admitió.
 2. `deserialize()` llama a `parse_core()` mientras no haya body pendiente o a
    `parse_body()` cuando ya se ha elegido un body framer.
 3. `parse_core()` procesa request-line y headers una vez. Usa
@@ -295,105 +295,169 @@ interna), A = alta (capa nueva, dependencia externa o cambio de contrato).
 
 ### Nivel 1 — Crítico: incumplimiento visible en cada respuesta
 
-1. **`Connection: close` no se refleja en el mensaje. (B)** El protocolo
-   calcula `channel_intent::kClose` y el transporte lo honra, pero el header
-   nunca se emite: el cliente ve una respuesta aparentemente persistente
-   seguida de un FIN inesperado, y reutiliza la conexión.
+1. **Ausencia total de timeouts. (A — diferido al final, ver Secuencia
+   recomendada)** Sin deadline de cabeceras, body, escritura ni idle de
+   keep-alive en ninguno de los dos backends. Exposición directa a
+   slowloris y prerequisito para emitir `408`, cuyo status-line ya existe
+   pero nunca se usa.
 
-2. **Semántica de `HEAD`, `204` y `304`. (M)** Nada suprime el cuerpo. Si un
-   handler de `HEAD` llama a `set_body`, el cuerpo se envía y la conexión se
-   desincroniza. Requiere que el punto de serialización conozca el método, dato
-   que hoy no cruza esa frontera.
-
-3. **Ausencia total de timeouts. (A)** Sin deadline de cabeceras, body,
-   escritura ni idle de keep-alive en ninguno de los dos backends. Exposición
-   directa a slowloris y prerequisito para emitir `408`, cuyo status-line ya
-   existe pero nunca se usa.
-
-4. **Todo rechazo colapsa en `400`. (M)** La causa raíz es que `verdict` es
-   binario (`kAccept`/`kReject`): ninguna regla puede expresar *por qué*
-   rechaza. Impide distinguir `413`, `414`, `431`, `501` y `505`, cuyos
-   status-lines ya existen. Ampliar `verdict` toca todos los `interpret()` de
-   `headers/` y las cuatro reglas de `rules/`: conviene planificarlo aparte.
+~~2. Todo rechazo colapsa en `400`.~~ **Resuelto.** `rejection_reason`
+   (`protocol/http11/rejection_reason.h`) sustituye el `verdict` binario como
+   canal neutro de motivo de rechazo: cada `interpret()` de `headers/` y las
+   cuatro reglas de `rules/` pueden registrar en `context_.rejection_reason`
+   por qué rechazan, sin que `decoder.h` ni el transporte conozcan semántica
+   HTTP (el motivo viaja como `int` opaco en
+   `deserialization_result::reason`). `http11::server::set_on_bad_request`
+   traduce ese motivo a `400`, `413`, `414`, `431`, `501` o `505` según
+   corresponda. `414` y `431` se apoyan en dos límites operacionales nuevos,
+   `policies::max_uri_length` y `policies::max_header_section_size`
+   (ambos deshabilitados por defecto, valor `0`), cuyos valores sugeridos
+   viven en el repositorio centralizado `protocol/http11/limits.h` junto con
+   el resto de límites operacionales del árbol (`kDecodingBufferSize`,
+   `kMaxRequestHeadSize`, `kMaxResponseSizeInMemory`,
+   `kMaxResponseBodySizeInMemory`, `kMaxChunkedExtensionSize`,
+   `kMaxChunkedTrailerSize`, `kMaxQueryParameters`, etc.). Los alias locales
+   redundantes que algunas clases (`decoder.h`, `request.h`,
+   `body/framer_chunked.h`, `body/reader_chunked.h`, `response.h`)
+   declaraban simplemente para renombrar una constante de `limits.h` se
+   eliminaron; todos los puntos de uso referencian `limits::` directamente,
+   evitando una capa de indirección sin valor añadido. Build verificado con
+   `run_build`: exitoso.
 
 ### Nivel 2 — Alto: bloquea despliegue real o usabilidad básica
 
-5. **Sin TLS. (A)** Ni Schannel ni OpenSSL ni ALPN. Hoy solo es desplegable
+3. **Sin TLS. (A — diferido al final, ver Secuencia recomendada)**
    detrás de un terminador TLS. Debe encajar sin romper la frontera
    protocolo/transporte.
 
-6. **`100-continue` y respuestas 1xx interinas. (A)** `Expect` se parsea e
+4. **`100-continue`
    interpreta, pero no se emite `100 Continue` ni `417`. El obstáculo
    estructural es que `on_send` es de un solo uso. Sin ello, los clientes que
    envían `Expect` esperan su timeout en cada petición con cuerpo grande.
 
-7. **Una excepción del handler cierra sin `500`. (B)** En ambos transportes el
-   `catch` alrededor de `on_request_` hace `close()` y retorna. Un bug de
-   usuario se manifiesta como conexión cortada, indistinguible de un fallo de
-   red. Existe `set_on_bad_request` para errores de decodificación; falta el
-   simétrico para errores de handler.
+5. ~~**Una excepción~~ **[RESUELTO]** Se añadió `rejection_reason::kHandlerError`
+   (mapea a 500 Internal Server Error en `server.h`) y ambos backends
+   (`tcpip_windows.h`, `tcpip_linux.h`) ahora reutilizan el canal existente
+   `enqueue_error_response`/`on_bad_request_` en el `catch` que envuelve la
+   llamada a `on_request_`, en lugar de cerrar la conexión silenciosamente.
+   No se añadió ningún delegate/miembro/setter nuevo: se reutilizó la
+   infraestructura ya existente para errores de decodificación. Build
+   verificado con `run_build`: exitoso.
 
-8. **`request` sin acceso a headers por nombre. (B)** Solo hay
-   `get_header(std::size_t)`. Leer `Authorization` obliga a iterar y comparar
-   sin distinguir mayúsculas a mano. Igual para query-parameters y cookies.
+6. ~~**`request` sin acceso~~ **[RESUELTO]** `get_header(std::string_view)` y
+   `exist_header(...)` ahora comparan de forma case-insensitive (RFC 9110
+   §5.1) usando `helpers::iequals`, corrigiendo un bug de compliance además
+   de la carencia de conveniencia. Se añadieron `get_query_parameter(name)`
+   (`std::optional<query_parameter_view>`), `get_cookie(name)`
+   (`std::optional<std::string_view>`, parseo perezoso bajo demanda del
+   header `Cookie` crudo) y `get_cookies()` (todos los pares). No se
+   modificó el parseo/validación existente de `headers/cookie.h` ni la
+   representación interna de `request`. Build verificado con `run_build`:
+   exitoso.
 
-9. **Sin percent-decoding ni normalización de path. (M)** No existe ninguna
-   función de decodificación porcentual. Afecta al enrutado de paths
-   codificados y, sobre todo, a la seguridad de cualquier handler que mapee a
-   disco. Debe decodificarse después de segmentar por `/`, nunca antes.
+   Durante el análisis se detectaron dos conveniencias de API adicionales,
+   diferidas para un futuro punto (fuera de alcance de este ítem):
+   - `request` no expone el body ya leído como string/bytes de conveniencia
+     (solo `get_body_reader()` de bajo nivel).
+   - No hay getters tipados para headers ya interpretados como `Content-Type`
+     o `Accept` (existen los parsers en `headers/`, falta exponerlos en
+     `request`).
 
-10. **Solo se acepta `HTTP/1.1`. (B)** Cualquier otra versión devuelve
-    `kInvalidSource` y acaba en `400`. Falta semántica `HTTP/1.0` (cierre
-    implícito, prohibición de chunked) y `505` para versiones superiores; esto
-    último depende del punto 4.
+7. **Sin percent-decoding. (B) — Resuelto.**
+   El path del request-target (`origin-form`/`absolute-form`) se decodifica
+   ahora en `decoder.h`, inmediatamente después de validar `max_uri_length` y
+   antes de montar la request, mediante `helpers::percent_decode_in_place`.
+   Se implementó como un algoritmo de dos punteros (lectura/escritura)
+   *in-place* sobre el propio sub-rango de `absolute_path_` dentro del buffer
+   del decoder: como un triplete `%HH` decodificado nunca es más largo que su
+   forma codificada, el resultado siempre cabe en el mismo rango sin
+   necesidad de un buffer adicional ni de una segunda pasada — coste O(n),
+   cero allocations, sin impacto apreciable en el caso común (paths sin `%`).
+   Un byte NUL (`%00`) decodificado se rechaza como sintácticamente inválido
+   (`rejection_reason::kSyntax`, mapeado a 400), al ser un vector clásico de
+   inyección/bypass. `request::get_absolute_path()` expone directamente el
+   path ya decodificado sin cambios de API ni de almacenamiento en
+   `request.h`; `router.h` no requirió cambios, ya que consume ese mismo
+   getter.
+
+   Nota para un futuro punto (p. ej. el handler de ficheros estáticos, ítem
+   12): un `%2F` decodificado se convierte en un `/` literal indistinguible
+   de un separador de segmento real. Cualquier lógica que vuelva a segmentar
+   el path por `/` después de este punto debe tener esto en cuenta (p. ej.
+   para mitigar path-traversal), ya que la decodificación ocurre una única
+   vez, antes del enrutado, sobre el path completo.
+
+8. **Solo se acepta `HTTP/1.1`. (B) — Resuelto por decisión de alcance.**
+    Doba es un framework HTTP/1.1-only por diseño (ver cabecera de este
+    documento y comentarios de `decoder.h`/`server.h`); no se implementará
+    semántica `HTTP/1.0` (framing sin chunked, cierre implícito por defecto,
+    etc.), ya que eso ampliaría el alcance del proyecto en lugar de corregir
+    un incumplimiento de compliance HTTP/1.1. El comportamiento actual ya es
+    conforme: una versión bien formada pero distinta de `1.1` que sea
+    numéricamente inferior (p. ej. `HTTP/1.0`, `HTTP/0.9`) devuelve `400`;
+    una versión numéricamente superior (p. ej. `HTTP/2.0`) devuelve `505`
+    (cubierto por el punto 2, ya resuelto). No se requiere ningún cambio de
+    código para este punto.
 
 ### Nivel 3 — Medio: paridad funcional esperada
 
-11. **Condicionales y `Range` sin semántica. (A)** `etag`, `if_*` y `range`
+9. **Condicionales
     están modelados y validados sintácticamente, pero nadie los evalúa: no se
     genera `304`, `412`, `206` ni `416`. Requiere decidir cómo expone el
     handler sus validadores.
 
-12. **Compresión y negociación de contenido. (A)** Sin gzip/deflate/br ni
-    gestión de `Vary`. Introduce dependencia externa, lo que choca con el
-    "cero dependencias" del README: es decisión de producto, no solo técnica.
-
-13. **`OPTIONS` por recurso y `TRACE`. (M)** `OPTIONS *` responde `200` sin
+11. **`OPTIONS`
     `Allow`. El router ya sabe calcular los métodos aplicables (lo hace para el
     `405`); falta exponerlo.
 
-14. **Sin handler de ficheros estáticos. (M)** El streaming de salida ya
-    funciona, así que la base está. Depende del punto 9 por seguridad e
-    idealmente de `TransmitFile`/`sendfile`.
-
-15. **`channel_intent::kUpgrade` sin contrato de traspaso. (A)** El valor está
+13. **`channel_intent::kUpgrade`
     definido y los headers `Sec-WebSocket-*` modelados, pero ningún transporte
     lo maneja. Hay que definir quién posee el socket tras el `101`, cómo se
     drena el buffer ya acumulado y cómo se desactiva el pipelining, sin filtrar
     semántica HTTP al transporte.
 
-16. **Trailers de salida. (M)** El lado de entrada los conserva y expone;
+14. **Trailers de salida.
     `response` no tiene API para emitirlos.
 
 ### Nivel 4 — Operabilidad y confianza
 
-17. **Sin límites de conexión ni backpressure de aceptación. (M)**
+15. **Sin límites de conexión
     `connections_` es solo un contador observacional: nada lo consulta para
     dejar de aceptar.
 
-18. **Sin logging de acceso, métricas ni trazas. (M)** No hay punto de
+## Backlog de producto / conveniencia — no es compliance HTTP/1.1
+
+Estos ítems no corrigen un incumplimiento de RFC 9110/9112: son
+funcionalidad de conveniencia que un framework web suele ofrecer, pero que
+un usuario de Doba puede implementar por su cuenta con la API ya existente
+sin que el servidor deje de ser conforme. Se numeran de forma independiente
+para no mezclarlos con el backlog de compliance.
+
+P1. **Compresión (antes ítem 10).** Negociación de contenido opcional
+    (`Accept-Encoding`/`Content-Encoding`) y gestión de `Vary`. Introduce
+    dependencia externa, lo que choca con el "cero dependencias" del README:
+    es decisión de producto, no solo técnica.
+
+P2. **Handler de ficheros estáticos (antes ítem 12). (M)** El streaming de
+    salida ya funciona, así que la base está. Depende del punto 7
+    (percent-decoding, ya resuelto) por seguridad e idealmente de
+    `TransmitFile`/`sendfile`.
+
+P3. **Logging de acceso (antes ítem 16).** No hay ningún punto de
     extensión para observabilidad.
 
-19. **Sin cadena de middleware. (M)** No hay forma de aplicar lógica
+P4. **Cadena de middleware (antes ítem 17).** No hay forma de componer lógica
     transversal sin duplicarla en cada handler. Requiere diseño cuidadoso para
     no contradecir el principio de "sin maquinaria de framework".
 
-20. **Sin parsing de formularios. (M)** Ni `x-www-form-urlencoded` ni
-    `multipart/form-data`. Comparte primitiva con el punto 9.
+P5. **Parsing de formularios (antes ítem 18). (M)** Ni
+    `x-www-form-urlencoded` ni `multipart/form-data`. Comparte primitiva con
+    el punto 7.
 
-21. **Sin suite de conformidad. (M)** Solo un harness de ejemplo. Sin batería
-    de casos de protocolo (framing, smuggling, pipelining, límites), cada
-    cambio en el decoder es una apuesta.
+P6. **Suite de conformidad (antes ítem 19).** No existe una batería propia
+    de casos de protocolo (framing, smuggling, pipelining, límites); cada
+    cambio en el decoder es una apuesta. Es infraestructura de QA, no un
+    incumplimiento de compliance en sí.
 
 ### Documentación pendiente
 
@@ -402,12 +466,14 @@ interna), A = alta (capa nueva, dependencia externa o cambio de contrato).
 
 ### Secuencia recomendada
 
-Tanda 1 (complejidad B, alto retorno): 1, 7, 8, 10.
-Tanda 2 (correctitud de framing): 2, luego 4 aislado.
-Tanda 3 (robustez): 3, 17.
-Tanda 4 (despliegue autónomo): 5, 6.
-Tanda 5 (paridad funcional, depende de 4 y/o 9): 11, 16, 13, 20, 9, 14, 15.
-Tanda 6 (producto/observabilidad, sin dependencias bloqueantes): 12, 18, 19, 21.
+Tanda 1 (complejidad B, alto retorno): 5, 6, 8.
+Tanda 2 (correctitud de framing): resuelta (ver punto 2, Nivel 1).
+Tanda 3 (robustez, excluyendo timeouts): 15.
+Tanda 4 (despliegue autónomo, excluyendo TLS): 4.
+Tanda 5 (paridad funcional de compliance, depende de 7): 9, 14, 11, 13.
+Tanda 6 (complejidad A, diferidos al final por decisión explícita): 1, 3.
+Tanda 7 (backlog de producto/conveniencia, sin dependencias bloqueantes):
+  P1, P2, P3, P4, P5, P6.
 
 ## Estado de pruebas y documentación
 

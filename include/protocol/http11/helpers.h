@@ -1934,6 +1934,99 @@ struct helpers {
     return true;
   }
   // +=========================================================================+
+  // | [>] percent_decode_validate                                  ( public ) |
+  // +=========================================================================+
+  // | RFC 3986 §2.1 § pct-encoded (validation)                                |
+  // +-------------------------------------------------------------------------+
+  // | Read-only counterpart of 'percent_decode_in_place'. Scans every         |
+  // | well-formed "%HH" pct-encoded triplet within 'sv' and checks that its   |
+  // | decoded byte is never NUL (0x00), which is never valid within a path,   |
+  // | without writing back into (or otherwise mutating) the source buffer.    |
+  // | Assumes 'sv' was already validated as syntactically well-formed (every  |
+  // | '%' is followed by two HEXDIGs), as guaranteed by the URI parsing       |
+  // | helpers upstream. Returns true if no triplet decodes to NUL, false      |
+  // | otherwise.                                                              |
+  // +=========================================================================+
+  static constexpr bool percent_decode_validate(std::string_view sv) noexcept {
+    const std::size_t len = sv.size();
+    for (std::size_t r = 0; r < len;) {
+      if (sv[r] == '%' && r + 2 < len && is_hex_digit(sv[r + 1]) &&
+          is_hex_digit(sv[r + 2])) {
+        auto hex_val = [](char h) -> unsigned char {
+          if (h >= '0' && h <= '9') return static_cast<unsigned char>(h - '0');
+          if (h >= 'a' && h <= 'f') {
+            return static_cast<unsigned char>(h - 'a' + 10);
+          }
+          return static_cast<unsigned char>(h - 'A' + 10);
+        };
+        unsigned char decoded = static_cast<unsigned char>(
+            (hex_val(sv[r + 1]) << 4) | hex_val(sv[r + 2]));
+        if (decoded == 0x00) return false;
+        r += 3;
+        continue;
+      }
+      r++;
+    }
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] percent_decode_in_place                                  ( public ) |
+  // +=========================================================================+
+  // | RFC 3986 §2.1 § pct-encoded (decoding)                                  |
+  // +-------------------------------------------------------------------------+
+  // | Decodes every well-formed "%HH" pct-encoded triplet within 'sv' back    |
+  // | into its raw byte, writing the result back into the very same           |
+  // | underlying buffer and shrinking 'sv' to the decoded length (mirroring   |
+  // | how ows_ltrim/ows_rtrim mutate their string_view argument in place).    |
+  // | This is safe because a decoded string is never longer than its encoded  |
+  // | source, so a simple two-pointer (read/write) pass suffices with no      |
+  // | extra allocation. The '/' character is copied as-is and never produced  |
+  // | as a decoding result of a "%2F"/"%2f" triplet being treated as a        |
+  // | separator; decoding happens uniformly, segment boundaries are the       |
+  // | caller's responsibility to (re-)establish only on literal '/' bytes     |
+  // | that were present before decoding.                                      |
+  // | Assumes 'sv' was already validated as syntactically well-formed (every  |
+  // | '%' is followed by two HEXDIGs) and semantically valid (no triplet      |
+  // | decodes to NUL), as guaranteed by 'percent_decode_validate' upstream,   |
+  // | and that it points into a buffer the caller owns and is allowed to      |
+  // | mutate. Does not re-check for NUL bytes, to avoid doing that work       |
+  // | twice; callers that have not already validated 'sv' must call           |
+  // | 'percent_decode_validate' beforehand.                                   |
+  // +=========================================================================+
+  static constexpr void percent_decode_in_place(
+      std::string_view& sv) noexcept {
+    // Fast path: the overwhelming majority of requests carry no "%" in the
+    // path at all. Detect that up front and return immediately without
+    // touching a single byte of the buffer, avoiding an O(n) self-copy loop
+    // on every request for the (dominant) case where there is nothing to
+    // decode.
+    const std::size_t pct_at = sv.find('%');
+    if (pct_at == std::string_view::npos) return;
+    char* data = const_cast<char*>(sv.data());
+    const std::size_t len = sv.size();
+    // Bytes before the first '%' are already known to need no rewriting.
+    std::size_t r = pct_at, w = pct_at;
+    while (r < len) {
+      if (data[r] == '%' && r + 2 < len && is_hex_digit(data[r + 1]) &&
+          is_hex_digit(data[r + 2])) {
+        auto hex_val = [](char h) -> unsigned char {
+          if (h >= '0' && h <= '9') return static_cast<unsigned char>(h - '0');
+          if (h >= 'a' && h <= 'f') {
+            return static_cast<unsigned char>(h - 'a' + 10);
+          }
+          return static_cast<unsigned char>(h - 'A' + 10);
+        };
+        unsigned char decoded = static_cast<unsigned char>(
+            (hex_val(data[r + 1]) << 4) | hex_val(data[r + 2]));
+        data[w++] = static_cast<char>(decoded);
+        r += 3;
+        continue;
+      }
+      data[w++] = data[r++];
+    }
+    sv = std::string_view(data, w);
+  }
+  // +=========================================================================+
   // | [>] check_uri_userinfo                                       ( public ) |
   // +=========================================================================+
   // | RFC 3986 §3.2.1 § userinfo                                              |
@@ -2702,6 +2795,6 @@ struct helpers {
     return count;
   }
 };
-}  // namespace martianlabs::doba::protocol::http11
+} // namespace martianlabs::doba::protocol::http11
 
 #endif

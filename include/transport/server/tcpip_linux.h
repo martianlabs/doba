@@ -707,7 +707,7 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
         accepted = ctx->accumulate(buffer + consumed, size - consumed);
       }
       if (accepted == 0 || accepted > (size - consumed)) {
-        enqueue_error_response(ctx, "Invalid request content!");
+        enqueue_error_response(ctx, 0, "Invalid request content!");
         return;
       }
       // Let's try to deserialize some requests!
@@ -726,11 +726,11 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
         return;
       }
       if (result.code == protocol::deserialization_status::kInvalidSource) {
-        enqueue_error_response(ctx, "Invalid request content!");
+        enqueue_error_response(ctx, result.reason, "Invalid request content!");
         return;
       }
       if (result.request == nullptr) {
-        enqueue_error_response(ctx, "Decoder error!");
+        enqueue_error_response(ctx, 0, "Decoder error!");
         return;
       }
       try {
@@ -764,8 +764,15 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
               }
             });
         if (close_after_this) return;
+      } catch (const std::exception& ex) {
+        // Reuses the same bad-request channel as decoder rejections; the
+        // reason code below mirrors
+        // protocol::http11::rejection_reason::kHandlerError (7), kept as a
+        // raw value here so the transport stays http-agnostic.
+        enqueue_error_response(ctx, 7, ex.what());
+        return;
       } catch (...) {
-        ctx->close();
+        enqueue_error_response(ctx, 7, "Request handler error!");
         return;
       }
     }
@@ -774,10 +781,10 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   // | [>] enqueue_error_response                                  ( private ) |
   // +=========================================================================+
   void enqueue_error_response(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
-                              std::string_view reason) {
+                              int reason_code, std::string_view reason) {
     try {
       std::shared_ptr<RSty> response = std::make_shared<RSty>();
-      on_bad_request_(reason, response);
+      on_bad_request_(reason_code, reason, response);
       ctx->enqueue_error_response(response);
     } catch (...) {
       ctx->close();

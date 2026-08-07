@@ -76,6 +76,7 @@ namespace martianlabs::doba::protocol::http11 {
 // | 421  | Misdirected Request                                                |
 // | 422  | Unprocessable Content                                              |
 // | 426  | Upgrade Required                                                   |
+// | 431  | Request Header Fields Too Large                                   |
 // | 500  | Internal Server Error                                              |
 // | 501  | Not Implemented                                                    |
 // | 502  | Bad Gateway                                                        |
@@ -123,6 +124,7 @@ namespace martianlabs::doba::protocol::http11 {
 #define SC_421_MISDIRECTED_REQUEST 421
 #define SC_422_UNPROCESSABLE_CONTENT 422
 #define SC_426_UPGRADE_REQUIRED 426
+#define SC_431_REQUEST_HEADER_FIELDS_TOO_LARGE 431
 #define SC_500_INTERNAL_SERVER_ERROR 500
 #define SC_501_NOT_IMPLEMENTED 501
 #define SC_502_BAD_GATEWAY 502

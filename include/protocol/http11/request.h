@@ -39,6 +39,7 @@
 #include "platform.h"
 #include "common/hash_map.h"
 #include "protocol/http11/context.h"
+#include "protocol/http11/limits.h"
 #include "protocol/http11/request_getter.h"
 #include "protocol/http11/query_parameter.h"
 #include "protocol/http11/method_names.h"
@@ -173,11 +174,12 @@ class request {
       std::optional<std::string_view> target_authority_host,
       std::optional<std::string_view> target_authority_port,
       std::optional<helpers::host_type> target_authority_type,
-      bool body_chunked_encoding = false, std::size_t body_content_length = 0) {
+      bool body_chunked_encoding = false, std::size_t body_content_length = 0,
+      bool wants_connection_close = false) {
     std::shared_ptr<request> req = std::shared_ptr<request>(new request(
         full_buffer, method, abs_path, target_form, std::move(headers),
         std::move(query_parameters), host, port, type, target_authority_host,
-        target_authority_port, target_authority_type));
+        target_authority_port, target_authority_type, wants_connection_close));
     return [req, body_chunked_encoding, body_content_length](
                std::optional<common::byte_storage> byte_storage) -> auto {
       if (byte_storage) {
@@ -199,8 +201,27 @@ class request {
   auto get_target() const { return target_; }
   auto get_absolute_path() const { return abs_path_; }
   auto get_header(std::size_t i) const { return headers_[i]; }
+  auto get_header(std::string_view name) const {
+    for (const auto& header : headers_) {
+      if (helpers::iequals(header.first, name)) return header;
+    }
+    throw std::out_of_range("Header not found: " + std::string(name));
+  }
+  auto exist_header(std::string_view name) const {
+    for (const auto& header : headers_) {
+      if (helpers::iequals(header.first, name)) return true;
+    }
+    return false;
+  }
   auto get_headers_length() const { return headers_.size(); }
   auto get_query_parameter(std::size_t i) const { return query_parameters_[i]; }
+  auto get_query_parameter(std::string_view name) const
+      -> std::optional<query_parameter_view> {
+    for (const auto& param : query_parameters_) {
+      if (param.first == name) return param;
+    }
+    return std::nullopt;
+  }
   auto get_query_parameters_length() const { return query_parameters_.size(); }
   auto has_host() const { return !host_.empty(); }
   auto get_host() const { return host_; }
@@ -212,12 +233,86 @@ class request {
   auto get_target_authority_type() const { return ta_type_; }
   auto get_body_reader() const { return body_reader_; }
   auto has_body_reader() const { return body_reader_ != nullptr; }
+  auto wants_connection_close() const { return wants_connection_close_; }
+  // +=========================================================================+
+  // | [>] get_cookie                                               ( public ) |
+  // +=========================================================================+
+  // | Looks up a single cookie-pair by name in the (unparsed) Cookie header,  |
+  // | if present. Parsing is done on demand; nothing is cached, mirroring how |
+  // | headers_ and query_parameters_ are already accessed by linear scan.     |
+  // +=========================================================================+
+  std::optional<std::string_view> get_cookie(std::string_view name) const {
+    std::string_view raw;
+    if (!find_cookie_header(raw)) return std::nullopt;
+    std::optional<std::string_view> found;
+    for_each_cookie_pair(
+        raw, [&](std::string_view cookie_name, std::string_view cookie_value) {
+          if (found) return;
+          if (cookie_name == name) found = cookie_value;
+        });
+    return found;
+  }
+  // +=========================================================================+
+  // | [>] get_cookies                                              ( public ) |
+  // +=========================================================================+
+  // | Returns every cookie-pair present in the (unparsed) Cookie header,      |
+  // | or an empty vector when the header is absent.                           |
+  // +=========================================================================+
+  std::vector<std::pair<std::string_view, std::string_view>> get_cookies()
+      const {
+    std::vector<std::pair<std::string_view, std::string_view>> cookies;
+    std::string_view raw;
+    if (!find_cookie_header(raw)) return cookies;
+    for_each_cookie_pair(
+        raw, [&](std::string_view cookie_name, std::string_view cookie_value) {
+          cookies.emplace_back(cookie_name, cookie_value);
+        });
+    return cookies;
+  }
 
  private:
   // +=========================================================================+
-  // | [>] CONSTANTs                                               ( private ) |
+  // | [>] find_cookie_header                                      ( private ) |
   // +=========================================================================+
-  static constexpr std::size_t kMaxHeadSize = 4096;
+  bool find_cookie_header(std::string_view& out) const {
+    for (const auto& header : headers_) {
+      if (helpers::iequals(header.first, header_names::kCookie)) {
+        out = header.second;
+        return true;
+      }
+    }
+    return false;
+  }
+  // +=========================================================================+
+  // | [>] for_each_cookie_pair                                    ( private ) |
+  // +=========================================================================+
+  // | Splits a Cookie header field-value on the exact "; " separator (RFC     |
+  // | 6265 §4.2.1) and invokes fn(name, value) for every cookie-pair found.   |
+  // +=========================================================================+
+  template <typename FNty>
+  static void for_each_cookie_pair(std::string_view raw, FNty&& fn) {
+    std::size_t start = 0;
+    std::size_t i = 0;
+    while (i < raw.size()) {
+      if (raw[i] == ';' && i + 1 < raw.size() && raw[i + 1] == ' ') {
+        emit_cookie_pair(raw.substr(start, i - start), fn);
+        i += 2;
+        start = i;
+        continue;
+      }
+      i++;
+    }
+    emit_cookie_pair(raw.substr(start), fn);
+  }
+  // +=========================================================================+
+  // | [>] emit_cookie_pair                                        ( private ) |
+  // +=========================================================================+
+  template <typename FNty>
+  static void emit_cookie_pair(std::string_view pair, FNty&& fn) {
+    std::size_t eq = pair.find('=');
+    if (eq == std::string_view::npos) return;
+    fn(pair.substr(0, eq), pair.substr(eq + 1));
+  }
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                ( private ) |
   // +=========================================================================+
@@ -230,13 +325,15 @@ class request {
           std::optional<helpers::host_type> type,
           std::optional<std::string_view> target_authority_host,
           std::optional<std::string_view> target_authority_port,
-          std::optional<helpers::host_type> target_authority_type) {
+          std::optional<helpers::host_type> target_authority_type,
+          bool wants_connection_close = false) {
     buffer_ = new char[full_buffer.size()];
     std::memcpy(buffer_, full_buffer.data(), full_buffer.size());
     char* method_at = buffer_ + (method.data() - full_buffer.data());
     method_ = std::string_view(method_at, method.size());
     char* abs_path_at = buffer_ + (abs_path.data() - full_buffer.data());
     abs_path_ = std::string_view(abs_path_at, abs_path.size());
+    helpers::percent_decode_in_place(abs_path_);
     target_ = target_form;
     headers_ = std::move(headers);
     query_parameters_ = std::move(query_parameters);
@@ -246,6 +343,7 @@ class request {
     if (target_authority_host) ta_host_ = *target_authority_host;
     if (target_authority_port) ta_port_ = *target_authority_port;
     if (target_authority_type) ta_type_ = *target_authority_type;
+    wants_connection_close_ = wants_connection_close;
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
@@ -263,6 +361,7 @@ class request {
   std::vector<header_view> headers_;                    // vector of headers
   std::vector<query_parameter_view> query_parameters_;  // query parameters
   std::shared_ptr<body::reader> body_reader_;           // body reader
+  bool wants_connection_close_ = false;  // protocol decided to close channel
 };
 }  // namespace martianlabs::doba::protocol::http11
 

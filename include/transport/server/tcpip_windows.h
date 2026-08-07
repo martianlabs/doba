@@ -685,6 +685,19 @@ class tcpip {
     }
   }
   // +=========================================================================+
+  // | [>] enqueue_error_response                                  ( private ) |
+  // +=========================================================================+
+  void enqueue_error_response(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
+                              int reason_code, std::string_view reason) {
+    try {
+      std::shared_ptr<RSty> response = std::make_shared<RSty>();
+      on_bad_request_(reason_code, reason, response);
+      ctx->enqueue_error_response(response);
+    } catch (...) {
+      ctx->close();
+    }
+  }
+  // +=========================================================================+
   // | [>] handle_receive                                          ( private ) |
   // +=========================================================================+
   void handle_receive(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
@@ -695,7 +708,6 @@ class tcpip {
     }
     DWORD bytes_accumulated = 0;
     bool keep_decoding_requests = true;
-    protocol::deserialization_result<RQty> result;
     std::thread::id this_thread_id = std::this_thread::get_id();
     do {
       // Let's accumulate the received bytes into the decoder!
@@ -707,32 +719,19 @@ class tcpip {
       // Let's try to deserialize some requests!
       do {
         using namespace protocol;
-        std::shared_ptr<RSty> response = std::make_shared<RSty>();
         deserialization_result<RQty> result = ctx->deserialize();
         if (result.code == deserialization_status::kMoreBytesNeeded) {
           break;
         } else if (result.code == deserialization_status::kInvalidSource) {
-          try {
-            on_bad_request_("Invalid request content!", response);
-            ctx->enqueue_error_response(response);
-          } catch (const std::exception&) {
-            ctx->close();
-          } catch (...) {
-            ctx->close();
-          }
+          enqueue_error_response(ctx, result.reason,
+                                 "Invalid request content!");
           return;
         } else if (result.code == deserialization_status::kSucceeded) {
           if (result.request == nullptr) {
-            try {
-              on_bad_request_("Decoder error!", response);
-              ctx->enqueue_error_response(response);
-            } catch (const std::exception&) {
-              ctx->close();
-            } catch (...) {
-              ctx->close();
-            }
+            enqueue_error_response(ctx, 0, "Decoder error!");
             return;
           }
+          std::shared_ptr<RSty> response = std::make_shared<RSty>();
           uint64_t this_response_id = ctx->get_next_response_id();
           if (result.channel == protocol::channel_intent::kClose) {
             ctx->set_closing_rid(this_response_id);
@@ -761,15 +760,19 @@ class tcpip {
                             context->close();
                           }
                         });
-          } catch (const std::exception& ex) {
-            ctx->close();
-            return;
-          } catch (...) {
-            ctx->close();
-            return;
-          }
-        }
-      } while (keep_decoding_requests);
+              } catch (const std::exception& ex) {
+                // Reuses the same bad-request channel as decoder rejections;
+                // the reason code below mirrors
+                // protocol::http11::rejection_reason::kHandlerError (7), kept as
+                // a raw value here so the transport stays http-agnostic.
+                enqueue_error_response(ctx, 7, ex.what());
+                return;
+              } catch (...) {
+                enqueue_error_response(ctx, 7, "Request handler error!");
+                return;
+              }
+            }
+          } while (keep_decoding_requests);
       bytes_received -= bytes_accumulated;
     } while (keep_decoding_requests && bytes_received > 0);
     ctx->arm_next_receive_operation();

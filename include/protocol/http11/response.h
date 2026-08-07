@@ -33,6 +33,7 @@
 #include "platform.h"
 #include "protocol/http11/body/writer.h"
 #include "protocol/http11/header_names.h"
+#include "protocol/http11/limits.h"
 #include "protocol/serialization.h"
 #include "status_codes.h"
 #include "status_lines.h"
@@ -74,6 +75,22 @@ class response {
     if (!has_date_header_) {
       add_header(header_names::kDate, common::date_server::get().current());
     }
+    // RFC 9110 S8.6/S15.3.5/S15.4.5: 1xx, 204 and 304 responses must never
+    // carry a message body, regardless of what a handler may have set via
+    // set_body(). 1xx/204 must not advertise any body framing at all, so
+    // Content-Length/Transfer-Encoding are stripped; 304 may still describe
+    // the resource via Content-Length (mirroring a hypothetical 200), but
+    // Transfer-Encoding is meaningless without an actual chunked body.
+    bool is_informational = status_code_ < SC_200_OK;
+    bool must_omit_body = is_informational ||
+                          status_code_ == SC_204_NO_CONTENT ||
+                          status_code_ == SC_304_NOT_MODIFIED;
+    if (must_omit_body) {
+      remove_header(header_names::kTransferEncoding);
+      if (is_informational || status_code_ == SC_204_NO_CONTENT) {
+        remove_header(header_names::kContentLength);
+      }
+    }
     std::size_t sln_plus_hdr_len = sln_len_ + hdr_len_;
     // Write the header-terminating CRLF (plus an extra CRLF when there are no
     // headers). The core section must always stay within [0, bdy_beg_).
@@ -89,12 +106,16 @@ class response {
     }
     auto result = std::make_unique<protocol::serialization_result>();
     result->prefix.assign(memory_, sln_plus_hdr_len);
-    if (bdy_len_ > 0) result->prefix.append(&memory_[bdy_beg_], bdy_len_);
+    if (!must_omit_body && bdy_len_ > 0) {
+      result->prefix.append(&memory_[bdy_beg_], bdy_len_);
+    }
     if (bdy_writer_.has_value()) {
-      // Finalizes the framing and transfers the accumulated bytes to the
-      // transport; the writer is consumed, so this response no longer owns a
-      // body afterwards.
-      result->source.emplace(bdy_writer_->release());
+      if (!must_omit_body) {
+        // Finalizes the framing and transfers the accumulated bytes to the
+        // transport; the writer is consumed, so this response no longer owns
+        // a body afterwards.
+        result->source.emplace(bdy_writer_->release());
+      }
       bdy_writer_.reset();
     }
     return result;
@@ -286,7 +307,7 @@ class response {
   response& set_body(std::string_view sv) {
     std::size_t body_size = sv.size();
     reset_body();
-    if (body_size <= kMaxBodySizeInMemory) {
+    if (body_size <= limits::kMaxResponseBodySizeInMemory) {
       std::memcpy(&memory_[bdy_beg_], sv.data(), body_size);
       bdy_len_ = body_size;
       set_header("Content-Length", body_size);
@@ -315,6 +336,22 @@ class response {
     reset_body();
     bdy_writer_.emplace(std::move(writer));
     apply_body_framing();
+    return *this;
+  }
+  // +=========================================================================+
+  // | [>] clear_body                                               ( public ) |
+  // +=========================================================================+
+  // | Discards any body bytes previously set via set_body(), and removes the  |
+  // | framing headers that described it (Content-Length/Transfer-Encoding),   |
+  // | leaving the response as if set_body() had never been called. Symmetric  |
+  // | counterpart to set_body(): it never leaves a framing header pointing    |
+  // | to bytes that are no longer sent.                                       |
+  // +-------------------------------------------------------------------------+
+  response& clear_body() {
+    bdy_len_ = 0;
+    bdy_writer_.reset();
+    remove_header(header_names::kContentLength);
+    remove_header(header_names::kTransferEncoding);
     return *this;
   }
   // +=========================================================================+
@@ -480,6 +517,10 @@ class response {
     // 426_UPGRADE_REQUIRED
     return sln(status_lines::k426, SC_426_UPGRADE_REQUIRED);
   }
+  response& request_header_fields_too_large_431() {
+    // 431_REQUEST_HEADER_FIELDS_TOO_LARGE
+    return sln(status_lines::k431, SC_431_REQUEST_HEADER_FIELDS_TOO_LARGE);
+  }
   response& internal_server_error_500() {
     // 500_INTERNAL_SERVER_ERROR
     return sln(status_lines::k500, SC_500_INTERNAL_SERVER_ERROR);
@@ -509,8 +550,6 @@ class response {
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
   // +=========================================================================+
-  static constexpr std::size_t kMaxSizeInMemory = 4096;
-  static constexpr std::size_t kMaxBodySizeInMemory = 2048;
   // +=========================================================================+
   // | [>] reset_body                                              ( private ) |
   // +=========================================================================+
@@ -601,6 +640,7 @@ class response {
     bdy_len_ = 0;
     has_date_header_ = false;
     bdy_writer_.reset();
+    status_code_ = status_code;
     if (len > bdy_beg_) {
       sln_len_ = 0;
       throw std::out_of_range("not enough space to set status line!");
@@ -622,11 +662,13 @@ class response {
   // +=========================================================================+
   // | [>] ATTRIBUTES                                              ( private ) |
   // +=========================================================================+
-  char memory_[kMaxSizeInMemory]{0};
+  char memory_[limits::kMaxResponseSizeInMemory]{0};
   std::size_t sln_len_{0};
   std::size_t hdr_len_{0};
-  std::size_t bdy_beg_{kMaxSizeInMemory - kMaxBodySizeInMemory};
+  std::size_t bdy_beg_{limits::kMaxResponseSizeInMemory -
+                       limits::kMaxResponseBodySizeInMemory};
   std::size_t bdy_len_{0};
+  int status_code_{SC_200_OK};
   bool has_date_header_{false};
   std::optional<body::body_writer> bdy_writer_;
 };
