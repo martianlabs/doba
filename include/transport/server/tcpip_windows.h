@@ -763,8 +763,8 @@ class tcpip {
               } catch (const std::exception& ex) {
                 // Reuses the same bad-request channel as decoder rejections;
                 // the reason code below mirrors
-                // protocol::http11::rejection_reason::kHandlerError (7), kept as
-                // a raw value here so the transport stays http-agnostic.
+                // protocol::http::v11::rejection_reason::kHandlerError (7),
+                // kept as a raw value here so the transport stays http-agnostic.
                 enqueue_error_response(ctx, 7, ex.what());
                 return;
               } catch (...) {

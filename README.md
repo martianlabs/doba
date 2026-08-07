@@ -36,10 +36,10 @@ It ships as **pure headers**. No build step, no binary to link, no dependencies 
 #include <memory>
 
 #include "common/execution_policy.h"
-#include "protocol/http11/server.h"
+#include "protocol/http/v11/server.h"
 
 using namespace martianlabs::doba::common;
-using namespace martianlabs::doba::protocol::http11;
+using namespace martianlabs::doba::protocol::http::v11;
 
 int main() {
   server srv;

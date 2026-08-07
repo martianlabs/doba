@@ -26,4 +26,4 @@ source_group(
   FILES ${DOBA_HEADERS}
 )
 
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test/ut-001-main)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/examples/001-hello_world)

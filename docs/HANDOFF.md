@@ -1,4 +1,4 @@
-# Doba — Documento de traspaso de contexto
+﻿# Doba — Documento de traspaso de contexto
 
 Este documento describe el árbol de código actual. No es un historial de
 auditorías ni una lista de cambios previstos.
@@ -33,40 +33,76 @@ include/
   protocol/
     deserialization.h    deserialization_status, channel_intent y resultado
     serialization.h      serialization_result { prefix, source }
-    http11/
-      decoder.h          decoder incremental de peticiones HTTP/1.1
-      request.h          objeto de request y materialización diferida
-      request_getter.h   callback que termina de construir la request
-      response.h         respuesta de buffer fijo
-      server.h           composición HTTP/1.1 de router y transporte
-      router.h           selección de rutas estáticas, parametrizadas y wildcard
-      router_types.h     resultados de match y conversión de parámetros
-      router_handler_static.h
-                         contrato del handler de ruta estática
-      router_handler_parametrized.h
-                         handler tipado para parámetros de path
-      router_handler_parametrized_base.h
+    http/
+      common/            tipos y componentes reutilizables entre versiones
+                         de HTTP (no especificos de HTTP/1.1)
+        header.h         alias de header y header_view
+        header_names.h   constantes de nombres de header
+        helpers.h        utilidades de parsing compartidas (iequals,
+                         percent_decode_in_place, etc.)
+        method.h         tipo de metodo HTTP
+        method_names.h   constantes de nombres de metodo
+        query_parameter.h
+                         tipo de parametro de query
+        request_getter.h callback generico que termina de construir una
+                         request a partir de un byte_storage opcional
+        router.h         seleccion de rutas estaticas, parametrizadas y
+                         wildcard (agnostico de la version HTTP)
+        router_types.h   resultados de match y conversion de parametros
+        router_handler_static.h
+                         contrato del handler de ruta estatica
+        router_handler_parametrized.h
+                         handler tipado para parametros de path
+        router_handler_parametrized_base.h
                          interfaz interna de handlers parametrizados
-      body/
-        (entrada: framing del body recibido)
-        framer_raw.h     framing de un body delimitado por Content-Length
-        framer_chunked.h validación del wire chunked recibido
-        framer_state.h   resultado de los body framers
-        framer_error.h   errores de framing de entrada
-        (entrada: lectura del body ya acumulado)
-        reader.h         body::reader: selecciona reader_chunked/reader_raw
-                         según el encoding real de la request
-        reader_chunked.h decodificación del framing chunked al leer
-        reader_raw.h     lectura directa de un body Content-Length
-        reader_state.h   resultado de los body readers
-        reader_error.h   errores de lectura de body
-        (salida: body de la respuesta)
-        writer.h         body::body_writer: fachada raw/chunked de salida
-        writer_raw.h     codificación de salida con Content-Length
-        writer_chunked.h codificación del wire chunked de salida
-        writer_state.h   resultado de los body writers
-        writer_error.h   errores de escritura de salida
-      headers/           checkers e intérpretes de headers y reglas
+        status_codes.h   constantes de status code
+        target.h         tipo de request-target
+        headers/         checkers e interpretes de headers compartidos
+                         entre versiones de HTTP (Accept, Cache-Control,
+                         Content-Type, Cookie, ETag, Range, Sec-WebSocket-*,
+                         Vary, WWW-Authenticate, etc.)
+      v11/               todo lo estrictamente especifico de HTTP/1.1
+        decoder.h        decoder incremental de peticiones HTTP/1.1
+        request.h        objeto de request y materializacion diferida
+        response.h       respuesta de buffer fijo
+        server.h         composicion HTTP/1.1 de router y transporte
+        connection.h     estado hop-by-hop derivado de la request
+        context.h        contexto de decodificacion (connection, policies,
+                         rejection_reason)
+        limits.h         limites operacionales centralizados (buffers,
+                         tamanos maximos, etc.)
+        parsed_types.h   tipos intermedios de parsing (tokens, parametros)
+        policies.h       politicas de decodificacion derivadas de limits
+        rejection_reason.h
+                         motivo de rechazo neutro que atraviesa el decoder
+        reason_phrases.h reason-phrases de status line
+        status_lines.h   status-lines completas (codigo + reason-phrase)
+        verdict.h        veredicto binario de check/interpret
+        body/
+          (entrada: framing del body recibido)
+          framer_raw.h     framing de un body delimitado por Content-Length
+          framer_chunked.h validacion del wire chunked recibido
+          framer_state.h   resultado de los body framers
+          framer_error.h   errores de framing de entrada
+          (entrada: lectura del body ya acumulado)
+          reader.h         body::reader: selecciona reader_chunked/reader_raw
+                           segun el encoding real de la request
+          reader_chunked.h decodificacion del framing chunked al leer
+          reader_raw.h     lectura directa de un body Content-Length
+          reader_state.h   resultado de los body readers
+          reader_error.h   errores de lectura de body
+          (salida: body de la respuesta)
+          writer.h         body::body_writer: fachada raw/chunked de salida
+          writer_raw.h     codificacion de salida con Content-Length
+          writer_chunked.h codificacion del wire chunked de salida
+          writer_state.h   resultado de los body writers
+          writer_error.h   errores de escritura de salida
+        headers/           checkers e interpretes de headers y reglas
+                           especificos de HTTP/1.1 (Host, Content-Length,
+                           Transfer-Encoding, Connection, TE, Trailer,
+                           Expect, Upgrade, Via, Forwarded, X-Forwarded-*)
+          rules/           reglas transversales aplicadas tras el pase de
+                           headers: directives, framing, policy, routing
   transport/server/
     tcpip.h              selector de plataforma
     tcpip_windows.h      backend IOCP
@@ -106,7 +142,7 @@ cuando el cuerpo se entregó como writer. Ambos transportes consumen primero
 ## HTTP/1.1: decodificación de requests
 
 El punto de entrada actual es `decoder<RQty, RSty>` en
-`protocol/http11/decoder.h`:
+`protocol/http/v11/decoder.h`:
 
 1. `accumulate(char*, size)` copia en su buffer interno hasta agotar
    `kDecodingBufferSize` (16384 bytes, alias privado del decoder que reutiliza
@@ -123,7 +159,7 @@ El punto de entrada actual es `decoder<RQty, RSty>` en
 6. Al completarse la request, `dispatch()` construye el
    `deserialization_result` y reinicia el estado del decoder.
 
-Los headers y reglas viven bajo `protocol/http11/headers/`. El mapa de
+Los headers y reglas viven bajo `protocol/http/v11/headers/`. El mapa de
 dispatch actual contiene los headers comprobados y los dispatchers dedicados
 para Host, Content-Length, Transfer-Encoding, Connection, TE, Trailer,
 Expect, Upgrade, Max-Forwards, Via, Forwarded y los tres X-Forwarded.
@@ -142,7 +178,7 @@ vuelca lo aceptado a un `common::writer`.
 termina de devolver una `std::shared_ptr<RQty>`. La implementación actual de
 `request::from` recibe además si la request usa chunked encoding y su
 Content-Length, crea un `common::reader` propietario del `byte_storage` y lo
-envuelve en un `body::reader` (ver `protocol/http11/body/reader.h`), que
+envuelve en un `body::reader` (ver `protocol/http/v11/body/reader.h`), que
 selecciona internamente `body::reader_chunked` o `body::reader_raw` según el
 encoding real usado por la request. `request::get_body_reader()` expone ese
 `body::reader` ya construido cuando hay body, de forma que el llamador no
@@ -302,17 +338,17 @@ interna), A = alta (capa nueva, dependencia externa o cambio de contrato).
    pero nunca se usa.
 
 ~~2. Todo rechazo colapsa en `400`.~~ **Resuelto.** `rejection_reason`
-   (`protocol/http11/rejection_reason.h`) sustituye el `verdict` binario como
+   (`protocol/http/v11/rejection_reason.h`) sustituye el `verdict` binario como
    canal neutro de motivo de rechazo: cada `interpret()` de `headers/` y las
    cuatro reglas de `rules/` pueden registrar en `context_.rejection_reason`
    por qué rechazan, sin que `decoder.h` ni el transporte conozcan semántica
    HTTP (el motivo viaja como `int` opaco en
-   `deserialization_result::reason`). `http11::server::set_on_bad_request`
+   `deserialization_result::reason`). `v11::server::set_on_bad_request`
    traduce ese motivo a `400`, `413`, `414`, `431`, `501` o `505` según
    corresponda. `414` y `431` se apoyan en dos límites operacionales nuevos,
    `policies::max_uri_length` y `policies::max_header_section_size`
    (ambos deshabilitados por defecto, valor `0`), cuyos valores sugeridos
-   viven en el repositorio centralizado `protocol/http11/limits.h` junto con
+   viven en el repositorio centralizado `protocol/http/v11/limits.h` junto con
    el resto de límites operacionales del árbol (`kDecodingBufferSize`,
    `kMaxRequestHeadSize`, `kMaxResponseSizeInMemory`,
    `kMaxResponseBodySizeInMemory`, `kMaxChunkedExtensionSize`,
@@ -462,7 +498,7 @@ P6. **Suite de conformidad (antes ítem 19).** No existe una batería propia
 ### Documentación pendiente
 
 - Documentar el contrato de ciclo de vida para usuarios que consuman
-  directamente el transporte, fuera de `http11::server`.
+  directamente el transporte, fuera de `v11::server`.
 
 ### Secuencia recomendada
 
@@ -477,8 +513,8 @@ Tanda 7 (backlog de producto/conveniencia, sin dependencias bloqueantes):
 
 ## Estado de pruebas y documentación
 
-El único subproyecto de prueba configurado es `test/ut-001-main`, que es un
-harness/ejemplo de servidor; no debe presentarse como una suite unitaria
+El único subproyecto de prueba configurado es `examples/001-hello_world`, que
+es un harness/ejemplo de servidor; no debe presentarse como una suite unitaria
 exhaustiva sin revisar sus casos y aserciones concretas. No existe una batería
 de conformidad de protocolo.
 
