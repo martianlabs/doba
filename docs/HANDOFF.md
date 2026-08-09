@@ -307,17 +307,40 @@ En Linux, cada worker posee su instancia EPOLL, su listener configurado con
 `SO_REUSEPORT` y todos los contextos aceptados por él. El camino síncrono
 deserializa, ejecuta el handler y envía en ese mismo worker. Una respuesta
 tardía conserva el contexto, se encola en su worker mediante `eventfd` y ese
-worker realiza el envío y cualquier operación EPOLL. No hay mutex ni lookup
-global en el despacho de eventos. Los contextos solo se destruyen desde su
-worker propietario; las inscripciones retiradas se conservan hasta completar
-el lote EPOLL que las referencia. Una respuesta tardía tras `stop()` descarta
-la notificación si el worker ya no acepta notificaciones.
+worker realiza el envío y cualquier operación EPOLL. El camino síncrono no
+toca la cola ni el mutex de notificaciones asíncronas. EPOLL entrega
+directamente el puntero al contexto, sin lookup por evento; el registro de
+contextos solo se consulta al aceptar o retirar una conexión.
 
-Cada `on_send` es de un solo uso: la primera llamada completa la respuesta y
-las posteriores se descartan. Al recibir EOF, Linux deja de leer y drena las
-respuestas ya completadas y las que estén pendientes; un fallo de handler o de
-serialización cierra el contexto. `tcpip::stop()` debe invocarse desde fuera de
-un worker del transporte.
+El worker conserva cada contexto mediante `shared_ptr` y `on_send` mantiene
+esa misma propiedad mientras puede existir una respuesta tardía. Al cerrar un
+socket, el contexto se enlaza en una lista de retirada del propio worker y no
+se elimina del registro hasta terminar el lote devuelto por `epoll_wait`; así
+ningún evento ya entregado puede observar memoria liberada y no se necesita
+una asignación para diferir la destrucción. Una respuesta tardía tras `stop()`
+encuentra el contexto cerrado y el worker deja de aceptar notificaciones.
+
+Cada request aceptada añade una posición a una única cola ordenada. Su
+identificador es la distancia respecto a la primera respuesta esperada, por lo
+que reservar es un `push_back` amortizado O(1) y completar es un acceso por
+índice O(1). Una posición vacía bloquea únicamente las respuestas posteriores;
+una respuesta duplicada, nula o tardía no puede completar de nuevo la misma
+posición. Cada contexto usa un único mutex para proteger esta cola, su buffer
+de salida y el estado compartido con respuestas asíncronas.
+
+Se distinguen dos formas de terminar:
+
+- Cierre ordenado (`close`): se deja de leer, se drena todo lo que sea seguro
+  enviar y el contexto se destruye cuando no quedan respuestas. Lo usan EOF,
+  `channel_intent::kClose`, una respuesta nula y un fallo de serialización.
+- Aborto fatal (`abort`): el flujo de salida ya esta corrupto (fallo del
+  socket, decoder o source), así que no se envía nada más y el contexto se
+  retira de inmediato.
+
+Un fallo sincrono del handler reutiliza el identificador ya reservado para
+enviar el error, en lugar de reservar uno nuevo. `tcpip::stop()` debe
+invocarse desde fuera de un worker del transporte. Los callbacks del
+transporte no pueden cambiar mientras `start()` o `stop()` están activos.
 
 No modificar la frontera protocolo/transporte para resolver una necesidad
 exclusiva de HTTP. Si un cambio requiere semántica HTTP, debe vivir en la capa

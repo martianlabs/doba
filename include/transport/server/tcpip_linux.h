@@ -37,7 +37,6 @@
 #include <deque>
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -73,20 +72,12 @@ struct context;
 template <typename RQty, typename RSty,
           template <typename, typename> class DEty>
 struct worker;
-template <typename RQty, typename RSty,
-          template <typename, typename> class DEty>
-struct epoll_registration;
-template <typename RQty, typename RSty,
-          template <typename, typename> class DEty>
-void notify_worker(std::shared_ptr<worker<RQty, RSty, DEty>> owner,
-                   std::shared_ptr<context<RQty, RSty, DEty>> ctx);
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] response_data                                              ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct response_data {
-  uint64_t id{0};
   std::unique_ptr<protocol::serialization_result> response;
   bool prefix_written{false};
 };
@@ -104,15 +95,16 @@ struct response_data {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty,
           template <typename, typename> class DEty>
-struct context {
+struct context
+    : public std::enable_shared_from_this<context<RQty, RSty, DEty>> {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   context(int in_socket, std::weak_ptr<worker<RQty, RSty, DEty>> in_owner,
           types::on_client_disconnected_delegate on_disconnection)
-      : socket_{in_socket},
-        owner{in_owner},
-        on_disconnection_{std::move(on_disconnection)} {}
+      : owner{std::move(in_owner)},
+        on_disconnection_{std::move(on_disconnection)},
+        socket_{in_socket} {}
   context(const context&) = delete;
   context(context&&) noexcept = delete;
   ~context() = default;
@@ -137,12 +129,12 @@ struct context {
   // | [>] receive                                                  ( public ) |
   // +=========================================================================+
   ssize_t receive() {
-    return ::recv(socket_, ovr_buf_, kReceiveBufferSz, MSG_DONTWAIT);
+    return ::recv(socket_, receive_buffer_, kReceiveBufferSz, MSG_DONTWAIT);
   }
   // +=========================================================================+
   // | [>] get_receive_buffer                                       ( public ) |
   // +=========================================================================+
-  char* get_receive_buffer() { return ovr_buf_; }
+  char* get_receive_buffer() { return receive_buffer_; }
   // +=========================================================================+
   // | [>] get_socket                                               ( public ) |
   // +=========================================================================+
@@ -150,93 +142,95 @@ struct context {
   // +=========================================================================+
   // | [>] get_next_response_id                                     ( public ) |
   // +=========================================================================+
-  uint64_t get_next_response_id() { return next_response_id_++; }
+  uint64_t get_next_response_id() {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    uint64_t response_id = next_response_id_++;
+    if (!closing_ && socket_ != -1) responses_.emplace_back();
+    return response_id;
+  }
   // +=========================================================================+
   // | [>] enqueue_response                                         ( public ) |
   // +=========================================================================+
-  void enqueue_response(
+  bool enqueue_response(
       std::unique_ptr<protocol::serialization_result> response,
-      uint64_t response_id, bool close_this_context_after_sending = false) {
+      uint64_t response_id) {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    enqueue_response_(std::move(response), response_id);
-    if (close_this_context_after_sending) {
-      closing_rid_ = response_id;
-      close_requested_ = true;
-      responses_.erase(
-          std::remove_if(responses_.begin(), responses_.end(),
-                         [response_id](const response_data& response) {
-                           return response.id > response_id;
-                         }),
-          responses_.end());
-      receiving_ = false;
-    }
+    return enqueue_response_(std::move(response), response_id);
   }
   // +=========================================================================+
   // | [>] enqueue_error_response                                   ( public ) |
   // +=========================================================================+
-  void enqueue_error_response(std::shared_ptr<RSty> error_response) {
-    if (!error_response) {
-      close();
-      return;
+  bool enqueue_error_response(
+      std::unique_ptr<protocol::serialization_result> response,
+      uint64_t response_id) {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    if (!enqueue_response_(std::move(response), response_id)) {
+      return fail_response_(response_id);
     }
-    uint64_t id = get_next_response_id();
-    enqueue_response(std::move(error_response->serialize()), id, true);
+    auto first = responses_.begin() +
+                 static_cast<std::ptrdiff_t>(response_id -
+                                             expected_response_id_) +
+                 1;
+    responses_.erase(first, responses_.end());
+    closing_ = true;
+    return true;
   }
   // +=========================================================================+
-  // | [>] set_closing_rid                                          ( public ) |
+  // | [>] fail_response                                            ( public ) |
   // +=========================================================================+
-  // | Marks the last response identifier to be sent before closing; the       |
-  // | context stops receiving but stays alive until that response is fully    |
-  // | flushed.                                                                |
-  // +=========================================================================+
-  void set_closing_rid(uint64_t rid) {
+  bool fail_response(uint64_t response_id) {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    closing_rid_ = rid;
-    close_requested_ = true;
-    receiving_ = false;
+    return fail_response_(response_id);
+  }
+  // +=========================================================================+
+  // | [>] connected                                                ( public ) |
+  // +=========================================================================+
+  void connected() {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    connected_ = true;
   }
   // +=========================================================================+
   // | [>] close                                                    ( public ) |
   // +=========================================================================+
-  // | Requests context closing; the context stops receiving but stays alive   |
-  // | until every already queued response has been fully flushed.             |
-  // +=========================================================================+
   void close() {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    close_requested_ = true;
-    receiving_ = false;
+    closing_ = true;
+  }
+  // +=========================================================================+
+  // | [>] abort                                                    ( public ) |
+  // +=========================================================================+
+  void abort() {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    abort_();
   }
   // +=========================================================================+
   // | [>] can_receive                                              ( public ) |
   // +=========================================================================+
-  bool can_receive() const { return !closing_.load() && receiving_; }
+  bool can_receive() const {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    return socket_ != -1 && !closing_;
+  }
   // +=========================================================================+
-  // | [>] is_closing                                               ( public ) |
+  // | [>] is_closed                                                ( public ) |
   // +=========================================================================+
-  bool is_closing() const { return closing_.load(); }
+  bool is_closed() const { return socket_ == -1; }
   // +=========================================================================+
   // | [>] flush_send                                               ( public ) |
   // +=========================================================================+
   bool flush_send() {
-    while (true) {
-      const char* data = nullptr;
-      std::size_t size = 0;
-      {
-        std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-        if (closing_) return false;
-        if (sending_offset_ == sending_buffer_.size()) {
-          sending_buffer_.clear();
-          sending_offset_ = 0;
-          append_sendable_responses_();
-        }
-        if (should_close_()) return false;
-        if (sending_buffer_.empty()) return true;
-        data = sending_buffer_.data() + sending_offset_;
-        size = sending_buffer_.size() - sending_offset_;
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    if (socket_ == -1 || aborted_) return false;
+    for (;;) {
+      if (sending_offset_ == sending_buffer_.size()) {
+        sending_buffer_.clear();
+        sending_offset_ = 0;
+        if (!append_sendable_responses_()) return false;
       }
-      ssize_t sent = ::send(socket_, data, size, MSG_NOSIGNAL);
+      if (sending_buffer_.empty()) return true;
+      ssize_t sent = ::send(socket_, sending_buffer_.data() + sending_offset_,
+                            sending_buffer_.size() - sending_offset_,
+                            MSG_NOSIGNAL);
       if (sent > 0) {
-        std::lock_guard<std::mutex> sending_lock(sending_mutex_);
         sending_offset_ += static_cast<std::size_t>(sent);
         continue;
       }
@@ -246,33 +240,43 @@ struct context {
     }
   }
   // +=========================================================================+
-  // | [>] should_close                                             ( public ) |
+  // | [>] get_event_mask                                           ( public ) |
   // +=========================================================================+
-  bool should_close() {
+  uint32_t get_event_mask() const {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    return should_close_();
+    if (socket_ == -1 || aborted_) return 0;
+    if (closing_ && sending_offset_ == sending_buffer_.size() &&
+        responses_.empty()) {
+      return 0;
+    }
+    uint32_t events = EPOLLRDHUP | EPOLLET;
+    if (!closing_) events |= EPOLLIN;
+    if (sending_offset_ < sending_buffer_.size() ||
+        (!responses_.empty() && responses_.front().response)) {
+      events |= EPOLLOUT;
+    }
+    return events;
   }
   // +=========================================================================+
-  // | [>] has_sendable_response                                    ( public ) |
+  // | [>] retire_socket                                           ( public ) |
   // +=========================================================================+
-  bool has_sendable_response() {
+  int retire_socket() {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    return has_sendable_response_();
-  }
-  // +=========================================================================+
-  // | [>] mark_context_for_closing                                 ( public ) |
-  // +=========================================================================+
-  int mark_context_for_closing() {
-    if (closing_.exchange(true)) return -1;
-    receiving_ = false;
-    int result = socket_;
+    if (socket_ == -1) return -1;
+    int socket = socket_;
     socket_ = -1;
-    return result;
+    closing_ = true;
+    return socket;
   }
   // +=========================================================================+
   // | [>] notify_disconnection                                     ( public ) |
   // +=========================================================================+
   void notify_disconnection() {
+    {
+      std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+      if (!connected_ || disconnected_ || socket_ != -1) return;
+      disconnected_ = true;
+    }
     try {
       on_disconnection_();
     } catch (...) {
@@ -282,69 +286,65 @@ struct context {
   // | ATTRIBUTEs                                                   ( public ) |
   // +=========================================================================+
   std::weak_ptr<worker<RQty, RSty, DEty>> owner;
-  epoll_registration<RQty, RSty, DEty>* registration{nullptr};
+  context* retirement_next{nullptr};
 
  private:
   // +=========================================================================+
   // | [>] enqueue_response_                                       ( private ) |
   // +=========================================================================+
-  void enqueue_response_(
+  bool enqueue_response_(
       std::unique_ptr<protocol::serialization_result> response,
       uint64_t response_id) {
-    if (!response || closing_ ||
-        (closing_rid_ && response_id > *closing_rid_)) {
-      return;
+    if (!response || socket_ == -1 || aborted_ ||
+        response_id < expected_response_id_) {
+      return false;
     }
-    response_data data{response_id, std::move(response)};
-    // Fast path: responses usually complete in order, so the incoming id is
-    // typically the new tail; this avoids a linear scan from the beginning.
-    if (responses_.empty() || responses_.back().id < data.id) {
-      responses_.emplace_back(std::move(data));
-      return;
-    }
-    auto itr = responses_.begin();
-    while (itr != responses_.end() && itr->id < data.id) itr++;
-    if (itr != responses_.end() && itr->id == data.id) return;
-    responses_.insert(itr, std::move(data));
+    uint64_t offset = response_id - expected_response_id_;
+    if (offset >= responses_.size()) return false;
+    response_data& data = responses_[static_cast<std::size_t>(offset)];
+    if (data.response) return false;
+    data.response = std::move(response);
+    return true;
   }
   // +=========================================================================+
-  // | [>] has_sendable_response_                                  ( private ) |
+  // | [>] fail_response_                                          ( private ) |
   // +=========================================================================+
-  bool has_sendable_response_() {
-    if (sending_offset_ < sending_buffer_.size()) return true;
-    // The responses queue is kept ordered, so only its head can be sent!
-    return !responses_.empty() &&
-           responses_.front().id == expected_response_id_;
+  bool fail_response_(uint64_t response_id) {
+    if (socket_ == -1 || aborted_ || response_id < expected_response_id_) {
+      return false;
+    }
+    uint64_t offset = response_id - expected_response_id_;
+    if (offset >= responses_.size()) return false;
+    auto first = responses_.begin() + static_cast<std::ptrdiff_t>(offset);
+    if (first->response) return false;
+    responses_.erase(first, responses_.end());
+    closing_ = true;
+    return true;
   }
   // +=========================================================================+
   // | [>] append_sendable_responses_                              ( private ) |
   // +=========================================================================+
-  void append_sendable_responses_() {
-    while (true) {
-      if (closing_rid_ && expected_response_id_ > *closing_rid_) return;
-      if (sending_buffer_.size() >= kSendBufferMaxSz) return;
-      // The responses queue is kept ordered, so only its head can be sent!
-      auto itr = responses_.begin();
-      if (itr == responses_.end() || itr->id != expected_response_id_) return;
-      if (!itr->prefix_written) {
-        sending_buffer_.append(itr->response->prefix);
-        itr->prefix_written = true;
+  bool append_sendable_responses_() {
+    while (!responses_.empty() &&
+           sending_buffer_.size() < kSendBufferMaxSz) {
+      response_data& data = responses_.front();
+      if (!data.response) break;
+      if (!data.prefix_written) {
+        sending_buffer_.append(data.response->prefix);
+        data.prefix_written = true;
         continue;
       }
-      auto& source = itr->response->source;
+      auto& source = data.response->source;
       if (source.has_value() && !source->eof()) {
-        // Let's pour, at most, the remaining outgoing buffer capacity!
         std::byte chunk[kSendChunkSz];
         std::size_t room = kSendBufferMaxSz - sending_buffer_.size();
         if (room > kSendChunkSz) room = kSendChunkSz;
         std::size_t read = source->read(std::span<std::byte>(chunk, room));
-        if (source->failed()) {
-          close_requested_ = true;
-          return;
+        if (source->failed() || read > room) {
+          abort_();
+          return false;
         }
         if (!read) {
-          // Sources are synchronous readers, so a zero-byte read means there
-          // is nothing else to pour: let's retire this response right below!
           source.reset();
           continue;
         }
@@ -352,52 +352,37 @@ struct context {
         continue;
       }
       expected_response_id_++;
-      responses_.erase(itr);
-      if (closing_rid_ && expected_response_id_ > *closing_rid_) return;
+      responses_.pop_front();
     }
+    return true;
   }
   // +=========================================================================+
-  // | [>] should_close_                                           ( private ) |
+  // | [>] abort_                                                  ( private ) |
   // +=========================================================================+
-  // | Mirrors the WindowsTM cleanup criteria: a closing context is only torn  |
-  // | down once every pending byte and queued response has been flushed.      |
-  // +=========================================================================+
-  bool should_close_() {
-    if (!close_requested_) return false;
-    if (sending_offset_ != sending_buffer_.size()) return false;
-    if (!responses_.empty()) return false;
-    if (closing_rid_ && expected_response_id_ <= *closing_rid_) return false;
-    return true;
+  void abort_() {
+    aborted_ = true;
+    closing_ = true;
+    responses_.clear();
+    sending_buffer_.clear();
+    sending_offset_ = 0;
   }
   // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
   // +=========================================================================+
   types::on_client_disconnected_delegate on_disconnection_;
-  std::atomic<bool> closing_{false};
-  bool close_requested_{false};
-  bool receiving_{true};
+  mutable std::mutex sending_mutex_;
   int socket_{-1};
+  bool closing_{false};
+  bool connected_{false};
+  bool disconnected_{false};
+  bool aborted_{false};
   DEty<RQty, RSty> decoder_{};
-  char ovr_buf_[kReceiveBufferSz];
-  uint64_t next_response_id_{0};
-  std::deque<response_data> responses_;
-  uint64_t expected_response_id_{0};
-  std::optional<uint64_t> closing_rid_;
+  char receive_buffer_[kReceiveBufferSz];
   std::string sending_buffer_;
   std::size_t sending_offset_{0};
-  std::mutex sending_mutex_;
-};
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] epoll_registration                                         ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-template <typename RQty, typename RSty,
-          template <typename, typename> class DEty>
-struct epoll_registration {
-  epoll_registration(std::shared_ptr<context<RQty, RSty, DEty>> in_context)
-      : ctx{std::move(in_context)} {}
-  std::shared_ptr<context<RQty, RSty, DEty>> ctx;
+  std::deque<response_data> responses_;
+  uint64_t expected_response_id_{0};
+  uint64_t next_response_id_{0};
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -443,17 +428,13 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
     }
     wake_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
     if (wake_fd_ == -1) {
-      ::close(epoll_fd_);
-      epoll_fd_ = -1;
+      close_resources();
       throw std::runtime_error("Stop event could not be created!");
     }
     listener_fd_ = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
                             IPPROTO_TCP);
     if (listener_fd_ == -1) {
-      ::close(wake_fd_);
-      ::close(epoll_fd_);
-      wake_fd_ = -1;
-      epoll_fd_ = -1;
+      close_resources();
       throw std::runtime_error("Socket could not be created!");
     }
     int reuse_address = 1;
@@ -492,9 +473,7 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
   // +=========================================================================+
-  void start() {
-    thread_ = std::jthread([this]() { run(); });
-  }
+  void start() { thread_ = std::jthread([this]() { run(); }); }
   // +=========================================================================+
   // | [>] is_current_thread                                        ( public ) |
   // +=========================================================================+
@@ -513,10 +492,11 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
     {
       std::lock_guard<std::mutex> pending_lock(pending_mutex_);
       accepting_notifications_ = false;
-      wake_pending_.store(true);
       uint64_t wake = 1;
-      while (::write(wake_fd_, &wake, sizeof(wake)) == -1 && errno == EINTR) {
-      }
+      ssize_t written = 0;
+      do {
+        written = ::write(wake_fd_, &wake, sizeof(wake));
+      } while (written == -1 && errno == EINTR);
     }
     if (thread_.joinable()) thread_.join();
     close_contexts();
@@ -532,11 +512,14 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   void notify(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
     std::lock_guard<std::mutex> pending_lock(pending_mutex_);
     if (!accepting_notifications_) return;
+    bool wake_worker = pending_contexts_.empty();
     pending_contexts_.emplace_back(std::move(ctx));
-    if (wake_pending_.exchange(true)) return;
+    if (!wake_worker) return;
     uint64_t wake = 1;
-    while (::write(wake_fd_, &wake, sizeof(wake)) == -1 && errno == EINTR) {
-    }
+    ssize_t written = 0;
+    do {
+      written = ::write(wake_fd_, &wake, sizeof(wake));
+    } while (written == -1 && errno == EINTR);
   }
 
  private:
@@ -545,29 +528,32 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   // +=========================================================================+
   void run() {
     std::array<epoll_event, 64> events{};
-    while (!stopping_.load()) {
+    for (;;) {
       int ready = ::epoll_wait(epoll_fd_, events.data(), events.size(), -1);
       if (ready == -1) {
         if (errno == EINTR) continue;
-        return;
+        break;
       }
-      for (int i = 0; i < ready; i++) {
+      for (std::size_t i = 0; i < static_cast<std::size_t>(ready); i++) {
         if (events[i].data.u64 == kWakeEventId) {
           handle_wake();
-          continue;
+        } else if (events[i].data.u64 == kListenerEventId) {
+          if (!stopping_.load()) handle_listener();
+        } else {
+          auto ctx = static_cast<context<RQty, RSty, DEty>*>(
+              events[i].data.ptr);
+          if (!ctx->is_closed()) {
+            try {
+              handle_context(ctx, events[i].events);
+            } catch (...) {
+              abort_context(ctx);
+            }
+          }
         }
-        if (events[i].data.u64 == kListenerEventId) {
-          handle_listener();
-          continue;
-        }
-        epoll_registration<RQty, RSty, DEty>* registration =
-            static_cast<epoll_registration<RQty, RSty, DEty>*>(
-                events[i].data.ptr);
-        auto itr = registrations_.find(registration);
-        if (itr == registrations_.end()) continue;
-        handle_context(itr->second->ctx, events[i].events);
+        if (stopping_.load()) break;
       }
-      retired_registrations_.clear();
+      retire_contexts();
+      if (stopping_.load()) break;
     }
   }
   // +=========================================================================+
@@ -575,24 +561,26 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   // +=========================================================================+
   void handle_wake() {
     uint64_t wake = 0;
-    wake_pending_.store(false);
-    // A single read drains the accumulated counter (no EFD_SEMAPHORE), so
-    // one syscall is enough regardless of how many notify() calls coalesced
-    // into it; the pending-contexts queue below is the actual source of
-    // truth, so the outcome of this read is otherwise inconsequential!
-    static_cast<void>(::read(wake_fd_, &wake, sizeof(wake)));
+    ssize_t received = 0;
+    do {
+      received = ::read(wake_fd_, &wake, sizeof(wake));
+    } while (received == -1 && errno == EINTR);
     if (stopping_.load()) return;
-    std::vector<std::shared_ptr<context<RQty, RSty, DEty>>> contexts;
+    std::vector<std::shared_ptr<context<RQty, RSty, DEty>>> pending;
     {
       std::lock_guard<std::mutex> pending_lock(pending_mutex_);
-      contexts.swap(pending_contexts_);
+      pending.swap(pending_contexts_);
     }
-    for (const auto& ctx : contexts) {
-      if (ctx->is_closing()) continue;
-      if (!ctx->flush_send()) {
-        close_context(ctx);
-      } else {
-        rearm_context(ctx);
+    for (const auto& ctx : pending) {
+      if (ctx->is_closed()) continue;
+      try {
+        if (!ctx->flush_send()) {
+          abort_context(ctx.get());
+        } else {
+          rearm_context(ctx.get());
+        }
+      } catch (...) {
+        abort_context(ctx.get());
       }
     }
   }
@@ -604,7 +592,12 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
       int socket = ::accept4(listener_fd_, nullptr, nullptr,
                              SOCK_NONBLOCK | SOCK_CLOEXEC);
       if (socket == -1) {
-        if (errno == EINTR) continue;
+        if (errno == EINTR || errno == ECONNABORTED || errno == EPROTO ||
+            errno == ENETDOWN || errno == ENOPROTOOPT || errno == EHOSTDOWN ||
+            errno == ENONET || errno == EHOSTUNREACH ||
+            errno == EOPNOTSUPP || errno == ENETUNREACH) {
+          continue;
+        }
         return;
       }
       int no_delay = 1;
@@ -616,6 +609,7 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
       try {
         register_context(socket);
       } catch (...) {
+        ::close(socket);
       }
     }
   }
@@ -626,45 +620,42 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
     std::shared_ptr<context<RQty, RSty, DEty>> ctx =
         std::make_shared<context<RQty, RSty, DEty>>(
             socket, this->shared_from_this(), on_disconnection_);
-    std::unique_ptr<epoll_registration<RQty, RSty, DEty>> registration =
-        std::make_unique<epoll_registration<RQty, RSty, DEty>>(ctx);
-    ctx->registration = registration.get();
-    try {
-      registrations_.emplace(ctx->registration, std::move(registration));
-    } catch (...) {
-      int failed_socket = ctx->mark_context_for_closing();
-      if (failed_socket != -1) ::close(failed_socket);
-      throw;
+    if (!contexts_.emplace(ctx.get(), ctx).second) {
+      throw std::runtime_error("Context could not be registered!");
     }
     epoll_event event{};
     event.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
-    event.data.ptr = ctx->registration;
+    event.data.ptr = ctx.get();
     if (::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket, &event) == -1) {
-      registrations_.erase(ctx->registration);
-      int failed_socket = ctx->mark_context_for_closing();
-      if (failed_socket != -1) ::close(failed_socket);
+      ctx->abort();
+      close_context(ctx.get());
       return;
     }
     try {
       on_connection_();
     } catch (...) {
-      close_context(ctx);
+      close_context(ctx.get());
+      return;
     }
+    ctx->connected();
   }
   // +=========================================================================+
   // | [>] handle_context                                          ( private ) |
   // +=========================================================================+
-  void handle_context(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
-                      uint32_t events) {
-    if (ctx->is_closing()) return;
+  void handle_context(context<RQty, RSty, DEty>* ctx, uint32_t events) {
     if (events & EPOLLERR) {
-      close_context(ctx);
+      abort_context(ctx);
       return;
     }
-    if (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP)) handle_receive(ctx);
-    if (ctx->is_closing()) return;
+    if (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP)) {
+      if (!handle_receive(ctx)) {
+        abort_context(ctx);
+        return;
+      }
+    }
+    if (ctx->is_closed()) return;
     if (!ctx->flush_send()) {
-      close_context(ctx);
+      abort_context(ctx);
       return;
     }
     rearm_context(ctx);
@@ -672,7 +663,7 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   // +=========================================================================+
   // | [>] handle_receive                                          ( private ) |
   // +=========================================================================+
-  void handle_receive(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
+  bool handle_receive(context<RQty, RSty, DEty>* ctx) {
     while (ctx->can_receive()) {
       ssize_t received = ctx->receive();
       if (received > 0) {
@@ -682,35 +673,33 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
       }
       if (received == 0) {
         ctx->close();
-        return;
+        return true;
       }
       if (errno == EINTR) continue;
-      if (errno == EAGAIN || errno == EWOULDBLOCK) return;
-      ctx->close();
-      return;
+      if (errno == EAGAIN || errno == EWOULDBLOCK) return true;
+      return false;
     }
+    return true;
   }
   // +=========================================================================+
   // | [>] consume_received                                        ( private ) |
   // +=========================================================================+
-  void consume_received(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
-                        char* buffer, std::size_t size) {
+  void consume_received(context<RQty, RSty, DEty>* ctx, char* buffer,
+                        std::size_t size) {
     std::size_t consumed = 0;
     do {
-      // Let's accumulate the received bytes into the decoder!
       std::size_t accepted =
           ctx->accumulate(buffer + consumed, size - consumed);
-      if (accepted == 0) {
-        // The decoder is full: let's drain the pending requests and retry!
+      if (!accepted) {
         handle_deserialized_requests(ctx);
         if (!ctx->can_receive()) return;
         accepted = ctx->accumulate(buffer + consumed, size - consumed);
       }
-      if (accepted == 0 || accepted > (size - consumed)) {
-        enqueue_error_response(ctx, 0, "Invalid request content!");
+      if (!accepted || accepted > (size - consumed)) {
+        enqueue_error_response(ctx, ctx->get_next_response_id(), 0,
+                               "Invalid request content!");
         return;
       }
-      // Let's try to deserialize some requests!
       handle_deserialized_requests(ctx);
       consumed += accepted;
     } while (ctx->can_receive() && consumed < size);
@@ -718,127 +707,138 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   // +=========================================================================+
   // | [>] handle_deserialized_requests                            ( private ) |
   // +=========================================================================+
-  void handle_deserialized_requests(
-      std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
+  void handle_deserialized_requests(context<RQty, RSty, DEty>* ctx) {
     while (ctx->can_receive()) {
       protocol::deserialization_result<RQty> result = ctx->deserialize();
       if (result.code == protocol::deserialization_status::kMoreBytesNeeded) {
         return;
       }
+      uint64_t response_id = ctx->get_next_response_id();
       if (result.code == protocol::deserialization_status::kInvalidSource) {
-        enqueue_error_response(ctx, result.reason, "Invalid request content!");
+        enqueue_error_response(ctx, response_id, result.reason,
+                               "Invalid request content!");
         return;
       }
-      if (result.request == nullptr) {
-        enqueue_error_response(ctx, 0, "Decoder error!");
+      if (!result.request) {
+        enqueue_error_response(ctx, response_id, 0, "Decoder error!");
         return;
       }
+      if (result.channel == protocol::channel_intent::kClose) ctx->close();
+      std::thread::id this_thread_id = std::this_thread::get_id();
+      std::shared_ptr<context<RQty, RSty, DEty>> context_owner =
+          ctx->shared_from_this();
       try {
-        std::thread::id tid = std::this_thread::get_id();
-        uint64_t id = ctx->get_next_response_id();
-        // When the protocol requests channel closing, this response becomes
-        // the last one to be sent and no more requests must be decoded!
-        bool close_after_this =
-            result.channel == protocol::channel_intent::kClose;
-        if (close_after_this) ctx->set_closing_rid(id);
         on_request_(
             result.request, std::make_shared<RSty>(),
-            [ctx, id, tid](std::shared_ptr<RSty> response) {
+            [context_owner, response_id,
+             this_thread_id](std::shared_ptr<RSty> response) {
+              bool completed = false;
               if (response) {
                 try {
-                  std::unique_ptr<protocol::serialization_result> serialized =
-                      response->serialize();
-                  // Duplicated identifiers are dropped downstream, so
-                  // a repeated completion is harmless here!
+                  auto serialized = response->serialize();
                   if (serialized) {
-                    ctx->enqueue_response(std::move(serialized), id);
+                    completed = context_owner->enqueue_response(
+                        std::move(serialized), response_id);
+                  } else {
+                    completed = context_owner->fail_response(response_id);
                   }
                 } catch (...) {
-                  ctx->close();
+                  completed = context_owner->fail_response(response_id);
                 }
+              } else {
+                completed = context_owner->fail_response(response_id);
               }
-              if (std::this_thread::get_id() != tid) {
-                std::shared_ptr<worker<RQty, RSty, DEty>> owner =
-                    ctx->owner.lock();
-                if (owner) notify_worker(std::move(owner), ctx);
+              if (completed && std::this_thread::get_id() != this_thread_id) {
+                auto owner = context_owner->owner.lock();
+                if (owner) owner->notify(context_owner);
               }
             });
-        if (close_after_this) return;
       } catch (const std::exception& ex) {
-        // Reuses the same bad-request channel as decoder rejections; the
-        // reason code below mirrors
-        // protocol::http::v11::rejection_reason::kHandlerError (7), kept as a
-        // raw value here so the transport stays http-agnostic.
-        enqueue_error_response(ctx, 7, ex.what());
+        enqueue_error_response(ctx, response_id, 7, ex.what());
         return;
       } catch (...) {
-        enqueue_error_response(ctx, 7, "Request handler error!");
+        enqueue_error_response(ctx, response_id, 7,
+                               "Request handler error!");
         return;
       }
+      if (result.channel == protocol::channel_intent::kClose) return;
     }
   }
   // +=========================================================================+
   // | [>] enqueue_error_response                                  ( private ) |
   // +=========================================================================+
-  void enqueue_error_response(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
-                              int reason_code, std::string_view reason) {
+  void enqueue_error_response(context<RQty, RSty, DEty>* ctx,
+                              uint64_t response_id, int reason_code,
+                              std::string_view reason) {
     try {
       std::shared_ptr<RSty> response = std::make_shared<RSty>();
       on_bad_request_(reason_code, reason, response);
-      ctx->enqueue_error_response(response);
+      auto serialized = response->serialize();
+      if (!serialized ||
+          !ctx->enqueue_error_response(std::move(serialized), response_id)) {
+        ctx->fail_response(response_id);
+      }
     } catch (...) {
-      ctx->close();
+      ctx->fail_response(response_id);
     }
   }
   // +=========================================================================+
   // | [>] rearm_context                                           ( private ) |
   // +=========================================================================+
-  void rearm_context(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    if (ctx->should_close()) {
+  void rearm_context(context<RQty, RSty, DEty>* ctx) {
+    uint32_t events = ctx->get_event_mask();
+    if (!events) {
       close_context(ctx);
       return;
     }
-    uint32_t events = EPOLLRDHUP | EPOLLET;
-    if (ctx->can_receive()) events |= EPOLLIN;
-    if (ctx->has_sendable_response()) events |= EPOLLOUT;
     epoll_event event{};
     event.events = events;
-    event.data.ptr = ctx->registration;
+    event.data.ptr = ctx;
     if (::epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, ctx->get_socket(), &event) ==
         -1) {
-      close_context(ctx);
+      abort_context(ctx);
     }
+  }
+  // +=========================================================================+
+  // | [>] abort_context                                           ( private ) |
+  // +=========================================================================+
+  void abort_context(context<RQty, RSty, DEty>* ctx) {
+    ctx->abort();
+    close_context(ctx);
   }
   // +=========================================================================+
   // | [>] close_context                                           ( private ) |
   // +=========================================================================+
-  void close_context(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    epoll_registration<RQty, RSty, DEty>* registration = ctx->registration;
-    int socket = ctx->mark_context_for_closing();
+  void close_context(context<RQty, RSty, DEty>* ctx) {
+    int socket = ctx->retire_socket();
     if (socket == -1) return;
     ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket, nullptr);
     ::close(socket);
-    auto itr = registrations_.find(registration);
-    if (itr != registrations_.end()) {
-      retired_registrations_.emplace_back(std::move(itr->second));
-      registrations_.erase(itr);
-    }
+    ctx->retirement_next = retired_contexts_;
+    retired_contexts_ = ctx;
     ctx->notify_disconnection();
+  }
+  // +=========================================================================+
+  // | [>] retire_contexts                                         ( private ) |
+  // +=========================================================================+
+  void retire_contexts() {
+    while (retired_contexts_) {
+      context<RQty, RSty, DEty>* ctx = retired_contexts_;
+      retired_contexts_ = ctx->retirement_next;
+      contexts_.erase(ctx);
+    }
   }
   // +=========================================================================+
   // | [>] close_contexts                                          ( private ) |
   // +=========================================================================+
   void close_contexts() {
-    for (auto& [registration, entry] : registrations_) {
-      int socket = entry->ctx->mark_context_for_closing();
-      if (socket != -1) {
-        ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket, nullptr);
-        ::close(socket);
-        entry->ctx->notify_disconnection();
-      }
+    for (auto& item : contexts_) {
+      context<RQty, RSty, DEty>* ctx = item.first;
+      if (ctx->is_closed()) continue;
+      ctx->abort();
+      close_context(ctx);
     }
-    registrations_.clear();
-    retired_registrations_.clear();
+    retire_contexts();
   }
   // +=========================================================================+
   // | [>] close_resources                                         ( private ) |
@@ -856,15 +856,13 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   // +=========================================================================+
   int epoll_fd_{-1};
   int wake_fd_{-1};
-  std::atomic<bool> wake_pending_{false};
   int listener_fd_{-1};
   std::atomic<bool> stopping_{false};
   std::jthread thread_;
-  std::unordered_map<epoll_registration<RQty, RSty, DEty>*,
-                     std::unique_ptr<epoll_registration<RQty, RSty, DEty>>>
-      registrations_;
-  std::vector<std::unique_ptr<epoll_registration<RQty, RSty, DEty>>>
-      retired_registrations_;
+  std::unordered_map<context<RQty, RSty, DEty>*,
+                     std::shared_ptr<context<RQty, RSty, DEty>>>
+      contexts_;
+  context<RQty, RSty, DEty>* retired_contexts_{nullptr};
   std::vector<std::shared_ptr<context<RQty, RSty, DEty>>> pending_contexts_;
   std::mutex pending_mutex_;
   bool accepting_notifications_{false};
@@ -873,17 +871,6 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
 };
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] notify_worker                                            ( function ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-template <typename RQty, typename RSty,
-          template <typename, typename> class DEty>
-void notify_worker(std::shared_ptr<worker<RQty, RSty, DEty>> owner,
-                   std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-  owner->notify(std::move(ctx));
-}
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tcpip [linux]                                               ( class ) |
@@ -916,79 +903,43 @@ class tcpip {
   // | [>] start                                                    ( public ) |
   // +=========================================================================+
   void start(const char port[]) {
-    std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
-    if (!workers_.empty() || stopping_) return;
-    uint16_t port_number = get_port(port);
-    std::size_t number_of_workers =
-        std::max<std::size_t>(1, std::thread::hardware_concurrency());
+    {
+      std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
+      if (starting_ || stopping_ || !workers_.empty()) return;
+      starting_ = true;
+    }
     try {
+      uint16_t port_number = parse_port(port);
+      std::size_t number_of_workers =
+          std::max<std::size_t>(1, std::thread::hardware_concurrency());
       for (std::size_t i = 0; i < number_of_workers; i++) {
-        std::shared_ptr<worker<RQty, RSty, DEty>> entry =
-            std::make_shared<worker<RQty, RSty, DEty>>(
-                on_request_, on_bad_request_, on_connection_,
-                on_disconnection_);
+        auto entry = std::make_shared<worker<RQty, RSty, DEty>>(
+            on_request_, on_bad_request_, on_connection_, on_disconnection_);
         entry->setup(port_number);
         workers_.emplace_back(std::move(entry));
       }
-      for (const auto& worker : workers_) worker->start();
+      for (const auto& entry : workers_) entry->start();
     } catch (...) {
-      stopping_ = true;
-      lifecycle_lock.unlock();
-      try {
-        for (const auto& worker : workers_) worker->stop();
-      } catch (...) {
-        lifecycle_lock.lock();
-        stopping_ = false;
-        lifecycle_lock.unlock();
-        lifecycle_condition_.notify_all();
-        throw;
-      }
-      lifecycle_lock.lock();
-      workers_.clear();
-      stopping_ = false;
-      lifecycle_lock.unlock();
-      lifecycle_condition_.notify_all();
+      stop_(true);
       throw;
     }
+    {
+      std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
+      starting_ = false;
+    }
+    lifecycle_condition_.notify_all();
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
-  void stop() {
-    std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
-    for (const auto& worker : workers_) {
-      if (worker->is_current_thread()) {
-        throw std::runtime_error("Transport cannot be stopped from a worker!");
-      }
-    }
-    if (stopping_) {
-      lifecycle_condition_.wait(lifecycle_lock,
-                                [this]() { return !stopping_; });
-    }
-    if (workers_.empty()) return;
-    stopping_ = true;
-    lifecycle_lock.unlock();
-    try {
-      for (const auto& worker : workers_) worker->stop();
-    } catch (...) {
-      lifecycle_lock.lock();
-      stopping_ = false;
-      lifecycle_lock.unlock();
-      lifecycle_condition_.notify_all();
-      throw;
-    }
-    lifecycle_lock.lock();
-    workers_.clear();
-    stopping_ = false;
-    lifecycle_lock.unlock();
-    lifecycle_condition_.notify_all();
-  }
+  void stop() { stop_(false); }
   // +=========================================================================+
   // | [>] set_on_request                                           ( public ) |
   // +=========================================================================+
   template <typename FNty>
   void set_on_request(FNty&& fn) {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
+    ensure_stopped();
     on_request_ = std::forward<FNty>(fn);
   }
   // +=========================================================================+
@@ -997,6 +948,7 @@ class tcpip {
   template <typename FNty>
   void set_on_bad_request(FNty&& fn) {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
+    ensure_stopped();
     on_bad_request_ = std::forward<FNty>(fn);
   }
   // +=========================================================================+
@@ -1005,6 +957,7 @@ class tcpip {
   template <typename FNty>
   void set_on_connection(FNty&& fn) {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
+    ensure_stopped();
     on_connection_ = std::forward<FNty>(fn);
   }
   // +=========================================================================+
@@ -1013,26 +966,82 @@ class tcpip {
   template <typename FNty>
   void set_on_disconnection(FNty&& fn) {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
+    ensure_stopped();
     on_disconnection_ = std::forward<FNty>(fn);
   }
 
  private:
   // +=========================================================================+
-  // | [>] get_port                                                ( private ) |
+  // | [>] stop_                                                   ( private ) |
   // +=========================================================================+
-  static uint16_t get_port(const char port[]) {
-    if (port == nullptr || *port == '\0') {
+  void stop_(bool starting_failure) {
+    std::vector<std::shared_ptr<worker<RQty, RSty, DEty>>> workers;
+    {
+      std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
+      if (starting_failure) {
+        starting_ = false;
+        lifecycle_condition_.notify_all();
+      } else {
+        lifecycle_condition_.wait(lifecycle_lock,
+                                  [this]() { return !starting_; });
+      }
+      if (stopping_) {
+        if (stopping_thread_ == std::this_thread::get_id()) return;
+        lifecycle_condition_.wait(lifecycle_lock,
+                                  [this]() { return !stopping_; });
+        return;
+      }
+      if (workers_.empty()) return;
+      for (const auto& entry : workers_) {
+        if (entry->is_current_thread()) {
+          throw std::runtime_error(
+              "Transport cannot be stopped from a worker!");
+        }
+      }
+      stopping_ = true;
+      stopping_thread_ = std::this_thread::get_id();
+      workers.swap(workers_);
+    }
+    try {
+      for (const auto& entry : workers) entry->stop();
+    } catch (...) {
+      std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
+      stopping_ = false;
+      stopping_thread_ = {};
+      lifecycle_condition_.notify_all();
+      throw;
+    }
+    {
+      std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
+      stopping_ = false;
+      stopping_thread_ = {};
+    }
+    lifecycle_condition_.notify_all();
+  }
+  // +=========================================================================+
+  // | [>] parse_port                                              ( private ) |
+  // +=========================================================================+
+  static uint16_t parse_port(const char port[]) {
+    if (!port || !*port) {
       throw std::runtime_error("Invalid port (range from 1 to 65535)!");
     }
-    int port_number = 0;
-    const char* const port_end = port + std::strlen(port);
-    const auto [parsed_at, parse_error] =
-        std::from_chars(port, port_end, port_number);
-    if (parse_error != std::errc{} || parsed_at != port_end ||
-        port_number < 1 || port_number > 65535) {
+    unsigned int port_number = 0;
+    const char* end = port + std::strlen(port);
+    auto result = std::from_chars(port, end, port_number);
+    if (result.ec != std::errc() || result.ptr != end || port_number < 1 ||
+        port_number > 65535) {
       throw std::runtime_error("Invalid port (range from 1 to 65535)!");
     }
     return static_cast<uint16_t>(port_number);
+  }
+  // +=========================================================================+
+  // | [>] ensure_stopped                                          ( private ) |
+  // +=========================================================================+
+  void ensure_stopped() const {
+    if (starting_ || stopping_ || !workers_.empty()) {
+      throw std::runtime_error(
+          "Transport callbacks cannot change while active!");
+    }
   }
   // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
@@ -1040,7 +1049,9 @@ class tcpip {
   std::vector<std::shared_ptr<worker<RQty, RSty, DEty>>> workers_;
   std::mutex lifecycle_mutex_;
   std::condition_variable lifecycle_condition_;
+  bool starting_{false};
   bool stopping_{false};
+  std::thread::id stopping_thread_{};
   types::on_request_delegate<RQty, RSty> on_request_;
   types::on_bad_request_delegate<RSty> on_bad_request_;
   types::on_client_connected_delegate on_connection_;
