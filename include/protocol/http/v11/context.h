@@ -83,7 +83,8 @@ struct context {
   // layer needs to pick a status code. Set by the interpreter/checker that
   // rejects the request; left at kNone for syntactic errors, which default to
   // 400 Bad Request.
-  rejection_reason rejection_reason = rejection_reason::kNone;
+  martianlabs::doba::protocol::http::v11::rejection_reason rejection_reason =
+      martianlabs::doba::protocol::http::v11::rejection_reason::kNone;
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 
