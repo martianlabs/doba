@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                             authorization |
 // +===========================================================================+
-// | RFC 9110 §11.6.2 Authorization                                            |
+// | RFC 9110 S11.6.2 Authorization                                            |
 // +---------------------------------------------------------------------------+
 // | The "Authorization" header field allows a user agent to authenticate      |
 // | itself with an origin server, usually after receiving a 401               |
@@ -67,7 +67,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |                  nonce="dcd98b7102dd2f0e8b11d0f600bfb0c093",              |
 // |                  uri="/dir/index.html", response="e966c9329242554e42c8"   |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §11.6.2 Authorization (ABNF summary)                             |
+// | RFC 9110 S11.6.2 Authorization (ABNF summary)                             |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -87,7 +87,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | BWS              | OWS                                                    |
 // | OWS              | *( SP / HTAB )                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.1 list expansion                                            |
+// | RFC 9110 S5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

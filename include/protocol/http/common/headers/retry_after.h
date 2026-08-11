@@ -33,7 +33,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                               retry-after |
 // +===========================================================================+
-// | RFC 9110 §10.2.3 Retry-After                                              |
+// | RFC 9110 S10.2.3 Retry-After                                              |
 // +---------------------------------------------------------------------------+
 // | The "Retry-After" response header field indicates how long the user agent |
 // | ought to wait before making a follow-up request.                          |
@@ -56,7 +56,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Retry-After: Fri, 31 Dec 1999 23:59:59 GMT                              |
 // |   Retry-After: 120                                                        |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §10.2.3 Retry-After (ABNF summary)                               |
+// | RFC 9110 S10.2.3 Retry-After (ABNF summary)                               |
 // +---------------------------------------------------------------------------+
 // +---------------+-----------------------------------------------------------+
 // | Field         | Definition                                                |
@@ -64,7 +64,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | Retry-After   | HTTP-date / delay-seconds                                 |
 // | delay-seconds | 1*DIGIT                                                   |
 // +---------------+-----------------------------------------------------------+
-// | RFC 9110 §5.6.7 Date/Time Formats                                         |
+// | RFC 9110 S5.6.7 Date/Time Formats                                         |
 // +---------------------------------------------------------------------------+
 // +---------------+-----------------------------------------------------------+
 // | Field         | Definition                                                |

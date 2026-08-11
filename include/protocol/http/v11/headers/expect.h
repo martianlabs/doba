@@ -36,7 +36,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // +---------------------------------------------------------------------------+
 // | [>] expect                                                      ( class ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§10.1.1 Expect                                                   |
+// | RFC 9110 S10.1.1 Expect                                                   |
 // +---------------------------------------------------------------------------+
 // | The "Expect" header field in a request indicates a set of behaviors       |
 // | ("expectations") that need to be supported by the server in order to      |
@@ -60,7 +60,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // |  Expect: custom=value                                                     |
 // |  Expect: custom="quoted value"; parameter=value                           |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§10.1.1 Expect (ABNF)                                            |
+// | RFC 9110 S10.1.1 Expect (ABNF)                                            |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -68,32 +68,32 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // | Expect           | #expectation                                           |
 // | expectation      | token [ "=" ( token / quoted-string ) parameters ]     |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§5.6.1 List Extension                                            |
+// | RFC 9110 S5.6.1 List Extension                                            |
 // +---------------------------------------------------------------------------+
 // | #expectation     | [ expectation *( OWS "," OWS expectation ) ]           |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§5.6.6 Parameters                                                |
+// | RFC 9110 S5.6.6 Parameters                                                |
 // +---------------------------------------------------------------------------+
 // | parameters       | *( OWS ";" OWS [ parameter ] )                         |
 // | parameter        | parameter-name "=" parameter-value                     |
 // | parameter-name   | token                                                  |
 // | parameter-value  | token / quoted-string                                  |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§5.6.2 Tokens                                                    |
+// | RFC 9110 S5.6.2 Tokens                                                    |
 // +---------------------------------------------------------------------------+
 // | token            | 1*tchar                                                |
 // | tchar            | "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" /        |
 // |                  | "-" / "." / "^" / "_" / "`" / "|" / "~" / DIGIT /      |
 // |                  | ALPHA                                                  |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§5.6.4 Quoted Strings                                            |
+// | RFC 9110 S5.6.4 Quoted Strings                                            |
 // +---------------------------------------------------------------------------+
 // | quoted-string    | DQUOTE *( qdtext / quoted-pair ) DQUOTE                |
 // | qdtext           | HTAB / SP / %x21 / %x23-5B / %x5D-7E / obs-text        |
 // | quoted-pair      | "\" ( HTAB / SP / VCHAR / obs-text )                   |
 // | obs-text         | %x80-FF                                                |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§5.6.3 Whitespace                                                |
+// | RFC 9110 S5.6.3 Whitespace                                                |
 // +---------------------------------------------------------------------------+
 // | OWS              | *( SP / HTAB )                                         |
 // +---------------------------------------------------------------------------+
@@ -127,13 +127,15 @@ class expect {
   // | [>] interpret                                                ( public ) |
   // +=========================================================================+
   static constexpr verdict interpret(
-      const parsed_parameter_list& parameters_list, v11::connection&,
+      const parsed_parameter_list& parameters_list, v11::connection& conn,
       const policies&) {
     for (const std::string_view expectation : parameters_list.elements) {
-      // Each element is an expectation optionally followed by ";"-separated
-      // parameters; the leading token is the expectation name.
-      const std::string_view name = helpers::consume_token(expectation);
-      if (!helpers::iequals(name, "100-continue")) return verdict::kReject;
+      if (!helpers::iequals(expectation, "100-continue")) {
+        return verdict::kReject;
+      }
+      // RFC 9110 S10.1.1: the client will wait for an interim response before
+      // sending the body; the decoder emits it once the header section ends.
+      conn.expects_continue = true;
     }
     return verdict::kAccept;
   }
@@ -155,7 +157,7 @@ class expect {
         helpers::consume_token_or_quoted_string(sv.substr(i));
     if (value.empty()) return false;
     i += value.size();
-    // parameters = *( OWS ";" OWS [ parameter ] ) â€” empty slots allowed and no
+    // parameters = *( OWS ";" OWS [ parameter ] ) - empty slots allowed and no
     // whitespace is permitted around the "=" of an expectation parameter.
     return helpers::for_each_parameter(
         sv.substr(i), /*require_parameter=*/false,

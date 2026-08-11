@@ -1,4 +1,4 @@
-﻿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -41,8 +41,8 @@ namespace martianlabs::doba::protocol::http::v11 {
 // | This class holds for the http 1.1 decoder implementation.                 |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   RQty - request being used (v11::request by default).                 |
-// |   RSty - response being used (v11::response by default).               |
+// |   RQty - request being used (v11::request by default).                    |
+// |   RSty - response being used (v11::response by default).                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty = request, typename RSty = response>
@@ -289,7 +289,20 @@ class decoder {
           // In case of a body writer, we need to continue parsing the body, so
           // we remove the already consumed bytes from the input and call
           // parse() again to continue parsing the body.
-          return deserialize();
+          deserialization_result<RQty> result = deserialize();
+          // RFC 9110 S10.1.1: the client is waiting for an interim response
+          // before sending the body, so it is handed to the transport here.
+          // This branch runs once per request, right as the body starts.
+          // It is deliberately skipped when the call above already completed
+          // the message: an optimistic client may send Expect together with
+          // the whole body, and once that body is in there is nothing left to
+          // wait for, so the interim is omitted (the spec allows it) instead
+          // of being emitted behind the data it was meant to precede.
+          if (context_.connection.expects_continue &&
+              result.code == deserialization_status::kMoreBytesNeeded) {
+            result.interim = k100_continue_interim_;
+          }
+          return result;
         }
         if (sv[i] == '\n') return deserialization_status::kInvalidSource;
         // [field-name] decoding..
@@ -621,8 +634,14 @@ class decoder {
     if (!headers::expect::check(expect_content, parsed)) {
       return verdict::kReject;
     }
-    return headers::expect::interpret(parsed, context_rules.connection,
-                                      context_rules.policies);
+    verdict result = headers::expect::interpret(
+        parsed, context_rules.connection, context_rules.policies);
+    if (result == verdict::kReject) {
+      // RFC 9110 S10.1.1: an expectation this server cannot meet is answered
+      // with 417, not with the generic 400 a syntactic failure would yield.
+      context_rules.rejection_reason = rejection_reason::kExpectationFailed;
+    }
+    return result;
   }
   // +=========================================================================+
   // | [>] dispatch_upgrade (modelled header)                      ( private ) |
@@ -856,11 +875,12 @@ class decoder {
            &dispatch<http::headers::x_proxy_connection>},
   };
   // +=========================================================================+
-  // | [>] CONSTANTs                                               ( private ) |
-  // +=========================================================================+
-  // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
+  // A complete interim response: the status-line already carries its CRLF, so
+  // only the empty line that closes the (absent) header section is added here.
+  static constexpr char k100_continue_interim_[] =
+      "HTTP/1.1 100 Continue\r\n\r\n";
   char* buffer_ = nullptr;
   std::optional<common::writer> body_buffer_ = std::nullopt;
   std::optional<body_framer_t> body_framer_ = std::nullopt;

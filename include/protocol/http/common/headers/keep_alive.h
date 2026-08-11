@@ -28,11 +28,11 @@
 #include "protocol/http/common/helpers.h"
 
 namespace martianlabs::doba::protocol::http::headers {
-// /////////////////////////////////////////////////////////////////////////////                                                 
+// /////////////////////////////////////////////////////////////////////////////
 // +===========================================================================+
 // |                                                                keep-alive |
 // +===========================================================================+
-// | RFC 2068 §19.7.1.1 The Keep-Alive Header                                  |
+// | RFC 2068 S19.7.1.1 The Keep-Alive Header                                  |
 // +---------------------------------------------------------------------------+
 // | The "Keep-Alive" header field is a historical HTTP/1.0 extension used     |
 // | with explicitly negotiated persistent connections. It can carry optional  |
@@ -58,7 +58,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Keep-Alive: timeout=5                                                   |
 // |   Keep-Alive: timeout=5, max=1000                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 2068 §19.7.1.1 Keep-Alive Header (ABNF summary)                       |
+// | RFC 2068 S19.7.1.1 Keep-Alive Header (ABNF summary)                       |
 // +---------------------------------------------------------------------------+
 // +-----------------+---------------------------------------------------------+
 // | Field           | Definition                                              |
@@ -77,7 +77,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | BWS             | OWS                                                     |
 // | OWS             | *( SP / HTAB )                                          |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.1 list expansion                                            |
+// | RFC 9110 S5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

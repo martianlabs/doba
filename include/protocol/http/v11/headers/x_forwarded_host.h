@@ -50,7 +50,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // |   X-Forwarded-Host: example.com:8443                                      |
 // |   X-Forwarded-Host: [2001:db8::1]:443                                     |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§7.2 Host / RFC 3986 Â§3.2.2 host (ABNF summary)                  |
+// | RFC 9110 S7.2 Host / RFC 3986 S3.2.2 host (ABNF summary)                  |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -76,8 +76,8 @@ class x_forwarded_host {
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
   // +=========================================================================+
-  static constexpr verdict interpret(const parsed_host_port&,
-                                     v11::connection&, const policies&) {
+  static constexpr verdict interpret(const parsed_host_port&, v11::connection&,
+                                     const policies&) {
     return verdict::kAccept;
   }
 };

@@ -35,7 +35,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                             if-none-match |
 // +===========================================================================+
-// | RFC 9110 §13.1.2 If-None-Match                                            |
+// | RFC 9110 S13.1.2 If-None-Match                                            |
 // +---------------------------------------------------------------------------+
 // | The "If-None-Match" header field makes a request conditional on a         |
 // | recipient cache or origin server either not having any current            |
@@ -71,7 +71,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   If-None-Match: W/"xyzzy", W/"r2d2xxxx", W/"c3piozzzz"                   |
 // |   If-None-Match: *                                                        |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §13.1.2 If-None-Match (ABNF summary)                             |
+// | RFC 9110 S13.1.2 If-None-Match (ABNF summary)                             |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -86,7 +86,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | DQUOTE           | %x22                                                   |
 // | OWS              | *( SP / HTAB )                                         |
 // +------------------+--------------------------------------------------------+
-// | RFC 9110 §5.6.1 list expansion                                            |
+// | RFC 9110 S5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | The "#entity-tag" alternative expands as follows:                         |
 // |                                                                           |

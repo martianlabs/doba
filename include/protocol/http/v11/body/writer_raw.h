@@ -33,8 +33,7 @@
 namespace martianlabs::doba::protocol::http::v11::body {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] writer_raw                                                    ( class )
-// |
+// | [>] writer_raw                                                  ( class ) |
 // +---------------------------------------------------------------------------+
 // | Encodes an outgoing Content-Length-framed body: the raw framing is a      |
 // | pure passthrough, so this simply forwards the caller-supplied payload     |

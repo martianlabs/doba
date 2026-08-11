@@ -36,7 +36,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // +---------------------------------------------------------------------------+
 // | [>] transfer_encoding                                           ( class ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9112 Â§6.1 Transfer-Encoding                                           |
+// | RFC 9112 S6.1 Transfer-Encoding                                           |
 // +---------------------------------------------------------------------------+
 // | The "Transfer-Encoding" header field lists the transfer coding names      |
 // | corresponding to the sequence of transfer codings that have been, or will |
@@ -47,7 +47,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // | Example:                                                                  |
 // |  Transfer-Encoding: gzip, chunked                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 9112 Â§6.1 / RFC 9110 Â§10.1.4 (ABNF summary)                           |
+// | RFC 9112 S6.1 / RFC 9110 S10.1.4 (ABNF summary)                           |
 // +---------------------------------------------------------------------------+
 // +--------------------+------------------------------------------------------+
 // | Field              | Definition                                           |
@@ -90,7 +90,7 @@ class transfer_encoding {
       const std::string_view coding = helpers::consume_token(element);
       conn.transfer_codings.push_back(coding);
     }
-    // The final transfer-coding governs message framing (RFC 9112 Â§6.1).
+    // The final transfer-coding governs message framing (RFC 9112 S6.1).
     conn.chunked = !conn.transfer_codings.empty() &&
                    helpers::iequals(conn.transfer_codings.back(), "chunked");
     if (conn.chunked && !pol.allow_chunked) return verdict::kReject;
@@ -107,7 +107,7 @@ class transfer_encoding {
     if (token.empty()) return false;
     off += token.size();
     if (off >= sv.size()) return true;
-    // transfer-parameters = *( OWS ";" OWS transfer-parameter ) â€” a parameter
+    // transfer-parameters = *( OWS ";" OWS transfer-parameter ) - a parameter
     // is mandatory after every ";" and OWS/BWS is permitted around the "=".
     return helpers::for_each_parameter(
         sv.substr(off), /*require_parameter=*/true,

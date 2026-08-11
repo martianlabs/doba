@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                         sec-websocket-key |
 // +===========================================================================+
-// | RFC 6455 §11.3.1 Sec-WebSocket-Key                                        |
+// | RFC 6455 S11.3.1 Sec-WebSocket-Key                                        |
 // +---------------------------------------------------------------------------+
 // | The "Sec-WebSocket-Key" header field is used in the WebSocket opening     |
 // | handshake. It is sent from the client to the server to provide part of    |
@@ -67,7 +67,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | Examples:                                                                 |
 // |   Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==                             |
 // +---------------------------------------------------------------------------+
-// | RFC 6455 §4.3 Sec-WebSocket-Key (ABNF summary)                            |
+// | RFC 6455 S4.3 Sec-WebSocket-Key (ABNF summary)                            |
 // +---------------------------------------------------------------------------+
 // +------------------------+--------------------------------------------------+
 // | Field                  | Definition                                       |
@@ -82,7 +82,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | ALPHA                  | %x41-5A / %x61-7A                                |
 // | DIGIT                  | %x30-39                                          |
 // +---------------------------------------------------------------------------+
-// | RFC 6455 §4.1 Client handshake semantic constraints                       |
+// | RFC 6455 S4.1 Client handshake semantic constraints                       |
 // +---------------------------------------------------------------------------+
 // | The decoded Sec-WebSocket-Key value MUST be exactly 16 bytes long.        |
 // | The nonce MUST be randomly selected for each connection.                  |

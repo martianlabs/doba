@@ -1,4 +1,4 @@
-﻿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -76,7 +76,7 @@ namespace martianlabs::doba::protocol::http {
 // | 421  | Misdirected Request                                                |
 // | 422  | Unprocessable Content                                              |
 // | 426  | Upgrade Required                                                   |
-// | 431  | Request Header Fields Too Large                                   |
+// | 431  | Request Header Fields Too Large                                    |
 // | 500  | Internal Server Error                                              |
 // | 501  | Not Implemented                                                    |
 // | 502  | Bad Gateway                                                        |

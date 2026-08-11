@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                      sec-websocket-accept |
 // +===========================================================================+
-// | RFC 6455 §11.3.3 Sec-WebSocket-Accept                                     |
+// | RFC 6455 S11.3.3 Sec-WebSocket-Accept                                     |
 // +---------------------------------------------------------------------------+
 // | The "Sec-WebSocket-Accept" header field is used in the WebSocket opening  |
 // | handshake. It is sent by the server to prove that it received the         |
@@ -57,7 +57,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | Example:                                                                  |
 // |   Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=                      |
 // +---------------------------------------------------------------------------+
-// | RFC 6455 §11.3.3 Sec-WebSocket-Accept (ABNF summary)                      |
+// | RFC 6455 S11.3.3 Sec-WebSocket-Accept (ABNF summary)                      |
 // +---------------------------------------------------------------------------+
 // +-----------------------------+---------------------------------------------+
 // | Field                       | Definition                                  |

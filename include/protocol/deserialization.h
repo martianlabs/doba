@@ -1,4 +1,4 @@
-﻿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -24,6 +24,9 @@
 
 #ifndef martianlabs_doba_protocol_deserialization_h
 #define martianlabs_doba_protocol_deserialization_h
+
+#include <memory>
+#include <string_view>
 
 namespace martianlabs::doba::protocol {
 // /////////////////////////////////////////////////////////////////////////////
@@ -89,7 +92,7 @@ struct deserialization_result {
   deserialization_result& operator=(const deserialization_result&) = default;
   deserialization_result& operator=(deserialization_result&&) = default;
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                                ( public ) |
+  // | [>] ATTRIBUTEs                                               ( public ) |
   // +=========================================================================+
   deserialization_status code = deserialization_status::kInvalidSource;
   std::shared_ptr<RQty> request = nullptr;
@@ -99,6 +102,14 @@ struct deserialization_result {
   // tracked; any other value is defined and interpreted solely by the
   // protocol layer that produced it (e.g. http11::rejection_reason).
   int reason = 0;
+  // Bytes the protocol needs sent on the channel before deserialization can
+  // continue, opaque to the transport. It is empty unless the protocol asked
+  // for an early handoff; the transport just writes them ahead of any later
+  // response, without interpreting their content. The referenced storage is
+  // owned by the protocol and outlives this result (e.g. a static constant).
+  // Only ever set together with kMoreBytesNeeded: these bytes exist to unblock
+  // a sender that is still owed data, so a completed message never carries one.
+  std::string_view interim;
 };
 }  // namespace martianlabs::doba::protocol
 

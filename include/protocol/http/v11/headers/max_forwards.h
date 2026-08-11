@@ -37,7 +37,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // +===========================================================================+
 // |                                                              max-forwards |
 // +===========================================================================+
-// | RFC 9110 Â§7.6.2 Max-Forwards                                              |
+// | RFC 9110 S7.6.2 Max-Forwards                                              |
 // +---------------------------------------------------------------------------+
 // | The "Max-Forwards" header field provides a mechanism with the TRACE and   |
 // | OPTIONS request methods to limit the number of times that a request is    |
@@ -51,7 +51,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // |   Max-Forwards: 1                                                         |
 // |   Max-Forwards: 10                                                        |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§7.6.2 Max-Forwards (ABNF summary)                               |
+// | RFC 9110 S7.6.2 Max-Forwards (ABNF summary)                               |
 // +---------------------------------------------------------------------------+
 // +--------------+------------------------------------------------------------+
 // | Field        | Definition                                                 |

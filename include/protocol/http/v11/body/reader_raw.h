@@ -35,15 +35,15 @@
 namespace martianlabs::doba::protocol::http::v11::body {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] reader_raw                                                   ( class ) |
+// | [>] reader_raw                                                  ( class ) |
 // +---------------------------------------------------------------------------+
 // | Decodes a Content-Length-framed body by pulling wire bytes from a         |
 // | common::reader source and filling the caller-supplied output span.        |
 // |                                                                           |
 // | Since a raw (Content-Length) body carries no wire framing of its own, the |
-// | decoded payload is identical to the source bytes: this reader simply     |
+// | decoded payload is identical to the source bytes: this reader simply      |
 // | copies bytes from src into output, up to the declared Content-Length. It  |
-// | exists to keep the reader API symmetrical with reader_chunked.           |
+// | exists to keep the reader API symmetrical with reader_chunked.            |
 // |                                                                           |
 // | If src reaches definitive eof() before Content-Length is satisfied, this  |
 // | is a protocol error reported as reader_error::raw_incomplete. Once an     |

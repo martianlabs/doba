@@ -1,4 +1,4 @@
-﻿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -197,7 +197,7 @@ class router_handler_parametrized final
 
  private:
   // +=========================================================================+
-  // | [>] parse_parameters                                      ( private ) |
+  // | [>] parse_parameters                                      ( private )   |
   // +=========================================================================+
   bool parse_parameters(const route_parameters& parameters,
                         tuple_type& values) const {

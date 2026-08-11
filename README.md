@@ -26,7 +26,7 @@ It ships as **pure headers**. No build step, no binary to link, no dependencies 
 
 - **Bodies scale beyond RAM.** Raw and chunked bodies use memory or file-backed storage according to configured limits, while preserving the original wire representation when required.
 
-- **Native asynchronous I/O.** Windows uses IOCP and Linux uses epoll, each written against the platform primitive directly. Both backends support pipelined responses and accept completions from asynchronous route handlers while preserving response order.
+- **Native asynchronous I/O on both platforms.** Windows (IOCP) and Linux (epoll) are both fully implemented and selected at compile time by `transport/server/tcpip.h` — there is no reference or fallback backend. Each is written against the platform primitive directly, yet both expose the same public contract to the protocol layer and share the same response-ordering model: pipelined responses are tracked by monotonic response identifiers, so completions from asynchronous route handlers are still delivered in request order.
 
 - **Keep control.** Request, response, decoder, transport, and router remain template parameters, so the framework can be adapted without rewriting its core.
 
@@ -68,7 +68,20 @@ Requires CMake ≥ 3.20 and a C++20 compiler. MSVC/Ninja presets (`msvc-debug`, 
 
 ## Current scope
 
-doba is under active development. The transport/protocol contract, HTTP/1.1 request decoding, routing, and body handling are in place on both backends. Notably absent today: TLS (deploy behind a terminator), `100-continue`, conditional requests and `Range` evaluation, content negotiation, and connection timeouts. Pending work is tracked in [docs/HANDOFF.md](docs/HANDOFF.md).
+doba is under active development. The transport/protocol contract, HTTP/1.1
+request decoding, routing, and body handling are in place, and both the Windows
+(IOCP) and Linux (epoll) transports are implemented and unified behind the same
+contract.
+
+Deliberately **out of scope for the first release**: TLS (deploy behind a
+terminator) and content compression — both are product decisions, the latter
+because it would introduce an external dependency and break the "no
+dependencies" rule above.
+
+Still pending for compliance: connection timeouts, `100-continue`, conditional
+request and `Range` evaluation, `OPTIONS`/`Allow`, protocol upgrade handling,
+outbound trailers, and effective connection limits. Pending work is tracked in
+[docs/HANDOFF.md](docs/HANDOFF.md).
 
 ## License
 

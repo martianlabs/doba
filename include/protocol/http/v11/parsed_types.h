@@ -36,7 +36,7 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] parsed_host_port                                           ( struct ) |
 // +---------------------------------------------------------------------------+
-// | RFC 3986 Â§3.2.2 / Â§3.2.3 â€” host [ ":" port ]                              |
+// | RFC 3986 S3.2.2 / S3.2.3 - host [ ":" port ]                              |
 // +---------------------------------------------------------------------------+
 // | The zero-copy product of a "host [ ":" port ]" value (the shape shared by |
 // | the Host header and an authority-form request-target). "host" is the      |
@@ -60,7 +60,7 @@ struct parsed_host_port {
 // +---------------------------------------------------------------------------+
 // | [>] parsed_token_list                                          ( struct ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§5.6.1 â€” #token                                                  |
+// | RFC 9110 S5.6.1 - #token                                                  |
 // +---------------------------------------------------------------------------+
 // | The zero-copy product of a comma-separated token list (the shape shared   |
 // | by Connection, Trailer, Upgrade, and X-Forwarded-Proto). "elements" holds |
@@ -75,7 +75,7 @@ struct parsed_token_list {
 // +---------------------------------------------------------------------------+
 // | [>] parsed_parameter_list                                      ( struct ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§5.6.1 / Â§5.6.6 â€” #( token *( ";" parameter ) )                  |
+// | RFC 9110 S5.6.1 / S5.6.6 - #( token *( ";" parameter ) )                  |
 // +---------------------------------------------------------------------------+
 // | The zero-copy product of a comma-separated list whose elements each carry |
 // | an optional set of ";"-separated parameters (the shape shared by          |
@@ -102,7 +102,7 @@ struct parsed_scalar {
 // +---------------------------------------------------------------------------+
 // | [>] parsed_via_element                                         ( struct ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§7.6.3 â€” Via                                                     |
+// | RFC 9110 S7.6.3 - Via                                                     |
 // +---------------------------------------------------------------------------+
 // | received-protocol = [ protocol-name "/" ] protocol-version                |
 // | received-by       = pseudonym / ( uri-host [ ":" port ] )                 |
@@ -121,7 +121,7 @@ struct parsed_via_element {
 // +---------------------------------------------------------------------------+
 // | [>] parsed_via_list                                            ( struct ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§7.6.3 â€” 1#( received-protocol RWS received-by [ RWS comment ] ) |
+// | RFC 9110 S7.6.3 - 1#( received-protocol RWS received-by [ RWS comment ] ) |
 // +---------------------------------------------------------------------------+
 // | The zero-copy product of a Via header: every list element in order.       |
 // +---------------------------------------------------------------------------+
@@ -133,7 +133,7 @@ struct parsed_via_list {
 // +---------------------------------------------------------------------------+
 // | [>] parsed_forwarded_pair                                      ( struct ) |
 // +---------------------------------------------------------------------------+
-// | RFC 7239 Â§4 â€” forwarded-pair = token "=" value                            |
+// | RFC 7239 S4 - forwarded-pair = token "=" value                            |
 // +---------------------------------------------------------------------------+
 // | The zero-copy product of a single Forwarded name=value pair. "name" is    |
 // | the raw parameter token and "value" is the raw token or quoted-string     |
@@ -148,7 +148,7 @@ struct parsed_forwarded_pair {
 // +---------------------------------------------------------------------------+
 // | [>] parsed_forwarded_element                                   ( struct ) |
 // +---------------------------------------------------------------------------+
-// | RFC 7239 Â§4 â€” forwarded-element = [ pair ] *( ";" [ pair ] )              |
+// | RFC 7239 S4 - forwarded-element = [ pair ] *( ";" [ pair ] )              |
 // +---------------------------------------------------------------------------+
 // | The zero-copy product of a single Forwarded list element: its ";"-        |
 // | separated name=value pairs, in order.                                     |
@@ -161,7 +161,7 @@ struct parsed_forwarded_element {
 // +---------------------------------------------------------------------------+
 // | [>] parsed_forwarded_list                                      ( struct ) |
 // +---------------------------------------------------------------------------+
-// | RFC 7239 Â§4 â€” Forwarded = 1#forwarded-element                             |
+// | RFC 7239 S4 - Forwarded = 1#forwarded-element                             |
 // +---------------------------------------------------------------------------+
 // | The zero-copy product of a Forwarded header: every list element in order. |
 // +---------------------------------------------------------------------------+
@@ -173,7 +173,7 @@ struct parsed_forwarded_list {
 // +---------------------------------------------------------------------------+
 // | [>] parsed_host_port_list                                      ( struct ) |
 // +---------------------------------------------------------------------------+
-// | de-facto X-Forwarded-Host â€” #( uri-host [ ":" port ] )                    |
+// | de-facto X-Forwarded-Host - #( uri-host [ ":" port ] )                    |
 // +---------------------------------------------------------------------------+
 // | The zero-copy product of a comma-separated list of "host [ ":" port ]"    |
 // | items (the shape of X-Forwarded-Host), each already parsed into its       |

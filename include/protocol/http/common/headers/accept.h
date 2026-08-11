@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                                    accept |
 // +===========================================================================+
-// | RFC 9110 §12.5.1 Accept                                                   |
+// | RFC 9110 S12.5.1 Accept                                                   |
 // +---------------------------------------------------------------------------+
 // | The "Accept" header field allows a user agent to specify its preferences  |
 // | regarding the media types of the response representation. It can be used  |
@@ -79,7 +79,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Accept: text/html, application/xhtml+xml                                |
 // |   Accept: text/plain;format=flowed;q=0.8, text/*;q=0.5, */*;q=0.1         |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §12.5.1 Accept (ABNF summary)                                    |
+// | RFC 9110 S12.5.1 Accept (ABNF summary)                                    |
 // +---------------------------------------------------------------------------+
 // +-----------------+---------------------------------------------------------+
 // | Field           | Definition                                              |
@@ -118,7 +118,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | semicolon because "parameter" is optional. Thus, values such as           |
 // | "text/html;" are accepted by the recipient-side ABNF.                     |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.1 list expansion                                            |
+// | RFC 9110 S5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | In this field, the list element is:                                       |
 // |                                                                           |
@@ -200,7 +200,8 @@ class accept {
       q_found = true;
       return true;
     }
-    // Regular parameter value: token or quoted-string, no whitespace around '='.
+    // Regular parameter value: token or quoted-string, 
+    // no whitespace around '='.
     return helpers::consume_parameter(sv, bytes_used, /*allow_bws=*/false);
   }
 };

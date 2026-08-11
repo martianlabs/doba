@@ -45,11 +45,11 @@ namespace martianlabs::doba::protocol::http::v11 {
 // | This class holds for the http 1.1 server implementation.                  |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   RQty - request being used (v11::request by default).                 |
-// |   RSty - response being used (v11::response by default).               |
-// |   DEty - decoder being used (v11::decoder by default).                 |
+// |   RQty - request being used (v11::request by default).                    |
+// |   RSty - response being used (v11::response by default).                  |
+// |   DEty - decoder being used (v11::decoder by default).                    |
 // |   TRty - transport being used (tcp/ip by default).                        |
-// |   ROty - router being used (v11::router by default).                   |
+// |   ROty - router being used (v11::router by default).                      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty = request, typename RSty = response,
@@ -110,8 +110,8 @@ class server {
           switch (req->get_target()) {
             case target::kOriginForm:
             case target::kAbsoluteForm: {
-              // The request is either in origin-form (RFC 9110 Â§9.3.5) or
-              // absolute-form (RFC 9110 Â§9.3.4); in either case, the request is
+              // The request is either in origin-form (RFC 9110 S9.3.5) or
+              // absolute-form (RFC 9110 S9.3.4); in either case, the request is
               // routed to a handler based on the method and absolute path.
               std::string_view method = req->get_method();
               std::string_view abs_path = req->get_absolute_path();
@@ -130,7 +130,7 @@ class server {
               break;
             }
             case target::kAuthorityForm:
-              // CONNECT tunnelling (RFC 9110 Â§9.3.6) is deliberately deferred
+              // CONNECT tunnelling (RFC 9110 S9.3.6) is deliberately deferred
               // to Doba's future client (dial-out) module: it will open the
               // outbound connection to the target authority already owned by
               // the request (req->get_target_authority_host()/_port()) and
@@ -141,7 +141,7 @@ class server {
               send(res);
               return;
             case target::kAsteriskForm:
-              // OPTIONS * (RFC 9110 Â§9.3.7) addresses the server in general
+              // OPTIONS * (RFC 9110 S9.3.7) addresses the server in general
               // rather than a specific resource; acknowledge it without
               // routing to a handler.
               res->ok_200();
@@ -153,37 +153,40 @@ class server {
               return;
           }
         });
-    transport_.set_on_bad_request([](int code, std::string_view reason,
-                                     std::shared_ptr<RSty> res) {
-      // The transport hands back the neutral reason recorded by the
-      // decoder; only the HTTP layer knows how to translate it into a
-      // status code (RFC 9110 semantics live here, not in the transport).
-      switch (static_cast<rejection_reason>(code)) {
-        case rejection_reason::kPayloadTooLarge:
-          res->content_too_large_413().set_body(reason);
-          break;
-        case rejection_reason::kUnsupportedFeature:
-          res->not_implemented_501().set_body(reason);
-          break;
-        case rejection_reason::kVersionNotSupported:
-          res->http_version_not_supported_505().set_body(reason);
-          break;
-        case rejection_reason::kUriTooLong:
-          res->uri_too_long_414().set_body(reason);
-          break;
-        case rejection_reason::kHeaderFieldsTooLarge:
-          res->request_header_fields_too_large_431().set_body(reason);
-          break;
-        case rejection_reason::kHandlerError:
-          res->internal_server_error_500().set_body(reason);
-          break;
-        case rejection_reason::kSyntax:
-        case rejection_reason::kNone:
-        default:
-          res->bad_request_400().set_body(reason);
-          break;
-      }
-    });
+    transport_.set_on_bad_request(
+        [](int code, std::string_view reason, std::shared_ptr<RSty> res) {
+          // The transport hands back the neutral reason recorded by the
+          // decoder; only the HTTP layer knows how to translate it into a
+          // status code (RFC 9110 semantics live here, not in the transport).
+          switch (static_cast<rejection_reason>(code)) {
+            case rejection_reason::kPayloadTooLarge:
+              res->content_too_large_413().set_body(reason);
+              break;
+            case rejection_reason::kUnsupportedFeature:
+              res->not_implemented_501().set_body(reason);
+              break;
+            case rejection_reason::kVersionNotSupported:
+              res->http_version_not_supported_505().set_body(reason);
+              break;
+            case rejection_reason::kUriTooLong:
+              res->uri_too_long_414().set_body(reason);
+              break;
+            case rejection_reason::kHeaderFieldsTooLarge:
+              res->request_header_fields_too_large_431().set_body(reason);
+              break;
+            case rejection_reason::kHandlerError:
+              res->internal_server_error_500().set_body(reason);
+              break;
+            case rejection_reason::kExpectationFailed:
+              res->expectation_failed_417().set_body(reason);
+              break;
+            case rejection_reason::kSyntax:
+            case rejection_reason::kNone:
+            default:
+              res->bad_request_400().set_body(reason);
+              break;
+          }
+        });
     transport_.set_on_connection([this]() { connections_++; });
     transport_.set_on_disconnection([this]() { connections_--; });
     transport_.start(port);

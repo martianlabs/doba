@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                                    server |
 // +===========================================================================+
-// | RFC 9110 §10.2.4 Server                                                   |
+// | RFC 9110 S10.2.4 Server                                                   |
 // +---------------------------------------------------------------------------+
 // | The "Server" header field contains information about the software used by |
 // | the origin server to handle the request. It is commonly used by clients to|
@@ -63,7 +63,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Server: doba/1.0                                                        |
 // |   Server: doba/1.0 (Windows)                                              |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §10.2.4 Server (ABNF summary)                                    |
+// | RFC 9110 S10.2.4 Server (ABNF summary)                                    |
 // +---------------------------------------------------------------------------+
 // +-----------------+---------------------------------------------------------+
 // | Field           | Definition                                              |
@@ -83,7 +83,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +---------------------------------------------------------------------------+
 // | Notes                                                                     |
 // +---------------------------------------------------------------------------+
-// | Server is not a list-based field. It does not use the RFC 9110 §5.6.1     |
+// | Server is not a list-based field. It does not use the RFC 9110 S5.6.1     |
 // | #rule syntax, so comma-separated list expansion does not apply.           |
 // |                                                                           |
 // | The field value is syntactically invalid if it does not begin with a      |
@@ -102,9 +102,9 @@ class server {
   // +=========================================================================+
   static constexpr bool check(std::string_view sv) {
     // Server = product *( RWS ( product / comment ) ). It is not an RFC 9110
-    // §5.6.1 "#" list: the value MUST begin with a product, items are
+    // S5.6.1 "#" list: the value MUST begin with a product, items are
     // separated by RWS (not commas), and this is the same product-list shape
-    // shared with the User-Agent header field (RFC 9110 §10.1.5).
+    // shared with the User-Agent header field (RFC 9110 S10.1.5).
     return helpers::check_product_list(sv);
   }
 };

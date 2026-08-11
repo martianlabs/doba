@@ -34,7 +34,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                                     range |
 // +===========================================================================+
-// | RFC 9110 §14.2 Range                                                      |
+// | RFC 9110 S14.2 Range                                                      |
 // +---------------------------------------------------------------------------+
 // | The "Range" request header field modifies GET semantics to request the    |
 // | transfer of only one or more subranges of the selected representation     |
@@ -86,7 +86,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Range: bytes=0-0,-1                                                     |
 // |   Range: bytes= 0-999, 4500-5499, -1000                                   |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §§14.1, 14.1.1, 14.1.2 and 14.2 (ABNF summary)                   |
+// | RFC 9110 SS14.1, 14.1.1, 14.1.2 and 14.2 (ABNF summary)                   |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -108,7 +108,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |                  | "." / "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA      |
 // | OWS              | *( SP / HTAB )                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.1 list expansion                                            |
+// | RFC 9110 S5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |
@@ -145,7 +145,7 @@ class range {
     // OWS is not allowed before '='.
     if (off >= sv.size() || sv[off++] != '=') return false;
     // Skip OWS after '='.
-    while (off < sv.size() && helpers::is_ows(sv[off])) off++;  
+    while (off < sv.size() && helpers::is_ows(sv[off])) off++;
     // Now we should be at the start of the range-set.
     return consume_range_set(sv.substr(off));
   }

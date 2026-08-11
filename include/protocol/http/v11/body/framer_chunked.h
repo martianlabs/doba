@@ -38,14 +38,14 @@
 namespace martianlabs::doba::protocol::http::v11::body {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] framer_chunked                                                ( class ) |
+// | [>] framer_chunked                                              ( class ) |
 // +---------------------------------------------------------------------------+
 // | Validates and accumulates a chunked Transfer-Encoding body into a         |
 // | common::writer.                                                           |
 // |                                                                           |
 // | The caller pushes incoming transport spans via write(). Each call         |
-// | validates the chunked framing and writes ALL wire bytes — including       |
-// | chunk-size lines, extensions, trailers and terminating CRLF — verbatim    |
+// | validates the chunked framing and writes ALL wire bytes - including       |
+// | chunk-size lines, extensions, trailers and terminating CRLF - verbatim    |
 // | into dst. No decoding is performed here; decoding is deferred to a        |
 // | reader pass over the completed buffer.                                    |
 // |                                                                           |
@@ -176,7 +176,7 @@ class framer_chunked {
             // All chunk data consumed; expect post-data CRLF next.
             state_ = state::data_cr;
           }
-          continue;  // i already advanced — skip the single-byte path below
+          continue;  // i already advanced - skip the single-byte path below
         }
         // ---------------------------------------------------------------------
         // Post-data CRLF
@@ -210,7 +210,7 @@ class framer_chunked {
             trailer_cr_seen_ = true;
           } else if (c == '\n') {
             if (trailer_cr_seen_ && trailer_line_start_) {
-              // Terminating empty CRLF — body complete. Write final byte
+              // Terminating empty CRLF - body complete. Write final byte
               // and return with the exact consumed count.
               if (!dst.write(input.subspan(i, 1))) {
                 // An I/O error occurred while writing to the destination!

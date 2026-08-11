@@ -36,7 +36,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // +===========================================================================+
 // |                                                                       via |
 // +===========================================================================+
-// | RFC 9110 Â§7.6.3 Via                                                       |
+// | RFC 9110 S7.6.3 Via                                                       |
 // +---------------------------------------------------------------------------+
 // | The "Via" header field indicates the presence of intermediate protocols   |
 // | and recipients between the user agent and the server on requests, or      |
@@ -46,7 +46,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // |   Via: 1.0 fred, 1.1 p.example.net                                        |
 // |   Via: HTTP/1.1 proxy.example.com (proxy software)                        |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§7.6.3 Via (ABNF summary)                                        |
+// | RFC 9110 S7.6.3 Via (ABNF summary)                                        |
 // +---------------------------------------------------------------------------+
 // +-------------------+-------------------------------------------------------+
 // | Field             | Definition                                            |

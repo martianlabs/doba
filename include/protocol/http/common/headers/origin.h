@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                                    origin |
 // +===========================================================================+
-// | RFC 6454 §7 Origin                                                        |
+// | RFC 6454 S7 Origin                                                        |
 // +---------------------------------------------------------------------------+
 // | The "Origin" header field indicates the origin or origins that caused the |
 // | user agent to issue an HTTP request. It is mainly used by servers to make |
@@ -58,7 +58,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Origin: http://example.com https://redirect.example                     |
 // |   Origin: null                                                            |
 // +---------------------------------------------------------------------------+
-// | RFC 6454 §7.1 Origin (ABNF summary)                                       |
+// | RFC 6454 S7.1 Origin (ABNF summary)                                       |
 // +---------------------------------------------------------------------------+
 // +---------------------+-----------------------------------------------------+
 // | Field               | Definition                                          |

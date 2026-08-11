@@ -36,7 +36,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // +---------------------------------------------------------------------------+
 // | [>] host                                                        ( class ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§7.2 Host                                                        |
+// | RFC 9110 S7.2 Host                                                        |
 // +---------------------------------------------------------------------------+
 // | The "Host" header field in a request provides the host and optional port  |
 // | information from the target URI, allowing the origin server to            |
@@ -56,7 +56,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // |  Host: www.example.org:8080                                               |
 // |  Host: [2001:db8::1]:443                                                  |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§7.2 and RFC 3986 Â§3.2.2-Â§3.2.3 (ABNF summary)                   |
+// | RFC 9110 S7.2 and RFC 3986 S3.2.2-S3.2.3 (ABNF summary)                   |
 // +---------------------------------------------------------------------------+
 // +----------------+----------------------------------------------------------+
 // | Field          | Definition                                               |
@@ -82,8 +82,8 @@ class host {
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
   // +=========================================================================+
-  static constexpr verdict interpret(const parsed_host_port&,
-                                     v11::connection&, const policies&) {
+  static constexpr verdict interpret(const parsed_host_port&, v11::connection&,
+                                     const policies&) {
     return verdict::kAccept;
   }
 };

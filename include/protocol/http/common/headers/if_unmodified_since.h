@@ -36,7 +36,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                       if-unmodified-since |
 // +===========================================================================+
-// | RFC 9110 §13.1.4 If-Unmodified-Since                                      |
+// | RFC 9110 S13.1.4 If-Unmodified-Since                                      |
 // +---------------------------------------------------------------------------+
 // | The "If-Unmodified-Since" header field makes a request conditional on the |
 // | selected representation's last modification date being earlier than or    |
@@ -82,7 +82,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | Example:                                                                  |
 // |   If-Unmodified-Since: Sat, 29 Oct 1994 19:43:31 GMT                      |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §13.1.4 If-Unmodified-Since (ABNF summary)                       |
+// | RFC 9110 S13.1.4 If-Unmodified-Since (ABNF summary)                       |
 // +---------------------------------------------------------------------------+
 // +---------------------+-----------------------------------------------------+
 // |Field                |Definition                                           |
@@ -114,7 +114,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |SP                   |%x20                                                 |
 // |DIGIT                |%x30-39                                              |
 // +---------------------+-----------------------------------------------------+
-// | RFC 9110 §5.6.7 Date/Time requirements                                    |
+// | RFC 9110 S5.6.7 Date/Time requirements                                    |
 // +---------------------------------------------------------------------------+
 // | A sender MUST generate HTTP-date values using IMF-fixdate.                |
 // |                                                                           |

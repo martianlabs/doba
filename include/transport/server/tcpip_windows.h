@@ -1,4 +1,4 @@
-﻿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -993,6 +993,15 @@ class tcpip {
           using namespace protocol;
           deserialization_result<RQty> result = ctx->deserialize();
           if (result.code == deserialization_status::kMoreBytesNeeded) {
+            // The protocol may need some bytes on the wire before it can go
+            // on (their meaning is opaque here); they take their own response
+            // slot so they are written ahead of any later response.
+            if (!result.interim.empty()) {
+              auto interim = std::make_unique<protocol::serialization_result>();
+              interim->prefix.assign(result.interim);
+              ctx->enqueue_response(std::move(interim),
+                                    ctx->get_next_response_id());
+            }
             break;
           } else if (result.code == deserialization_status::kInvalidSource) {
             uint64_t response_id = ctx->get_next_response_id();
@@ -1111,7 +1120,7 @@ class tcpip {
     }
   }
   // +=========================================================================+
-  // | [>] replenish_accept_pipeline                              ( private ) |
+  // | [>] replenish_accept_pipeline                              ( private )  |
   // +=========================================================================+
   bool replenish_accept_pipeline() {
     for (;;) {

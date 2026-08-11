@@ -42,20 +42,20 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | Decodes a chunked Transfer-Encoding body (as accumulated verbatim by      |
 // | framer_chunked) by pulling wire bytes on demand from a common::reader     |
-// | source and filling the caller-supplied output span.                      |
+// | source and filling the caller-supplied output span.                       |
 // |                                                                           |
 // | The caller pulls decoded payload via read(). Each call walks the same     |
 // | chunked framing grammar as framer_chunked, but chunk-size lines,          |
 // | extensions, CRLFs and trailers are wire framing, not payload: they are    |
 // | consumed from src and discarded, never written to output.                 |
 // |                                                                           |
-// | reader_state::produced reports the exact number of decoded payload bytes |
-// | written into output during this call. If src is only temporarily        |
-// | exhausted (more bytes may still arrive), read() returns early with       |
-// | complete=false and no error; the caller may invoke it again once more    |
-// | wire bytes are available in src. If src reaches definitive eof() before  |
-// | the body reaches state::complete, this is a protocol error reported as   |
-// | reader_error::chunked_incomplete.                                        |
+// | reader_state::produced reports the exact number of decoded payload bytes  |
+// | written into output during this call. If src is only temporarily          |
+// | exhausted (more bytes may still arrive), read() returns early with        |
+// | complete=false and no error; the caller may invoke it again once more     |
+// | wire bytes are available in src. If src reaches definitive eof() before   |
+// | the body reaches state::complete, this is a protocol error reported as    |
+// | reader_error::chunked_incomplete.                                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class reader_chunked {
@@ -76,7 +76,7 @@ class reader_chunked {
 
  public:
   // +=========================================================================+
-  // | [>] CONSTANTs                                                 ( public ) |
+  // | [>] CONSTANTs                                                ( public ) |
   // +=========================================================================+
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
@@ -108,7 +108,7 @@ class reader_chunked {
       // -----------------------------------------------------------------------
       if (state_ == state::data) {
         std::size_t room = output.size() - out_pos;
-        if (room == 0) break;  // output full — stop here for this call
+        if (room == 0) break;  // output full - stop here for this call
         std::size_t to_take = std::min(room, chunk_remaining_);
         if (to_take > 0) {
           std::size_t got = src.read(output.subspan(out_pos, to_take));
@@ -121,7 +121,7 @@ class reader_chunked {
               result.produced = out_pos;
               return fail(result, reader_error::chunked_incomplete);
             }
-            break;  // src exhausted for now — resume on next call
+            break;  // src exhausted for now - resume on next call
           }
           out_pos += got;
           chunk_remaining_ -= got;
@@ -148,7 +148,7 @@ class reader_chunked {
           result.produced = out_pos;
           return fail(result, reader_error::chunked_incomplete);
         }
-        break;  // src exhausted for now — resume on next call
+        break;  // src exhausted for now - resume on next call
       }
       const char c = static_cast<char>(b);
       switch (state_) {
@@ -191,7 +191,8 @@ class reader_chunked {
           if (++extension_size_ > limits::kMaxChunkedExtensionSize) {
             // Chunk-extension section exceeded the configured size limit!
             result.produced = out_pos;
-            return fail(result, reader_error::chunk_extension_size_limit_exceeded);
+            return fail(result,
+                        reader_error::chunk_extension_size_limit_exceeded);
           }
           break;
         }
@@ -250,7 +251,7 @@ class reader_chunked {
             trailer_cr_seen_ = true;
           } else if (c == '\n') {
             if (trailer_cr_seen_ && trailer_line_start_) {
-              // Terminating empty CRLF — body complete. Trailer bytes are not
+              // Terminating empty CRLF - body complete. Trailer bytes are not
               // payload, so nothing more is written to output.
               state_ = state::complete;
               result.produced = out_pos;

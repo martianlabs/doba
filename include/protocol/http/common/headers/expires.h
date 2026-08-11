@@ -33,7 +33,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                                   expires |
 // +===========================================================================+
-// | RFC 9111 §5.3 Expires                                                     |
+// | RFC 9111 S5.3 Expires                                                     |
 // +---------------------------------------------------------------------------+
 // | The "Expires" response header field gives the date/time after which the   |
 // | response is considered stale. It is part of the HTTP caching model and is |
@@ -63,7 +63,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Expires: Thu, 01 Dec 1994 16:00:00 GMT                                  |
 // |   Expires: Sun, 06 Nov 1994 08:49:37 GMT                                  |
 // +---------------------------------------------------------------------------+
-// | RFC 9111 §5.3 Expires (ABNF summary)                                      |
+// | RFC 9111 S5.3 Expires (ABNF summary)                                      |
 // +---------------------------------------------------------------------------+
 // +--------------+------------------------------------------------------------+
 // | Field        | Definition                                                 |
@@ -72,7 +72,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | HTTP-date    | IMF-fixdate / obs-date                                     |
 // | obs-date     | rfc850-date / asctime-date                                 |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.7 Date/Time Formats                                         |
+// | RFC 9110 S5.6.7 Date/Time Formats                                         |
 // +---------------------------------------------------------------------------+
 // +--------------+------------------------------------------------------------+
 // | Field        | Definition                                                 |
@@ -102,7 +102,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +---------------------------------------------------------------------------+
 // | Notes                                                                     |
 // +---------------------------------------------------------------------------+
-// | Expires is not a list field. It does not use the RFC 9110 §5.6.1 "#rule"  |
+// | Expires is not a list field. It does not use the RFC 9110 S5.6.1 "#rule"  |
 // | list extension, and comma-separated multiple values are not               |
 // | valid ABNF for| this field.                                               |
 // |                                                                           |

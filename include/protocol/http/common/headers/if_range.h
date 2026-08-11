@@ -36,7 +36,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                                  if-range |
 // +===========================================================================+
-// | RFC 9110 §13.1.5 If-Range                                                 |
+// | RFC 9110 S13.1.5 If-Range                                                 |
 // +---------------------------------------------------------------------------+
 // | The "If-Range" header field provides a conditional mechanism specifically |
 // | for requests that also contain a Range header field. It allows a client   |
@@ -73,7 +73,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |                                                                           |
 // | A client MUST NOT generate an HTTP-date validator unless it has no entity |
 // | tag for the corresponding representation and the date qualifies as a      |
-// | strong validator according to RFC 9110 §8.8.2.2.                          |
+// | strong validator according to RFC 9110 S8.8.2.2.                          |
 // |                                                                           |
 // | Entity-tag evaluation uses the strong comparison function. The condition  |
 // | is true only when the supplied entity tag and the current ETag are both   |
@@ -93,7 +93,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |                                                                           |
 // |   If-Range: W/"67ab43"                                                    |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §13.1.5 If-Range (ABNF summary)                                  |
+// | RFC 9110 S13.1.5 If-Range (ABNF summary)                                  |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -136,7 +136,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | SP               | %x20                                                   |
 // | DIGIT            | %x30-39                                                |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.7 HTTP-date requirements                                    |
+// | RFC 9110 S5.6.7 HTTP-date requirements                                    |
 // +---------------------------------------------------------------------------+
 // | A recipient parsing HTTP-date MUST accept all three date formats:         |
 // |                                                                           |

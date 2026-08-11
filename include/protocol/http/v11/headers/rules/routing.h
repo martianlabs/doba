@@ -35,16 +35,16 @@ namespace martianlabs::doba::protocol::http::v11::headers::rules {
 // +---------------------------------------------------------------------------+
 // | [>] routing                                                     ( class ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9112 §3.2 / RFC 9110 §7.2 Host and request-target                     |
+// | RFC 9112 S3.2 / RFC 9110 S7.2 Host and request-target                     |
 // +---------------------------------------------------------------------------+
 // | Transversal routing rules that reconcile the request-target with the      |
 // | Host header, which the intra-header Host interpreter cannot decide alone  |
 // | because it never sees the request line. Applied by deserialize() after    |
 // | the single header pass has populated the context.                         |
 // |                                                                           |
-// | 1. RFC 9112 §3.2: a client MUST send exactly one Host header field in an  |
+// | 1. RFC 9112 S3.2: a client MUST send exactly one Host header field in an  |
 // |    HTTP/1.1 request; a missing or duplicated Host is rejected.            |
-// | 2. RFC 9112 §3.2.2 / §3.3: when the request-target carries an authority   |
+// | 2. RFC 9112 S3.2.2 / S3.3: when the request-target carries an authority   |
 // |    (absolute-form or authority-form), the server MUST use that authority  |
 // |    and it MUST agree with Host; a mismatch is rejected.                   |
 // |                                                                           |

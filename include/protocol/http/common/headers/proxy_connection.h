@@ -75,7 +75,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |                    | ALPHA                                                |
 // | OWS                | *( SP / HTAB )                                       |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.1 list expansion                                            |
+// | RFC 9110 S5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |
@@ -105,7 +105,7 @@ class x_proxy_connection {
   static constexpr bool check(std::string_view sv) {
     // Proxy-Connection = #connection-option, where connection-option = token.
     // This is the same comma-separated token list as the standard Connection
-    // header (RFC 9110 §7.6.1). Since the rule is "#connection-option" (not
+    // header (RFC 9110 S7.6.1). Since the rule is "#connection-option" (not
     // "1#connection-option"), an empty list and empty list elements are
     // permitted.
     return helpers::for_each_list_element(sv, consume_connection_option);

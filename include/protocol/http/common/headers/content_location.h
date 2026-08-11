@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                          content-location |
 // +===========================================================================+
-// | RFC 9110 §8.7 Content-Location                                            |
+// | RFC 9110 S8.7 Content-Location                                            |
 // +---------------------------------------------------------------------------+
 // | The "Content-Location" header field references a URI that identifies a    |
 // | resource corresponding to the representation enclosed in the message.     |
@@ -65,7 +65,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Content-Location: /documents/report.en                                  |
 // |   Content-Location: https://example.com/documents/report.en               |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §8.7 Content-Location (ABNF summary)                             |
+// | RFC 9110 S8.7 Content-Location (ABNF summary)                             |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |

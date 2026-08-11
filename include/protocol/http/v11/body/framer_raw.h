@@ -35,15 +35,15 @@
 namespace martianlabs::doba::protocol::http::v11::body {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] framer_raw                                                    ( class ) |
+// | [>] framer_raw                                                  ( class ) |
 // +---------------------------------------------------------------------------+
-// | Detects the Content-Length-framed body boundary within an already-wire-    |
+// | Detects the Content-Length-framed body boundary within an already-wire-   |
 // | encoded input buffer and accumulates it into a common::writer.            |
 // |                                                                           |
 // | The caller pushes incoming transport spans via write(); each call         |
 // | returns a framer_state indicating how many bytes were consumed from the   |
 // | span and whether the body is complete. Bytes beyond the declared          |
-// | Content-Length are never touched — they belong to the next request.       |
+// | Content-Length are never touched - they belong to the next request.       |
 // |                                                                           |
 // | Once write() reports an error, the failure is latched: every subsequent   |
 // | call returns the same has_error/error without touching dst again.         |

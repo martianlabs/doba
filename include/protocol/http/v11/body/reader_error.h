@@ -31,14 +31,14 @@
 namespace martianlabs::doba::protocol::http::v11::body {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] reader_error                                            ( enum-class ) |
+// | [>] reader_error                                           ( enum-class ) |
 // +---------------------------------------------------------------------------+
 // | Error codes shared by reader_raw and reader_chunked.                      |
 // |                                                                           |
 // | Actively produced by these classes:                                       |
-// |   io_error, invalid_chunk_size, chunk_size_overflow, invalid_chunk_crlf,   |
-// |   chunked_incomplete, raw_incomplete, chunk_extension_size_limit_exceeded, |
-// |   trailer_size_limit_exceeded.                                            |
+// |   io_error, invalid_chunk_size, chunk_size_overflow, invalid_chunk_crlf,  |
+// |   chunked_incomplete, raw_incomplete,                                     |
+// |   chunk_extension_size_limit_exceeded, trailer_size_limit_exceeded.       |
 // |                                                                           |
 // | Reserved (declared for API parity / future use, never produced here):     |
 // |   invalid_trailer     - full trailer field-line syntax validation is not  |

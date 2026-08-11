@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                    sec-websocket-protocol |
 // +===========================================================================+
-// | RFC 6455 §11.3.4 Sec-WebSocket-Protocol                                   |
+// | RFC 6455 S11.3.4 Sec-WebSocket-Protocol                                   |
 // +---------------------------------------------------------------------------+
 // | The "Sec-WebSocket-Protocol" header field is used in the WebSocket        |
 // | opening handshake to negotiate the application-level subprotocol layered  |
@@ -63,7 +63,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Sec-WebSocket-Protocol: wamp                                            |
 // |   Sec-WebSocket-Protocol: mqtt                                            |
 // +---------------------------------------------------------------------------+
-// | RFC 6455 §4.3 / §11.3.4 Sec-WebSocket-Protocol (ABNF summary)             |
+// | RFC 6455 S4.3 / S11.3.4 Sec-WebSocket-Protocol (ABNF summary)             |
 // +---------------------------------------------------------------------------+
 // +-------------------------------+-------------------------------------------+
 // | Field                         | Definition                                |
@@ -76,7 +76,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |                               | "`" / "|" / "~" / DIGIT / ALPHA           |
 // | OWS                           | *( SP / HTAB )                            |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.1 list expansion for client syntax                          |
+// | RFC 9110 S5.6.1 list expansion for client syntax                          |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

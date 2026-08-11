@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                                  location |
 // +===========================================================================+
-// | RFC 9110 §10.2.2 Location                                                 |
+// | RFC 9110 S10.2.2 Location                                                 |
 // +---------------------------------------------------------------------------+
 // | The "Location" header field is used in some responses to refer to a       |
 // | specific resource in relation to the response. Its field value consists   |
@@ -62,7 +62,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Location: ../archive/item.html                                          |
 // |   Location: /People.html#tim                                              |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §10.2.2 Location (ABNF summary)                                  |
+// | RFC 9110 S10.2.2 Location (ABNF summary)                                  |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |

@@ -1,4 +1,4 @@
-﻿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -41,7 +41,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <sys/eventfd.h>
 #include <unordered_map>
 #include <utility>
 
@@ -258,7 +257,7 @@ struct context
     return events;
   }
   // +=========================================================================+
-  // | [>] retire_socket                                           ( public ) |
+  // | [>] retire_socket                                           ( public )  |
   // +=========================================================================+
   int retire_socket() {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
@@ -711,6 +710,15 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
     while (ctx->can_receive()) {
       protocol::deserialization_result<RQty> result = ctx->deserialize();
       if (result.code == protocol::deserialization_status::kMoreBytesNeeded) {
+        // The protocol may need some bytes on the wire before it can go on
+        // (their meaning is opaque here); they take their own response slot
+        // so they are written ahead of any later response.
+        if (!result.interim.empty()) {
+          auto interim = std::make_unique<protocol::serialization_result>();
+          interim->prefix.assign(result.interim);
+          ctx->enqueue_response(std::move(interim),
+                                ctx->get_next_response_id());
+        }
         return;
       }
       uint64_t response_id = ctx->get_next_response_id();

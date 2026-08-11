@@ -287,7 +287,7 @@ class request {
   // | [>] for_each_cookie_pair                                    ( private ) |
   // +=========================================================================+
   // | Splits a Cookie header field-value on the exact "; " separator (RFC     |
-  // | 6265 Ã‚Â§4.2.1) and invokes fn(name, value) for every cookie-pair found.   |
+  // | 6265 S4.2.1) and invokes fn(name, value) for every cookie-pair found.   |
   // +=========================================================================+
   template <typename FNty>
   static void for_each_cookie_pair(std::string_view raw, FNty&& fn) {

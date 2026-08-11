@@ -36,7 +36,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // +---------------------------------------------------------------------------+
 // | [>] trailer                                                     ( class ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§6.6.2 Trailer                                                   |
+// | RFC 9110 S6.6.2 Trailer                                                   |
 // +---------------------------------------------------------------------------+
 // | The "Trailer" header field provides a list of field names that the sender |
 // | anticipates sending as trailer fields within the same message.            |
@@ -44,7 +44,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // | Example:                                                                  |
 // |  Trailer: Example-Checksum, Example-Signature                             |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§6.6.2 Trailer and Â§5.6.1 Lists (ABNF summary)                   |
+// | RFC 9110 S6.6.2 Trailer and S5.6.1 Lists (ABNF summary)                   |
 // +---------------------------------------------------------------------------+
 // +--------------------------+------------------------------------------------+
 // | Field                    | Definition                                     |
@@ -73,8 +73,7 @@ class trailer {
   // | [>] interpret                                                ( public ) |
   // +=========================================================================+
   static constexpr verdict interpret(const parsed_token_list& token_list,
-                                     v11::connection& conn,
-                                     const policies&) {
+                                     v11::connection& conn, const policies&) {
     for (const std::string_view name : token_list.elements) {
       conn.trailer_names.push_back(name);
     }

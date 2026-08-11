@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                                    pragma |
 // +===========================================================================+
-// | RFC 9111 §5.4 Pragma                                                      |
+// | RFC 9111 S5.4 Pragma                                                      |
 // +---------------------------------------------------------------------------+
 // | The "Pragma" request header field was originally defined for HTTP/1.0     |
 // | caches, allowing clients to send a "no-cache" request before              |
@@ -65,7 +65,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Pragma: no-cache, foo=bar                                               |
 // |   Pragma: foo="bar"                                                       |
 // +---------------------------------------------------------------------------+
-// | RFC 9111 §5.4 Pragma / RFC 7234 §5.4 historical ABNF summary              |
+// | RFC 9111 S5.4 Pragma / RFC 7234 S5.4 historical ABNF summary              |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -82,7 +82,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | obs-text         | %x80-FF                                                |
 // | OWS              | *( SP / HTAB )                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.1 list expansion                                            |
+// | RFC 9110 S5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

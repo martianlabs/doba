@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                     sec-websocket-version |
 // +===========================================================================+
-// | RFC 6455 §11.3.5 Sec-WebSocket-Version                                    |
+// | RFC 6455 S11.3.5 Sec-WebSocket-Version                                    |
 // +---------------------------------------------------------------------------+
 // | The "Sec-WebSocket-Version" header field is used in the WebSocket opening |
 // | handshake to indicate the protocol version used by the client.            |
@@ -59,7 +59,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Sec-WebSocket-Version: 13                                               |
 // |   Sec-WebSocket-Version: 8, 7                                             |
 // +---------------------------------------------------------------------------+
-// | RFC 6455 §11.3.5 Sec-WebSocket-Version (ABNF summary)                     |
+// | RFC 6455 S11.3.5 Sec-WebSocket-Version (ABNF summary)                     |
 // +---------------------------------------------------------------------------+
 // +-----------------------+---------------------------------------------------+
 // | Field                 | Definition                                        |

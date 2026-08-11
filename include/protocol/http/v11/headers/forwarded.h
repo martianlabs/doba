@@ -38,7 +38,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // +===========================================================================+
 // |                                                                 forwarded |
 // +===========================================================================+
-// | RFC 7239 Â§4 Forwarded                                                     |
+// | RFC 7239 S4 Forwarded                                                     |
 // +---------------------------------------------------------------------------+
 // | The "Forwarded" header field is an optional request header field used by  |
 // | proxies to disclose information that is altered or lost when a request    |
@@ -84,7 +84,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // |   Forwarded: for=192.0.2.60;proto=http;by=203.0.113.43                    |
 // |   Forwarded: for=192.0.2.43, for=198.51.100.17                            |
 // +---------------------------------------------------------------------------+
-// | RFC 7239 Â§4 Forwarded (ABNF summary)                                      |
+// | RFC 7239 S4 Forwarded (ABNF summary)                                      |
 // +---------------------------------------------------------------------------+
 // +-------------------+-------------------------------------------------------+
 // | Field             | Definition                                            |
@@ -143,7 +143,7 @@ class forwarded {
   // | forwarded-element = [ forwarded-pair ] *( ";" [ forwarded-pair ] )      |
   // | forwarded-pair    = token "=" ( token / quoted-string )                 |
   // +-------------------------------------------------------------------------+
-  // | The RFC 7239 Â§5/Â§6 node / Host / URI-scheme constraints apply to the    |
+  // | The RFC 7239 S5/S6 node / Host / URI-scheme constraints apply to the    |
   // | value after quoted-string unescaping and are semantic; only the token   |
   // | "=" ( token / quoted-string ) syntax is validated here. When out is     |
   // | non-null, each pair is captured, split at the "=" that                  |
@@ -155,7 +155,7 @@ class forwarded {
     return helpers::for_each_forwarded_pair(
         sv, [out](std::string_view rest, std::size_t& bytes) {
           // forwarded-pair = token "=" value with a mandatory "=" and no
-          // whitespace around it (RFC 7239 Â§4 has no BWS).
+          // whitespace around it (RFC 7239 S4 has no BWS).
           if (!helpers::consume_parameter(rest, bytes, /*allow_bws=*/false)) {
             return false;
           }

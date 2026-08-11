@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                                     allow |
 // +===========================================================================+
-// | RFC 9110 §10.2.1 Allow                                                    |
+// | RFC 9110 S10.2.1 Allow                                                    |
 // +---------------------------------------------------------------------------+
 // | The "Allow" header field lists the set of methods advertised as supported |
 // | by the target resource. Its purpose is strictly to inform the recipient   |
@@ -59,7 +59,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Allow: OPTIONS, GET, HEAD, POST, DELETE                                 |
 // |   Allow:                                                                  |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §10.2.1 Allow (ABNF summary)                                     |
+// | RFC 9110 S10.2.1 Allow (ABNF summary)                                     |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -71,7 +71,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |                  | "." / "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA      |
 // | OWS              | *( SP / HTAB )                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.1 list expansion                                            |
+// | RFC 9110 S5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

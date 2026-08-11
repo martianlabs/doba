@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                                   referer |
 // +===========================================================================+
-// | RFC 9110 §10.1.3 Referer                                                  |
+// | RFC 9110 S10.1.3 Referer                                                  |
 // +---------------------------------------------------------------------------+
 // | The "Referer" header field allows a user agent to specify a URI reference |
 // | for the resource from which the target URI was obtained. This enables     |
@@ -65,7 +65,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Referer: /docs/current/page.html                                        |
 // |   Referer: https://example.com/search?q=http                              |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §10.1.3 Referer (ABNF summary)                                   |
+// | RFC 9110 S10.1.3 Referer (ABNF summary)                                   |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -97,7 +97,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | sub-delims       | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," /  |
 // |                  | ";" / "="                                              |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §4.2.1 URI references                                            |
+// | RFC 9110 S4.2.1 URI references                                            |
 // +---------------------------------------------------------------------------+
 // | Referer uses absolute-URI or partial-URI. Both forms intentionally        |
 // |exclude a fragment component from the ABNF used by HTTP field values.      |
@@ -124,7 +124,7 @@ class referer {
     // Referer = absolute-URI / partial-URI. This is the URI-reference grammar
     // without a fragment component, so an unencoded '#' is rejected. The same
     // absolute-URI / partial-URI shape is shared with Content-Location (RFC
-    // 9110 §8.7). The RFC 9110 §10.1.3 prohibition on a userinfo component is
+    // 9110 S8.7). The RFC 9110 S10.1.3 prohibition on a userinfo component is
     // a semantic sender rule; syntactic validation accepts the ABNF as-is.
     return helpers::check_uri_reference(sv, /*allow_fragment=*/false);
   }

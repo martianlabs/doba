@@ -1,4 +1,4 @@
-﻿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -21,7 +21,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
-
 
 #ifndef martianlabs_doba_protocol_http_v11_rejection_reason_h
 #define martianlabs_doba_protocol_http_v11_rejection_reason_h
@@ -58,7 +57,11 @@ namespace martianlabs::doba::protocol::http::v11 {
 // |                       | Too Large.                                        |
 // +-----------------------+---------------------------------------------------+
 // | kHandlerError         | the user's request handler threw an exception;    |
-// |                       | maps to 500 Internal Server Error.                 |
+// |                       | maps to 500 Internal Server Error.                |
+// +-----------------------+---------------------------------------------------+
+// | kExpectationFailed    | the Expect field states an expectation this       |
+// |                       | server cannot meet; maps to 417 Expectation       |
+// |                       | Failed.                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 enum class rejection_reason {
@@ -70,6 +73,7 @@ enum class rejection_reason {
   kUriTooLong,            // request-target too long; maps to 414.
   kHeaderFieldsTooLarge,  // header section too large; maps to 431.
   kHandlerError,          // user handler threw an exception; maps to 500.
+  kExpectationFailed,     // unsupported Expect expectation; maps to 417.
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

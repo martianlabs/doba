@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                            access-control-request-headers |
 // +===========================================================================+
-// | Fetch Standard §3.3.4 Access-Control-Request-Headers                      |
+// | Fetch Standard S3.3.4 Access-Control-Request-Headers                      |
 // +---------------------------------------------------------------------------+
 // | The "Access-Control-Request-Headers" header field is used by a user       |
 // | agent when issuing a CORS-preflight request. It informs the server which  |
@@ -55,7 +55,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Access-Control-Request-Headers: authorization, x-requested-with         |
 // |   Access-Control-Request-Headers: content-type, x-custom-header           |
 // +---------------------------------------------------------------------------+
-// | Fetch Standard §3.3.4 HTTP new-header syntax (ABNF summary)               |
+// | Fetch Standard S3.3.4 HTTP new-header syntax (ABNF summary)               |
 // +---------------------------------------------------------------------------+
 // +--------------------------------+------------------------------------------+
 // | Field                          | Definition                               |
@@ -68,7 +68,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |                                | "|" / "~" / DIGIT / ALPHA                |
 // | OWS                            | *( SP / HTAB )                           |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.1 list expansion                                            |
+// | RFC 9110 S5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

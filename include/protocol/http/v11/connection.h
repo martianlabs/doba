@@ -63,10 +63,15 @@ struct connection {
   // The header field names announced in the Trailer header, in order.
   std::vector<std::string_view> trailer_names;
   // The protocols offered in the Upgrade header, in order (empty when absent).
+  // Parsed and validated, but never acted upon: no upgrade is completed. See
+  // policies::allow_upgrade.
   std::vector<std::string_view> upgrade_offer;
   // Every connection-option token named by Connection, in order. These name
   // header fields that are hop-by-hop for this connection.
   std::vector<std::string_view> options;
+  // Whether the client sent "Expect: 100-continue" and is therefore waiting
+  // for an interim response before sending the request body.
+  bool expects_continue = false;
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

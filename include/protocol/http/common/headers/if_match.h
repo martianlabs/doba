@@ -35,7 +35,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                                  if-match |
 // +===========================================================================+
-// | RFC 9110 §13.1.1 If-Match                                                 |
+// | RFC 9110 S13.1.1 If-Match                                                 |
 // +---------------------------------------------------------------------------+
 // | The "If-Match" header field makes the requested method conditional on the |
 // | target resource having a current representation that satisfies the        |
@@ -78,7 +78,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   If-Match: "xyzzy", "r2d2xxxx", "c3piozzzz"                              |
 // |   If-Match: *                                                             |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §13.1.1 If-Match (ABNF summary)                                  |
+// | RFC 9110 S13.1.1 If-Match (ABNF summary)                                  |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -93,7 +93,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | DQUOTE           | %x22                                                   |
 // | OWS              | *( SP / HTAB )                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.1 list expansion                                            |
+// | RFC 9110 S5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                             accept-ranges |
 // +===========================================================================+
-// | RFC 9110 §14.3 Accept-Ranges                                              |
+// | RFC 9110 S14.3 Accept-Ranges                                              |
 // +---------------------------------------------------------------------------+
 // | The "Accept-Ranges" response header field indicates whether an upstream   |
 // | server supports range requests for the target resource.                   |
@@ -76,7 +76,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Accept-Ranges: none                                                     |
 // |   Accept-Ranges: bytes, example-unit                                      |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §14.3 Accept-Ranges (ABNF summary)                               |
+// | RFC 9110 S14.3 Accept-Ranges (ABNF summary)                               |
 // +---------------------------------------------------------------------------+
 // +-------------------+-------------------------------------------------------+
 // | Field             | Definition                                            |
@@ -89,7 +89,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |                   | "." / "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA     |
 // | OWS               | *( SP / HTAB )                                        |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.1 list expansion                                            |
+// | RFC 9110 S5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

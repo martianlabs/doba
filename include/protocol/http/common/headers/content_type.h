@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                              content-type |
 // +===========================================================================+
-// | RFC 9110 §8.3 Content-Type                                                |
+// | RFC 9110 S8.3 Content-Type                                                |
 // +---------------------------------------------------------------------------+
 // | The "Content-Type" header field indicates the media type of the           |
 // | associated representation. It identifies both the representation's data   |
@@ -62,7 +62,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Content-Type: application/json                                          |
 // |   Content-Type: multipart/form-data; boundary="example-boundary"          |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §8.3 and §8.3.1 Content-Type / Media Type (ABNF summary)         |
+// | RFC 9110 S8.3 and S8.3.1 Content-Type / Media Type (ABNF summary)         |
 // +---------------------------------------------------------------------------+
 // +-----------------+---------------------------------------------------------+
 // | Field           | Definition                                              |
@@ -86,7 +86,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | DQUOTE          | %x22                                                    |
 // | VCHAR           | %x21-7E                                                 |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.6 parameter rules                                           |
+// | RFC 9110 S5.6.6 parameter rules                                           |
 // +---------------------------------------------------------------------------+
 // | Parameters are introduced by a semicolon and consist of a name/value      |
 // | pair. Parameter names and unquoted parameter values are tokens. A value   |

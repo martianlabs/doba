@@ -35,7 +35,7 @@ namespace martianlabs::doba::protocol::http::v11::headers::rules {
 // +---------------------------------------------------------------------------+
 // | [>] directives                                                  ( class ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §7.6.1 Connection                                                |
+// | RFC 9110 S7.6.1 Connection                                                |
 // +---------------------------------------------------------------------------+
 // | The transversal "connection directives" rules: they relate the Connection |
 // | option tokens (the hop-by-hop directives) to other headers, which the     |
@@ -44,16 +44,16 @@ namespace martianlabs::doba::protocol::http::v11::headers::rules {
 // | pass has populated the context. Named "directives" (not "connection") to  |
 // | avoid clashing with the protocol-level connection.h.                      |
 // |                                                                           |
-// | 1. RFC 9110 §7.8: the "upgrade" connection option is only meaningful      |
+// | 1. RFC 9110 S7.8: the "upgrade" connection option is only meaningful      |
 // |    alongside an Upgrade header; a client that names it without offering   |
 // |    any protocol is rejected.                                              |
-// | 2. RFC 9110 §7.6.1: a connection option names a header field that is      |
+// | 2. RFC 9110 S7.6.1: a connection option names a header field that is      |
 // |    hop-by-hop for this connection, but control headers with connection-   |
 // |    wide semantics (Host, Content-Length, Transfer-Encoding, TE, Trailer,  |
 // |    Upgrade, and Connection itself) MUST NOT be nominated; doing so is     |
 // |    rejected.                                                              |
 // |                                                                           |
-// | Connection option comparison is case-insensitive per RFC 9110 §7.6.1.     |
+// | Connection option comparison is case-insensitive per RFC 9110 S7.6.1.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class directives {

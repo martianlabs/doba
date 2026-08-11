@@ -37,7 +37,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // +---------------------------------------------------------------------------+
 // | [>] content_length                                              ( class ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§8.6 Content-Length                                              |
+// | RFC 9110 S8.6 Content-Length                                              |
 // +---------------------------------------------------------------------------+
 // | The "Content-Length" header field indicates the associated                |
 // | representation's data length as a decimal non-negative integer number of  |
@@ -56,7 +56,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // | Example:                                                                  |
 // |  Content-Length: 3495                                                     |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§8.6 Content-Length (ABNF summary)                               |
+// | RFC 9110 S8.6 Content-Length (ABNF summary)                               |
 // +---------------------------------------------------------------------------+
 // +----------------+----------------------------------------------------------+
 // | Field          | Definition                                               |
@@ -81,8 +81,7 @@ class content_length {
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
   // +=========================================================================+
-  static constexpr verdict interpret(const std::size_t& len,
-                                     v11::connection&,
+  static constexpr verdict interpret(const std::size_t& len, v11::connection&,
                                      const policies& policies) {
     if (policies.max_content_length != 0 && len > policies.max_content_length) {
       return verdict::kReject;

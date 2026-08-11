@@ -36,7 +36,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // +---------------------------------------------------------------------------+
 // | [>] te                                                          ( class ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§10.1.4 TE                                                       |
+// | RFC 9110 S10.1.4 TE                                                       |
 // +---------------------------------------------------------------------------+
 // | The "TE" request header field describes the client's capabilities with    |
 // | regard to transfer codings and trailer sections.                          |
@@ -57,7 +57,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // |  TE: deflate; q=0.5, trailers                                             |
 // |  Connection: TE                                                           |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§10.1.4 TE (ABNF summary)                                        |
+// | RFC 9110 S10.1.4 TE (ABNF summary)                                        |
 // +---------------------------------------------------------------------------+
 // +--------------------+------------------------------------------------------+
 // | Field              | Definition                                           |
@@ -125,7 +125,7 @@ class te {
     if (token.empty()) return false;
     off += token.size();
     if (off >= sv.size()) return true;
-    // transfer-parameters = *( OWS ";" OWS transfer-parameter ) â€” a parameter
+    // transfer-parameters = *( OWS ";" OWS transfer-parameter ) - a parameter
     // is mandatory after every ";" and OWS/BWS is permitted around the "=". The
     // "q" ranking parameter is handled specially: it may appear at most once
     // and, if present, must be the last parameter.

@@ -36,7 +36,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // +===========================================================================+
 // |                                                                   upgrade |
 // +===========================================================================+
-// | RFC 9110 Â§7.8 Upgrade                                                     |
+// | RFC 9110 S7.8 Upgrade                                                     |
 // +---------------------------------------------------------------------------+
 // | The "Upgrade" header field provides a mechanism for transitioning from    |
 // | HTTP/1.1 to another protocol on the same connection.                      |
@@ -53,7 +53,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // |   Upgrade: websocket                                                      |
 // |   Upgrade: websocket, IRC/6.9, RTA/x11                                    |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§7.8 Upgrade (ABNF summary)                                      |
+// | RFC 9110 S7.8 Upgrade (ABNF summary)                                      |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |

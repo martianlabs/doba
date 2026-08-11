@@ -36,7 +36,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // +---------------------------------------------------------------------------+
 // | [>] connection                                                  ( class ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§7.6.1 Connection                                                |
+// | RFC 9110 S7.6.1 Connection                                                |
 // +---------------------------------------------------------------------------+
 // | The "Connection" header field allows the sender to list control options   |
 // | that are specific to the current connection.                              |
@@ -57,7 +57,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // |  Connection: close                                                        |
 // |  Connection: keep-alive, upgrade                                          |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 Â§7.6.1 and Â§Â§5.6.1-5.6.3 (ABNF summary)                          |
+// | RFC 9110 S7.6.1 and SS5.6.1-5.6.3 (ABNF summary)                          |
 // +---------------------------------------------------------------------------+
 // +-------------------+-------------------------------------------------------+
 // | Field             | Definition                                            |

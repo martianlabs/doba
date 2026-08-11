@@ -22,7 +22,6 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-
 #ifndef martianlabs_doba_protocol_http_v11_policies_h
 #define martianlabs_doba_protocol_http_v11_policies_h
 
@@ -64,6 +63,13 @@ struct policies {
   // Whether the server allows requests carrying a chunked Transfer-Encoding.
   bool allow_chunked = true;
   // Whether the server allows protocol upgrades offered via Upgrade.
+  //
+  // NOTE: no protocol upgrade is ever completed. Doba never emits a 101 and
+  // never yields channel_intent::kUpgrade, so this flag only decides whether
+  // an offer is rejected or ignored: true accepts the request and serves it
+  // over HTTP/1.1, discarding the offer (RFC 9110 S7.8 explicitly allows a
+  // server to ignore Upgrade); false rejects the request outright. Honouring
+  // an upgrade is deferred to a future release.
   bool allow_upgrade = true;
 };
 }  // namespace martianlabs::doba::protocol::http::v11

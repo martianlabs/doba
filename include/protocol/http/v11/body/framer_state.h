@@ -33,7 +33,7 @@
 namespace martianlabs::doba::protocol::http::v11::body {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] framer_state                                                 ( struct ) |
+// | [>] framer_state                                               ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Result of a body framer write() call.                                     |
 // |   consumed  - bytes taken from the input span (wire bytes, including any  |

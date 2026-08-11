@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                                      vary |
 // +===========================================================================+
-// | RFC 9110 §12.5.5 Vary                                                     |
+// | RFC 9110 S12.5.5 Vary                                                     |
 // +---------------------------------------------------------------------------+
 // | The "Vary" response header field describes which parts of the request,    |
 // | aside from the method and target URI, might have influenced the origin    |
@@ -74,7 +74,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   Vary: Accept-Encoding                                                   |
 // |   Vary: Accept-Encoding, Accept-Language                                  |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §12.5.5 Vary (ABNF summary)                                      |
+// | RFC 9110 S12.5.5 Vary (ABNF summary)                                      |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |
@@ -86,7 +86,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |                  | "." / "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA      |
 // | OWS              | *( SP / HTAB )                                         |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.1 list expansion                                            |
+// | RFC 9110 S5.6.1 list expansion                                            |
 // +---------------------------------------------------------------------------+
 // | Sender syntax:                                                            |
 // |                                                                           |

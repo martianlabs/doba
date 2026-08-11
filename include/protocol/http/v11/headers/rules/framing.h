@@ -35,23 +35,23 @@ namespace martianlabs::doba::protocol::http::v11::headers::rules {
 // +---------------------------------------------------------------------------+
 // | [>] framing                                                     ( class ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9112 §6 Message Body Length                                           |
+// | RFC 9112 S6 Message Body Length                                           |
 // +---------------------------------------------------------------------------+
 // | Transversal framing rules that span Content-Length and Transfer-Encoding, |
 // | which no single intra-header interpreter can decide because they need     |
 // | both headers at once. Applied by the coordinator after every intra-header |
 // | interpreter has run and the context has been populated.                   |
 // |                                                                           |
-// | 1. RFC 9112 §6.1: if a Transfer-Encoding is present, the "chunked" coding |
+// | 1. RFC 9112 S6.1: if a Transfer-Encoding is present, the "chunked" coding |
 // |    MUST be the final coding; otherwise the message length is undefined    |
 // |    and the request is rejected.                                           |
-// | 2. RFC 9112 §6.3 (bullet 3): a message MUST NOT contain both a            |
+// | 2. RFC 9112 S6.3 (bullet 3): a message MUST NOT contain both a            |
 // |    Transfer-Encoding and a Content-Length; a sender that does so is       |
 // |    treated as a framing error and the request is rejected.                |
-// | 3. RFC 9112 §6.3 (bullet 4): a message MUST NOT contain multiple          |
+// | 3. RFC 9112 S6.3 (bullet 4): a message MUST NOT contain multiple          |
 // |    Content-Length header fields, regardless of whether their values       |
 // |    agree; doing so is an unrecoverable framing error (the classic         |
-// |    CL.CL request-smuggling vector) and the request is rejected.            |
+// |    CL.CL request-smuggling vector) and the request is rejected.           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class framing {
@@ -61,7 +61,7 @@ class framing {
   // +=========================================================================+
   static constexpr verdict apply(const context& ctx) {
     // Multiple Content-Length header fields are always a framing error, even
-    // when every occurrence carries the same value (RFC 9112 §6.3 bullet 4).
+    // when every occurrence carries the same value (RFC 9112 S6.3 bullet 4).
     if (ctx.multiple_content_length) return verdict::kReject;
     if (ctx.has_transfer_encoding) {
       // A present Transfer-Encoding must delimit the body itself, so a

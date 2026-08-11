@@ -1,4 +1,4 @@
-﻿//                              _       _
+//                              _       _
 //                           __| | ___ | |__   __ _
 //                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
@@ -38,47 +38,47 @@ struct header_names {
   // | [>] CONSTANTs                                                ( public ) |
   // +=========================================================================+
   // +------------------------+--------------------+---------------------------+
-  // |        Header          |       Sección      |          Tipo             |
+  // |        Header          |       Seccion      |          Tipo             |
   // +------------------------+--------------------+---------------------------+
-  // | Connection             | RFC 9110 §7.6.1    | General                   |
-  // | Date                   | RFC 9110 §8.6.1    | General                   |
-  // | Via                    | RFC 9110 §7.6.3    | General                   |
-  // | Cache-Control          | RFC 9111 §5.2      | General (caching)         |
-  // | Pragma                 | RFC 9111 §5.4      | General (legacy caching)  |
-  // | Warning                | RFC 9111 §5.5      | General (caching)         |
-  // | Host                   | RFC 9110 §7.2      | Request                   |
-  // | User-Agent             | RFC 9110 §10.1.5   | Request                   |
-  // | Accept                 | RFC 9110 §12.5.1   | Request                   |
-  // | Accept-Encoding        | RFC 9110 §12.5.3   | Request                   |
-  // | Accept-Language        | RFC 9110 §12.5.4   | Request                   |
-  // | Authorization          | RFC 9110 §11.6.2   | Request (auth)            |
-  // | Expect                 | RFC 9110 §10.1.3   | Request                   |
-  // | From                   | RFC 9110 §10.1.4   | Request                   |
-  // | If-Match               | RFC 9110 §13.1.1   | Request (conditional)     |
-  // | If-None-Match          | RFC 9110 §13.1.2   | Request (conditional)     |
-  // | If-Modified-Since      | RFC 9110 §13.1.3   | Request (conditional)     |
-  // | If-Unmodified-Since    | RFC 9110 §13.1.4   | Request (conditional)     |
-  // | Range                  | RFC 9110 §14.1     | Request (range requests)  |
-  // | Referer                | RFC 9110 §10.1.6   | Request                   |
-  // | TE                     | RFC 9110 §10.1.7   | Request                   |
-  // | Upgrade                | RFC 9110 §7.8      | Request                   |
+  // | Connection             | RFC 9110 S7.6.1    | General                   |
+  // | Date                   | RFC 9110 S8.6.1    | General                   |
+  // | Via                    | RFC 9110 S7.6.3    | General                   |
+  // | Cache-Control          | RFC 9111 S5.2      | General (caching)         |
+  // | Pragma                 | RFC 9111 S5.4      | General (legacy caching)  |
+  // | Warning                | RFC 9111 S5.5      | General (caching)         |
+  // | Host                   | RFC 9110 S7.2      | Request                   |
+  // | User-Agent             | RFC 9110 S10.1.5   | Request                   |
+  // | Accept                 | RFC 9110 S12.5.1   | Request                   |
+  // | Accept-Encoding        | RFC 9110 S12.5.3   | Request                   |
+  // | Accept-Language        | RFC 9110 S12.5.4   | Request                   |
+  // | Authorization          | RFC 9110 S11.6.2   | Request (auth)            |
+  // | Expect                 | RFC 9110 S10.1.3   | Request                   |
+  // | From                   | RFC 9110 S10.1.4   | Request                   |
+  // | If-Match               | RFC 9110 S13.1.1   | Request (conditional)     |
+  // | If-None-Match          | RFC 9110 S13.1.2   | Request (conditional)     |
+  // | If-Modified-Since      | RFC 9110 S13.1.3   | Request (conditional)     |
+  // | If-Unmodified-Since    | RFC 9110 S13.1.4   | Request (conditional)     |
+  // | Range                  | RFC 9110 S14.1     | Request (range requests)  |
+  // | Referer                | RFC 9110 S10.1.6   | Request                   |
+  // | TE                     | RFC 9110 S10.1.7   | Request                   |
+  // | Upgrade                | RFC 9110 S7.8      | Request                   |
   // | Cookie                 | RFC 6265           | Request (cookies)         |
-  // | Location               | RFC 9110 §10.2.2   | Response                  |
-  // | Server                 | RFC 9110 §10.2.5   | Response                  |
-  // | Vary                   | RFC 9110 §12.5.5   | Response                  |
-  // | WWW-Authenticate       | RFC 9110 §11.6.1   | Response (auth challenge) |
-  // | Content-Length         | RFC 9110 §8.6.1    | Entity                    |
-  // | Content-Type           | RFC 9110 §8.3.1    | Entity                    |
-  // | Content-Encoding       | RFC 9110 §8.4      | Entity                    |
-  // | Content-Language       | RFC 9110 §8.5      | Entity                    |
-  // | Content-Range          | RFC 9110 §14.4     | Entity                    |
-  // | Trailer                | RFC 9110 §6.5      | Trailer header            |
-  // | Transfer-Encoding      | RFC 9112 §6.1      | Special                   |
-  // | Allow                  | RFC 9110 §10.2.1   | Response                  |
-  // | Retry-After            | RFC 9110 §10.2.3   | Response                  |
-  // | Accept-Ranges          | RFC 9110 §14.2     | Response                  |
-  // | ETag                   | RFC 9110 §8.8.3    | Response                  |
-  // | Last-Modified          | RFC 9110 §8.8.2    | Response                  |
+  // | Location               | RFC 9110 S10.2.2   | Response                  |
+  // | Server                 | RFC 9110 S10.2.5   | Response                  |
+  // | Vary                   | RFC 9110 S12.5.5   | Response                  |
+  // | WWW-Authenticate       | RFC 9110 S11.6.1   | Response (auth challenge) |
+  // | Content-Length         | RFC 9110 S8.6.1    | Entity                    |
+  // | Content-Type           | RFC 9110 S8.3.1    | Entity                    |
+  // | Content-Encoding       | RFC 9110 S8.4      | Entity                    |
+  // | Content-Language       | RFC 9110 S8.5      | Entity                    |
+  // | Content-Range          | RFC 9110 S14.4     | Entity                    |
+  // | Trailer                | RFC 9110 S6.5      | Trailer header            |
+  // | Transfer-Encoding      | RFC 9112 S6.1      | Special                   |
+  // | Allow                  | RFC 9110 S10.2.1   | Response                  |
+  // | Retry-After            | RFC 9110 S10.2.3   | Response                  |
+  // | Accept-Ranges          | RFC 9110 S14.2     | Response                  |
+  // | ETag                   | RFC 9110 S8.8.3    | Response                  |
+  // | Last-Modified          | RFC 9110 S8.8.2    | Response                  |
   // +------------------------+--------------------+---------------------------+
   static constexpr char kConnection[] = "Connection";
   static constexpr char kDate[] = "Date";

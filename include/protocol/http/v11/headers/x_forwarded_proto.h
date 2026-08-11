@@ -77,8 +77,8 @@ class x_forwarded_proto {
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
   // +=========================================================================+
-  static constexpr verdict interpret(const parsed_token_list&,
-                                     v11::connection&, const policies&) {
+  static constexpr verdict interpret(const parsed_token_list&, v11::connection&,
+                                     const policies&) {
     return verdict::kAccept;
   }
 
@@ -87,7 +87,7 @@ class x_forwarded_proto {
   // | [>] consume_scheme                                          ( private ) |
   // +=========================================================================+
   static constexpr bool consume_scheme(std::string_view sv) {
-    // Each list element is a bare URI scheme (RFC 3986 Â§3.1), matching the
+    // Each list element is a bare URI scheme (RFC 3986 S3.1), matching the
     // "proto" parameter value of the RFC 7239 Forwarded header.
     return helpers::is_uri_scheme(sv);
   }

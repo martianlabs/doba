@@ -32,7 +32,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                          access-control-allow-credentials |
 // +===========================================================================+
-// | Fetch §3.3.3 HTTP responses                                               |
+// | Fetch S3.3.3 HTTP responses                                               |
 // +---------------------------------------------------------------------------+
 // | The "Access-Control-Allow-Credentials" response header field indicates    |
 // | whether the response can be shared when the request's credentials mode is |
@@ -55,7 +55,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | Examples:                                                                 |
 // |   Access-Control-Allow-Credentials: true                                  |
 // +---------------------------------------------------------------------------+
-// | Fetch §3.3.4 HTTP new-header syntax (ABNF summary)                        |
+// | Fetch S3.3.4 HTTP new-header syntax (ABNF summary)                        |
 // +---------------------------------------------------------------------------+
 // +----------------------------------+----------------------------------------+
 // | Field                            | Definition                             |

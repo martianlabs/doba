@@ -32,11 +32,11 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                                      from |
 // +===========================================================================+
-// | RFC 9110 §10.1.2 From                                                     |
+// | RFC 9110 S10.1.2 From                                                     |
 // +---------------------------------------------------------------------------+
 // | The "From" header field contains an Internet email address for a human    |
 // | user who controls the requesting user agent. The address ought to be      |
-// | machine-usable, as defined by "mailbox" in RFC 5322 §3.4.                 |
+// | machine-usable, as defined by "mailbox" in RFC 5322 S3.4.                 |
 // |                                                                           |
 // | Non-robotic user agents rarely send From. A user agent SHOULD NOT send a  |
 // | From header field without explicit configuration by the user, since that  |
@@ -54,7 +54,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | Example:                                                                  |
 // |   From: spider-admin@example.org                                          |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §10.1.2 From (ABNF summary)                                      |
+// | RFC 9110 S10.1.2 From (ABNF summary)                                      |
 // +---------------------------------------------------------------------------+
 // +----------------+----------------------------------------------------------+
 // | Field          | Definition                                               |
@@ -86,7 +86,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | RFC 5322 imported mailbox syntax                                          |
 // +---------------------------------------------------------------------------+
 // | HTTP does not define an independent email-address grammar for From.       |
-// | Instead, it imports "mailbox" from RFC 5322 §3.4. A mailbox can be either |
+// | Instead, it imports "mailbox" from RFC 5322 S3.4. A mailbox can be either |
 // | a name-address form with angle brackets or a bare addr-spec.              |
 // |                                                                           |
 // | Valid shapes include:                                                     |
@@ -112,7 +112,7 @@ class from {
   // +=========================================================================+
   static constexpr bool check(std::string_view sv) {
     // From = mailbox. HTTP does not define its own email-address grammar; it
-    // imports "mailbox" from RFC 5322 §3.4, which is either a name-addr (an
+    // imports "mailbox" from RFC 5322 S3.4, which is either a name-addr (an
     // optional display-name followed by an angle-addressed addr-spec) or a
     // bare addr-spec. From is not a list field, so a single mailbox must span
     // the whole (already normalized) field-value.

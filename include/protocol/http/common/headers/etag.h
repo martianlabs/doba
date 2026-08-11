@@ -35,7 +35,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +===========================================================================+
 // |                                                                      etag |
 // +===========================================================================+
-// | RFC 9110 §8.8.3 ETag                                                      |
+// | RFC 9110 S8.8.3 ETag                                                      |
 // +---------------------------------------------------------------------------+
 // | The "ETag" response header field provides the current entity tag for the  |
 // | selected representation, as determined at the conclusion of handling the  |
@@ -63,7 +63,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // |   ETag: W/"xyzzy"                                                         |
 // |   ETag: ""                                                                |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §8.8.3 ETag (ABNF summary)                                       |
+// | RFC 9110 S8.8.3 ETag (ABNF summary)                                       |
 // +---------------------------------------------------------------------------+
 // +------------------+--------------------------------------------------------+
 // | Field            | Definition                                             |

@@ -35,7 +35,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // +---------------------------------------------------------------------------+
 // | [>] date                                                        ( class ) |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §6.6.1 Date                                                      |
+// | RFC 9110 S6.6.1 Date                                                      |
 // +---------------------------------------------------------------------------+
 // | The "Date" header field represents the date and time at which the message |
 // | was originated. Its field value is an HTTP-date, as defined in RFC 9110   |
@@ -59,7 +59,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | Example:                                                                  |
 // |   Date: Tue, 15 Nov 1994 08:12:31 GMT                                     |
 // +---------------------------------------------------------------------------+
-// | RFC 9110 §5.6.7 Date/Time Formats § ABNF                                  |
+// | RFC 9110 S5.6.7 Date/Time Formats S ABNF                                  |
 // +---------------------------------------------------------------------------+
 // +----------------+----------------------------------------------------------+
 // | Field          | Definition                                               |
