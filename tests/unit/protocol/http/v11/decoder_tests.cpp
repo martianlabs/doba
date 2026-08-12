@@ -72,6 +72,7 @@ DOBA_TEST("empty input needs more bytes and accumulation is bounded") {
   std::string empty;
   DOBA_EXPECT_EQUAL(value.accumulate(empty.data(), 0), 0);
   DOBA_EXPECT_EQUAL(value.accumulate(nullptr, 0), 0);
+  DOBA_EXPECT_EQUAL(value.accumulate(nullptr, 1), 0);
   std::string oversized(limits::kDecodingBufferSize + 1, 'x');
   DOBA_EXPECT_EQUAL(value.accumulate(oversized.data(), oversized.size()),
                     limits::kDecodingBufferSize);

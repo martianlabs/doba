@@ -165,6 +165,7 @@ class decoder {
   // | [>] accumulate                                               ( public ) |
   // +=========================================================================+
   std::size_t accumulate(char* const buffer, std::size_t size) {
+    if (!buffer || !size) return 0;
     std::size_t space_left = limits::kDecodingBufferSize - off_;
     std::size_t bytes_to_copy = std::min(space_left, size);
     std::memcpy(buffer_ + off_, buffer, bytes_to_copy);
