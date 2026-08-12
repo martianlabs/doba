@@ -1,5 +1,7 @@
 ![doba](resources/doba-small.png)
 
+[![Build & Test](https://github.com/martianlabs/doba/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/martianlabs/doba/actions/workflows/ci.yml?query=branch%3Amain)
+
 **A high-performance, transport- and protocol-agnostic C++20 server framework. HTTP/1.1 is its first protocol, not its limit.**
 
 ---
