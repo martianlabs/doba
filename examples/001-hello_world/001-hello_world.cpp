@@ -22,6 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include "common/console_logger.h"
+#include "common/logo.h"
 #include "network/environment.h"
 #include "protocol/http/v11/server.h"
 
@@ -29,6 +31,10 @@ using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
 int main(int argc, char* argv[]) {
+  console_logger logger{
+      "001-hello_world",
+      console_logger_options{.show_function = false, .show_line = false}};
+  logo::dump();
   martianlabs::doba::network::startup();
   server http_server;
   http_server.add_route(
@@ -40,6 +46,7 @@ int main(int argc, char* argv[]) {
             .set_body("ok");
       });
   http_server.start("8080");
+  logger.info() << "server listening on port 8080";
   while (true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   martianlabs::doba::network::cleanup();
   return 0;

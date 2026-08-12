@@ -32,4 +32,7 @@ source_group(
   FILES ${DOBA_HEADERS}
 )
 
+enable_testing()
+
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/examples/001-hello_world)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tests/unit)

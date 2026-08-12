@@ -87,9 +87,9 @@ struct status_lines {
   static constexpr char k415[] = EAS(SL(415_UNSUPPORTED_MEDIA_TYPE));
   static constexpr char k416[] = EAS(SL(416_RANGE_NOT_SATISFIABLE));
   static constexpr char k417[] = EAS(SL(417_EXPECTATION_FAILED));
-  static constexpr char k418[] = EAS(SL(418_UNUSED));
+  static constexpr char k418[] = EAS(SL(418_IM_A_TEAPOT));
   static constexpr char k421[] = EAS(SL(421_MISDIRECTED_REQUEST));
-  static constexpr char k422[] = EAS(SL(422_UNPROCESSABLE_ENTITY));
+  static constexpr char k422[] = EAS(SL(422_UNPROCESSABLE_CONTENT));
   static constexpr char k426[] = EAS(SL(426_UPGRADE_REQUIRED));
   static constexpr char k431[] = EAS(SL(431_REQUEST_HEADER_FIELDS_TOO_LARGE));
   static constexpr char k500[] = EAS(SL(500_INTERNAL_SERVER_ERROR));

@@ -70,6 +70,10 @@ class framing {
       // "chunked" is only valid as the final transfer-coding; when a chunked
       // coding appears elsewhere in the list the length is undefined.
       const auto& codings = ctx.connection.transfer_codings;
+      if (codings.empty() ||
+          !helpers::iequals(codings.back(), "chunked")) {
+        return verdict::kReject;
+      }
       for (std::size_t i = 0; i < codings.size(); i++) {
         const bool is_last = (i + 1 == codings.size());
         if (helpers::iequals(codings[i], "chunked") && !is_last) {

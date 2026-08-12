@@ -147,14 +147,16 @@ class range {
     // Skip OWS after '='.
     while (off < sv.size() && helpers::is_ows(sv[off])) off++;
     // Now we should be at the start of the range-set.
-    return consume_range_set(sv.substr(off));
+    const bool allow_other_range = !helpers::iequals(range_unit, "bytes");
+    return consume_range_set(sv.substr(off), allow_other_range);
   }
 
  private:
   // +=========================================================================+
   // | [>] consume_range_set                                       ( private ) |
   // +=========================================================================+
-  static constexpr bool consume_range_set(std::string_view sv) {
+  static constexpr bool consume_range_set(std::string_view sv,
+                                          bool allow_other_range) {
     bool at_least_one_range_spec = false;
     std::size_t last = 0;
     for (std::size_t i = 0; i <= sv.size(); i++) {
@@ -162,7 +164,9 @@ class range {
       std::string_view range_specifier = sv.substr(last, i - last);
       helpers::ows_trim(range_specifier);
       if (!range_specifier.empty()) {
-        if (!consume_range_specifier(range_specifier)) return false;
+        if (!consume_range_specifier(range_specifier, allow_other_range)) {
+          return false;
+        }
         at_least_one_range_spec = true;
       }
       last = i + 1;
@@ -172,11 +176,12 @@ class range {
   // +=========================================================================+
   // | [>] consume_range_specifier                                 ( private ) |
   // +=========================================================================+
-  static constexpr bool consume_range_specifier(std::string_view sv) {
+  static constexpr bool consume_range_specifier(std::string_view sv,
+                                                bool allow_other_range) {
     if (sv.empty()) return false;
     if (consume_int_range(sv)) return true;
     if (consume_suffix_range(sv)) return true;
-    return consume_other_range(sv);
+    return allow_other_range && consume_other_range(sv);
   }
   // +=========================================================================+
   // | [>] consume_int_range                                       ( private ) |

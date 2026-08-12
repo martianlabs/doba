@@ -32,6 +32,7 @@
 #include <span>
 
 #include "common/writer.h"
+#include "protocol/http/common/helpers.h"
 #include "protocol/http/v11/body/framer_state.h"
 #include "protocol/http/v11/limits.h"
 
@@ -59,15 +60,27 @@ class framer_chunked {
   // | [>] TYPEs                                                   ( private ) |
   // +=========================================================================+
   enum class state : std::uint8_t {
-    chunk_size,  // reading hex digits of the chunk-size field
-    extension,   // skipping chunk-extension after ';' until CR
-    size_lf,     // expecting LF after the CR of the chunk-size line
-    data,        // consuming chunk-data bytes (bulk)
-    data_cr,     // expecting CR after chunk-data
-    data_lf,     // expecting LF after the post-data CR
-    trailer,     // reading trailer section until empty CRLF line
-    complete,    // last-chunk and terminating CRLF fully consumed
-    error        // unrecoverable parse error
+    chunk_size,
+    extension_before_semicolon,
+    extension_before_name,
+    extension_name,
+    extension_after_name,
+    extension_before_value,
+    extension_token_value,
+    extension_quoted_value,
+    extension_quoted_pair,
+    extension_after_value,
+    size_lf,
+    data,
+    data_cr,
+    data_lf,
+    trailer_line_start,
+    trailer_name,
+    trailer_value,
+    trailer_line_lf,
+    trailer_end_lf,
+    complete,
+    error
   };
 
  public:
@@ -99,17 +112,37 @@ class framer_chunked {
     std::size_t i = 0;
     while (i < input.size()) {
       const char c = static_cast<char>(input[i]);
+      if (state_ >= state::extension_before_semicolon &&
+          state_ <= state::extension_after_value &&
+          ++extension_size_ > limits::kMaxChunkedExtensionSize) {
+        return fail(result, framer_error::chunk_extension_size_limit_exceeded);
+      }
+      if (state_ >= state::trailer_line_start &&
+          state_ <= state::trailer_end_lf &&
+          ++trailer_size_ > limits::kMaxChunkedTrailerSize) {
+        return fail(result, framer_error::trailer_size_limit_exceeded);
+      }
       switch (state_) {
         // ---------------------------------------------------------------------
         // Chunk-size line: accumulate hex digits, handle extension and CR
         // ---------------------------------------------------------------------
         case state::chunk_size: {
           if (c == ';') {
-            state_ = state::extension;
+            if (!chunk_size_started_) {
+              return fail(result, framer_error::invalid_chunk_size);
+            }
+            state_ = state::extension_before_name;
             break;
           }
           if (c == '\r') {
+            if (!chunk_size_started_) {
+              return fail(result, framer_error::invalid_chunk_size);
+            }
             state_ = state::size_lf;
+            break;
+          }
+          if ((c == ' ' || c == '\t') && chunk_size_started_) {
+            state_ = state::extension_before_semicolon;
             break;
           }
           int digit = hex_digit(c);
@@ -124,22 +157,123 @@ class framer_chunked {
           }
           chunk_remaining_ =
               (chunk_remaining_ << 4) | static_cast<std::size_t>(digit);
+          chunk_size_started_ = true;
           break;
         }
         // ---------------------------------------------------------------------
-        // Chunk-extension: discard until CR
+        // Chunk-extension
         // ---------------------------------------------------------------------
-        case state::extension: {
+        case state::extension_before_semicolon: {
+          if (c == ' ' || c == '\t') break;
+          if (c == ';') {
+            state_ = state::extension_before_name;
+            break;
+          }
+          return fail(result, framer_error::invalid_chunk_size);
+        }
+        case state::extension_before_name: {
+          if (c == ' ' || c == '\t') break;
+          if (helpers::is_token(c)) {
+            state_ = state::extension_name;
+            break;
+          }
+          return fail(result, framer_error::invalid_chunk_size);
+        }
+        case state::extension_name: {
+          if (helpers::is_token(c)) break;
+          if (c == ' ' || c == '\t') {
+            state_ = state::extension_after_name;
+            break;
+          }
+          if (c == '=') {
+            state_ = state::extension_before_value;
+            break;
+          }
+          if (c == ';') {
+            state_ = state::extension_before_name;
+            break;
+          }
           if (c == '\r') {
             state_ = state::size_lf;
             break;
           }
-          if (++extension_size_ > limits::kMaxChunkedExtensionSize) {
-            // Chunk-extension section exceeded the configured size limit!
-            return fail(result,
-                        framer_error::chunk_extension_size_limit_exceeded);
+          return fail(result, framer_error::invalid_chunk_size);
+        }
+        case state::extension_after_name: {
+          if (c == ' ' || c == '\t') break;
+          if (c == '=') {
+            state_ = state::extension_before_value;
+            break;
           }
-          break;
+          if (c == ';') {
+            state_ = state::extension_before_name;
+            break;
+          }
+          if (c == '\r') {
+            state_ = state::size_lf;
+            break;
+          }
+          return fail(result, framer_error::invalid_chunk_size);
+        }
+        case state::extension_before_value: {
+          if (c == ' ' || c == '\t') break;
+          if (helpers::is_token(c)) {
+            state_ = state::extension_token_value;
+            break;
+          }
+          if (c == '"') {
+            state_ = state::extension_quoted_value;
+            break;
+          }
+          return fail(result, framer_error::invalid_chunk_size);
+        }
+        case state::extension_token_value: {
+          if (helpers::is_token(c)) break;
+          if (c == ' ' || c == '\t') {
+            state_ = state::extension_after_value;
+            break;
+          }
+          if (c == ';') {
+            state_ = state::extension_before_name;
+            break;
+          }
+          if (c == '\r') {
+            state_ = state::size_lf;
+            break;
+          }
+          return fail(result, framer_error::invalid_chunk_size);
+        }
+        case state::extension_quoted_value: {
+          if (helpers::is_qdtext(c)) break;
+          if (c == '\\') {
+            state_ = state::extension_quoted_pair;
+            break;
+          }
+          if (c == '"') {
+            state_ = state::extension_after_value;
+            break;
+          }
+          return fail(result, framer_error::invalid_chunk_size);
+        }
+        case state::extension_quoted_pair: {
+          if (c == '\t' || c == ' ' || helpers::is_vchar(c) ||
+              helpers::is_obs_text(c)) {
+            state_ = state::extension_quoted_value;
+            break;
+          }
+          return fail(result, framer_error::invalid_chunk_size);
+        }
+        case state::extension_after_value: {
+          if (c == ' ' || c == '\t') break;
+          if (c == ';') {
+            state_ = state::extension_before_name;
+            break;
+          }
+          if (c == '\r') {
+            state_ = state::size_lf;
+            break;
+          }
+          return fail(result, framer_error::invalid_chunk_size);
         }
         // ---------------------------------------------------------------------
         // LF after chunk-size CR: decide data vs last-chunk
@@ -151,9 +285,7 @@ class framer_chunked {
           }
           extension_size_ = 0;
           if (chunk_remaining_ == 0) {
-            state_ = state::trailer;
-            trailer_line_start_ = true;
-            trailer_cr_seen_ = false;
+            state_ = state::trailer_line_start;
             trailer_size_ = 0;
           } else {
             state_ = state::data;
@@ -195,43 +327,61 @@ class framer_chunked {
             return fail(result, framer_error::invalid_chunk_crlf);
           }
           chunk_remaining_ = 0;
+          chunk_size_started_ = false;
           state_ = state::chunk_size;
           break;
         }
         // ---------------------------------------------------------------------
-        // Trailer section: validate lines, detect terminating empty CRLF
+        // Trailer section
         // ---------------------------------------------------------------------
-        case state::trailer: {
-          if (++trailer_size_ > limits::kMaxChunkedTrailerSize) {
-            // Trailer section exceeded the configured size limit!
-            return fail(result, framer_error::trailer_size_limit_exceeded);
+        case state::trailer_line_start: {
+          if (helpers::is_token(c)) {
+            state_ = state::trailer_name;
+            break;
           }
           if (c == '\r') {
-            trailer_cr_seen_ = true;
-          } else if (c == '\n') {
-            if (trailer_cr_seen_ && trailer_line_start_) {
-              // Terminating empty CRLF - body complete. Write final byte
-              // and return with the exact consumed count.
-              if (!dst.write(input.subspan(i, 1))) {
-                // An I/O error occurred while writing to the destination!
-                return fail(result, framer_error::io_error);
-              }
-              result.consumed += 1;
-              state_ = state::complete;
-              result.complete = true;
-              return result;
-            }
-            if (trailer_cr_seen_) {
-              // End of a non-empty trailer field line.
-              trailer_line_start_ = true;
-            }
-            trailer_cr_seen_ = false;
-          } else {
-            // Non-CR/LF byte: we are inside a trailer field value.
-            trailer_cr_seen_ = false;
-            trailer_line_start_ = false;
+            state_ = state::trailer_end_lf;
+            break;
           }
+          return fail(result, framer_error::invalid_trailer);
+        }
+        case state::trailer_name: {
+          if (helpers::is_token(c)) break;
+          if (c == ':') {
+            state_ = state::trailer_value;
+            break;
+          }
+          return fail(result, framer_error::invalid_trailer);
+        }
+        case state::trailer_value: {
+          if (c == '\r') {
+            state_ = state::trailer_line_lf;
+            break;
+          }
+          if (c == '\t' || c == ' ' || helpers::is_vchar(c) ||
+              helpers::is_obs_text(c)) {
+            break;
+          }
+          return fail(result, framer_error::invalid_trailer);
+        }
+        case state::trailer_line_lf: {
+          if (c != '\n') {
+            return fail(result, framer_error::invalid_trailer);
+          }
+          state_ = state::trailer_line_start;
           break;
+        }
+        case state::trailer_end_lf: {
+          if (c != '\n') {
+            return fail(result, framer_error::invalid_trailer);
+          }
+          if (!dst.write(input.subspan(i, 1))) {
+            return fail(result, framer_error::io_error);
+          }
+          result.consumed += 1;
+          state_ = state::complete;
+          result.complete = true;
+          return result;
         }
         default:
           break;
@@ -282,8 +432,7 @@ class framer_chunked {
   std::size_t chunk_remaining_{0};
   std::size_t extension_size_{0};
   std::size_t trailer_size_{0};
-  bool trailer_cr_seen_{false};
-  bool trailer_line_start_{false};
+  bool chunk_size_started_{false};
 };
 }  // namespace martianlabs::doba::protocol::http::v11::body
 

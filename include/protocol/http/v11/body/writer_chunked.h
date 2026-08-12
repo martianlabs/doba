@@ -54,6 +54,7 @@ class writer_chunked {
   // | Encodes payload as a single chunk and writes it into dst.               |
   // +=========================================================================+
   bool write(std::span<const std::byte> payload, common::writer& dst) {
+    if (ended_) return false;
     if (payload.empty()) return true;
     if (!write_chunk_size(payload.size(), dst)) return false;
     if (!dst.write(payload)) return false;

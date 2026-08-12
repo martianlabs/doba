@@ -98,6 +98,7 @@ class date_server {
       // Not running, do nothing.
       return;
     }
+    if (jthread_.joinable()) jthread_.join();
   }
   // +=========================================================================+
   // | [>] current                                                  ( public ) |

@@ -96,6 +96,7 @@ class decoder {
   // | [>] parse_core                                               ( public ) |
   // +=========================================================================+
   deserialization_result<RQty> parse_core() {
+    reset_decoding_attributes();
     std::string_view sv(buffer_, off_);
     std::size_t i = 0;
     // +-----------------------------------------------------------------------+
@@ -150,7 +151,7 @@ class decoder {
           sv.substr(i), absolute_path_, query_, bytes_used);
       if (status == deserialization_status::kSucceeded) {
         target_ = target::kOriginForm;
-      } else {
+      } else if (status == deserialization_status::kInvalidSource) {
         // If we couldn't parse the request-target as origin-form, let's try to
         // parse it as absolute-form, which is the only other valid form for all
         // other methods.

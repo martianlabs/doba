@@ -37,14 +37,10 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // |                                                                           |
 // | Actively produced by these classes:                                       |
 // |   io_error, invalid_chunk_size, chunk_size_overflow, invalid_chunk_crlf,  |
-// |   chunked_incomplete, raw_incomplete,                                     |
+// |   invalid_trailer, chunked_incomplete, raw_incomplete,                    |
 // |   chunk_extension_size_limit_exceeded, trailer_size_limit_exceeded.       |
 // |                                                                           |
 // | Reserved (declared for API parity / future use, never produced here):     |
-// |   invalid_trailer     - full trailer field-line syntax validation is not  |
-// |                         implemented; trailers are only framed, not        |
-// |                         validated as header fields (same scope as         |
-// |                         framer_chunked).                                  |
 // |   raw_size_limit_exceeded - Content-Length vs. policy limits are enforced |
 // |                         (or should be) at the header/policy layer before  |
 // |                         a body reader is ever constructed, since these    |

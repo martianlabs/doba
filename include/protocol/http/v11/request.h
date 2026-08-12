@@ -329,19 +329,30 @@ class request {
           bool wants_connection_close = false) {
     buffer_ = new char[full_buffer.size()];
     std::memcpy(buffer_, full_buffer.data(), full_buffer.size());
-    char* method_at = buffer_ + (method.data() - full_buffer.data());
-    method_ = std::string_view(method_at, method.size());
-    char* abs_path_at = buffer_ + (abs_path.data() - full_buffer.data());
-    abs_path_ = std::string_view(abs_path_at, abs_path.size());
+    auto rebase = [this, full_buffer](std::string_view value) {
+      if (!value.data()) return std::string_view{};
+      return std::string_view(buffer_ + (value.data() - full_buffer.data()),
+                              value.size());
+    };
+    method_ = rebase(method);
+    abs_path_ = rebase(abs_path);
     helpers::percent_decode_in_place(abs_path_);
     target_ = target_form;
     headers_ = std::move(headers);
+    for (auto& header : headers_) {
+      header.first = rebase(header.first);
+      header.second = rebase(header.second);
+    }
     query_parameters_ = std::move(query_parameters);
-    if (host) host_ = *host;
-    if (port) host_port_ = *port;
+    for (auto& parameter : query_parameters_) {
+      parameter.first = rebase(parameter.first);
+      parameter.second = rebase(parameter.second);
+    }
+    if (host) host_ = rebase(*host);
+    if (port) host_port_ = rebase(*port);
     if (type) host_type_ = *type;
-    if (target_authority_host) ta_host_ = *target_authority_host;
-    if (target_authority_port) ta_port_ = *target_authority_port;
+    if (target_authority_host) ta_host_ = rebase(*target_authority_host);
+    if (target_authority_port) ta_port_ = rebase(*target_authority_port);
     if (target_authority_type) ta_type_ = *target_authority_type;
     wants_connection_close_ = wants_connection_close;
   }

@@ -31,6 +31,7 @@
 
 #include "common/date_server.h"
 #include "platform.h"
+#include "protocol/http/common/helpers.h"
 #include "protocol/http/v11/body/writer.h"
 #include "protocol/http/common/header_names.h"
 #include "protocol/http/v11/limits.h"
@@ -124,6 +125,15 @@ class response {
   // | [>] add_header                                               ( public ) |
   // +=========================================================================+
   response& add_header(std::string_view k, std::string_view v) {
+    if (!helpers::is_token(k)) {
+      throw std::invalid_argument("invalid header name!");
+    }
+    for (const char c : v) {
+      if (c != '\t' && c != ' ' && !helpers::is_vchar(c) &&
+          !helpers::is_obs_text(c)) {
+        throw std::invalid_argument("invalid header value!");
+      }
+    }
     std::size_t k_size = k.size();
     std::size_t v_size = v.size();
     std::size_t space_left = bdy_beg_ - sln_len_ - hdr_len_;
@@ -162,6 +172,15 @@ class response {
   // | [>] set_header                                               ( public ) |
   // +=========================================================================+
   response& set_header(std::string_view k, std::string_view v) {
+    if (!helpers::is_token(k)) {
+      throw std::invalid_argument("invalid header name!");
+    }
+    for (const char c : v) {
+      if (c != '\t' && c != ' ' && !helpers::is_vchar(c) &&
+          !helpers::is_obs_text(c)) {
+        throw std::invalid_argument("invalid header value!");
+      }
+    }
     std::size_t line_off, val_off, val_len, line_len;
     if (!find_header(k, line_off, val_off, val_len, line_len)) {
       // Header not present: reuse add_header to append it.

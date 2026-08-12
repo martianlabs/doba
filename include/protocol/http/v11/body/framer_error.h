@@ -37,12 +37,10 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // |                                                                           |
 // | Actively produced by these classes:                                       |
 // |   io_error, invalid_chunk_size, chunk_size_overflow, invalid_chunk_crlf,  |
-// |   chunk_extension_size_limit_exceeded, trailer_size_limit_exceeded.       |
+// |   invalid_trailer, chunk_extension_size_limit_exceeded,                   |
+// |   trailer_size_limit_exceeded.                                            |
 // |                                                                           |
 // | Reserved (declared for API parity / future use, never produced here):     |
-// |   invalid_trailer     - full trailer field-line syntax validation is not  |
-// |                         implemented; trailers are only framed, not        |
-// |                         validated as header fields.                       |
 // |   chunked_incomplete  - a body that never reaches its terminating CRLF    |
 // |                         simply keeps requesting more bytes (kMoreBytes-   |
 // |                         Needed at the decoder level); premature-EOF       |
