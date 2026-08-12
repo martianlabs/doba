@@ -1,9 +1,11 @@
-name: CI
+name: Build & Test
 
 on:
   pull_request:
   merge_group:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   workflow_dispatch:
@@ -13,7 +15,7 @@ permissions:
 
 jobs:
   ubuntu:
-    name: CI (ubuntu-latest)
+    name: Ubuntu (GCC)
     runs-on: ubuntu-latest
 
     steps:
@@ -34,7 +36,7 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
   windows:
-    name: CI (windows-latest)
+    name: Windows (MSVC)
     runs-on: windows-latest
 
     steps:
@@ -42,7 +44,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: TheMrMilchmann/setup-msvc-dev@v4
         with:
           arch: x64
 
