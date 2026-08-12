@@ -26,12 +26,108 @@
 #define martianlabs_doba_protocol_http_v11_decoder_h
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstring>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <variant>
+#include <vector>
 
+#include "common/byte_storage.h"
+#include "common/hash_map.h"
+#include "common/writer.h"
+#include "protocol/deserialization.h"
+#include "protocol/http/common/header.h"
 #include "protocol/http/common/helpers.h"
-#include "protocol/http/v11/limits.h"
-#include "protocol/http/v11/request.h"
+#include "protocol/http/common/method_names.h"
+#include "protocol/http/common/query_parameter.h"
+#include "protocol/http/common/request_getter.h"
+#include "protocol/http/common/target.h"
+#include "protocol/http/common/headers/accept.h"
+#include "protocol/http/common/headers/accept_charset.h"
+#include "protocol/http/common/headers/accept_encoding.h"
+#include "protocol/http/common/headers/accept_language.h"
+#include "protocol/http/common/headers/accept_ranges.h"
+#include "protocol/http/common/headers/access_control_allow_credentials.h"
+#include "protocol/http/common/headers/access_control_allow_headers.h"
+#include "protocol/http/common/headers/access_control_allow_methods.h"
+#include "protocol/http/common/headers/access_control_allow_origin.h"
+#include "protocol/http/common/headers/access_control_expose_headers.h"
+#include "protocol/http/common/headers/access_control_max_age.h"
+#include "protocol/http/common/headers/access_control_request_headers.h"
+#include "protocol/http/common/headers/access_control_request_method.h"
+#include "protocol/http/common/headers/age.h"
+#include "protocol/http/common/headers/allow.h"
+#include "protocol/http/common/headers/authentication_info.h"
+#include "protocol/http/common/headers/authorization.h"
+#include "protocol/http/common/headers/cache_control.h"
+#include "protocol/http/common/headers/content_encoding.h"
+#include "protocol/http/common/headers/content_language.h"
+#include "protocol/http/common/headers/content_location.h"
+#include "protocol/http/common/headers/content_range.h"
+#include "protocol/http/common/headers/content_type.h"
+#include "protocol/http/common/headers/cookie.h"
+#include "protocol/http/common/headers/date.h"
+#include "protocol/http/common/headers/etag.h"
+#include "protocol/http/common/headers/expires.h"
+#include "protocol/http/common/headers/from.h"
+#include "protocol/http/common/headers/if_match.h"
+#include "protocol/http/common/headers/if_modified_since.h"
+#include "protocol/http/common/headers/if_none_match.h"
+#include "protocol/http/common/headers/if_range.h"
+#include "protocol/http/common/headers/if_unmodified_since.h"
+#include "protocol/http/common/headers/keep_alive.h"
+#include "protocol/http/common/headers/last_modified.h"
+#include "protocol/http/common/headers/location.h"
+#include "protocol/http/common/headers/origin.h"
+#include "protocol/http/common/headers/pragma.h"
+#include "protocol/http/common/headers/proxy_connection.h"
+#include "protocol/http/common/headers/range.h"
+#include "protocol/http/common/headers/referer.h"
+#include "protocol/http/common/headers/retry_after.h"
+#include "protocol/http/common/headers/sec_websocket_accept.h"
+#include "protocol/http/common/headers/sec_websocket_extensions.h"
+#include "protocol/http/common/headers/sec_websocket_key.h"
+#include "protocol/http/common/headers/sec_websocket_protocol.h"
+#include "protocol/http/common/headers/sec_websocket_version.h"
+#include "protocol/http/common/headers/server.h"
+#include "protocol/http/common/headers/set_cookie.h"
+#include "protocol/http/common/headers/user_agent.h"
+#include "protocol/http/common/headers/vary.h"
+#include "protocol/http/common/headers/www_authenticate.h"
 #include "protocol/http/v11/body/framer_raw.h"
 #include "protocol/http/v11/body/framer_chunked.h"
+#include "protocol/http/v11/context.h"
+#include "protocol/http/v11/headers/connection.h"
+#include "protocol/http/v11/headers/content_length.h"
+#include "protocol/http/v11/headers/expect.h"
+#include "protocol/http/v11/headers/forwarded.h"
+#include "protocol/http/v11/headers/host.h"
+#include "protocol/http/v11/headers/max_forwards.h"
+#include "protocol/http/v11/headers/te.h"
+#include "protocol/http/v11/headers/trailer.h"
+#include "protocol/http/v11/headers/transfer_encoding.h"
+#include "protocol/http/v11/headers/upgrade.h"
+#include "protocol/http/v11/headers/via.h"
+#include "protocol/http/v11/headers/x_forwarded_for.h"
+#include "protocol/http/v11/headers/x_forwarded_host.h"
+#include "protocol/http/v11/headers/x_forwarded_proto.h"
+#include "protocol/http/v11/headers/rules/directives.h"
+#include "protocol/http/v11/headers/rules/framing.h"
+#include "protocol/http/v11/headers/rules/policy.h"
+#include "protocol/http/v11/headers/rules/routing.h"
+#include "protocol/http/v11/limits.h"
+#include "protocol/http/v11/parsed_types.h"
+#include "protocol/http/v11/rejection_reason.h"
+#include "protocol/http/v11/verdict.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -41,11 +137,11 @@ namespace martianlabs::doba::protocol::http::v11 {
 // | This class holds for the http 1.1 decoder implementation.                 |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   RQty - request being used (v11::request by default).                    |
-// |   RSty - response being used (v11::response by default).                  |
+// |   RQty - request being used.                                              |
+// |   RSty - response being used.                                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <typename RQty = request, typename RSty = response>
+template <typename RQty, typename RSty>
 class decoder {
   // +=========================================================================+
   // | [>] USINGs                                                  ( private ) |
@@ -410,7 +506,7 @@ class decoder {
     }
     // Now that the request is fully validated, we can build the request object
     std::string_view buffer_view(buffer_, bytes_used);
-    request_getter_ = request::from(
+    request_getter_ = RQty::from(
         buffer_view, method_, absolute_path_, target_, headers_,
         query_parameters, host_host, host_port, host_type,
         target_authority_host, target_authority_port, target_authority_type,
