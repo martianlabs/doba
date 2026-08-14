@@ -22,32 +22,40 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <string>
+
 #include "common/console_logger.h"
 #include "common/logo.h"
-#include "network/environment.h"
+#include "common/signaler.h"
 #include "protocol/http/v11/server.h"
 
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
 int main(int argc, char* argv[]) {
-  console_logger logger{
-      "001-hello_world",
-      console_logger_options{.show_function = false, .show_line = false}};
-  logo::dump();
-  martianlabs::doba::network::startup();
   server http_server;
   http_server.add_route(
-      "GET", "/pipeline",
+      "GET", "/cookies",
       [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+        std::string body = "session: ";
+        // Cookie lookup parses the Cookie field on demand.
+        const auto session = req->get_cookie("session");
+        body.append(session ? *session : "not provided");
+        body.append("\n\nall cookies:\n");
+        for (const auto& [name, value] : req->get_cookies()) {
+          body.append(name);
+          body.append(" = ");
+          body.append(value);
+          body.push_back('\n');
+        }
         res->ok_200()
-            .add_header("Server", "doba.")
             .add_header("Content-Type", "text/plain; charset=utf-8")
-            .set_body("ok");
+            // Keep each Set-Cookie value as a separate header field.
+            .add_header("Set-Cookie", "session=doba; Path=/; HttpOnly")
+            .add_header("Set-Cookie", "theme=dark; Path=/; SameSite=Lax")
+            .set_body(body);
       });
   http_server.start("8080");
-  logger.info() << "server listening on port 8080";
-  while (true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  martianlabs::doba::network::cleanup();
+  signaler::wait();
   return 0;
 }

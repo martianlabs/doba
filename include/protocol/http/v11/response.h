@@ -358,6 +358,19 @@ class response {
     return *this;
   }
   // +=========================================================================+
+  // | [>] set_body                                                 ( public ) |
+  // +=========================================================================+
+  // | Convenience overload for numeric types: converts the value to a string  |
+  // | and stores it as the response body. Framing headers are derived from    |
+  // | the writer: chunked writers get 'Transfer-Encoding: chunked',           |
+  // | raw ones a 'Content-Length' matching the bytes written so far.          |
+  // +-------------------------------------------------------------------------+
+  template <typename T>
+    requires std::is_arithmetic_v<T>
+  response& set_body(const T& val) {
+    return set_body(std::to_string(val));
+  }
+  // +=========================================================================+
   // | [>] clear_body                                               ( public ) |
   // +=========================================================================+
   // | Discards any body bytes previously set via set_body(), and removes the  |

@@ -22,31 +22,20 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_network_environment_windows_h
-#define martianlabs_doba_network_environment_windows_h
+#ifndef martianlabs_doba_common_signaler_h
+#define martianlabs_doba_common_signaler_h
 
-#include <stdexcept>
+#include "platform.h"
 
-namespace martianlabs::doba::network::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] environment [windowsTM]                                     ( class ) |
+// | [>] PLATFORM-DEPENDENT-INCLUDEs                               ( section ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-class environment {
- public:
-  environment() {
-    WSADATA wsa_data;
-    if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
-      throw std::runtime_error("Could not initialize network environment!");
-    }
-  }
-  environment(const environment&) = delete;
-  environment(environment&&) noexcept = delete;
-  ~environment() { WSACleanup(); }
-  environment& operator=(const environment&) = delete;
-  environment& operator=(environment&&) noexcept = delete;
-};
-}  // namespace martianlabs::doba::network::detail
+#ifdef _WIN32
+#include "common/signaler_windows.h"
+#elif __linux__
+#include "common/signaler_linux.h"
+#endif
 
 #endif

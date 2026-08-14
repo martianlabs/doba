@@ -66,24 +66,27 @@ cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
 
-Requires CMake ≥ 3.20 and a C++20 compiler. MSVC/Ninja presets (`msvc-debug`, `msvc-release`) are provided in `CMakePresets.json`.
+Requires CMake ≥ 3.20 and a C++20 compiler. The MSVC/Ninja presets
+(`msvc-debug`, `msvc-release`) provided in `CMakePresets.json` require
+CMake ≥ 3.25.
 
 ## Current scope
 
 doba is under active development. The transport/protocol contract, HTTP/1.1
-request decoding, routing, and body handling are in place, and both the Windows
-(IOCP) and Linux (epoll) transports are implemented and unified behind the same
-contract.
+request decoding, routing, `Expect: 100-continue`, and body handling are in
+place, and both the Windows (IOCP) and Linux (epoll) transports are implemented
+and unified behind the same contract.
 
 Deliberately **out of scope for the first release**: TLS (deploy behind a
 terminator) and content compression — both are product decisions, the latter
 because it would introduce an external dependency and break the "no
 dependencies" rule above.
 
-Still pending for compliance: connection timeouts, `100-continue`, conditional
-request and `Range` evaluation, `OPTIONS`/`Allow`, protocol upgrade handling,
-outbound trailers, and effective connection limits. Pending work is tracked in
-[docs/HANDOFF.md](docs/HANDOFF.md).
+Still pending for compliance: connection timeouts, conditional request and
+`Range` evaluation, automatic resource-specific `OPTIONS` responses, protocol
+upgrade handling, outbound trailers, and effective connection limits.
+`OPTIONS *` and `Allow` on `405 Method Not Allowed` are already implemented.
+Pending work is tracked in [docs/HANDOFF.md](docs/HANDOFF.md).
 
 ## License
 

@@ -22,24 +22,28 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_network_environment_linux_h
-#define martianlabs_doba_network_environment_linux_h
+#include "common/console_logger.h"
+#include "common/logo.h"
+#include "common/signaler.h"
+#include "protocol/http/v11/server.h"
 
-namespace martianlabs::doba::network::detail {
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] environment [linux]                                         ( class ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-class environment {
- public:
-  environment() = default;
-  environment(const environment&) = delete;
-  environment(environment&&) noexcept = delete;
-  ~environment() = default;
-  environment& operator=(const environment&) = delete;
-  environment& operator=(environment&&) noexcept = delete;
-};
-}  // namespace martianlabs::doba::network::detail
+using namespace martianlabs::doba::common;
+using namespace martianlabs::doba::protocol::http::v11;
 
-#endif
+int main(int argc, char* argv[]) {
+  server http_server;
+  // Routes are selected by both the HTTP method and the absolute path.
+  http_server.add_route(
+      "GET", "/pipeline",
+      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+        // Response mutators return response&, so they can be chained.
+        res->ok_200()
+            .add_header("Server", "doba.")
+            .add_header("Content-Type", "text/plain; charset=utf-8")
+            .set_body("ok");
+      });
+  http_server.start("8080");
+  // start() returns after opening the listener; wait for a shutdown signal.
+  signaler::wait();
+  return 0;
+}

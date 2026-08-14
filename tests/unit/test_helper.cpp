@@ -28,7 +28,6 @@
 #include <vector>
 
 #include "common/console_logger.h"
-#include "common/logo.h"
 
 // +===========================================================================+
 // | [>] test_case                                                  ( struct ) |
@@ -92,7 +91,15 @@ int test_helper::run() {
   common::console_logger logger{
       "unit_tests", common::console_logger_options{.show_function = false,
                                                    .show_line = false}};
-  common::logo::dump();
+  static constexpr std::string_view kText =
+      "     _       _\n"
+      "  __| | ___ | |__   __ _\n"
+      " / _` |/ _ \\| '_ \\ / _` |\n"
+      "| (_| | (_) | |_) | (_| |\n"
+      " \\__,_|\\___/|_.__/ \\__,_|\n";
+  std::fwrite(kText.data(), 1, kText.size(), stdout);
+  std::fputc('\n', stdout);
+  std::fflush(stdout);
   logger.info() << "running " << tests().size() << " unit tests";
   std::size_t failed_tests = 0;
   for (const auto& test : tests()) {

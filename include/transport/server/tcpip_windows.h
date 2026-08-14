@@ -38,6 +38,7 @@
 #include <span>
 #include <unordered_map>
 
+#include "network/environment.h"
 #include "platform.h"
 #include "protocol/deserialization.h"
 #include "protocol/serialization.h"
@@ -1176,6 +1177,7 @@ class tcpip {
   // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
   // +=========================================================================+
+  network::detail::environment environment_;
   HANDLE io_h_ = nullptr;
   SOCKET accept_socket_ = INVALID_SOCKET;
   LPFN_ACCEPTEX accept_ex_ = nullptr;

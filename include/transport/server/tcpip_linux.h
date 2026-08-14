@@ -44,6 +44,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "network/environment.h"
 #include "platform.h"
 #include "protocol/deserialization.h"
 #include "protocol/serialization.h"
@@ -1054,6 +1055,7 @@ class tcpip {
   // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
   // +=========================================================================+
+  network::detail::environment environment_;
   std::vector<std::shared_ptr<worker<RQty, RSty, DEty>>> workers_;
   std::mutex lifecycle_mutex_;
   std::condition_variable lifecycle_condition_;
