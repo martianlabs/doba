@@ -5,7 +5,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$buildDirectory = Join-Path $repoRoot "build\http11probe"
+$buildDirectory = Join-Path $repoRoot "build\http11probe-windows"
 
 cmake -S $PSScriptRoot -B $buildDirectory -DCMAKE_BUILD_TYPE=Release
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

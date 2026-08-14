@@ -5,7 +5,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$buildDirectory = Join-Path $repoRoot "build\h1spec"
+$buildDirectory = Join-Path $repoRoot "build\h1spec-windows"
 
 cmake -S $PSScriptRoot -B $buildDirectory -DCMAKE_BUILD_TYPE=Release
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

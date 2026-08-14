@@ -3,7 +3,7 @@ set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd -- "$script_dir/../.." && pwd)"
-build_directory="$repo_root/build/h1spec"
+build_directory="$repo_root/build/h1spec-linux"
 doba_host="${DOBA_HOST:-host.docker.internal}"
 doba_port="${DOBA_PORT:-8080}"
 server_pid=""
