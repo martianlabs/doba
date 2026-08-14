@@ -1,6 +1,6 @@
 # Web Frameworks HTTP/1.1 benchmark adapter
 
-This target exposes the root route used by the Web Frameworks benchmark. It
+This target exposes the routes used by the Web Frameworks benchmark. It
 contains only the doba server adapter; the upstream project owns validation,
 load generation, and result collection.
 
@@ -22,7 +22,7 @@ build/web-frameworks/http/v11/doba_web_frameworks_http_v11
 
 The adapter implements `GET /`, `GET /user/:id`, and `POST /user` on port
 3000, with the responses required by the upstream validation suite. The default
-upstream run benchmarks `GET /`.
+upstream profile measures `GET /`, `GET /user/0`, and `POST /user`.
 
 Build and start the standalone adapter container:
 
