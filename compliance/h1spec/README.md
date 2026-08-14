@@ -26,14 +26,17 @@ See `compliance/README.md` for the complete battery and its final summary.
 Run this command from a Visual Studio developer PowerShell:
 
 ```powershell
-.\compliance\run-h1spec.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\compliance\run-h1spec.ps1
 ```
 
 Override the target when necessary:
 
 ```powershell
-.\compliance\run-h1spec.ps1 -DobaHost server.internal -DobaPort 8081
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\compliance\run-h1spec.ps1 -DobaHost server.internal -DobaPort 8081
 ```
+
+`Bypass` applies only to the PowerShell process started by the command; it does
+not change the execution policy of the system or the current shell.
 
 ## Linux
 

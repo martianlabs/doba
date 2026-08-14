@@ -12,58 +12,106 @@ The two benchmark adapters remain read-only mounts:
 - `benchmarks/web-frameworks/http/v11`
 - `benchmarks/httparena/http/v11`
 
-## Configure targets
+## Requirements
 
-Edit `targets.env` to select the default framework subset for each suite. Use
-`docker compose build runner` after editing it so the new defaults are copied
-into the image. Use `-e` to override a selection for one invocation without
-rebuilding.
+- Docker Desktop or Docker Engine with Docker Compose V2.
+- Network access when the runner or an upstream image is first built.
+- Docker Desktop WSL integration enabled when running from WSL.
+
+## Run all suites
+
+The following examples run from the repository root. On Windows:
 
 ```powershell
-docker compose run --rm -e WEB_FRAMEWORKS=doba,drogon,oatpp runner web-frameworks
-docker compose run --rm -e HTTPARENA_FRAMEWORKS=doba,web-framework-cpp runner httparena
+.\benchmarks\run-all.ps1
 ```
 
-`doba` is copied from the mounted adapter into each temporary upstream
-checkout. The remaining names must exist in the corresponding upstream
-project.
+On Linux:
 
-## Run
-
-From `benchmarks/`:
-
-```powershell
-docker compose build runner
-docker compose run --rm runner web-frameworks
-docker compose run --rm runner httparena
-docker compose run --rm runner all
+```sh
+bash benchmarks/run-all.sh
 ```
 
-Each command validates selected targets first. `web-frameworks` then runs its
-upstream benchmark workflow. `httparena` runs its upstream benchmark workflow
-after validation. To perform validation only:
+Both commands benchmark the default framework subsets. To validate them
+without collecting benchmark measurements, use:
 
 ```powershell
-docker compose run --rm runner web-frameworks validate
-docker compose run --rm runner httparena validate
-docker compose run --rm runner all validate
+.\benchmarks\run-all.ps1 -Mode validate
 ```
 
-The runner creates its upstream checkouts in the `runner-work` volume. Exported
-logs and results are written under `artifacts/`, which is ignored by Git.
-
-## Cleanup
-
-The daemon is isolated from Docker Desktop's image cache and containers. Stop
-the stack normally with:
-
-```powershell
-docker compose down
+```sh
+BENCHMARK_MODE=validate bash benchmarks/run-all.sh
 ```
 
-Remove its cached checkouts and images as well only when they are no longer
-needed:
+The all-suite runners execute Web Frameworks first and HttpArena second, even
+when Web Frameworks fails. They exit non-zero when either suite fails.
+
+## Select frameworks
+
+The defaults are defined in `targets.env`. Override both subsets on Windows
+with:
 
 ```powershell
-docker compose down --volumes
+.\benchmarks\run-all.ps1 -WebFrameworks "doba,drogon,oatpp" -HttpArenaFrameworks "doba,web-framework-cpp"
+```
+
+On Linux:
+
+```sh
+WEB_FRAMEWORKS=doba,drogon,oatpp HTTPARENA_FRAMEWORKS=doba,web-framework-cpp bash benchmarks/run-all.sh
+```
+
+The scripts rebuild the runner automatically, so changes to `targets.env`
+take effect on the next execution. The remaining framework names must exist in
+the corresponding upstream project.
+
+## Run one suite
+
+Use the individual runners to execute one suite. On Windows:
+
+```powershell
+.\benchmarks\run-web-frameworks.ps1
+.\benchmarks\run-httparena.ps1
+```
+
+Select frameworks or validation mode with:
+
+```powershell
+.\benchmarks\run-web-frameworks.ps1 -Mode validate -Frameworks "doba"
+.\benchmarks\run-httparena.ps1 -Mode validate -Frameworks "doba"
+```
+
+On Linux:
+
+```sh
+bash benchmarks/run-web-frameworks.sh
+bash benchmarks/run-httparena.sh
+```
+
+Select frameworks or validation mode with:
+
+```sh
+BENCHMARK_MODE=validate WEB_FRAMEWORKS=doba bash benchmarks/run-web-frameworks.sh
+BENCHMARK_MODE=validate HTTPARENA_FRAMEWORKS=doba bash benchmarks/run-httparena.sh
+```
+
+## Results
+
+The runner creates temporary upstream checkouts in the `runner-work` volume.
+Exported logs and results are written under `artifacts/`, which is ignored by
+Git. Each wrapper stops the Compose stack after execution while preserving
+these artifacts and the named cache volumes.
+
+## Implementation
+
+The platform wrappers call Docker Compose and build the runner automatically.
+`benchmark-runner.sh` is the container's internal entry point and is not
+invoked directly from the host. It copies the mounted `doba` adapter into
+each temporary upstream checkout before running the official workflows.
+
+The daemon is isolated from Docker Desktop's image cache and containers. Remove
+its cached checkouts and inner images only when they are no longer needed:
+
+```powershell
+docker compose -f benchmarks/compose.yaml down --volumes
 ```

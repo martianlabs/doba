@@ -22,14 +22,17 @@ sequentially.
 Run this command from a Visual Studio developer PowerShell:
 
 ```powershell
-.\compliance\run-all.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\compliance\run-all.ps1
 ```
 
 Override the target when necessary:
 
 ```powershell
-.\compliance\run-all.ps1 -DobaHost server.internal -DobaPort 8081
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\compliance\run-all.ps1 -DobaHost server.internal -DobaPort 8081
 ```
+
+`Bypass` applies only to the PowerShell process started by the command; it does
+not change the execution policy of the system or the current shell.
 
 ## Run all suites on Linux
 
@@ -76,11 +79,11 @@ output. For Http11Probe, use `results.json` for the structured per-case detail.
 ### Windows
 
 ```powershell
-.\compliance\run-h1spec.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\compliance\run-h1spec.ps1
 ```
 
 ```powershell
-.\compliance\run-http11probe.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\compliance\run-http11probe.ps1
 ```
 
 ### Linux

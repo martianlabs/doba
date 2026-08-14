@@ -19,7 +19,7 @@ RUN apt-get update \
        make \
     && rm -rf /var/lib/apt/lists/*
 
-COPY run.sh /usr/local/bin/benchmark-runner
+COPY benchmark-runner.sh /usr/local/bin/benchmark-runner
 COPY targets.env /usr/local/etc/benchmark-targets.env
 
 RUN sed -i 's/\r$//' /usr/local/etc/benchmark-targets.env \
