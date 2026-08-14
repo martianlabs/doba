@@ -1,5 +1,24 @@
-cmake_minimum_required(VERSION 3.20)
-project(large_response_bodies LANGUAGES CXX)
-add_executable(large_response_bodies "${CMAKE_CURRENT_LIST_DIR}/main.cpp")
-target_link_libraries(large_response_bodies PRIVATE doba_headers)
-source_group(TREE "${CMAKE_CURRENT_LIST_DIR}" FILES "${CMAKE_CURRENT_LIST_DIR}/main.cpp")
+cmake_minimum_required(
+  VERSION 3.20
+)
+
+project(
+  large_response_bodies
+  LANGUAGES CXX
+)
+
+add_executable(
+  large_response_bodies
+  "${CMAKE_CURRENT_LIST_DIR}/main.cpp"
+)
+
+target_link_libraries(
+  large_response_bodies
+  PRIVATE
+  doba_headers
+)
+
+source_group(
+  TREE "${CMAKE_CURRENT_LIST_DIR}"
+  FILES "${CMAKE_CURRENT_LIST_DIR}/main.cpp"
+)
