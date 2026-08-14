@@ -20,10 +20,11 @@ The two benchmark adapters remain read-only mounts:
 
 ## Run all suites
 
-The following examples run from the repository root. On Windows:
+The following examples run from the repository root. The Windows commands
+bypass the script policy for their process only:
 
 ```powershell
-.\benchmarks\run-all.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\benchmarks\run-all.ps1
 ```
 
 On Linux:
@@ -36,7 +37,7 @@ Both commands benchmark the default framework subsets. To validate them
 without collecting benchmark measurements, use:
 
 ```powershell
-.\benchmarks\run-all.ps1 -Mode validate
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\benchmarks\run-all.ps1 -Mode validate
 ```
 
 ```sh
@@ -52,7 +53,7 @@ The defaults are defined in `targets.env`. Override both subsets on Windows
 with:
 
 ```powershell
-.\benchmarks\run-all.ps1 -WebFrameworks "doba,drogon,oatpp" -HttpArenaFrameworks "doba,web-framework-cpp"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\benchmarks\run-all.ps1 -WebFrameworks "doba,drogon,oatpp" -HttpArenaFrameworks "doba,web-framework-cpp"
 ```
 
 On Linux:
@@ -70,15 +71,15 @@ the corresponding upstream project.
 Use the individual runners to execute one suite. On Windows:
 
 ```powershell
-.\benchmarks\run-web-frameworks.ps1
-.\benchmarks\run-httparena.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\benchmarks\run-web-frameworks.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\benchmarks\run-httparena.ps1
 ```
 
 Select frameworks or validation mode with:
 
 ```powershell
-.\benchmarks\run-web-frameworks.ps1 -Mode validate -Frameworks "doba"
-.\benchmarks\run-httparena.ps1 -Mode validate -Frameworks "doba"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\benchmarks\run-web-frameworks.ps1 -Mode validate -Frameworks "doba"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\benchmarks\run-httparena.ps1 -Mode validate -Frameworks "doba"
 ```
 
 On Linux:

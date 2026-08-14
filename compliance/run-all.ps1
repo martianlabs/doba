@@ -24,7 +24,15 @@ function Invoke-ComplianceSuite {
   )
 
   Write-Host "`n=== $Name ==="
+  $ErrorActionPreference = "Continue"
   & $powerShellExecutable -NoProfile -ExecutionPolicy Bypass -File $Script -DobaHost $DobaHost -DobaPort $DobaPort 2>&1 |
+    ForEach-Object {
+      if ($_ -is [System.Management.Automation.ErrorRecord]) {
+        $_.Exception.Message
+      } else {
+        $_
+      }
+    } |
     Tee-Object -FilePath $Log |
     Out-Host
   return $LASTEXITCODE

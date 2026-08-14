@@ -43,10 +43,24 @@ $exitCode = 1
 try {
   $server = Start-Process -FilePath $serverPath -WindowStyle Hidden -PassThru
   Start-Sleep -Seconds 1
-  docker compose -f (Join-Path $suiteDirectory "docker-compose.yml") run --rm --build http11probe 2>&1 |
-    Tee-Object -FilePath $logPath |
-    Out-Host
-  $exitCode = $LASTEXITCODE
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    docker compose -f (Join-Path $suiteDirectory "docker-compose.yml") run --rm --build http11probe 2>&1 |
+      ForEach-Object {
+        if ($_ -is [System.Management.Automation.ErrorRecord]) {
+          $_.Exception.Message
+        } else {
+          $_
+        }
+      } |
+      Tee-Object -FilePath $logPath |
+      Out-Host
+    $exitCode = $LASTEXITCODE
+  }
+  finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
 }
 finally {
   if ($server -and -not $server.HasExited) {
