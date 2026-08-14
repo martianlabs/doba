@@ -51,7 +51,10 @@ DOBA_HOST=server.internal DOBA_PORT=8081 bash compliance/run-h1spec.sh
 
 `DOBA_HOST` must resolve from inside the runner container. h1spec writes its
 complete result to the terminal and returns a non-zero exit status when any
-test fails; it does not create a result artifact.
+test fails. The runner saves that output to
+`compliance/out/h1spec-<timestamp>/h1spec.log` and writes the total, passed,
+failed, and warning counts to `summary.txt` in the same directory. h1spec does
+not produce a native structured result file.
 
 ## Verified result
 

@@ -48,12 +48,16 @@ Override the target when necessary:
 DOBA_HOST=server.internal DOBA_PORT=8081 bash compliance/run-http11probe.sh
 ```
 
-`DOBA_HOST` must resolve from inside the runner container. Http11Probe writes
-`results.json` to `compliance/http11probe/out/http11probe/results.json`. This
-directory is ignored by Git; inspect, archive, or remove the artifact after a
-run. The CLI can exit with status zero when the report contains failed cases,
-so use `summary.failed` and the individual verdicts in `results.json` as the
-pass/fail result.
+`DOBA_HOST` must resolve from inside the runner container. The runner writes a
+quick quantitative summary to
+`compliance/out/http11probe-<timestamp>/summary.txt` and its complete output
+to `http11probe.log` in the same directory. Http11Probe writes the structured
+per-case report to `compliance/http11probe/out/http11probe/results.json`.
+These output directories are ignored by Git; inspect, archive, or remove them
+after a run. The CLI can exit with status zero when the report contains failed
+cases, so use the counts in `summary.txt` and the individual verdicts in
+`results.json` as the result. Use `run-all.ps1` or `run-all.sh` when automation
+must return a non-zero exit status for scored Http11Probe failures.
 
 ## Verified result
 

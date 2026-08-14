@@ -59,11 +59,19 @@ also writes its structured report to
 `compliance/http11probe/out/http11probe/results.json`. Both output directories
 are ignored by Git.
 
+The all-suite runner invokes the two suite-specific runners. Those runners
+also create their own `h1spec-<timestamp>/` and
+`http11probe-<timestamp>/` directories under `compliance/out/`, each with a
+suite-only log and `summary.txt`.
+
 ## Run one suite
 
 Use these runners only to investigate one suite in isolation. Each writes its
 complete log and a suite-specific `summary.txt` under
 `compliance/out/<suite>-<timestamp>/`.
+
+Read `summary.txt` first for the test counts. Use the log for the full suite
+output. For Http11Probe, use `results.json` for the structured per-case detail.
 
 ### Windows
 

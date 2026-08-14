@@ -69,9 +69,9 @@ write_failures() {
       sub(/,[[:space:]]*$/, "", line)
       sub(/^"/, "", line)
       sub(/"$/, "", line)
-      gsub(/\\\\u00A7/, "S", line)
-      gsub(/\\\\u2014/, "-", line)
-      gsub(/\\\\u002B/, "+", line)
+      gsub(/\\u00A7/, "S", line)
+      gsub(/\\u2014/, "-", line)
+      gsub(/\\u002B/, "+", line)
       return line
     }
     /^[[:space:]]*"id":/ {
