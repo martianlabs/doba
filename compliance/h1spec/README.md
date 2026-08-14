@@ -9,56 +9,116 @@ benchmark targets.
 - CMake 3.20 or newer and a C++20 compiler.
 - Docker Desktop or Docker Engine with Docker Compose V2.
 - Network access when the runner image is first built.
-- On Windows, a Visual Studio developer shell when building with MSVC.
 
 The runner downloads h1spec during its image build, checks out commit
 `f0a5650a20c575fbea0f7179a3a9cfa50f20ba6e`, and verifies that checkout. No
 local clone of h1spec is required.
 
-## Run the suite
+Run only one compliance suite at a time because both default to port `8080`.
 
-Build the adapter in Release mode:
+## Windows
 
-```text
+Use a Visual Studio developer PowerShell. Run the following commands in the
+same window. Run the cleanup command even if the suite fails.
+
+Configure the Release build:
+
+```powershell
 cmake -S compliance/h1spec -B build/h1spec -DCMAKE_BUILD_TYPE=Release
+```
+
+Build the adapter:
+
+```powershell
 cmake --build build/h1spec --config Release
 ```
 
-In Windows PowerShell, start the adapter, run the runner, and always stop the
-adapter when the suite exits:
+Start the adapter:
 
 ```powershell
-$server = Start-Process `
-  -FilePath (Resolve-Path "build/h1spec/Release/doba_h1spec.exe") `
-  -WindowStyle Hidden `
-  -PassThru
-$exitCode = 1
-try {
-  Start-Sleep -Seconds 1
-  docker compose -f compliance/h1spec/docker-compose.yml run --rm --build h1spec
-  $exitCode = $LASTEXITCODE
-}
-finally {
-  if (-not $server.HasExited) {
-    Stop-Process -Id $server.Id -Force
-    $server.WaitForExit()
-  }
-}
-exit $exitCode
+$server = Start-Process -FilePath (Resolve-Path "build/h1spec/Release/doba_h1spec.exe") -WindowStyle Hidden -PassThru
 ```
+
+Wait for the adapter to start:
+
+```powershell
+Start-Sleep -Seconds 1
+```
+
+Run the suite:
+
+```powershell
+docker compose -f compliance/h1spec/docker-compose.yml run --rm --build h1spec
+```
+
+Stop the adapter:
+
+```powershell
+Stop-Process -Id $server.Id -Force
+```
+
+## Linux
+
+Run the following commands in the same shell. Run the cleanup command even if
+the suite fails.
+
+Configure the Release build:
+
+```sh
+cmake -S compliance/h1spec -B build/h1spec -DCMAKE_BUILD_TYPE=Release
+```
+
+Build the adapter:
+
+```sh
+cmake --build build/h1spec
+```
+
+Start the adapter and retain its process ID:
+
+```sh
+./build/h1spec/doba_h1spec & server_pid=$!
+```
+
+Wait for the adapter to start:
+
+```sh
+sleep 1
+```
+
+Run the suite:
+
+```sh
+docker compose -f compliance/h1spec/docker-compose.yml run --rm --build h1spec
+```
+
+Stop the adapter:
+
+```sh
+kill "$server_pid"
+```
+
+## Target override
 
 The runner targets `host.docker.internal:8080`. Override either endpoint part
 when necessary before invoking Docker Compose. `DOBA_HOST` must resolve from
-inside the runner container:
+inside the runner container.
 
 ```powershell
 $env:DOBA_HOST = "server.internal"
+```
+
+```powershell
 $env:DOBA_PORT = "8081"
 ```
 
-For a single-config generator, the executable is normally
-`build/h1spec/doba_h1spec` rather than the MSVC Release path above. Run only
-one compliance suite at a time because both default to port `8080`.
+```sh
+export DOBA_HOST=server.internal
+```
+
+```sh
+export DOBA_PORT=8081
+```
 
 h1spec writes its complete result to the terminal and returns a non-zero exit
 status when any test fails; it does not create a result artifact.
