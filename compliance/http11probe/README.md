@@ -14,22 +14,24 @@ The runner downloads Http11Probe during its image build, checks out commit
 `59513c793ca1f148c82cfedc4b5d75b81d47c591`, restores and builds its CLI. No
 local clone of Http11Probe is required.
 
-The platform script configures and builds the adapter, starts it, runs the
-suite, and always stops the adapter. Run only one compliance suite at a time
-because both default to port `8080`.
+Use the parent runner to execute the complete compliance battery. This
+suite-specific runner configures and builds the adapter, starts it, runs the
+suite, and always stops the adapter.
+
+See `compliance/README.md` for the complete battery and its final summary.
 
 ## Windows
 
 Run this command from a Visual Studio developer PowerShell:
 
 ```powershell
-.\compliance\http11probe\run.ps1
+.\compliance\run-http11probe.ps1
 ```
 
 Override the target when necessary:
 
 ```powershell
-.\compliance\http11probe\run.ps1 -DobaHost server.internal -DobaPort 8081
+.\compliance\run-http11probe.ps1 -DobaHost server.internal -DobaPort 8081
 ```
 
 ## Linux
@@ -37,13 +39,13 @@ Override the target when necessary:
 Run this command from a Bash shell:
 
 ```sh
-bash compliance/http11probe/run.sh
+bash compliance/run-http11probe.sh
 ```
 
 Override the target when necessary:
 
 ```sh
-DOBA_HOST=server.internal DOBA_PORT=8081 bash compliance/http11probe/run.sh
+DOBA_HOST=server.internal DOBA_PORT=8081 bash compliance/run-http11probe.sh
 ```
 
 `DOBA_HOST` must resolve from inside the runner container. Http11Probe writes

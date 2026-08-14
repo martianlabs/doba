@@ -15,22 +15,24 @@ The runner downloads h1spec during its image build, checks out commit
 `f0a5650a20c575fbea0f7179a3a9cfa50f20ba6e`, and verifies that checkout. No
 local clone of h1spec is required.
 
-The platform script configures and builds the adapter, starts it, runs the
-suite, and always stops the adapter. Run only one compliance suite at a time
-because both default to port `8080`.
+Use the parent runner to execute the complete compliance battery. This
+suite-specific runner configures and builds the adapter, starts it, runs the
+suite, and always stops the adapter.
+
+See `compliance/README.md` for the complete battery and its final summary.
 
 ## Windows
 
 Run this command from a Visual Studio developer PowerShell:
 
 ```powershell
-.\compliance\h1spec\run.ps1
+.\compliance\run-h1spec.ps1
 ```
 
 Override the target when necessary:
 
 ```powershell
-.\compliance\h1spec\run.ps1 -DobaHost server.internal -DobaPort 8081
+.\compliance\run-h1spec.ps1 -DobaHost server.internal -DobaPort 8081
 ```
 
 ## Linux
@@ -38,13 +40,13 @@ Override the target when necessary:
 Run this command from a Bash shell:
 
 ```sh
-bash compliance/h1spec/run.sh
+bash compliance/run-h1spec.sh
 ```
 
 Override the target when necessary:
 
 ```sh
-DOBA_HOST=server.internal DOBA_PORT=8081 bash compliance/h1spec/run.sh
+DOBA_HOST=server.internal DOBA_PORT=8081 bash compliance/run-h1spec.sh
 ```
 
 `DOBA_HOST` must resolve from inside the runner container. h1spec writes its
