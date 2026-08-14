@@ -293,11 +293,19 @@ class decoder {
     // | HTTP-version   | HTTP-name "/" DIGIT "." DIGIT                        |
     // | HTTP-name      | %s"HTTP"                                             |
     // +----------------+------------------------------------------------------+
-    if (i + 7 >= off_) return deserialization_status::kMoreBytesNeeded;
-    if (sv[i + 0] != 'H' || sv[i + 1] != 'T' || sv[i + 2] != 'T' ||
-        sv[i + 3] != 'P' || sv[i + 4] != '/' || !helpers::is_digit(sv[i + 5]) ||
-        sv[i + 6] != '.' || !helpers::is_digit(sv[i + 7])) {
-      return deserialization_status::kInvalidSource;
+    constexpr std::string_view kHttpVersion = "HTTP/0.0";
+    constexpr std::size_t kHttpVersionLength = kHttpVersion.size();
+    const std::size_t available = std::min(kHttpVersionLength, off_ - i);
+    for (std::size_t version_index = 0; version_index < available;
+         version_index++) {
+      const char expected = kHttpVersion[version_index];
+      if ((expected == '0' && !helpers::is_digit(sv[i + version_index])) ||
+          (expected != '0' && sv[i + version_index] != expected)) {
+        return deserialization_status::kInvalidSource;
+      }
+    }
+    if (available < kHttpVersionLength) {
+      return deserialization_status::kMoreBytesNeeded;
     }
     if (sv[i + 5] != '1' || sv[i + 7] != '1') {
       // The grammar is well-formed but the version is not HTTP/1.1. A
@@ -311,8 +319,10 @@ class decoder {
       return deserialization_status::kInvalidSource;
     }
     i += 8;
+    if (i >= off_) return deserialization_status::kMoreBytesNeeded;
+    if (sv[i] != '\r') return deserialization_status::kInvalidSource;
     if (i + 1 >= off_) return deserialization_status::kMoreBytesNeeded;
-    if (sv[i + 0] != '\r' || sv[i + 1] != '\n') {
+    if (sv[i + 1] != '\n') {
       return deserialization_status::kInvalidSource;
     }
     i += 2;

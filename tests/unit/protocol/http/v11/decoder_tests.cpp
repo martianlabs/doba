@@ -136,6 +136,41 @@ DOBA_TEST("parses a valid request at every transport split") {
   }
 }
 // +===========================================================================+
+// | [>] parses each target form at every transport split        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("parses every request target form at every transport split") {
+  struct test_case {
+    std::string_view source;
+    target target_form;
+  };
+  constexpr test_case cases[] = {
+      {"GET /path HTTP/1.1\r\nHost: example.com\r\n\r\n",
+       target::kOriginForm},
+      {"GET http://example.com/path HTTP/1.1\r\nHost: example.com\r\n\r\n",
+       target::kAbsoluteForm},
+      {"CONNECT example.com:443 HTTP/1.1\r\nHost: example.com:443\r\n\r\n",
+       target::kAuthorityForm},
+      {"OPTIONS * HTTP/1.1\r\nHost: example.com\r\n\r\n",
+       target::kAsteriskForm},
+  };
+  for (const auto& test : cases) {
+    for (std::size_t split = 0; split <= test.source.size(); split++) {
+      test_decoder value;
+      DOBA_EXPECT_EQUAL(accumulate(value, test.source.substr(0, split)), split);
+      auto result = value.deserialize();
+      if (split < test.source.size()) {
+        DOBA_EXPECT_EQUAL(result.code,
+                          deserialization_status::kMoreBytesNeeded);
+        DOBA_EXPECT_EQUAL(accumulate(value, test.source.substr(split)),
+                          test.source.size() - split);
+        result = value.deserialize();
+      }
+      DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+      DOBA_EXPECT_EQUAL(result.request->get_target(), test.target_form);
+    }
+  }
+}
+// +===========================================================================+
 // | [>] content length body handles every transport split       ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("content length body consumes exact bytes across every split") {
@@ -184,6 +219,34 @@ DOBA_TEST("chunked body is preserved then exposed decoded") {
   DOBA_EXPECT_EQUAL(
       std::string_view(reinterpret_cast<const char*>(output.data()), 5),
       "abcde");
+}
+// +===========================================================================+
+// | [>] chunked body handles every transport split              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("chunked body consumes exact bytes across every split") {
+  constexpr std::string_view source =
+      "POST / HTTP/1.1\r\nHost: example.com\r\n"
+      "Transfer-Encoding: chunked\r\n\r\n"
+      "3;ext=yes\r\nabc\r\n2\r\nde\r\n0\r\nX: y\r\n\r\n";
+  for (std::size_t split = 0; split <= source.size(); split++) {
+    test_decoder value;
+    DOBA_EXPECT_EQUAL(accumulate(value, source.substr(0, split)), split);
+    auto result = value.deserialize();
+    if (split < source.size()) {
+      DOBA_EXPECT_EQUAL(result.code, deserialization_status::kMoreBytesNeeded);
+      DOBA_EXPECT_EQUAL(accumulate(value, source.substr(split)),
+                        source.size() - split);
+      result = value.deserialize();
+    }
+    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+    std::array<std::byte, 8> output{};
+    const auto state = result.request->get_body_reader()->read(output);
+    DOBA_EXPECT(state.complete);
+    DOBA_EXPECT_EQUAL(state.produced, 5);
+    DOBA_EXPECT_EQUAL(
+        std::string_view(reinterpret_cast<const char*>(output.data()), 5),
+        "abcde");
+  }
 }
 // +===========================================================================+
 // | [>] expect continue returns interim while body is pending   ( test-case ) |
@@ -264,6 +327,45 @@ DOBA_TEST("rejects malformed request line and header syntax") {
     DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
     DOBA_EXPECT_EQUAL(value.deserialize().code,
                       deserialization_status::kInvalidSource);
+  }
+}
+// +===========================================================================+
+// | [>] classifies incomplete and terminal request lines        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("distinguishes incomplete and terminal invalid request lines") {
+  struct test_case {
+    std::string_view source;
+    deserialization_status expected;
+  };
+  constexpr test_case cases[] = {
+      {"GET", deserialization_status::kMoreBytesNeeded},
+      {"GET ", deserialization_status::kMoreBytesNeeded},
+      {"GET /", deserialization_status::kMoreBytesNeeded},
+      {"GET / ", deserialization_status::kMoreBytesNeeded},
+      {"GET / H", deserialization_status::kMoreBytesNeeded},
+      {"GET / HTTP/1.", deserialization_status::kMoreBytesNeeded},
+      {"GET / HTTP/1.1", deserialization_status::kMoreBytesNeeded},
+      {"GET / HTTP/1.1\r", deserialization_status::kMoreBytesNeeded},
+      {"GET / HTTP/1.1\r\n", deserialization_status::kMoreBytesNeeded},
+      {"GET\r\n", deserialization_status::kInvalidSource},
+      {"GET /\r\n", deserialization_status::kInvalidSource},
+      {"GET / X", deserialization_status::kInvalidSource},
+      {"GET / \r\n", deserialization_status::kInvalidSource},
+      {"GET / H\r\n", deserialization_status::kInvalidSource},
+      {"GET / HT\r\n", deserialization_status::kInvalidSource},
+      {"GET / HTT\r\n", deserialization_status::kInvalidSource},
+      {"GET / HTTP\r\n", deserialization_status::kInvalidSource},
+      {"GET / HTTP/\r\n", deserialization_status::kInvalidSource},
+      {"GET / HTTP/1\r\n", deserialization_status::kInvalidSource},
+      {"GET / HTTP/1.\r\n", deserialization_status::kInvalidSource},
+      {"GET / HTTP/1.1\n", deserialization_status::kInvalidSource},
+      {"GET / HTTP/1.1\rX", deserialization_status::kInvalidSource},
+      {"GET / \r\n\r\n", deserialization_status::kInvalidSource},
+  };
+  for (const auto& test : cases) {
+    test_decoder value;
+    DOBA_EXPECT_EQUAL(accumulate(value, test.source), test.source.size());
+    DOBA_EXPECT_EQUAL(value.deserialize().code, test.expected);
   }
 }
 // +===========================================================================+
