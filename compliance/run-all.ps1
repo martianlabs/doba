@@ -4,6 +4,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$utf8Encoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::InputEncoding = $utf8Encoding
+[Console]::OutputEncoding = $utf8Encoding
+$OutputEncoding = $utf8Encoding
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $outputDirectory = Join-Path $PSScriptRoot "out\all-$timestamp"
 $summaryPath = Join-Path $outputDirectory "summary.txt"
