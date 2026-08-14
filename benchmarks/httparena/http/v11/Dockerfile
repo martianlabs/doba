@@ -8,6 +8,7 @@ RUN apt-get update \
        cmake \
        g++ \
        git \
+       make \
     && rm -rf /var/lib/apt/lists/*
 
 RUN git clone https://github.com/martianlabs/doba.git /doba \

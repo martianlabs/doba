@@ -82,10 +82,11 @@ terminator) and content compression — both are product decisions, the latter
 because it would introduce an external dependency and break the "no
 dependencies" rule above.
 
-Still pending for compliance: connection timeouts, conditional request and
-`Range` evaluation, automatic resource-specific `OPTIONS` responses, protocol
-upgrade handling, outbound trailers, and effective connection limits.
-`OPTIONS *` and `Allow` on `405 Method Not Allowed` are already implemented.
+Still pending for compliance: connection timeouts; invalid-date handling and
+evaluation of conditional requests; `Range` evaluation; automatic
+resource-specific `OPTIONS` responses; `Allow` on `405 Method Not Allowed`;
+outbound trailers; and effective connection limits. `OPTIONS *` is already
+implemented. Protocol upgrade handling is out of scope for the first release.
 Pending work is tracked in [docs/HANDOFF.md](docs/HANDOFF.md).
 
 ## License
