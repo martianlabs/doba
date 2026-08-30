@@ -49,12 +49,12 @@ namespace martianlabs::doba::protocol::http::v11 {
 struct limits {
   // Maximum accepted request-target length, in octets. A request-target
   // longer than this is rejected with 414 URI Too Long (RFC 9110 S15.5.15).
-  static constexpr std::size_t kDefaultMaxUriLength = 8192;
+  static constexpr std::size_t kDefaultMaxUriLength = 1024;
   // Maximum accepted size of the whole header section (all header field
   // names and values combined, before CRLF/OWS overhead), in octets. A
   // header section larger than this is rejected with 431 Request Header
   // Fields Too Large (RFC 6585 S5).
-  static constexpr std::size_t kDefaultMaxHeaderSectionSize = 8192;
+  static constexpr std::size_t kDefaultMaxHeaderSectionSize = 4096;
   // Maximum accepted Content-Length, in octets. A body larger than this is
   // rejected with 413 Content Too Large (RFC 9110 S15.5.14).
   static constexpr std::size_t kDefaultMaxContentLength = 10 * 1024 * 1024;
