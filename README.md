@@ -20,7 +20,7 @@ It ships as **pure headers**. No build step, no binary to link, no dependencies 
 
 - **Direct dispatch.** Header dispatch uses raw function pointers and the routing path stays deliberately simple: no framework machinery, no virtual dispatch, and no per-request indirection for its own sake.
 
-- **Choose how a route runs.** Routes run synchronously by default. Mark one as asynchronous when its handler should leave the transport worker and complete later without blocking the synchronous path.
+- **Direct synchronous handlers.** Route handlers execute inline on the transport worker and complete the response before returning.
 
 - **Memory where it earns its place.** Responses use a fixed buffer for the latency-sensitive write path. Requests retain only the storage they need because inbound data is variable-sized and may outlive parsing.
 
@@ -28,31 +28,26 @@ It ships as **pure headers**. No build step, no binary to link, no dependencies 
 
 - **Bodies scale beyond RAM.** Raw and chunked bodies use memory or file-backed storage according to configured limits, while preserving the original wire representation when required.
 
-- **Native asynchronous I/O on both platforms.** Windows (IOCP) and Linux (epoll) are both fully implemented and selected at compile time by `transport/server/tcpip.h` — there is no reference or fallback backend. Each is written against the platform primitive directly, yet both expose the same public contract to the protocol layer and share the same response-ordering model: pipelined responses are tracked by monotonic response identifiers, so completions from asynchronous route handlers are still delivered in request order.
+- **Native event-driven I/O on both platforms.** Windows (IOCP) and Linux (epoll) are both fully implemented and selected at compile time by `transport/server/tcpip.h` — there is no reference or fallback backend. Each is written against the platform primitive directly, while both expose the same synchronous handler contract and preserve pipelined response order.
 
 - **Keep control.** Request, response, decoder, transport, and router remain template parameters, so the framework can be adapted without rewriting its core.
 
 ## Quick look
 
 ```cpp
-#include <memory>
-
-#include "common/execution_policy.h"
 #include "protocol/http/v11/server.h"
 
-using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
 int main() {
   server srv;
   srv.add_route(
       "GET", "/hello",
-      [](std::shared_ptr<const request>, std::shared_ptr<response> res) {
-        res->ok_200()
+      [](const request&, response& res) {
+        res.ok_200()
            .add_header("Content-Type", "text/plain; charset=utf-8")
            .set_body("hello from doba");
-      },
-      execution_policy::kSynchronous);
+      });
   srv.start("8080");
 }
 ```

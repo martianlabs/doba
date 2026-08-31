@@ -215,11 +215,22 @@ struct context
     }
     uint32_t events = EPOLLRDHUP | EPOLLET;
     if (!closing_) events |= EPOLLIN;
-    if (sending_offset_ < sending_buffer_.size() ||
-        (!responses_.empty() && responses_.front().response)) {
+    if (sending_offset_ < sending_buffer_.size() || !responses_.empty()) {
       events |= EPOLLOUT;
     }
     return events;
+  }
+  // +=========================================================================+
+  // | [>] get_registered_event_mask                                ( public ) |
+  // +=========================================================================+
+  uint32_t get_registered_event_mask() const {
+    return registered_event_mask_;
+  }
+  // +=========================================================================+
+  // | [>] set_registered_event_mask                                ( public ) |
+  // +=========================================================================+
+  void set_registered_event_mask(uint32_t events) {
+    registered_event_mask_ = events;
   }
   // +=========================================================================+
   // | [>] retire_socket                                           ( public )  |
@@ -272,7 +283,6 @@ struct context
     while (!responses_.empty() &&
            sending_buffer_.size() < kSendBufferMaxSz) {
       response_data& data = responses_.front();
-      if (!data.response) break;
       if (!data.prefix_written) {
         sending_buffer_.append(data.response->prefix);
         data.prefix_written = true;
@@ -323,6 +333,7 @@ struct context
   std::string sending_buffer_;
   std::size_t sending_offset_{0};
   std::deque<response_data> responses_;
+  uint32_t registered_event_mask_{EPOLLIN | EPOLLRDHUP | EPOLLET};
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -671,13 +682,16 @@ struct worker {
       close_context(ctx);
       return;
     }
+    if (events == ctx->get_registered_event_mask()) return;
     epoll_event event{};
     event.events = events;
     event.data.ptr = ctx;
     if (::epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, ctx->get_socket(), &event) ==
         -1) {
       abort_context(ctx);
+      return;
     }
+    ctx->set_registered_event_mask(events);
   }
   // +=========================================================================+
   // | [>] abort_context                                           ( private ) |
