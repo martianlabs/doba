@@ -33,12 +33,12 @@ using martianlabs::doba::protocol::http::v11::limits;
 // | [>] constants expose documented operational limits          ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("constants expose documented operational limits") {
-  DOBA_EXPECT_EQUAL(limits::kDefaultMaxUriLength, 8192);
-  DOBA_EXPECT_EQUAL(limits::kDefaultMaxHeaderSectionSize, 8192);
+  DOBA_EXPECT_EQUAL(limits::kDefaultMaxUriLength, 1024);
+  DOBA_EXPECT_EQUAL(limits::kDefaultMaxHeaderSectionSize, 4096);
   DOBA_EXPECT_EQUAL(limits::kDefaultMaxContentLength, 10 * 1024 * 1024);
   DOBA_EXPECT_EQUAL(limits::kDefaultMaxForwardingHops, 20);
   DOBA_EXPECT_EQUAL(limits::kDefaultMaxTransferCodings, 4);
-  DOBA_EXPECT_EQUAL(limits::kMaxRequestHeadSize, 16384);
+  DOBA_EXPECT_EQUAL(limits::kMaxRequestHeadSize, 5120);
   DOBA_EXPECT_EQUAL(limits::kDecodingBufferSize, limits::kMaxRequestHeadSize);
   DOBA_EXPECT_EQUAL(limits::kMaxResponseSizeInMemory, 4096);
   DOBA_EXPECT_EQUAL(limits::kMaxResponseBodySizeInMemory, 2048);
