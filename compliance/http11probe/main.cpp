@@ -25,7 +25,6 @@
 #include <array>
 #include <cstddef>
 #include <future>
-#include <memory>
 #include <string>
 #include <string_view>
 
@@ -38,30 +37,30 @@ int main() {
   // Root routes cover baseline, response metadata, and method handling probes.
   http_server.add_route(
       "GET", "/",
-      [](std::shared_ptr<const request>, std::shared_ptr<response> res) {
-        res->ok_200().add_header("Content-Type", "text/plain").set_body("OK");
+      [](const request&, response& res) {
+        res.ok_200().add_header("Content-Type", "text/plain").set_body("OK");
       });
   http_server.add_route(
       "HEAD", "/",
-      [](std::shared_ptr<const request>, std::shared_ptr<response> res) {
-        res->ok_200().add_header("Content-Type", "text/plain");
+      [](const request&, response& res) {
+        res.ok_200().add_header("Content-Type", "text/plain");
       });
   http_server.add_route(
       "OPTIONS", "/",
-      [](std::shared_ptr<const request>, std::shared_ptr<response> res) {
-        res->ok_200().add_header("Allow", "GET, HEAD, POST, OPTIONS");
+      [](const request&, response& res) {
+        res.ok_200().add_header("Allow", "GET, HEAD, POST, OPTIONS");
       });
   // Echo decoded bytes so both request body framing modes are exercised.
   http_server.add_route(
       "POST", "/",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         std::string body;
-        if (req->has_body_reader()) {
+        if (req.has_body_reader()) {
           std::array<std::byte, 4096> buffer{};
           for (;;) {
-            const auto state = req->get_body_reader()->read(buffer);
+            const auto state = req.get_body_reader()->read(buffer);
             if (state.has_error) {
-              res->bad_request_400();
+              res.bad_request_400();
               return;
             }
             body.append(reinterpret_cast<const char*>(buffer.data()),
@@ -69,38 +68,37 @@ int main() {
             if (state.complete) break;
           }
         }
-        res->ok_200().add_header("Content-Type", "text/plain").set_body(body);
+        res.ok_200().add_header("Content-Type", "text/plain").set_body(body);
       });
   // Http11Probe uses /echo to inspect received header fields verbatim.
-  const auto echo_headers = [](std::shared_ptr<const request> req,
-                               std::shared_ptr<response> res) {
+  const auto echo_headers = [](const request& req, response& res) {
     std::string body;
-    for (std::size_t i = 0; i < req->get_headers_length(); i++) {
-      const auto header = req->get_header(i);
+    for (std::size_t i = 0; i < req.get_headers_length(); i++) {
+      const auto header = req.get_header(i);
       body.append(header.first);
       body.append(": ");
       body.append(header.second);
       body.push_back('\n');
     }
-    res->ok_200().add_header("Content-Type", "text/plain").set_body(body);
+    res.ok_200().add_header("Content-Type", "text/plain").set_body(body);
   };
   http_server.add_route("GET", "/echo", echo_headers);
   http_server.add_route("POST", "/echo", echo_headers);
   // The parsed-cookie probes query only these four fixed names.
   http_server.add_route(
       "GET", "/cookie",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         constexpr std::string_view cookie_names[] = {"foo", "a", "b", "c"};
         std::string body;
         for (const auto name : cookie_names) {
-          const auto value = req->get_cookie(name);
+          const auto value = req.get_cookie(name);
           if (!value) continue;
           body.append(name);
           body.push_back('=');
           body.append(*value);
           body.push_back('\n');
         }
-        res->ok_200().add_header("Content-Type", "text/plain").set_body(body);
+        res.ok_200().add_header("Content-Type", "text/plain").set_body(body);
       });
   http_server.start("8080");
   // The test harness owns process shutdown; wait after the server starts.

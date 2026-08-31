@@ -25,7 +25,6 @@
 #include <array>
 #include <cstddef>
 #include <future>
-#include <memory>
 #include <string>
 
 #include "protocol/http/v11/server.h"
@@ -35,15 +34,14 @@ using namespace martianlabs::doba::protocol::http::v11;
 int main() {
   server http_server;
   // h1spec expects successful routes to echo the decoded request body.
-  const auto echo_body = [](std::shared_ptr<const request> req,
-                            std::shared_ptr<response> res) {
+  const auto echo_body = [](const request& req, response& res) {
     std::string body;
-    if (req->has_body_reader()) {
+    if (req.has_body_reader()) {
       std::array<std::byte, 4096> buffer{};
       for (;;) {
-        const auto state = req->get_body_reader()->read(buffer);
+        const auto state = req.get_body_reader()->read(buffer);
         if (state.has_error) {
-          res->bad_request_400();
+          res.bad_request_400();
           return;
         }
         body.append(reinterpret_cast<const char*>(buffer.data()),
@@ -51,7 +49,7 @@ int main() {
         if (state.complete) break;
       }
     }
-    res->ok_200().add_header("Content-Type", "text/plain").set_body(body);
+    res.ok_200().add_header("Content-Type", "text/plain").set_body(body);
   };
   http_server.add_route("GET", "/", echo_body);
   http_server.add_route("POST", "/", echo_body);

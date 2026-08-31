@@ -7,12 +7,10 @@ RUN apt-get update \
        ca-certificates \
        cmake \
        g++ \
-       git \
        make \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git clone https://github.com/martianlabs/doba.git /doba \
-    && git -C /doba checkout "${DOBA_REF}"
+ADD "https://github.com/martianlabs/doba.git#${DOBA_REF}" /doba
 
 WORKDIR /source
 COPY CMakeLists.txt main.cpp ./
