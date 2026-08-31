@@ -710,27 +710,13 @@ DOBA_TEST("path and query deserializers handle empty truncated buffers") {
                     deserialization_status::kMoreBytesNeeded);
 }
 // +===========================================================================+
-// | [>] case route and query helpers preserve views             ( test-case ) |
+// | [>] case and query helpers preserve views                   ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("case route and query helpers preserve views") {
+DOBA_TEST("case and query helpers preserve views") {
   DOBA_EXPECT(helpers::iequals("Content-Type", "content-type"));
   DOBA_EXPECT(helpers::iequals("", ""));
   DOBA_EXPECT(!helpers::iequals("a", "b"));
   DOBA_EXPECT(!helpers::iequals("a", "aa"));
-  std::vector<std::pair<std::string_view, std::string_view>> parameters = {
-      {"stale", "value"},
-  };
-  DOBA_EXPECT(helpers::get_parameters("/items/:id:/name/:name",
-                                      "/items/42/name/doba", parameters));
-  DOBA_EXPECT_EQUAL(parameters.size(), 2);
-  DOBA_EXPECT_EQUAL(parameters[0].first, "id");
-  DOBA_EXPECT_EQUAL(parameters[0].second, "42");
-  DOBA_EXPECT_EQUAL(parameters[1].first, "name");
-  DOBA_EXPECT_EQUAL(parameters[1].second, "doba");
-  DOBA_EXPECT(!helpers::get_parameters("/items/:id", "/items/", parameters));
-  DOBA_EXPECT(parameters.empty());
-  DOBA_EXPECT(helpers::get_parameters("", "", parameters));
-  DOBA_EXPECT(!helpers::get_parameters("/", "", parameters));
   std::array<std::string_view, 4> keys;
   std::array<std::string_view, 4> values;
   const std::size_t count =

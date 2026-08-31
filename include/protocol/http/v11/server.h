@@ -27,6 +27,7 @@
 
 #include "common/date_server.h"
 #include "common/execution_policy.h"
+#include "common/thread_pool.h"
 #include "transport/server/tcpip.h"
 #include "protocol/http/common/method_names.h"
 #include "protocol/http/common/helpers.h"
@@ -78,7 +79,7 @@ class server {
   void start(const char port[]) {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     common::date_server::get().start();
-    router_.start();
+    thread_pool_.start();
     transport_.set_on_request(
         [this](std::shared_ptr<const RQty> req, std::shared_ptr<RSty> res,
                transport::server::types::on_send_delegate<RSty> on_send) {
@@ -115,17 +116,32 @@ class server {
               // routed to a handler based on the method and absolute path.
               std::string_view method = req->get_method();
               std::string_view abs_path = req->get_absolute_path();
-              switch (router_.match(method, abs_path, req, res, send)) {
-                case router_match_result::kMatched:
-                  break;
-                case router_match_result::kNotFound:
+              auto match = router_.match(method, abs_path);
+              if (match) {
+                switch (match.handler->policy) {
+                  case common::execution_policy::kSynchronous:
+                    match.handler->callback(req, res);
+                    send(res);
+                    break;
+                  case common::execution_policy::kAsynchronous:
+                    thread_pool_.enqueue(
+                        [handler = match.handler->callback,
+                         req = std::move(req), res = std::move(res), send] {
+                          handler(req, res);
+                          send(res);
+                        });
+                    break;
+                }
+              } else {
+                std::string allowed_methods =
+                    router_.allowed_methods(abs_path);
+                if (allowed_methods.empty()) {
                   res->not_found_404();
-                  send(res);
-                  break;
-                case router_match_result::kMethodNotAllowed:
+                } else {
                   res->method_not_allowed_405();
-                  send(res);
-                  break;
+                  res->set_header(header_names::kAllow, allowed_methods);
+                }
+                send(res);
               }
               break;
             }
@@ -197,7 +213,7 @@ class server {
   // +=========================================================================+
   void stop() {
     std::lock_guard<std::mutex> lock(locked_mutex_);
-    router_.stop();
+    thread_pool_.stop();
     transport_.stop();
     common::date_server::get().stop();
     locked_ = false;
@@ -228,6 +244,7 @@ class server {
   TRty<RQty, RSty, DEty> transport_;
   std::mutex locked_mutex_;
   ROty<RQty, RSty> router_;
+  common::thread_pool thread_pool_;
   bool locked_{false};
 };
 }  // namespace martianlabs::doba::protocol::http::v11

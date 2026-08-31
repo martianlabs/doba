@@ -22,7 +22,9 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <chrono>
 #include <functional>
+#include <future>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -34,7 +36,6 @@
 
 namespace {
 using martianlabs::doba::common::execution_policy;
-using martianlabs::doba::protocol::http::router_match_result;
 using martianlabs::doba::protocol::http::target;
 using martianlabs::doba::protocol::http::v11::decoder;
 using martianlabs::doba::protocol::http::v11::rejection_reason;
@@ -85,50 +86,54 @@ template <typename RQty, typename RSty>
 class fake_router {
  public:
   // +=========================================================================+
-  // | [>] start                                                    ( public ) |
+  // | [>] TYPEs                                                    ( public ) |
   // +=========================================================================+
-  void start() { started = true; }
-  // +=========================================================================+
-  // | [>] stop                                                     ( public ) |
-  // +=========================================================================+
-  void stop() { started = false; }
+  struct handler_data {
+    std::function<void(std::shared_ptr<const RQty>, std::shared_ptr<RSty>)>
+        callback;
+    execution_policy policy;
+  };
+  struct route_match {
+    const handler_data* handler{nullptr};
+    explicit operator bool() const { return handler != nullptr; }
+  };
   // +=========================================================================+
   // | [>] add                                                      ( public ) |
   // +=========================================================================+
   template <typename Hty>
-  void add(std::string_view method, std::string_view route, Hty,
+  void add(std::string_view method, std::string_view route, Hty handler,
            execution_policy policy) {
     additions++;
     last_method = method;
     last_route = route;
     last_policy = policy;
+    matched_handler = {std::move(handler), policy};
   }
   // +=========================================================================+
   // | [>] match                                                    ( public ) |
   // +=========================================================================+
-  template <typename FNty>
-  router_match_result match(std::string_view method, std::string_view path,
-                            std::shared_ptr<const RQty>,
-                            std::shared_ptr<RSty> res, const FNty& on_send) {
+  route_match match(std::string_view method, std::string_view path) {
     matched_method = method;
     matched_path = path;
-    if (match_result == router_match_result::kMatched) {
-      res->ok_200();
-      if (write_body) res->set_body("body");
-      on_send(res);
-    }
-    return match_result;
+    return match_available ? route_match{&matched_handler} : route_match{};
+  }
+  // +=========================================================================+
+  // | [>] allowed_methods                                          ( public ) |
+  // +=========================================================================+
+  std::string allowed_methods(std::string_view) {
+    return allowed_methods_result;
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +=========================================================================+
-  static inline bool started = false;
   static inline std::size_t additions = 0;
   static inline std::string last_method;
   static inline std::string last_route;
   static inline execution_policy last_policy = execution_policy::kSynchronous;
-  static inline router_match_result match_result =
-      router_match_result::kMatched;
+  static inline handler_data matched_handler{
+      {}, execution_policy::kSynchronous};
+  static inline bool match_available = true;
+  static inline std::string allowed_methods_result;
   static inline std::string matched_method;
   static inline std::string matched_path;
   static inline bool write_body = false;
@@ -230,6 +235,36 @@ DOBA_TEST("server is neither copyable nor movable") {
   DOBA_EXPECT(true);
 }
 // +===========================================================================+
+// | [>] asynchronous handlers execute in the server pool        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("asynchronous handlers execute in the server pool") {
+  test_router::match_available = true;
+  test_router::allowed_methods_result.clear();
+  test_server value;
+  value.add_route(
+      "GET", "/",
+      [](std::shared_ptr<const request>, std::shared_ptr<response> res) {
+        res->ok_200();
+      },
+      execution_policy::kAsynchronous);
+  value.start("8080");
+  std::promise<std::string> sent;
+  auto result = sent.get_future();
+  test_transport::on_request(
+      std::make_shared<const request>(), std::make_shared<response>(),
+      [&sent](std::shared_ptr<response> res) {
+        res->set_header("Date", "fixed");
+        sent.set_value(res->serialize()->prefix);
+      });
+  DOBA_EXPECT(result.wait_for(std::chrono::seconds(2)) ==
+              std::future_status::ready);
+  if (result.wait_for(std::chrono::seconds(0)) ==
+      std::future_status::ready) {
+    DOBA_EXPECT(std::string_view(result.get()).starts_with("HTTP/1.1 200 OK"));
+  }
+  value.stop();
+}
+// +===========================================================================+
 // | [>] lifecycle routing and callbacks cover server behavior   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
@@ -238,7 +273,10 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   // ---------------------------------------------------------------------------
   test_router::additions = 0;
   test_server value;
-  auto handler = [](std::shared_ptr<const request>, std::shared_ptr<response>) {
+  auto handler = [](std::shared_ptr<const request>,
+                    std::shared_ptr<response> res) {
+    res->ok_200();
+    if (test_router::write_body) res->set_body("body");
   };
   DOBA_EXPECT_EQUAL(&value.add_route("GET", "/", handler), &value);
   DOBA_EXPECT_EQUAL(test_router::additions, 1);
@@ -249,7 +287,6 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   // ---------------------------------------------------------------------------
   value.start("8080");
   DOBA_EXPECT(test_transport::started);
-  DOBA_EXPECT(test_router::started);
   DOBA_EXPECT_EQUAL(test_transport::started_port, "8080");
   // ---------------------------------------------------------------------------
   // Route locking
@@ -267,19 +304,25 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   // ---------------------------------------------------------------------------
   test_router::write_body = false;
   struct route_case {
-    router_match_result result;
+    bool matched;
+    std::string_view allowed_methods;
     std::string_view status;
   };
   constexpr route_case route_cases[] = {
-      {router_match_result::kMatched, "HTTP/1.1 200 OK\r\n"},
-      {router_match_result::kNotFound, "HTTP/1.1 404 Not Found\r\n"},
-      {router_match_result::kMethodNotAllowed,
-       "HTTP/1.1 405 Method Not Allowed\r\n"},
+      {true, "", "HTTP/1.1 200 OK\r\n"},
+      {false, "", "HTTP/1.1 404 Not Found\r\n"},
+      {false, "GET", "HTTP/1.1 405 Method Not Allowed\r\n"},
   };
   for (const auto& test : route_cases) {
-    test_router::match_result = test.result;
+    test_router::match_available = test.matched;
+    test_router::allowed_methods_result = test.allowed_methods;
     const std::string output = send_request(request{});
     DOBA_EXPECT(std::string_view(output).starts_with(test.status));
+    if (test.allowed_methods.empty()) {
+      DOBA_EXPECT(output.find("Allow:") == std::string::npos);
+    } else {
+      DOBA_EXPECT(output.find("Allow: GET\r\n") != std::string::npos);
+    }
     DOBA_EXPECT_EQUAL(test_router::matched_method, "GET");
     DOBA_EXPECT_EQUAL(test_router::matched_path, "/");
   }
@@ -304,7 +347,8 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   // ---------------------------------------------------------------------------
   // Connection close
   // ---------------------------------------------------------------------------
-  test_router::match_result = router_match_result::kMatched;
+  test_router::match_available = true;
+  test_router::allowed_methods_result.clear();
   request req;
   req.close = true;
   std::string output = send_request(req);
@@ -357,5 +401,4 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   // ---------------------------------------------------------------------------
   value.stop();
   DOBA_EXPECT(!test_transport::started);
-  DOBA_EXPECT(!test_router::started);
 }
