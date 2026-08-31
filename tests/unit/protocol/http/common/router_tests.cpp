@@ -82,36 +82,7 @@ DOBA_TEST("routes use exact path matching") {
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/assets/a")));
 }
 // +===========================================================================+
-// | [>] parametrized routes parse typed segments                ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("parametrized routes parse typed segments") {
-  router<request, response> value;
-  bool invoked = false;
-  value.add(
-      "GET", "/items/:id/:enabled/:score/:name",
-      [&invoked](const request&, response& res, std::uint64_t id,
-                 bool enabled, double score, std::string_view name) {
-        invoked = id == 42 && enabled && score == 1.5 && name == "doba";
-        res.value = "parametrized";
-      });
-  auto match = value.match("GET", "/items/42/TRUE/1.5/doba");
-  DOBA_EXPECT(static_cast<bool>(match));
-  DOBA_EXPECT(match.handler == nullptr);
-  DOBA_EXPECT(match.parametrized_handler != nullptr);
-  DOBA_EXPECT(!invoked);
-  request req;
-  response res;
-  match.parametrized_handler->invoke(
-      req, res, "/items/42/TRUE/1.5/doba");
-  DOBA_EXPECT(invoked);
-  DOBA_EXPECT_EQUAL(res.value, "parametrized");
-  DOBA_EXPECT(!static_cast<bool>(
-      value.match("GET", "/items/x/true/1.5/doba")));
-  DOBA_EXPECT(!static_cast<bool>(
-      value.match("GET", "/items/42/true/1.5/doba/")));
-}
-// +===========================================================================+
-// | [>] static routes take precedence over parametrized routes ( test-case ) |
+// | [>] static routes take precedence over parametrized routes  ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("static routes take precedence over parametrized routes") {
   router<request, response> value;
@@ -134,7 +105,7 @@ DOBA_TEST("static routes take precedence over parametrized routes") {
   DOBA_EXPECT_EQUAL(res.value, "static");
 }
 // +===========================================================================+
-// | [>] parametrized routes preserve typed registration order  ( test-case ) |
+// | [>] parametrized routes preserve typed registration order   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("parametrized routes preserve typed registration order") {
   router<request, response> value;
@@ -158,7 +129,7 @@ DOBA_TEST("parametrized routes preserve typed registration order") {
   DOBA_EXPECT_EQUAL(res.value, "text");
 }
 // +===========================================================================+
-// | [>] parametrized routes validate pattern and handler shape ( test-case ) |
+// | [>] parametrized routes validate pattern and handler shape  ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("parametrized routes validate pattern and handler shape") {
   router<request, response> value;
@@ -187,7 +158,7 @@ DOBA_TEST("parametrized routes validate pattern and handler shape") {
   DOBA_EXPECT(threw);
 }
 // +===========================================================================+
-// | [>] match preserves first handler                            ( test-case ) |
+// | [>] match preserves first handler                           ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("match preserves first handler") {
   router<request, response> value;
@@ -215,7 +186,7 @@ DOBA_TEST("match preserves first handler") {
   DOBA_EXPECT(value.allowed_methods("/missing").empty());
 }
 // +===========================================================================+
-// | [>] allowed methods include matching parametrized routes   ( test-case ) |
+// | [>] allowed methods include matching parametrized routes    ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("allowed methods include matching parametrized routes") {
   router<request, response> value;

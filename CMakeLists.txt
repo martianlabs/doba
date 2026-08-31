@@ -72,6 +72,9 @@ add_subdirectory(
   ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/static_routes
 )
 add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/parametrized_routes
+)
+add_subdirectory(
   ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_information
 )
 add_subdirectory(

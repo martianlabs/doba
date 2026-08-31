@@ -166,35 +166,56 @@ void invoke_route_handler(Hty& handler, const RQty& req, RSty& res,
 // +---------------------------------------------------------------------------+
 // | [>] router_handler_parametrized                                 ( class ) |
 // +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   RQty - request being used                                               |
+// |   RSty - response being used                                              |
+// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty>
 class router_handler_parametrized {
  public:
+  // +=========================================================================+
+  // | [>] TYPEs                                                    ( public ) |
+  // +=========================================================================+
   using matcher_type = bool (*)(std::string_view, std::string_view);
   using callback_type = std::function<void(const RQty&, RSty&,
                                            std::string_view,
                                            std::string_view)>;
-
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
   router_handler_parametrized(std::string pattern, matcher_type matcher,
                               callback_type callback)
       : pattern_{std::move(pattern)},
         matcher_{matcher},
         callback_{std::move(callback)} {}
-
+  // +=========================================================================+
+  // | [>] matches                                                  ( public ) |
+  // +=========================================================================+
   [[nodiscard]] bool matches(std::string_view path) const {
     return matcher_(pattern_, path);
   }
-
+  // +=========================================================================+
+  // | [>] invoke                                                   ( public ) |
+  // +=========================================================================+
   void invoke(const RQty& req, RSty& res, std::string_view path) const {
     callback_(req, res, pattern_, path);
   }
 
  private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
   std::string pattern_;
   matcher_type matcher_;
   callback_type callback_;
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] make_router_handler_parametrized                           (function) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename... Args, typename Hty>
 auto make_router_handler_parametrized(std::string_view pattern,
                                       Hty&& handler) {

@@ -29,22 +29,22 @@
 
 namespace martianlabs::doba::protocol::http::v11 {
 // ///////////////////////////////////////////////////////////////////////////
-// +-------------------------------------------------------------------------+
-// | [>] limits                                                   ( struct ) |
-// +-------------------------------------------------------------------------+
-// | Centralized repository of http 1.1 operational limits. This file holds  |
-// | exclusively constants: suggested default values that a server may adopt |
-// | (verbatim or overridden) when populating protocol::http::v11::policies. |
-// | It carries no logic and no dependency on decoder/request/response,      |
-// | so any component may reference these numbers without pulling in         |
-// | parsing code.                                                           |
-// +-------------------------------------------------------------------------+
-// | These defaults are deliberately conservative-but-practical values drawn |
-// | from common HTTP server practice; they are not wired in automatically.  |
-// | Policies remain permissive (0 = unlimited) unless a server explicitly   |
-// | assigns one of these constants (or its own value) to the matching       |
-// | protocol::http::v11::policies field.                                    |
-// +-------------------------------------------------------------------------+
+// +---------------------------------------------------------------------------+
+// | [>] limits                                                     ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Centralized repository of http 1.1 operational limits. This file holds    |
+// | exclusively constants: suggested default values that a server may adopt   |
+// | (verbatim or overridden) when populating protocol::http::v11::policies.   |
+// | It carries no logic and no dependency on decoder/request/response,        |
+// | so any component may reference these numbers without pulling in           |
+// | parsing code.                                                             |
+// +---------------------------------------------------------------------------+
+// | These defaults are deliberately conservative-but-practical values drawn   |
+// | from common HTTP server practice; they are not wired in automatically.    |
+// | Policies remain permissive (0 = unlimited) unless a server explicitly     |
+// | assigns one of these constants (or its own value) to the matching         |
+// | protocol::http::v11::policies field.                                      |
+// +---------------------------------------------------------------------------+
 // ///////////////////////////////////////////////////////////////////////////
 struct limits {
   // Maximum accepted request-target length, in octets. A request-target
