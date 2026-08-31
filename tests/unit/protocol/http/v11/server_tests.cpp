@@ -87,9 +87,15 @@ class fake_router {
   struct handler_data {
     std::function<void(const RQty&, RSty&)> callback;
   };
+  struct parametrized_handler_data {
+    void invoke(const RQty&, RSty&, std::string_view) const {}
+  };
   struct route_match {
     const handler_data* handler{nullptr};
-    explicit operator bool() const { return handler != nullptr; }
+    const parametrized_handler_data* parametrized_handler{nullptr};
+    explicit operator bool() const {
+      return handler != nullptr || parametrized_handler != nullptr;
+    }
   };
   // +=========================================================================+
   // | [>] add                                                      ( public ) |
@@ -107,7 +113,8 @@ class fake_router {
   route_match match(std::string_view method, std::string_view path) {
     matched_method = method;
     matched_path = path;
-    return match_available ? route_match{&matched_handler} : route_match{};
+    return match_available ? route_match{&matched_handler, nullptr}
+                           : route_match{};
   }
   // +=========================================================================+
   // | [>] allowed_methods                                          ( public ) |

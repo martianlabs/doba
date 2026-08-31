@@ -88,8 +88,10 @@ class server {
               std::string_view method = req.get_method();
               std::string_view abs_path = req.get_absolute_path();
               auto match = router_.match(method, abs_path);
-              if (match) {
+              if (match.handler) {
                 match.handler->callback(req, res);
+              } else if (match.parametrized_handler) {
+                match.parametrized_handler->invoke(req, res, abs_path);
               } else {
                 std::string allowed_methods =
                     router_.allowed_methods(abs_path);

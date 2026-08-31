@@ -28,7 +28,11 @@
 #include <concepts>
 #include <cstddef>
 #include <functional>
+#include <string_view>
 #include <type_traits>
+#include <utility>
+
+#include "protocol/http/common/router_handler_parametrized.h"
 
 namespace martianlabs::doba::protocol::http {
 // /////////////////////////////////////////////////////////////////////////////
@@ -49,6 +53,11 @@ struct router_handler_signature_base {
   using request_type = LQty;
   using response_type = LSty;
   static constexpr std::size_t parameter_count = sizeof...(Args);
+  template <typename RQty, typename RSty, typename Hty>
+  static auto make_parametrized(std::string_view pattern, Hty&& handler) {
+    return make_router_handler_parametrized<RQty, RSty, Args...>(
+        pattern, std::forward<Hty>(handler));
+  }
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

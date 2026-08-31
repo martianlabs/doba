@@ -23,6 +23,7 @@
 // permissions and limitations under the License.
 
 #include <future>
+#include <string_view>
 
 #include "protocol/http/v11/server.h"
 
@@ -37,7 +38,9 @@ int main(int argc, char* argv[]) {
       });
   http_server.add_route(
       "GET", "/user/:id",
-      [](const request& req, response& res) { res.ok_200(); });
+      [](const request& req, response& res, std::string_view id) {
+        res.ok_200();
+      });
   http_server.add_route(
       "POST", "/user",
       [](const request& req, response& res) {
