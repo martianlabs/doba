@@ -28,7 +28,6 @@
 #include <concepts>
 #include <cstddef>
 #include <functional>
-#include <memory>
 #include <type_traits>
 
 namespace martianlabs::doba::protocol::http {
@@ -85,7 +84,7 @@ concept router_handler_lambda = requires {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty>
 using router_handler_static =
-    std::function<void(std::shared_ptr<const RQty>, std::shared_ptr<RSty>)>;
+    std::function<void(const RQty&, RSty&)>;
 }  // namespace martianlabs::doba::protocol::http
 
 #endif

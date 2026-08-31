@@ -23,7 +23,6 @@
 // permissions and limitations under the License.
 
 #include <functional>
-#include <memory>
 #include <type_traits>
 
 #include "protocol/http/common/router_handler_static.h"
@@ -39,16 +38,14 @@ using martianlabs::doba::protocol::http::router_handler_static;
 // | [>] alias accepts and invokes the documented callback       ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("alias accepts and invokes the documented callback") {
-  using expected = std::function<void(std::shared_ptr<const request>,
-                                      std::shared_ptr<response>)>;
+  using expected = std::function<void(const request&, response&)>;
   static_assert(
       std::same_as<router_handler_static<request, response>, expected>);
   bool invoked = false;
   router_handler_static<request, response> handler =
-      [&invoked](std::shared_ptr<const request> req,
-                 std::shared_ptr<response> res) {
-        invoked = req != nullptr && res != nullptr;
-      };
-  handler(std::make_shared<const request>(), std::make_shared<response>());
+      [&invoked](const request&, response&) { invoked = true; };
+  request req;
+  response res;
+  handler(req, res);
   DOBA_EXPECT(invoked);
 }

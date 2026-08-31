@@ -102,9 +102,6 @@ add_subdirectory(
   ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/large_response_bodies
 )
 add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/asynchronous_routes
-)
-add_subdirectory(
   ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/standard_http_behaviors
 )
 add_subdirectory(

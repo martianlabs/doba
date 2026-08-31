@@ -27,7 +27,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <future>
-#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
@@ -46,10 +45,9 @@ bool parse_integer(std::string_view source, std::int64_t& value) {
   return error == std::errc() && end == last;
 }
 
-bool read_query_sum(const std::shared_ptr<const request>& req,
-                    std::int64_t& value) {
-  const auto a = req->get_query_parameter("a");
-  const auto b = req->get_query_parameter("b");
+bool read_query_sum(const request& req, std::int64_t& value) {
+  const auto a = req.get_query_parameter("a");
+  const auto b = req.get_query_parameter("b");
   std::int64_t a_value = 0;
   std::int64_t b_value = 0;
   if (!a || !b || !parse_integer(a->second, a_value) ||
@@ -61,14 +59,13 @@ bool read_query_sum(const std::shared_ptr<const request>& req,
 }
 
 // The body reader exposes decoded bytes for Content-Length and chunked bodies.
-bool read_body_integer(const std::shared_ptr<const request>& req,
-                       std::int64_t& value) {
-  if (!req->has_body_reader()) return false;
+bool read_body_integer(const request& req, std::int64_t& value) {
+  if (!req.has_body_reader()) return false;
   std::array<std::byte, 64> buffer{};
   std::size_t used = 0;
   for (;;) {
     const auto state =
-        req->get_body_reader()->read(std::span(buffer).subspan(used));
+        req.get_body_reader()->read(std::span(buffer).subspan(used));
     if (state.has_error) return false;
     used += state.produced;
     if (state.complete) break;
@@ -85,56 +82,56 @@ int main(int argc, char* argv[]) {
   // Parse every baseline value; HttpArena randomizes them to detect shortcuts.
   http_server.add_route(
       "GET", "/baseline11",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         std::int64_t value = 0;
         if (!read_query_sum(req, value)) {
-          res->bad_request_400().set_body("invalid request");
+          res.bad_request_400().set_body("invalid request");
           return;
         }
-        res->ok_200()
+        res.ok_200()
             .add_header("Content-Type", "text/plain")
             .set_body(std::to_string(value));
       });
   http_server.add_route(
       "POST", "/baseline11",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         std::int64_t value = 0;
         std::int64_t body_value = 0;
         if (!read_query_sum(req, value) ||
             !read_body_integer(req, body_value)) {
-          res->bad_request_400().set_body("invalid request");
+          res.bad_request_400().set_body("invalid request");
           return;
         }
-        res->ok_200()
+        res.ok_200()
             .add_header("Content-Type", "text/plain")
             .set_body(std::to_string(value + body_value));
       });
   // Keep this handler minimal so the profile isolates pipelining overhead.
   http_server.add_route(
       "GET", "/pipeline",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
-        res->ok_200().add_header("Content-Type", "text/plain").set_body("ok");
+      [](const request& req, response& res) {
+        res.ok_200().add_header("Content-Type", "text/plain").set_body("ok");
       });
   http_server.add_route(
       "POST", "/upload",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
-        if (!req->has_body_reader()) {
-          res->bad_request_400().set_body("request body required");
+      [](const request& req, response& res) {
+        if (!req.has_body_reader()) {
+          res.bad_request_400().set_body("request body required");
           return;
         }
         // HttpArena requires counting bytes read, not Content-Length.
         std::array<std::byte, 65536> buffer{};
         std::size_t bytes = 0;
         for (;;) {
-          const auto state = req->get_body_reader()->read(buffer);
+          const auto state = req.get_body_reader()->read(buffer);
           if (state.has_error) {
-            res->bad_request_400().set_body("unable to read request body");
+            res.bad_request_400().set_body("unable to read request body");
             return;
           }
           bytes += state.produced;
           if (state.complete) break;
         }
-        res->ok_200()
+        res.ok_200()
             .add_header("Content-Type", "text/plain")
             .set_body(std::to_string(bytes));
       });

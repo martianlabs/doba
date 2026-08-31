@@ -36,22 +36,22 @@ int main(int argc, char* argv[]) {
   server http_server;
   http_server.add_route(
       "GET", "/search",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         std::string body;
         // Lookup by name is optional because the parameter may be absent.
-        const auto query = req->get_query_parameter("q");
+        const auto query = req.get_query_parameter("q");
         body.append("q: ");
         body.append(query ? query->second : "not provided");
         body.append("\n\nall parameters:\n");
         // Indexed access visits every parsed name-value pair.
-        for (std::size_t i = 0; i < req->get_query_parameters_length(); i++) {
-          const auto [name, value] = req->get_query_parameter(i);
+        for (std::size_t i = 0; i < req.get_query_parameters_length(); i++) {
+          const auto [name, value] = req.get_query_parameter(i);
           body.append(name);
           body.append(" = ");
           body.append(value);
           body.push_back('\n');
         }
-        res->ok_200()
+        res.ok_200()
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(body);
       });

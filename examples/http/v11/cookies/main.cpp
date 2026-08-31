@@ -36,19 +36,19 @@ int main(int argc, char* argv[]) {
   server http_server;
   http_server.add_route(
       "GET", "/cookies",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         std::string body = "session: ";
         // Cookie lookup parses the Cookie field on demand.
-        const auto session = req->get_cookie("session");
+        const auto session = req.get_cookie("session");
         body.append(session ? *session : "not provided");
         body.append("\n\nall cookies:\n");
-        for (const auto& [name, value] : req->get_cookies()) {
+        for (const auto& [name, value] : req.get_cookies()) {
           body.append(name);
           body.append(" = ");
           body.append(value);
           body.push_back('\n');
         }
-        res->ok_200()
+        res.ok_200()
             .add_header("Content-Type", "text/plain; charset=utf-8")
             // Keep each Set-Cookie value as a separate header field.
             .add_header("Set-Cookie", "session=doba; Path=/; HttpOnly")

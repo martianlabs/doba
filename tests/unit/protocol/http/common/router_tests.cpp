@@ -22,7 +22,6 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <memory>
 #include <string>
 #include <type_traits>
 
@@ -34,11 +33,7 @@ struct request {};
 struct response {
   std::string value;
 };
-using martianlabs::doba::common::execution_policy;
 using martianlabs::doba::protocol::http::router;
-
-auto make_request() { return std::make_shared<const request>(); }
-auto make_response() { return std::make_shared<response>(); }
 }  // namespace
 
 // +===========================================================================+
@@ -59,20 +54,18 @@ DOBA_TEST("match returns handler without executing it") {
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/items")));
   bool invoked = false;
   value.add("GET", "/items",
-            [&invoked](std::shared_ptr<const request>,
-                       std::shared_ptr<response> res) {
+            [&invoked](const request&, response& res) {
               invoked = true;
-              res->value = "matched";
+              res.value = "matched";
             });
   auto match = value.match("GET", "/items");
   DOBA_EXPECT(static_cast<bool>(match));
   DOBA_EXPECT(!invoked);
-  auto res = make_response();
-  match.handler->callback(make_request(), res);
+  request req;
+  response res;
+  match.handler->callback(req, res);
   DOBA_EXPECT(invoked);
-  DOBA_EXPECT_EQUAL(res->value, "matched");
-  DOBA_EXPECT_EQUAL(match.handler->policy,
-                    execution_policy::kSynchronous);
+  DOBA_EXPECT_EQUAL(res.value, "matched");
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/Items")));
 }
 // +===========================================================================+
@@ -80,8 +73,7 @@ DOBA_TEST("match returns handler without executing it") {
 // +===========================================================================+
 DOBA_TEST("routes use exact path matching") {
   router<request, response> value;
-  auto handler = [](std::shared_ptr<const request>,
-                    std::shared_ptr<response>) {};
+  auto handler = [](const request&, response&) {};
   value.add("GET", "/assets/*", handler);
   value.add("GET", "/items/:id", handler);
   DOBA_EXPECT(static_cast<bool>(value.match("GET", "/assets/*")));
@@ -90,31 +82,30 @@ DOBA_TEST("routes use exact path matching") {
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/items/42")));
 }
 // +===========================================================================+
-// | [>] match preserves first handler and execution policy      ( test-case ) |
+// | [>] match preserves first handler                            ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("match preserves first handler and execution policy") {
+DOBA_TEST("match preserves first handler") {
   router<request, response> value;
   value.add(
       "GET", "/resource",
-      [](std::shared_ptr<const request>, std::shared_ptr<response> res) {
-        res->value = "first";
+      [](const request&, response& res) {
+        res.value = "first";
       });
   value.add(
       "GET", "/resource",
-      [](std::shared_ptr<const request>, std::shared_ptr<response> res) {
-        res->value = "second";
+      [](const request&, response& res) {
+        res.value = "second";
       });
   value.add(
       "POST", "/resource",
-      [](std::shared_ptr<const request>, std::shared_ptr<response>) {},
-      execution_policy::kAsynchronous);
+      [](const request&, response&) {});
   auto get = value.match("GET", "/resource");
   auto post = value.match("POST", "/resource");
-  auto res = make_response();
-  get.handler->callback(make_request(), res);
-  DOBA_EXPECT_EQUAL(res->value, "first");
-  DOBA_EXPECT_EQUAL(get.handler->policy, execution_policy::kSynchronous);
-  DOBA_EXPECT_EQUAL(post.handler->policy, execution_policy::kAsynchronous);
+  request req;
+  response res;
+  get.handler->callback(req, res);
+  DOBA_EXPECT_EQUAL(res.value, "first");
+  DOBA_EXPECT(static_cast<bool>(post));
   DOBA_EXPECT_EQUAL(value.allowed_methods("/resource"), "GET, POST");
   DOBA_EXPECT(value.allowed_methods("/missing").empty());
 }

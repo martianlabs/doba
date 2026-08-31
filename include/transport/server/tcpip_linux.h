@@ -96,14 +96,13 @@ struct response_data {
 template <typename RQty, typename RSty,
           template <typename, typename> class DEty>
 struct context
-    : public std::enable_shared_from_this<context<RQty, RSty, DEty>> {
+{
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  context(int in_socket, std::weak_ptr<worker<RQty, RSty, DEty>> in_owner,
+  context(int in_socket,
           types::on_client_disconnected_delegate on_disconnection)
-      : owner{std::move(in_owner)},
-        on_disconnection_{std::move(on_disconnection)},
+      : on_disconnection_{std::move(on_disconnection)},
         socket_{in_socket} {}
   context(const context&) = delete;
   context(context&&) noexcept = delete;
@@ -140,76 +139,43 @@ struct context
   // +=========================================================================+
   int get_socket() const { return socket_; }
   // +=========================================================================+
-  // | [>] get_next_response_id                                     ( public ) |
-  // +=========================================================================+
-  uint64_t get_next_response_id() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    uint64_t response_id = next_response_id_++;
-    if (!closing_ && socket_ != -1) responses_.emplace_back();
-    return response_id;
-  }
-  // +=========================================================================+
   // | [>] enqueue_response                                         ( public ) |
   // +=========================================================================+
   bool enqueue_response(
-      std::unique_ptr<protocol::serialization_result> response,
-      uint64_t response_id) {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    return enqueue_response_(std::move(response), response_id);
+      std::unique_ptr<protocol::serialization_result> response) {
+    return enqueue_response_(std::move(response));
   }
   // +=========================================================================+
   // | [>] enqueue_error_response                                   ( public ) |
   // +=========================================================================+
   bool enqueue_error_response(
-      std::unique_ptr<protocol::serialization_result> response,
-      uint64_t response_id) {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    if (!enqueue_response_(std::move(response), response_id)) {
-      return fail_response_(response_id);
+      std::unique_ptr<protocol::serialization_result> response) {
+    if (!enqueue_response_(std::move(response))) {
+      return fail_response_();
     }
-    auto first = responses_.begin() +
-                 static_cast<std::ptrdiff_t>(response_id -
-                                             expected_response_id_) +
-                 1;
-    responses_.erase(first, responses_.end());
     closing_ = true;
     return true;
   }
   // +=========================================================================+
   // | [>] fail_response                                            ( public ) |
   // +=========================================================================+
-  bool fail_response(uint64_t response_id) {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    return fail_response_(response_id);
-  }
+  bool fail_response() { return fail_response_(); }
   // +=========================================================================+
   // | [>] connected                                                ( public ) |
   // +=========================================================================+
-  void connected() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    connected_ = true;
-  }
+  void connected() { connected_ = true; }
   // +=========================================================================+
   // | [>] close                                                    ( public ) |
   // +=========================================================================+
-  void close() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    closing_ = true;
-  }
+  void close() { closing_ = true; }
   // +=========================================================================+
   // | [>] abort                                                    ( public ) |
   // +=========================================================================+
-  void abort() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    abort_();
-  }
+  void abort() { abort_(); }
   // +=========================================================================+
   // | [>] can_receive                                              ( public ) |
   // +=========================================================================+
-  bool can_receive() const {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    return socket_ != -1 && !closing_;
-  }
+  bool can_receive() const { return socket_ != -1 && !closing_; }
   // +=========================================================================+
   // | [>] is_closed                                                ( public ) |
   // +=========================================================================+
@@ -218,7 +184,6 @@ struct context
   // | [>] flush_send                                               ( public ) |
   // +=========================================================================+
   bool flush_send() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     if (socket_ == -1 || aborted_) return false;
     for (;;) {
       if (sending_offset_ == sending_buffer_.size()) {
@@ -243,7 +208,6 @@ struct context
   // | [>] get_event_mask                                           ( public ) |
   // +=========================================================================+
   uint32_t get_event_mask() const {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     if (socket_ == -1 || aborted_) return 0;
     if (closing_ && sending_offset_ == sending_buffer_.size() &&
         responses_.empty()) {
@@ -261,7 +225,6 @@ struct context
   // | [>] retire_socket                                           ( public )  |
   // +=========================================================================+
   int retire_socket() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     if (socket_ == -1) return -1;
     int socket = socket_;
     socket_ = -1;
@@ -272,11 +235,8 @@ struct context
   // | [>] notify_disconnection                                     ( public ) |
   // +=========================================================================+
   void notify_disconnection() {
-    {
-      std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-      if (!connected_ || disconnected_ || socket_ != -1) return;
-      disconnected_ = true;
-    }
+    if (!connected_ || disconnected_ || socket_ != -1) return;
+    disconnected_ = true;
     try {
       on_disconnection_();
     } catch (...) {
@@ -285,7 +245,6 @@ struct context
   // +=========================================================================+
   // | ATTRIBUTEs                                                   ( public ) |
   // +=========================================================================+
-  std::weak_ptr<worker<RQty, RSty, DEty>> owner;
   context* retirement_next{nullptr};
 
  private:
@@ -293,31 +252,16 @@ struct context
   // | [>] enqueue_response_                                       ( private ) |
   // +=========================================================================+
   bool enqueue_response_(
-      std::unique_ptr<protocol::serialization_result> response,
-      uint64_t response_id) {
-    if (!response || socket_ == -1 || aborted_ ||
-        response_id < expected_response_id_) {
-      return false;
-    }
-    uint64_t offset = response_id - expected_response_id_;
-    if (offset >= responses_.size()) return false;
-    response_data& data = responses_[static_cast<std::size_t>(offset)];
-    if (data.response) return false;
-    data.response = std::move(response);
+      std::unique_ptr<protocol::serialization_result> response) {
+    if (!response || socket_ == -1 || aborted_) return false;
+    responses_.push_back({std::move(response)});
     return true;
   }
   // +=========================================================================+
   // | [>] fail_response_                                          ( private ) |
   // +=========================================================================+
-  bool fail_response_(uint64_t response_id) {
-    if (socket_ == -1 || aborted_ || response_id < expected_response_id_) {
-      return false;
-    }
-    uint64_t offset = response_id - expected_response_id_;
-    if (offset >= responses_.size()) return false;
-    auto first = responses_.begin() + static_cast<std::ptrdiff_t>(offset);
-    if (first->response) return false;
-    responses_.erase(first, responses_.end());
+  bool fail_response_() {
+    if (socket_ == -1 || aborted_) return false;
     closing_ = true;
     return true;
   }
@@ -351,7 +295,6 @@ struct context
         sending_buffer_.append(reinterpret_cast<const char*>(chunk), read);
         continue;
       }
-      expected_response_id_++;
       responses_.pop_front();
     }
     return true;
@@ -370,7 +313,6 @@ struct context
   // | ATTRIBUTEs                                                  ( private ) |
   // +=========================================================================+
   types::on_client_disconnected_delegate on_disconnection_;
-  mutable std::mutex sending_mutex_;
   int socket_{-1};
   bool closing_{false};
   bool connected_{false};
@@ -381,8 +323,6 @@ struct context
   std::string sending_buffer_;
   std::size_t sending_offset_{0};
   std::deque<response_data> responses_;
-  uint64_t expected_response_id_{0};
-  uint64_t next_response_id_{0};
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -398,7 +338,7 @@ struct context
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty,
           template <typename, typename> class DEty>
-struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
+struct worker {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
@@ -467,8 +407,6 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
       close_resources();
       throw std::runtime_error("Listener could not be registered!");
     }
-    std::lock_guard<std::mutex> pending_lock(pending_mutex_);
-    accepting_notifications_ = true;
   }
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
@@ -489,37 +427,14 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
     }
     if (epoll_fd_ == -1) return;
     stopping_.store(true);
-    {
-      std::lock_guard<std::mutex> pending_lock(pending_mutex_);
-      accepting_notifications_ = false;
-      uint64_t wake = 1;
-      ssize_t written = 0;
-      do {
-        written = ::write(wake_fd_, &wake, sizeof(wake));
-      } while (written == -1 && errno == EINTR);
-    }
-    if (thread_.joinable()) thread_.join();
-    close_contexts();
-    {
-      std::lock_guard<std::mutex> pending_lock(pending_mutex_);
-      pending_contexts_.clear();
-      close_resources();
-    }
-  }
-  // +=========================================================================+
-  // | [>] notify                                                   ( public ) |
-  // +=========================================================================+
-  void notify(std::shared_ptr<context<RQty, RSty, DEty>> ctx) {
-    std::lock_guard<std::mutex> pending_lock(pending_mutex_);
-    if (!accepting_notifications_) return;
-    bool wake_worker = pending_contexts_.empty();
-    pending_contexts_.emplace_back(std::move(ctx));
-    if (!wake_worker) return;
     uint64_t wake = 1;
     ssize_t written = 0;
     do {
       written = ::write(wake_fd_, &wake, sizeof(wake));
     } while (written == -1 && errno == EINTR);
+    if (thread_.joinable()) thread_.join();
+    close_contexts();
+    close_resources();
   }
 
  private:
@@ -565,24 +480,6 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
     do {
       received = ::read(wake_fd_, &wake, sizeof(wake));
     } while (received == -1 && errno == EINTR);
-    if (stopping_.load()) return;
-    std::vector<std::shared_ptr<context<RQty, RSty, DEty>>> pending;
-    {
-      std::lock_guard<std::mutex> pending_lock(pending_mutex_);
-      pending.swap(pending_contexts_);
-    }
-    for (const auto& ctx : pending) {
-      if (ctx->is_closed()) continue;
-      try {
-        if (!ctx->flush_send()) {
-          abort_context(ctx.get());
-        } else {
-          rearm_context(ctx.get());
-        }
-      } catch (...) {
-        abort_context(ctx.get());
-      }
-    }
   }
   // +=========================================================================+
   // | [>] handle_listener                                         ( private ) |
@@ -617,27 +514,27 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   // | [>] register_context                                        ( private ) |
   // +=========================================================================+
   void register_context(int socket) {
-    std::shared_ptr<context<RQty, RSty, DEty>> ctx =
-        std::make_shared<context<RQty, RSty, DEty>>(
-            socket, this->shared_from_this(), on_disconnection_);
-    if (!contexts_.emplace(ctx.get(), ctx).second) {
+    auto ctx = std::make_unique<context<RQty, RSty, DEty>>(
+        socket, on_disconnection_);
+    auto ctx_ptr = ctx.get();
+    if (!contexts_.emplace(ctx_ptr, std::move(ctx)).second) {
       throw std::runtime_error("Context could not be registered!");
     }
     epoll_event event{};
     event.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
-    event.data.ptr = ctx.get();
+    event.data.ptr = ctx_ptr;
     if (::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket, &event) == -1) {
-      ctx->abort();
-      close_context(ctx.get());
+      ctx_ptr->abort();
+      close_context(ctx_ptr);
       return;
     }
     try {
       on_connection_();
     } catch (...) {
-      close_context(ctx.get());
+      close_context(ctx_ptr);
       return;
     }
-    ctx->connected();
+    ctx_ptr->connected();
   }
   // +=========================================================================+
   // | [>] handle_context                                          ( private ) |
@@ -696,8 +593,7 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
         accepted = ctx->accumulate(buffer + consumed, size - consumed);
       }
       if (!accepted || accepted > (size - consumed)) {
-        enqueue_error_response(ctx, ctx->get_next_response_id(), 0,
-                               "Invalid request content!");
+        enqueue_error_response(ctx, 0, "Invalid request content!");
         return;
       }
       handle_deserialized_requests(ctx);
@@ -712,61 +608,38 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
       protocol::deserialization_result<RQty> result = ctx->deserialize();
       if (result.code == protocol::deserialization_status::kMoreBytesNeeded) {
         // The protocol may need some bytes on the wire before it can go on
-        // (their meaning is opaque here); they take their own response slot
-        // so they are written ahead of any later response.
+        // (their meaning is opaque here); they are written ahead of any later
+        // response.
         if (!result.interim.empty()) {
           auto interim = std::make_unique<protocol::serialization_result>();
           interim->prefix.assign(result.interim);
-          ctx->enqueue_response(std::move(interim),
-                                ctx->get_next_response_id());
+          ctx->enqueue_response(std::move(interim));
         }
         return;
       }
-      uint64_t response_id = ctx->get_next_response_id();
       if (result.code == protocol::deserialization_status::kInvalidSource) {
-        enqueue_error_response(ctx, response_id, result.reason,
+        enqueue_error_response(ctx, result.reason,
                                "Invalid request content!");
         return;
       }
       if (!result.request) {
-        enqueue_error_response(ctx, response_id, 0, "Decoder error!");
+        enqueue_error_response(ctx, 0, "Decoder error!");
         return;
       }
       if (result.channel == protocol::channel_intent::kClose) ctx->close();
-      std::thread::id this_thread_id = std::this_thread::get_id();
-      std::shared_ptr<context<RQty, RSty, DEty>> context_owner =
-          ctx->shared_from_this();
       try {
-        on_request_(
-            result.request, std::make_shared<RSty>(),
-            [context_owner, response_id,
-             this_thread_id](std::shared_ptr<RSty> response) {
-              bool completed = false;
-              if (response) {
-                try {
-                  auto serialized = response->serialize();
-                  if (serialized) {
-                    completed = context_owner->enqueue_response(
-                        std::move(serialized), response_id);
-                  } else {
-                    completed = context_owner->fail_response(response_id);
-                  }
-                } catch (...) {
-                  completed = context_owner->fail_response(response_id);
-                }
-              } else {
-                completed = context_owner->fail_response(response_id);
-              }
-              if (completed && std::this_thread::get_id() != this_thread_id) {
-                auto owner = context_owner->owner.lock();
-                if (owner) owner->notify(context_owner);
-              }
-            });
+        RSty response;
+        on_request_(*result.request, response);
+        auto serialized = response.serialize();
+        if (!serialized || !ctx->enqueue_response(std::move(serialized))) {
+          ctx->fail_response();
+          return;
+        }
       } catch (const std::exception& ex) {
-        enqueue_error_response(ctx, response_id, 7, ex.what());
+        enqueue_error_response(ctx, 7, ex.what());
         return;
       } catch (...) {
-        enqueue_error_response(ctx, response_id, 7,
+        enqueue_error_response(ctx, 7,
                                "Request handler error!");
         return;
       }
@@ -777,18 +650,16 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   // | [>] enqueue_error_response                                  ( private ) |
   // +=========================================================================+
   void enqueue_error_response(context<RQty, RSty, DEty>* ctx,
-                              uint64_t response_id, int reason_code,
-                              std::string_view reason) {
+                              int reason_code, std::string_view reason) {
     try {
-      std::shared_ptr<RSty> response = std::make_shared<RSty>();
+      RSty response;
       on_bad_request_(reason_code, reason, response);
-      auto serialized = response->serialize();
-      if (!serialized ||
-          !ctx->enqueue_error_response(std::move(serialized), response_id)) {
-        ctx->fail_response(response_id);
+      auto serialized = response.serialize();
+      if (!serialized || !ctx->enqueue_error_response(std::move(serialized))) {
+        ctx->fail_response();
       }
     } catch (...) {
-      ctx->fail_response(response_id);
+      ctx->fail_response();
     }
   }
   // +=========================================================================+
@@ -869,12 +740,9 @@ struct worker : public std::enable_shared_from_this<worker<RQty, RSty, DEty>> {
   std::atomic<bool> stopping_{false};
   std::jthread thread_;
   std::unordered_map<context<RQty, RSty, DEty>*,
-                     std::shared_ptr<context<RQty, RSty, DEty>>>
+                     std::unique_ptr<context<RQty, RSty, DEty>>>
       contexts_;
   context<RQty, RSty, DEty>* retired_contexts_{nullptr};
-  std::vector<std::shared_ptr<context<RQty, RSty, DEty>>> pending_contexts_;
-  std::mutex pending_mutex_;
-  bool accepting_notifications_{false};
   types::on_request_delegate<RQty, RSty> on_request_;
   types::on_bad_request_delegate<RSty> on_bad_request_;
   types::on_client_connected_delegate on_connection_;
@@ -922,7 +790,7 @@ class tcpip {
       std::size_t number_of_workers =
           std::max<std::size_t>(1, std::thread::hardware_concurrency());
       for (std::size_t i = 0; i < number_of_workers; i++) {
-        auto entry = std::make_shared<worker<RQty, RSty, DEty>>(
+        auto entry = std::make_unique<worker<RQty, RSty, DEty>>(
             on_request_, on_bad_request_, on_connection_, on_disconnection_);
         entry->setup(port_number);
         workers_.emplace_back(std::move(entry));
@@ -984,7 +852,7 @@ class tcpip {
   // | [>] stop_                                                   ( private ) |
   // +=========================================================================+
   void stop_(bool starting_failure) {
-    std::vector<std::shared_ptr<worker<RQty, RSty, DEty>>> workers;
+    std::vector<std::unique_ptr<worker<RQty, RSty, DEty>>> workers;
     {
       std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
       if (starting_failure) {
@@ -1056,7 +924,7 @@ class tcpip {
   // | ATTRIBUTEs                                                  ( private ) |
   // +=========================================================================+
   network::detail::environment environment_;
-  std::vector<std::shared_ptr<worker<RQty, RSty, DEty>>> workers_;
+  std::vector<std::unique_ptr<worker<RQty, RSty, DEty>>> workers_;
   std::mutex lifecycle_mutex_;
   std::condition_variable lifecycle_condition_;
   bool starting_{false};

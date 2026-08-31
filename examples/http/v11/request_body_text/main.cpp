@@ -38,26 +38,26 @@ int main(int argc, char* argv[]) {
   server http_server;
   http_server.add_route(
       "POST", "/echo",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         // The reader hides Content-Length and chunked request framing.
-        if (!req->has_body_reader()) {
-          res->bad_request_400().set_body("request body required");
+        if (!req.has_body_reader()) {
+          res.bad_request_400().set_body("request body required");
           return;
         }
         std::array<std::byte, 1024> buffer{};
         std::string text;
         for (;;) {
           // produced is the valid byte count; complete ends the read loop.
-          const auto state = req->get_body_reader()->read(buffer);
+          const auto state = req.get_body_reader()->read(buffer);
           if (state.has_error) {
-            res->bad_request_400().set_body("unable to read request body");
+            res.bad_request_400().set_body("unable to read request body");
             return;
           }
           text.append(reinterpret_cast<const char*>(buffer.data()),
                       state.produced);
           if (state.complete) break;
         }
-        res->ok_200()
+        res.ok_200()
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(text);
       });

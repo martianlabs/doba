@@ -160,7 +160,6 @@ struct context
   // | [>] accumulate                                               ( public ) |
   // +=========================================================================+
   std::size_t accumulate(std::size_t bytes_received) {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     std::size_t bytes_accumulated =
         decoder_.accumulate(ovr_wsa_.buf + receive_offset_, bytes_received);
     receive_offset_ += bytes_accumulated;
@@ -170,49 +169,36 @@ struct context
   // | [>] deserialize                                              ( public ) |
   // +=========================================================================+
   protocol::deserialization_result<RQty> deserialize() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     return decoder_.deserialize();
   }
-  // +=========================================================================+
-  // | [>] get_next_response_id                                     ( public ) |
-  // +=========================================================================+
-  uint64_t get_next_response_id() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    return get_next_rid_();
-  }
-  // +=========================================================================+
   // | [>] enqueue_response                                         ( public ) |
   // +=========================================================================+
-  void enqueue_response(
-      std::unique_ptr<protocol::serialization_result> response,
-      uint64_t response_id) {
+  bool enqueue_response(
+      std::unique_ptr<protocol::serialization_result> response) {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    enqueue_response_(std::move(response), response_id);
+    return enqueue_response_(std::move(response));
   }
   // +=========================================================================+
   // | [>] enqueue_error_response                                   ( public ) |
   // +=========================================================================+
-  void enqueue_error_response(
-      std::unique_ptr<protocol::serialization_result> response,
-      uint64_t response_id) {
+  bool enqueue_error_response(
+      std::unique_ptr<protocol::serialization_result> response) {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    if (!enqueue_response_(std::move(response), response_id)) {
-      fail_response_(response_id);
-      return;
+    if (!enqueue_response_(std::move(response))) {
+      fail_response_();
+      return false;
     }
-    responses_.erase(responses_.begin() +
-                         (response_id - expected_response_id_) + 1,
-                     responses_.end());
     closing_ = true;
     arm_next_send_operation_();
+    return true;
   }
   // +=========================================================================+
   // | [>] fail_response                                            ( public ) |
   // +=========================================================================+
-  void fail_response(uint64_t response_id) {
+  void fail_response() {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     try {
-      fail_response_(response_id);
+      fail_response_();
     } catch (...) {
       abort_();
     }
@@ -311,34 +297,15 @@ struct context
   // | [>] enqueue_response_                                       ( private ) |
   // +=========================================================================+
   bool enqueue_response_(
-      std::unique_ptr<protocol::serialization_result> response,
-      uint64_t response_id) {
-    if (!response || response_id < expected_response_id_) return false;
-    uint64_t offset = response_id - expected_response_id_;
-    if (offset >= responses_.size()) return false;
-    response_data& rdata = responses_[static_cast<std::size_t>(offset)];
-    if (rdata.response) return false;
-    rdata.response = std::move(response);
+      std::unique_ptr<protocol::serialization_result> response) {
+    if (!response || socket_ == INVALID_SOCKET) return false;
+    responses_.push_back({std::move(response)});
     return true;
-  }
-  // +=========================================================================+
-  // | [>] get_next_rid_                                           ( private ) |
-  // +=========================================================================+
-  uint64_t get_next_rid_() {
-    uint64_t response_id = next_response_id_++;
-    if (!closing_) responses_.emplace_back();
-    return response_id;
   }
   // +=========================================================================+
   // | [>] fail_response_                                          ( private ) |
   // +=========================================================================+
-  void fail_response_(uint64_t response_id) {
-    if (response_id < expected_response_id_) return;
-    uint64_t offset = response_id - expected_response_id_;
-    if (offset >= responses_.size()) return;
-    auto itr = responses_.begin() + static_cast<std::size_t>(offset);
-    if (itr->response) return;
-    responses_.erase(itr, responses_.end());
+  void fail_response_() {
     closing_ = true;
     arm_next_send_operation_();
   }
@@ -354,7 +321,6 @@ struct context
       sending_offset_ = 0;
       auto itr = responses_.begin();
       while (itr != responses_.end()) {
-        if (!itr->response) break;
         if (sending_buffer_.size() >= kSendBufferMaxSz) break;
         if (!itr->prefix_written) {
           sending_buffer_.append(itr->response->prefix);
@@ -381,7 +347,6 @@ struct context
           sending_buffer_.append(reinterpret_cast<const char*>(chunk), read);
           continue;
         }
-        expected_response_id_++;
         itr = responses_.erase(itr);
       }
     }
@@ -520,8 +485,6 @@ struct context
   WSABUF ovs_wsa_{0};
   // [responses] section!
   std::deque<response_data> responses_;
-  uint64_t expected_response_id_{0};
-  uint64_t next_response_id_{0};
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -957,15 +920,17 @@ class tcpip {
   // | [>] enqueue_error_response                                  ( private ) |
   // +=========================================================================+
   void enqueue_error_response(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
-                               uint64_t response_id, int reason_code,
-                               std::string_view reason) {
+                               int reason_code, std::string_view reason) {
     try {
-      std::shared_ptr<RSty> response = std::make_shared<RSty>();
+      RSty response;
       on_bad_request_(reason_code, reason, response);
-      ctx->enqueue_error_response(std::move(response->serialize()),
-                                  response_id);
+      auto serialized = response.serialize();
+      if (!serialized ||
+          !ctx->enqueue_error_response(std::move(serialized))) {
+        ctx->fail_response();
+      }
     } catch (...) {
-      ctx->fail_response(response_id);
+      ctx->fail_response();
     }
   }
   // +=========================================================================+
@@ -981,7 +946,6 @@ class tcpip {
       }
       std::size_t bytes_accumulated = 0;
       bool keep_decoding_requests = true;
-      std::thread::id this_thread_id = std::this_thread::get_id();
       do {
         // Let's accumulate the received bytes into the decoder!
         bytes_accumulated = ctx->accumulate(bytes_received);
@@ -995,71 +959,51 @@ class tcpip {
           deserialization_result<RQty> result = ctx->deserialize();
           if (result.code == deserialization_status::kMoreBytesNeeded) {
             // The protocol may need some bytes on the wire before it can go
-            // on (their meaning is opaque here); they take their own response
-            // slot so they are written ahead of any later response.
+            // on (their meaning is opaque here); they are written ahead of any
+            // later response.
             if (!result.interim.empty()) {
               auto interim = std::make_unique<protocol::serialization_result>();
               interim->prefix.assign(result.interim);
-              ctx->enqueue_response(std::move(interim),
-                                    ctx->get_next_response_id());
+              if (!ctx->enqueue_response(std::move(interim))) {
+                ctx->fail_response();
+                return;
+              }
             }
             break;
           } else if (result.code == deserialization_status::kInvalidSource) {
-            uint64_t response_id = ctx->get_next_response_id();
-            enqueue_error_response(ctx, response_id, result.reason,
+            enqueue_error_response(ctx, result.reason,
                                    "Invalid request content!");
             return;
           } else if (result.code == deserialization_status::kSucceeded) {
             if (result.request == nullptr) {
-              uint64_t response_id = ctx->get_next_response_id();
-              enqueue_error_response(ctx, response_id, 0, "Decoder error!");
+              enqueue_error_response(ctx, 0, "Decoder error!");
               return;
             }
-            std::shared_ptr<RSty> response = std::make_shared<RSty>();
-            uint64_t this_response_id = ctx->get_next_response_id();
-            if (result.channel == protocol::channel_intent::kClose) {
+            bool close_channel =
+                result.channel == protocol::channel_intent::kClose;
+            if (close_channel) {
               keep_decoding_requests = false;
-              ctx->close();
             }
             try {
               // Let's call user handler!
-              on_request_(result.request, response,
-                          [context = ctx, this_response_id,
-                           this_thread_id](std::shared_ptr<RSty> response) {
-                            if (!response) {
-                              context->fail_response(this_response_id);
-                              return;
-                            }
-                            try {
-                              auto serialized = response->serialize();
-                              if (!serialized) {
-                                context->fail_response(this_response_id);
-                                return;
-                              }
-                              context->enqueue_response(std::move(serialized),
-                                                        this_response_id);
-                              // Let's arm next send operation only from a
-                              // different thread (delayed operation)!
-                              if (std::this_thread::get_id() !=
-                                  this_thread_id) {
-                                context->arm_next_send_operation();
-                              }
-                            } catch (const std::exception&) {
-                              context->fail_response(this_response_id);
-                            } catch (...) {
-                              context->fail_response(this_response_id);
-                            }
-                          });
+              RSty response;
+              on_request_(*result.request, response);
+              auto serialized = response.serialize();
+              if (!serialized ||
+                  !ctx->enqueue_response(std::move(serialized))) {
+                ctx->fail_response();
+                return;
+              }
+              if (close_channel) ctx->close();
             } catch (const std::exception& ex) {
               // Reuses the same bad-request channel as decoder rejections;
               // the reason code below mirrors
               // protocol::http::v11::rejection_reason::kHandlerError (7),
               // kept as a raw value here so the transport stays http-agnostic.
-              enqueue_error_response(ctx, this_response_id, 7, ex.what());
+              enqueue_error_response(ctx, 7, ex.what());
               return;
             } catch (...) {
-              enqueue_error_response(ctx, this_response_id, 7,
-                                     "Request handler error!");
+              enqueue_error_response(ctx, 7, "Request handler error!");
               return;
             }
           }

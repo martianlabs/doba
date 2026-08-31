@@ -37,10 +37,10 @@ int main(int argc, char* argv[]) {
   server http_server;
   http_server.add_route(
       "GET", "/request",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         // Target and host syntax are parsed before the handler is called.
         std::string target_form;
-        switch (req->get_target()) {
+        switch (req.get_target()) {
           case target::kOriginForm:
             target_form = "origin-form";
             break;
@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
             break;
         }
         std::string host_type;
-        switch (req->get_host_type()) {
+        switch (req.get_host_type()) {
           case helpers::host_type::kIpLiteral:
             host_type = "IP literal";
             break;
@@ -74,20 +74,20 @@ int main(int argc, char* argv[]) {
         }
         // Request accessors return views backed by the request object.
         std::string body = "method: ";
-        body.append(req->get_method());
+        body.append(req.get_method());
         body.append("\npath: ");
-        body.append(req->get_absolute_path());
+        body.append(req.get_absolute_path());
         body.append("\ntarget: ");
         body.append(target_form);
         body.append("\nhost: ");
-        body.append(req->get_host());
+        body.append(req.get_host());
         body.append("\nport: ");
-        body.append(req->get_host_port());
+        body.append(req.get_host_port());
         body.append("\nhost type: ");
         body.append(host_type);
         body.append("\nconnection close: ");
-        body.append(req->wants_connection_close() ? "true" : "false");
-        res->ok_200()
+        body.append(req.wants_connection_close() ? "true" : "false");
+        res.ok_200()
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(body);
       });

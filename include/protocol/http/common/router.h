@@ -30,7 +30,6 @@
 #include <utility>
 #include <vector>
 
-#include "common/execution_policy.h"
 #include "protocol/http/common/router_handler_static.h"
 
 namespace martianlabs::doba::protocol::http {
@@ -53,7 +52,6 @@ class router {
   // +=========================================================================+
   struct handler_data {
     router_handler_static<RQty, RSty> callback;
-    common::execution_policy policy;
   };
   struct route_match {
     const handler_data* handler{nullptr};
@@ -77,13 +75,11 @@ class router {
   // | [>] add                                                      ( public ) |
   // +=========================================================================+
   template <router_handler_lambda Hty>
-  void add(std::string_view method, std::string_view route, Hty handler,
-           common::execution_policy policy =
-               common::execution_policy::kSynchronous) {
+  void add(std::string_view method, std::string_view route, Hty handler) {
     perform_checks<Hty>();
     route_data data{
         std::string(route),
-        {router_handler_static<RQty, RSty>(std::move(handler)), policy}};
+        {router_handler_static<RQty, RSty>(std::move(handler))}};
     for (auto& [static_method, handlers] : handlers_) {
       if (static_method == method) {
         handlers.push_back(std::move(data));
@@ -143,12 +139,22 @@ class router {
                   "The route handler must return void");
     static_assert(
         std::same_as<std::decay_t<typename signature::request_type>,
-                     std::shared_ptr<const RQty>>,
-        "The first route handler argument must be std::shared_ptr<const RQty>");
+                     RQty>,
+        "The first route handler argument must be const RQty&");
+    static_assert(
+        std::is_lvalue_reference_v<typename signature::request_type> &&
+            std::is_const_v<std::remove_reference_t<
+                typename signature::request_type>>,
+        "The first route handler argument must be const RQty&");
     static_assert(
         std::same_as<std::decay_t<typename signature::response_type>,
-                     std::shared_ptr<RSty>>,
-        "The second route handler argument must be std::shared_ptr<RSty>");
+                     RSty>,
+        "The second route handler argument must be RSty&");
+    static_assert(
+        std::is_lvalue_reference_v<typename signature::response_type> &&
+            !std::is_const_v<std::remove_reference_t<
+                typename signature::response_type>>,
+        "The second route handler argument must be RSty&");
     static_assert(signature::parameter_count == 0,
                   "Static route handlers accept exactly two arguments");
   }

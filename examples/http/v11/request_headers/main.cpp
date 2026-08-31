@@ -36,24 +36,24 @@ int main(int argc, char* argv[]) {
   server http_server;
   http_server.add_route(
       "GET", "/headers",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         std::string body = "user-agent: ";
         // Header-name lookup is case-insensitive.
-        if (req->exist_header("User-Agent")) {
-          body.append(req->get_header("User-Agent").second);
+        if (req.exist_header("User-Agent")) {
+          body.append(req.get_header("User-Agent").second);
         } else {
           body.append("not provided");
         }
         body.append("\n\nall headers:\n");
         // Indexed access also allows every received field to be inspected.
-        for (std::size_t i = 0; i < req->get_headers_length(); i++) {
-          const auto [name, value] = req->get_header(i);
+        for (std::size_t i = 0; i < req.get_headers_length(); i++) {
+          const auto [name, value] = req.get_header(i);
           body.append(name);
           body.append(": ");
           body.append(value);
           body.push_back('\n');
         }
-        res->ok_200()
+        res.ok_200()
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(body);
       });

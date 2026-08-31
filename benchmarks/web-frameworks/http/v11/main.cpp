@@ -23,8 +23,6 @@
 // permissions and limitations under the License.
 
 #include <future>
-#include <memory>
-#include <string>
 
 #include "protocol/http/v11/server.h"
 
@@ -34,17 +32,16 @@ int main(int argc, char* argv[]) {
   server http_server;
   http_server.add_route(
       "GET", "/",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
-        res->ok_200();
+      [](const request& req, response& res) {
+        res.ok_200();
       });
   http_server.add_route(
       "GET", "/user/:id",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res,
-         const std::string& id) { res->ok_200().set_body(id); });
+      [](const request& req, response& res) { res.ok_200(); });
   http_server.add_route(
       "POST", "/user",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
-        res->ok_200();
+      [](const request& req, response& res) {
+        res.ok_200();
       });
   http_server.start("3000");
   std::promise<void> shutdown;

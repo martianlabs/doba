@@ -35,8 +35,8 @@ using namespace martianlabs::doba::protocol::http::v11;
 int main(int argc, char* argv[]) {
   server http_server;
   auto resource =
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
-        res->ok_200()
+      [](const request& req, response& res) {
+        res.ok_200()
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body("resource representation");
       };

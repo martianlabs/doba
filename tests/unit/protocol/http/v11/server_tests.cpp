@@ -22,10 +22,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <chrono>
 #include <functional>
-#include <future>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -35,7 +32,6 @@
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::common::execution_policy;
 using martianlabs::doba::protocol::http::target;
 using martianlabs::doba::protocol::http::v11::decoder;
 using martianlabs::doba::protocol::http::v11::rejection_reason;
@@ -89,9 +85,7 @@ class fake_router {
   // | [>] TYPEs                                                    ( public ) |
   // +=========================================================================+
   struct handler_data {
-    std::function<void(std::shared_ptr<const RQty>, std::shared_ptr<RSty>)>
-        callback;
-    execution_policy policy;
+    std::function<void(const RQty&, RSty&)> callback;
   };
   struct route_match {
     const handler_data* handler{nullptr};
@@ -101,13 +95,11 @@ class fake_router {
   // | [>] add                                                      ( public ) |
   // +=========================================================================+
   template <typename Hty>
-  void add(std::string_view method, std::string_view route, Hty handler,
-           execution_policy policy) {
+  void add(std::string_view method, std::string_view route, Hty handler) {
     additions++;
     last_method = method;
     last_route = route;
-    last_policy = policy;
-    matched_handler = {std::move(handler), policy};
+    matched_handler = {std::move(handler)};
   }
   // +=========================================================================+
   // | [>] match                                                    ( public ) |
@@ -129,9 +121,7 @@ class fake_router {
   static inline std::size_t additions = 0;
   static inline std::string last_method;
   static inline std::string last_route;
-  static inline execution_policy last_policy = execution_policy::kSynchronous;
-  static inline handler_data matched_handler{
-      {}, execution_policy::kSynchronous};
+  static inline handler_data matched_handler{};
   static inline bool match_available = true;
   static inline std::string allowed_methods_result;
   static inline std::string matched_method;
@@ -153,11 +143,9 @@ class fake_transport {
   // +=========================================================================+
   // | [>] TYPEs                                                    ( public ) |
   // +=========================================================================+
-  using request_callback = std::function<void(
-      std::shared_ptr<const RQty>, std::shared_ptr<RSty>,
-      martianlabs::doba::transport::server::types::on_send_delegate<RSty>)>;
+  using request_callback = std::function<void(const RQty&, RSty&)>;
   using bad_request_callback =
-      std::function<void(int, std::string_view, std::shared_ptr<RSty>)>;
+      std::function<void(int, std::string_view, RSty&)>;
   // +=========================================================================+
   // | [>] set_on_request                                           ( public ) |
   // +=========================================================================+
@@ -213,14 +201,10 @@ using test_transport = fake_transport<request, response, decoder>;
 // | [>] send_request                                             ( function ) |
 // +===========================================================================+
 std::string send_request(const request& req) {
-  std::string output;
-  test_transport::on_request(std::make_shared<const request>(req),
-                             std::make_shared<response>(),
-                             [&output](std::shared_ptr<response> res) {
-                               res->set_header("Date", "fixed");
-                               output = res->serialize()->prefix;
-                             });
-  return output;
+  response res;
+  test_transport::on_request(req, res);
+  res.set_header("Date", "fixed");
+  return res.serialize()->prefix;
 }
 }  // namespace
 
@@ -235,36 +219,6 @@ DOBA_TEST("server is neither copyable nor movable") {
   DOBA_EXPECT(true);
 }
 // +===========================================================================+
-// | [>] asynchronous handlers execute in the server pool        ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("asynchronous handlers execute in the server pool") {
-  test_router::match_available = true;
-  test_router::allowed_methods_result.clear();
-  test_server value;
-  value.add_route(
-      "GET", "/",
-      [](std::shared_ptr<const request>, std::shared_ptr<response> res) {
-        res->ok_200();
-      },
-      execution_policy::kAsynchronous);
-  value.start("8080");
-  std::promise<std::string> sent;
-  auto result = sent.get_future();
-  test_transport::on_request(
-      std::make_shared<const request>(), std::make_shared<response>(),
-      [&sent](std::shared_ptr<response> res) {
-        res->set_header("Date", "fixed");
-        sent.set_value(res->serialize()->prefix);
-      });
-  DOBA_EXPECT(result.wait_for(std::chrono::seconds(2)) ==
-              std::future_status::ready);
-  if (result.wait_for(std::chrono::seconds(0)) ==
-      std::future_status::ready) {
-    DOBA_EXPECT(std::string_view(result.get()).starts_with("HTTP/1.1 200 OK"));
-  }
-  value.stop();
-}
-// +===========================================================================+
 // | [>] lifecycle routing and callbacks cover server behavior   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
@@ -273,10 +227,9 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   // ---------------------------------------------------------------------------
   test_router::additions = 0;
   test_server value;
-  auto handler = [](std::shared_ptr<const request>,
-                    std::shared_ptr<response> res) {
-    res->ok_200();
-    if (test_router::write_body) res->set_body("body");
+  auto handler = [](const request&, response& res) {
+    res.ok_200();
+    if (test_router::write_body) res.set_body("body");
   };
   DOBA_EXPECT_EQUAL(&value.add_route("GET", "/", handler), &value);
   DOBA_EXPECT_EQUAL(test_router::additions, 1);
@@ -388,11 +341,11 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
        "HTTP/1.1 417 Expectation Failed\r\n"},
   };
   for (const auto& test : rejection_cases) {
-    auto res = std::make_shared<response>();
+    response res;
     test_transport::on_bad_request(static_cast<int>(test.reason), "reason",
                                    res);
-    res->set_header("Date", "fixed");
-    const auto serialized = res->serialize();
+    res.set_header("Date", "fixed");
+    const auto serialized = res.serialize();
     DOBA_EXPECT(serialized->prefix.starts_with(test.status));
     DOBA_EXPECT(serialized->prefix.ends_with("reason"));
   }

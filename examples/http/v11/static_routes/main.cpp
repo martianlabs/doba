@@ -37,28 +37,28 @@ int main(int argc, char* argv[]) {
   // A path can expose an independent handler for each HTTP method.
   http_server.add_route(
       method_names::kGet, "/resources",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
-        res->ok_200()
+      [](const request& req, response& res) {
+        res.ok_200()
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body("resource list");
       });
   http_server.add_route(
       method_names::kPost, "/resources",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
-        res->created_201()
+      [](const request& req, response& res) {
+        res.created_201()
             .add_header("Location", "/resources/1")
             .set_body("resource created");
       });
   http_server.add_route(
       method_names::kPut, "/resources",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
-        res->ok_200().set_body("resource replaced");
+      [](const request& req, response& res) {
+        res.ok_200().set_body("resource replaced");
       });
   http_server.add_route(
       method_names::kDelete, "/resources",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         // no_content_204() leaves the response without a message body.
-        res->no_content_204();
+        res.no_content_204();
       });
   http_server.start("8080");
   signaler::wait();

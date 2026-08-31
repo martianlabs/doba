@@ -36,15 +36,12 @@
 // /////////////////////////////////////////////////////////////////////////////
 namespace martianlabs::doba::transport::server {
 struct types {
-  template <typename RSty>
-  using on_send_delegate = std::function<void(std::shared_ptr<RSty>)>;
   template <typename RQty, typename RSty>
   using on_request_delegate =
-      std::function<void(std::shared_ptr<const RQty>, std::shared_ptr<RSty>,
-                         on_send_delegate<RSty>)>;
+      std::function<void(const RQty&, RSty&)>;
   template <typename RSty>
   using on_bad_request_delegate =
-      std::function<void(int, std::string_view, std::shared_ptr<RSty>)>;
+      std::function<void(int, std::string_view, RSty&)>;
   using on_client_connected_delegate = std::function<void()>;
   using on_client_disconnected_delegate = std::function<void()>;
 };

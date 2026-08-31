@@ -39,44 +39,44 @@ int main(int argc, char* argv[]) {
   server http_server;
   http_server.add_route(
       "GET", "/raw",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         // A raw writer stores payload bytes without transfer-coding them.
         auto writer = body::body_writer::raw();
         if (!writer.write("first part\n") || !writer.write("second part\n")) {
-          res->internal_server_error_500();
+          res.internal_server_error_500();
           return;
         }
-        res->ok_200()
+        res.ok_200()
             .add_header("Content-Type", "text/plain; charset=utf-8")
             // Moving the writer derives Content-Length from bytes_written().
             .set_body(std::move(writer));
       });
   http_server.add_route(
       "GET", "/binary",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         const std::array bytes{std::byte{0x00}, std::byte{0x01},
                                std::byte{0x02}, std::byte{0x03}};
         auto writer = body::body_writer::raw();
         // write() also accepts byte spans for binary payloads.
         if (!writer.write(bytes)) {
-          res->internal_server_error_500();
+          res.internal_server_error_500();
           return;
         }
-        res->ok_200()
+        res.ok_200()
             .add_header("Content-Type", "application/octet-stream")
             .set_body(std::move(writer));
       });
   http_server.add_route(
       "GET", "/chunked",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         auto writer = body::body_writer::chunked();
         // Each write emits one chunk; end() emits the terminating chunk.
         if (!writer.write("first chunk\n") || !writer.write("second chunk\n") ||
             !writer.end()) {
-          res->internal_server_error_500();
+          res.internal_server_error_500();
           return;
         }
-        res->ok_200()
+        res.ok_200()
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(std::move(writer));
       });

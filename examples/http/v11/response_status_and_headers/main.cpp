@@ -37,20 +37,20 @@ int main(int argc, char* argv[]) {
   // Status helpers select the status line before headers and body are added.
   http_server.add_route(
       "POST", "/resources",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
-        res->created_201()
+      [](const request& req, response& res) {
+        res.created_201()
             .add_header("Location", "/resources/1")
             .set_body("resource created");
       });
   http_server.add_route(
       "GET", "/redirect",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
-        res->temporary_redirect_307().add_header("Location", "/json");
+      [](const request& req, response& res) {
+        res.temporary_redirect_307().add_header("Location", "/json");
       });
   http_server.add_route(
       "GET", "/json",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
-        res->ok_200()
+      [](const request& req, response& res) {
+        res.ok_200()
             .add_header("Content-Type", "application/json")
             .add_header("Access-Control-Allow-Origin", "*")
             .add_header("Cache-Control", "no-store")
@@ -58,31 +58,31 @@ int main(int argc, char* argv[]) {
       });
   http_server.add_route(
       "GET", "/html",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
-        res->ok_200()
+      [](const request& req, response& res) {
+        res.ok_200()
             .add_header("Content-Type", "text/html; charset=utf-8")
             .set_body("<h1>doba</h1>");
       });
   http_server.add_route(
       "GET", "/headers",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         // add appends, set replaces, and remove erases a response header.
-        res->ok_200()
+        res.ok_200()
             .add_header("X-Example", "first")
             .set_header("X-Example", "replaced")
             .add_header("X-Remove", "value")
             .remove_header("X-Remove");
-        const auto header = res->get_header("X-Example");
+        const auto header = res.get_header("X-Example");
         std::string body = header.second;
         body.append("\nheaders: ");
-        body.append(std::to_string(res->get_headers_length()));
-        res->set_body(body);
+        body.append(std::to_string(res.get_headers_length()));
+        res.set_body(body);
       });
   http_server.add_route(
       "DELETE", "/resources",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         // 204 responses do not carry content or payload framing headers.
-        res->no_content_204();
+        res.no_content_204();
       });
   http_server.start("8080");
   signaler::wait();

@@ -39,18 +39,18 @@ int main(int argc, char* argv[]) {
   server http_server;
   http_server.add_route(
       "GET", "/large",
-      [](std::shared_ptr<const request> req, std::shared_ptr<response> res) {
+      [](const request& req, response& res) {
         // Storage spills to a temporary file after this in-memory threshold.
         byte_storage_options options{.spill_threshold = 1024};
         auto writer = body::body_writer::raw(options);
         const std::string block(1024, 'x');
         for (int i = 0; i < 8; i++) {
           if (!writer.write(block)) {
-            res->internal_server_error_500();
+            res.internal_server_error_500();
             return;
           }
         }
-        res->ok_200()
+        res.ok_200()
             .add_header("Content-Type", "application/octet-stream")
             // The response adopts the writer and its storage.
             .set_body(std::move(writer));
