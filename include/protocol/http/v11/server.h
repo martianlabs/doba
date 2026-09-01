@@ -25,9 +25,12 @@
 #ifndef martianlabs_doba_protocol_http_v11_server_h
 #define martianlabs_doba_protocol_http_v11_server_h
 
+#include <cstddef>
 #include <memory>
+#include <thread>
 
 #include "common/date_server.h"
+#include "common/thread_pool_executor.h"
 #include "transport/server/tcpip.h"
 #include "protocol/http/common/method_names.h"
 #include "protocol/http/common/helpers.h"
@@ -52,6 +55,7 @@ namespace martianlabs::doba::protocol::http::v11 {
 // |   DEty - decoder being used (v11::decoder by default).                    |
 // |   TRty - transport being used (tcp/ip by default).                        |
 // |   ROty - router being used (v11::router by default).                      |
+// |   EXty - asynchronous executor (thread_pool_executor by default).         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty = request, typename RSty = response,
@@ -59,13 +63,16 @@ template <typename RQty = request, typename RSty = response,
           template <typename, typename,
                     template <typename, typename> typename> class TRty =
               transport::server::tcpip,
-          template <typename, typename> class ROty = router>
+          template <typename, typename> class ROty = router,
+          typename EXty = common::thread_pool_executor>
 class server {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  server() = default;
+  server() : server{default_async_workers_(), 1024} {}
+  server(std::size_t async_workers, std::size_t async_queue_capacity)
+      : executor_{async_workers, async_queue_capacity} {}
   server(const server&) = delete;
   server(server&&) noexcept = delete;
   ~server() { stop(); }
@@ -81,8 +88,8 @@ class server {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     common::date_server::get().start();
     transport_.set_on_request(
-        [this](const std::shared_ptr<RQty>& req, RSty& res, auto&) {
-          session_.dispatch(*req, res, router_);
+        [this](const std::shared_ptr<RQty>& req, RSty& res, auto& context) {
+          session_.dispatch(req, res, router_, context, executor_);
         });
     transport_.set_on_bad_request(
         [](int code, std::string_view reason, RSty& res) {
@@ -120,7 +127,14 @@ class server {
         });
     transport_.set_on_connection([this]() { connections_++; });
     transport_.set_on_disconnection([this]() { connections_--; });
-    transport_.start(port);
+    try {
+      if (has_async_routes_) executor_.start();
+      transport_.start(port);
+    } catch (...) {
+      executor_.stop();
+      common::date_server::get().stop();
+      throw;
+    }
     locked_ = true;
   }
   // +=========================================================================+
@@ -129,6 +143,7 @@ class server {
   void stop() {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     transport_.stop();
+    executor_.stop();
     common::date_server::get().stop();
     locked_ = false;
   }
@@ -147,8 +162,29 @@ class server {
     router_.add(method, route, std::move(handler));
     return *this;
   }
+  // +=========================================================================+
+  // | [>] add_async_route                                          ( public ) |
+  // +=========================================================================+
+  template <router_handler_lambda Hty>
+  server& add_async_route(std::string_view method, std::string_view route,
+                          Hty handler) {
+    std::lock_guard<std::mutex> lock(locked_mutex_);
+    if (locked_) {
+      throw std::runtime_error("Cannot add route when the server is running");
+    }
+    router_.add_async(method, route, std::move(handler));
+    has_async_routes_ = true;
+    return *this;
+  }
 
  private:
+  // +=========================================================================+
+  // | [>] default_async_workers_                                  ( private ) |
+  // +=========================================================================+
+  static std::size_t default_async_workers_() {
+    const std::size_t workers = std::thread::hardware_concurrency();
+    return workers == 0 ? 1 : workers;
+  }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
@@ -157,6 +193,8 @@ class server {
   std::mutex locked_mutex_;
   ROty<RQty, RSty> router_;
   session<RQty, RSty, ROty<RQty, RSty>> session_;
+  EXty executor_;
+  bool has_async_routes_{false};
   bool locked_{false};
 };
 }  // namespace martianlabs::doba::protocol::http::v11

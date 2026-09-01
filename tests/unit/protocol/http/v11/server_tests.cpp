@@ -87,6 +87,7 @@ class fake_router {
   // +=========================================================================+
   struct handler_data {
     std::function<void(const RQty&, RSty&)> callback;
+    bool asynchronous{false};
   };
   struct parametrized_handler_data {
     void invoke(const RQty&, RSty&, std::string_view) const {}
@@ -106,7 +107,18 @@ class fake_router {
     additions++;
     last_method = method;
     last_route = route;
-    matched_handler = {std::move(handler)};
+    matched_handler = {std::move(handler), false};
+  }
+  // +=========================================================================+
+  // | [>] add_async                                                ( public ) |
+  // +=========================================================================+
+  template <typename Hty>
+  void add_async(std::string_view method, std::string_view route,
+                 Hty handler) {
+    additions++;
+    last_method = method;
+    last_route = route;
+    matched_handler = {std::move(handler), true};
   }
   // +=========================================================================+
   // | [>] match                                                    ( public ) |
@@ -151,7 +163,20 @@ class fake_transport {
   // +=========================================================================+
   // | [>] TYPEs                                                    ( public ) |
   // +=========================================================================+
-  struct request_context {};
+  struct request_context {
+    struct sender {
+      sender() = default;
+      sender(const sender&) = delete;
+      sender(sender&&) noexcept = default;
+      sender& operator=(const sender&) = delete;
+      sender& operator=(sender&&) noexcept = delete;
+      bool complete(
+          std::unique_ptr<martianlabs::doba::protocol::serialization_result>) {
+        return true;
+      }
+    };
+    sender defer() { return {}; }
+  };
   using request_callback = std::function<void(
       const std::shared_ptr<RQty>&, RSty&, request_context&)>;
   using bad_request_callback =
@@ -202,8 +227,57 @@ class fake_transport {
   static inline std::string started_port;
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] fake_executor                                               ( class ) |
+// +---------------------------------------------------------------------------+
+// | Executor double used by the server tests.                                 |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+class fake_executor {
+ public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
+  fake_executor(std::size_t workers, std::size_t capacity) {
+    configured_workers = workers;
+    configured_capacity = capacity;
+  }
+  // +=========================================================================+
+  // | [>] start                                                    ( public ) |
+  // +=========================================================================+
+  void start() {
+    starts++;
+    running = true;
+  }
+  // +=========================================================================+
+  // | [>] try_submit                                               ( public ) |
+  // +=========================================================================+
+  template <typename FNty>
+  bool try_submit(FNty&&) {
+    return running;
+  }
+  // +=========================================================================+
+  // | [>] stop                                                     ( public ) |
+  // +=========================================================================+
+  void stop() {
+    if (!running) return;
+    stops++;
+    running = false;
+  }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +=========================================================================+
+  static inline std::size_t configured_workers = 0;
+  static inline std::size_t configured_capacity = 0;
+  static inline std::size_t starts = 0;
+  static inline std::size_t stops = 0;
+  static inline bool running = false;
+};
+
 using test_server =
-    server<request, response, decoder, fake_transport, fake_router>;
+    server<request, response, decoder, fake_transport, fake_router,
+           fake_executor>;
 using test_router = fake_router<request, response>;
 using test_transport = fake_transport<request, response, decoder>;
 
@@ -366,4 +440,41 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   // ---------------------------------------------------------------------------
   value.stop();
   DOBA_EXPECT(!test_transport::started);
+}
+// +===========================================================================+
+// | [>] asynchronous routes control executor lifecycle           ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("asynchronous routes control executor lifecycle") {
+  fake_executor::starts = 0;
+  fake_executor::stops = 0;
+  fake_executor::running = false;
+  test_server value{2, 7};
+  DOBA_EXPECT_EQUAL(fake_executor::configured_workers, 2);
+  DOBA_EXPECT_EQUAL(fake_executor::configured_capacity, 7);
+  value.add_route("GET", "/sync", [](const request&, response&) {});
+  value.start("8080");
+  DOBA_EXPECT_EQUAL(fake_executor::starts, 0);
+  value.stop();
+
+  DOBA_EXPECT_EQUAL(
+      &value.add_async_route("GET", "/async",
+                             [](const request&, response&) {}),
+      &value);
+  value.start("8080");
+  DOBA_EXPECT_EQUAL(fake_executor::starts, 1);
+  DOBA_EXPECT(fake_executor::running);
+  bool threw = false;
+  try {
+    value.add_async_route("POST", "/async",
+                          [](const request&, response&) {});
+  } catch (const std::runtime_error&) {
+    threw = true;
+  }
+  DOBA_EXPECT(threw);
+  value.stop();
+  DOBA_EXPECT_EQUAL(fake_executor::stops, 1);
+  value.start("8080");
+  DOBA_EXPECT_EQUAL(fake_executor::starts, 2);
+  value.stop();
+  DOBA_EXPECT_EQUAL(fake_executor::stops, 2);
 }

@@ -25,8 +25,10 @@
 #ifndef martianlabs_doba_protocol_http_v11_session_h
 #define martianlabs_doba_protocol_http_v11_session_h
 
+#include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "protocol/http/common/header_names.h"
 #include "protocol/http/common/method_names.h"
@@ -37,7 +39,7 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] session                                                     ( class ) |
 // +---------------------------------------------------------------------------+
-// | This class holds for the synchronous HTTP/1.1 session dispatch.          |
+// | This class holds for the HTTP/1.1 session dispatch.                      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename ROty>
@@ -46,20 +48,30 @@ class session {
   // +=========================================================================+
   // | [>] dispatch                                                 ( public ) |
   // +=========================================================================+
-  void dispatch(const RQty& req, RSty& res, ROty& router) const {
-    switch (req.get_target()) {
+  template <typename Dty, typename EXty>
+  void dispatch(const std::shared_ptr<RQty>& req, RSty& res, ROty& router,
+                Dty& deferred, EXty& executor) const {
+    switch (req->get_target()) {
       case target::kOriginForm:
       case target::kAbsoluteForm: {
         // The request is either in origin-form (RFC 9110 S9.3.5) or
         // absolute-form (RFC 9110 S9.3.4); in either case, the request is
         // routed to a handler based on the method and absolute path.
-        std::string_view method = req.get_method();
-        std::string_view abs_path = req.get_absolute_path();
+        std::string_view method = req->get_method();
+        std::string_view abs_path = req->get_absolute_path();
         auto match = router.match(method, abs_path);
         if (match.handler) {
-          match.handler->callback(req, res);
+          if (match.handler->asynchronous) {
+            using dispatch_type =
+                async_dispatch<decltype(deferred.defer())>;
+            auto sender = deferred.defer();
+            dispatch_type task{req, match.handler, std::move(sender)};
+            if (!executor.try_submit(std::move(task))) task.reject();
+            return;
+          }
+          match.handler->callback(*req, res);
         } else if (match.parametrized_handler) {
-          match.parametrized_handler->invoke(req, res, abs_path);
+          match.parametrized_handler->invoke(*req, res, abs_path);
         } else {
           std::string allowed_methods = router.allowed_methods(abs_path);
           if (allowed_methods.empty()) {
@@ -86,6 +98,64 @@ class session {
         res.bad_request_400();
         break;
     }
+    finalize_response_(*req, res);
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] async_dispatch                                           ( private ) |
+  // +=========================================================================+
+  template <typename Sty>
+  class async_dispatch {
+   public:
+    async_dispatch(std::shared_ptr<RQty> req,
+                   const typename ROty::handler_data* handler, Sty sender)
+        : req_{std::move(req)},
+          handler_{handler},
+          sender_{std::move(sender)} {}
+    async_dispatch(const async_dispatch&) = delete;
+    async_dispatch(async_dispatch&&) noexcept = default;
+    ~async_dispatch() = default;
+    async_dispatch& operator=(const async_dispatch&) = delete;
+    async_dispatch& operator=(async_dispatch&&) noexcept = delete;
+
+    void operator()() {
+      try {
+        RSty res;
+        handler_->callback(*req_, res);
+        finalize_response_(*req_, res);
+        sender_.complete(res.serialize());
+        return;
+      } catch (...) {
+      }
+      try {
+        RSty res;
+        res.internal_server_error_500();
+        finalize_response_(*req_, res);
+        sender_.complete(res.serialize());
+      } catch (...) {
+      }
+    }
+
+    void reject() {
+      try {
+        RSty res;
+        res.service_unavailable_503();
+        finalize_response_(*req_, res);
+        sender_.complete(res.serialize());
+      } catch (...) {
+      }
+    }
+
+   private:
+    std::shared_ptr<RQty> req_;
+    const typename ROty::handler_data* handler_;
+    Sty sender_;
+  };
+  // +=========================================================================+
+  // | [>] finalize_response_                                       ( private ) |
+  // +=========================================================================+
+  static void finalize_response_(const RQty& req, RSty& res) {
     if (req.wants_connection_close()) {
       res.set_header(header_names::kConnection, "close");
     }

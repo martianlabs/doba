@@ -545,6 +545,10 @@ struct worker {
     auto item = contexts_.find(completion.connection_key);
     if (item == contexts_.end()) return;
     context<RQty, RSty, DEty>* ctx = item->second.get();
+    if (!completion.response) {
+      abort_context(ctx);
+      return;
+    }
     if (!ctx->complete_response(completion.position,
                                 std::move(completion.response))) {
       return;

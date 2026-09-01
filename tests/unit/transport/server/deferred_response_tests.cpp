@@ -124,3 +124,22 @@ DOBA_TEST("response sender transfers ownership and observes revocation") {
   DOBA_EXPECT(!sender.valid());
   DOBA_EXPECT_EQUAL(wakes, 0);
 }
+// +===========================================================================+
+// | [>] abandoned response sender publishes cancellation         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("abandoned response sender publishes cancellation") {
+  std::size_t wakes = 0;
+  test_context context;
+  test_mailbox mailbox{test_waker{&wakes}};
+  test_dispatch dispatch{context, mailbox};
+  {
+    test_sender sender = dispatch.defer();
+    DOBA_EXPECT(sender.valid());
+  }
+  DOBA_EXPECT_EQUAL(wakes, 1);
+  auto completions = mailbox.drain();
+  DOBA_EXPECT_EQUAL(completions.size(), 1);
+  DOBA_EXPECT_EQUAL(completions.front().connection_key, 41);
+  DOBA_EXPECT_EQUAL(completions.front().position, 13);
+  DOBA_EXPECT(!completions.front().response);
+}

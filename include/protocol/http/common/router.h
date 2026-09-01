@@ -53,6 +53,7 @@ class router {
   // +=========================================================================+
   struct handler_data {
     router_handler_static<RQty, RSty> callback;
+    bool asynchronous{false};
   };
   struct route_match {
     const handler_data* handler{nullptr};
@@ -145,6 +146,35 @@ class router {
       }
       parametrized_handlers_.push_back(
           {std::string(method), {std::move(data)}});
+    }
+  }
+  // +=========================================================================+
+  // | [>] add_async                                                ( public ) |
+  // +=========================================================================+
+  template <router_handler_lambda Hty>
+  void add_async(std::string_view method, std::string_view route,
+                 Hty handler) {
+    perform_checks<Hty>();
+    using signature =
+        router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
+    if constexpr (signature::parameter_count != 0) {
+      throw std::invalid_argument(
+          "An asynchronous route handler cannot have typed parameters");
+    } else {
+      if (route.find('*') != std::string_view::npos ||
+          count_parameters(route) != 0) {
+        throw std::invalid_argument("An asynchronous route must be exact");
+      }
+      route_data data{
+          std::string(route),
+          {router_handler_static<RQty, RSty>(std::move(handler)), true}};
+      for (auto& [static_method, handlers] : handlers_) {
+        if (static_method == method) {
+          handlers.push_back(std::move(data));
+          return;
+        }
+      }
+      handlers_.push_back({std::string(method), {std::move(data)}});
     }
   }
   // +=========================================================================+

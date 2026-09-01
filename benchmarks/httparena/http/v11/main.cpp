@@ -112,6 +112,11 @@ int main(int argc, char* argv[]) {
       [](const request& req, response& res) {
         res.ok_200().add_header("Content-Type", "text/plain").set_body("ok");
       });
+  http_server.add_async_route(
+      "GET", "/async-pipeline",
+      [](const request& req, response& res) {
+        res.ok_200().add_header("Content-Type", "text/plain").set_body("ok");
+      });
   http_server.add_route(
       "POST", "/upload",
       [](const request& req, response& res) {

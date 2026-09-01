@@ -56,7 +56,15 @@ class response_sender {
         connection_key_{other.connection_key_},
         position_{other.position_},
         pending_{std::exchange(other.pending_, false)} {}
-  ~response_sender() = default;
+  ~response_sender() {
+    if (pending_) {
+      try {
+        publisher_.publish(
+            response_completion{connection_key_, position_, nullptr});
+      } catch (...) {
+      }
+    }
+  }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +=========================================================================+

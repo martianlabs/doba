@@ -1108,6 +1108,10 @@ class tcpip {
       if (item == contexts_.end()) return;
       ctx = item->second;
     }
+    if (!completion.response) {
+      ctx->fail_response();
+      return;
+    }
     ctx->complete_response(completion.position,
                            std::move(completion.response));
   }
