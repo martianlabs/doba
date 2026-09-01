@@ -35,6 +35,7 @@
 #include "protocol/http/common/header_names.h"
 #include "protocol/http/v11/decoder.h"
 #include "protocol/http/v11/rejection_reason.h"
+#include "protocol/http/v11/session.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -79,72 +80,7 @@ class server {
     common::date_server::get().start();
     transport_.set_on_request(
         [this](const RQty& req, RSty& res) {
-          switch (req.get_target()) {
-            case target::kOriginForm:
-            case target::kAbsoluteForm: {
-              // The request is either in origin-form (RFC 9110 S9.3.5) or
-              // absolute-form (RFC 9110 S9.3.4); in either case, the request is
-              // routed to a handler based on the method and absolute path.
-              std::string_view method = req.get_method();
-              std::string_view abs_path = req.get_absolute_path();
-              auto match = router_.match(method, abs_path);
-              if (match.handler) {
-                match.handler->callback(req, res);
-              } else if (match.parametrized_handler) {
-                match.parametrized_handler->invoke(req, res, abs_path);
-              } else {
-                std::string allowed_methods =
-                    router_.allowed_methods(abs_path);
-                if (allowed_methods.empty()) {
-                  res.not_found_404();
-                } else {
-                  res.method_not_allowed_405();
-                  res.set_header(header_names::kAllow, allowed_methods);
-                }
-              }
-              break;
-            }
-            case target::kAuthorityForm:
-              // CONNECT tunnelling (RFC 9110 S9.3.6) is deliberately deferred
-              // to Doba's future client (dial-out) module: it will open the
-              // outbound connection to the target authority already owned by
-              // the request (req.get_target_authority_host()/_port()) and
-              // drive the raw-byte relay, keeping this server-side transport
-              // agnostic of CONNECT. Until that module exists, the request
-              // must not be left unanswered.
-              res.not_implemented_501();
-              break;
-            case target::kAsteriskForm:
-              // OPTIONS * (RFC 9110 S9.3.7) addresses the server in general
-              // rather than a specific resource; acknowledge it without
-              // routing to a handler.
-              res.ok_200();
-              break;
-            default:
-              res.bad_request_400();
-              break;
-          }
-          if (req.wants_connection_close()) {
-            res.set_header(header_names::kConnection, "close");
-          }
-          if (req.get_method() == method_names::kHead) {
-            // RFC 9110 S9.3.2: a HEAD response must describe the same
-            // headers a matching GET would have produced, but must never
-            // carry a message body. clear_body() also drops the framing
-            // headers, so they are captured beforehand and restored right
-            // after, using only the response's already public API.
-            bool had_cl = res.has_header(header_names::kContentLength);
-            std::string cl =
-                had_cl ? res.get_header(header_names::kContentLength).second
-                       : std::string();
-            bool had_te = res.has_header(header_names::kTransferEncoding);
-            std::string te =
-                had_te ? res.get_header(header_names::kTransferEncoding).second
-                       : std::string();
-            res.clear_body();
-            if (had_cl) res.set_header(header_names::kContentLength, cl);
-            if (had_te) res.set_header(header_names::kTransferEncoding, te);
-          }
+          session_.dispatch(req, res, router_);
         });
     transport_.set_on_bad_request(
         [](int code, std::string_view reason, RSty& res) {
@@ -218,6 +154,7 @@ class server {
   TRty<RQty, RSty, DEty> transport_;
   std::mutex locked_mutex_;
   ROty<RQty, RSty> router_;
+  session<RQty, RSty, ROty<RQty, RSty>> session_;
   bool locked_{false};
 };
 }  // namespace martianlabs::doba::protocol::http::v11

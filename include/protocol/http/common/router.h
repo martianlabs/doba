@@ -82,7 +82,39 @@ class router {
     perform_checks<Hty>();
     using signature =
         router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
+    const std::size_t wildcard_position = route.find('*');
+    const bool is_wildcard =
+        wildcard_position != std::string_view::npos &&
+        wildcard_position == route.size() - 1 && wildcard_position > 0 &&
+        route[wildcard_position - 1] == '/';
+    if (wildcard_position != std::string_view::npos && !is_wildcard) {
+      throw std::invalid_argument(
+          "The wildcard must be the final route segment");
+    }
     const std::size_t parameter_count = count_parameters(route);
+    if (is_wildcard) {
+      if (parameter_count != 0) {
+        throw std::invalid_argument(
+            "A wildcard route cannot contain route parameters");
+      }
+      if constexpr (signature::parameter_count != 0) {
+        throw std::invalid_argument(
+            "A wildcard route handler cannot have typed parameters");
+      } else {
+        route_data data{
+            std::string(route.substr(0, wildcard_position)),
+            {router_handler_static<RQty, RSty>(std::move(handler))}};
+        for (auto& [wildcard_method, handlers] : wildcard_handlers_) {
+          if (wildcard_method == method) {
+            handlers.push_back(std::move(data));
+            return;
+          }
+        }
+        wildcard_handlers_.push_back(
+            {std::string(method), {std::move(data)}});
+      }
+      return;
+    }
     if constexpr (signature::parameter_count == 0) {
       if (parameter_count != 0) {
         throw std::invalid_argument(
@@ -133,6 +165,12 @@ class router {
         if (handler.matches(path)) return {nullptr, &handler};
       }
     }
+    for (const auto& [wildcard_method, handlers] : wildcard_handlers_) {
+      if (wildcard_method != method) continue;
+      for (const auto& route : handlers) {
+        if (path.starts_with(route.path)) return {&route.handler, nullptr};
+      }
+    }
     return {};
   }
   // +=========================================================================+
@@ -159,6 +197,21 @@ class router {
       if (found) continue;
       for (const auto& handler : handlers) {
         if (!handler.matches(path)) continue;
+        allowed.push_back(method);
+        break;
+      }
+    }
+    for (const auto& [method, handlers] : wildcard_handlers_) {
+      bool found = false;
+      for (const auto allowed_method : allowed) {
+        if (allowed_method == method) {
+          found = true;
+          break;
+        }
+      }
+      if (found) continue;
+      for (const auto& route : handlers) {
+        if (!path.starts_with(route.path)) continue;
         allowed.push_back(method);
         break;
       }
@@ -237,6 +290,7 @@ class router {
   // +=========================================================================+
   std::vector<handler_pair> handlers_;
   std::vector<parametrized_handler_pair> parametrized_handlers_;
+  std::vector<handler_pair> wildcard_handlers_;
 };
 }  // namespace martianlabs::doba::protocol::http
 
