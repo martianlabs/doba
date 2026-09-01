@@ -28,6 +28,7 @@
 #include <concepts>
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -42,6 +43,8 @@ namespace martianlabs::doba::protocol::http {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename>
 struct router_handler_signature;
+template <typename>
+struct router_async_handler_signature;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] router_handler_signature_base                              ( struct ) |
@@ -57,6 +60,43 @@ struct router_handler_signature_base {
   static auto make_parametrized(std::string_view pattern, Hty&& handler) {
     return make_router_handler_parametrized<RQty, RSty, Args...>(
         pattern, std::forward<Hty>(handler));
+  }
+  template <typename RQty, typename RSty>
+  static void check() {
+    static_assert(std::same_as<LOty, void>,
+                  "The route handler must return void");
+    static_assert(std::same_as<std::decay_t<LQty>, RQty>,
+                  "The first route handler argument must be const RQty&");
+    static_assert(
+        std::is_lvalue_reference_v<LQty> &&
+            std::is_const_v<std::remove_reference_t<LQty>>,
+        "The first route handler argument must be const RQty&");
+    static_assert(std::same_as<std::decay_t<LSty>, RSty>,
+                  "The second route handler argument must be RSty&");
+    static_assert(
+        std::is_lvalue_reference_v<LSty> &&
+            !std::is_const_v<std::remove_reference_t<LSty>>,
+        "The second route handler argument must be RSty&");
+  }
+};
+template <typename LOty, typename LQty, typename... Args>
+struct router_async_handler_signature_base {
+  using return_type = LOty;
+  using request_type = LQty;
+  static constexpr std::size_t parameter_count = sizeof...(Args);
+  template <typename RQty, typename RSty, typename Hty>
+  static auto make_parametrized(std::string_view pattern, Hty&& handler) {
+    return make_router_handler_parametrized_async<RQty, RSty, Args...>(
+        pattern, std::forward<Hty>(handler));
+  }
+  template <typename RQty, typename RSty>
+  static void check() {
+    static_assert(std::same_as<LOty, common::task<RSty>>,
+                  "The asynchronous route handler must return "
+                  "common::task<RSty>");
+    static_assert(std::same_as<LQty, std::shared_ptr<const RQty>>,
+                  "The asynchronous route handler argument must be "
+                  "std::shared_ptr<const RQty>");
   }
 };
 // /////////////////////////////////////////////////////////////////////////////
@@ -74,6 +114,17 @@ struct router_handler_signature<Retty (Cty::*)(Reqty, Resty, Args...)>
     : router_handler_signature_base<Retty, Reqty, Resty, Args...> {};
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
+// | [>] router_async_handler_signature                             ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename Cty, typename Retty, typename Reqty, typename... Args>
+struct router_async_handler_signature<Retty (Cty::*)(Reqty, Args...) const>
+    : router_async_handler_signature_base<Retty, Reqty, Args...> {};
+template <typename Cty, typename Retty, typename Reqty, typename... Args>
+struct router_async_handler_signature<Retty (Cty::*)(Reqty, Args...)>
+    : router_async_handler_signature_base<Retty, Reqty, Args...> {};
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] router_handler_lambda                                      (concept ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
@@ -81,6 +132,27 @@ template <typename Hty>
 concept router_handler_lambda = requires {
   typename router_handler_signature<
       decltype(&std::decay_t<Hty>::operator())>::request_type;
+  requires std::same_as<typename router_handler_signature<
+                            decltype(&std::decay_t<Hty>::operator())>::
+                            return_type,
+                        void>;
+};
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] router_async_handler_lambda                                (concept ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename>
+struct router_handler_returns_task : std::false_type {};
+template <typename T>
+struct router_handler_returns_task<common::task<T>> : std::true_type {};
+template <typename Hty>
+concept router_async_handler_lambda = requires {
+  typename router_async_handler_signature<
+      decltype(&std::decay_t<Hty>::operator())>::request_type;
+  requires router_handler_returns_task<
+      typename router_async_handler_signature<
+          decltype(&std::decay_t<Hty>::operator())>::return_type>::value;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

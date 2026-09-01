@@ -23,6 +23,7 @@
 // permissions and limitations under the License.
 
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -37,6 +38,7 @@ struct response {
   std::string value;
 };
 using martianlabs::doba::protocol::http::router;
+using martianlabs::doba::common::task;
 }  // namespace
 
 // +===========================================================================+
@@ -306,4 +308,31 @@ DOBA_TEST("allowed methods include matching wildcard routes") {
   DOBA_EXPECT_EQUAL(value.allowed_methods("/assets/42"),
                     "POST, GET, DELETE");
   DOBA_EXPECT(value.allowed_methods("/assets").empty());
+}
+// +===========================================================================+
+// | [>] sync and async routes share one router                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("sync and async routes share one router") {
+  router<request, response> value;
+  value.add("GET", "/sync", [](const request&, response&) {});
+  value.add("GET", "/async",
+            [](std::shared_ptr<const request>) -> task<response> {
+              co_return response{"async"};
+            });
+  value.add("GET", "/items/:id",
+            [](std::shared_ptr<const request>, int) -> task<response> {
+              co_return response{"parametrized"};
+            });
+  value.add("GET", "/assets/*",
+            [](std::shared_ptr<const request>) -> task<response> {
+              co_return response{"wildcard"};
+            });
+  auto sync = value.match("GET", "/sync");
+  auto async = value.match("GET", "/async");
+  auto parametrized = value.match("GET", "/items/42");
+  auto wildcard = value.match("GET", "/assets/logo");
+  DOBA_EXPECT(!sync.handler->is_async());
+  DOBA_EXPECT(async.handler->is_async());
+  DOBA_EXPECT(parametrized.parametrized_handler->is_async());
+  DOBA_EXPECT(wildcard.handler->is_async());
 }

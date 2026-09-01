@@ -22,11 +22,16 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <coroutine>
+#include <exception>
 #include <functional>
+#include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 #include "protocol/http/v11/server.h"
 #include "test_helper.h"
@@ -37,6 +42,9 @@ using martianlabs::doba::protocol::http::v11::decoder;
 using martianlabs::doba::protocol::http::v11::rejection_reason;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::protocol::http::v11::server;
+using martianlabs::doba::protocol::http::router_async_handler_lambda;
+using martianlabs::doba::protocol::http::router_handler_lambda;
+using martianlabs::doba::common::task;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -86,9 +94,18 @@ class fake_router {
   // +=========================================================================+
   struct handler_data {
     std::function<void(const RQty&, RSty&)> callback;
+    std::function<task<RSty>(std::shared_ptr<const RQty>)> async_callback;
+    bool is_async() const {
+      return static_cast<bool>(async_callback);
+    }
   };
   struct parametrized_handler_data {
     void invoke(const RQty&, RSty&, std::string_view) const {}
+    task<RSty> invoke_async(std::shared_ptr<const RQty>,
+                            std::string_view) const {
+      co_return RSty{};
+    }
+    bool is_async() const { return false; }
   };
   struct route_match {
     const handler_data* handler{nullptr};
@@ -105,7 +122,14 @@ class fake_router {
     additions++;
     last_method = method;
     last_route = route;
-    matched_handler = {std::move(handler)};
+    if constexpr (router_handler_lambda<Hty>) {
+      matched_handler = {
+          std::function<void(const RQty&, RSty&)>(std::move(handler)), {}};
+    } else if constexpr (router_async_handler_lambda<Hty>) {
+      async_handler = {
+          {}, std::function<task<RSty>(std::shared_ptr<const RQty>)>(
+                  std::move(handler))};
+    }
   }
   // +=========================================================================+
   // | [>] match                                                    ( public ) |
@@ -113,8 +137,9 @@ class fake_router {
   route_match match(std::string_view method, std::string_view path) {
     matched_method = method;
     matched_path = path;
-    return match_available ? route_match{&matched_handler, nullptr}
-                           : route_match{};
+    if (!match_available) return {};
+    return path == "/async" ? route_match{&async_handler, nullptr}
+                            : route_match{&matched_handler, nullptr};
   }
   // +=========================================================================+
   // | [>] allowed_methods                                          ( public ) |
@@ -129,6 +154,7 @@ class fake_router {
   static inline std::string last_method;
   static inline std::string last_route;
   static inline handler_data matched_handler{};
+  static inline handler_data async_handler{};
   static inline bool match_available = true;
   static inline std::string allowed_methods_result;
   static inline std::string matched_method;
@@ -206,13 +232,61 @@ using test_server =
 using test_router = fake_router<request, response>;
 using test_transport = fake_transport<request, response, decoder>;
 
+class task_probe {
+ public:
+  struct promise_type {
+    task_probe get_return_object() noexcept {
+      return task_probe(
+          std::coroutine_handle<promise_type>::from_promise(*this));
+    }
+    std::suspend_never initial_suspend() const noexcept { return {}; }
+    std::suspend_always final_suspend() const noexcept { return {}; }
+    void return_void() const noexcept {}
+    void unhandled_exception() noexcept {
+      exception_ = std::current_exception();
+    }
+    std::exception_ptr exception_;
+  };
+  task_probe(const task_probe&) = delete;
+  task_probe(task_probe&& in) noexcept
+      : coroutine_(std::exchange(in.coroutine_, nullptr)) {}
+  ~task_probe() {
+    if (coroutine_) coroutine_.destroy();
+  }
+  [[nodiscard]] bool done() const noexcept { return coroutine_.done(); }
+  void rethrow_if_failed() const {
+    if (coroutine_.promise().exception_) {
+      std::rethrow_exception(coroutine_.promise().exception_);
+    }
+  }
+
+ private:
+  explicit task_probe(std::coroutine_handle<promise_type> coroutine) noexcept
+      : coroutine_(coroutine) {}
+  std::coroutine_handle<promise_type> coroutine_;
+};
+
+template <typename Tty>
+task_probe collect(task<Tty> value, std::optional<Tty>& result) {
+  result.emplace(co_await std::move(value));
+}
+
 // +===========================================================================+
 // | [>] send_request                                             ( function ) |
 // +===========================================================================+
 std::string send_request(const request& req) {
   response res;
   auto shared_request = std::make_shared<request>(req);
-  test_transport::on_request(shared_request, res);
+  auto response_task = test_transport::on_request(shared_request, res);
+  if (response_task) {
+    std::optional<response> result;
+    auto probe = collect(std::move(*response_task), result);
+    probe.rethrow_if_failed();
+    if (!probe.done() || !result) {
+      throw std::runtime_error("The asynchronous response did not complete");
+    }
+    res = std::move(*result);
+  }
   res.set_header("Date", "fixed");
   return res.serialize()->prefix;
 }
@@ -245,6 +319,17 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   DOBA_EXPECT_EQUAL(test_router::additions, 1);
   DOBA_EXPECT_EQUAL(test_router::last_method, "GET");
   DOBA_EXPECT_EQUAL(test_router::last_route, "/");
+  auto async_handler =
+      [](std::shared_ptr<const request>) -> task<response> {
+    response res;
+    res.ok_200().set_body("async");
+    co_return res;
+  };
+  DOBA_EXPECT_EQUAL(
+      &value.add_route("GET", "/async", async_handler), &value);
+  DOBA_EXPECT_EQUAL(test_router::additions, 2);
+  DOBA_EXPECT_EQUAL(test_router::last_method, "GET");
+  DOBA_EXPECT_EQUAL(test_router::last_route, "/async");
   // ---------------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------------
@@ -261,7 +346,7 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
     threw = true;
   }
   DOBA_EXPECT(threw);
-  DOBA_EXPECT_EQUAL(test_router::additions, 1);
+  DOBA_EXPECT_EQUAL(test_router::additions, 2);
   // ---------------------------------------------------------------------------
   // Router results
   // ---------------------------------------------------------------------------
@@ -326,6 +411,17 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   DOBA_EXPECT(output.find("Content-Length: 4\r\n") != std::string::npos);
   DOBA_EXPECT(!std::string_view(output).ends_with("body"));
   test_router::write_body = false;
+  // ---------------------------------------------------------------------------
+  // Asynchronous response rules
+  // ---------------------------------------------------------------------------
+  req = {};
+  req.method = "HEAD";
+  req.path = "/async";
+  req.close = true;
+  output = send_request(req);
+  DOBA_EXPECT(output.find("Connection: close\r\n") != std::string::npos);
+  DOBA_EXPECT(output.find("Content-Length: 5\r\n") != std::string::npos);
+  DOBA_EXPECT(!std::string_view(output).ends_with("async"));
   // ---------------------------------------------------------------------------
   // Rejection reasons
   // ---------------------------------------------------------------------------
