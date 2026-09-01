@@ -24,6 +24,7 @@
 
 #include <array>
 #include <charconv>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <future>
@@ -31,6 +32,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <thread>
 
 #include "protocol/http/v11/server.h"
 
@@ -130,6 +132,14 @@ int main(int argc, char* argv[]) {
         res.ok_200()
             .add_header("Content-Type", "text/plain")
             .set_body("wildcard");
+      });
+  http_server.add_async_route(
+      "GET", "/async-slow",
+      [](const request& req, response& res) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        res.ok_200()
+            .add_header("Content-Type", "text/plain")
+            .set_body("slow");
       });
   http_server.add_route(
       "POST", "/upload",

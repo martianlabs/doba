@@ -195,6 +195,7 @@ struct context
     if (socket_ == INVALID_SOCKET) return false;
     if (!scheduler_.complete(position, std::move(response))) return false;
     arm_next_send_operation_();
+    resume_receive_operation_();
     return true;
   }
   // +=========================================================================+
@@ -241,16 +242,14 @@ struct context
     }
     sending_offset_ += bytes_sent;
     arm_next_send_operation_();
+    resume_receive_operation_();
   }
   // +=========================================================================+
   // | [>] arm_next_receive_operation                               ( public ) |
   // +=========================================================================+
   bool arm_next_receive_operation() {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    if (closing_) return false;
-    if (receive_()) return true;
-    abort_();
-    return false;
+    return arm_next_receive_operation_();
   }
   // +=========================================================================+
   // | [>] arm_next_send_operation                                  ( public ) |
@@ -327,6 +326,27 @@ struct context
   void fail_response_() {
     closing_ = true;
     arm_next_send_operation_();
+  }
+  // +=========================================================================+
+  // | [>] arm_next_receive_operation_                             ( private ) |
+  // +=========================================================================+
+  bool arm_next_receive_operation_() {
+    if (closing_) return false;
+    if (scheduler_.saturated()) {
+      receive_paused_ = true;
+      return true;
+    }
+    receive_paused_ = false;
+    if (receive_()) return true;
+    abort_();
+    return false;
+  }
+  // +=========================================================================+
+  // | [>] resume_receive_operation_                               ( private ) |
+  // +=========================================================================+
+  void resume_receive_operation_() {
+    if (!receive_paused_ || closing_ || scheduler_.saturated()) return;
+    arm_next_receive_operation_();
   }
   // +=========================================================================+
   // | [>] arm_next_send_operation_                                ( private ) |
@@ -491,6 +511,7 @@ struct context
   bool connected_{false};
   bool disconnected_{false};
   bool receiving_{false};
+  bool receive_paused_{false};
   bool sending_{false};
   bool retired_{false};
   // [decoder] section!
@@ -1059,8 +1080,8 @@ class tcpip {
         } while (keep_decoding_requests);
         bytes_received -= static_cast<DWORD>(bytes_accumulated);
       } while (keep_decoding_requests && bytes_received > 0);
-      ctx->arm_next_receive_operation();
       ctx->arm_next_send_operation();
+      ctx->arm_next_receive_operation();
     } catch (...) {
       ctx->abort();
     }

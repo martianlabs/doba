@@ -209,6 +209,26 @@ struct context
   // +=========================================================================+
   bool can_receive() const { return socket_ != -1 && !closing_; }
   // +=========================================================================+
+  // | [>] can_read                                                 ( public ) |
+  // +=========================================================================+
+  bool can_read() const { return can_receive() && !receive_paused_; }
+  // +=========================================================================+
+  // | [>] pause_receive_if_saturated                               ( public ) |
+  // +=========================================================================+
+  bool pause_receive_if_saturated() {
+    if (!can_receive() || !scheduler_.saturated()) return false;
+    receive_paused_ = true;
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] resume_receive                                           ( public ) |
+  // +=========================================================================+
+  bool resume_receive() {
+    if (!receive_paused_ || scheduler_.saturated()) return false;
+    receive_paused_ = false;
+    return true;
+  }
+  // +=========================================================================+
   // | [>] is_closed                                                ( public ) |
   // +=========================================================================+
   bool is_closed() const { return socket_ == -1; }
@@ -246,7 +266,7 @@ struct context
       return 0;
     }
     uint32_t events = EPOLLRDHUP | EPOLLET;
-    if (!closing_) events |= EPOLLIN;
+    if (can_read()) events |= EPOLLIN;
     if (sending_offset_ < sending_buffer_.size() || !scheduler_.empty()) {
       events |= EPOLLOUT;
     }
@@ -361,6 +381,7 @@ struct context
   bool connected_{false};
   bool disconnected_{false};
   bool aborted_{false};
+  bool receive_paused_{false};
   DEty<RQty, RSty> decoder_{};
   char receive_buffer_[kReceiveBufferSz];
   std::string sending_buffer_;
@@ -553,7 +574,7 @@ struct worker {
                                 std::move(completion.response))) {
       return;
     }
-    if (!ctx->flush_send()) {
+    if (!flush_context(ctx)) {
       abort_context(ctx);
       return;
     }
@@ -630,7 +651,7 @@ struct worker {
       }
     }
     if (ctx->is_closed()) return;
-    if (!ctx->flush_send()) {
+    if (!flush_context(ctx)) {
       abort_context(ctx);
       return;
     }
@@ -640,11 +661,12 @@ struct worker {
   // | [>] handle_receive                                          ( private ) |
   // +=========================================================================+
   bool handle_receive(context<RQty, RSty, DEty>* ctx) {
-    while (ctx->can_receive()) {
+    while (ctx->can_read()) {
       ssize_t received = ctx->receive();
       if (received > 0) {
         consume_received(ctx, ctx->get_receive_buffer(),
                          static_cast<std::size_t>(received));
+        if (ctx->pause_receive_if_saturated()) return true;
         continue;
       }
       if (received == 0) {
@@ -656,6 +678,16 @@ struct worker {
       return false;
     }
     return true;
+  }
+  // +=========================================================================+
+  // | [>] flush_context                                          ( private ) |
+  // +=========================================================================+
+  bool flush_context(context<RQty, RSty, DEty>* ctx) {
+    for (;;) {
+      if (!ctx->flush_send()) return false;
+      if (!ctx->resume_receive()) return true;
+      if (!handle_receive(ctx)) return false;
+    }
   }
   // +=========================================================================+
   // | [>] consume_received                                        ( private ) |

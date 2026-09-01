@@ -108,3 +108,21 @@ DOBA_TEST("invalid and duplicate completions are rejected") {
   DOBA_EXPECT(!value.complete(
       pending, std::make_unique<serialization_result>()));
 }
+// +===========================================================================+
+// | [>] response high watermark reports saturation              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("response high watermark reports saturation") {
+  response_scheduler value;
+  for (std::size_t i = 0; i < 63; i++) {
+    value.push_ready(std::make_unique<serialization_result>());
+  }
+  DOBA_EXPECT(!value.saturated());
+  value.reserve();
+  DOBA_EXPECT(value.saturated());
+  value.pop_front();
+  DOBA_EXPECT(!value.saturated());
+  value.reserve();
+  DOBA_EXPECT(value.saturated());
+  value.clear();
+  DOBA_EXPECT(!value.saturated());
+}
