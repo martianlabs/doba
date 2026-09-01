@@ -82,14 +82,21 @@ DOBA_TEST("static routes use exact path matching") {
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/assets/a")));
 }
 // +===========================================================================+
-// | [>] asynchronous routes are marked and exact                ( test-case ) |
+// | [>] asynchronous route shapes are marked                    ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("asynchronous routes are marked and exact") {
+DOBA_TEST("asynchronous route shapes are marked") {
   router<request, response> value;
   value.add("GET", "/sync", [](const request&, response&) {});
   value.add_async("GET", "/async", [](const request&, response&) {});
+  value.add_async("GET", "/items/:id",
+                  [](const request&, response&, int) {});
+  value.add_async("GET", "/assets/*",
+                  [](const request&, response&) {});
   DOBA_EXPECT(!value.match("GET", "/sync").handler->asynchronous);
   DOBA_EXPECT(value.match("GET", "/async").handler->asynchronous);
+  DOBA_EXPECT(
+      value.match("GET", "/items/42").parametrized_handler->asynchronous());
+  DOBA_EXPECT(value.match("GET", "/assets/logo").handler->asynchronous);
 
   bool threw = false;
   try {
@@ -101,8 +108,8 @@ DOBA_TEST("asynchronous routes are marked and exact") {
   DOBA_EXPECT(threw);
   threw = false;
   try {
-    value.add_async("GET", "/items/*",
-                    [](const request&, response&) {});
+    value.add_async("GET", "/items/:id/*",
+                    [](const request&, response&, int) {});
   } catch (const std::invalid_argument&) {
     threw = true;
   }

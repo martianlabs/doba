@@ -117,6 +117,20 @@ int main(int argc, char* argv[]) {
       [](const request& req, response& res) {
         res.ok_200().add_header("Content-Type", "text/plain").set_body("ok");
       });
+  http_server.add_async_route(
+      "GET", "/async-item/:value",
+      [](const request& req, response& res, std::int64_t value) {
+        res.ok_200()
+            .add_header("Content-Type", "text/plain")
+            .set_body(std::to_string(value));
+      });
+  http_server.add_async_route(
+      "GET", "/async-assets/*",
+      [](const request& req, response& res) {
+        res.ok_200()
+            .add_header("Content-Type", "text/plain")
+            .set_body("wildcard");
+      });
   http_server.add_route(
       "POST", "/upload",
       [](const request& req, response& res) {

@@ -91,6 +91,7 @@ class fake_router {
   };
   struct parametrized_handler_data {
     void invoke(const RQty&, RSty&, std::string_view) const {}
+    bool asynchronous() const { return false; }
   };
   struct route_match {
     const handler_data* handler{nullptr};

@@ -71,6 +71,15 @@ class session {
           }
           match.handler->callback(*req, res);
         } else if (match.parametrized_handler) {
+          if (match.parametrized_handler->asynchronous()) {
+            using dispatch_type =
+                async_dispatch<decltype(deferred.defer())>;
+            auto sender = deferred.defer();
+            dispatch_type task{req, match.parametrized_handler, abs_path,
+                               std::move(sender)};
+            if (!executor.try_submit(std::move(task))) task.reject();
+            return;
+          }
           match.parametrized_handler->invoke(*req, res, abs_path);
         } else {
           std::string allowed_methods = router.allowed_methods(abs_path);
@@ -102,6 +111,9 @@ class session {
   }
 
  private:
+  using parametrized_handler_pointer =
+      decltype(std::declval<typename ROty::route_match>()
+                   .parametrized_handler);
   // +=========================================================================+
   // | [>] async_dispatch                                           ( private ) |
   // +=========================================================================+
@@ -113,6 +125,14 @@ class session {
         : req_{std::move(req)},
           handler_{handler},
           sender_{std::move(sender)} {}
+    async_dispatch(
+        std::shared_ptr<RQty> req,
+        parametrized_handler_pointer handler,
+        std::string_view path, Sty sender)
+        : req_{std::move(req)},
+          parametrized_handler_{handler},
+          path_{path},
+          sender_{std::move(sender)} {}
     async_dispatch(const async_dispatch&) = delete;
     async_dispatch(async_dispatch&&) noexcept = default;
     ~async_dispatch() = default;
@@ -122,7 +142,11 @@ class session {
     void operator()() {
       try {
         RSty res;
-        handler_->callback(*req_, res);
+        if (handler_) {
+          handler_->callback(*req_, res);
+        } else {
+          parametrized_handler_->invoke(*req_, res, path_);
+        }
         finalize_response_(*req_, res);
         sender_.complete(res.serialize());
         return;
@@ -149,7 +173,9 @@ class session {
 
    private:
     std::shared_ptr<RQty> req_;
-    const typename ROty::handler_data* handler_;
+    const typename ROty::handler_data* handler_{nullptr};
+    parametrized_handler_pointer parametrized_handler_{nullptr};
+    std::string_view path_;
     Sty sender_;
   };
   // +=========================================================================+

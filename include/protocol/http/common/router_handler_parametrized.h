@@ -185,10 +185,12 @@ class router_handler_parametrized {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   router_handler_parametrized(std::string pattern, matcher_type matcher,
-                              callback_type callback)
+                              callback_type callback,
+                              bool asynchronous = false)
       : pattern_{std::move(pattern)},
         matcher_{matcher},
-        callback_{std::move(callback)} {}
+        callback_{std::move(callback)},
+        asynchronous_{asynchronous} {}
   // +=========================================================================+
   // | [>] matches                                                  ( public ) |
   // +=========================================================================+
@@ -201,6 +203,10 @@ class router_handler_parametrized {
   void invoke(const RQty& req, RSty& res, std::string_view path) const {
     callback_(req, res, pattern_, path);
   }
+  // +=========================================================================+
+  // | [>] asynchronous                                             ( public ) |
+  // +=========================================================================+
+  bool asynchronous() const { return asynchronous_; }
 
  private:
   // +=========================================================================+
@@ -209,6 +215,7 @@ class router_handler_parametrized {
   std::string pattern_;
   matcher_type matcher_;
   callback_type callback_;
+  bool asynchronous_{false};
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -218,7 +225,8 @@ class router_handler_parametrized {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename... Args, typename Hty>
 auto make_router_handler_parametrized(std::string_view pattern,
-                                      Hty&& handler) {
+                                      Hty&& handler,
+                                      bool asynchronous = false) {
   using handler_type = std::decay_t<Hty>;
   return router_handler_parametrized<RQty, RSty>(
       std::string(pattern), &detail::match_route_parameters<Args...>,
@@ -227,7 +235,8 @@ auto make_router_handler_parametrized(std::string_view pattern,
           std::string_view path) mutable {
         detail::invoke_route_handler<handler_type, RQty, RSty, Args...>(
             handler, req, res, route_pattern, path);
-      });
+      },
+      asynchronous);
 }
 }  // namespace martianlabs::doba::protocol::http
 

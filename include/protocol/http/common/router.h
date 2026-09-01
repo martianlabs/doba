@@ -157,13 +157,43 @@ class router {
     perform_checks<Hty>();
     using signature =
         router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
-    if constexpr (signature::parameter_count != 0) {
+    const std::size_t wildcard_position = route.find('*');
+    const bool is_wildcard =
+        wildcard_position != std::string_view::npos &&
+        wildcard_position == route.size() - 1 && wildcard_position > 0 &&
+        route[wildcard_position - 1] == '/';
+    if (wildcard_position != std::string_view::npos && !is_wildcard) {
       throw std::invalid_argument(
-          "An asynchronous route handler cannot have typed parameters");
-    } else {
-      if (route.find('*') != std::string_view::npos ||
-          count_parameters(route) != 0) {
-        throw std::invalid_argument("An asynchronous route must be exact");
+          "The wildcard must be the final route segment");
+    }
+    const std::size_t parameter_count = count_parameters(route);
+    if (is_wildcard) {
+      if (parameter_count != 0) {
+        throw std::invalid_argument(
+            "A wildcard route cannot contain route parameters");
+      }
+      if constexpr (signature::parameter_count != 0) {
+        throw std::invalid_argument(
+            "A wildcard route handler cannot have typed parameters");
+      } else {
+        route_data data{
+            std::string(route.substr(0, wildcard_position)),
+            {router_handler_static<RQty, RSty>(std::move(handler)), true}};
+        for (auto& [wildcard_method, handlers] : wildcard_handlers_) {
+          if (wildcard_method == method) {
+            handlers.push_back(std::move(data));
+            return;
+          }
+        }
+        wildcard_handlers_.push_back(
+            {std::string(method), {std::move(data)}});
+      }
+      return;
+    }
+    if constexpr (signature::parameter_count == 0) {
+      if (parameter_count != 0) {
+        throw std::invalid_argument(
+            "The route parameters and handler arguments do not match");
       }
       route_data data{
           std::string(route),
@@ -175,6 +205,21 @@ class router {
         }
       }
       handlers_.push_back({std::string(method), {std::move(data)}});
+    } else {
+      if (parameter_count != signature::parameter_count) {
+        throw std::invalid_argument(
+            "The route parameters and handler arguments do not match");
+      }
+      auto data = signature::template make_parametrized<RQty, RSty>(
+          route, std::move(handler), true);
+      for (auto& [parametrized_method, handlers] : parametrized_handlers_) {
+        if (parametrized_method == method) {
+          handlers.push_back(std::move(data));
+          return;
+        }
+      }
+      parametrized_handlers_.push_back(
+          {std::string(method), {std::move(data)}});
     }
   }
   // +=========================================================================+

@@ -28,6 +28,7 @@
 #include <future>
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -167,6 +168,62 @@ DOBA_TEST("asynchronous route retains request and completes") {
   DOBA_EXPECT(ready.front()->prefix.ends_with("async"));
 }
 // +===========================================================================+
+// | [>] asynchronous route shapes preserve precedence           ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("asynchronous route shapes preserve precedence") {
+  test_router routes;
+  routes.add_async("GET", "/items/*", [](const request&, response& res) {
+    res.ok_200().set_body("wildcard");
+  });
+  routes.add_async("GET", "/items/:id",
+                   [](const request&, response& res, int id) {
+                     res.ok_200().set_body(std::to_string(id));
+                   });
+  routes.add("GET", "/items/42", [](const request&, response& res) {
+    res.ok_200().set_body("exact");
+  });
+  test_session value;
+  {
+    auto req = std::make_shared<request>();
+    req->path = "/items/42";
+    response res;
+    deferred_context deferred;
+    executor work;
+    value.dispatch(req, res, routes, deferred, work);
+    DOBA_EXPECT_EQUAL(deferred.deferrals, 0);
+    DOBA_EXPECT_EQUAL(work.submissions, 0);
+    DOBA_EXPECT(res.serialize()->prefix.ends_with("exact"));
+  }
+  {
+    auto req = std::make_shared<request>();
+    req->path = "/items/7";
+    std::weak_ptr<request> retained = req;
+    response res;
+    deferred_context deferred;
+    executor work;
+    value.dispatch(req, res, routes, deferred, work);
+    req.reset();
+    DOBA_EXPECT(!retained.expired());
+    work.run();
+    DOBA_EXPECT(retained.expired());
+    auto ready = deferred.take_ready();
+    DOBA_EXPECT_EQUAL(ready.size(), 1);
+    DOBA_EXPECT(ready.front()->prefix.ends_with("7"));
+  }
+  {
+    auto req = std::make_shared<request>();
+    req->path = "/items/name";
+    response res;
+    deferred_context deferred;
+    executor work;
+    value.dispatch(req, res, routes, deferred, work);
+    work.run();
+    auto ready = deferred.take_ready();
+    DOBA_EXPECT_EQUAL(ready.size(), 1);
+    DOBA_EXPECT(ready.front()->prefix.ends_with("wildcard"));
+  }
+}
+// +===========================================================================+
 // | [>] asynchronous rejection and exception produce errors     ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("asynchronous rejection and exception produce errors") {
@@ -187,10 +244,11 @@ DOBA_TEST("asynchronous rejection and exception produce errors") {
   }
   {
     test_router routes;
-    routes.add_async("GET", "/", [](const request&, response&) {
+    routes.add_async("GET", "/items/:id", [](const request&, response&, int) {
       throw std::runtime_error("handler failure");
     });
     auto req = std::make_shared<request>();
+    req->path = "/items/7";
     response res;
     deferred_context deferred;
     executor work;

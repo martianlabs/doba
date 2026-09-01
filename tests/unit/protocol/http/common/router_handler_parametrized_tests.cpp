@@ -63,6 +63,18 @@ DOBA_TEST("matching requires the complete route shape") {
   DOBA_EXPECT(!handler.matches("/items/42/details"));
 }
 // +===========================================================================+
+// | [>] handler records synchronous or asynchronous execution   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("handler records synchronous or asynchronous execution") {
+  auto synchronous = make_router_handler_parametrized<request, response, int>(
+      "/items/:id", [](const request&, response&, int) {});
+  auto asynchronous =
+      make_router_handler_parametrized<request, response, int>(
+          "/items/:id", [](const request&, response&, int) {}, true);
+  DOBA_EXPECT(!synchronous.asynchronous());
+  DOBA_EXPECT(asynchronous.asynchronous());
+}
+// +===========================================================================+
 // | [>] invoke passes parsed values to the callback             ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("invoke passes parsed values to the callback") {

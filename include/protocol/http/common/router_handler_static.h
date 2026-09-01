@@ -54,9 +54,10 @@ struct router_handler_signature_base {
   using response_type = LSty;
   static constexpr std::size_t parameter_count = sizeof...(Args);
   template <typename RQty, typename RSty, typename Hty>
-  static auto make_parametrized(std::string_view pattern, Hty&& handler) {
+  static auto make_parametrized(std::string_view pattern, Hty&& handler,
+                                bool asynchronous = false) {
     return make_router_handler_parametrized<RQty, RSty, Args...>(
-        pattern, std::forward<Hty>(handler));
+        pattern, std::forward<Hty>(handler), asynchronous);
   }
 };
 // /////////////////////////////////////////////////////////////////////////////
