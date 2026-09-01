@@ -1059,14 +1059,32 @@ como pendientes futuros, para que no se pierda el contexto ya analizado.
   Introduce dependencia externa, lo que choca con el "cero dependencias" del
   README.
 
+- **Streaming HTTP progresivo y SSE. (A)** El `body_writer` actual permite
+  drenar una fuente genérica, pero el handler debe terminar de producirla antes
+  de entregar la respuesta; no constituye streaming progresivo. La futura API
+  deberá representar inicio, fragmentos y final o error, aplicar backpressure
+  por bytes y agrupar fragmentos pequeños sin penalizar el camino one-shot ni
+  el hot path síncrono.
+
+- **Barrera ordenada de upgrade. (A)** Antes de cambiar de protocolo,
+  el `101` debe alcanzar la cabeza del orden de respuestas. Solo entonces se
+  puede detener la decodificación HTTP, entregar al nuevo codec los bytes
+  residuales ya recibidos y transferir el control del canal. La frontera debe
+  seguir siendo genérica y probarse primero con un codec ficticio, sin filtrar
+  semántica HTTP a IOCP ni epoll.
+
 - **WebSockets / manejo de `channel_intent::kUpgrade`. (A)**
   `channel_intent::kUpgrade` está definido y los headers `Sec-WebSocket-*`
-  están modelados, pero ningún transporte lo maneja. Abordarlo exige definir
-  quién posee el socket tras el `101`, cómo se drena el buffer ya acumulado y
-  cómo se desactiva el pipelining, todo ello sin filtrar semántica HTTP al
-  transporte. No es un incumplimiento de RFC 9110/9112: un servidor conforme
-  puede rechazar toda petición de upgrade. Lo ya modelado se conserva tal
-  cual, sin coste para la primera release.
+  están modelados, pero ningún transporte lo maneja. Depende de la barrera de
+  upgrade anterior y requerirá handshake, framing, fragmentación,
+  `ping`/`pong`/`close`, envíos iniciados externamente y backpressure
+  bidireccional. No es un incumplimiento de RFC 9110/9112: un servidor conforme
+  puede rechazar toda petición de upgrade. Lo ya modelado se conserva tal cual.
+
+Este aplazamiento se limita al streaming público, al cambio de codec y a
+WebSockets. Permanecen dentro del plan actual la operación interna multi-evento,
+el hardening de ciclo de vida, límites, desconexiones y clientes lentos, y la
+documentación, auditoría, pruebas de estrés y benchmarks finales.
 
 ### Documentación pendiente
 
@@ -1131,8 +1149,9 @@ confirmados R1-R4, ejecutar una batería wire-level para C1-C7, pipelining y
 cierres en IOCP y epoll, y completar RE1-RE4. La beta podrá declarar soporte
 de condicionales, rangos y trailers de salida solo tras esas verificaciones.
 
-TLS, compresión/GZIP y WebSockets no aparecen en ninguna tanda ni en la
-numeración de ítems: ver "Fuera del alcance de la primera release".
+TLS, compresión/GZIP, streaming HTTP/SSE, la barrera de upgrade y WebSockets
+no aparecen en ninguna tanda ni en la numeración de ítems: ver "Fuera del
+alcance de la primera release".
 
 ## Estado de pruebas y documentación
 
