@@ -35,7 +35,9 @@
 #include <mutex>
 #include <new>
 #include <span>
+#include <type_traits>
 #include <unordered_map>
+#include <utility>
 
 #include "network/environment.h"
 #include "platform.h"
@@ -43,6 +45,7 @@
 #include "protocol/serialization.h"
 #include "transport/server/completion_mailbox.h"
 #include "transport/server/connection_identity.h"
+#include "transport/server/deferred_response.h"
 #include "transport/server/response_scheduler.h"
 
 namespace martianlabs::doba::transport::server {
@@ -153,6 +156,13 @@ struct context
   // | [>] get_connection_key                                       ( public ) |
   // +=========================================================================+
   uint64_t get_connection_key() const { return connection_key_; }
+  // +=========================================================================+
+  // | [>] reserve_response                                         ( public ) |
+  // +=========================================================================+
+  uint64_t reserve_response() {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    return scheduler_.reserve();
+  }
   // +=========================================================================+
   // | [>] accumulate                                               ( public ) |
   // +=========================================================================+
@@ -560,7 +570,20 @@ class tcpip {
   void set_on_request(FNty&& fn) {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
     ensure_stopped();
-    on_request_ = std::forward<FNty>(fn);
+    using request_context = detail::deferred_response_context<
+        context<RQty, RSty, DEty>, detail::iocp_completion_mailbox>;
+    if constexpr (std::is_invocable_v<
+                      FNty, const std::shared_ptr<RQty>&, RSty&,
+                      request_context&>) {
+      on_request_ = std::forward<FNty>(fn);
+    } else {
+      static_assert(std::is_invocable_v<FNty, const RQty&, RSty&>);
+      on_request_ = [callback = std::forward<FNty>(fn)](
+                        const std::shared_ptr<RQty>& request,
+                        RSty& response, request_context&) mutable {
+        callback(*request, response);
+      };
+    }
   }
   // +=========================================================================+
   // | [>] set_on_bad_request                                       ( public ) |
@@ -1007,12 +1030,18 @@ class tcpip {
             try {
               // Let's call user handler!
               RSty response;
-              on_request_(*result.request, response);
-              auto serialized = response.serialize();
-              if (!serialized ||
-                  !ctx->enqueue_response(std::move(serialized))) {
-                ctx->fail_response();
-                return;
+              detail::deferred_response_context<
+                  context<RQty, RSty, DEty>,
+                  detail::iocp_completion_mailbox> dispatch{
+                      *ctx, completion_mailbox_};
+              on_request_(result.request, response, dispatch);
+              if (!dispatch.deferred()) {
+                auto serialized = response.serialize();
+                if (!serialized ||
+                    !ctx->enqueue_response(std::move(serialized))) {
+                  ctx->fail_response();
+                  return;
+                }
               }
               if (close_channel) ctx->close();
             } catch (const std::exception& ex) {
@@ -1169,7 +1198,11 @@ class tcpip {
   std::vector<std::jthread> workers_;
   std::unordered_map<uint64_t, std::shared_ptr<context<RQty, RSty, DEty>>>
       contexts_;
-  types::on_request_delegate<RQty, RSty> on_request_;
+  types::on_request_dispatch_delegate<
+      RQty, RSty,
+      detail::deferred_response_context<
+          context<RQty, RSty, DEty>,
+          detail::iocp_completion_mailbox>> on_request_;
   types::on_bad_request_delegate<RSty> on_bad_request_;
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;

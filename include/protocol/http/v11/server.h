@@ -25,6 +25,8 @@
 #ifndef martianlabs_doba_protocol_http_v11_server_h
 #define martianlabs_doba_protocol_http_v11_server_h
 
+#include <memory>
+
 #include "common/date_server.h"
 #include "transport/server/tcpip.h"
 #include "protocol/http/common/method_names.h"
@@ -79,8 +81,8 @@ class server {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     common::date_server::get().start();
     transport_.set_on_request(
-        [this](const RQty& req, RSty& res) {
-          session_.dispatch(req, res, router_);
+        [this](const std::shared_ptr<RQty>& req, RSty& res, auto&) {
+          session_.dispatch(*req, res, router_);
         });
     transport_.set_on_bad_request(
         [](int code, std::string_view reason, RSty& res) {

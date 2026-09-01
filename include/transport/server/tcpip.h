@@ -26,6 +26,7 @@
 #define martianlabs_doba_transport_server_tcpip_h
 
 #include <functional>
+#include <memory>
 
 #include "platform.h"
 
@@ -39,6 +40,9 @@ struct types {
   template <typename RQty, typename RSty>
   using on_request_delegate =
       std::function<void(const RQty&, RSty&)>;
+  template <typename RQty, typename RSty, typename Cty>
+  using on_request_dispatch_delegate =
+      std::function<void(const std::shared_ptr<RQty>&, RSty&, Cty&)>;
   template <typename RSty>
   using on_bad_request_delegate =
       std::function<void(int, std::string_view, RSty&)>;

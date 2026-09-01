@@ -40,6 +40,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 
@@ -49,6 +50,7 @@
 #include "protocol/serialization.h"
 #include "transport/server/completion_mailbox.h"
 #include "transport/server/connection_identity.h"
+#include "transport/server/deferred_response.h"
 #include "transport/server/response_scheduler.h"
 
 namespace martianlabs::doba::transport::server {
@@ -129,6 +131,10 @@ struct context
   // | [>] get_connection_key                                       ( public ) |
   // +=========================================================================+
   uint64_t get_connection_key() const { return connection_key_; }
+  // +=========================================================================+
+  // | [>] reserve_response                                         ( public ) |
+  // +=========================================================================+
+  uint64_t reserve_response() { return scheduler_.reserve(); }
   // +=========================================================================+
   // | [>] accumulate                                               ( public ) |
   // +=========================================================================+
@@ -382,7 +388,11 @@ struct worker {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   worker(detail::connection_identity& connection_identity,
-         types::on_request_delegate<RQty, RSty> on_request,
+         types::on_request_dispatch_delegate<
+             RQty, RSty,
+             detail::deferred_response_context<
+                 context<RQty, RSty, DEty>,
+                 detail::completion_mailbox<detail::eventfd_waker>>> on_request,
          types::on_bad_request_delegate<RSty> on_bad_request,
          types::on_client_connected_delegate on_connection,
          types::on_client_disconnected_delegate on_disconnection)
@@ -694,11 +704,17 @@ struct worker {
       if (result.channel == protocol::channel_intent::kClose) ctx->close();
       try {
         RSty response;
-        on_request_(*result.request, response);
-        auto serialized = response.serialize();
-        if (!serialized || !ctx->enqueue_response(std::move(serialized))) {
-          ctx->fail_response();
-          return;
+        detail::deferred_response_context<
+            context<RQty, RSty, DEty>,
+            detail::completion_mailbox<detail::eventfd_waker>> dispatch{
+                *ctx, completion_mailbox_};
+        on_request_(result.request, response, dispatch);
+        if (!dispatch.deferred()) {
+          auto serialized = response.serialize();
+          if (!serialized || !ctx->enqueue_response(std::move(serialized))) {
+            ctx->fail_response();
+            return;
+          }
         }
       } catch (const std::exception& ex) {
         enqueue_error_response(ctx, 7, ex.what());
@@ -810,7 +826,11 @@ struct worker {
   std::unordered_map<uint64_t, std::unique_ptr<context<RQty, RSty, DEty>>>
       contexts_;
   context<RQty, RSty, DEty>* retired_contexts_{nullptr};
-  types::on_request_delegate<RQty, RSty> on_request_;
+  types::on_request_dispatch_delegate<
+      RQty, RSty,
+      detail::deferred_response_context<
+          context<RQty, RSty, DEty>,
+          detail::completion_mailbox<detail::eventfd_waker>>> on_request_;
   types::on_bad_request_delegate<RSty> on_bad_request_;
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
@@ -887,7 +907,21 @@ class tcpip {
   void set_on_request(FNty&& fn) {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
     ensure_stopped();
-    on_request_ = std::forward<FNty>(fn);
+    using request_context = detail::deferred_response_context<
+        context<RQty, RSty, DEty>,
+        detail::completion_mailbox<detail::eventfd_waker>>;
+    if constexpr (std::is_invocable_v<
+                      FNty, const std::shared_ptr<RQty>&, RSty&,
+                      request_context&>) {
+      on_request_ = std::forward<FNty>(fn);
+    } else {
+      static_assert(std::is_invocable_v<FNty, const RQty&, RSty&>);
+      on_request_ = [callback = std::forward<FNty>(fn)](
+                        const std::shared_ptr<RQty>& request,
+                        RSty& response, request_context&) mutable {
+        callback(*request, response);
+      };
+    }
   }
   // +=========================================================================+
   // | [>] set_on_bad_request                                       ( public ) |
@@ -1000,7 +1034,11 @@ class tcpip {
   bool starting_{false};
   bool stopping_{false};
   std::thread::id stopping_thread_{};
-  types::on_request_delegate<RQty, RSty> on_request_;
+  types::on_request_dispatch_delegate<
+      RQty, RSty,
+      detail::deferred_response_context<
+          context<RQty, RSty, DEty>,
+          detail::completion_mailbox<detail::eventfd_waker>>> on_request_;
   types::on_bad_request_delegate<RSty> on_bad_request_;
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;

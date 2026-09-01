@@ -23,6 +23,7 @@
 // permissions and limitations under the License.
 
 #include <functional>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -150,7 +151,9 @@ class fake_transport {
   // +=========================================================================+
   // | [>] TYPEs                                                    ( public ) |
   // +=========================================================================+
-  using request_callback = std::function<void(const RQty&, RSty&)>;
+  struct request_context {};
+  using request_callback = std::function<void(
+      const std::shared_ptr<RQty>&, RSty&, request_context&)>;
   using bad_request_callback =
       std::function<void(int, std::string_view, RSty&)>;
   // +=========================================================================+
@@ -208,8 +211,10 @@ using test_transport = fake_transport<request, response, decoder>;
 // | [>] send_request                                             ( function ) |
 // +===========================================================================+
 std::string send_request(const request& req) {
+  auto request_ptr = std::make_shared<request>(req);
   response res;
-  test_transport::on_request(req, res);
+  test_transport::request_context context;
+  test_transport::on_request(request_ptr, res, context);
   res.set_header("Date", "fixed");
   return res.serialize()->prefix;
 }
