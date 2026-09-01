@@ -1,9 +1,0 @@
-services:
-  h1spec:
-    build:
-      context: .
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    command:
-      - "${DOBA_HOST:-host.docker.internal}"
-      - "${DOBA_PORT:-8080}"
