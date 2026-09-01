@@ -41,6 +41,7 @@
 #include "platform.h"
 #include "protocol/deserialization.h"
 #include "protocol/serialization.h"
+#include "transport/server/connection_identity.h"
 #include "transport/server/response_scheduler.h"
 
 namespace martianlabs::doba::transport::server {
@@ -132,12 +133,13 @@ struct context
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  context(SOCKET in_socket,
+  context(uint64_t connection_key, SOCKET in_socket,
           types::on_client_disconnected_delegate on_disconnection,
-          std::function<void(context*)> on_retirement = {})
-      : socket_{in_socket},
-        on_disconnection_{on_disconnection},
-        on_retirement_{on_retirement} {}
+          std::function<void(uint64_t)> on_retirement = {})
+      : on_disconnection_{on_disconnection},
+        on_retirement_{on_retirement},
+        socket_{in_socket},
+        connection_key_{connection_key} {}
   context(const context&) = delete;
   context(context&&) noexcept = delete;
   ~context() = default;
@@ -146,6 +148,10 @@ struct context
   // +=========================================================================+
   context& operator=(const context&) = delete;
   context& operator=(context&&) noexcept = delete;
+  // +=========================================================================+
+  // | [>] get_connection_key                                       ( public ) |
+  // +=========================================================================+
+  uint64_t get_connection_key() const { return connection_key_; }
   // +=========================================================================+
   // | [>] accumulate                                               ( public ) |
   // +=========================================================================+
@@ -448,14 +454,14 @@ struct context
   void retire_() {
     if (retired_ || socket_ != INVALID_SOCKET || receiving_ || sending_) return;
     retired_ = true;
-    if (on_retirement_) on_retirement_(this);
+    if (on_retirement_) on_retirement_(connection_key_);
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   // [common] section!
   types::on_client_disconnected_delegate on_disconnection_;
-  std::function<void(context*)> on_retirement_;
+  std::function<void(uint64_t)> on_retirement_;
   SOCKET socket_{INVALID_SOCKET};
   mutable std::mutex sending_mutex_;
   bool closing_{false};
@@ -476,6 +482,7 @@ struct context
   WSABUF ovs_wsa_{0};
   // [responses] section!
   detail::response_scheduler scheduler_;
+  const uint64_t connection_key_;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -813,7 +820,7 @@ class tcpip {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
     if (stopping_) return false;
     try {
-      return contexts_.emplace(ctx.get(), ctx).second;
+      return contexts_.emplace(ctx->get_connection_key(), ctx).second;
     } catch (...) {
       return false;
     }
@@ -821,10 +828,10 @@ class tcpip {
   // +=========================================================================+
   // | [>] retire_context                                          ( private ) |
   // +=========================================================================+
-  void retire_context(context<RQty, RSty, DEty>* ctx) {
+  void retire_context(uint64_t connection_key) {
     {
       std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-      contexts_.erase(ctx);
+      contexts_.erase(connection_key);
     }
     lifecycle_cv_.notify_all();
     replenish_accept_pipeline();
@@ -865,10 +872,11 @@ class tcpip {
     }
     std::shared_ptr<context<RQty, RSty, DEty>> ctx;
     try {
+      uint64_t connection_key = connection_identity_.acquire();
       ctx = std::make_shared<context<RQty, RSty, DEty>>(
-          ova->socket, on_disconnection_,
-          [this](context<RQty, RSty, DEty>* context) {
-            retire_context(context);
+          connection_key, ova->socket, on_disconnection_,
+          [this](uint64_t retired_connection_key) {
+            retire_context(retired_connection_key);
           });
     } catch (...) {
       closesocket(ova->socket);
@@ -1124,13 +1132,13 @@ class tcpip {
   bool stopping_ = false;
   std::thread::id stopping_thread_{};
   std::vector<std::jthread> workers_;
-  std::unordered_map<context<RQty, RSty, DEty>*,
-                     std::shared_ptr<context<RQty, RSty, DEty>>>
+  std::unordered_map<uint64_t, std::shared_ptr<context<RQty, RSty, DEty>>>
       contexts_;
   types::on_request_delegate<RQty, RSty> on_request_;
   types::on_bad_request_delegate<RSty> on_bad_request_;
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
+  detail::connection_identity connection_identity_;
 };
 }  // namespace martianlabs::doba::transport::server
 

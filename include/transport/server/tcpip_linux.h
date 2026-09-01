@@ -47,6 +47,7 @@
 #include "platform.h"
 #include "protocol/deserialization.h"
 #include "protocol/serialization.h"
+#include "transport/server/connection_identity.h"
 #include "transport/server/response_scheduler.h"
 
 namespace martianlabs::doba::transport::server {
@@ -90,10 +91,11 @@ struct context
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  context(int in_socket,
+  context(uint64_t connection_key, int in_socket,
           types::on_client_disconnected_delegate on_disconnection)
       : on_disconnection_{std::move(on_disconnection)},
-        socket_{in_socket} {}
+        socket_{in_socket},
+        connection_key_{connection_key} {}
   context(const context&) = delete;
   context(context&&) noexcept = delete;
   ~context() = default;
@@ -102,6 +104,10 @@ struct context
   // +=========================================================================+
   context& operator=(const context&) = delete;
   context& operator=(context&&) noexcept = delete;
+  // +=========================================================================+
+  // | [>] get_connection_key                                       ( public ) |
+  // +=========================================================================+
+  uint64_t get_connection_key() const { return connection_key_; }
   // +=========================================================================+
   // | [>] accumulate                                               ( public ) |
   // +=========================================================================+
@@ -325,6 +331,7 @@ struct context
   std::size_t sending_offset_{0};
   detail::response_scheduler scheduler_;
   uint32_t registered_event_mask_{EPOLLIN | EPOLLRDHUP | EPOLLET};
+  const uint64_t connection_key_;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -344,14 +351,16 @@ struct worker {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  worker(types::on_request_delegate<RQty, RSty> on_request,
+  worker(detail::connection_identity& connection_identity,
+         types::on_request_delegate<RQty, RSty> on_request,
          types::on_bad_request_delegate<RSty> on_bad_request,
          types::on_client_connected_delegate on_connection,
          types::on_client_disconnected_delegate on_disconnection)
       : on_request_{std::move(on_request)},
         on_bad_request_{std::move(on_bad_request)},
         on_connection_{std::move(on_connection)},
-        on_disconnection_{std::move(on_disconnection)} {}
+        on_disconnection_{std::move(on_disconnection)},
+        connection_identity_{connection_identity} {}
   worker(const worker&) = delete;
   worker(worker&&) noexcept = delete;
   ~worker() { stop(); }
@@ -516,10 +525,11 @@ struct worker {
   // | [>] register_context                                        ( private ) |
   // +=========================================================================+
   void register_context(int socket) {
+    uint64_t connection_key = connection_identity_.acquire();
     auto ctx = std::make_unique<context<RQty, RSty, DEty>>(
-        socket, on_disconnection_);
+        connection_key, socket, on_disconnection_);
     auto ctx_ptr = ctx.get();
-    if (!contexts_.emplace(ctx_ptr, std::move(ctx)).second) {
+    if (!contexts_.emplace(connection_key, std::move(ctx)).second) {
       throw std::runtime_error("Context could not be registered!");
     }
     epoll_event event{};
@@ -710,7 +720,7 @@ struct worker {
     while (retired_contexts_) {
       context<RQty, RSty, DEty>* ctx = retired_contexts_;
       retired_contexts_ = ctx->retirement_next;
-      contexts_.erase(ctx);
+      contexts_.erase(ctx->get_connection_key());
     }
   }
   // +=========================================================================+
@@ -718,7 +728,7 @@ struct worker {
   // +=========================================================================+
   void close_contexts() {
     for (auto& item : contexts_) {
-      context<RQty, RSty, DEty>* ctx = item.first;
+      context<RQty, RSty, DEty>* ctx = item.second.get();
       if (ctx->is_closed()) continue;
       ctx->abort();
       close_context(ctx);
@@ -744,14 +754,14 @@ struct worker {
   int listener_fd_{-1};
   std::atomic<bool> stopping_{false};
   std::jthread thread_;
-  std::unordered_map<context<RQty, RSty, DEty>*,
-                     std::unique_ptr<context<RQty, RSty, DEty>>>
+  std::unordered_map<uint64_t, std::unique_ptr<context<RQty, RSty, DEty>>>
       contexts_;
   context<RQty, RSty, DEty>* retired_contexts_{nullptr};
   types::on_request_delegate<RQty, RSty> on_request_;
   types::on_bad_request_delegate<RSty> on_bad_request_;
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
+  detail::connection_identity& connection_identity_;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -796,7 +806,8 @@ class tcpip {
           std::max<std::size_t>(1, std::thread::hardware_concurrency());
       for (std::size_t i = 0; i < number_of_workers; i++) {
         auto entry = std::make_unique<worker<RQty, RSty, DEty>>(
-            on_request_, on_bad_request_, on_connection_, on_disconnection_);
+            connection_identity_, on_request_, on_bad_request_, on_connection_,
+            on_disconnection_);
         entry->setup(port_number);
         workers_.emplace_back(std::move(entry));
       }
@@ -939,6 +950,7 @@ class tcpip {
   types::on_bad_request_delegate<RSty> on_bad_request_;
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
+  detail::connection_identity connection_identity_;
 };
 }  // namespace martianlabs::doba::transport::server
 
