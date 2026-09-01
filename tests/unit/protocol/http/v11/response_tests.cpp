@@ -45,14 +45,35 @@ std::string read_source(reader& source) {
 }  // namespace
 
 // +===========================================================================+
-// | [>] response is neither copyable nor movable                ( test-case ) |
+// | [>] response is movable but not copyable                    ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("response is neither copyable nor movable") {
+DOBA_TEST("response is movable but not copyable") {
   static_assert(!std::is_copy_constructible_v<response>);
   static_assert(!std::is_copy_assignable_v<response>);
-  static_assert(!std::is_move_constructible_v<response>);
-  static_assert(!std::is_move_assignable_v<response>);
+  static_assert(std::is_nothrow_move_constructible_v<response>);
+  static_assert(std::is_nothrow_move_assignable_v<response>);
   DOBA_EXPECT(true);
+}
+// +===========================================================================+
+// | [>] moving preserves response state and owned body writers  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("moving preserves response state and owned body writers") {
+  response source;
+  auto writer = body_writer::chunked();
+  DOBA_EXPECT(writer.write("body"));
+  source.created_201()
+      .set_header("Date", "fixed")
+      .add_header("X-Test", "value")
+      .set_body(std::move(writer));
+  response constructed(std::move(source));
+  DOBA_EXPECT_EQUAL(constructed.get_header("X-Test").second, "value");
+  response assigned;
+  assigned.bad_request_400().set_body("replaced");
+  assigned = std::move(constructed);
+  auto serialized = assigned.serialize();
+  DOBA_EXPECT(serialized->prefix.starts_with("HTTP/1.1 201 Created\r\n"));
+  DOBA_EXPECT_EQUAL(read_source(*serialized->source),
+                    "4\r\nbody\r\n0\r\n\r\n");
 }
 // +===========================================================================+
 // | [>] headers support mutation lookup removal and indexes     ( test-case ) |

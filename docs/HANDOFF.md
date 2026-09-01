@@ -291,21 +291,17 @@ Origin-form y absolute-form se enrutan; authority-form responde 501 y
 asterisk-form responde 200.
 
 El router registra rutas estáticas, parametrizadas y wildcard mediante
-`add_route(method, path, lambda, policy)`, donde `policy` es opcional y por
-defecto `execution_policy::kSynchronous`. El handler recibe
-`std::shared_ptr<const RQty>` y `std::shared_ptr<RSty>` como sus dos primeros
-argumentos. El patrón parametrizado usa segmentos `:nombre`, por ejemplo
+`add_route(method, path, lambda)`. El handler recibe `const RQty&` y `RSty&`
+como sus dos primeros argumentos. El patrón parametrizado usa segmentos
+`:nombre`, por ejemplo
 `/users/:id`, y sus parámetros se declaran a continuación en la lambda. Se
 convierten en orden y soportan `std::string`, `bool`, tipos integrales y tipos
 de punto flotante.
 
-`match` recibe también `on_send`, evalúa primero las rutas estáticas y después
-las parametrizadas, y da prioridad a una coincidencia estática. Una ruta
-síncrona ejecuta su handler y llama a `on_send` dentro del router. Una ruta
-asíncrona se encola en el pool interno del router y llama a `on_send` al
-completar. Devuelve `kMatched`, `kNotFound` o `kMethodNotAllowed`; `server`
-traduce los dos últimos a 404 y 405, respectivamente. Al detenerse, `server`
-drena el router antes de detener el transporte.
+`match` evalúa primero las rutas estáticas, después las parametrizadas y por
+último las wildcard. Devuelve el handler coincidente; `server` lo invoca
+directamente dentro del callback del transporte y traduce la ausencia de ruta
+o de método permitido a 404 y 405, respectivamente.
 
 Los paths son sensibles a mayúsculas. Una ruta parametrizada con barra final
 solo coincide con un path que también la tenga. Un patrón que termina en `/*`
@@ -325,80 +321,35 @@ Ambos backends estan implementados y operativos. `transport/server/tcpip.h`
 selecciona `tcpip_windows.h` (IOCP) o `tcpip_linux.h` (EPOLL) en tiempo de
 compilacion segun la plataforma; no hay backend de referencia ni fallback
 sincrono. Los dos exponen exactamente la misma API publica al protocolo
-(`start`/`stop`, callbacks de request, bad-request y ciclo de vida de canal) y
-comparten el mismo modelo de ordenacion de respuestas pipelined mediante
-identificadores monotonos.
-
-Tras la unificacion de ambos transportes, la parte de gestion de respuestas es
-estructuralmente identica en los dos backends:
-
-- El estado por respuesta vive en un `response_data` con el mismo contenido
-  (`response`, `prefix_written`, etc.).
-- Las respuestas pendientes se guardan en un `std::deque<response_data>`
-  (`responses_`) indexado por la distancia respecto a `expected_response_id_`,
-  de modo que reservar es un `push_back` amortizado O(1) y completar es un
-  acceso por indice O(1).
-- Los limites de envio son las mismas constantes en ambos ficheros:
-  `kSendBufferMaxSz` (65536) y `kSendChunkSz` (8192).
-- Ambos ofrecen el mismo conjunto de operaciones sobre el contexto:
-  `get_next_response_id`, encolado de respuesta normal, `enqueue_error_response`
-  (usado tanto por errores de decodificacion como por excepciones de handler),
-  `fail_response`, `close()` y `abort()`.
+(`start`/`stop`, callbacks de request, bad-request y ciclo de vida de canal).
+Cada request deserializada ejecuta su handler de forma directa en el worker del
+transporte. Cuando este retorna, la respuesta se serializa y se añade a la cola
+FIFO del contexto, conservando el orden de las requests pipelined.
 
 Ambos backends consumen `serialization_result` de la misma forma: primero
 vuelcan `prefix` una sola vez (marca `prefix_written`) y despues drenan
 `source` en trozos acotados por `kSendChunkSz`, deteniendose cuando el buffer
 de envio alcanza `kSendBufferMaxSz`. Un `failed()` del reader cierra el
-contexto; una lectura de cero bytes retira la respuesta y avanza al siguiente
-identificador esperado.
+contexto; una lectura de cero bytes retira la respuesta.
 
-La diferencia entre backends es unicamente el mecanismo de I/O y de propiedad
-del contexto que impone cada plataforma:
-
-En Windows, cada request recibe un identificador de respuesta monotono. El
-`on_send` entregado al protocolo conserva el contexto mediante `shared_ptr`,
-encola la respuesta serializada con ese identificador y, cuando la completacion
-llega desde otro hilo del pool de IOCP, arma el siguiente envio. El contexto
-solo envia la siguiente respuesta esperada, por lo que las respuestas de
-handlers asincronos se entregan en el orden de las requests pipelined. El
-estado compartido del contexto (cola de respuestas, buffer de salida y flags de
-cierre) se protege con `sending_mutex_`, ya que las completaciones pueden
-llegar en cualquier worker.
-
-En Linux, cada worker posee su instancia EPOLL, su listener configurado con
-`SO_REUSEPORT` y todos los contextos aceptados por el. El camino sincrono
-deserializa, ejecuta el handler y envia en ese mismo worker. Una respuesta
-tardia conserva el contexto, se encola en su worker mediante `eventfd` y ese
-worker realiza el envio y cualquier operacion EPOLL. El camino sincrono no
-toca la cola ni el mutex de notificaciones asincronas. EPOLL entrega
-directamente el puntero al contexto, sin lookup por evento; el registro de
-contextos solo se consulta al aceptar o retirar una conexion.
-
-El worker conserva cada contexto mediante `shared_ptr` y `on_send` mantiene
-esa misma propiedad mientras puede existir una respuesta tardia. Al cerrar un
-socket, el contexto se enlaza en una lista de retirada del propio worker y no
-se elimina del registro hasta terminar el lote devuelto por `epoll_wait`; asi
-ningun evento ya entregado puede observar memoria liberada y no se necesita
-una asignacion para diferir la destruccion. Una respuesta tardia tras `stop()`
-encuentra el contexto cerrado y el worker deja de aceptar notificaciones.
-
-Una posicion vacia en la cola bloquea unicamente las respuestas posteriores;
-una respuesta duplicada, nula o tardia no puede completar de nuevo la misma
-posicion.
+En Windows, IOCP conserva el contexto mediante `shared_ptr` mientras haya
+operaciones solapadas y protege el estado de envio con `sending_mutex_`. En
+Linux, cada worker posee su instancia EPOLL, su listener configurado con
+`SO_REUSEPORT` y los contextos que acepta; todas las operaciones EPOLL y de
+socket de esos contextos se realizan en su propio worker.
 
 Se distinguen dos formas de terminar, identicas en ambos backends:
 
 - Cierre ordenado (`close`): se deja de leer, se drena todo lo que sea seguro
   enviar y el contexto se destruye cuando no quedan respuestas. Lo usan EOF,
-  `channel_intent::kClose`, una respuesta nula y un fallo de serializacion.
+  `channel_intent::kClose` y un fallo de serializacion.
 - Aborto fatal (`abort`): el flujo de salida ya esta corrupto (fallo del
   socket, decoder o source), asi que no se envia nada mas y el contexto se
   retira de inmediato.
 
-Un fallo sincrono del handler reutiliza el identificador ya reservado para
-enviar el error, en lugar de reservar uno nuevo. `tcpip::stop()` debe
-invocarse desde fuera de un worker del transporte. Los callbacks del
-transporte no pueden cambiar mientras `start()` o `stop()` estan activos.
+`tcpip::stop()` debe invocarse desde fuera de un worker del transporte. Los
+callbacks del transporte no pueden cambiar mientras `start()` o `stop()` estan
+activos.
 
 Lo que sigue pendiente en el transporte no es el backend en si, sino politicas
 transversales aun no implementadas en ninguno de los dos: timeouts (item 1) y
@@ -436,8 +387,8 @@ C1. **Ausencia total de timeouts. (A - diferido al final, ver Secuencia
       semantica de cierre, por lo que requiere un plan propio aprobado.
     - **Por que es necesario:** sin limites temporales una conexion puede
       retener socket, contexto y buffers enviando bytes lentamente o dejando
-      bloqueada una escritura. Es el mayor riesgo operativo y amplifica R1 y
-      R2, que de otro modo pueden retener una respuesta pendiente sin limite.
+      bloqueada una escritura. Es el mayor riesgo operativo y puede retener
+      recursos sin limite.
     - **Evidencia de cierre:** clientes locales que fragmenten el head y el
       body, no lean una respuesta, mantengan un keep-alive idle y usen
       pipelining. Los mismos casos deben comprobar plazo, bytes finales,
@@ -633,107 +584,19 @@ C5. **Sin límites de conexión efectivos. (B/M)**
 
 ## Pendientes de robustez arquitectonica y operativa
 
-Estos puntos no son incumplimientos de HTTP/1.1. Son riesgos observados por
-lectura del codigo en los limites entre router, pool asincrono y transporte.
-Todavia requieren reproduccion enfocada antes de afirmar que todos se
-manifiestan sobre el cable. Se identifican como `R1`-`R4` para mantenerlos
-separados del backlog de compliance y del backlog de producto.
-
-R1. **Una excepcion de handler asincrono puede dejar una respuesta sin
-    completar. (Alta)**
-
-    - **Comportamiento observado:** `router::match` encola el handler y llama a
-      `on_send` solamente despues de que el handler retorna. El worker de
-      `common::thread_pool` captura cualquier excepcion y la descarta para
-      conservar vivo el hilo.
-    - **Mecanismo de fallo:** si el handler lanza, el control no alcanza
-      `on_send`. El transporte ya reservo un `response_id`, pero su posicion en
-      `responses_` permanece vacia. Como ambos backends entregan respuestas en
-      orden estricto, esa posicion puede impedir el avance de respuestas
-      posteriores de la misma conexion.
-    - **Impacto:** una excepcion de aplicacion puede producir una peticion sin
-      respuesta, bloquear el pipeline de la conexion y retener contexto y
-      buffers hasta que el cliente cierre o exista un timeout. Los timeouts
-      tampoco estan implementados todavia (C1), por lo que ambos riesgos se
-      amplifican.
-    - **Componentes afectados:** `common/thread_pool.h`,
-      `protocol/http/common/router.h`, los callbacks `on_send` y las colas
-      ordenadas de `transport/server/tcpip_windows.h` y
-      `transport/server/tcpip_linux.h`.
-    - **Verificacion requerida:** prueba asincrona con un handler que lance,
-      seguida por otra request pipelined en la misma conexion. Debe comprobarse
-      que se emite un `500` o que la posicion se marca como fallida y la
-      conexion termina de forma determinista, en ambos backends.
-    - **Por que importa:** es una diferencia de confiabilidad entre handlers
-      sincronos y asincronos. El transporte ya convierte excepciones sincronas
-      en `500`; la misma garantia debe existir para trabajo delegado.
-
-R2. **La conversion fallida de una ruta parametrizada asincrona puede dejarla
-    marcada como coincidente sin enviar respuesta. (Alta)**
-
-    - **Comportamiento observado:** en modo sincrono,
-      `router_handler_parametrized::invoke` convierte los parametros antes de
-      confirmar el match; si falla, el router continua buscando. En modo
-      asincrono, `router::match` encola el trabajo y devuelve `kMatched` antes
-      de ejecutar esa conversion.
-    - **Mecanismo de fallo:** si la conversion tipada falla dentro del worker,
-      `invoke` devuelve `false` y el lambda no llama a `on_send`. El servidor ya
-      recibio `kMatched`, por lo que tampoco genera `404` ni busca otra ruta.
-    - **Impacto:** una URL que no pueda convertirse al tipo declarado puede
-      quedar sin respuesta y bloquear respuestas pipelined posteriores. Ademas,
-      la semantica observable de la misma ruta cambia solo por seleccionar
-      `execution_policy::kAsynchronous`.
-    - **Componentes afectados:** `protocol/http/common/router.h`,
-      `router_handler_parametrized.h`, `common/thread_pool.h` y las colas de
-      respuesta de ambos transportes.
-    - **Verificacion requerida:** registrar rutas parametrizadas solapadas,
-      ejecutar casos validos e invalidos con ambas politicas y comprobar
-      paridad de `kMatched`/`kNotFound`, numero de envios y continuidad de una
-      conexion pipelined.
-    - **Por que importa:** la politica de ejecucion debe decidir donde corre el
-      handler, no cambiar la resolucion de rutas ni permitir respuestas
-      inconclusas.
-
-R3. **El orden de apagado permite una ventana en la que se descarta trabajo
-    asincrono nuevo. (Alta, pendiente de reproduccion)**
-
-    - **Comportamiento observado:** `v11::server::stop` detiene y drena primero
-      el router y despues detiene el transporte. `thread_pool::enqueue` retorna
-      silenciosamente cuando el pool ya no esta activo.
-    - **Mecanismo de fallo:** mientras `router_.stop()` espera a que terminen
-      tareas existentes, el transporte puede seguir aceptando o procesando una
-      request. Si esa request selecciona una ruta asincrona despues de que el
-      pool haya marcado `running_ = false`, la tarea se descarta sin completar
-      su `response_id`.
-    - **Impacto:** el apagado bajo trafico puede dejar peticiones sin respuesta,
-      prolongar el cierre o depender de que el transporte aborte finalmente el
-      contexto. El retorno `void` de `enqueue` impide que el router detecte y
-      resuelva el rechazo.
-    - **Componentes afectados:** `protocol/http/v11/server.h`,
-      `protocol/http/common/router.h`, `common/thread_pool.h` y el ciclo de vida
-      `start`/`stop` de ambos transportes.
-    - **Verificacion requerida:** pruebas repetidas de `stop()` bajo carga con
-      handlers sincronos y asincronos, incluyendo requests que llegan durante
-      el drenaje. Deben comprobar ausencia de slots pendientes, terminacion
-      acotada y callbacks de desconexion exactamente una vez.
-    - **Por que importa:** un servidor debe poder apagarse de forma
-      determinista sin aceptar trabajo que ya no puede completar.
-
-R4. **Un fallo durante `server::start` no revierte explicitamente los
+R1. **Un fallo durante `server::start` no revierte explicitamente los
     subsistemas ya iniciados. (Media, pendiente de reproduccion)**
 
     - **Comportamiento observado:** `server::start` inicia `date_server` y el
-      router antes de llamar a `transport_.start`. El transporte limpia su
+      transporte antes de marcarse como iniciado. El transporte limpia su
       estado si falla, pero la capa `server` no captura la excepcion para
-      detener los dos subsistemas anteriores ni para restaurar explicitamente
-      toda la secuencia.
+      detener `date_server` ni para restaurar explicitamente toda la secuencia.
     - **Impacto:** un bind fallido, puerto invalido o error de inicializacion
       puede dejar hilos auxiliares activos hasta un `stop()` posterior o la
       destruccion del servidor. Tambien debe verificarse que un segundo
       `start()` sea seguro despues del fallo.
     - **Componentes afectados:** `protocol/http/v11/server.h`,
-      `common/date_server.h`, `protocol/http/common/router.h` y ambos
-      transportes.
+      `common/date_server.h` y ambos transportes.
     - **Verificacion requerida:** forzar cada fallo de inicializacion posible,
       comprobar que no quedan hilos o handles activos y volver a iniciar la
       misma instancia correctamente.
@@ -810,19 +673,19 @@ QA1. **No hay pruebas de integracion sobre IOCP y epoll. (Alta)**
 
 QA2. **Faltan pruebas de concurrencia, pipelining y ciclo de vida. (Alta)**
 
-    - **Riesgo:** no hay pruebas enfocadas para respuestas asincronas fuera de
-      orden, excepciones, envio duplicado o nulo, `start`/`stop` repetido,
-      apagado bajo carga y respuestas tardias despues del cierre.
-    - **Impacto:** races, deadlocks, slots de respuesta vacios o callbacks
-      duplicados pueden aparecer solamente bajo interleavings concretos. R1-R4
-      dependen de esta cobertura para confirmar su mecanismo y su solucion.
-    - **Componentes afectados:** router, thread pool, servidor, ownership de
-      contextos y colas `responses_` de ambos backends.
+    - **Riesgo:** no hay pruebas enfocadas para multiples workers, pipelining,
+      excepciones de handler, `start`/`stop` repetido o apagado bajo carga.
+    - **Impacto:** races, deadlocks, cierres incompletos o callbacks duplicados
+      pueden aparecer solamente bajo interleavings concretos. R1 depende de
+      esta cobertura para confirmar su mecanismo y su solucion.
+    - **Componentes afectados:** servidor, ciclo de vida de contextos y colas
+      `responses_` de ambos backends.
     - **Verificacion requerida:** tests deterministas con barreras/latches para
       controlar interleavings, mas pruebas repetidas de estres con muchas
       conexiones y requests pipelined.
-    - **Por que importa:** la entrega ordenada de respuestas asincronas es una
-      caracteristica central anunciada por Doba, no un detalle interno.
+    - **Por que importa:** la ejecucion y el envio ocurren en workers de I/O;
+      su ciclo de vida es una caracteristica central de Doba, no un detalle
+      interno.
 
 QA3. **No hay fuzzing ni ejecucion con sanitizers. (Alta)**
 
@@ -851,11 +714,11 @@ QA4. **No existen benchmarks reproducibles para las afirmaciones de
       `shared_ptr`, `std::function`, spill a disco o tamanos de buffer. Tampoco
       se puede cuantificar la promesa de "high-performance".
     - **Componentes afectados:** decoder, router, response serialization,
-      streaming de bodies, thread pool y ambos transportes.
+      streaming de bodies y ambos transportes.
     - **Verificacion requerida:** escenarios versionados y reproducibles para
-      request minima, headers grandes, body inline/streaming, sync/async,
-      pipelining y concurrencia; registrar toolchain, hardware y distribucion de
-      latencias, no solo requests por segundo.
+      request minima, headers grandes, body inline/streaming, pipelining y
+      concurrencia; registrar toolchain, hardware y distribucion de latencias,
+      no solo requests por segundo.
     - **Por que importa:** las optimizaciones y futuras refactorizaciones deben
       decidirse con medidas y conservar un baseline de release.
 
@@ -974,15 +837,14 @@ DT1. **Persisten buffers propietarios gestionados con `new[]`/`delete[]`.
     - **Por que importa:** hacer visible la propiedad reduce el riesgo de
       mantenimiento en la zona con mas views y offsets del parser.
 
-DT2. **El hot path usa ownership compartido, `std::function` y dispatch virtual
-     sin medicion publicada. (Media)**
+DT2. **El hot path usa ownership compartido y `std::function` sin medicion
+     publicada. (Media)**
 
-    - **Situacion actual:** requests, responses y contextos usan `shared_ptr`;
-      los callbacks usan `std::function`; los handlers parametrizados incluyen
-      una interfaz virtual interna.
+    - **Situacion actual:** las requests y los contextos de Windows usan
+      `shared_ptr`; los callbacks de rutas usan `std::function`.
     - **Riesgo:** conteo atomico, type erasure y asignaciones pueden afectar
       latencia y throughput, pero reemplazarlos sin datos podria aumentar la
-      complejidad o romper el lifetime asincrono correcto.
+      complejidad o romper los contratos de lifetime existentes.
     - **Componentes afectados:** contrato de transporte, router, handlers,
       request getter y ownership de contextos.
     - **Verificacion requerida:** medir primero con QA4, identificar
@@ -1092,8 +954,7 @@ documentación, auditoría, pruebas de estrés y benchmarks finales.
   directamente el transporte, fuera de `v11::server`.
 - Verificar sobre el cable el `100-continue` ya implementado, dentro de P5/QA1.
 - Documentar lifetime y propiedad de los `string_view` devueltos por `request`,
-  las precondiciones de getters indexados y la garantia de finalizacion de
-  handlers asincronos cuando se resuelvan R1-R3.
+  y las precondiciones de getters indexados.
 
 ### Secuencia recomendada
 
@@ -1110,10 +971,9 @@ Los números son los identificadores de los ítems de este documento.
 | 5     | Compliance funcional             | C2, C3, C4        | Objetivo beta |
 | 6     | Proteccion de conexiones         | C1                | Objetivo beta |
 | 7     | Producto y conveniencia          | P1, P2, P3, P4, P5 | Pendiente |
-| 8     | Async y ciclo de vida            | R1-R4             | Gate beta  |
-| 9     | QA integral                      | QA1, QA2           | Gate beta  |
-| 10    | Preparacion de release           | RE1-RE4           | Gate beta  |
-| 11    | Deuda tecnica medida             | DT1-DT5           | Pendiente  |
+| 8     | QA integral                      | QA1, QA2           | Gate beta  |
+| 9     | Preparacion de release           | RE1-RE4           | Gate beta  |
+| 10    | Deuda tecnica medida             | DT1-DT5           | Pendiente  |
 
 **Objetivo fijado para `0.1.0-beta.1`:** cerrar los siete ítems de compliance
 pendientes. El orden de ejecución busca primero corregir el incumplimiento
@@ -1122,11 +982,11 @@ visible y los riesgos operativos, y después completar la semántica HTTP.
 El orden es una dependencia de trabajo, no una afirmacion de criticidad pura:
 C7 abre la secuencia por ser un gate obligatorio de release; C6 es el siguiente
 cambio localizado y desbloquea C4; C5 y C1 comparten el diseño generico de
-admision, tiempo y cierre en ambos transportes; R1-R4 deben reproducirse
-mientras se valida ese ciclo de vida; C2 requiere congelar su contrato de
-aplicacion antes de editar la API; y C3 depende solo de que el framing chunked
-de salida conserve sus invariantes. Por criticidad operativa, C1 sigue siendo
-el riesgo principal aunque no sea el primer cambio propuesto.
+admision, tiempo y cierre en ambos transportes; R1 debe reproducirse mientras
+se valida ese ciclo de vida; C2 requiere congelar su contrato de aplicacion
+antes de editar la API; y C3 depende solo de que el framing chunked de salida
+conserve sus invariantes. Por criticidad operativa, C1 sigue siendo el riesgo
+principal aunque no sea el primer cambio propuesto.
 
 1. Item C7 - Fechas condicionales invalidas rechazan la request (Nivel 2,
    obligatorio para la release).
@@ -1145,7 +1005,7 @@ C2 puede requerir una ampliación deliberada de la API pública; su diseño y
 plan de implementación necesitan aprobación explícita antes de modificarla.
 
 La salida de `0.1.0-beta.1` exige además reproducir y resolver los riesgos
-confirmados R1-R4, ejecutar una batería wire-level para C1-C7, pipelining y
+confirmados R1, ejecutar una batería wire-level para C1-C7, pipelining y
 cierres en IOCP y epoll, y completar RE1-RE4. La beta podrá declarar soporte
 de condicionales, rangos y trailers de salida solo tras esas verificaciones.
 
