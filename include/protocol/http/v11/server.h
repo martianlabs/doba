@@ -78,20 +78,21 @@ class server {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     common::date_server::get().start();
     transport_.set_on_request(
-        [this](const RQty& req, RSty& res) {
-          switch (req.get_target()) {
+        [this](const std::shared_ptr<RQty>& req, RSty& res)
+            -> std::optional<common::task<RSty>> {
+          switch (req->get_target()) {
             case target::kOriginForm:
             case target::kAbsoluteForm: {
               // The request is either in origin-form (RFC 9110 S9.3.5) or
               // absolute-form (RFC 9110 S9.3.4); in either case, the request is
               // routed to a handler based on the method and absolute path.
-              std::string_view method = req.get_method();
-              std::string_view abs_path = req.get_absolute_path();
+              std::string_view method = req->get_method();
+              std::string_view abs_path = req->get_absolute_path();
               auto match = router_.match(method, abs_path);
               if (match.handler) {
-                match.handler->callback(req, res);
+                match.handler->callback(*req, res);
               } else if (match.parametrized_handler) {
-                match.parametrized_handler->invoke(req, res, abs_path);
+                match.parametrized_handler->invoke(*req, res, abs_path);
               } else {
                 std::string allowed_methods =
                     router_.allowed_methods(abs_path);
@@ -124,10 +125,10 @@ class server {
               res.bad_request_400();
               break;
           }
-          if (req.wants_connection_close()) {
+          if (req->wants_connection_close()) {
             res.set_header(header_names::kConnection, "close");
           }
-          if (req.get_method() == method_names::kHead) {
+          if (req->get_method() == method_names::kHead) {
             // RFC 9110 S9.3.2: a HEAD response must describe the same
             // headers a matching GET would have produced, but must never
             // carry a message body. clear_body() also drops the framing
@@ -145,6 +146,7 @@ class server {
             if (had_cl) res.set_header(header_names::kContentLength, cl);
             if (had_te) res.set_header(header_names::kTransferEncoding, te);
           }
+          return std::nullopt;
         });
     transport_.set_on_bad_request(
         [](int code, std::string_view reason, RSty& res) {

@@ -42,6 +42,7 @@
 #include "platform.h"
 #include "protocol/deserialization.h"
 #include "protocol/serialization.h"
+#include "transport/server/executor.h"
 
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
@@ -54,6 +55,77 @@ static constexpr DWORD kAcceptAddressBytes =
 static constexpr inline std::size_t kReceiveBufferSz = 8192;
 static constexpr inline std::size_t kSendBufferMaxSz = 65536;
 static constexpr inline std::size_t kSendChunkSz = 8192;
+static constexpr ULONG_PTR kExecutorCompletionKey = 1;
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] executor_dispatcher                                         ( class ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+namespace detail {
+class executor_dispatcher {
+ public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
+  explicit executor_dispatcher(HANDLE io_h) : io_h_{io_h} {}
+  executor_dispatcher(const executor_dispatcher&) = delete;
+  executor_dispatcher(executor_dispatcher&&) noexcept = delete;
+  ~executor_dispatcher() = default;
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +=========================================================================+
+  executor_dispatcher& operator=(const executor_dispatcher&) = delete;
+  executor_dispatcher& operator=(executor_dispatcher&&) noexcept = delete;
+  // +=========================================================================+
+  // | [>] schedule                                                 ( public ) |
+  // +=========================================================================+
+  bool schedule(std::coroutine_handle<> continuation) noexcept {
+    try {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (io_h_ == nullptr || !executor_.schedule(continuation)) return false;
+      PostQueuedCompletionStatus(io_h_, 0, kExecutorCompletionKey, nullptr);
+      return true;
+    } catch (...) {
+      return false;
+    }
+  }
+  // +=========================================================================+
+  // | [>] run                                                      ( public ) |
+  // +=========================================================================+
+  bool run() { return executor_.run(); }
+  // +=========================================================================+
+  // | [>] wake                                                     ( public ) |
+  // +=========================================================================+
+  void wake() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (io_h_ != nullptr) {
+      PostQueuedCompletionStatus(io_h_, 0, kExecutorCompletionKey, nullptr);
+    }
+  }
+  // +=========================================================================+
+  // | [>] stop                                                     ( public ) |
+  // +=========================================================================+
+  void stop() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    executor_.stop();
+  }
+  // +=========================================================================+
+  // | [>] close                                                    ( public ) |
+  // +=========================================================================+
+  void close() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    io_h_ = nullptr;
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
+  std::mutex mutex_;
+  executor executor_;
+  HANDLE io_h_{nullptr};
+};
+}  // namespace detail
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] io_type                                                ( enum-class ) |
@@ -526,6 +598,8 @@ class tcpip {
     try {
       uint16_t port_num = parse_port(port);
       std::size_t workers = setup_listener(port_num);
+      dispatcher_ =
+          std::make_shared<detail::executor_dispatcher>(io_h_);
       setup_workers(workers);
       setup_accept_pipeline(workers);
     } catch (...) {
@@ -586,6 +660,7 @@ class tcpip {
   void stop_(bool starting_failure) {
     HANDLE ioh = nullptr;
     SOCKET listener = INVALID_SOCKET;
+    std::shared_ptr<detail::executor_dispatcher> dispatcher;
     std::vector<std::shared_ptr<context<RQty, RSty, DEty>>> contexts;
     {
       std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
@@ -609,6 +684,8 @@ class tcpip {
       }
       stopping_ = true;
       stopping_thread_ = std::this_thread::get_id();
+      dispatcher = dispatcher_;
+      if (dispatcher) dispatcher->stop();
       ioh = io_h_;
       listener = accept_socket_;
       try {
@@ -630,6 +707,10 @@ class tcpip {
         return pending_accepts_ == 0 && contexts_.empty();
       });
     }
+    if (dispatcher) {
+      while (dispatcher->run()) {
+      }
+    }
     for (std::size_t i = 0; i < workers_.size(); i++) {
       if (!PostQueuedCompletionStatus(ioh, 0, 0, nullptr)) {
         CloseHandle(ioh);
@@ -638,6 +719,7 @@ class tcpip {
       }
     }
     workers_.clear();
+    if (dispatcher) dispatcher->close();
     if (ioh != nullptr) CloseHandle(ioh);
     {
       std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
@@ -645,6 +727,7 @@ class tcpip {
       accept_ex_ = nullptr;
       accept_depth_ = 0;
       pending_accepts_ = 0;
+      dispatcher_.reset();
       stopping_ = false;
       stopping_thread_ = {};
     }
@@ -762,7 +845,11 @@ class tcpip {
           BOOL st = GetQueuedCompletionStatus(io_h_, &bytes, &key, &lpo, tout);
           overlapped_base* ovb = reinterpret_cast<overlapped_base*>(lpo);
           if (st == TRUE && ovb == nullptr) {
-            stopping = true;
+            if (key == kExecutorCompletionKey) {
+              if (dispatcher_ && dispatcher_->run()) dispatcher_->wake();
+            } else {
+              stopping = true;
+            }
           } else if (st == TRUE) {
             if (ovb->get_type() == io_type::kAccept) {
               auto ova = (overlapped_accept*)ovb;
@@ -987,14 +1074,23 @@ class tcpip {
             try {
               // Let's call user handler!
               RSty response;
-              on_request_(*result.request, response);
-              auto serialized = response.serialize();
-              if (!serialized ||
-                  !ctx->enqueue_response(std::move(serialized))) {
-                ctx->fail_response();
-                return;
+              std::optional<common::task<RSty>> response_task =
+                  on_request_(result.request, response);
+              if (response_task) {
+                if (!start_deferred_response(
+                        ctx, std::move(*response_task), close_channel)) {
+                  ctx->fail_response();
+                  return;
+                }
+              } else {
+                auto serialized = response.serialize();
+                if (!serialized ||
+                    !ctx->enqueue_response(std::move(serialized))) {
+                  ctx->fail_response();
+                  return;
+                }
+                if (close_channel) ctx->close();
               }
-              if (close_channel) ctx->close();
             } catch (const std::exception& ex) {
               // Reuses the same bad-request channel as decoder rejections;
               // the reason code below mirrors
@@ -1012,6 +1108,68 @@ class tcpip {
       } while (keep_decoding_requests && bytes_received > 0);
       ctx->arm_next_receive_operation();
       ctx->arm_next_send_operation();
+    } catch (...) {
+      ctx->abort();
+    }
+  }
+  // +=========================================================================+
+  // | [>] start_deferred_response                                ( private ) |
+  // +=========================================================================+
+  bool start_deferred_response(
+      std::weak_ptr<context<RQty, RSty, DEty>> ctx,
+      common::task<RSty> response_task, bool close_channel) {
+    if (!dispatcher_) return false;
+    detail::detached_operation operation = complete_deferred_response(
+        std::move(ctx), dispatcher_, std::move(response_task), close_channel);
+    if (!dispatcher_->schedule(operation.get_coroutine())) return false;
+    operation.release();
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] complete_deferred_response                             ( private ) |
+  // +=========================================================================+
+  detail::detached_operation complete_deferred_response(
+      std::weak_ptr<context<RQty, RSty, DEty>> weak_ctx,
+      std::weak_ptr<detail::executor_dispatcher> dispatcher,
+      common::task<RSty> response_task, bool close_channel) {
+    std::optional<RSty> response;
+    std::exception_ptr exception;
+    try {
+      response.emplace(co_await std::move(response_task));
+    } catch (...) {
+      exception = std::current_exception();
+    }
+    if (!(co_await detail::resume_on<detail::executor_dispatcher>(
+              dispatcher))) {
+      co_return;
+    }
+    std::shared_ptr<context<RQty, RSty, DEty>> ctx = weak_ctx.lock();
+    if (!ctx) co_return;
+    try {
+      if (exception) {
+        try {
+          std::rethrow_exception(exception);
+        } catch (const std::exception& ex) {
+          enqueue_error_response(ctx, 7, ex.what());
+        } catch (...) {
+          enqueue_error_response(ctx, 7, "Request handler error!");
+        }
+      } else {
+        try {
+          auto serialized = response->serialize();
+          if (!serialized || !ctx->enqueue_response(std::move(serialized))) {
+            ctx->fail_response();
+          } else if (close_channel) {
+            ctx->close();
+          } else {
+            ctx->arm_next_send_operation();
+          }
+        } catch (const std::exception& ex) {
+          enqueue_error_response(ctx, 7, ex.what());
+        } catch (...) {
+          enqueue_error_response(ctx, 7, "Request handler error!");
+        }
+      }
     } catch (...) {
       ctx->abort();
     }
@@ -1133,6 +1291,7 @@ class tcpip {
   bool stopping_ = false;
   std::thread::id stopping_thread_{};
   std::vector<std::jthread> workers_;
+  std::shared_ptr<detail::executor_dispatcher> dispatcher_;
   std::unordered_map<context<RQty, RSty, DEty>*,
                      std::shared_ptr<context<RQty, RSty, DEty>>>
       contexts_;

@@ -150,7 +150,9 @@ class fake_transport {
   // +=========================================================================+
   // | [>] TYPEs                                                    ( public ) |
   // +=========================================================================+
-  using request_callback = std::function<void(const RQty&, RSty&)>;
+  using request_callback =
+      std::function<std::optional<martianlabs::doba::common::task<RSty>>(
+          const std::shared_ptr<RQty>&, RSty&)>;
   using bad_request_callback =
       std::function<void(int, std::string_view, RSty&)>;
   // +=========================================================================+
@@ -209,7 +211,8 @@ using test_transport = fake_transport<request, response, decoder>;
 // +===========================================================================+
 std::string send_request(const request& req) {
   response res;
-  test_transport::on_request(req, res);
+  auto shared_request = std::make_shared<request>(req);
+  test_transport::on_request(shared_request, res);
   res.set_header("Date", "fixed");
   return res.serialize()->prefix;
 }

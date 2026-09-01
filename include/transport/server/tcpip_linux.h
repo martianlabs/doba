@@ -48,6 +48,7 @@
 #include "platform.h"
 #include "protocol/deserialization.h"
 #include "protocol/serialization.h"
+#include "transport/server/executor.h"
 
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
@@ -61,6 +62,86 @@ static constexpr inline std::size_t kSendChunkSz = 8192;
 static constexpr uint64_t kWakeEventId = 0;
 static constexpr uint64_t kListenerEventId =
     std::numeric_limits<uint64_t>::max();
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] executor_dispatcher                                         ( class ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+namespace detail {
+class executor_dispatcher {
+ public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
+  explicit executor_dispatcher(int wake_fd) : wake_fd_{wake_fd} {}
+  executor_dispatcher(const executor_dispatcher&) = delete;
+  executor_dispatcher(executor_dispatcher&&) noexcept = delete;
+  ~executor_dispatcher() = default;
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +=========================================================================+
+  executor_dispatcher& operator=(const executor_dispatcher&) = delete;
+  executor_dispatcher& operator=(executor_dispatcher&&) noexcept = delete;
+  // +=========================================================================+
+  // | [>] schedule                                                 ( public ) |
+  // +=========================================================================+
+  bool schedule(std::coroutine_handle<> continuation) noexcept {
+    try {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (wake_fd_ == -1 || !executor_.schedule(continuation)) return false;
+      wake_();
+      return true;
+    } catch (...) {
+      return false;
+    }
+  }
+  // +=========================================================================+
+  // | [>] run                                                      ( public ) |
+  // +=========================================================================+
+  bool run() { return executor_.run(); }
+  // +=========================================================================+
+  // | [>] wake                                                     ( public ) |
+  // +=========================================================================+
+  void wake() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    wake_();
+  }
+  // +=========================================================================+
+  // | [>] stop                                                     ( public ) |
+  // +=========================================================================+
+  void stop() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    executor_.stop();
+    wake_();
+  }
+  // +=========================================================================+
+  // | [>] close                                                    ( public ) |
+  // +=========================================================================+
+  void close() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    wake_fd_ = -1;
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] wake_                                                   ( private ) |
+  // +=========================================================================+
+  void wake_() {
+    if (wake_fd_ == -1) return;
+    uint64_t wake = 1;
+    ssize_t written = 0;
+    do {
+      written = ::write(wake_fd_, &wake, sizeof(wake));
+    } while (written == -1 && errno == EINTR);
+  }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
+  std::mutex mutex_;
+  executor executor_;
+  int wake_fd_{-1};
+};
+}  // namespace detail
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] FORWARDs                                                   ( public ) |
@@ -96,6 +177,7 @@ struct response_data {
 template <typename RQty, typename RSty,
           template <typename, typename> class DEty>
 struct context
+    : public std::enable_shared_from_this<context<RQty, RSty, DEty>>
 {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
@@ -382,6 +464,7 @@ struct worker {
       close_resources();
       throw std::runtime_error("Stop event could not be created!");
     }
+    dispatcher_ = std::make_shared<detail::executor_dispatcher>(wake_fd_);
     listener_fd_ = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
                             IPPROTO_TCP);
     if (listener_fd_ == -1) {
@@ -437,12 +520,8 @@ struct worker {
       throw std::runtime_error("Worker cannot be stopped from itself!");
     }
     if (epoll_fd_ == -1) return;
+    if (dispatcher_) dispatcher_->stop();
     stopping_.store(true);
-    uint64_t wake = 1;
-    ssize_t written = 0;
-    do {
-      written = ::write(wake_fd_, &wake, sizeof(wake));
-    } while (written == -1 && errno == EINTR);
     if (thread_.joinable()) thread_.join();
     close_contexts();
     close_resources();
@@ -491,6 +570,13 @@ struct worker {
     do {
       received = ::read(wake_fd_, &wake, sizeof(wake));
     } while (received == -1 && errno == EINTR);
+    if (!dispatcher_) return;
+    if (stopping_.load()) {
+      while (dispatcher_->run()) {
+      }
+    } else if (dispatcher_->run()) {
+      dispatcher_->wake();
+    }
   }
   // +=========================================================================+
   // | [>] handle_listener                                         ( private ) |
@@ -525,7 +611,7 @@ struct worker {
   // | [>] register_context                                        ( private ) |
   // +=========================================================================+
   void register_context(int socket) {
-    auto ctx = std::make_unique<context<RQty, RSty, DEty>>(
+    auto ctx = std::make_shared<context<RQty, RSty, DEty>>(
         socket, on_disconnection_);
     auto ctx_ptr = ctx.get();
     if (!contexts_.emplace(ctx_ptr, std::move(ctx)).second) {
@@ -637,14 +723,24 @@ struct worker {
         enqueue_error_response(ctx, 0, "Decoder error!");
         return;
       }
-      if (result.channel == protocol::channel_intent::kClose) ctx->close();
       try {
         RSty response;
-        on_request_(*result.request, response);
-        auto serialized = response.serialize();
-        if (!serialized || !ctx->enqueue_response(std::move(serialized))) {
-          ctx->fail_response();
-          return;
+        std::optional<common::task<RSty>> response_task =
+            on_request_(result.request, response);
+        if (response_task) {
+          if (!start_deferred_response(
+                  ctx->weak_from_this(), std::move(*response_task),
+                  result.channel == protocol::channel_intent::kClose)) {
+            ctx->fail_response();
+            return;
+          }
+        } else {
+          auto serialized = response.serialize();
+          if (!serialized || !ctx->enqueue_response(std::move(serialized))) {
+            ctx->fail_response();
+            return;
+          }
+          if (result.channel == protocol::channel_intent::kClose) ctx->close();
         }
       } catch (const std::exception& ex) {
         enqueue_error_response(ctx, 7, ex.what());
@@ -655,6 +751,72 @@ struct worker {
         return;
       }
       if (result.channel == protocol::channel_intent::kClose) return;
+    }
+  }
+  // +=========================================================================+
+  // | [>] start_deferred_response                                ( private ) |
+  // +=========================================================================+
+  bool start_deferred_response(
+      std::weak_ptr<context<RQty, RSty, DEty>> ctx,
+      common::task<RSty> response_task, bool close_channel) {
+    if (!dispatcher_) return false;
+    detail::detached_operation operation = complete_deferred_response(
+        std::move(ctx), dispatcher_, std::move(response_task), close_channel);
+    if (!dispatcher_->schedule(operation.get_coroutine())) return false;
+    operation.release();
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] complete_deferred_response                             ( private ) |
+  // +=========================================================================+
+  detail::detached_operation complete_deferred_response(
+      std::weak_ptr<context<RQty, RSty, DEty>> weak_ctx,
+      std::weak_ptr<detail::executor_dispatcher> dispatcher,
+      common::task<RSty> response_task, bool close_channel) {
+    std::optional<RSty> response;
+    std::exception_ptr exception;
+    try {
+      response.emplace(co_await std::move(response_task));
+    } catch (...) {
+      exception = std::current_exception();
+    }
+    if (!(co_await detail::resume_on<detail::executor_dispatcher>(
+              dispatcher))) {
+      co_return;
+    }
+    std::shared_ptr<context<RQty, RSty, DEty>> ctx = weak_ctx.lock();
+    if (!ctx || ctx->is_closed()) co_return;
+    try {
+      if (exception) {
+        try {
+          std::rethrow_exception(exception);
+        } catch (const std::exception& ex) {
+          enqueue_error_response(ctx.get(), 7, ex.what());
+        } catch (...) {
+          enqueue_error_response(ctx.get(), 7, "Request handler error!");
+        }
+      } else {
+        try {
+          auto serialized = response->serialize();
+          if (!serialized || !ctx->enqueue_response(std::move(serialized))) {
+            ctx->fail_response();
+          } else if (close_channel) {
+            ctx->close();
+          }
+        } catch (const std::exception& ex) {
+          enqueue_error_response(ctx.get(), 7, ex.what());
+        } catch (...) {
+          enqueue_error_response(ctx.get(), 7, "Request handler error!");
+        }
+      }
+      if (ctx->is_closed()) co_return;
+      if (!ctx->flush_send()) {
+        abort_context(ctx.get());
+        co_return;
+      }
+      rearm_context(ctx.get());
+    } catch (...) {
+      abort_context(ctx.get());
     }
   }
   // +=========================================================================+
@@ -738,12 +900,14 @@ struct worker {
   // | [>] close_resources                                         ( private ) |
   // +=========================================================================+
   void close_resources() {
+    if (dispatcher_) dispatcher_->close();
     if (listener_fd_ != -1) ::close(listener_fd_);
     if (wake_fd_ != -1) ::close(wake_fd_);
     if (epoll_fd_ != -1) ::close(epoll_fd_);
     listener_fd_ = -1;
     wake_fd_ = -1;
     epoll_fd_ = -1;
+    dispatcher_.reset();
   }
   // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
@@ -753,8 +917,9 @@ struct worker {
   int listener_fd_{-1};
   std::atomic<bool> stopping_{false};
   std::jthread thread_;
+  std::shared_ptr<detail::executor_dispatcher> dispatcher_;
   std::unordered_map<context<RQty, RSty, DEty>*,
-                     std::unique_ptr<context<RQty, RSty, DEty>>>
+                     std::shared_ptr<context<RQty, RSty, DEty>>>
       contexts_;
   context<RQty, RSty, DEty>* retired_contexts_{nullptr};
   types::on_request_delegate<RQty, RSty> on_request_;
