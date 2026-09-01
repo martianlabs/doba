@@ -34,7 +34,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <deque>
 #include <memory>
 #include <mutex>
 #include <span>
@@ -48,6 +47,7 @@
 #include "platform.h"
 #include "protocol/deserialization.h"
 #include "protocol/serialization.h"
+#include "transport/server/response_scheduler.h"
 
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
@@ -72,16 +72,6 @@ struct context;
 template <typename RQty, typename RSty,
           template <typename, typename> class DEty>
 struct worker;
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] response_data                                              ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct response_data {
-  std::unique_ptr<protocol::serialization_result> response;
-  bool prefix_written{false};
-};
-// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] context [linux]                                            ( struct ) |
 // +---------------------------------------------------------------------------+
@@ -210,12 +200,12 @@ struct context
   uint32_t get_event_mask() const {
     if (socket_ == -1 || aborted_) return 0;
     if (closing_ && sending_offset_ == sending_buffer_.size() &&
-        responses_.empty()) {
+        scheduler_.empty()) {
       return 0;
     }
     uint32_t events = EPOLLRDHUP | EPOLLET;
     if (!closing_) events |= EPOLLIN;
-    if (sending_offset_ < sending_buffer_.size() || !responses_.empty()) {
+    if (sending_offset_ < sending_buffer_.size() || !scheduler_.empty()) {
       events |= EPOLLOUT;
     }
     return events;
@@ -265,7 +255,7 @@ struct context
   bool enqueue_response_(
       std::unique_ptr<protocol::serialization_result> response) {
     if (!response || socket_ == -1 || aborted_) return false;
-    responses_.push_back({std::move(response)});
+    scheduler_.push_ready(std::move(response));
     return true;
   }
   // +=========================================================================+
@@ -280,9 +270,9 @@ struct context
   // | [>] append_sendable_responses_                              ( private ) |
   // +=========================================================================+
   bool append_sendable_responses_() {
-    while (!responses_.empty() &&
+    while (!scheduler_.empty() &&
            sending_buffer_.size() < kSendBufferMaxSz) {
-      response_data& data = responses_.front();
+      detail::response_data& data = scheduler_.front();
       if (!data.prefix_written) {
         sending_buffer_.append(data.response->prefix);
         data.prefix_written = true;
@@ -305,7 +295,7 @@ struct context
         sending_buffer_.append(reinterpret_cast<const char*>(chunk), read);
         continue;
       }
-      responses_.pop_front();
+      scheduler_.pop_front();
     }
     return true;
   }
@@ -315,7 +305,7 @@ struct context
   void abort_() {
     aborted_ = true;
     closing_ = true;
-    responses_.clear();
+    scheduler_.clear();
     sending_buffer_.clear();
     sending_offset_ = 0;
   }
@@ -332,7 +322,7 @@ struct context
   char receive_buffer_[kReceiveBufferSz];
   std::string sending_buffer_;
   std::size_t sending_offset_{0};
-  std::deque<response_data> responses_;
+  detail::response_scheduler scheduler_;
   uint32_t registered_event_mask_{EPOLLIN | EPOLLRDHUP | EPOLLET};
 };
 // /////////////////////////////////////////////////////////////////////////////

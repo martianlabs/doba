@@ -31,7 +31,6 @@
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
-#include <deque>
 #include <functional>
 #include <mutex>
 #include <new>
@@ -42,6 +41,7 @@
 #include "platform.h"
 #include "protocol/deserialization.h"
 #include "protocol/serialization.h"
+#include "transport/server/response_scheduler.h"
 
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
@@ -68,16 +68,6 @@ enum class io_type : uint8_t { kAccept, kSend, kReceive };
 template <typename RQty, typename RSty,
           template <typename, typename> class DEty>
 struct context;
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] response_data                                              ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct response_data {
-  std::unique_ptr<protocol::serialization_result> response;
-  bool prefix_written{false};
-};
-// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] overlapped_base                                            ( struct ) |
 // +---------------------------------------------------------------------------+
@@ -299,7 +289,7 @@ struct context
   bool enqueue_response_(
       std::unique_ptr<protocol::serialization_result> response) {
     if (!response || socket_ == INVALID_SOCKET) return false;
-    responses_.push_back({std::move(response)});
+    scheduler_.push_ready(std::move(response));
     return true;
   }
   // +=========================================================================+
@@ -319,15 +309,15 @@ struct context
     if (sending_offset_ == sending_buffer_.size()) {
       sending_buffer_.clear();
       sending_offset_ = 0;
-      auto itr = responses_.begin();
-      while (itr != responses_.end()) {
+      while (!scheduler_.empty()) {
         if (sending_buffer_.size() >= kSendBufferMaxSz) break;
-        if (!itr->prefix_written) {
-          sending_buffer_.append(itr->response->prefix);
-          itr->prefix_written = true;
+        detail::response_data& data = scheduler_.front();
+        if (!data.prefix_written) {
+          sending_buffer_.append(data.response->prefix);
+          data.prefix_written = true;
           continue;
         }
-        auto& source = itr->response->source;
+        auto& source = data.response->source;
         if (source.has_value() && !source->eof()) {
           // Let's pour, at most, the remaining outgoing buffer capacity!
           std::byte chunk[kSendChunkSz];
@@ -347,7 +337,7 @@ struct context
           sending_buffer_.append(reinterpret_cast<const char*>(chunk), read);
           continue;
         }
-        itr = responses_.erase(itr);
+        scheduler_.pop_front();
       }
     }
     if (sending_buffer_.empty()) {
@@ -405,7 +395,7 @@ struct context
   void cleanup_resources_() {
     if (!closing_) return;
     if (sending_ || sending_offset_ != sending_buffer_.size() ||
-        !responses_.empty()) {
+        !scheduler_.empty()) {
       return;
     }
     sending_buffer_.clear();
@@ -418,7 +408,7 @@ struct context
   // +=========================================================================+
   void abort_() {
     closing_ = true;
-    responses_.clear();
+    scheduler_.clear();
     if (!sending_) {
       sending_buffer_.clear();
       sending_offset_ = 0;
@@ -484,7 +474,7 @@ struct context
   std::size_t sending_offset_{0};
   WSABUF ovs_wsa_{0};
   // [responses] section!
-  std::deque<response_data> responses_;
+  detail::response_scheduler scheduler_;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
