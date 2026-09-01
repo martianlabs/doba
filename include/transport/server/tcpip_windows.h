@@ -41,6 +41,7 @@
 #include "platform.h"
 #include "protocol/deserialization.h"
 #include "protocol/serialization.h"
+#include "transport/server/completion_mailbox.h"
 #include "transport/server/connection_identity.h"
 #include "transport/server/response_scheduler.h"
 
@@ -173,6 +174,18 @@ struct context
       std::unique_ptr<protocol::serialization_result> response) {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     return enqueue_response_(std::move(response));
+  }
+  // +=========================================================================+
+  // | [>] complete_response                                        ( public ) |
+  // +=========================================================================+
+  bool complete_response(
+      uint64_t position,
+      std::unique_ptr<protocol::serialization_result> response) {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    if (socket_ == INVALID_SOCKET) return false;
+    if (!scheduler_.complete(position, std::move(response))) return false;
+    arm_next_send_operation_();
+    return true;
   }
   // +=========================================================================+
   // | [>] enqueue_error_response                                   ( public ) |
@@ -620,6 +633,7 @@ class tcpip {
       for (const auto& item : contexts_) contexts.emplace_back(item.second);
       accept_socket_ = INVALID_SOCKET;
     }
+    completion_mailbox_.close();
     if (listener != INVALID_SOCKET) closesocket(listener);
     for (const auto& ctx : contexts) ctx->abort();
     {
@@ -730,6 +744,7 @@ class tcpip {
     accept_socket_ = sock;
     io_h_ = ioh;
     accept_ex_ = accept_ex;
+    completion_mailbox_.open(ioh);
     return workers;
   }
   // +=========================================================================+
@@ -758,6 +773,12 @@ class tcpip {
           DWORD bytes = 0;  // bytes transfered..
           DWORD tout = INFINITE;
           BOOL st = GetQueuedCompletionStatus(io_h_, &bytes, &key, &lpo, tout);
+          if (st == TRUE && key == detail::kResponseCompletionKey) {
+            std::unique_ptr<detail::iocp_response_completion> completion{
+                reinterpret_cast<detail::iocp_response_completion*>(lpo)};
+            handle_response_completion(std::move(completion->completion));
+            continue;
+          }
           overlapped_base* ovb = reinterpret_cast<overlapped_base*>(lpo);
           if (st == TRUE && ovb == nullptr) {
             stopping = true;
@@ -1048,6 +1069,20 @@ class tcpip {
     }
   }
   // +=========================================================================+
+  // | [>] handle_response_completion                             ( private ) |
+  // +=========================================================================+
+  void handle_response_completion(detail::response_completion completion) {
+    std::shared_ptr<context<RQty, RSty, DEty>> ctx;
+    {
+      std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
+      auto item = contexts_.find(completion.connection_key);
+      if (item == contexts_.end()) return;
+      ctx = item->second;
+    }
+    ctx->complete_response(completion.position,
+                           std::move(completion.response));
+  }
+  // +=========================================================================+
   // | [>] handle_overlapped                                       ( private ) |
   // +=========================================================================+
   void handle_overlapped(overlapped_base* ovb) {
@@ -1139,6 +1174,7 @@ class tcpip {
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
   detail::connection_identity connection_identity_;
+  detail::iocp_completion_mailbox completion_mailbox_;
 };
 }  // namespace martianlabs::doba::transport::server
 

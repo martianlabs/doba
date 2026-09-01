@@ -47,6 +47,7 @@
 #include "platform.h"
 #include "protocol/deserialization.h"
 #include "protocol/serialization.h"
+#include "transport/server/completion_mailbox.h"
 #include "transport/server/connection_identity.h"
 #include "transport/server/response_scheduler.h"
 
@@ -62,6 +63,26 @@ static constexpr inline std::size_t kSendChunkSz = 8192;
 static constexpr uint64_t kWakeEventId = 0;
 static constexpr uint64_t kListenerEventId =
     std::numeric_limits<uint64_t>::max();
+namespace detail {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] eventfd_waker                                             ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct eventfd_waker {
+  bool operator()() const noexcept {
+    uint64_t wake = 1;
+    ssize_t written = 0;
+    do {
+      written = ::write(*fd, &wake, sizeof(wake));
+    } while (written == -1 && errno == EINTR);
+    return written == sizeof(wake) ||
+           (written == -1 && errno == EAGAIN);
+  }
+
+  const int* fd;
+};
+}  // namespace detail
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] FORWARDs                                                   ( public ) |
@@ -140,6 +161,15 @@ struct context
   bool enqueue_response(
       std::unique_ptr<protocol::serialization_result> response) {
     return enqueue_response_(std::move(response));
+  }
+  // +=========================================================================+
+  // | [>] complete_response                                        ( public ) |
+  // +=========================================================================+
+  bool complete_response(
+      uint64_t position,
+      std::unique_ptr<protocol::serialization_result> response) {
+    if (socket_ == -1 || aborted_) return false;
+    return scheduler_.complete(position, std::move(response));
   }
   // +=========================================================================+
   // | [>] enqueue_error_response                                   ( public ) |
@@ -360,7 +390,8 @@ struct worker {
         on_bad_request_{std::move(on_bad_request)},
         on_connection_{std::move(on_connection)},
         on_disconnection_{std::move(on_disconnection)},
-        connection_identity_{connection_identity} {}
+        connection_identity_{connection_identity},
+        completion_mailbox_{detail::eventfd_waker{&wake_fd_}} {}
   worker(const worker&) = delete;
   worker(worker&&) noexcept = delete;
   ~worker() { stop(); }
@@ -437,6 +468,7 @@ struct worker {
       throw std::runtime_error("Worker cannot be stopped from itself!");
     }
     if (epoll_fd_ == -1) return;
+    completion_mailbox_.close();
     stopping_.store(true);
     uint64_t wake = 1;
     ssize_t written = 0;
@@ -491,6 +523,27 @@ struct worker {
     do {
       received = ::read(wake_fd_, &wake, sizeof(wake));
     } while (received == -1 && errno == EINTR);
+    auto completions = completion_mailbox_.drain();
+    for (auto& completion : completions) {
+      handle_response_completion(std::move(completion));
+    }
+  }
+  // +=========================================================================+
+  // | [>] handle_response_completion                             ( private ) |
+  // +=========================================================================+
+  void handle_response_completion(detail::response_completion completion) {
+    auto item = contexts_.find(completion.connection_key);
+    if (item == contexts_.end()) return;
+    context<RQty, RSty, DEty>* ctx = item->second.get();
+    if (!ctx->complete_response(completion.position,
+                                std::move(completion.response))) {
+      return;
+    }
+    if (!ctx->flush_send()) {
+      abort_context(ctx);
+      return;
+    }
+    rearm_context(ctx);
   }
   // +=========================================================================+
   // | [>] handle_listener                                         ( private ) |
@@ -762,6 +815,7 @@ struct worker {
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
   detail::connection_identity& connection_identity_;
+  detail::completion_mailbox<detail::eventfd_waker> completion_mailbox_;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
