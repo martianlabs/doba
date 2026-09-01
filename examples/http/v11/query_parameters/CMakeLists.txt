@@ -1,0 +1,24 @@
+cmake_minimum_required(
+  VERSION 3.20
+)
+
+project(
+  query_parameters
+  LANGUAGES CXX
+)
+
+add_executable(
+  query_parameters
+  "${CMAKE_CURRENT_LIST_DIR}/main.cpp"
+)
+
+target_link_libraries(
+  query_parameters
+  PRIVATE
+  doba_headers
+)
+
+source_group(
+  TREE "${CMAKE_CURRENT_LIST_DIR}"
+  FILES "${CMAKE_CURRENT_LIST_DIR}/main.cpp"
+)

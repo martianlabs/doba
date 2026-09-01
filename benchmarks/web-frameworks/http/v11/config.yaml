@@ -1,0 +1,20 @@
+language:
+  version: 20
+  engines:
+    default:
+      command: /opt/web/build/doba_web_frameworks_http_v11
+
+framework:
+  website: https://github.com/martianlabs/doba
+  github: https://github.com/martianlabs/doba
+  version: 0.1.0
+  engines:
+    - default
+  binaries:
+    - build/doba_web_frameworks_http_v11
+  download:
+    - git clone --depth=1 https://github.com/martianlabs/doba.git doba
+  build:
+    - mkdir build
+    - cd build && cmake -DCMAKE_BUILD_TYPE=Release -DDOBA_INCLUDE_DIR=/usr/src/app/doba/include ..
+    - cd build && make
