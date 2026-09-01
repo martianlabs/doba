@@ -147,7 +147,8 @@ struct context;
 // /////////////////////////////////////////////////////////////////////////////
 struct response_data {
   std::unique_ptr<protocol::serialization_result> response;
-  bool prefix_written{false};
+  // 0/1 is prefix state; greater values identify pending responses.
+  std::size_t state{0};
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -249,6 +250,34 @@ struct context
       std::unique_ptr<protocol::serialization_result> response) {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     return enqueue_response_(std::move(response));
+  }
+  // +=========================================================================+
+  // | [>] reserve_response                                         ( public ) |
+  // +=========================================================================+
+  bool reserve_response(std::size_t& id) {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    if (socket_ == INVALID_SOCKET) return false;
+    next_response_id_++;
+    if (next_response_id_ < 2) next_response_id_ = 2;
+    id = next_response_id_;
+    responses_.push_back({nullptr, id});
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] complete_response                                        ( public ) |
+  // +=========================================================================+
+  bool complete_response(
+      std::size_t id,
+      std::unique_ptr<protocol::serialization_result> response) {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    if (!response || socket_ == INVALID_SOCKET) return false;
+    for (response_data& data : responses_) {
+      if (data.response || data.state != id) continue;
+      data.response = std::move(response);
+      data.state = 0;
+      return true;
+    }
+    return false;
   }
   // +=========================================================================+
   // | [>] enqueue_error_response                                   ( public ) |
@@ -363,6 +392,17 @@ struct context
     closing_ = true;
     arm_next_send_operation_();
   }
+  // +=========================================================================+
+  // | [>] close_input                                              ( public ) |
+  // +=========================================================================+
+  void close_input() {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    closing_ = true;
+    auto itr = responses_.begin();
+    while (itr != responses_.end() && itr->response) itr++;
+    responses_.erase(itr, responses_.end());
+    arm_next_send_operation_();
+  }
 
  private:
   // +=========================================================================+
@@ -394,9 +434,10 @@ struct context
       auto itr = responses_.begin();
       while (itr != responses_.end()) {
         if (sending_buffer_.size() >= kSendBufferMaxSz) break;
-        if (!itr->prefix_written) {
+        if (!itr->response) break;
+        if (!itr->state) {
           sending_buffer_.append(itr->response->prefix);
-          itr->prefix_written = true;
+          itr->state = 1;
           continue;
         }
         auto& source = itr->response->source;
@@ -557,6 +598,7 @@ struct context
   WSABUF ovs_wsa_{0};
   // [responses] section!
   std::deque<response_data> responses_;
+  std::size_t next_response_id_{0};
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -1028,7 +1070,7 @@ class tcpip {
     if (!ctx->receive_completed()) return;
     try {
       if (!bytes_received) {
-        ctx->close();
+        ctx->close_input();
         return;
       }
       std::size_t bytes_accumulated = 0;
@@ -1077,11 +1119,17 @@ class tcpip {
               std::optional<common::task<RSty>> response_task =
                   on_request_(result.request, response);
               if (response_task) {
-                if (!start_deferred_response(
-                        ctx, std::move(*response_task), close_channel)) {
-                  ctx->fail_response();
+                std::size_t response_id = 0;
+                if (!ctx->reserve_response(response_id)) {
+                  ctx->abort();
                   return;
                 }
+                if (!start_deferred_response(
+                        ctx, std::move(*response_task), response_id)) {
+                  ctx->abort();
+                  return;
+                }
+                if (close_channel) ctx->close();
               } else {
                 auto serialized = response.serialize();
                 if (!serialized ||
@@ -1117,10 +1165,10 @@ class tcpip {
   // +=========================================================================+
   bool start_deferred_response(
       std::weak_ptr<context<RQty, RSty, DEty>> ctx,
-      common::task<RSty> response_task, bool close_channel) {
+      common::task<RSty> response_task, std::size_t response_id) {
     if (!dispatcher_) return false;
     detail::detached_operation operation = complete_deferred_response(
-        std::move(ctx), dispatcher_, std::move(response_task), close_channel);
+        std::move(ctx), dispatcher_, std::move(response_task), response_id);
     if (!dispatcher_->schedule(operation.get_coroutine())) return false;
     operation.release();
     return true;
@@ -1131,7 +1179,7 @@ class tcpip {
   detail::detached_operation complete_deferred_response(
       std::weak_ptr<context<RQty, RSty, DEty>> weak_ctx,
       std::weak_ptr<detail::executor_dispatcher> dispatcher,
-      common::task<RSty> response_task, bool close_channel) {
+      common::task<RSty> response_task, std::size_t response_id) {
     std::optional<RSty> response;
     std::exception_ptr exception;
     try {
@@ -1146,32 +1194,56 @@ class tcpip {
     std::shared_ptr<context<RQty, RSty, DEty>> ctx = weak_ctx.lock();
     if (!ctx) co_return;
     try {
+      bool completed = false;
       if (exception) {
         try {
           std::rethrow_exception(exception);
         } catch (const std::exception& ex) {
-          enqueue_error_response(ctx, 7, ex.what());
+          completed = complete_error_response(ctx, response_id, 7,
+                                              ex.what());
         } catch (...) {
-          enqueue_error_response(ctx, 7, "Request handler error!");
+          completed = complete_error_response(
+              ctx, response_id, 7, "Request handler error!");
         }
       } else {
         try {
           auto serialized = response->serialize();
-          if (!serialized || !ctx->enqueue_response(std::move(serialized))) {
-            ctx->fail_response();
-          } else if (close_channel) {
-            ctx->close();
-          } else {
-            ctx->arm_next_send_operation();
-          }
+          completed = ctx->complete_response(response_id,
+                                             std::move(serialized));
         } catch (const std::exception& ex) {
-          enqueue_error_response(ctx, 7, ex.what());
+          completed = complete_error_response(ctx, response_id, 7,
+                                              ex.what());
         } catch (...) {
-          enqueue_error_response(ctx, 7, "Request handler error!");
+          completed = complete_error_response(
+              ctx, response_id, 7, "Request handler error!");
         }
       }
+      if (!completed) {
+        ctx->abort();
+        co_return;
+      }
+      ctx->arm_next_send_operation();
     } catch (...) {
       ctx->abort();
+    }
+  }
+  // +=========================================================================+
+  // | [>] complete_error_response                                 ( private ) |
+  // +=========================================================================+
+  bool complete_error_response(
+      const std::shared_ptr<context<RQty, RSty, DEty>>& ctx,
+      std::size_t response_id, int reason_code, std::string_view reason) {
+    try {
+      RSty response;
+      on_bad_request_(reason_code, reason, response);
+      auto serialized = response.serialize();
+      if (!ctx->complete_response(response_id, std::move(serialized))) {
+        return false;
+      }
+      ctx->close();
+      return true;
+    } catch (...) {
+      return false;
     }
   }
   // +=========================================================================+

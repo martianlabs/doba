@@ -83,12 +83,14 @@ struct transport_request {
 struct transport_response {
   std::unique_ptr<martianlabs::doba::protocol::serialization_result>
   serialize() {
+    if (serialized) serialized->fetch_add(1);
     auto result = std::make_unique<
         martianlabs::doba::protocol::serialization_result>();
     result->prefix = std::move(value);
     return result;
   }
   std::string value;
+  std::shared_ptr<std::atomic<std::size_t>> serialized;
 };
 
 template <typename RQty, typename RSty>
@@ -147,6 +149,18 @@ class client_socket {
   }
   bool send(char value) {
     return ::send(socket_, &value, 1, 0) == 1;
+  }
+  bool has_data() {
+    fd_set read_set;
+    FD_ZERO(&read_set);
+    FD_SET(socket_, &read_set);
+    timeval timeout{0, 100000};
+#ifdef _WIN32
+    int ready = ::select(0, &read_set, nullptr, nullptr, &timeout);
+#else
+    int ready = ::select(socket_ + 1, &read_set, nullptr, nullptr, &timeout);
+#endif
+    return ready > 0 && FD_ISSET(socket_, &read_set);
   }
   std::string receive(std::size_t size) {
     std::string result(size, '\0');
@@ -232,10 +246,25 @@ bool wait_for_count(const std::atomic<std::size_t>& value,
 
 martianlabs::doba::common::task<transport_response> make_response(
     std::shared_ptr<const transport_request> request,
-    std::shared_ptr<deferred_signal> signal) {
+    std::shared_ptr<deferred_signal> signal,
+    std::shared_ptr<std::atomic<std::size_t>> serialized) {
   co_await *signal;
   transport_response response;
-  response.value = request->value == 'A' ? "async" : "discarded";
+  switch (request->value) {
+    case 'A':
+      response.value = "async";
+      break;
+    case 'F':
+      response.value = "first";
+      break;
+    case 'L':
+      response.value = "second";
+      break;
+    default:
+      response.value = "discarded";
+      break;
+  }
+  response.serialized = std::move(serialized);
   co_return response;
 }
 }  // namespace
@@ -251,21 +280,30 @@ DOBA_TEST("transport delivers immediate and deferred responses") {
   DOBA_EXPECT(port != 0);
   std::shared_ptr<deferred_signal> signals[] = {
       std::make_shared<deferred_signal>(),
+      std::make_shared<deferred_signal>(),
+      std::make_shared<deferred_signal>(),
+      std::make_shared<deferred_signal>(),
       std::make_shared<deferred_signal>()};
+  auto serialized = std::make_shared<std::atomic<std::size_t>>(0);
   std::atomic<std::size_t> deferred = 0;
+  std::atomic<std::size_t> synchronous = 0;
   std::atomic<std::size_t> disconnected = 0;
   server.set_on_request(
-      [&signals, &deferred](const std::shared_ptr<transport_request>& request,
-                            transport_response& response)
+      [&signals, &deferred, &synchronous, &serialized](
+          const std::shared_ptr<transport_request>& request,
+          transport_response& response)
           -> std::optional<
               martianlabs::doba::common::task<transport_response>> {
         if (request->value == 'S') {
           response.value = "sync";
+          response.serialized = serialized;
+          synchronous.fetch_add(1);
           return std::nullopt;
         }
         std::size_t index = deferred.fetch_add(1);
         return make_response(
-            std::shared_ptr<const transport_request>(request), signals[index]);
+            std::shared_ptr<const transport_request>(request), signals[index],
+            serialized);
       });
   server.set_on_bad_request(
       [](int, std::string_view, transport_response& response) {
@@ -297,11 +335,40 @@ DOBA_TEST("transport delivers immediate and deferred responses") {
   {
     client_socket client;
     DOBA_EXPECT(client.connect(port));
-    DOBA_EXPECT(client.send('D'));
+    DOBA_EXPECT(client.send('F'));
+    DOBA_EXPECT(client.send('L'));
     DOBA_EXPECT(signals[1]->wait());
+    DOBA_EXPECT(signals[2]->wait());
+    signals[2]->resume();
+    DOBA_EXPECT(wait_for_count(*serialized, 3));
+    DOBA_EXPECT(!client.has_data());
+    signals[1]->resume();
+    DOBA_EXPECT_EQUAL(client.receive(11), "firstsecond");
   }
   DOBA_EXPECT(wait_for_count(disconnected, 3));
-  signals[1]->resume();
+
+  {
+    client_socket client;
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send('F'));
+    DOBA_EXPECT(signals[3]->wait());
+    DOBA_EXPECT(client.send('S'));
+    DOBA_EXPECT(wait_for_count(synchronous, 2));
+    DOBA_EXPECT(wait_for_count(*serialized, 5));
+    DOBA_EXPECT(!client.has_data());
+    signals[3]->resume();
+    DOBA_EXPECT_EQUAL(client.receive(9), "firstsync");
+  }
+  DOBA_EXPECT(wait_for_count(disconnected, 4));
+
+  {
+    client_socket client;
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send('D'));
+    DOBA_EXPECT(signals[4]->wait());
+  }
+  DOBA_EXPECT(wait_for_count(disconnected, 5));
+  signals[4]->resume();
 
   {
     client_socket client;
@@ -309,6 +376,6 @@ DOBA_TEST("transport delivers immediate and deferred responses") {
     DOBA_EXPECT(client.send('S'));
     DOBA_EXPECT_EQUAL(client.receive(4), "sync");
   }
-  DOBA_EXPECT(wait_for_count(disconnected, 4));
+  DOBA_EXPECT(wait_for_count(disconnected, 6));
   server.stop();
 }
