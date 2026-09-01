@@ -273,6 +273,7 @@ struct context
     while (!scheduler_.empty() &&
            sending_buffer_.size() < kSendBufferMaxSz) {
       detail::response_data& data = scheduler_.front();
+      if (!data.ready()) break;
       if (!data.prefix_written) {
         sending_buffer_.append(data.response->prefix);
         data.prefix_written = true;

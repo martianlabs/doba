@@ -42,12 +42,14 @@ struct response_data {
   const uint64_t position;
   std::unique_ptr<protocol::serialization_result> response;
   bool prefix_written{false};
+
+  bool ready() const { return response != nullptr; }
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] response_scheduler                                         ( class ) |
 // +---------------------------------------------------------------------------+
-// | This class holds ready responses in connection order.                    |
+// | This class holds response positions in connection order.                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class response_scheduler {
@@ -61,6 +63,31 @@ class response_scheduler {
     responses_.push_back({position, std::move(response)});
     next_position_++;
     return position;
+  }
+  // +=========================================================================+
+  // | [>] reserve                                                  ( public ) |
+  // +=========================================================================+
+  uint64_t reserve() {
+    uint64_t position = next_position_;
+    responses_.push_back({position, nullptr});
+    next_position_++;
+    return position;
+  }
+  // +=========================================================================+
+  // | [>] complete                                                 ( public ) |
+  // +=========================================================================+
+  bool complete(
+      uint64_t position,
+      std::unique_ptr<protocol::serialization_result> response) {
+    if (!response || responses_.empty()) return false;
+    uint64_t first = responses_.front().position;
+    if (position < first) return false;
+    uint64_t offset = position - first;
+    if (offset >= responses_.size()) return false;
+    response_data& data = responses_[static_cast<std::size_t>(offset)];
+    if (data.ready()) return false;
+    data.response = std::move(response);
+    return true;
   }
   // +=========================================================================+
   // | [>] empty                                                    ( public ) |
