@@ -99,10 +99,12 @@ class date_server {
   // +=========================================================================+
   // | [>] current                                                  ( public ) |
   // +=========================================================================+
-  std::string current() const {
-    std::shared_ptr<const slot> value = front_.load(std::memory_order_acquire);
-    return {value->text, kDateLen};
-  }
+std::string_view current() const noexcept {
+  std::shared_ptr<const slot> value = front_.load(std::memory_order_acquire);
+  thread_local char buffer[kDateLen];
+  std::memcpy(buffer, value->text, kDateLen);
+  return {buffer, kDateLen};
+}
 
  private:
   // +=========================================================================+
