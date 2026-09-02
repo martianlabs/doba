@@ -955,6 +955,11 @@ documentación, auditoría, pruebas de estrés y benchmarks finales.
 - Verificar sobre el cable el `100-continue` ya implementado, dentro de P5/QA1.
 - Documentar lifetime y propiedad de los `string_view` devueltos por `request`,
   y las precondiciones de getters indexados.
+- Resolver la cancelación cooperativa de operaciones externas que mantienen
+  una corrutina suspendida. El runtime conserva su frame hasta que finaliza y
+  descarta la entrega si la conexión o el transporte ya se cerraron, pero una
+  operación que nunca reanude conserva ese frame indefinidamente. No debe
+  destruirse de forma forzada mientras siga suspendido.
 
 ### Secuencia recomendada
 

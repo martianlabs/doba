@@ -283,6 +283,7 @@ DOBA_TEST("transport delivers immediate and deferred responses") {
       std::make_shared<deferred_signal>(),
       std::make_shared<deferred_signal>(),
       std::make_shared<deferred_signal>(),
+      std::make_shared<deferred_signal>(),
       std::make_shared<deferred_signal>()};
   auto serialized = std::make_shared<std::atomic<std::size_t>>(0);
   std::atomic<std::size_t> deferred = 0;
@@ -377,5 +378,16 @@ DOBA_TEST("transport delivers immediate and deferred responses") {
     DOBA_EXPECT_EQUAL(client.receive(4), "sync");
   }
   DOBA_EXPECT(wait_for_count(disconnected, 6));
-  server.stop();
+
+  std::size_t serialized_before_stop = serialized->load();
+  {
+    client_socket client;
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send('D'));
+    DOBA_EXPECT(signals[5]->wait());
+    server.stop();
+    DOBA_EXPECT(wait_for_count(disconnected, 7));
+    signals[5]->resume();
+    DOBA_EXPECT_EQUAL(serialized->load(), serialized_before_stop);
+  }
 }
