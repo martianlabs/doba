@@ -78,20 +78,34 @@ class server {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     common::date_server::get().start();
     transport_.set_on_request(
-        [this](const RQty& req, RSty& res) {
-          switch (req.get_target()) {
+        [this](const std::shared_ptr<RQty>& req, RSty& res,
+               const std::stop_token& stop_token)
+            -> std::optional<common::task<RSty>> {
+          switch (req->get_target()) {
             case target::kOriginForm:
             case target::kAbsoluteForm: {
               // The request is either in origin-form (RFC 9110 S9.3.5) or
               // absolute-form (RFC 9110 S9.3.4); in either case, the request is
               // routed to a handler based on the method and absolute path.
-              std::string_view method = req.get_method();
-              std::string_view abs_path = req.get_absolute_path();
+              std::string_view method = req->get_method();
+              std::string_view abs_path = req->get_absolute_path();
               auto match = router_.match(method, abs_path);
               if (match.handler) {
-                match.handler->callback(req, res);
+                if (match.handler->is_async()) {
+                  std::shared_ptr<const RQty> async_req(req);
+                  return complete_async_response(
+                      async_req,
+                      match.handler->async_callback(async_req, stop_token));
+                }
+                match.handler->callback(*req, res);
               } else if (match.parametrized_handler) {
-                match.parametrized_handler->invoke(req, res, abs_path);
+                if (match.parametrized_handler->is_async()) {
+                  std::shared_ptr<const RQty> async_req(req);
+                  return complete_async_response(
+                      async_req, match.parametrized_handler->invoke_async(
+                                     async_req, stop_token, abs_path));
+                }
+                match.parametrized_handler->invoke(*req, res, abs_path);
               } else {
                 std::string allowed_methods =
                     router_.allowed_methods(abs_path);
@@ -124,27 +138,8 @@ class server {
               res.bad_request_400();
               break;
           }
-          if (req.wants_connection_close()) {
-            res.set_header(header_names::kConnection, "close");
-          }
-          if (req.get_method() == method_names::kHead) {
-            // RFC 9110 S9.3.2: a HEAD response must describe the same
-            // headers a matching GET would have produced, but must never
-            // carry a message body. clear_body() also drops the framing
-            // headers, so they are captured beforehand and restored right
-            // after, using only the response's already public API.
-            bool had_cl = res.has_header(header_names::kContentLength);
-            std::string cl =
-                had_cl ? res.get_header(header_names::kContentLength).second
-                       : std::string();
-            bool had_te = res.has_header(header_names::kTransferEncoding);
-            std::string te =
-                had_te ? res.get_header(header_names::kTransferEncoding).second
-                       : std::string();
-            res.clear_body();
-            if (had_cl) res.set_header(header_names::kContentLength, cl);
-            if (had_te) res.set_header(header_names::kTransferEncoding, te);
-          }
+          apply_response_rules(*req, res);
+          return std::nullopt;
         });
     transport_.set_on_bad_request(
         [](int code, std::string_view reason, RSty& res) {
@@ -209,8 +204,56 @@ class server {
     router_.add(method, route, std::move(handler));
     return *this;
   }
+  template <router_async_handler_lambda Hty>
+  server& add_route(std::string_view method, std::string_view route,
+                    Hty handler) {
+    std::lock_guard<std::mutex> lock(locked_mutex_);
+    if (locked_) {
+      // If the server is running, we cannot add a route because the router is
+      // locked and cannot be modified.
+      throw std::runtime_error("Cannot add route when the server is running");
+    }
+    router_.add(method, route, std::move(handler));
+    return *this;
+  }
 
  private:
+  // +=========================================================================+
+  // | [>] apply_response_rules                                    ( private ) |
+  // +=========================================================================+
+  static void apply_response_rules(const RQty& req, RSty& res) {
+    if (req.wants_connection_close()) {
+      res.set_header(header_names::kConnection, "close");
+    }
+    if (req.get_method() == method_names::kHead) {
+      // RFC 9110 S9.3.2: a HEAD response must describe the same
+      // headers a matching GET would have produced, but must never
+      // carry a message body. clear_body() also drops the framing
+      // headers, so they are captured beforehand and restored right
+      // after, using only the response's already public API.
+      bool had_cl = res.has_header(header_names::kContentLength);
+      std::string cl =
+          had_cl ? res.get_header(header_names::kContentLength).second
+                 : std::string();
+      bool had_te = res.has_header(header_names::kTransferEncoding);
+      std::string te =
+          had_te ? res.get_header(header_names::kTransferEncoding).second
+                 : std::string();
+      res.clear_body();
+      if (had_cl) res.set_header(header_names::kContentLength, cl);
+      if (had_te) res.set_header(header_names::kTransferEncoding, te);
+    }
+  }
+  // +=========================================================================+
+  // | [>] complete_async_response                                ( private ) |
+  // +=========================================================================+
+  static common::task<RSty> complete_async_response(
+      std::shared_ptr<const RQty> req,
+      common::task<RSty> response_task) {
+    RSty res = co_await std::move(response_task);
+    apply_response_rules(*req, res);
+    co_return res;
+  }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+

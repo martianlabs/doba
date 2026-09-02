@@ -25,12 +25,15 @@
 #ifndef martianlabs_doba_protocol_http_router_h
 #define martianlabs_doba_protocol_http_router_h
 
+#include <functional>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <stdexcept>
 #include <utility>
 #include <vector>
 
+#include "protocol/http/common/router_handler_signature.h"
 #include "protocol/http/common/router_handler_static.h"
 
 namespace martianlabs::doba::protocol::http {
@@ -53,6 +56,11 @@ class router {
   // +=========================================================================+
   struct handler_data {
     router_handler_static<RQty, RSty> callback;
+    std::function<common::task<RSty>(std::shared_ptr<const RQty>,
+                                     std::stop_token)> async_callback;
+    [[nodiscard]] bool is_async() const {
+      return static_cast<bool>(async_callback);
+    }
   };
   struct route_match {
     const handler_data* handler{nullptr};
@@ -77,11 +85,20 @@ class router {
   // +=========================================================================+
   // | [>] add                                                      ( public ) |
   // +=========================================================================+
-  template <router_handler_lambda Hty>
+  template <typename Hty>
+    requires(router_handler_lambda<Hty> ||
+             router_async_handler_lambda<Hty>)
   void add(std::string_view method, std::string_view route, Hty handler) {
     perform_checks<Hty>();
-    using signature =
-        router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
+    constexpr std::size_t handler_parameter_count = []() {
+      if constexpr (router_handler_lambda<Hty>) {
+        return router_handler_signature<
+            decltype(&std::decay_t<Hty>::operator())>::parameter_count;
+      } else {
+        return router_async_handler_signature<
+            decltype(&std::decay_t<Hty>::operator())>::parameter_count;
+      }
+    }();
     const std::size_t wildcard_position = route.find('*');
     const bool is_wildcard =
         wildcard_position != std::string_view::npos &&
@@ -97,13 +114,13 @@ class router {
         throw std::invalid_argument(
             "A wildcard route cannot contain route parameters");
       }
-      if constexpr (signature::parameter_count != 0) {
+      if constexpr (handler_parameter_count != 0) {
         throw std::invalid_argument(
             "A wildcard route handler cannot have typed parameters");
       } else {
         route_data data{
             std::string(route.substr(0, wildcard_position)),
-            {router_handler_static<RQty, RSty>(std::move(handler))}};
+            make_handler_data(std::move(handler))};
         for (auto& [wildcard_method, handlers] : wildcard_handlers_) {
           if (wildcard_method == method) {
             handlers.push_back(std::move(data));
@@ -115,14 +132,14 @@ class router {
       }
       return;
     }
-    if constexpr (signature::parameter_count == 0) {
+    if constexpr (handler_parameter_count == 0) {
       if (parameter_count != 0) {
         throw std::invalid_argument(
             "The route parameters and handler arguments do not match");
       }
       route_data data{
           std::string(route),
-          {router_handler_static<RQty, RSty>(std::move(handler))}};
+          make_handler_data(std::move(handler))};
       for (auto& [static_method, handlers] : handlers_) {
         if (static_method == method) {
           handlers.push_back(std::move(data));
@@ -131,12 +148,23 @@ class router {
       }
       handlers_.push_back({std::string(method), {std::move(data)}});
     } else {
-      if (parameter_count != signature::parameter_count) {
+      if (parameter_count != handler_parameter_count) {
         throw std::invalid_argument(
             "The route parameters and handler arguments do not match");
       }
-      auto data = signature::template make_parametrized<RQty, RSty>(
-          route, std::move(handler));
+      auto data = [&]() {
+        if constexpr (router_handler_lambda<Hty>) {
+          return router_handler_signature<
+              decltype(&std::decay_t<Hty>::operator())>::
+              template make_parametrized<RQty, RSty>(route,
+                                                     std::move(handler));
+        } else {
+          return router_async_handler_signature<
+              decltype(&std::decay_t<Hty>::operator())>::
+              template make_parametrized<RQty, RSty>(route,
+                                                     std::move(handler));
+        }
+      }();
       for (auto& [parametrized_method, handlers] : parametrized_handlers_) {
         if (parametrized_method == method) {
           handlers.push_back(std::move(data));
@@ -258,32 +286,51 @@ class router {
     }
   }
   // +=========================================================================+
+  // | [>] invoke_async_handler                                   ( private ) |
+  // +=========================================================================+
+  template <typename Hty>
+  static common::task<RSty> invoke_async_handler(
+      std::shared_ptr<Hty> handler, std::shared_ptr<const RQty> req,
+      std::stop_token stop_token) {
+    // The coroutine frame owns the handler while it is suspended.
+    co_return co_await std::invoke(*handler, std::move(req), stop_token);
+  }
+  // +=========================================================================+
+  // | [>] make_handler_data                                      ( private ) |
+  // +=========================================================================+
+  template <typename Hty>
+  static handler_data make_handler_data(Hty handler) {
+    if constexpr (router_handler_lambda<Hty>) {
+      return {router_handler_static<RQty, RSty>(std::move(handler)), {}};
+    } else {
+      auto shared_handler =
+          std::make_shared<std::decay_t<Hty>>(std::move(handler));
+      return {
+          {},
+          std::function<common::task<RSty>(std::shared_ptr<const RQty>,
+                                           std::stop_token)>(
+              [handler = std::move(shared_handler)](
+                  std::shared_ptr<const RQty> req,
+                  std::stop_token stop_token) {
+                return invoke_async_handler(handler, std::move(req),
+                                            stop_token);
+              })};
+    }
+  }
+  // +=========================================================================+
   // | [>] perform_checks                                          ( private ) |
   // +=========================================================================+
-  template <router_handler_lambda Hty>
+  template <typename Hty>
   static void perform_checks() {
-    using signature =
-        router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
-    static_assert(std::same_as<typename signature::return_type, void>,
-                  "The route handler must return void");
-    static_assert(
-        std::same_as<std::decay_t<typename signature::request_type>,
-                     RQty>,
-        "The first route handler argument must be const RQty&");
-    static_assert(
-        std::is_lvalue_reference_v<typename signature::request_type> &&
-            std::is_const_v<std::remove_reference_t<
-                typename signature::request_type>>,
-        "The first route handler argument must be const RQty&");
-    static_assert(
-        std::same_as<std::decay_t<typename signature::response_type>,
-                     RSty>,
-        "The second route handler argument must be RSty&");
-    static_assert(
-        std::is_lvalue_reference_v<typename signature::response_type> &&
-            !std::is_const_v<std::remove_reference_t<
-                typename signature::response_type>>,
-        "The second route handler argument must be RSty&");
+    if constexpr (router_handler_lambda<Hty>) {
+      router_handler_signature<
+          decltype(&std::decay_t<Hty>::operator())>::
+          template check<RQty, RSty>();
+    } else {
+      router_async_handler_signature<
+          decltype(&std::decay_t<Hty>::operator())>::
+          template check<RQty, RSty>();
+    }
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |

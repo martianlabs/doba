@@ -58,13 +58,45 @@ class response {
   // +=========================================================================+
   response() = default;
   response(const response&) = delete;
-  response(response&& in) noexcept = delete;
+  response(response&& in) noexcept
+      : sln_len_(in.sln_len_),
+        hdr_len_(in.hdr_len_),
+        bdy_beg_(in.bdy_beg_),
+        bdy_len_(in.bdy_len_),
+        status_code_(in.status_code_),
+        has_date_header_(in.has_date_header_),
+        bdy_writer_(std::move(in.bdy_writer_)) {
+    std::memcpy(memory_, in.memory_, sizeof(memory_));
+    in.sln_len_ = 0;
+    in.hdr_len_ = 0;
+    in.bdy_len_ = 0;
+    in.status_code_ = SC_200_OK;
+    in.has_date_header_ = false;
+    in.bdy_writer_.reset();
+  }
   ~response() = default;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +=========================================================================+
   response& operator=(const response&) = delete;
-  response& operator=(response&& in) noexcept = delete;
+  response& operator=(response&& in) noexcept {
+    if (this == &in) return *this;
+    std::memcpy(memory_, in.memory_, sizeof(memory_));
+    sln_len_ = in.sln_len_;
+    hdr_len_ = in.hdr_len_;
+    bdy_beg_ = in.bdy_beg_;
+    bdy_len_ = in.bdy_len_;
+    status_code_ = in.status_code_;
+    has_date_header_ = in.has_date_header_;
+    bdy_writer_ = std::move(in.bdy_writer_);
+    in.sln_len_ = 0;
+    in.hdr_len_ = 0;
+    in.bdy_len_ = 0;
+    in.status_code_ = SC_200_OK;
+    in.has_date_header_ = false;
+    in.bdy_writer_.reset();
+    return *this;
+  }
   // +=========================================================================+
   // | [>] serialize                                                ( public ) |
   // +=========================================================================+

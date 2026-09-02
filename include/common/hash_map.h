@@ -25,6 +25,8 @@
 #ifndef martianlabs_doba_common_hash_map_h
 #define martianlabs_doba_common_hash_map_h
 
+#include <unordered_map>
+
 #include "hash_base.h"
 
 namespace martianlabs::doba::common {

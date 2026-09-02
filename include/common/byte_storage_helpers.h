@@ -22,23 +22,20 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_common_hash_set_h
-#define martianlabs_doba_common_hash_set_h
+#ifndef martianlabs_doba_common_byte_storage_helpers_h
+#define martianlabs_doba_common_byte_storage_helpers_h
 
-#include <unordered_set>
+#include "platform.h"
 
-#include "hash_base.h"
-
-namespace martianlabs::doba::common {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] hash_set                                                    ( class ) |
-// +---------------------------------------------------------------------------+
-// | This class holds for a generic hash based set.                            |
+// | [>] PLATFORM-DEPENDENT-INCLUDEs                               ( section ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <typename KEty>
-using hash_set = std::unordered_set<KEty, base_hash, base_equal>;
-}  // namespace martianlabs::doba::common
+#ifdef _WIN32
+#include "common/byte_storage_helpers_windows.h"
+#elif __linux__
+#include "common/byte_storage_helpers_linux.h"
+#endif
 
 #endif

@@ -104,7 +104,7 @@ class reader {
     }
     std::size_t bytes =
         storage_.read(reinterpret_cast<char*>(output.data()), output.size());
-    if (bytes == 0 && !storage_.ok()) failed_ = true;
+    if (!storage_.ok()) failed_ = true;
     return bytes;
   }
   // +=========================================================================+

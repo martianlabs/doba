@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -22,23 +22,21 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_common_hash_set_h
-#define martianlabs_doba_common_hash_set_h
+#include "common/hash_map.h"
 
-#include <unordered_set>
+#include <string_view>
 
-#include "hash_base.h"
+#include "test_helper.h"
 
-namespace martianlabs::doba::common {
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] hash_set                                                    ( class ) |
-// +---------------------------------------------------------------------------+
-// | This class holds for a generic hash based set.                            |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-template <typename KEty>
-using hash_set = std::unordered_set<KEty, base_hash, base_equal>;
-}  // namespace martianlabs::doba::common
+namespace {
+using martianlabs::doba::common::hash_map;
+}
 
-#endif
+// +===========================================================================+
+// | [>] hash map header is self contained                       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("hash map header is self contained") {
+  hash_map<std::string_view, int> values;
+  values.emplace("key", 1);
+  DOBA_EXPECT_EQUAL(values.at("KEY"), 1);
+}

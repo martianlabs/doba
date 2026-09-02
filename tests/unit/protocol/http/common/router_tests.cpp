@@ -23,20 +23,84 @@
 // permissions and limitations under the License.
 
 #include <cstdint>
+#include <coroutine>
+#include <exception>
+#include <memory>
+#include <optional>
 #include <stdexcept>
+#include <stop_token>
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 #include "protocol/http/common/router.h"
 #include "test_helper.h"
 
 namespace {
-struct request {};
+struct request {
+  int event{0};
+};
 struct response {
   std::string value;
 };
 using martianlabs::doba::protocol::http::router;
+using martianlabs::doba::common::task;
+
+class task_probe {
+ public:
+  struct promise_type {
+    task_probe get_return_object() noexcept {
+      return task_probe(
+          std::coroutine_handle<promise_type>::from_promise(*this));
+    }
+    std::suspend_never initial_suspend() const noexcept { return {}; }
+    std::suspend_always final_suspend() const noexcept { return {}; }
+    void return_void() const noexcept {}
+    void unhandled_exception() noexcept {
+      exception_ = std::current_exception();
+    }
+    std::exception_ptr exception_;
+  };
+  task_probe(const task_probe&) = delete;
+  task_probe(task_probe&& in) noexcept
+      : coroutine_(std::exchange(in.coroutine_, nullptr)) {}
+  ~task_probe() {
+    if (coroutine_) coroutine_.destroy();
+  }
+  [[nodiscard]] bool done() const noexcept { return coroutine_.done(); }
+  void rethrow_if_failed() const {
+    if (coroutine_.promise().exception_) {
+      std::rethrow_exception(coroutine_.promise().exception_);
+    }
+  }
+
+ private:
+  explicit task_probe(std::coroutine_handle<promise_type> coroutine) noexcept
+      : coroutine_(coroutine) {}
+  std::coroutine_handle<promise_type> coroutine_;
+};
+
+class manual_event {
+ public:
+  bool await_ready() const noexcept { return false; }
+  void await_suspend(std::coroutine_handle<> continuation) noexcept {
+    continuation_ = continuation;
+  }
+  void await_resume() const noexcept {}
+  void resume() {
+    auto continuation = std::exchange(continuation_, nullptr);
+    continuation.resume();
+  }
+
+ private:
+  std::coroutine_handle<> continuation_;
+};
+
+template <typename Tty>
+task_probe collect(task<Tty> value, std::optional<Tty>& result) {
+  result.emplace(co_await std::move(value));
+}
 }  // namespace
 
 // +===========================================================================+
@@ -306,4 +370,230 @@ DOBA_TEST("allowed methods include matching wildcard routes") {
   DOBA_EXPECT_EQUAL(value.allowed_methods("/assets/42"),
                     "POST, GET, DELETE");
   DOBA_EXPECT(value.allowed_methods("/assets").empty());
+}
+// +===========================================================================+
+// | [>] sync and async routes share one router                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("sync and async routes share one router") {
+  router<request, response> value;
+  value.add("GET", "/sync", [](const request&, response&) {});
+  value.add("GET", "/async",
+            [](std::shared_ptr<const request>,
+               std::stop_token) -> task<response> {
+              co_return response{"async"};
+            });
+  value.add("GET", "/items/:id",
+            [](std::shared_ptr<const request>, std::stop_token,
+               int) -> task<response> {
+              co_return response{"parametrized"};
+            });
+  value.add("GET", "/assets/*",
+            [](std::shared_ptr<const request>,
+               std::stop_token) -> task<response> {
+              co_return response{"wildcard"};
+            });
+  auto sync = value.match("GET", "/sync");
+  auto async = value.match("GET", "/async");
+  auto parametrized = value.match("GET", "/items/42");
+  auto wildcard = value.match("GET", "/assets/logo");
+  DOBA_EXPECT(!sync.handler->is_async());
+  DOBA_EXPECT(async.handler->is_async());
+  DOBA_EXPECT(parametrized.parametrized_handler->is_async());
+  DOBA_EXPECT(wildcard.handler->is_async());
+}
+// +===========================================================================+
+// | [>] static async handler outlives its router                ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("static async handler outlives its router") {
+  manual_event first_event;
+  manual_event second_event;
+  auto state = std::make_shared<std::string>("static");
+  std::weak_ptr<std::string> lifetime = state;
+  std::optional<response> first_result;
+  std::optional<response> second_result;
+  std::optional<task_probe> first_probe;
+  std::optional<task_probe> second_probe;
+  {
+    router<request, response> value;
+    value.add(
+        "GET", "/async",
+        [state, &first_event, &second_event](
+            std::shared_ptr<const request> req,
+            std::stop_token) -> task<response> {
+          if (req->event == 0) {
+            co_await first_event;
+          } else {
+            co_await second_event;
+          }
+          co_return response{*state};
+        });
+    state.reset();
+    auto match = value.match("GET", "/async");
+    first_probe.emplace(collect(
+        match.handler->async_callback(
+            std::make_shared<const request>(request{0}), std::stop_token{}),
+        first_result));
+    second_probe.emplace(collect(
+        match.handler->async_callback(
+            std::make_shared<const request>(request{1}), std::stop_token{}),
+        second_result));
+    DOBA_EXPECT(!first_probe->done());
+    DOBA_EXPECT(!second_probe->done());
+  }
+  DOBA_EXPECT(!lifetime.expired());
+  first_event.resume();
+  first_probe->rethrow_if_failed();
+  DOBA_EXPECT(first_probe->done());
+  DOBA_EXPECT(first_result.has_value());
+  DOBA_EXPECT_EQUAL(first_result->value, "static");
+  DOBA_EXPECT(!lifetime.expired());
+  second_event.resume();
+  second_probe->rethrow_if_failed();
+  DOBA_EXPECT(second_probe->done());
+  DOBA_EXPECT(second_result.has_value());
+  DOBA_EXPECT_EQUAL(second_result->value, "static");
+  DOBA_EXPECT(lifetime.expired());
+}
+// +===========================================================================+
+// | [>] wildcard async handler propagates late failure          ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("wildcard async handler propagates late failure") {
+  manual_event event;
+  auto state = std::make_shared<std::string>("failure");
+  std::weak_ptr<std::string> lifetime = state;
+  std::optional<response> result;
+  std::optional<task_probe> probe;
+  {
+    router<request, response> value;
+    value.add(
+        "GET", "/assets/*",
+        [state, &event](std::shared_ptr<const request>,
+                        std::stop_token) -> task<response> {
+          co_await event;
+          throw std::runtime_error(*state);
+          co_return response{};
+        });
+    state.reset();
+    auto match = value.match("GET", "/assets/item");
+    probe.emplace(collect(
+        match.handler->async_callback(std::make_shared<const request>(),
+                                      std::stop_token{}),
+        result));
+    DOBA_EXPECT(!probe->done());
+  }
+  DOBA_EXPECT(!lifetime.expired());
+  event.resume();
+  DOBA_EXPECT(probe->done());
+  bool threw = false;
+  try {
+    probe->rethrow_if_failed();
+  } catch (const std::runtime_error& error) {
+    threw = std::string_view(error.what()) == "failure";
+  }
+  DOBA_EXPECT(threw);
+  DOBA_EXPECT(!result.has_value());
+  DOBA_EXPECT(lifetime.expired());
+}
+// +===========================================================================+
+// | [>] parametrized async handler outlives its router          ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("parametrized async handler outlives its router") {
+  manual_event event;
+  auto state = std::make_shared<std::string>("item");
+  std::weak_ptr<std::string> lifetime = state;
+  std::optional<response> result;
+  std::optional<task_probe> probe;
+  {
+    router<request, response> value;
+    value.add(
+        "GET", "/items/:id",
+        [state, &event](std::shared_ptr<const request>,
+                        std::stop_token,
+                        int id) -> task<response> {
+          co_await event;
+          co_return response{*state + std::to_string(id)};
+        });
+    state.reset();
+    auto match = value.match("GET", "/items/42");
+    probe.emplace(collect(
+        match.parametrized_handler->invoke_async(
+            std::make_shared<const request>(), std::stop_token{},
+            "/items/42"),
+        result));
+    DOBA_EXPECT(!probe->done());
+  }
+  DOBA_EXPECT(!lifetime.expired());
+  event.resume();
+  probe->rethrow_if_failed();
+  DOBA_EXPECT(probe->done());
+  DOBA_EXPECT(result.has_value());
+  DOBA_EXPECT_EQUAL(result->value, "item42");
+  DOBA_EXPECT(lifetime.expired());
+}
+// +===========================================================================+
+// | [>] router accepts move-only async handlers                 ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("router accepts move-only async handlers") {
+  router<request, response> value;
+  auto state = std::make_unique<std::string>("move-only");
+  value.add(
+      "GET", "/move-only",
+      [state = std::move(state)](
+          std::shared_ptr<const request>,
+          std::stop_token) -> task<response> {
+        co_return response{*state};
+      });
+  DOBA_EXPECT(state == nullptr);
+  auto match = value.match("GET", "/move-only");
+  std::optional<response> result;
+  auto probe = collect(
+      match.handler->async_callback(std::make_shared<const request>(),
+                                    std::stop_token{}),
+      result);
+  probe.rethrow_if_failed();
+  DOBA_EXPECT(probe.done());
+  DOBA_EXPECT(result.has_value());
+  DOBA_EXPECT_EQUAL(result->value, "move-only");
+}
+// +===========================================================================+
+// | [>] async routes validate pattern and handler shape         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("async routes validate pattern and handler shape") {
+  router<request, response> value;
+  bool threw = false;
+  try {
+    value.add(
+        "GET", "/items/:id",
+        [](std::shared_ptr<const request>,
+           std::stop_token) -> task<response> {
+          co_return response{};
+        });
+  } catch (const std::invalid_argument&) {
+    threw = true;
+  }
+  DOBA_EXPECT(threw);
+  threw = false;
+  try {
+    value.add(
+        "GET", "/items",
+        [](std::shared_ptr<const request>, std::stop_token,
+           int) -> task<response> {
+          co_return response{};
+        });
+  } catch (const std::invalid_argument&) {
+    threw = true;
+  }
+  DOBA_EXPECT(threw);
+  threw = false;
+  try {
+    value.add(
+        "GET", "/items/*",
+        [](std::shared_ptr<const request>, std::stop_token,
+           int) -> task<response> {
+          co_return response{};
+        });
+  } catch (const std::invalid_argument&) {
+    threw = true;
+  }
+  DOBA_EXPECT(threw);
 }

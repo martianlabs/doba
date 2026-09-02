@@ -26,16 +26,14 @@
 #define martianlabs_doba_common_byte_storage_h
 
 #include <algorithm>
-#include <atomic>
-#include <chrono>
 #include <cstddef>
-#include <cstdint>
 #include <cstring>
 #include <filesystem>
-#include <fstream>
 #include <optional>
 #include <string>
 #include <utility>
+
+#include "common/byte_storage_helpers.h"
 
 namespace martianlabs::doba::common {
 // /////////////////////////////////////////////////////////////////////////////
@@ -101,8 +99,7 @@ class byte_storage {
       return false;
     }
     if (spilled_) {
-      file_.write(ptr, static_cast<std::streamsize>(len));
-      if (!file_) {
+      if (!file_.write(ptr, len)) {
         // An I/O error occurred while writing to the file!
         io_error_ = true;
         return false;
@@ -118,8 +115,7 @@ class byte_storage {
   void finish(std::size_t stored) noexcept {
     total_bytes_ = stored;
     if (spilled_) {
-      file_.flush();
-      if (!file_) {
+      if (!file_.flush()) {
         // An I/O error occurred while flushing the file!
         io_error_ = true;
         return;
@@ -160,7 +156,7 @@ class byte_storage {
   // | [>] reset                                                   ( private ) |
   // +=========================================================================+
   void reset() noexcept {
-    if (file_.is_open()) file_.close();
+    file_.close();
     if (!spill_path_.empty()) {
       std::error_code ec;
       std::filesystem::remove(spill_path_, ec);
@@ -192,16 +188,16 @@ class byte_storage {
   // | [>] spill_to_file                                           ( private ) |
   // +=========================================================================+
   bool spill_to_file() {
-    spill_path_ = make_spill_path();
-    file_.open(spill_path_, std::ios::in | std::ios::out | std::ios::trunc |
-                                std::ios::binary);
-    if (!file_.is_open()) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    fs::path directory =
+        spill_dir_.empty() ? fs::temp_directory_path(ec) : fs::path(spill_dir_);
+    if (ec || !file_.open(directory, spill_path_)) {
       io_error_ = true;
       return false;
     }
     if (!mem_.empty()) {
-      file_.write(mem_.data(), static_cast<std::streamsize>(mem_.size()));
-      if (!file_) {
+      if (!file_.write(mem_.data(), mem_.size())) {
         io_error_ = true;
         return false;
       }
@@ -217,9 +213,8 @@ class byte_storage {
   bool fetch_file(std::byte& b) {
     if (!finished_ || read_pos_ >= total_bytes_) return false;
     char c;
-    file_.seekg(static_cast<std::streamoff>(read_pos_), std::ios::beg);
-    file_.read(&c, 1);
-    if (file_.gcount() != 1) {
+    std::size_t got = 0;
+    if (!file_.read(read_pos_, &c, 1, got) || got != 1) {
       io_error_ = true;
       return false;
     }
@@ -233,33 +228,16 @@ class byte_storage {
   std::size_t read_file(char* out, std::size_t want, std::size_t& pos) {
     if (!finished_ || pos >= total_bytes_) return 0;
     std::size_t n = std::min(want, total_bytes_ - pos);
-    file_.seekg(static_cast<std::streamoff>(pos), std::ios::beg);
-    file_.read(out, static_cast<std::streamsize>(n));
-    std::size_t got = static_cast<std::size_t>(file_.gcount());
-    if (got == 0 && !file_.eof()) io_error_ = true;
+    std::size_t got = 0;
+    if (!file_.read(pos, out, n, got) || got != n) io_error_ = true;
     pos += got;
     return got;
-  }
-  // +=========================================================================+
-  // | [>] make_spill_path                                         ( private ) |
-  // +=========================================================================+
-  std::filesystem::path make_spill_path() const {
-    namespace fs = std::filesystem;
-    static std::atomic<std::uint64_t> counter{0};
-    std::uint64_t ns = static_cast<std::uint64_t>(
-        std::chrono::steady_clock::now().time_since_epoch().count());
-    std::uint64_t seq = counter.fetch_add(1, std::memory_order_relaxed);
-    std::string name =
-        "doba_bytes_" + std::to_string(ns) + "_" + std::to_string(seq) + ".tmp";
-    fs::path dir =
-        spill_dir_.empty() ? fs::temp_directory_path() : fs::path(spill_dir_);
-    return dir / name;
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   std::string mem_;
-  std::fstream file_;
+  byte_storage_file file_;
   std::filesystem::path spill_path_;
   std::size_t spill_threshold_{0};
   std::string spill_dir_;

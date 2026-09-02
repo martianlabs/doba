@@ -25,8 +25,15 @@
 #ifndef martianlabs_doba_transport_server_tcpip_h
 #define martianlabs_doba_transport_server_tcpip_h
 
+#include <coroutine>
+#include <exception>
 #include <functional>
+#include <memory>
+#include <optional>
+#include <stop_token>
+#include <utility>
 
+#include "common/task.h"
 #include "platform.h"
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -38,7 +45,9 @@ namespace martianlabs::doba::transport::server {
 struct types {
   template <typename RQty, typename RSty>
   using on_request_delegate =
-      std::function<void(const RQty&, RSty&)>;
+      std::function<std::optional<common::task<RSty>>(
+          const std::shared_ptr<RQty>&, RSty&,
+          const std::stop_token&)>;
   template <typename RSty>
   using on_bad_request_delegate =
       std::function<void(int, std::string_view, RSty&)>;
@@ -46,6 +55,95 @@ struct types {
   using on_client_disconnected_delegate = std::function<void()>;
 };
 }  // namespace martianlabs::doba::transport::server
+
+namespace martianlabs::doba::transport::server::detail {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] detached_operation                                         ( class ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+class detached_operation {
+ public:
+  // +=========================================================================+
+  // | [>] promise_type                                             ( public ) |
+  // +=========================================================================+
+  struct promise_type {
+    detached_operation get_return_object() noexcept {
+      return detached_operation(
+          std::coroutine_handle<promise_type>::from_promise(*this));
+    }
+    std::suspend_always initial_suspend() const noexcept { return {}; }
+    std::suspend_never final_suspend() const noexcept { return {}; }
+    void return_void() const noexcept {}
+    void unhandled_exception() const noexcept { std::terminate(); }
+  };
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
+  detached_operation(const detached_operation&) = delete;
+  detached_operation(detached_operation&& in) noexcept
+      : coroutine_(std::exchange(in.coroutine_, nullptr)) {}
+  ~detached_operation() {
+    if (coroutine_) coroutine_.destroy();
+  }
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +=========================================================================+
+  detached_operation& operator=(const detached_operation&) = delete;
+  detached_operation& operator=(detached_operation&& in) noexcept {
+    if (this == &in) return *this;
+    if (coroutine_) coroutine_.destroy();
+    coroutine_ = std::exchange(in.coroutine_, nullptr);
+    return *this;
+  }
+  // +=========================================================================+
+  // | [>] get_coroutine                                            ( public ) |
+  // +=========================================================================+
+  std::coroutine_handle<> get_coroutine() const noexcept {
+    return coroutine_;
+  }
+  // +=========================================================================+
+  // | [>] release                                                  ( public ) |
+  // +=========================================================================+
+  void release() noexcept { coroutine_ = nullptr; }
+
+ private:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs                                            ( private ) |
+  // +=========================================================================+
+  explicit detached_operation(
+      std::coroutine_handle<promise_type> coroutine) noexcept
+      : coroutine_(coroutine) {}
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
+  std::coroutine_handle<promise_type> coroutine_;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] resume_on                                                   ( class ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename STty>
+class resume_on {
+ public:
+  explicit resume_on(std::weak_ptr<STty> scheduler) noexcept
+      : scheduler_(std::move(scheduler)) {}
+  bool await_ready() const noexcept { return false; }
+  bool await_suspend(std::coroutine_handle<> continuation) {
+    auto scheduler = scheduler_.lock();
+    if (!scheduler) return false;
+    scheduled_ = scheduler->schedule(continuation);
+    return scheduled_;
+  }
+  bool await_resume() const noexcept { return scheduled_; }
+
+ private:
+  std::weak_ptr<STty> scheduler_;
+  bool scheduled_{false};
+};
+}  // namespace martianlabs::doba::transport::server::detail
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

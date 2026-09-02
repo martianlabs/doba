@@ -52,7 +52,6 @@
 #ifdef _WIN32
 #define _WIN32_DCOM
 #define NOMINMAX
-#define INLINE __forceinline
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <mswsock.h>
@@ -68,7 +67,6 @@
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 #elif __linux__
-#define INLINE inline __attribute__((always_inline))
 #include <fcntl.h>
 #include <netdb.h>
 #include <unistd.h>
