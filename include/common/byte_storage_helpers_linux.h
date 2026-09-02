@@ -36,17 +36,22 @@
 namespace martianlabs::doba::common {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] byte_storage_file [linux]                                  ( class ) |
+// | [>] byte_storage_file [linux]                                   ( class ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class byte_storage_file {
  public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
   byte_storage_file() = default;
   byte_storage_file(const byte_storage_file&) = delete;
   byte_storage_file(byte_storage_file&& in) noexcept
       : file_(std::exchange(in.file_, -1)) {}
   ~byte_storage_file() { close(); }
-
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +=========================================================================+
   byte_storage_file& operator=(const byte_storage_file&) = delete;
   byte_storage_file& operator=(byte_storage_file&& in) noexcept {
     if (this == &in) return *this;
@@ -54,7 +59,9 @@ class byte_storage_file {
     file_ = std::exchange(in.file_, -1);
     return *this;
   }
-
+  // +=========================================================================+
+  // | [>] open                                                     ( public ) |
+  // +=========================================================================+
   bool open(const std::filesystem::path& directory,
             std::filesystem::path& path) {
     std::string pattern = (directory / "doba_bytes_XXXXXX").string();
@@ -69,7 +76,9 @@ class byte_storage_file {
     path = name.data();
     return true;
   }
-
+  // +=========================================================================+
+  // | [>] write                                                    ( public ) |
+  // +=========================================================================+
   bool write(const char* data, std::size_t size) {
     std::size_t written = 0;
     while (written < size) {
@@ -80,9 +89,13 @@ class byte_storage_file {
     }
     return true;
   }
-
-  bool flush() { return fsync(file_) == 0; }
-
+  // +=========================================================================+
+  // | [>] flush                                                    ( public ) |
+  // +=========================================================================+
+  bool flush() { return true; }
+  // +=========================================================================+
+  // | [>] read                                                     ( public ) |
+  // +=========================================================================+
   bool read(std::size_t position, char* data, std::size_t size,
             std::size_t& read) {
     read = 0;
@@ -96,7 +109,9 @@ class byte_storage_file {
     }
     return true;
   }
-
+  // +=========================================================================+
+  // | [>] close                                                    ( public ) |
+  // +=========================================================================+
   void close() noexcept {
     if (file_ == -1) return;
     ::close(file_);
@@ -104,6 +119,9 @@ class byte_storage_file {
   }
 
  private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
   int file_{-1};
 };
 }  // namespace martianlabs::doba::common

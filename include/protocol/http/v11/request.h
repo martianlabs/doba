@@ -325,9 +325,9 @@ class request {
           std::optional<std::string_view> port,
           std::optional<helpers::host_type> type,
           std::optional<std::string_view> target_authority_host,
-           std::optional<std::string_view> target_authority_port,
-           std::optional<helpers::host_type> target_authority_type,
-           bool wants_connection_close = false) {
+          std::optional<std::string_view> target_authority_port,
+          std::optional<helpers::host_type> target_authority_type,
+          bool wants_connection_close = false) {
     auto offset = [full_buffer](std::string_view value) {
       if (value.empty()) return std::size_t{0};
       const char* first = full_buffer.data();

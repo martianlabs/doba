@@ -210,8 +210,8 @@ DOBA_TEST("task move assignment releases the previous frame") {
 // +===========================================================================+
 DOBA_TEST("awaiting a moved task reports an error") {
   std::optional<int> result;
-  auto probe = collect(await_moved_source(owned_value(std::make_shared<int>(7))),
-                       result);
+  auto probe =
+      collect(await_moved_source(owned_value(std::make_shared<int>(7))), result);
   DOBA_EXPECT(probe.done());
   bool threw = false;
   try {

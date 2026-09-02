@@ -238,7 +238,7 @@ DOBA_TEST("request views remain independent from the source buffer") {
   DOBA_EXPECT_EQUAL(value->get_host(), "example.com");
 }
 // +===========================================================================+
-// | [>] factory rejects components outside the source buffer     ( test-case ) |
+// | [>] factory rejects components outside source buffer         ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("factory rejects components outside the source buffer") {
   const std::string source = "GET / HTTP/1.1\r\n\r\n";

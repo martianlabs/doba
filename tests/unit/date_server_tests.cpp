@@ -45,7 +45,7 @@ bool valid_http_date(std::string_view value) {
 }  // namespace
 
 // +===========================================================================+
-// | [>] concurrent serialization preserves HTTP dates            ( test-case ) |
+// | [>] concurrent serialization preserves HTTP dates           ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("concurrent serialization preserves HTTP dates") {
   date_server::get().start();

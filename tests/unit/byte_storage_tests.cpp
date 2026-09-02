@@ -44,7 +44,8 @@ class spill_directory {
   spill_directory() {
     namespace fs = std::filesystem;
     static std::atomic<std::size_t> sequence{0};
-    const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
+    const auto stamp =
+        std::chrono::steady_clock::now().time_since_epoch().count();
     path_ = fs::temp_directory_path() /
             ("doba_byte_storage_" + std::to_string(stamp) + "_" +
              std::to_string(sequence.fetch_add(1)));
@@ -81,8 +82,9 @@ DOBA_TEST("spilling preserves existing files") {
     stream << "preserved";
   }
   {
-    byte_storage storage(byte_storage_options{.spill_threshold = 1,
-                                              .spill_dir = directory.path().string()});
+    byte_storage storage(
+        byte_storage_options{.spill_threshold = 1,
+                             .spill_dir = directory.path().string()});
     DOBA_EXPECT(storage.write("body", 4));
     storage.finish(4);
     DOBA_EXPECT(storage.ok());
@@ -96,8 +98,9 @@ DOBA_TEST("spilling preserves existing files") {
 // +===========================================================================+
 DOBA_TEST("truncated spill files fail the reader") {
   spill_directory directory;
-  byte_storage storage(byte_storage_options{.spill_threshold = 1,
-                                            .spill_dir = directory.path().string()});
+  byte_storage storage(
+      byte_storage_options{.spill_threshold = 1,
+                           .spill_dir = directory.path().string()});
   DOBA_EXPECT(storage.write("abcdef", 6));
   storage.finish(6);
   const auto spill_file = only_spill_file(directory.path());

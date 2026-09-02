@@ -47,9 +47,7 @@ class date_server {
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                            ( private ) |
   // +=========================================================================+
-  date_server() {
-    front_.store(make_slot(), std::memory_order_release);
-  }
+  date_server() { front_.store(make_slot(), std::memory_order_release); }
 
  public:
   // +=========================================================================+
