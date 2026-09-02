@@ -178,18 +178,18 @@ struct response_data {
 template <typename RQty, typename RSty,
           template <typename, typename> class DEty>
 struct context
-    : public std::enable_shared_from_this<context<RQty, RSty, DEty>>
-{
+    : public std::enable_shared_from_this<context<RQty, RSty, DEty>> {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   context(int in_socket,
           types::on_client_disconnected_delegate on_disconnection)
       : on_disconnection_{std::move(on_disconnection)},
-        socket_{in_socket} {}
+        socket_{in_socket},
+        stop_token_{stop_source_.get_token()} {}
   context(const context&) = delete;
   context(context&&) noexcept = delete;
-  ~context() = default;
+  ~context() { stop_source_.request_stop(); }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +=========================================================================+
@@ -221,6 +221,12 @@ struct context
   // | [>] get_socket                                               ( public ) |
   // +=========================================================================+
   int get_socket() const { return socket_; }
+  // +=========================================================================+
+  // | [>] get_stop_token                                           ( public ) |
+  // +=========================================================================+
+  const std::stop_token& get_stop_token() const noexcept {
+    return stop_token_;
+  }
   // +=========================================================================+
   // | [>] enqueue_response                                         ( public ) |
   // +=========================================================================+
@@ -444,6 +450,8 @@ struct context
   // +=========================================================================+
   types::on_client_disconnected_delegate on_disconnection_;
   int socket_{-1};
+  std::stop_source stop_source_;
+  std::stop_token stop_token_;
   bool closing_{false};
   bool connected_{false};
   bool disconnected_{false};
@@ -559,8 +567,8 @@ struct worker {
       throw std::runtime_error("Worker cannot be stopped from itself!");
     }
     if (epoll_fd_ == -1) return;
-    if (dispatcher_) dispatcher_->stop();
     stopping_.store(true);
+    if (dispatcher_) dispatcher_->stop();
     if (thread_.joinable()) thread_.join();
     close_contexts();
     close_resources();
@@ -765,7 +773,7 @@ struct worker {
       try {
         RSty response;
         std::optional<common::task<RSty>> response_task =
-            on_request_(result.request, response);
+            on_request_(result.request, response, ctx->get_stop_token());
         if (response_task) {
           std::size_t response_id = 0;
           if (!ctx->reserve_response(response_id)) {

@@ -29,6 +29,7 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
+#include <stop_token>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -79,7 +80,7 @@ struct router_handler_signature_base {
         "The second route handler argument must be RSty&");
   }
 };
-template <typename LOty, typename LQty, typename... Args>
+template <typename LOty, typename LQty, typename LCty, typename... Args>
 struct router_async_handler_signature_base {
   using return_type = LOty;
   using request_type = LQty;
@@ -97,6 +98,9 @@ struct router_async_handler_signature_base {
     static_assert(std::same_as<LQty, std::shared_ptr<const RQty>>,
                   "The asynchronous route handler argument must be "
                   "std::shared_ptr<const RQty>");
+    static_assert(std::same_as<LCty, std::stop_token>,
+                  "The second asynchronous route handler argument must be "
+                  "std::stop_token");
   }
 };
 // /////////////////////////////////////////////////////////////////////////////
@@ -117,12 +121,16 @@ struct router_handler_signature<Retty (Cty::*)(Reqty, Resty, Args...)>
 // | [>] router_async_handler_signature                             ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <typename Cty, typename Retty, typename Reqty, typename... Args>
-struct router_async_handler_signature<Retty (Cty::*)(Reqty, Args...) const>
-    : router_async_handler_signature_base<Retty, Reqty, Args...> {};
-template <typename Cty, typename Retty, typename Reqty, typename... Args>
-struct router_async_handler_signature<Retty (Cty::*)(Reqty, Args...)>
-    : router_async_handler_signature_base<Retty, Reqty, Args...> {};
+template <typename Cty, typename Retty, typename Reqty, typename Cancelty,
+          typename... Args>
+struct router_async_handler_signature<
+    Retty (Cty::*)(Reqty, Cancelty, Args...) const>
+    : router_async_handler_signature_base<Retty, Reqty, Cancelty, Args...> {};
+template <typename Cty, typename Retty, typename Reqty, typename Cancelty,
+          typename... Args>
+struct router_async_handler_signature<
+    Retty (Cty::*)(Reqty, Cancelty, Args...)>
+    : router_async_handler_signature_base<Retty, Reqty, Cancelty, Args...> {};
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] router_handler_lambda                                      (concept ) |

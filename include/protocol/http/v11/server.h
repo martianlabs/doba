@@ -78,7 +78,8 @@ class server {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     common::date_server::get().start();
     transport_.set_on_request(
-        [this](const std::shared_ptr<RQty>& req, RSty& res)
+        [this](const std::shared_ptr<RQty>& req, RSty& res,
+               const std::stop_token& stop_token)
             -> std::optional<common::task<RSty>> {
           switch (req->get_target()) {
             case target::kOriginForm:
@@ -94,7 +95,7 @@ class server {
                   std::shared_ptr<const RQty> async_req(req);
                   return complete_async_response(
                       async_req,
-                      match.handler->async_callback(async_req));
+                      match.handler->async_callback(async_req, stop_token));
                 }
                 match.handler->callback(*req, res);
               } else if (match.parametrized_handler) {
@@ -102,7 +103,7 @@ class server {
                   std::shared_ptr<const RQty> async_req(req);
                   return complete_async_response(
                       async_req, match.parametrized_handler->invoke_async(
-                                     async_req, abs_path));
+                                     async_req, stop_token, abs_path));
                 }
                 match.parametrized_handler->invoke(*req, res, abs_path);
               } else {

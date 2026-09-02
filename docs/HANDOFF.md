@@ -261,7 +261,7 @@ decoder.
 
 ### `response`
 
-`response` no es copiable ni movible y usa `char memory_[4096]`:
+`response` no es copiable y usa `char memory_[4096]`:
 
 - status-line y headers ocupan la parte inicial;
 - el body inline se reserva al final;
@@ -291,17 +291,13 @@ Origin-form y absolute-form se enrutan; authority-form responde 501 y
 asterisk-form responde 200.
 
 El router registra rutas estáticas, parametrizadas y wildcard mediante
-`add_route(method, path, lambda)`. El handler recibe `const RQty&` y `RSty&`
-como sus dos primeros argumentos. El patrón parametrizado usa segmentos
-`:nombre`, por ejemplo
-`/users/:id`, y sus parámetros se declaran a continuación en la lambda. Se
-convierten en orden y soportan `std::string`, `bool`, tipos integrales y tipos
-de punto flotante.
+`add_route(method, path, lambda)`. El patrón parametrizado usa segmentos
+`:nombre`, por ejemplo `/users/:id`. Los parámetros se convierten en orden y
+soportan `std::string`, `bool`, tipos integrales y tipos de punto flotante.
 
 `match` evalúa primero las rutas estáticas, después las parametrizadas y por
-último las wildcard. Devuelve el handler coincidente; `server` lo invoca
-directamente dentro del callback del transporte y traduce la ausencia de ruta
-o de método permitido a 404 y 405, respectivamente.
+último las wildcard. `server` traduce la ausencia de ruta o de método
+permitido a 404 y 405, respectivamente.
 
 Los paths son sensibles a mayúsculas. Una ruta parametrizada con barra final
 solo coincide con un path que también la tenga. Un patrón que termina en `/*`
@@ -319,18 +315,15 @@ combinación con `*` se rechaza durante `add_route`.
 
 Ambos backends estan implementados y operativos. `transport/server/tcpip.h`
 selecciona `tcpip_windows.h` (IOCP) o `tcpip_linux.h` (EPOLL) en tiempo de
-compilacion segun la plataforma; no hay backend de referencia ni fallback
-sincrono. Los dos exponen exactamente la misma API publica al protocolo
+compilacion segun la plataforma; no hay backend de referencia. Los dos exponen
+exactamente la misma API publica al protocolo
 (`start`/`stop`, callbacks de request, bad-request y ciclo de vida de canal).
-Cada request deserializada ejecuta su handler de forma directa en el worker del
-transporte. Cuando este retorna, la respuesta se serializa y se añade a la cola
-FIFO del contexto, conservando el orden de las requests pipelined.
 
 Ambos backends consumen `serialization_result` de la misma forma: primero
-vuelcan `prefix` una sola vez (marca `prefix_written`) y despues drenan
-`source` en trozos acotados por `kSendChunkSz`, deteniendose cuando el buffer
-de envio alcanza `kSendBufferMaxSz`. Un `failed()` del reader cierra el
-contexto; una lectura de cero bytes retira la respuesta.
+vuelcan `prefix` una sola vez y despues drenan `source` en trozos acotados por
+`kSendChunkSz`, deteniendose cuando el buffer de envio alcanza
+`kSendBufferMaxSz`. Un `failed()` del reader cierra el contexto; una lectura de
+cero bytes retira la respuesta.
 
 En Windows, IOCP conserva el contexto mediante `shared_ptr` mientras haya
 operaciones solapadas y protege el estado de envio con `sending_mutex_`. En
@@ -955,12 +948,6 @@ documentación, auditoría, pruebas de estrés y benchmarks finales.
 - Verificar sobre el cable el `100-continue` ya implementado, dentro de P5/QA1.
 - Documentar lifetime y propiedad de los `string_view` devueltos por `request`,
   y las precondiciones de getters indexados.
-- Resolver la cancelación cooperativa de operaciones externas que mantienen
-  una corrutina suspendida. El runtime conserva su frame hasta que finaliza y
-  descarta la entrega si la conexión o el transporte ya se cerraron, pero una
-  operación que nunca reanude conserva ese frame indefinidamente. No debe
-  destruirse de forma forzada mientras siga suspendido.
-
 ### Secuencia recomendada
 
 Las "tandas" son lotes de ejecución, no un ranking de criticidad: agrupan

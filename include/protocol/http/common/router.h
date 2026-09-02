@@ -25,6 +25,8 @@
 #ifndef martianlabs_doba_protocol_http_router_h
 #define martianlabs_doba_protocol_http_router_h
 
+#include <functional>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <stdexcept>
@@ -53,8 +55,8 @@ class router {
   // +=========================================================================+
   struct handler_data {
     router_handler_static<RQty, RSty> callback;
-    std::function<common::task<RSty>(std::shared_ptr<const RQty>)>
-        async_callback;
+    std::function<common::task<RSty>(std::shared_ptr<const RQty>,
+                                     std::stop_token)> async_callback;
     [[nodiscard]] bool is_async() const {
       return static_cast<bool>(async_callback);
     }
@@ -283,6 +285,16 @@ class router {
     }
   }
   // +=========================================================================+
+  // | [>] invoke_async_handler                                   ( private ) |
+  // +=========================================================================+
+  template <typename Hty>
+  static common::task<RSty> invoke_async_handler(
+      std::shared_ptr<Hty> handler, std::shared_ptr<const RQty> req,
+      std::stop_token stop_token) {
+    // The coroutine frame owns the handler while it is suspended.
+    co_return co_await std::invoke(*handler, std::move(req), stop_token);
+  }
+  // +=========================================================================+
   // | [>] make_handler_data                                      ( private ) |
   // +=========================================================================+
   template <typename Hty>
@@ -290,10 +302,18 @@ class router {
     if constexpr (router_handler_lambda<Hty>) {
       return {router_handler_static<RQty, RSty>(std::move(handler)), {}};
     } else {
+      auto shared_handler =
+          std::make_shared<std::decay_t<Hty>>(std::move(handler));
       return {
           {},
-          std::function<common::task<RSty>(std::shared_ptr<const RQty>)>(
-              std::move(handler))};
+          std::function<common::task<RSty>(std::shared_ptr<const RQty>,
+                                           std::stop_token)>(
+              [handler = std::move(shared_handler)](
+                  std::shared_ptr<const RQty> req,
+                  std::stop_token stop_token) {
+                return invoke_async_handler(handler, std::move(req),
+                                            stop_token);
+              })};
     }
   }
   // +=========================================================================+

@@ -27,6 +27,7 @@
 #include <exception>
 #include <memory>
 #include <optional>
+#include <stop_token>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -165,7 +166,7 @@ DOBA_TEST("async invoke retains parameters while suspended") {
   auto handler = make_router_handler_parametrized_async<
       request, response, std::string>(
       "/items/:name",
-      [&event](std::shared_ptr<const request>,
+      [&event](std::shared_ptr<const request>, std::stop_token,
                const std::string& name) -> task<response> {
         co_await event;
         response res;
@@ -174,7 +175,8 @@ DOBA_TEST("async invoke retains parameters while suspended") {
       });
   auto req = std::make_shared<const request>();
   std::optional<response> result;
-  auto probe = collect(handler.invoke_async(req, "/items/doba"), result);
+  auto probe = collect(
+      handler.invoke_async(req, std::stop_token{}, "/items/doba"), result);
   DOBA_EXPECT(!probe.done());
   DOBA_EXPECT(!result.has_value());
   event.resume();
@@ -182,4 +184,86 @@ DOBA_TEST("async invoke retains parameters while suspended") {
   DOBA_EXPECT(probe.done());
   DOBA_EXPECT(result.has_value());
   DOBA_EXPECT_EQUAL(result->value, "doba");
+}
+// +===========================================================================+
+// | [>] async invoke passes parsed values to the callback       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("async invoke passes parsed values to the callback") {
+  std::stop_source stop_source;
+  stop_source.request_stop();
+  auto handler = make_router_handler_parametrized_async<
+      request, response, std::uint64_t, bool, double, std::string_view>(
+      "/items/:id/:enabled/:score/:name",
+      [](std::shared_ptr<const request>, std::stop_token stop_token,
+         std::uint64_t id, bool enabled, double score,
+         std::string_view name) -> task<response> {
+        const bool valid =
+            stop_token.stop_requested() && id == 42 && enabled &&
+            score == 1.5 && name == "doba";
+        co_return response{valid ? "converted" : "invalid"};
+      });
+  std::optional<response> result;
+  auto probe = collect(
+      handler.invoke_async(std::make_shared<const request>(),
+                           stop_source.get_token(),
+                           "/items/42/true/1.5/doba"),
+      result);
+  probe.rethrow_if_failed();
+  DOBA_EXPECT(probe.done());
+  DOBA_EXPECT(result.has_value());
+  DOBA_EXPECT_EQUAL(result->value, "converted");
+}
+// +===========================================================================+
+// | [>] async invoke reports invalid parameters                 ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("async invoke reports invalid parameters") {
+  auto handler = make_router_handler_parametrized_async<
+      request, response, int>(
+      "/items/:id",
+      [](std::shared_ptr<const request>, std::stop_token,
+         int) -> task<response> {
+        co_return response{};
+      });
+  std::optional<response> result;
+  auto probe = collect(
+      handler.invoke_async(std::make_shared<const request>(),
+                           std::stop_token{}, "/items/value"),
+      result);
+  DOBA_EXPECT(probe.done());
+  bool threw = false;
+  try {
+    probe.rethrow_if_failed();
+  } catch (const std::runtime_error& error) {
+    threw = std::string_view(error.what()) ==
+            "The route parameters could not be parsed";
+  }
+  DOBA_EXPECT(threw);
+  DOBA_EXPECT(!result.has_value());
+}
+// +===========================================================================+
+// | [>] async invoke reports an incompatible path               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("async invoke reports an incompatible path") {
+  auto handler = make_router_handler_parametrized_async<
+      request, response, int>(
+      "/items/:id",
+      [](std::shared_ptr<const request>, std::stop_token,
+         int) -> task<response> {
+        co_return response{};
+      });
+  std::optional<response> result;
+  auto probe = collect(
+      handler.invoke_async(std::make_shared<const request>(),
+                           std::stop_token{}, "/other/42"),
+      result);
+  DOBA_EXPECT(probe.done());
+  bool threw = false;
+  try {
+    probe.rethrow_if_failed();
+  } catch (const std::runtime_error& error) {
+    threw = std::string_view(error.what()) ==
+            "The route parameters could not be extracted";
+  }
+  DOBA_EXPECT(threw);
+  DOBA_EXPECT(!result.has_value());
 }

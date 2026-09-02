@@ -78,6 +78,9 @@ add_subdirectory(
   ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/wildcard_routes
 )
 add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/asynchronous_routes
+)
+add_subdirectory(
   ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_information
 )
 add_subdirectory(
@@ -112,4 +115,7 @@ add_subdirectory(
 )
 add_subdirectory(
   ${CMAKE_CURRENT_LIST_DIR}/tests/unit
+)
+add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/tests/integration
 )

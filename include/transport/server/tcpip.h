@@ -30,6 +30,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <stop_token>
 #include <utility>
 
 #include "common/task.h"
@@ -45,7 +46,8 @@ struct types {
   template <typename RQty, typename RSty>
   using on_request_delegate =
       std::function<std::optional<common::task<RSty>>(
-          const std::shared_ptr<RQty>&, RSty&)>;
+          const std::shared_ptr<RQty>&, RSty&,
+          const std::stop_token&)>;
   template <typename RSty>
   using on_bad_request_delegate =
       std::function<void(int, std::string_view, RSty&)>;
@@ -118,6 +120,11 @@ class detached_operation {
   std::coroutine_handle<promise_type> coroutine_;
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] resume_on                                                   ( class ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 template <typename STty>
 class resume_on {
  public:

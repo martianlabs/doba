@@ -106,6 +106,16 @@ task<int> failed_value() {
   throw std::runtime_error("failure");
   co_return 0;
 }
+
+task<int> owned_value(std::shared_ptr<int> value) {
+  co_return *value;
+}
+
+task<int> add_one(task<int> value, int& resumed) {
+  const int result = co_await std::move(value);
+  resumed++;
+  co_return result + 1;
+}
 }  // namespace
 
 // +===========================================================================+
@@ -119,7 +129,7 @@ DOBA_TEST("task is movable but not copyable") {
   DOBA_EXPECT(true);
 }
 // +===========================================================================+
-// | [>] task starts lazily and resumes its continuation          ( test-case ) |
+// | [>] task starts lazily and resumes its continuation         ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("task starts lazily and resumes its continuation") {
   manual_event event;
@@ -136,7 +146,7 @@ DOBA_TEST("task starts lazily and resumes its continuation") {
   DOBA_EXPECT_EQUAL(*result, 42);
 }
 // +===========================================================================+
-// | [>] task returns move-only values                            ( test-case ) |
+// | [>] task returns move-only values                           ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("task returns move-only values") {
   std::optional<std::unique_ptr<int>> result;
@@ -146,7 +156,7 @@ DOBA_TEST("task returns move-only values") {
   DOBA_EXPECT_EQUAL(**result, 7);
 }
 // +===========================================================================+
-// | [>] task propagates unhandled exceptions                    ( test-case ) |
+// | [>] task propagates unhandled exceptions                   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("task propagates unhandled exceptions") {
   std::optional<int> result;
@@ -160,4 +170,52 @@ DOBA_TEST("task propagates unhandled exceptions") {
   }
   DOBA_EXPECT(threw);
   DOBA_EXPECT(!result.has_value());
+}
+// +===========================================================================+
+// | [>] task destroys a frame that was never started            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("task destroys a frame that was never started") {
+  auto owner = std::make_shared<int>(1);
+  std::weak_ptr<int> lifetime = owner;
+  {
+    auto value = owned_value(std::move(owner));
+    DOBA_EXPECT(!lifetime.expired());
+  }
+  DOBA_EXPECT(lifetime.expired());
+}
+// +===========================================================================+
+// | [>] task move assignment releases the previous frame        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("task move assignment releases the previous frame") {
+  auto first_owner = std::make_shared<int>(1);
+  auto second_owner = std::make_shared<int>(2);
+  std::weak_ptr<int> first_lifetime = first_owner;
+  std::weak_ptr<int> second_lifetime = second_owner;
+  {
+    auto first = owned_value(std::move(first_owner));
+    auto second = owned_value(std::move(second_owner));
+    first = std::move(second);
+    DOBA_EXPECT(first_lifetime.expired());
+    DOBA_EXPECT(!second_lifetime.expired());
+  }
+  DOBA_EXPECT(second_lifetime.expired());
+}
+// +===========================================================================+
+// | [>] nested tasks resume each continuation once              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("nested tasks resume each continuation once") {
+  manual_event event;
+  int started = 0;
+  int resumed = 0;
+  std::optional<int> result;
+  auto probe = collect(add_one(delayed_value(event, started), resumed),
+                       result);
+  DOBA_EXPECT_EQUAL(started, 1);
+  DOBA_EXPECT_EQUAL(resumed, 0);
+  DOBA_EXPECT(!probe.done());
+  event.resume();
+  probe.rethrow_if_failed();
+  DOBA_EXPECT(probe.done());
+  DOBA_EXPECT_EQUAL(resumed, 1);
+  DOBA_EXPECT_EQUAL(*result, 43);
 }

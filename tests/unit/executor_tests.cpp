@@ -144,3 +144,31 @@ DOBA_TEST("executor rejects work while stopped") {
   DOBA_EXPECT(!value.run());
   DOBA_EXPECT_EQUAL(resumed.load(), 2);
 }
+// +===========================================================================+
+// | [>] executor rejects null and completed continuations       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("executor rejects null and completed continuations") {
+  martianlabs::doba::transport::server::detail::executor value;
+  std::atomic<std::size_t> resumed = 0;
+  DOBA_EXPECT(!value.schedule({}));
+  auto completed = increment(resumed);
+  completed.get_coroutine().resume();
+  DOBA_EXPECT_EQUAL(resumed.load(), 1);
+  DOBA_EXPECT(!value.schedule(completed.get_coroutine()));
+  DOBA_EXPECT(!value.run());
+  DOBA_EXPECT_EQUAL(resumed.load(), 1);
+}
+// +===========================================================================+
+// | [>] executor start requires an empty queue                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("executor start requires an empty queue") {
+  martianlabs::doba::transport::server::detail::executor value;
+  std::atomic<std::size_t> resumed = 0;
+  auto pending = increment(resumed);
+  DOBA_EXPECT(value.schedule(pending.get_coroutine()));
+  value.stop();
+  DOBA_EXPECT(!value.start());
+  DOBA_EXPECT(!value.run());
+  DOBA_EXPECT_EQUAL(resumed.load(), 1);
+  DOBA_EXPECT(value.start());
+}

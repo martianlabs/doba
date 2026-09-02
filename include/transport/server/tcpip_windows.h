@@ -220,10 +220,11 @@ struct context
           std::function<void(context*)> on_retirement = {})
       : socket_{in_socket},
         on_disconnection_{on_disconnection},
-        on_retirement_{on_retirement} {}
+        on_retirement_{on_retirement},
+        stop_token_{stop_source_.get_token()} {}
   context(const context&) = delete;
   context(context&&) noexcept = delete;
-  ~context() = default;
+  ~context() { stop_source_.request_stop(); }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +=========================================================================+
@@ -243,6 +244,12 @@ struct context
   // +=========================================================================+
   protocol::deserialization_result<RQty> deserialize() {
     return decoder_.deserialize();
+  }
+  // +=========================================================================+
+  // | [>] get_stop_token                                           ( public ) |
+  // +=========================================================================+
+  const std::stop_token& get_stop_token() const noexcept {
+    return stop_token_;
   }
   // | [>] enqueue_response                                         ( public ) |
   // +=========================================================================+
@@ -305,6 +312,21 @@ struct context
     }
   }
   // +=========================================================================+
+  // | [>] fail_response                                            ( public ) |
+  // +=========================================================================+
+  bool fail_response(std::size_t id) {
+    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    if (socket_ == INVALID_SOCKET) return false;
+    for (auto itr = responses_.begin(); itr != responses_.end(); itr++) {
+      if (itr->response || itr->state != id) continue;
+      responses_.erase(itr, responses_.end());
+      closing_ = true;
+      arm_next_send_operation_();
+      return true;
+    }
+    return false;
+  }
+  // +=========================================================================+
   // | [>] check_sending_buffer_and_arm                             ( public ) |
   // +=========================================================================+
   void check_sending_buffer_and_arm(std::size_t bytes_sent) {
@@ -351,7 +373,9 @@ struct context
       retire_();
       return false;
     }
-    return !closing_;
+    if (!closing_) return true;
+    cleanup_resources_();
+    return false;
   }
   // +=========================================================================+
   // | [>] receive_failed                                           ( public ) |
@@ -359,6 +383,10 @@ struct context
   void receive_failed() {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
     receiving_ = false;
+    if (closing_) {
+      cleanup_resources_();
+      return;
+    }
     abort_();
   }
   // +=========================================================================+
@@ -523,6 +551,18 @@ struct context
     }
     sending_buffer_.clear();
     sending_offset_ = 0;
+    if (receiving_) {
+      if (!socket_shutdown_) {
+        if (::shutdown(socket_, SD_SEND) == SOCKET_ERROR ||
+            (!CancelIoEx((HANDLE)socket_, nullptr) &&
+             GetLastError() != ERROR_NOT_FOUND)) {
+          abort_();
+          return;
+        }
+        socket_shutdown_ = true;
+      }
+      return;
+    }
     close_socket_();
     retire_();
   }
@@ -579,12 +619,15 @@ struct context
   types::on_client_disconnected_delegate on_disconnection_;
   std::function<void(context*)> on_retirement_;
   SOCKET socket_{INVALID_SOCKET};
+  std::stop_source stop_source_;
+  std::stop_token stop_token_;
   mutable std::mutex sending_mutex_;
   bool closing_{false};
   bool connected_{false};
   bool disconnected_{false};
   bool receiving_{false};
   bool sending_{false};
+  bool socket_shutdown_{false};
   bool retired_{false};
   // [decoder] section!
   DEty<RQty, RSty> decoder_{};
@@ -1079,7 +1122,7 @@ class tcpip {
         // Let's accumulate the received bytes into the decoder!
         bytes_accumulated = ctx->accumulate(bytes_received);
         if (bytes_accumulated == 0 || bytes_accumulated > bytes_received) {
-          ctx->close();
+          enqueue_error_response(ctx, 0, "Invalid request content!");
           return;
         }
         // Let's try to deserialize some requests!
@@ -1117,7 +1160,8 @@ class tcpip {
               // Let's call user handler!
               RSty response;
               std::optional<common::task<RSty>> response_task =
-                  on_request_(result.request, response);
+                  on_request_(result.request, response,
+                              ctx->get_stop_token());
               if (response_task) {
                 std::size_t response_id = 0;
                 if (!ctx->reserve_response(response_id)) {
@@ -1208,8 +1252,12 @@ class tcpip {
       } else {
         try {
           auto serialized = response->serialize();
-          completed = ctx->complete_response(response_id,
-                                             std::move(serialized));
+          if (serialized) {
+            completed = ctx->complete_response(response_id,
+                                               std::move(serialized));
+          } else {
+            completed = ctx->fail_response(response_id);
+          }
         } catch (const std::exception& ex) {
           completed = complete_error_response(ctx, response_id, 7,
                                               ex.what());

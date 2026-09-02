@@ -18,9 +18,9 @@ It ships as **pure headers**. No build step, no binary to link, no dependencies 
 
 - **Built for the hot path.** Parsing is single-pass and works directly over the received data wherever lifetime permits it. No re-scans, no unnecessary intermediate representations.
 
-- **Direct dispatch.** Header dispatch uses raw function pointers and the routing path stays deliberately simple: no framework machinery, no virtual dispatch, and no per-request indirection for its own sake.
+- **Direct dispatch.** Header dispatch uses raw function pointers and the routing path stays deliberately simple: no framework machinery or virtual dispatch. Synchronous routes retain their direct hot path.
 
-- **Direct synchronous handlers.** Route handlers execute inline on the transport worker and complete the response before returning.
+- **Synchronous and coroutine handlers.** Synchronous route handlers execute inline on the transport worker and complete the response before returning. Asynchronous handlers receive a `std::stop_token`, return `common::task<response>`, and may suspend without changing the synchronous route contract.
 
 - **Memory where it earns its place.** Responses use a fixed buffer for the latency-sensitive write path. Requests retain only the storage they need because inbound data is variable-sized and may outlive parsing.
 
@@ -28,7 +28,7 @@ It ships as **pure headers**. No build step, no binary to link, no dependencies 
 
 - **Bodies scale beyond RAM.** Raw and chunked bodies use memory or file-backed storage according to configured limits, while preserving the original wire representation when required.
 
-- **Native event-driven I/O on both platforms.** Windows (IOCP) and Linux (epoll) are both fully implemented and selected at compile time by `transport/server/tcpip.h` — there is no reference or fallback backend. Each is written against the platform primitive directly, while both expose the same synchronous handler contract and preserve pipelined response order.
+- **Native event-driven I/O on both platforms.** Windows (IOCP) and Linux (epoll) are both fully implemented and selected at compile time by `transport/server/tcpip.h` — there is no reference or fallback backend. Each is written against the platform primitive directly, while both support immediate and deferred completions and preserve response order.
 
 - **Keep control.** Request, response, decoder, transport, and router remain template parameters, so the framework can be adapted without rewriting its core.
 
@@ -51,6 +51,15 @@ int main() {
   srv.start("8080");
 }
 ```
+
+The [asynchronous routes example](examples/http/v11/asynchronous_routes/main.cpp)
+shows synchronous and coroutine handlers in one server, including a real
+suspension resumed by an application executor.
+
+Asynchronous handlers take `std::shared_ptr<const request>` and
+`std::stop_token` before any route parameters. Awaited operations must observe
+the token and eventually resume after cancellation. The transport requests
+stop when the connection disappears or the server stops.
 
 ## Build
 
