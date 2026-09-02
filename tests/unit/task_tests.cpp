@@ -118,7 +118,7 @@ task<int> add_one(task<int> value, int& resumed) {
 }
 
 task<int> await_moved_source(task<int> value) {
-  task<int> moved(std::move(value));
+  [[maybe_unused]] task<int> moved(std::move(value));
   co_return co_await std::move(value);
 }
 }  // namespace
