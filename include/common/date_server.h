@@ -28,6 +28,8 @@
 #include <atomic>
 #include <chrono>
 #include <cstring>
+#include <memory>
+#include <string>
 #include <string_view>
 #include <thread>
 
@@ -46,8 +48,7 @@ class date_server {
   // | [>] CONSTRUCTORs                                            ( private ) |
   // +=========================================================================+
   date_server() {
-    write_date(slot_a_.text);
-    front_.store(&slot_a_, std::memory_order_release);
+    front_.store(make_slot(), std::memory_order_release);
   }
 
  public:
@@ -81,11 +82,8 @@ class date_server {
       return;
     }
     jthread_ = std::jthread([this] {
-      slot* next = &slot_b_;
       while (running_.load(std::memory_order_acquire)) {
-        write_date(next->text);
-        front_.store(next, std::memory_order_release);
-        next = next == &slot_a_ ? &slot_b_ : &slot_a_;
+        front_.store(make_slot(), std::memory_order_release);
         std::this_thread::sleep_for(std::chrono::seconds(1));
       }
     });
@@ -103,9 +101,9 @@ class date_server {
   // +=========================================================================+
   // | [>] current                                                  ( public ) |
   // +=========================================================================+
-  std::string_view current() const noexcept {
-    const slot* s = front_.load(std::memory_order_acquire);
-    return {s->text, kDateLen};
+  std::string current() const {
+    std::shared_ptr<const slot> value = front_.load(std::memory_order_acquire);
+    return {value->text, kDateLen};
   }
 
  private:
@@ -125,6 +123,14 @@ class date_server {
   struct slot {
     char text[kBufSize]{};
   };
+  // +=========================================================================+
+  // | [>] make_slot                                              ( private ) |
+  // +=========================================================================+
+  static std::shared_ptr<const slot> make_slot() {
+    auto value = std::make_shared<slot>();
+    write_date(value->text);
+    return value;
+  }
   // +=========================================================================+
   // | [>] two_digits                                              ( private ) |
   // +=========================================================================+
@@ -169,11 +175,9 @@ class date_server {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  std::atomic<const slot*> front_{&slot_a_};
+  std::atomic<std::shared_ptr<const slot>> front_;
   std::atomic<bool> running_{false};
   std::jthread jthread_;
-  slot slot_a_{};
-  slot slot_b_{};
 };
 }  // namespace martianlabs::doba::common
 

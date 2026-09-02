@@ -116,6 +116,11 @@ task<int> add_one(task<int> value, int& resumed) {
   resumed++;
   co_return result + 1;
 }
+
+task<int> await_moved_source(task<int> value) {
+  task<int> moved(std::move(value));
+  co_return co_await std::move(value);
+}
 }  // namespace
 
 // +===========================================================================+
@@ -199,6 +204,23 @@ DOBA_TEST("task move assignment releases the previous frame") {
     DOBA_EXPECT(!second_lifetime.expired());
   }
   DOBA_EXPECT(second_lifetime.expired());
+}
+// +===========================================================================+
+// | [>] awaiting a moved task reports an error                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("awaiting a moved task reports an error") {
+  std::optional<int> result;
+  auto probe = collect(await_moved_source(owned_value(std::make_shared<int>(7))),
+                       result);
+  DOBA_EXPECT(probe.done());
+  bool threw = false;
+  try {
+    probe.rethrow_if_failed();
+  } catch (const std::logic_error& error) {
+    threw = std::string_view(error.what()) == "cannot await an empty task";
+  }
+  DOBA_EXPECT(threw);
+  DOBA_EXPECT(!result.has_value());
 }
 // +===========================================================================+
 // | [>] nested tasks resume each continuation once              ( test-case ) |

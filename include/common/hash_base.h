@@ -25,7 +25,7 @@
 #ifndef martianlabs_doba_common_hash_base_h
 #define martianlabs_doba_common_hash_base_h
 
-#include <unordered_set>
+#include <cstddef>
 #include <string_view>
 
 namespace martianlabs::doba::common {

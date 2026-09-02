@@ -30,6 +30,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -324,15 +325,39 @@ class request {
           std::optional<std::string_view> port,
           std::optional<helpers::host_type> type,
           std::optional<std::string_view> target_authority_host,
-          std::optional<std::string_view> target_authority_port,
-          std::optional<helpers::host_type> target_authority_type,
-          bool wants_connection_close = false) {
+           std::optional<std::string_view> target_authority_port,
+           std::optional<helpers::host_type> target_authority_type,
+           bool wants_connection_close = false) {
+    auto offset = [full_buffer](std::string_view value) {
+      if (value.empty()) return std::size_t{0};
+      const char* first = full_buffer.data();
+      const char* last = first + full_buffer.size();
+      const char* value_last = value.data() + value.size();
+      if (std::less<const char*>{}(value.data(), first) ||
+          std::less<const char*>{}(last, value_last)) {
+        throw std::invalid_argument("request component is outside full buffer");
+      }
+      return static_cast<std::size_t>(value.data() - first);
+    };
+    offset(method);
+    offset(abs_path);
+    for (const auto& header : headers) {
+      offset(header.first);
+      offset(header.second);
+    }
+    for (const auto& parameter : query_parameters) {
+      offset(parameter.first);
+      offset(parameter.second);
+    }
+    if (host) offset(*host);
+    if (port) offset(*port);
+    if (target_authority_host) offset(*target_authority_host);
+    if (target_authority_port) offset(*target_authority_port);
     buffer_ = new char[full_buffer.size()];
     std::memcpy(buffer_, full_buffer.data(), full_buffer.size());
-    auto rebase = [this, full_buffer](std::string_view value) {
-      if (!value.data()) return std::string_view{};
-      return std::string_view(buffer_ + (value.data() - full_buffer.data()),
-                              value.size());
+    auto rebase = [this, offset](std::string_view value) {
+      if (value.empty()) return std::string_view{};
+      return std::string_view(buffer_ + offset(value), value.size());
     };
     method_ = rebase(method);
     abs_path_ = rebase(abs_path);

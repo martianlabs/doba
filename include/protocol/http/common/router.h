@@ -33,6 +33,7 @@
 #include <utility>
 #include <vector>
 
+#include "protocol/http/common/router_handler_signature.h"
 #include "protocol/http/common/router_handler_static.h"
 
 namespace martianlabs::doba::protocol::http {

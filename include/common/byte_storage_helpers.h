@@ -22,26 +22,20 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_protocol_http_router_handler_static_h
-#define martianlabs_doba_protocol_http_router_handler_static_h
+#ifndef martianlabs_doba_common_byte_storage_helpers_h
+#define martianlabs_doba_common_byte_storage_helpers_h
 
-#include <functional>
+#include "platform.h"
 
-#include "protocol/http/common/router_handler_signature.h"
-
-namespace martianlabs::doba::protocol::http {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] router_handler_static                                       ( using ) |
-// +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// |   RQty - request being used                                               |
-// |   RSty - response being used                                              |
+// | [>] PLATFORM-DEPENDENT-INCLUDEs                               ( section ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <typename RQty, typename RSty>
-using router_handler_static =
-    std::function<void(const RQty&, RSty&)>;
-}  // namespace martianlabs::doba::protocol::http
+#ifdef _WIN32
+#include "common/byte_storage_helpers_windows.h"
+#elif __linux__
+#include "common/byte_storage_helpers_linux.h"
+#endif
 
 #endif

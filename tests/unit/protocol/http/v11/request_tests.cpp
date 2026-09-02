@@ -237,3 +237,20 @@ DOBA_TEST("request views remain independent from the source buffer") {
   DOBA_EXPECT_EQUAL(value->get_query_parameter("name")->second, "value");
   DOBA_EXPECT_EQUAL(value->get_host(), "example.com");
 }
+// +===========================================================================+
+// | [>] factory rejects components outside the source buffer     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("factory rejects components outside the source buffer") {
+  const std::string source = "GET / HTTP/1.1\r\n\r\n";
+  const std::string foreign = "GET";
+  bool threw = false;
+  try {
+    request::from(source, foreign, part(source, "/"), target::kOriginForm, {},
+                  {}, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
+                  std::nullopt, std::nullopt);
+  } catch (const std::invalid_argument& error) {
+    threw = std::string_view(error.what()) ==
+            "request component is outside full buffer";
+  }
+  DOBA_EXPECT(threw);
+}

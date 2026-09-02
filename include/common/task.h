@@ -28,6 +28,7 @@
 #include <coroutine>
 #include <exception>
 #include <optional>
+#include <stdexcept>
 #include <utility>
 
 namespace martianlabs::doba::common {
@@ -97,7 +98,8 @@ class task {
     coroutine_ = std::exchange(in.coroutine_, nullptr);
     return *this;
   }
-  auto operator co_await() && noexcept {
+  auto operator co_await() && {
+    if (!coroutine_) throw std::logic_error("cannot await an empty task");
     return awaiter(std::exchange(coroutine_, nullptr));
   }
   void operator co_await() & = delete;
