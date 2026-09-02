@@ -106,7 +106,7 @@ class response {
   // +=========================================================================+
   [[nodiscard]] std::unique_ptr<protocol::serialization_result> serialize() {
     if (!has_date_header_) {
-      add_header(header_names::kDate, common::date_server::get().current());
+      add_date_header();
     }
     // RFC 9110 S8.6/S15.3.5/S15.4.5: 1xx, 204 and 304 responses must never
     // carry a message body, regardless of what a handler may have set via
@@ -614,6 +614,26 @@ class response {
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
   // +=========================================================================+
+  static constexpr std::string_view kDatePrefix = "Date: ";
+  static constexpr std::size_t kDateLength = 29;
+  static constexpr std::size_t kDateLineLength =
+      kDatePrefix.size() + kDateLength + 2;
+  // +=========================================================================+
+  // | [>] add_date_header                                         ( private ) |
+  // +=========================================================================+
+  void add_date_header() {
+    std::size_t space_left = bdy_beg_ - sln_len_ - hdr_len_;
+    if (kDateLineLength + 2 > space_left) {
+      throw std::out_of_range("not enough space to add header!");
+    }
+    char* out = &memory_[sln_len_ + hdr_len_];
+    std::memcpy(out, kDatePrefix.data(), kDatePrefix.size());
+    common::date_server::get().copy_current(out + kDatePrefix.size());
+    out[kDateLineLength - 2] = '\r';
+    out[kDateLineLength - 1] = '\n';
+    hdr_len_ += kDateLineLength;
+    has_date_header_ = true;
+  }
   // +=========================================================================+
   // | [>] reset_body                                              ( private ) |
   // +=========================================================================+
