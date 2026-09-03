@@ -9,14 +9,41 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      create_release:
+        description: Create the GitHub Release after all jobs pass
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 jobs:
-  ubuntu:
-    name: Ubuntu (GCC)
+  linux:
+    name: Ubuntu (${{ matrix.name }})
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: GCC Debug
+            compiler: g++
+            build_type: Debug
+            build_dir: out/build/gcc-debug
+          - name: GCC Release
+            compiler: g++
+            build_type: Release
+            build_dir: out/build/gcc-release
+          - name: Clang Debug
+            compiler: clang++
+            build_type: Debug
+            build_dir: out/build/clang-debug
+          - name: Clang Release
+            compiler: clang++
+            build_type: Release
+            build_dir: out/build/clang-release
 
     steps:
       - uses: actions/checkout@v6
@@ -25,19 +52,62 @@ jobs:
 
       - name: Configure
         run: >-
-          cmake -S . -B build -G Ninja
-          -DCMAKE_BUILD_TYPE=Debug
-          -DCMAKE_CXX_COMPILER=g++
+          cmake -S . -B ${{ matrix.build_dir }} -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
 
       - name: Build
-        run: cmake --build build
+        run: cmake --build ${{ matrix.build_dir }}
 
       - name: Test
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir ${{ matrix.build_dir }} --output-on-failure
+
+      - name: Install
+        if: matrix.name == 'GCC Release'
+        run: >-
+          cmake --install ${{ matrix.build_dir }}
+          --prefix out/install/gcc-release
+
+      - name: Configure package consumer (Debug)
+        if: matrix.name == 'GCC Release'
+        run: >-
+          cmake -S tests/package -B out/build/package-consumer-debug -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_COMPILER=g++
+          -DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/gcc-release
+
+      - name: Build package consumer (Debug)
+        if: matrix.name == 'GCC Release'
+        run: cmake --build out/build/package-consumer-debug
+
+      - name: Configure package consumer (Release)
+        if: matrix.name == 'GCC Release'
+        run: >-
+          cmake -S tests/package -B out/build/package-consumer-release -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER=g++
+          -DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/gcc-release
+
+      - name: Build package consumer (Release)
+        if: matrix.name == 'GCC Release'
+        run: cmake --build out/build/package-consumer-release
 
   windows:
-    name: Windows (MSVC)
+    name: Windows (MSVC ${{ matrix.build_type }})
     runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build_type: Debug
+            configure_preset: msvc-debug
+            build_preset: build-debug
+            build_dir: out/build/msvc-debug
+          - build_type: Release
+            configure_preset: msvc-release
+            build_preset: build-release
+            build_dir: out/build/msvc-release
 
     steps:
       - uses: actions/checkout@v6
@@ -49,10 +119,133 @@ jobs:
           arch: x64
 
       - name: Configure
-        run: cmake --preset msvc-debug
+        run: cmake --preset ${{ matrix.configure_preset }}
 
       - name: Build
-        run: cmake --build --preset build-debug
+        run: cmake --build --preset ${{ matrix.build_preset }}
 
       - name: Test
-        run: ctest --test-dir out/build/msvc-debug --output-on-failure
+        run: ctest --test-dir ${{ matrix.build_dir }} --output-on-failure
+
+  sanitizer:
+    name: Ubuntu (${{ matrix.name }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ASan
+            sanitizer: address
+            build_dir: out/build/asan
+          - name: UBSan
+            sanitizer: undefined
+            build_dir: out/build/ubsan
+          - name: TSan
+            sanitizer: thread
+            build_dir: out/build/tsan
+
+    env:
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      TSAN_OPTIONS: halt_on_error=1
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Configure
+        run: >-
+          cmake -S . -B ${{ matrix.build_dir }} -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_COMPILER=clang++
+          "-DCMAKE_CXX_FLAGS=-fsanitize=${{ matrix.sanitizer }} -fno-omit-frame-pointer"
+
+      - name: Build
+        run: cmake --build ${{ matrix.build_dir }}
+
+      - name: Test
+        run: ctest --test-dir ${{ matrix.build_dir }} --output-on-failure
+
+  cmake-minimum:
+    name: Ubuntu (CMake 3.20.6)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: "3.20.6"
+
+      - name: Configure
+        run: >-
+          cmake -S . -B out/build/cmake-3.20 -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_COMPILER=g++
+
+      - name: Build
+        run: cmake --build out/build/cmake-3.20
+
+      - name: Test
+        run: ctest --test-dir out/build/cmake-3.20 --output-on-failure
+
+  release:
+    name: Create GitHub Release
+    if: github.event_name == 'workflow_dispatch' && inputs.create_release
+    needs:
+      - linux
+      - windows
+      - sanitizer
+      - cmake-minimum
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate branch
+        run: test "$GITHUB_REF" = "refs/heads/main"
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: |
+          major="$(awk '$2 == "DOBA_VERSION_MAJOR" { print $3 }' include/version.h)"
+          minor="$(awk '$2 == "DOBA_VERSION_MINOR" { print $3 }' include/version.h)"
+          patch="$(awk '$2 == "DOBA_VERSION_PATCH" { print $3 }' include/version.h)"
+          version="${major}.${minor}.${patch}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version in include/version.h: $version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Validate existing tag
+        shell: bash
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          if git rev-parse --verify "refs/tags/$tag" >/dev/null 2>&1; then
+            target="$(git rev-list -n 1 "$tag")"
+            if [ "$target" != "$GITHUB_SHA" ]; then
+              echo "$tag points to $target instead of $GITHUB_SHA" >&2
+              exit 1
+            fi
+          fi
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "${{ steps.version.outputs.tag }}"
+          --target "$GITHUB_SHA"
+          --title "doba ${{ steps.version.outputs.version }}"
+          --generate-notes

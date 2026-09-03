@@ -63,16 +63,42 @@ stop when the connection disappears or the server stops.
 
 ## Build
 
-doba is header-only — consuming it is just an include path. To build the bundled example:
+doba is header-only. To build the bundled examples and tests:
 
 ```bash
-cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
-cmake --build build
+cmake -S . -B out/build/release -DCMAKE_BUILD_TYPE=Release
+cmake --build out/build/release
 ```
 
-Requires CMake ≥ 3.20 and a C++20 compiler. The MSVC/Ninja presets
+Requires CMake >= 3.20 and a C++20 compiler. The MSVC/Ninja presets
 (`msvc-debug`, `msvc-release`) provided in `CMakePresets.json` require
-CMake ≥ 3.25.
+CMake >= 3.25.
+
+To install doba into a dedicated prefix:
+
+```bash
+cmake --install out/build/release --prefix out/install/release
+```
+
+A CMake project can then consume the installed package with:
+
+```cmake
+find_package(
+  doba
+  CONFIG
+  REQUIRED
+)
+
+target_link_libraries(
+  application
+  PRIVATE
+  martianlabs::doba
+)
+```
+
+Set `CMAKE_PREFIX_PATH` to the installation prefix when it is not in a
+standard system location. The exported target provides the include directory,
+C++20 requirement, and system threading dependency.
 
 ## Current scope
 
