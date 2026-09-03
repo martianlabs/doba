@@ -152,10 +152,12 @@ class decoder {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  decoder() { buffer_ = new char[limits::kDecodingBufferSize]; }
+  decoder()
+      : buffer_(std::make_unique_for_overwrite<char[]>(
+            limits::kDecodingBufferSize)) {}
   decoder(const decoder&) = delete;
   decoder(decoder&&) noexcept = delete;
-  ~decoder() { delete[] buffer_; }
+  ~decoder() = default;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +=========================================================================+
@@ -168,7 +170,7 @@ class decoder {
     if (!buffer || !size) return 0;
     std::size_t space_left = limits::kDecodingBufferSize - off_;
     std::size_t bytes_to_copy = std::min(space_left, size);
-    std::memcpy(buffer_ + off_, buffer, bytes_to_copy);
+    std::memcpy(buffer_.get() + off_, buffer, bytes_to_copy);
     off_ += bytes_to_copy;
     return bytes_to_copy;
   }
@@ -194,7 +196,7 @@ class decoder {
   // +=========================================================================+
   deserialization_result<RQty> parse_core() {
     reset_decoding_attributes();
-    std::string_view sv(buffer_, off_);
+    std::string_view sv(buffer_.get(), off_);
     std::size_t i = 0;
     // +-----------------------------------------------------------------------+
     // | request-line = method SP request-target SP HTTP-version               |
@@ -470,14 +472,15 @@ class decoder {
     body::framer_state state = std::visit(
         [this](auto& arg) -> body::framer_state {
           std::span<const std::byte> byte_span{
-              reinterpret_cast<const std::byte*>(buffer_), off_};
+              reinterpret_cast<const std::byte*>(buffer_.get()), off_};
           return arg.write(byte_span, *body_buffer_);
         },
         *body_framer_);
     if (state.has_error || state.consumed > off_) {
       return deserialization_status::kInvalidSource;
     }
-    std::memmove(buffer_, buffer_ + state.consumed, off_ - state.consumed);
+    std::memmove(buffer_.get(), buffer_.get() + state.consumed,
+                 off_ - state.consumed);
     off_ -= state.consumed;
     if (!state.complete) return deserialization_status::kMoreBytesNeeded;
     return dispatch(body_buffer_->release());
@@ -517,7 +520,7 @@ class decoder {
       target_authority_type = context_.target_authority.type;
     }
     // Now that the request is fully validated, we can build the request object
-    std::string_view buffer_view(buffer_, bytes_used);
+    std::string_view buffer_view(buffer_.get(), bytes_used);
     request_getter_ = RQty::from(
         buffer_view, method_, absolute_path_, target_, headers_,
         query_parameters, host_host, host_port, host_type,
@@ -525,7 +528,8 @@ class decoder {
         context_.connection.chunked, context_.content_length,
         context_.connection.close_requested);
     // Let's adjust the buffer to remove the bytes that were used!
-    std::memmove(buffer_, buffer_ + bytes_used, off_ - bytes_used);
+    std::memmove(buffer_.get(), buffer_.get() + bytes_used,
+                 off_ - bytes_used);
     off_ -= bytes_used;
   }
   // +=========================================================================+
@@ -990,7 +994,7 @@ class decoder {
   // only the empty line that closes the (absent) header section is added here.
   static constexpr char k100_continue_interim_[] =
       "HTTP/1.1 100 Continue\r\n\r\n";
-  char* buffer_ = nullptr;
+  std::unique_ptr<char[]> buffer_;
   std::optional<common::writer> body_buffer_ = std::nullopt;
   std::optional<body_framer_t> body_framer_ = std::nullopt;
   std::size_t off_ = 0;

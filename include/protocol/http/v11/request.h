@@ -140,7 +140,7 @@ class request {
   // +=========================================================================+
   request(const request&) = delete;
   request(request&&) noexcept = delete;
-  ~request() { delete[] buffer_; }
+  ~request() = default;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +=========================================================================+
@@ -353,11 +353,11 @@ class request {
     if (port) offset(*port);
     if (target_authority_host) offset(*target_authority_host);
     if (target_authority_port) offset(*target_authority_port);
-    buffer_ = new char[full_buffer.size()];
-    std::memcpy(buffer_, full_buffer.data(), full_buffer.size());
+    buffer_ = std::make_unique_for_overwrite<char[]>(full_buffer.size());
+    std::memcpy(buffer_.get(), full_buffer.data(), full_buffer.size());
     auto rebase = [this, offset](std::string_view value) {
       if (value.empty()) return std::string_view{};
-      return std::string_view(buffer_ + offset(value), value.size());
+      return std::string_view(buffer_.get() + offset(value), value.size());
     };
     method_ = rebase(method);
     abs_path_ = rebase(abs_path);
@@ -384,7 +384,7 @@ class request {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  char* buffer_ = nullptr;            // buffer holding the serialized request
+  std::unique_ptr<char[]> buffer_;     // buffer holding the serialized request
   std::string_view method_;           // HTTP method (e.g., GET, POST, etc.)
   std::string_view abs_path_;         // absolute path from the request-target
   target target_ = target::kUnknown;  // request-target form

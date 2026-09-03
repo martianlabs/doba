@@ -753,24 +753,21 @@ Estos puntos no deben modernizarse por estetica ni bloquear automaticamente la
 primera release. Deben abordarse solo con tests y, cuando afecten al hot path,
 benchmarks. Se identifican como `DT1`-`DT5`.
 
-DT1. **Persisten buffers propietarios gestionados con `new[]`/`delete[]`.
-     (Media)**
+DT1. **Buffers propietarios bajo RAII explicito. (Media, completada)**
 
-    - **Situacion actual:** `decoder` y `request` poseen buffers `char*` y
-      gestionan manualmente construccion y destruccion. El modelo actual es
-      local y las clases no son copiables ni movibles, pero la propiedad no esta
-      expresada por el tipo.
-    - **Riesgo:** futuros retornos tempranos, cambios de construccion o soporte
-      de movimiento pueden introducir fugas o doble liberacion. El rebasing de
-      `string_view` en `request` depende ademas de offsets validos sobre el
-      buffer fuente.
-    - **Componentes afectados:** `protocol/http/v11/decoder.h` y
-      `protocol/http/v11/request.h`.
-    - **Verificacion requerida:** antes de cambiar ownership, cubrir
-      construccion fallida, lifetime de views, percent-decoding y dispatch con
-      bodies. Comparar coste y layout si se sustituye por RAII explicito.
-    - **Por que importa:** hacer visible la propiedad reduce el riesgo de
-      mantenimiento en la zona con mas views y offsets del parser.
+    - **Situacion actual:** `decoder` y `request` poseen sus buffers mediante
+      `std::unique_ptr<char[]>` y reservan con `make_unique_for_overwrite`, sin
+      inicializacion adicional. Sus destructores son los predeterminados.
+    - **Verificacion funcional:** las suites completas pasan con GCC y MSVC en
+      Debug y Release con warnings estrictos, y con GCC bajo ASan y UBSan. Los
+      tests cubren lifetime de views, percent-decoding, dispatch incremental y
+      bodies.
+    - **Layout:** con GCC 13, `request` conserva 200 bytes y `decoder` 712.
+    - **Rendimiento:** cinco muestras de `/pipeline`, una conexion y profundidad
+      32, dieron medianas de 377142 req/s antes y 376937 req/s despues (-0,05%,
+      dentro del ruido), con p50 de 75 us en ambos casos.
+    - **Resultado:** no quedan buffers propietarios gestionados mediante
+      `new[]`/`delete[]` en el codigo.
 
 DT2. **El hot path usa ownership compartido y `std::function` sin medicion
      publicada. (Media)**
