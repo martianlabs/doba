@@ -35,11 +35,11 @@ using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http;
 using namespace martianlabs::doba::protocol::http::v11;
 
-int main(int argc, char* argv[]) {
+int main() {
   server http_server;
   http_server.add_route(
       method_names::kGet, "/resources/:id/:detailed",
-      [](const request& req, response& res, std::uint64_t id, bool detailed) {
+      [](const request&, response& res, std::uint64_t id, bool detailed) {
         std::string body = "resource " + std::to_string(id);
         if (detailed) body += " with details";
         res.ok_200()

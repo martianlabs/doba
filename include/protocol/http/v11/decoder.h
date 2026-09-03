@@ -231,7 +231,7 @@ class decoder {
         target_ = target::kAuthorityForm;
         context_.has_target_authority = true;
         context_.target_authority = {authority_host, authority_port,
-                                     authority_type};
+                                     authority_type, {}};
       }
     } else if (method_ == method_names::kOptions && sv[i] == '*') {
       // Let's try to parse the request-target as asterisk-form, which is the
@@ -380,6 +380,7 @@ class decoder {
           if (body_expected) {
             body_buffer_ = common::writer(common::byte_storage_options{
                 .spill_threshold = 65535,  // 64 KiB!
+                .spill_dir = {},
             });
             if (context_.connection.chunked) {
               body_framer_ = body::framer_chunked();

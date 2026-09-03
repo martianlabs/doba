@@ -93,9 +93,10 @@ DOBA_TEST("absolute form normalizes scheme default ports") {
 DOBA_TEST("authority form requires exact port equality") {
   context ctx;
   ctx.has_host = true;
-  ctx.host = {.host = "example.com", .port = "443"};
+  ctx.host = {.host = "example.com", .port = "443", .scheme = {}};
   ctx.has_target_authority = true;
-  ctx.target_authority = {.host = "example.com", .port = "443"};
+  ctx.target_authority = {
+      .host = "example.com", .port = "443", .scheme = {}};
   DOBA_EXPECT_EQUAL(routing::apply(ctx), verdict::kAccept);
   ctx.target_authority.port = "";
   DOBA_EXPECT_EQUAL(routing::apply(ctx), verdict::kReject);

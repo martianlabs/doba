@@ -56,6 +56,33 @@ find_package(
   REQUIRED
 )
 
+option(
+  DOBA_ENABLE_STRICT_WARNINGS
+  "Enable strict warnings for doba targets"
+  OFF
+)
+if(
+  DOBA_ENABLE_STRICT_WARNINGS
+)
+  if(
+    MSVC
+  )
+    add_compile_options(
+      /W4
+      /WX
+    )
+  elseif(
+    CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang"
+  )
+    add_compile_options(
+      -Wall
+      -Wextra
+      -Wpedantic
+      -Werror
+    )
+  endif()
+endif()
+
 add_library(
   doba_headers
   INTERFACE

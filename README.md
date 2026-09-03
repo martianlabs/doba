@@ -8,7 +8,7 @@
 
 ## What is doba?
 
-doba is a **generic server framework** built around one hard rule: transport and protocol are kept strictly separate. The transport layer never sees a header, a method name, or a status line — only a universal channel-lifecycle signal. HTTP/1.1 is the first protocol plugged into that contract; swap it, extend it, or run several side by side.
+doba is a **generic server framework** built around one hard rule: transport and protocol are kept strictly separate. The transport layer never sees a header, a method name, or a status line - only a universal channel-lifecycle signal. HTTP/1.1 is the first protocol plugged into that contract; swap it, extend it, or run several side by side.
 
 It ships as **pure headers**. No build step, no binary to link, no dependencies to fetch. `#include` it, point a C++20 compiler at it, and you have a server.
 
@@ -24,11 +24,11 @@ It ships as **pure headers**. No build step, no binary to link, no dependencies 
 
 - **Memory where it earns its place.** Responses use a fixed buffer for the latency-sensitive write path. Requests retain only the storage they need because inbound data is variable-sized and may outlive parsing.
 
-- **HTTP/1.1 is serious, not incidental.** It is the first protocol implemented on doba’s generic foundation: strict request parsing, all request-target forms, header validation, framing rules, connection directives, and body handling.
+- **HTTP/1.1 is serious, not incidental.** It is the first protocol implemented on doba's generic foundation: strict request parsing, all request-target forms, header validation, framing rules, connection directives, and body handling.
 
 - **Bodies scale beyond RAM.** Raw and chunked bodies use memory or file-backed storage according to configured limits, while preserving the original wire representation when required.
 
-- **Native event-driven I/O on both platforms.** Windows (IOCP) and Linux (epoll) are both fully implemented and selected at compile time by `transport/server/tcpip.h` — there is no reference or fallback backend. Each is written against the platform primitive directly, while both support immediate and deferred completions and preserve response order.
+- **Native event-driven I/O on both platforms.** Windows (IOCP) and Linux (epoll) are both fully implemented and selected at compile time by `transport/server/tcpip.h` - there is no reference or fallback backend. Each is written against the platform primitive directly, while both support immediate and deferred completions and preserve response order.
 
 - **Keep control.** Request, response, decoder, transport, and router remain template parameters, so the framework can be adapted without rewriting its core.
 
@@ -75,6 +75,14 @@ Requires CMake >= 3.20 and a C++20 compiler. The MSVC/Ninja presets
 (`msvc-debug`, `msvc-release`) provided in `CMakePresets.json` require
 CMake >= 3.25.
 
+CI builds and tests Debug and Release with GCC, Clang, and MSVC. It also runs
+ASan, UBSan, TSan, and CMake 3.20.6. Strict warnings are enabled in CI and can
+be enabled locally with `-DDOBA_ENABLE_STRICT_WARNINGS=ON`.
+
+Component tests mirror the public include tree below `tests/unit`,
+`tests/integration`, and `tests/package`. Shared harness files remain at each
+suite root.
+
 To install doba into a dedicated prefix:
 
 ```bash
@@ -109,7 +117,7 @@ place, and both the Windows (IOCP) and Linux (epoll) transports are implemented
 and unified behind the same contract.
 
 Deliberately **out of scope for the first release**: TLS (deploy behind a
-terminator) and content compression — both are product decisions, the latter
+terminator) and content compression - both are product decisions, the latter
 because it would introduce an external dependency and break the "no
 dependencies" rule above.
 
@@ -119,8 +127,10 @@ resource-specific `OPTIONS` responses; outbound trailers; and effective
 connection limits. `OPTIONS *` is already implemented. Protocol upgrade
 handling is out of scope for the first release.
 Pending work is tracked in [docs/HANDOFF.md](docs/HANDOFF.md).
+Automated fuzzing and CI execution of the existing h1spec and Http11Probe
+adapters also remain pending.
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE).
+Apache License 2.0 - see [LICENSE](LICENSE).
 

@@ -35,11 +35,11 @@
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
-int main(int argc, char* argv[]) {
+int main() {
   server http_server;
   http_server.add_route(
       "GET", "/raw",
-      [](const request& req, response& res) {
+      [](const request&, response& res) {
         // A raw writer stores payload bytes without transfer-coding them.
         auto writer = body::body_writer::raw();
         if (!writer.write("first part\n") || !writer.write("second part\n")) {
@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
       });
   http_server.add_route(
       "GET", "/binary",
-      [](const request& req, response& res) {
+      [](const request&, response& res) {
         const std::array bytes{std::byte{0x00}, std::byte{0x01},
                                std::byte{0x02}, std::byte{0x03}};
         auto writer = body::body_writer::raw();
@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
       });
   http_server.add_route(
       "GET", "/chunked",
-      [](const request& req, response& res) {
+      [](const request&, response& res) {
         auto writer = body::body_writer::chunked();
         // Each write emits one chunk; end() emits the terminating chunk.
         if (!writer.write("first chunk\n") || !writer.write("second chunk\n") ||

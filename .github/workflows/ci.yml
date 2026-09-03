@@ -55,6 +55,7 @@ jobs:
           cmake -S . -B ${{ matrix.build_dir }} -G Ninja
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+          -DDOBA_ENABLE_STRICT_WARNINGS=ON
 
       - name: Build
         run: cmake --build ${{ matrix.build_dir }}
@@ -119,7 +120,9 @@ jobs:
           arch: x64
 
       - name: Configure
-        run: cmake --preset ${{ matrix.configure_preset }}
+        run: >-
+          cmake --preset ${{ matrix.configure_preset }}
+          -DDOBA_ENABLE_STRICT_WARNINGS=ON
 
       - name: Build
         run: cmake --build --preset ${{ matrix.build_preset }}
@@ -160,6 +163,7 @@ jobs:
           cmake -S . -B ${{ matrix.build_dir }} -G Ninja
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_CXX_COMPILER=clang++
+          -DDOBA_ENABLE_STRICT_WARNINGS=ON
           "-DCMAKE_CXX_FLAGS=-fsanitize=${{ matrix.sanitizer }} -fno-omit-frame-pointer"
 
       - name: Build
@@ -186,6 +190,7 @@ jobs:
           cmake -S . -B out/build/cmake-3.20 -G Ninja
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_CXX_COMPILER=g++
+          -DDOBA_ENABLE_STRICT_WARNINGS=ON
 
       - name: Build
         run: cmake --build out/build/cmake-3.20

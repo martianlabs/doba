@@ -30,12 +30,12 @@
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
-int main(int argc, char* argv[]) {
+int main() {
   server http_server;
   // Routes are selected by both the HTTP method and the absolute path.
   http_server.add_route(
       "GET", "/pipeline",
-      [](const request& req, response& res) {
+      [](const request&, response& res) {
         // Response mutators return response&, so they can be chained.
         res.ok_200()
             .add_header("Server", "doba.")
