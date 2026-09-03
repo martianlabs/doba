@@ -305,10 +305,10 @@ coincide con cualquier path que empiece por su prefijo, incluida la porción
 vacía: `/assets/*` coincide con `/assets/` y con `/assets/a/b`, pero no con
 `/assets`. La ruta wildcard no entrega esa porción como argumento: el handler
 puede consultarla en la request. La prioridad es estática, parametrizada y
-wildcard. Ante un método no permitido, el router añade `Allow` con los métodos
-aplicables, incluidos los wildcard, pero `server` lo descarta actualmente al
-establecer el status `405` (C6). Una wildcard contiene un único `*` como
-segmento final y su handler no admite parámetros tipados; cualquier otra
+wildcard. Ante un método no permitido, el servidor genera `405` y añade
+`Allow` con los métodos aplicables, incluidos los wildcard. Una wildcard
+contiene un único `*` como segmento final y su handler no admite parámetros
+tipados; cualquier otra
 combinación con `*` se rechaza durante `add_route`.
 
 ## Transporte
@@ -388,39 +388,6 @@ C1. **Ausencia total de timeouts. (A - diferido al final, ver Secuencia
       cierre y callbacks en Windows y Linux.
 
 ### Nivel 2 - Alto: incumplimiento en respuestas concretas
-
-C6. **Las respuestas `405` pierden el header obligatorio `Allow`. (B)**
-
-    - **Comportamiento observado:** una peticion con un metodo no registrado
-      sobre un recurso que si tiene rutas devuelve `405 Method Not Allowed`,
-      pero la respuesta enviada no contiene `Allow`. Se reprodujo sobre el
-      cable con rutas `GET` y `HEAD` y una peticion `POST` al mismo path.
-    - **Mecanismo de fallo:** `router::match` calcula los metodos aplicables y
-      ejecuta `res->set_header(header_names::kAllow, allow)` antes de devolver
-      `kMethodNotAllowed`. A continuacion, `server` llama a
-      `res->method_not_allowed_405()`. Ese helper entra en `response::sln`, que
-      reinicia `hdr_len_` y elimina todos los headers ya presentes, incluido
-      `Allow`, antes de crear el nuevo `Content-Length`.
-    - **Impacto:** la respuesta incumple RFC 9110 S15.5.6, que exige generar un
-      campo `Allow` en una respuesta `405`. El cliente recibe el status
-      correcto, pero no puede descubrir que metodos admite el recurso.
-    - **Componentes afectados:** `protocol/http/common/router.h`,
-      `protocol/http/v11/server.h` y el reinicio de estado realizado por
-      `protocol/http/v11/response.h`.
-    - **Correccion esperada:** mantener la responsabilidad del status en
-      `server`, pero conservar el valor calculado por el router y establecerlo
-      despues de `method_not_allowed_405()`. La solucion debe aceptar routers
-      personalizados que devuelvan `kMethodNotAllowed` sin haber creado
-      `Allow`, sin cambiar la API publica ni la semantica general de los
-      helpers de status.
-    - **Verificacion requerida:** comprobar sobre el cable que las rutas
-      estaticas, parametrizadas y wildcard producen `405` con todos los
-      metodos aplicables, sin duplicados y en el orden establecido por el
-      router. Cubrir tambien un router personalizado que no establezca `Allow`
-      y confirmar que `404` y las respuestas normales no cambian.
-    - **Por que importa:** `Allow` forma parte obligatoria de la semantica de
-      `405`; calcularlo internamente no aporta conformidad si se pierde antes
-      de serializar la respuesta.
 
 C7. **OBLIGATORIO PARA LA RELEASE - Los condicionales con fecha invalida
     rechazan la request completa. (B/M)**
@@ -526,9 +493,9 @@ C3. **Trailers de salida. (M)**
 
 C4. **`OPTIONS` sin respuesta automática para recursos concretos. (B)**
     `OPTIONS *` ya responde `200` en `server.h` y el router ya calcula los
-    metodos aplicables a un recurso para el caso `405`, aunque C6 impide que
-    ese valor llegue actualmente al cliente. Falta responder automaticamente
-    a un `OPTIONS` dirigido a un recurso concreto reutilizando ese calculo.
+    metodos aplicables a un recurso para el caso `405`. Falta responder
+    automaticamente a un `OPTIONS` dirigido a un recurso concreto reutilizando
+    ese calculo.
 
     - **Que implica:** detectar `OPTIONS` sobre una ruta existente, obtener los
       metodos aplicables con la misma prioridad de rutas que usa `405` y emitir
@@ -542,8 +509,7 @@ C4. **`OPTIONS` sin respuesta automática para recursos concretos. (B)**
       `OPTIONS` y `405`.
     - **Por que es necesario:** da al cliente una forma estandar de descubrir
       las capacidades del recurso y reutiliza informacion que Doba ya calcula.
-      Depende de C6 para que `Allow` sobreviva a la construccion de la
-      respuesta.
+      Reutiliza la lista `Allow` ya emitida en una respuesta `405`.
     - **Evidencia de cierre:** requests a rutas estaticas, parametrizadas y
       wildcard, con rutas solapadas y metodos no registrados; comprobar status,
       `Allow`, ausencia de ejecucion del handler y que `OPTIONS *` no cambia.
@@ -958,7 +924,7 @@ Los números son los identificadores de los ítems de este documento.
 |-------|----------------------------------|-------------------|------------|
 | 1     | Complejidad B, alto retorno      | (5, 6, 8)         | Completada |
 | 2     | Correctitud de framing           | (2)               | Completada |
-| 3     | Compliance localizado            | C7, C6, C5        | Pendiente  |
+| 3     | Compliance localizado            | C7, C5            | Pendiente  |
 | 4     | Despliegue autonomo              | (2)               | Completada |
 | 5     | Compliance funcional             | C2, C3, C4        | Objetivo beta |
 | 6     | Proteccion de conexiones         | C1                | Objetivo beta |
@@ -967,14 +933,14 @@ Los números son los identificadores de los ítems de este documento.
 | 9     | Preparacion de release           | RE1-RE4           | Gate beta  |
 | 10    | Deuda tecnica medida             | DT1-DT5           | Pendiente  |
 
-**Objetivo fijado para `0.1.0-beta.1`:** cerrar los siete ítems de compliance
+**Objetivo fijado para `0.1.0-beta.1`:** cerrar los seis ítems de compliance
 pendientes. El orden de ejecución busca primero corregir el incumplimiento
 visible y los riesgos operativos, y después completar la semántica HTTP.
 
 El orden es una dependencia de trabajo, no una afirmacion de criticidad pura:
-C7 abre la secuencia por ser un gate obligatorio de release; C6 es el siguiente
-cambio localizado y desbloquea C4; C5 y C1 comparten el diseño generico de
-admision, tiempo y cierre en ambos transportes; R1 debe reproducirse mientras
+C7 abre la secuencia por ser un gate obligatorio de release; C5 y C1 comparten
+el diseño generico de admision, tiempo y cierre en ambos transportes; R1 debe
+reproducirse mientras
 se valida ese ciclo de vida; C2 requiere congelar su contrato de aplicacion
 antes de editar la API; y C3 depende solo de que el framing chunked de salida
 conserve sus invariantes. Por criticidad operativa, C1 sigue siendo el riesgo
@@ -982,13 +948,12 @@ principal aunque no sea el primer cambio propuesto.
 
 1. Item C7 - Fechas condicionales invalidas rechazan la request (Nivel 2,
    obligatorio para la release).
-2. Item C6 - `405` pierde el header obligatorio `Allow` (Nivel 2).
-3. Ítem C5 - Sin límites de conexión efectivos (Nivel 4).
-4. Ítem C1 - Ausencia total de timeouts (Nivel 1).
-5. Ítem C4 - `OPTIONS` para recursos concretos (Nivel 3).
-6. Ítem C2 - Evaluación de condicionales: `304`, `412`, `206`, `416`
+2. Ítem C5 - Sin límites de conexión efectivos (Nivel 4).
+3. Ítem C1 - Ausencia total de timeouts (Nivel 1).
+4. Ítem C4 - `OPTIONS` para recursos concretos (Nivel 3).
+5. Ítem C2 - Evaluación de condicionales: `304`, `412`, `206`, `416`
    (Nivel 3).
-7. Ítem C3 - Trailers de salida (Nivel 3).
+6. Ítem C3 - Trailers de salida (Nivel 3).
 
 C1 y C5 deben diseñarse como políticas genéricas de transporte: admisión de
 conexiones y notificación de timeout. HTTP/1.1 decide la respuesta, incluido

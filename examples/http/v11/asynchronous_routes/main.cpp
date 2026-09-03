@@ -140,23 +140,13 @@ int main() {
   background_executor executor;
   server http_server;
   http_server.add_route(
-      method_names::kGet, "/health",
-      [](const request&, response& res) {
-        res.ok_200()
-            .add_header("Content-Type", "text/plain; charset=utf-8")
-            .set_body("ready");
-      });
-  http_server.add_route(
-      method_names::kGet, "/work/:id",
+      method_names::kGet, "/work",
       [&executor](std::shared_ptr<const request> req,
-                  std::stop_token stop_token,
-                  int id) -> task<response> {
+                  std::stop_token stop_token) -> task<response> {
         co_await executor.schedule(stop_token);
         if (stop_token.stop_requested()) co_return response();
         std::string body = "completed ";
         body += req->get_absolute_path();
-        body += " with id ";
-        body += std::to_string(id);
         response res;
         res.ok_200()
             .add_header("Content-Type", "text/plain; charset=utf-8")

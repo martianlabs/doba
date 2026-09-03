@@ -178,6 +178,21 @@ enable_testing(
 )
 
 add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/common/byte_storage
+)
+add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/common/writer
+)
+add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/common/reader
+)
+add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/common/console_logger
+)
+add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/common/date_server
+)
+add_subdirectory(
   ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/hello_world
 )
 add_subdirectory(
@@ -211,7 +226,10 @@ add_subdirectory(
   ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_body_binary
 )
 add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/response_status_and_headers
+  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/response_statuses
+)
+add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/response_headers
 )
 add_subdirectory(
   ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/response_body_values
@@ -223,7 +241,28 @@ add_subdirectory(
   ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/large_response_bodies
 )
 add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/standard_http_behaviors
+  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/head_requests
+)
+add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/automatic_not_found
+)
+add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/method_not_allowed
+)
+add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/options_asterisk
+)
+add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/expect_continue
+)
+add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/connection_close
+)
+add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/automatic_date
+)
+add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_rejections
 )
 add_subdirectory(
   ${CMAKE_CURRENT_LIST_DIR}/tests/unit

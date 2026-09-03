@@ -52,9 +52,10 @@ int main() {
 }
 ```
 
-The [asynchronous routes example](examples/http/v11/asynchronous_routes/main.cpp)
-shows synchronous and coroutine handlers in one server, including a real
-suspension resumed by an application executor.
+The [examples catalog](examples/README.md) groups standalone `common` APIs and
+HTTP/1.1 server behavior. The [asynchronous routes example](examples/http/v11/asynchronous_routes/main.cpp)
+shows a coroutine handler with a real suspension resumed by an application
+executor.
 
 Asynchronous handlers take `std::shared_ptr<const request>` and
 `std::stop_token` before any route parameters. Awaited operations must observe
@@ -114,9 +115,9 @@ dependencies" rule above.
 
 Still pending for compliance: connection timeouts; invalid-date handling and
 evaluation of conditional requests; `Range` evaluation; automatic
-resource-specific `OPTIONS` responses; `Allow` on `405 Method Not Allowed`;
-outbound trailers; and effective connection limits. `OPTIONS *` is already
-implemented. Protocol upgrade handling is out of scope for the first release.
+resource-specific `OPTIONS` responses; outbound trailers; and effective
+connection limits. `OPTIONS *` is already implemented. Protocol upgrade
+handling is out of scope for the first release.
 Pending work is tracked in [docs/HANDOFF.md](docs/HANDOFF.md).
 
 ## License
