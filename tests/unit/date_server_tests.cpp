@@ -24,6 +24,7 @@
 
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <string_view>
 #include <thread>
 #include <vector>
@@ -51,9 +52,11 @@ DOBA_TEST("concurrent serialization preserves HTTP dates") {
   date_server::get().start();
   std::atomic<bool> valid{true};
   std::vector<std::thread> threads;
+  const auto end = std::chrono::steady_clock::now() +
+                   std::chrono::milliseconds(1100);
   for (std::size_t thread = 0; thread < 4; ++thread) {
-    threads.emplace_back([&valid] {
-      for (std::size_t index = 0; index < 10000; ++index) {
+    threads.emplace_back([&valid, end] {
+      while (std::chrono::steady_clock::now() < end) {
         response value;
         auto serialized = value.serialize();
         const std::size_t begin = serialized->prefix.find("Date: ");
@@ -68,4 +71,5 @@ DOBA_TEST("concurrent serialization preserves HTTP dates") {
   for (auto& thread : threads) thread.join();
   date_server::get().stop();
   DOBA_EXPECT(valid.load());
+  DOBA_EXPECT(valid_http_date(date_server::get().current()));
 }

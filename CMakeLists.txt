@@ -2,23 +2,84 @@ cmake_minimum_required(
   VERSION 3.20
 )
 
+file(
+  STRINGS
+  "${CMAKE_CURRENT_LIST_DIR}/include/version.h"
+  DOBA_VERSION_DEFINITIONS
+  REGEX "^#define DOBA_VERSION_(MAJOR|MINOR|PATCH) [0-9]+$"
+)
+foreach(
+  DOBA_VERSION_PART
+  MAJOR
+  MINOR
+  PATCH
+)
+  string(
+    REGEX MATCH
+    "#define DOBA_VERSION_${DOBA_VERSION_PART} ([0-9]+)"
+    DOBA_VERSION_MATCH
+    "${DOBA_VERSION_DEFINITIONS}"
+  )
+  if(
+    NOT DOBA_VERSION_MATCH
+  )
+    message(
+      FATAL_ERROR
+      "Unable to read DOBA_VERSION_${DOBA_VERSION_PART} from include/version.h"
+    )
+  endif()
+  set(
+    DOBA_VERSION_${DOBA_VERSION_PART}
+    "${CMAKE_MATCH_1}"
+  )
+endforeach()
+set(
+  DOBA_VERSION
+  "${DOBA_VERSION_MAJOR}.${DOBA_VERSION_MINOR}.${DOBA_VERSION_PATCH}"
+)
+
 project(
   doba
+  VERSION "${DOBA_VERSION}"
   LANGUAGES CXX
 )
 
-set(
-  CMAKE_CXX_STANDARD
-  20
+include(
+  CMakePackageConfigHelpers
 )
-set(
-  CMAKE_CXX_STANDARD_REQUIRED
-  ON
+include(
+  GNUInstallDirs
+)
+
+find_package(
+  Threads
+  REQUIRED
 )
 
 add_library(
   doba_headers
   INTERFACE
+)
+add_library(
+  martianlabs::doba
+  ALIAS
+  doba_headers
+)
+set_target_properties(
+  doba_headers
+  PROPERTIES
+  EXPORT_NAME doba
+)
+
+target_compile_features(
+  doba_headers
+  INTERFACE
+  cxx_std_20
+)
+target_link_libraries(
+  doba_headers
+  INTERFACE
+  Threads::Threads
 )
 
 # Sources are UTF-8 without BOM. Tell MSVC to treat both the source and the
@@ -41,7 +102,8 @@ set(
 target_include_directories(
   doba_headers
   INTERFACE
-  "${DOBA_INCLUDE_DIR}"
+  "$<BUILD_INTERFACE:${DOBA_INCLUDE_DIR}>"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
 file(
@@ -54,12 +116,62 @@ file(
 target_sources(
   doba_headers
   INTERFACE
-  ${DOBA_HEADERS}
+  "$<BUILD_INTERFACE:${DOBA_HEADERS}>"
 )
 
 source_group(
   TREE "${DOBA_INCLUDE_DIR}"
   FILES ${DOBA_HEADERS}
+)
+
+install(
+  TARGETS doba_headers
+  EXPORT dobaTargets
+)
+install(
+  DIRECTORY "${DOBA_INCLUDE_DIR}/"
+  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
+
+set(
+  DOBA_INSTALL_CMAKEDIR
+  "${CMAKE_INSTALL_LIBDIR}/cmake/doba"
+)
+configure_package_config_file(
+  "${CMAKE_CURRENT_LIST_DIR}/cmake/dobaConfig.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/dobaConfig.cmake"
+  INSTALL_DESTINATION "${DOBA_INSTALL_CMAKEDIR}"
+)
+if(
+  PROJECT_VERSION_MAJOR EQUAL 0
+)
+  set(
+    DOBA_VERSION_COMPATIBILITY
+    SameMinorVersion
+  )
+else()
+  set(
+    DOBA_VERSION_COMPATIBILITY
+    SameMajorVersion
+  )
+endif()
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/dobaConfigVersion.cmake"
+  VERSION "${PROJECT_VERSION}"
+  COMPATIBILITY "${DOBA_VERSION_COMPATIBILITY}"
+  ARCH_INDEPENDENT
+)
+install(
+  EXPORT dobaTargets
+  FILE dobaTargets.cmake
+  NAMESPACE martianlabs::
+  DESTINATION "${DOBA_INSTALL_CMAKEDIR}"
+)
+install(
+  FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/dobaConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/dobaConfigVersion.cmake"
+  DESTINATION "${DOBA_INSTALL_CMAKEDIR}"
 )
 
 enable_testing(

@@ -134,8 +134,10 @@ class resume_on {
   bool await_suspend(std::coroutine_handle<> continuation) {
     auto scheduler = scheduler_.lock();
     if (!scheduler) return false;
-    scheduled_ = scheduler->schedule(continuation);
-    return scheduled_;
+    scheduled_ = true;
+    if (scheduler->schedule(continuation)) return true;
+    scheduled_ = false;
+    return false;
   }
   bool await_resume() const noexcept { return scheduled_; }
 

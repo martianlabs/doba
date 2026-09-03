@@ -25,15 +25,19 @@
 #ifndef martianlabs_doba_common_date_server_h
 #define martianlabs_doba_common_date_server_h
 
+#include <array>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <cstring>
-#include <memory>
-#include <string>
 #include <string_view>
 #include <thread>
 
 #include "date_server_helpers.h"
+
+namespace martianlabs::doba::protocol::http::v11 {
+class response;
+}
 
 namespace martianlabs::doba::common {
 // /////////////////////////////////////////////////////////////////////////////
@@ -47,7 +51,7 @@ class date_server {
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                            ( private ) |
   // +=========================================================================+
-  date_server() { front_.store(make_slot(), std::memory_order_release); }
+  date_server() { update(); }
 
  public:
   // +=========================================================================+
@@ -81,7 +85,7 @@ class date_server {
     }
     jthread_ = std::jthread([this] {
       while (running_.load(std::memory_order_acquire)) {
-        front_.store(make_slot(), std::memory_order_release);
+        update();
         std::this_thread::sleep_for(std::chrono::seconds(1));
       }
     });
@@ -99,38 +103,43 @@ class date_server {
   // +=========================================================================+
   // | [>] current                                                  ( public ) |
   // +=========================================================================+
-std::string_view current() const noexcept {
-  std::shared_ptr<const slot> value = front_.load(std::memory_order_acquire);
-  thread_local char buffer[kDateLen];
-  std::memcpy(buffer, value->text, kDateLen);
-  return {buffer, kDateLen};
-}
+  std::string_view current() const noexcept {
+    thread_local char buffer[kDateLen];
+    copy_current(buffer);
+    return {buffer, kDateLen};
+  }
 
  private:
+  friend class martianlabs::doba::protocol::http::v11::response;
+  // +=========================================================================+
+  // | [>] copy_current                                            ( private ) |
+  // +=========================================================================+
+  void copy_current(char* out) const noexcept {
+    std::uint64_t current[kWordCount];
+    for (;;) {
+      std::uint64_t sequence = sequence_.load(std::memory_order_seq_cst);
+      // Odd sequence values mark an update in progress.
+      if (sequence & 1) continue;
+      for (std::size_t index = 0; index < kWordCount; ++index) {
+        current[index] = words_[index].load(std::memory_order_seq_cst);
+      }
+      if (sequence_.load(std::memory_order_seq_cst) == sequence) break;
+    }
+    std::memcpy(out, current, kDateLen);
+  }
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
   // +=========================================================================+
   static constexpr std::size_t kDateLen = 29;
   static constexpr std::size_t kBufSize = kDateLen + 1;
+  static constexpr std::size_t kWordCount = 4;
+  static constexpr std::size_t kStorageSize =
+      kWordCount * sizeof(std::uint64_t);
   static constexpr const char* kWeekDays[] = {"Sun", "Mon", "Tue", "Wed",
                                               "Thu", "Fri", "Sat"};
   static constexpr const char* kMonths[] = {"Jan", "Feb", "Mar", "Apr",
                                             "May", "Jun", "Jul", "Aug",
                                             "Sep", "Oct", "Nov", "Dec"};
-  // +=========================================================================+
-  // | [>] TYPEs                                                   ( private ) |
-  // +=========================================================================+
-  struct slot {
-    char text[kBufSize]{};
-  };
-  // +=========================================================================+
-  // | [>] make_slot                                              ( private ) |
-  // +=========================================================================+
-  static std::shared_ptr<const slot> make_slot() {
-    auto value = std::make_shared<slot>();
-    write_date(value->text);
-    return value;
-  }
   // +=========================================================================+
   // | [>] two_digits                                              ( private ) |
   // +=========================================================================+
@@ -173,9 +182,24 @@ std::string_view current() const noexcept {
     out[29] = '\0';
   }
   // +=========================================================================+
+  // | [>] update                                                  ( private ) |
+  // +=========================================================================+
+  void update() noexcept {
+    alignas(std::uint64_t) char text[kStorageSize]{};
+    std::uint64_t next[kWordCount];
+    write_date(text);
+    std::memcpy(next, text, kStorageSize);
+    sequence_.fetch_add(1, std::memory_order_seq_cst);
+    for (std::size_t index = 0; index < kWordCount; ++index) {
+      words_[index].store(next[index], std::memory_order_seq_cst);
+    }
+    sequence_.fetch_add(1, std::memory_order_seq_cst);
+  }
+  // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  std::atomic<std::shared_ptr<const slot>> front_;
+  std::array<std::atomic<std::uint64_t>, kWordCount> words_{};
+  std::atomic<std::uint64_t> sequence_{0};
   std::atomic<bool> running_{false};
   std::jthread jthread_;
 };
