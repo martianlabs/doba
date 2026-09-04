@@ -367,42 +367,34 @@ No modificar la frontera protocolo/transporte para resolver una necesidad
 exclusiva de HTTP. Si un cambio requiere semantica HTTP, debe vivir en la capa
 HTTP o expresarse en el contrato generico ya existente.
 
-## Pendientes de compliance HTTP/1.1
+## Estado de compliance y hardening HTTP/1.1
 
-Estado verificado por lectura del arbol, no por ejecucion contra clientes
-reales. Complejidad: B = baja (localizada), M = media (varios archivos o API
-interna), A = alta (capa nueva, dependencia externa o cambio de contrato).
+C7 documenta una correccion RFC completada. C1 y C5 son protecciones
+operativas pendientes. C2-C4 son funcionalidad opcional o responsabilidad de
+la aplicacion, no gates de compliance del core.
 
-### Nivel 1 - Critico: incumplimiento visible en cada respuesta
+### Hardening operativo pendiente
 
-C1. **Ausencia total de timeouts. (A - diferido al final, ver Secuencia
-    recomendada)** Sin deadline de cabeceras, body, escritura ni idle de
-    keep-alive en ninguno de los dos backends. Exposicion directa a
-    slowloris y prerequisito para emitir `408`, cuyo status-line ya existe
-    pero nunca se usa.
+C1. **Timeout unico de inactividad. (M)** Ninguno de los dos backends cierra
+    una conexion que permanece abierta sin realizar progreso.
 
-    - **Que implica:** medir el progreso de cada conexion y aplicar limites
-      independientes al head, body, escritura pendiente e inactividad entre
-      requests. Al agotarse un plazo, el transporte debe dejar de leer y
-      cerrar de forma ordenada o abortar segun el estado del envio.
-    - **Frontera:** los relojes, la espera de I/O y el cierre pertenecen a cada
-      backend; la politica debe exponerse de forma generica. `v11::server`
-      decide el significado HTTP, incluido el `408` cuando aun sea posible
-      responder, sin que IOCP ni epoll interpreten HTTP.
-    - **Decision pendiente:** fijar los plazos iniciales, si son constantes o
-      una politica configurable, y que ocurre cuando ya hay respuestas
-      pipelined pendientes. La eleccion afecta API publica, consumo de timers y
-      semantica de cierre, por lo que requiere un plan propio aprobado.
-    - **Por que es necesario:** sin limites temporales una conexion puede
-      retener socket, contexto y buffers enviando bytes lentamente o dejando
-      bloqueada una escritura. Es el mayor riesgo operativo y puede retener
-      recursos sin limite.
-    - **Evidencia de cierre:** clientes locales que fragmenten el head y el
-      body, no lean una respuesta, mantengan un keep-alive idle y usen
-      pipelining. Los mismos casos deben comprobar plazo, bytes finales,
-      cierre y callbacks en Windows y Linux.
+    - **Alcance inicial:** un unico `inactivity_timeout`, configurado antes de
+      `start()`, aplicable durante lectura, keep-alive y escritura.
+    - **Progreso:** recibir o enviar bytes renueva el plazo. La duracion total
+      de la conexion o de una request no lo consume mientras exista progreso.
+    - **Vencimiento:** el transporte cierra la conexion de forma segura y
+      conserva las garantias actuales de lifetime, orden y callbacks. No tiene
+      que generar automaticamente una respuesta `408`.
+    - **Frontera:** la configuracion es comun y cada fichero de plataforma
+      implementa la espera y el cierre con sus primitivas de IOCP o epoll.
+    - **Fuera del alcance inicial:** plazos distintos para head, body,
+      escritura o keep-alive, duracion maxima absoluta, configuracion dinamica
+      y generacion automatica de `408`.
+    - **Evidencia de cierre:** tests con lectura fragmentada que progresa,
+      request parcial detenida, keep-alive inactivo y cliente que no lee. Deben
+      comprobar plazo, cierre y un unico callback en Windows y Linux.
 
-### Nivel 2 - Alto: incumplimiento en respuestas concretas
+### Correccion RFC completada
 
 C7. **Fechas condicionales invalidas. (B/M, completada)**
 
@@ -419,123 +411,53 @@ C7. **Fechas condicionales invalidas. (B/M, completada)**
       integracion sobre TCP/IP que confirma una respuesta `200` en lugar de
       `400`.
 
-### Nivel 3 - Medio: paridad funcional esperada
+### Funcionalidad opcional o responsabilidad de la aplicacion
 
-C2. **Condicionales sin evaluar. (M/A)** Los headers condicionales
-    estan modelados y validados sintacticamente, pero nadie los evalua: no se
-    genera `304`, `412`, `206` ni `416`. Es objetivo de `0.1.0-beta.1`.
-    C7 cubre por separado la admision incorrecta de valores invalidos y es un
-    gate obligatorio anterior a esta semantica funcional.
-    Antes de implementarlo hay que decidir la API minima con la que el handler
-    expone validadores y representacion, y evaluar `If-Match`,
-    `If-None-Match`, `If-Modified-Since`, `If-Unmodified-Since`, `Range` e
-    `If-Range` con las reglas de precedencia aplicables.
+C2. **Evaluacion automatica de condicionales y rangos. (Reclasificada)**
 
-    - **Que implica:** separar la comprobacion de precondiciones de la
-      ejecucion del handler y seleccionar la respuesta antes de enviar una
-      representacion: `304` para una lectura no modificada, `412` para una
-      precondicion falsa, `206` para un rango satisfacible y `416` para uno
-      fuera de representacion. Los headers de respuesta asociados deben ser
-      coherentes con el status y el cuerpo finalmente emitido.
-    - **Frontera:** el parser ya entrega los campos; conocer el ETag, la fecha
-      de modificacion, el tamano y la fuente de la representacion es
-      responsabilidad de la aplicacion. El transporte no participa. La capa
-      HTTP debe proporcionar el punto minimo para que el handler declare esos
-      datos sin duplicar o adivinar semantica de recurso.
-    - **Decision pendiente:** definir si los validadores se establecen en la
-      respuesta, se devuelven desde el handler o se exponen mediante otro
-      contrato. Tambien hay que fijar el alcance inicial de rangos multiples y
-      de `If-Range`; no deben anunciarse como soportados hasta tener una
-      semantica completa y pruebas de wire format.
-    - **Por que es necesario:** aceptar sintacticamente precondiciones y luego
-      ignorarlas puede entregar un cuerpo que el cliente ya posee, sobrescribir
-      un recurso que el cliente condiciono o servir un rango incorrecto. Es el
-      mayor bloque de semantica HTTP pendiente y el unico que probablemente
-      requiere una ampliacion deliberada de API publica.
-    - **Evidencia de cierre:** matriz de requests para cada combinacion de
-      metodo, ETag, fecha, rango y `If-Range`, verificando precedencia, status,
-      `Content-Range`, `Content-Length`, ETag/fecha, ausencia de body en `304`
-      y continuidad de la conexion.
+    - **Situacion actual:** Doba valida y conserva los campos condicionales para
+      que el handler pueda evaluarlos con los validadores de su recurso.
+    - **Responsabilidad:** cuando la aplicacion actua como origin server, el
+      handler debe aplicar las precondiciones de RFC 9110 S13.2. Doba no conoce
+      la representacion seleccionada y no debe inventar sus metadatos.
+    - **Range:** RFC 9110 S14 define los rangos como opcionales; ignorar `Range`
+      y responder como a un GET normal es valido.
+    - **Decision:** un helper automatico para `304`, `412`, `206` o `416` es
+      funcionalidad de conveniencia diferida. Si se solicita, necesitara un plan
+      propio y debera respetar la precedencia de RFC 9110 S13.2.2.
 
-C3. **Trailers de salida. (M)**
-    `response` no tiene API para emitirlos. Es objetivo de `0.1.0-beta.1`:
-    la API minima debe declarar nombres y valores, limitar los trailers a
-    respuestas chunked, emitir `Trailer` antes del body y serializar los
-    campos tras el chunk terminador. Debe rechazar los campos prohibidos en
-    trailers y no alterar las respuestas raw ni inline.
+C3. **Trailers de salida. (Reclasificada)**
 
-    - **Que implica:** reservar los nombres de trailer antes de serializar los
-      headers, aceptar sus valores mientras se escribe el body chunked y emitir
-      los field-lines solo despues del chunk de tamano cero. La serializacion
-      debe seguir funcionando cuando el body se entrega por `body_writer` y se
-      derrama a fichero.
-    - **Frontera:** es framing de respuesta HTTP/1.1; no requiere cambios en
-      request, router ni transporte, que ya drenan un `serialization_result`.
-      La respuesta debe conservar la propiedad de los bytes hasta terminar el
-      envio, igual que hoy conserva el writer de body.
-    - **Decision pendiente:** concretar la API minima para declarar nombres y
-      establecer valores, y decidir como se informa un intento invalido sobre
-      un body raw, inline o despues de iniciar la serializacion. No se deben
-      permitir campos cuyo significado depende de haberlos recibido antes del
-      body.
-    - **Por que es necesario:** sin trailers un usuario no puede emitir de
-      forma correcta metadatos que solo conoce al terminar un streaming, como
-      integridad o estadisticas. No afecta la seguridad basica, pero completa
-      la capacidad chunked ya expuesta por `body_writer`.
-    - **Evidencia de cierre:** capturar bytes en el cable para body chunked en
-      memoria y en fichero, con cero y varios trailers; confirmar `Trailer`,
-      chunk terminador, orden, rechazo de campos prohibidos y ausencia de
-      regresion en respuestas raw e inline.
+    - **Situacion actual:** `response` no expone una API para emitir trailers.
+    - **Decision:** es una capacidad opcional y queda en el backlog de producto,
+      no como requisito de compliance ni gate de release.
+    - **Condicion futura:** si se implementa, debe limitarse al framing que los
+      permite y respetar las restricciones de RFC 9110 S6.5.
 
-C4. **`OPTIONS` sin respuesta automatica para recursos concretos. (B)**
-    `OPTIONS *` ya responde `200` en `server.h` y el router ya calcula los
-    metodos aplicables a un recurso para el caso `405`. Falta responder
-    automaticamente a un `OPTIONS` dirigido a un recurso concreto reutilizando
-    ese calculo.
+C4. **`OPTIONS` automatico para recursos. (Reclasificada)**
 
-    - **Que implica:** detectar `OPTIONS` sobre una ruta existente, obtener los
-      metodos aplicables con la misma prioridad de rutas que usa `405` y emitir
-      una respuesta `200` con `Allow`, sin ejecutar el handler del recurso.
-    - **Frontera:** la resolucion pertenece al router y la respuesta al
-      servidor HTTP; no debe duplicarse el algoritmo de match ni introducirse
-      conocimiento de rutas en el transporte.
-    - **Decision pendiente:** decidir si `OPTIONS` se incluye en `Allow` cuando
-      lo resuelve automaticamente el servidor y como se comporta ante rutas no
-      encontradas, parametrizadas y wildcard. Esa regla debe ser unica para
-      `OPTIONS` y `405`.
-    - **Por que es necesario:** da al cliente una forma estandar de descubrir
-      las capacidades del recurso y reutiliza informacion que Doba ya calcula.
-      Reutiliza la lista `Allow` ya emitida en una respuesta `405`.
-    - **Evidencia de cierre:** requests a rutas estaticas, parametrizadas y
-      wildcard, con rutas solapadas y metodos no registrados; comprobar status,
-      `Allow`, ausencia de ejecucion del handler y que `OPTIONS *` no cambia.
+    - **Situacion actual:** `OPTIONS *` se genera automaticamente y la
+      aplicacion puede registrar handlers `OPTIONS` para recursos concretos.
+    - **Decision:** sintetizar esas respuestas desde el router es conveniencia
+      opcional, no un requisito del core ni un gate de release.
+    - **Condicion futura:** si se implementa, debe reutilizar el calculo de
+      `Allow` del `405` y conservar la prioridad actual de rutas.
 
-### Nivel 4 - Operabilidad y confianza
+### Proteccion operativa pendiente
 
-C5. **Sin limites de conexion efectivos. (B/M)**
-    `connections_` es solo un contador observacional: nada lo consulta para
-    dejar de aceptar.
+C5. **Maximo global de conexiones activas. (M)** `connections_` es solo un
+    contador observacional y no limita la admision.
 
-    - **Que implica:** establecer un maximo de conexiones activas y decidir la
-      admision antes de crear o registrar un contexto. Al alcanzar el limite,
-      el listener debe rechazar o cerrar de inmediato conexiones nuevas sin
-      alterar las existentes.
-    - **Frontera:** la admision se ejecuta en el transporte, donde ocurre
-      `accept`; la politica debe ser generica para no convertir IOCP ni epoll
-      en capas HTTP. El contador de `v11::server` puede informar la politica,
-      pero no basta si se incrementa despues de aceptar.
-    - **Decision pendiente:** fijar el limite inicial, su configurabilidad, el
-      comportamiento de rechazo y la distribucion entre workers Linux. Si la
-      politica necesita un callback nuevo, hay que preservar a los usuarios que
-      consumen el transporte directamente.
-    - **Por que es necesario:** sin una admision efectiva un atacante o una
-      carga accidental puede agotar descriptores, memoria y workers antes de
-      que los limites de request o los timeouts tengan oportunidad de actuar.
-      Es una proteccion operativa, no una regla de sintaxis HTTP.
-    - **Evidencia de cierre:** abrir mas conexiones que el maximo y comprobar
-      que las primeras siguen atendidas, las posteriores no reservan contexto
-      de larga vida, los contadores vuelven a cero y la politica es igual en
-      Windows y Linux.
+    - **Alcance inicial:** un unico limite global, configurado antes de
+      `start()`. Al alcanzarlo, cada backend cierra inmediatamente la nueva
+      conexion sin afectar a las ya admitidas.
+    - **Frontera:** la configuracion es comun y la reserva atomica se aplica en
+      IOCP y epoll antes de admitir el contexto como conexion activa.
+    - **Fuera del alcance inicial:** cuotas por worker, cambios dinamicos,
+      backpressure de aceptacion, callbacks nuevos y respuestas HTTP de rechazo.
+    - **Evidencia de cierre:** superar el maximo en Windows y Linux, comprobar
+      que las conexiones existentes siguen atendidas y que el cupo se recupera
+      exactamente una vez al cerrar cada conexion.
 
 ## Pendientes de robustez arquitectonica y operativa
 
@@ -739,9 +661,9 @@ RE4. **Gobierno y trazabilidad de release. (Media, parcial)**
 
 ## Deuda tecnica de C++ y mantenibilidad
 
-Estos puntos no deben modernizarse por estetica ni bloquear automaticamente la
-primera release. Deben abordarse solo con tests y, cuando afecten al hot path,
-benchmarks. Se identifican como `DT1`-`DT5`.
+DT1 se conserva como antecedente completado. Los pendientes activos son DT4 y
+DT5; no deben bloquear automaticamente la primera release y requieren un plan
+propio antes de abordarse.
 
 DT1. **Buffers propietarios bajo RAII explicito. (Media, completada)**
 
@@ -758,39 +680,6 @@ DT1. **Buffers propietarios bajo RAII explicito. (Media, completada)**
       dentro del ruido), con p50 de 75 us en ambos casos.
     - **Resultado:** no quedan buffers propietarios gestionados mediante
       `new[]`/`delete[]` en el codigo.
-
-DT2. **El hot path usa ownership compartido y `std::function` sin medicion
-     publicada. (Media)**
-
-    - **Situacion actual:** las requests y los contextos de Windows usan
-      `shared_ptr`; los callbacks de rutas usan `std::function`.
-    - **Riesgo:** conteo atomico, type erasure y asignaciones pueden afectar
-      latencia y throughput, pero reemplazarlos sin datos podria aumentar la
-      complejidad o romper los contratos de lifetime existentes.
-    - **Componentes afectados:** contrato de transporte, router, handlers,
-      request getter y ownership de contextos.
-    - **Verificacion requerida:** medir primero con QA4, identificar
-      asignaciones y contencion reales y cambiar solo puntos con impacto
-      demostrado.
-    - **Por que importa:** la afirmacion de alto rendimiento debe apoyarse en
-      medidas; modernizar o micro-optimizar sin ellas seria especulativo.
-
-DT3. **Headers publicos muy grandes exponen detalles de implementacion y
-     aumentan el coste de compilacion. (Media)**
-
-    - **Situacion actual:** `decoder.h` ronda mil lineas y cada backend de
-      transporte supera esa escala. Clases auxiliares, constantes y estructuras
-      de plataforma viven en namespaces accesibles desde headers publicos.
-    - **Riesgo:** mayor tiempo de compilacion, mas superficie accidental para el
-      consumidor y cambios internos que fuerzan recompilacion amplia. Separar
-      codigo en una libreria compilada chocaria con la decision header-only.
-    - **Componentes afectados:** decoder, transportes, `platform.h` y estructura
-      publica de `include/`.
-    - **Verificacion requerida:** medir tiempos de compilacion y superficie de
-      includes; evaluar namespaces `detail`, headers internos o particiones que
-      preserven el modelo header-only y la API.
-    - **Por que importa:** la facilidad de consumo incluye tambien coste de
-      compilacion y estabilidad de la superficie publica.
 
 DT4. **`platform.h` concentra includes, macros y configuracion global.
      (Media)**
@@ -886,42 +775,33 @@ Los numeros son los identificadores de los items de este documento.
 |-------|----------------------------------|-------------------|------------|
 | 1     | Complejidad B, alto retorno      | (5, 6, 8)         | Completada |
 | 2     | Correctitud de framing           | (2)               | Completada |
-| 3     | Compliance localizado            | C7, C5            | C5 pendiente |
+| 3     | Correccion RFC                    | C7                | Completada |
 | 4     | Despliegue autonomo              | (2)               | Completada |
-| 5     | Compliance funcional             | C2, C3, C4        | Objetivo beta |
-| 6     | Proteccion de conexiones         | C1                | Objetivo beta |
+| 5     | Funcionalidad opcional           | C2, C3, C4        | Diferida |
+| 6     | Hardening operativo              | C1, C5            | Objetivo beta |
 | 7     | Producto y conveniencia          | P1, P2, P3, P4, P5 | Pendiente |
 | 8     | QA integral                      | QA1, QA2           | Completada |
 | 9     | Preparacion de release           | RE1-RE4           | RE4 parcial |
-| 10    | Deuda tecnica medida             | DT2-DT5           | Pendiente  |
+| 10    | Deuda tecnica medida             | DT4, DT5          | Pendiente  |
 
-**Objetivo fijado para `0.1.0-beta.1`:** cerrar los cinco items de compliance
-pendientes. C7 ya esta completado. El orden de ejecucion busca primero los
-riesgos operativos y despues completar la semantica HTTP.
+**Objetivo fijado para `0.1.0-beta.1`:** completar las dos protecciones
+operativas acotadas C1 y C5. C7 ya esta completado. C2-C4 estan diferidos y no
+son gates de compliance ni de release.
 
-El orden es una dependencia de trabajo, no una afirmacion de criticidad pura:
-C5 y C1 comparten el diseno generico de admision, tiempo y cierre en ambos
-transportes; C2 requiere congelar su contrato de aplicacion antes de editar la
-API; y C3 depende solo de que el framing chunked de salida conserve sus
-invariantes. Por criticidad operativa, C1 sigue siendo el riesgo principal.
+1. Item C1 - Timeout unico de inactividad.
+2. Item C5 - Maximo global de conexiones activas.
 
-1. Item C5 - Sin limites de conexion efectivos (Nivel 4).
-2. Item C1 - Ausencia total de timeouts (Nivel 1).
-3. Item C4 - `OPTIONS` para recursos concretos (Nivel 3).
-4. Item C2 - Evaluacion de condicionales: `304`, `412`, `206`, `416`
-   (Nivel 3).
-5. Item C3 - Trailers de salida (Nivel 3).
+C1 y C5 comparten configuracion generica y ejecucion especifica en IOCP y
+epoll. Cada item necesita su propio plan aprobado y pruebas equivalentes en
+Windows y Linux. C1 no incluye inicialmente respuestas `408` ni plazos por
+fase; C5 no incluye cuotas por worker ni configuracion dinamica.
 
-C1 y C5 deben disenarse como politicas genericas de transporte: admision de
-conexiones y notificacion de timeout. HTTP/1.1 decide la respuesta, incluido
-el `408` cuando corresponda, sin filtrar semantica HTTP a IOCP ni epoll.
-C2 puede requerir una ampliacion deliberada de la API publica; su diseno y
-plan de implementacion necesitan aprobacion explicita antes de modificarla.
+La aplicacion sigue siendo responsable de evaluar las precondiciones cuando
+actua como origin server. Doba no declara soporte automatico de condicionales,
+rangos, `OPTIONS` de recurso ni trailers de salida.
 
-La salida de `0.1.0-beta.1` exige ademas ejecutar una bateria wire-level para
-C1-C7, pipelining y cierres en IOCP y epoll, y completar RE1-RE4. La beta
-podra declarar soporte de condicionales, rangos y trailers de salida solo tras
-esas verificaciones.
+La salida de `0.1.0-beta.1` exige ademas verificar C1 y C5 sobre sockets reales
+y completar RE1-RE4.
 
 TLS, compresion/GZIP, streaming HTTP/SSE, la barrera de upgrade y WebSockets
 no aparecen en ninguna tanda ni en la numeracion de items: ver "Fuera del

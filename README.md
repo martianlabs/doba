@@ -125,11 +125,13 @@ terminator) and content compression - both are product decisions, the latter
 because it would introduce an external dependency and break the "no
 dependencies" rule above.
 
-Still pending for compliance: connection timeouts; evaluation of conditional
-requests; `Range` evaluation; automatic resource-specific `OPTIONS` responses;
-outbound trailers; and effective connection limits. `OPTIONS *` is already
-implemented. Protocol upgrade handling is out of scope for the first release.
-Pending work is tracked in [docs/HANDOFF.md](docs/HANDOFF.md).
+The remaining operational hardening planned for the first release is a
+configurable inactivity timeout and an effective global connection limit.
+Handlers are responsible for resource semantics such as precondition
+evaluation. Automatic conditional and range handling, resource-specific
+`OPTIONS`, and outbound trailers are optional product features; `OPTIONS *` is
+already implemented. Protocol upgrade handling is out of scope for the first
+release. Pending work is tracked in [docs/HANDOFF.md](docs/HANDOFF.md).
 Automated fuzzing and CI execution of the existing h1spec and Http11Probe
 adapters are deferred and are not part of the current hardening plan.
 
