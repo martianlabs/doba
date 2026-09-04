@@ -112,3 +112,25 @@ DOBA_TEST("truncated spill files fail the reader") {
   DOBA_EXPECT(source.failed());
   DOBA_EXPECT(!source.eof());
 }
+// +===========================================================================+
+// | [>] finishing seals memory and spilled storage              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("finishing seals memory and spilled storage") {
+  spill_directory directory;
+  byte_storage_options cases[] = {
+      {},
+      {.spill_threshold = 1, .spill_dir = directory.path().string()},
+  };
+  for (auto& options : cases) {
+    byte_storage storage(std::move(options));
+    DOBA_EXPECT(storage.write("body", 4));
+    storage.finish(4);
+    DOBA_EXPECT(!storage.write("x", 1));
+    DOBA_EXPECT(!storage.write(nullptr, 0));
+    storage.finish(1);
+    DOBA_EXPECT_EQUAL(storage.total_size().value(), 4);
+    std::array<char, 4> output{};
+    DOBA_EXPECT_EQUAL(storage.read(output.data(), output.size()), 4);
+    DOBA_EXPECT_EQUAL(std::string_view(output.data(), output.size()), "body");
+  }
+}

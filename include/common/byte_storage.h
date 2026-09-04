@@ -92,8 +92,8 @@ class byte_storage {
   // | [>] write                                                    ( public ) |
   // +=========================================================================+
   bool write(const char* ptr, std::size_t len) {
+    if (finished_ || io_error_) return false;
     if (len == 0) return true;
-    if (io_error_) return false;
     if (!spilled_ && spill_threshold_ > 0 &&
         mem_.size() + len > spill_threshold_ && !spill_to_file()) {
       return false;
@@ -113,7 +113,9 @@ class byte_storage {
   // | [>] finish                                                   ( public ) |
   // +=========================================================================+
   void finish(std::size_t stored) noexcept {
+    if (finished_) return;
     total_bytes_ = stored;
+    finished_ = true;
     if (spilled_) {
       if (!file_.flush()) {
         // An I/O error occurred while flushing the file!
@@ -121,7 +123,6 @@ class byte_storage {
         return;
       }
     }
-    finished_ = true;
   }
   // +=========================================================================+
   // | [>] fetch                                                    ( public ) |

@@ -231,6 +231,10 @@ leer el storage, obtener bytes individuales y vaciarlo a un `std::string` con
 bytes y exige que el almacenamiento del llamador sobreviva al reader y a todos
 los objetos a los que se mueva.
 
+`finish()` sella tanto `common::writer` como `common::byte_storage`: las
+escrituras posteriores fallan y repetir `finish()` no altera el tamano final.
+El contrato es identico para almacenamiento en memoria y para spill a fichero.
+
 ### Body de salida
 
 `body::body_writer` (`body/writer.h`) es la fachada del cuerpo de respuesta.
@@ -246,6 +250,9 @@ el llamador. En ambos casos `apply_body_framing()` emite
 `Transfer-Encoding: chunked` para writers chunked o un `Content-Length`
 derivado de `bytes_written()` para los raw. `serialize()` consume el writer y
 lo entrega como `serialization_result::source`.
+
+`serialize()` nunca entrega contenido para respuestas 1xx, 204, 205 o 304.
+Una respuesta 205 elimina `Transfer-Encoding` y fuerza `Content-Length: 0`.
 
 ## Objetos HTTP publicos
 
@@ -293,6 +300,10 @@ Sus valores por defecto son `request`, `response`, `decoder`,
 y `start` recibe el puerto.
 Origin-form y absolute-form se enrutan; authority-form responde 501 y
 asterisk-form responde 200.
+
+Los servidores comparten el singleton `common::date_server`. Su ciclo de vida
+cuenta propietarios bajo mutex y mantiene el servicio activo hasta el ultimo
+`stop()`. La lectura de la fecha publicada permanece lock-free.
 
 El router registra rutas estaticas, parametrizadas y wildcard mediante
 `add_route(method, path, lambda)`. El patron parametrizado usa segmentos
@@ -349,8 +360,8 @@ callbacks del transporte no pueden cambiar mientras `start()` o `stop()` estan
 activos.
 
 Lo que sigue pendiente en el transporte no es el backend en si, sino politicas
-transversales aun no implementadas en ninguno de los dos: timeouts (item 1) y
-limites de conexion efectivos (item 15).
+transversales aun no implementadas en ninguno de los dos: timeouts (C1) y
+limites de conexion efectivos (C5).
 
 No modificar la frontera protocolo/transporte para resolver una necesidad
 exclusiva de HTTP. Si un cambio requiere semantica HTTP, debe vivir en la capa
@@ -393,39 +404,20 @@ C1. **Ausencia total de timeouts. (A - diferido al final, ver Secuencia
 
 ### Nivel 2 - Alto: incumplimiento en respuestas concretas
 
-C7. **OBLIGATORIO PARA LA RELEASE - Los condicionales con fecha invalida
-    rechazan la request completa. (B/M)**
+C7. **Fechas condicionales invalidas. (B/M, completada)**
 
-    - **Comportamiento confirmado:** Http11Probe `CAP-IMS-INVALID` envia
-      `If-Modified-Since: not-a-date`. Doba responde `400 Bad Request` y cierra
-      la conexion; la peticion deberia continuar como si el campo no estuviera
-      presente.
-    - **Incumplimiento:** RFC 9110 S13.1.3 exige ignorar
-      `If-Modified-Since` cuando su valor no es un `HTTP-date` valido. RFC 9110
-      S13.1.4 establece la misma regla para un `If-Unmodified-Since` invalido.
-    - **Mecanismo de fallo:** `if_modified_since::check()` e
-      `if_unmodified_since::check()` delegan en `date::check()`. El dispatcher
-      generico de headers comprobados convierte cualquier `false` en
-      `verdict::kReject`, por lo que una semantica especifica de "ignorar el
-      campo" termina rechazando toda la request antes de que la aplicacion
-      pueda procesarla.
-    - **Componentes afectados:**
-      `protocol/http/common/headers/if_modified_since.h`,
-      `protocol/http/common/headers/if_unmodified_since.h` y
-      `protocol/http/v11/decoder.h`. Debe auditarse tambien `If-Range`, porque
-      tiene reglas contextuales de ignorado y usa el mismo dispatcher.
-    - **Correccion esperada:** conservar la validacion ABNF de los checkers,
-      pero no convertir un valor invalido de estos campos en rechazo global.
-      Deben respetarse ademas la precedencia de `If-None-Match` sobre
-      `If-Modified-Since` y la de `If-Match` sobre `If-Unmodified-Since`.
-    - **Verificacion requerida:** pruebas externas enfocadas con fechas
-      invalidas, listas de fechas y combinaciones de precedencia; confirmar
-      respuesta normal, continuidad de la conexion y ausencia de regresiones
-      para fechas validas. Repetir Http11Probe y comprobar que
-      `CAP-IMS-INVALID` pasa.
-    - **Gate de release:** este defecto debe estar corregido y verificado antes
-      de publicar la release. No puede cerrarse suprimiendo, desactivando o
-      reclasificando la prueba.
+    - **Causa confirmada:** el dispatcher generico convertia el fallo del
+      checker estricto de fecha en rechazo de toda la request.
+    - **Resolucion:** el decoder acepta y conserva el field-value de
+      `If-Modified-Since` e `If-Unmodified-Since` aunque la fecha sea invalida,
+      como exigen RFC 9110 S13.1.3 y S13.1.4. La sintaxis estructural general
+      del field-value y los checkers de fecha independientes siguen siendo
+      estrictos.
+    - **Alcance:** no se ha implementado evaluacion de precondiciones ni se ha
+      cambiado `If-Range`.
+    - **Verificacion:** tests unitarios de decoder para ambos campos y test de
+      integracion sobre TCP/IP que confirma una respuesta `200` en lugar de
+      `400`.
 
 ### Nivel 3 - Medio: paridad funcional esperada
 
@@ -547,24 +539,29 @@ C5. **Sin limites de conexion efectivos. (B/M)**
 
 ## Pendientes de robustez arquitectonica y operativa
 
-R1. **Un fallo durante `server::start` no revierte explicitamente los
-    subsistemas ya iniciados. (Media, pendiente de reproduccion)**
+R1. **Rollback de `server::start`. (Media, completada)**
 
-    - **Comportamiento observado:** `server::start` inicia `date_server` y el
-      transporte antes de marcarse como iniciado. El transporte limpia su
-      estado si falla, pero la capa `server` no captura la excepcion para
-      detener `date_server` ni para restaurar explicitamente toda la secuencia.
-    - **Impacto:** un bind fallido, puerto invalido o error de inicializacion
-      puede dejar hilos auxiliares activos hasta un `stop()` posterior o la
-      destruccion del servidor. Tambien debe verificarse que un segundo
-      `start()` sea seguro despues del fallo.
-    - **Componentes afectados:** `protocol/http/v11/server.h`,
-      `common/date_server.h` y ambos transportes.
-    - **Verificacion requerida:** forzar cada fallo de inicializacion posible,
-      comprobar que no quedan hilos o handles activos y volver a iniciar la
-      misma instancia correctamente.
-    - **Por que importa:** el arranque debe ofrecer una garantia clara de todo
-      o nada; es esencial para reinicios, pruebas y gestores de servicio.
+    - **Causa confirmada:** una excepcion de `transport_.start()` dejaba una
+      adquisicion de `date_server` sin liberar.
+    - **Resolucion:** la capa HTTP libera solo su adquisicion fallida y relanza
+      la excepcion original. `stop()` no libera recursos de una instancia que
+      no llego a arrancar.
+    - **Verificacion:** el transporte fake fuerza la excepcion y comprueba que
+      el servicio de fecha queda detenido al liberar el propietario restante.
+
+R2. **Limites efectivos de request. (Alta, diferida)**
+
+    - **Situacion confirmada:** las politicas de `max_content_length`,
+      `max_forwarding_hops`, `max_transfer_codings`, `max_uri_length` y
+      `max_header_section_size` usan cero como ilimitado y el `server`
+      predeterminado no expone una via para configurarlas.
+    - **Distincion:** este punto limita recursos por request y no es C5, que
+      controla la admision del numero de conexiones activas.
+    - **Decision:** queda expresamente fuera del plan de hardening actual. No
+      se han cambiado defaults, API, decoder, transportes ni comportamiento.
+    - **Trabajo futuro:** definir en un plan propio defaults seguros y la API
+      minima de configuracion previa a `start()`, con rechazo antes de consumir
+      el body y sin penalizar el hot path.
 
 ## Backlog de producto / conveniencia - no es compliance HTTP/1.1
 
@@ -590,95 +587,86 @@ P4. **Parsing de formularios. (M)** Ni
     `x-www-form-urlencoded` ni `multipart/form-data`. Comparte primitiva con
     el percent-decoding ya implementado.
 
-P5. **Suite de conformidad.** No existe una bateria propia
-    ejecutada contra el servidor real para framing, request smuggling,
-    pipelining, limites y cierre de conexion.
+P5. **Suite de conformidad exhaustiva.** La suite de integracion propia usa
+    sockets reales y cubre framing, fragmentacion, pipelining y cierre, pero no
+    constituye aun una matriz exhaustiva de conformidad RFC.
 
-    - **Riesgo:** los unit tests validan piezas aisladas del decoder y de los
-      headers, pero no demuestran que la composicion decoder-servidor-transporte
-      produce bytes y decisiones de canal correctos frente a secuencias reales.
+    - **Riesgo:** faltan casos sistematicos de request smuggling, todas las
+      fragmentaciones relevantes, limites configurados y combinaciones de
+      framing ambiguo.
     - **Impacto:** una regresion puede atravesar tests locales y manifestarse
       solo con segmentacion TCP concreta, requests concatenadas o clientes que
       ejercen limites y casos ambiguos.
     - **Componentes afectados:** decoder, reglas de framing, request/response,
       contrato protocolo-transporte y ambos backends TCP/IP.
-    - **Verificacion requerida:** bateria de casos positivos y negativos basada
-      en RFC 9110/9112, incluyendo mensajes fragmentados en todos los puntos
-      relevantes, pipelining, `Content-Length`/`Transfer-Encoding`, chunked,
-      trailers, `Expect`, cierres y limites configurados.
+    - **Verificacion requerida:** ampliar la bateria con casos positivos y
+      negativos basados en RFC 9110/9112, incluyendo mensajes fragmentados en
+      todos los puntos relevantes, `Content-Length`/`Transfer-Encoding`,
+      chunked, trailers y limites configurados.
     - **Por que importa:** es la evidencia necesaria para sostener una
       declaracion publica de implementacion HTTP/1.1 estricta.
 
 ## Pendientes de QA y validacion
 
-Los 111 ficheros de unit tests cubren ampliamente parsers, headers y objetos de
+Los 115 ficheros de unit tests cubren ampliamente parsers, headers y objetos de
 valor. Los puntos siguientes describen capas de validacion adicionales; no
 invalidan esa cobertura, pero si limitan la confianza sobre integracion,
 concurrencia, seguridad y rendimiento. Se identifican como `QA1`-`QA5`.
 
-QA1. **No hay pruebas de integracion sobre IOCP y epoll. (Alta)**
+QA1. **Integracion sobre IOCP y epoll. (Alta, completada)**
 
-    - **Riesgo:** no se ejercitan sockets reales, aceptacion, recepcion parcial,
-      envio parcial, rearmado, desconexion, errores del sistema ni orden de
-      completaciones con el ejecutable de tests.
-    - **Impacto:** diferencias entre backends o regresiones de ciclo de vida
-      pueden compilar y pasar los unit tests sin ser detectadas. Esto afecta
-      directamente la promesa publica de paridad Windows/Linux.
-    - **Componentes afectados:** `transport/server/tcpip_windows.h`,
-      `transport/server/tcpip_linux.h`, `protocol/http/v11/server.h` y el
-      contrato de `protocol/deserialization.h`/`serialization.h`.
-    - **Verificacion requerida:** levantar el servidor en un puerto efimero,
-      ejecutar clientes locales y comprobar bytes, orden, cierre y callbacks.
-      La misma especificacion de casos debe ejecutarse en Windows y Linux.
-    - **Por que importa:** los transportes contienen la concurrencia y el ciclo
-      de vida mas complejos del proyecto, pero son la zona menos cubierta por
-      pruebas automatizadas.
+    - **Situacion actual:** 38 casos de transporte usan sockets loopback reales
+      y el mismo codigo de test selecciona IOCP en Windows y epoll en Linux.
+      Un caso adicional ejercita la composicion HTTP/1.1 sobre TCP/IP.
+    - **Cobertura:** aceptacion, recepcion fragmentada, envios acotados,
+      desconexion, errores, streaming, orden y callbacks.
+    - **CI:** las suites de integracion se ejecutan en las matrices Windows y
+      Linux y bajo los sanitizers configurados.
+    - **Limite:** esta cobertura no sustituye la suite exhaustiva descrita en
+      P5 ni las campanas prolongadas de estres.
 
-QA2. **Faltan pruebas de concurrencia, pipelining y ciclo de vida. (Alta)**
+QA2. **Concurrencia, pipelining y ciclo de vida. (Alta, completada)**
 
-    - **Riesgo:** no hay pruebas enfocadas para multiples workers, pipelining,
-      excepciones de handler, `start`/`stop` repetido o apagado bajo carga.
-    - **Impacto:** races, deadlocks, cierres incompletos o callbacks duplicados
-      pueden aparecer solamente bajo interleavings concretos. R1 depende de
-      esta cobertura para confirmar su mecanismo y su solucion.
-    - **Componentes afectados:** servidor, ciclo de vida de contextos y colas
-      `responses_` de ambos backends.
-    - **Verificacion requerida:** tests deterministas con barreras/latches para
-      controlar interleavings, mas pruebas repetidas de estres con muchas
-      conexiones y requests pipelined.
-    - **Por que importa:** la ejecucion y el envio ocurren en workers de I/O;
-      su ciclo de vida es una caracteristica central de Doba, no un detalle
-      interno.
+    - **Situacion actual:** hay casos enfocados para pipelines sincronos y
+      diferidos, respuestas fuera de orden, clientes concurrentes, excepciones
+      de handler, cancelacion, apagado con estados mixtos y reinicio repetido.
+    - **Ciclo de vida global:** `date_server` tiene pruebas de varios
+      propietarios y de `start()`/`stop()` concurrentes; el servidor HTTP tiene
+      una prueba de rollback y reintento tras un fallo de transporte.
+    - **Limite:** no hay soak tests prolongados ni control determinista de cada
+      interleaving posible entre workers. Son validaciones futuras, no ausencia
+      de cobertura funcional.
 
-QA3. **Sanitizers integrados; fuzzing pendiente. (Alta, parcial)**
+QA3. **Sanitizers integrados; fuzzing diferido. (Alta, parcial)**
 
     - **Situacion actual:** CI compila con Clang y ejecuta CTest bajo ASan,
       UBSan y TSan. Cada job ejecuta las suites unitaria y de integracion.
-    - **Riesgo pendiente:** los tests escritos no exploran automaticamente
+    - **Riesgo residual:** los tests escritos no exploran automaticamente
       combinaciones inesperadas ni todos los limites del decoder y los body
       framers.
     - **Componentes afectados:** helpers HTTP, decoder, body framers/readers,
       request rebasing, response serialization, byte storage y transportes.
-    - **Verificacion pendiente:** targets de fuzz para request-line, headers,
-      chunked y secuencias incrementales. El fuzzing no esta integrado en CI.
+    - **Decision:** el fuzzing no esta integrado en CI y queda fuera del plan
+      de hardening actual. Requiere un plan independiente antes de retomarse.
     - **Por que importa:** los sanitizers detectan defectos en caminos
       ejecutados; el fuzzing ampliaria sistematicamente esos caminos.
 
-QA4. **No existen benchmarks reproducibles para las afirmaciones de
-     rendimiento. (Media)**
+QA4. **Adaptadores de benchmark disponibles; baseline pendiente. (Media)**
 
-    - **Riesgo:** el README describe parsing single-pass, hot path, dispatch
-      directo y buffers optimizados, pero no hay baseline de throughput,
-      latencia, asignaciones, memoria o escalado por numero de conexiones.
+    - **Situacion actual:** existen adaptadores versionados para HttpArena y Web
+      Frameworks Benchmark. HttpArena fija la revision upstream y ambos
+      Dockerfiles permiten fijar la revision de Doba mediante `DOBA_REF`.
+    - **Riesgo:** no hay un baseline de release persistente ni un gate que mida
+      throughput, latencia, asignaciones, memoria o escalado por conexiones. El
+      runner upstream de Web Frameworks tampoco tiene un commit fijado.
     - **Impacto:** no se pueden detectar regresiones ni comparar decisiones como
       `shared_ptr`, `std::function`, spill a disco o tamanos de buffer. Tampoco
       se puede cuantificar la promesa de "high-performance".
     - **Componentes afectados:** decoder, router, response serialization,
       streaming de bodies y ambos transportes.
-    - **Verificacion requerida:** escenarios versionados y reproducibles para
+    - **Verificacion requerida:** fijar escenarios y baselines de release para
       request minima, headers grandes, body inline/streaming, pipelining y
-      concurrencia; registrar toolchain, hardware y distribucion de latencias,
-      no solo requests por segundo.
+      concurrencia; registrar toolchain, hardware y distribucion de latencias.
     - **Por que importa:** las optimizaciones y futuras refactorizaciones deben
       decidirse con medidas y conservar un baseline de release.
 
@@ -725,6 +713,8 @@ RE2. **Consumo e instalacion CMake. (Alta, completada)**
       `martianlabs::doba`.
     - **Verificacion:** CI instala en un prefijo aislado y compila consumidores
       externos Debug y Release mediante `find_package(doba CONFIG REQUIRED)`.
+      Tambien compila un consumidor mediante `add_subdirectory` y comprueba
+      que no se incorporan los ejemplos ni tests internos de doba.
     - **Contrato:** el target instalado aporta includes, C++20 y Threads sin
       heredar opciones internas de warnings o sanitizers.
 
@@ -876,15 +866,14 @@ como pendientes futuros, para que no se pierda el contexto ya analizado.
   puede rechazar toda peticion de upgrade. Lo ya modelado se conserva tal cual.
 
 Este aplazamiento se limita al streaming publico, al cambio de codec y a
-WebSockets. Permanecen dentro del plan actual la operacion interna multi-evento,
-el hardening de ciclo de vida, limites, desconexiones y clientes lentos, y la
-documentacion, auditoria, pruebas de estres y benchmarks finales.
+WebSockets. Los limites, clientes lentos, pruebas de estres y baselines de
+rendimiento permanecen en sus backlogs respectivos; no forman parte de un plan
+aprobado por el mero hecho de aparecer en este documento.
 
 ### Documentacion pendiente
 
 - Documentar el contrato de ciclo de vida para usuarios que consuman
   directamente el transporte, fuera de `v11::server`.
-- Verificar sobre el cable el `100-continue` ya implementado, dentro de P5/QA1.
 - Documentar lifetime y propiedad de los `string_view` devueltos por `request`,
   y las precondiciones de getters indexados.
 ### Secuencia recomendada
@@ -897,36 +886,31 @@ Los numeros son los identificadores de los items de este documento.
 |-------|----------------------------------|-------------------|------------|
 | 1     | Complejidad B, alto retorno      | (5, 6, 8)         | Completada |
 | 2     | Correctitud de framing           | (2)               | Completada |
-| 3     | Compliance localizado            | C7, C5            | Pendiente  |
+| 3     | Compliance localizado            | C7, C5            | C5 pendiente |
 | 4     | Despliegue autonomo              | (2)               | Completada |
 | 5     | Compliance funcional             | C2, C3, C4        | Objetivo beta |
 | 6     | Proteccion de conexiones         | C1                | Objetivo beta |
 | 7     | Producto y conveniencia          | P1, P2, P3, P4, P5 | Pendiente |
-| 8     | QA integral                      | QA1, QA2           | Gate beta  |
+| 8     | QA integral                      | QA1, QA2           | Completada |
 | 9     | Preparacion de release           | RE1-RE4           | RE4 parcial |
-| 10    | Deuda tecnica medida             | DT1-DT5           | Pendiente  |
+| 10    | Deuda tecnica medida             | DT2-DT5           | Pendiente  |
 
-**Objetivo fijado para `0.1.0-beta.1`:** cerrar los seis items de compliance
-pendientes. El orden de ejecucion busca primero corregir el incumplimiento
-visible y los riesgos operativos, y despues completar la semantica HTTP.
+**Objetivo fijado para `0.1.0-beta.1`:** cerrar los cinco items de compliance
+pendientes. C7 ya esta completado. El orden de ejecucion busca primero los
+riesgos operativos y despues completar la semantica HTTP.
 
 El orden es una dependencia de trabajo, no una afirmacion de criticidad pura:
-C7 abre la secuencia por ser un gate obligatorio de release; C5 y C1 comparten
-el diseno generico de admision, tiempo y cierre en ambos transportes; R1 debe
-reproducirse mientras
-se valida ese ciclo de vida; C2 requiere congelar su contrato de aplicacion
-antes de editar la API; y C3 depende solo de que el framing chunked de salida
-conserve sus invariantes. Por criticidad operativa, C1 sigue siendo el riesgo
-principal aunque no sea el primer cambio propuesto.
+C5 y C1 comparten el diseno generico de admision, tiempo y cierre en ambos
+transportes; C2 requiere congelar su contrato de aplicacion antes de editar la
+API; y C3 depende solo de que el framing chunked de salida conserve sus
+invariantes. Por criticidad operativa, C1 sigue siendo el riesgo principal.
 
-1. Item C7 - Fechas condicionales invalidas rechazan la request (Nivel 2,
-   obligatorio para la release).
-2. Item C5 - Sin limites de conexion efectivos (Nivel 4).
-3. Item C1 - Ausencia total de timeouts (Nivel 1).
-4. Item C4 - `OPTIONS` para recursos concretos (Nivel 3).
-5. Item C2 - Evaluacion de condicionales: `304`, `412`, `206`, `416`
+1. Item C5 - Sin limites de conexion efectivos (Nivel 4).
+2. Item C1 - Ausencia total de timeouts (Nivel 1).
+3. Item C4 - `OPTIONS` para recursos concretos (Nivel 3).
+4. Item C2 - Evaluacion de condicionales: `304`, `412`, `206`, `416`
    (Nivel 3).
-6. Item C3 - Trailers de salida (Nivel 3).
+5. Item C3 - Trailers de salida (Nivel 3).
 
 C1 y C5 deben disenarse como politicas genericas de transporte: admision de
 conexiones y notificacion de timeout. HTTP/1.1 decide la respuesta, incluido
@@ -934,10 +918,10 @@ el `408` cuando corresponda, sin filtrar semantica HTTP a IOCP ni epoll.
 C2 puede requerir una ampliacion deliberada de la API publica; su diseno y
 plan de implementacion necesitan aprobacion explicita antes de modificarla.
 
-La salida de `0.1.0-beta.1` exige ademas reproducir y resolver los riesgos
-confirmados R1, ejecutar una bateria wire-level para C1-C7, pipelining y
-cierres en IOCP y epoll, y completar RE1-RE4. La beta podra declarar soporte
-de condicionales, rangos y trailers de salida solo tras esas verificaciones.
+La salida de `0.1.0-beta.1` exige ademas ejecutar una bateria wire-level para
+C1-C7, pipelining y cierres en IOCP y epoll, y completar RE1-RE4. La beta
+podra declarar soporte de condicionales, rangos y trailers de salida solo tras
+esas verificaciones.
 
 TLS, compresion/GZIP, streaming HTTP/SSE, la barrera de upgrade y WebSockets
 no aparecen en ninguna tanda ni en la numeracion de items: ver "Fuera del
@@ -946,15 +930,16 @@ alcance de la primera release".
 ## Estado de pruebas y documentacion
 
 El arbol configura dos ejecutables CTest: `doba_unit_tests` y
-`doba_integration_tests`. El inventario versionado actual contiene 114
-ficheros unitarios `*_tests.cpp` con 395 casos `DOBA_TEST`, y dos ficheros de
+`doba_integration_tests`. El inventario versionado actual contiene 115
+ficheros unitarios `*_tests.cpp` con 401 casos `DOBA_TEST`, y dos ficheros de
 integracion con 39 casos. Los tests de componente replican bajo cada suite la
 ruta del header probado a partir de `include/`; los helpers compartidos quedan
 en la raiz de la suite.
 
 Los adaptadores de h1spec y Http11Probe existen, pero su ejecucion sigue siendo
-manual. No hay fuzzing integrado. El inventario anterior es estructural; el
-estado debe confirmarse mediante configuracion, compilacion y CTest antes de
+manual. Su automatizacion y el fuzzing estan diferidos fuera del plan de
+hardening actual. El inventario anterior es estructural; el estado debe
+confirmarse mediante configuracion, compilacion y CTest antes de
 afirmar que un checkout concreto pasa.
 
 ## Al continuar

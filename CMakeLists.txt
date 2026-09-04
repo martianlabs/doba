@@ -44,6 +44,31 @@ project(
   LANGUAGES CXX
 )
 
+if(
+  CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR
+)
+  set(
+    DOBA_IS_TOP_LEVEL
+    ON
+  )
+else()
+  set(
+    DOBA_IS_TOP_LEVEL
+    OFF
+  )
+endif()
+
+option(
+  DOBA_BUILD_EXAMPLES
+  "Build doba examples"
+  ${DOBA_IS_TOP_LEVEL}
+)
+option(
+  DOBA_BUILD_TESTS
+  "Build doba tests"
+  ${DOBA_IS_TOP_LEVEL}
+)
+
 include(
   CMakePackageConfigHelpers
 )
@@ -201,99 +226,112 @@ install(
   DESTINATION "${DOBA_INSTALL_CMAKEDIR}"
 )
 
-enable_testing(
+if(
+  DOBA_BUILD_EXAMPLES
 )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/common/byte_storage
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/common/writer
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/common/reader
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/common/console_logger
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/common/date_server
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/hello_world
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/static_routes
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/parametrized_routes
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/wildcard_routes
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/asynchronous_routes
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_information
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/query_parameters
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_headers
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/cookies
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_body_text
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_body_binary
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/response_statuses
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/response_headers
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/response_body_values
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/response_body_writers
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/large_response_bodies
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/head_requests
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/automatic_not_found
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/method_not_allowed
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/options_asterisk
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/expect_continue
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/connection_close
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/automatic_date
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_rejections
+  )
+endif()
 
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/common/byte_storage
+if(
+  DOBA_BUILD_TESTS
 )
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/common/writer
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/common/reader
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/common/console_logger
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/common/date_server
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/hello_world
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/static_routes
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/parametrized_routes
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/wildcard_routes
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/asynchronous_routes
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_information
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/query_parameters
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_headers
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/cookies
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_body_text
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_body_binary
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/response_statuses
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/response_headers
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/response_body_values
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/response_body_writers
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/large_response_bodies
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/head_requests
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/automatic_not_found
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/method_not_allowed
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/options_asterisk
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/expect_continue
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/connection_close
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/automatic_date
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_rejections
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/tests/unit
-)
-add_subdirectory(
-  ${CMAKE_CURRENT_LIST_DIR}/tests/integration
-)
+  include(
+    CTest
+  )
+  if(
+    BUILD_TESTING
+  )
+    add_subdirectory(
+      ${CMAKE_CURRENT_LIST_DIR}/tests/unit
+    )
+    add_subdirectory(
+      ${CMAKE_CURRENT_LIST_DIR}/tests/integration
+    )
+  endif()
+endif()

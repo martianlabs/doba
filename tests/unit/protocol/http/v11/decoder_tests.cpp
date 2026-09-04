@@ -302,6 +302,31 @@ DOBA_TEST("pipelined requests remain available after first dispatch") {
                     "two.example");
 }
 // +===========================================================================+
+// | [>] invalid conditional dates are ignored                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("invalid conditional dates do not reject requests") {
+  struct test_case {
+    std::string_view name;
+    std::string_view value;
+  };
+  constexpr test_case cases[] = {
+      {"If-Modified-Since", "not-a-date"},
+      {"If-Unmodified-Since", "Sunday, 06-Nov-94 08:49:37 GMT"},
+  };
+  for (const auto& test : cases) {
+    const std::string source =
+        "GET / HTTP/1.1\r\nHost: example.com\r\n" +
+        std::string(test.name) + ": " + std::string(test.value) +
+        "\r\n\r\n";
+    test_decoder value;
+    DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
+    const auto result = value.deserialize();
+    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+    DOBA_EXPECT_EQUAL(result.request->get_header(test.name).second,
+                      test.value);
+  }
+}
+// +===========================================================================+
 // | [>] rejects malformed request line and header syntax        ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("rejects malformed request line and header syntax") {

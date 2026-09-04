@@ -30,6 +30,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <mutex>
 #include <string_view>
 #include <thread>
 
@@ -59,7 +60,12 @@ class date_server {
   // +=========================================================================+
   date_server(const date_server&) = delete;
   date_server(date_server&&) noexcept = delete;
-  ~date_server() { stop(); }
+  ~date_server() {
+    std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+    owners_ = 0;
+    running_.store(false, std::memory_order_release);
+    if (jthread_.joinable()) jthread_.join();
+  }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +=========================================================================+
@@ -76,28 +82,29 @@ class date_server {
   // | [>] start                                                    ( public ) |
   // +=========================================================================+
   void start() {
-    bool expected = false;
-    if (!running_.compare_exchange_strong(expected, true,
-                                          std::memory_order_acq_rel,
-                                          std::memory_order_acquire)) {
-      // Already running, do nothing.
-      return;
+    std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+    if (owners_++ > 0) return;
+    running_.store(true, std::memory_order_release);
+    try {
+      jthread_ = std::jthread([this] {
+        while (running_.load(std::memory_order_acquire)) {
+          update();
+          std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+      });
+    } catch (...) {
+      running_.store(false, std::memory_order_release);
+      owners_ = 0;
+      throw;
     }
-    jthread_ = std::jthread([this] {
-      while (running_.load(std::memory_order_acquire)) {
-        update();
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-      }
-    });
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
   void stop() {
-    if (!running_.exchange(false, std::memory_order_acq_rel)) {
-      // Not running, do nothing.
-      return;
-    }
+    std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+    if (owners_ == 0 || --owners_ > 0) return;
+    running_.store(false, std::memory_order_release);
     if (jthread_.joinable()) jthread_.join();
   }
   // +=========================================================================+
@@ -201,6 +208,8 @@ class date_server {
   std::array<std::atomic<std::uint64_t>, kWordCount> words_{};
   std::atomic<std::uint64_t> sequence_{0};
   std::atomic<bool> running_{false};
+  std::mutex lifecycle_mutex_;
+  std::size_t owners_{0};
   std::jthread jthread_;
 };
 }  // namespace martianlabs::doba::common

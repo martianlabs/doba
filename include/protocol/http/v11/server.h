@@ -76,7 +76,7 @@ class server {
   // +=========================================================================+
   void start(const char port[]) {
     std::lock_guard<std::mutex> lock(locked_mutex_);
-    common::date_server::get().start();
+    if (locked_) return;
     transport_.set_on_request(
         [this](const std::shared_ptr<RQty>& req, RSty& res,
                const std::stop_token& stop_token)
@@ -177,7 +177,13 @@ class server {
         });
     transport_.set_on_connection([this]() { connections_++; });
     transport_.set_on_disconnection([this]() { connections_--; });
-    transport_.start(port);
+    common::date_server::get().start();
+    try {
+      transport_.start(port);
+    } catch (...) {
+      common::date_server::get().stop();
+      throw;
+    }
     locked_ = true;
   }
   // +=========================================================================+
@@ -185,6 +191,7 @@ class server {
   // +=========================================================================+
   void stop() {
     std::lock_guard<std::mutex> lock(locked_mutex_);
+    if (!locked_) return;
     transport_.stop();
     common::date_server::get().stop();
     locked_ = false;

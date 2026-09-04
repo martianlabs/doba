@@ -383,12 +383,13 @@ DOBA_TEST("every status method emits its registered status line") {
 // +===========================================================================+
 // | [>] bodyless statuses never serialize response bodies       ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("informational 204 and 304 responses never serialize bodies") {
+DOBA_TEST("informational 204 205 and 304 responses never serialize bodies") {
   using setter = response& (response::*)();
   constexpr setter cases[] = {
       &response::continue_100,
       &response::switching_protocols_101,
       &response::no_content_204,
+      &response::reset_content_205,
       &response::not_modified_304,
   };
   for (const auto set : cases) {
@@ -399,5 +400,18 @@ DOBA_TEST("informational 204 and 304 responses never serialize bodies") {
     DOBA_EXPECT(!serialized->prefix.ends_with("body"));
     DOBA_EXPECT(!serialized->source.has_value());
     DOBA_EXPECT(!value.has_header("Transfer-Encoding"));
+    if (set == &response::reset_content_205) {
+      DOBA_EXPECT_EQUAL(value.get_header("Content-Length").second, "0");
+    }
   }
+  auto writer = body_writer::chunked();
+  DOBA_EXPECT(writer.write("body"));
+  response streamed;
+  streamed.reset_content_205()
+      .set_header("Date", "fixed")
+      .set_body(std::move(writer));
+  const auto serialized = streamed.serialize();
+  DOBA_EXPECT(!serialized->source.has_value());
+  DOBA_EXPECT(!streamed.has_header("Transfer-Encoding"));
+  DOBA_EXPECT_EQUAL(streamed.get_header("Content-Length").second, "0");
 }

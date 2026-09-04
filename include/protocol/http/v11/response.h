@@ -108,20 +108,22 @@ class response {
     if (!has_date_header_) {
       add_date_header();
     }
-    // RFC 9110 S8.6/S15.3.5/S15.4.5: 1xx, 204 and 304 responses must never
-    // carry a message body, regardless of what a handler may have set via
-    // set_body(). 1xx/204 must not advertise any body framing at all, so
-    // Content-Length/Transfer-Encoding are stripped; 304 may still describe
-    // the resource via Content-Length (mirroring a hypothetical 200), but
-    // Transfer-Encoding is meaningless without an actual chunked body.
+    // RFC 9110 S8.6/S15.3.5/S15.3.6/S15.4.5: 1xx, 204, 205 and 304 responses
+    // must never carry a message body, regardless of what a handler may have
+    // set via set_body(). 1xx/204 must not advertise any body framing at all,
+    // while 205 uses Content-Length: 0. 304 may still describe the resource
+    // via Content-Length (mirroring a hypothetical 200).
     bool is_informational = status_code_ < SC_200_OK;
     bool must_omit_body = is_informational ||
                           status_code_ == SC_204_NO_CONTENT ||
+                          status_code_ == SC_205_RESET_CONTENT ||
                           status_code_ == SC_304_NOT_MODIFIED;
     if (must_omit_body) {
       remove_header(header_names::kTransferEncoding);
       if (is_informational || status_code_ == SC_204_NO_CONTENT) {
         remove_header(header_names::kContentLength);
+      } else if (status_code_ == SC_205_RESET_CONTENT) {
+        set_header(header_names::kContentLength, "0");
       }
     }
     std::size_t sln_plus_hdr_len = sln_len_ + hdr_len_;
