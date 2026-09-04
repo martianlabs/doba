@@ -75,6 +75,10 @@ Requires CMake >= 3.20 and a C++20 compiler. The MSVC/Ninja presets
 (`msvc-debug`, `msvc-release`) provided in `CMakePresets.json` require
 CMake >= 3.25.
 
+`DOBA_BUILD_EXAMPLES` and `DOBA_BUILD_TESTS` default to `ON` when doba is the
+top-level project and to `OFF` when it is added with `add_subdirectory` or
+FetchContent. `BUILD_TESTING=OFF` disables tests explicitly.
+
 CI builds and tests Debug and Release with GCC, Clang, and MSVC. It also runs
 ASan, UBSan, TSan, and CMake 3.20.6. Strict warnings are enabled in CI and can
 be enabled locally with `-DDOBA_ENABLE_STRICT_WARNINGS=ON`.
@@ -121,14 +125,13 @@ terminator) and content compression - both are product decisions, the latter
 because it would introduce an external dependency and break the "no
 dependencies" rule above.
 
-Still pending for compliance: connection timeouts; invalid-date handling and
-evaluation of conditional requests; `Range` evaluation; automatic
-resource-specific `OPTIONS` responses; outbound trailers; and effective
-connection limits. `OPTIONS *` is already implemented. Protocol upgrade
-handling is out of scope for the first release.
+Still pending for compliance: connection timeouts; evaluation of conditional
+requests; `Range` evaluation; automatic resource-specific `OPTIONS` responses;
+outbound trailers; and effective connection limits. `OPTIONS *` is already
+implemented. Protocol upgrade handling is out of scope for the first release.
 Pending work is tracked in [docs/HANDOFF.md](docs/HANDOFF.md).
 Automated fuzzing and CI execution of the existing h1spec and Http11Probe
-adapters also remain pending.
+adapters are deferred and are not part of the current hardening plan.
 
 ## License
 

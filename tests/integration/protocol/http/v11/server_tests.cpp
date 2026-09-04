@@ -79,6 +79,22 @@ DOBA_TEST("HTTP/1.1 emits interim and automatic response behavior") {
   DOBA_EXPECT(echoed->find("Connection: close\r\n") != std::string::npos);
   DOBA_EXPECT(echoed->ends_with("doba"));
 
+  constexpr std::string_view conditional_headers[] = {
+      "If-Modified-Since: not-a-date\r\n",
+      "If-Unmodified-Since: not-a-date\r\n",
+  };
+  for (const auto header : conditional_headers) {
+    DOBA_EXPECT(client.connect(port));
+    const std::string conditional =
+        "GET /resource HTTP/1.1\r\nHost: example.com\r\n" +
+        std::string(header) + "Connection: close\r\n\r\n";
+    DOBA_EXPECT(client.send_all(conditional));
+    const auto accepted = client.receive_until_close(4096);
+    DOBA_EXPECT(accepted.has_value());
+    DOBA_EXPECT(accepted->starts_with("HTTP/1.1 200 OK\r\n"));
+    DOBA_EXPECT(accepted->ends_with("resource"));
+  }
+
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
       "POST /resource HTTP/1.1\r\nHost: example.com\r\n"

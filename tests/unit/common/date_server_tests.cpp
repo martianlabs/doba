@@ -25,6 +25,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <string>
 #include <string_view>
 #include <thread>
 #include <vector>
@@ -72,4 +73,48 @@ DOBA_TEST("concurrent serialization preserves HTTP dates") {
   date_server::get().stop();
   DOBA_EXPECT(valid.load());
   DOBA_EXPECT(valid_http_date(date_server::get().current()));
+}
+// +===========================================================================+
+// | [>] date server waits for last owner                        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("date server remains active until its last owner stops") {
+  auto& value = date_server::get();
+  value.start();
+  value.start();
+  value.stop();
+  const std::string initial(value.current());
+  const auto deadline = std::chrono::steady_clock::now() +
+                        std::chrono::milliseconds(2200);
+  bool updated = false;
+  while (std::chrono::steady_clock::now() < deadline) {
+    if (value.current() != initial) {
+      updated = true;
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  value.stop();
+  DOBA_EXPECT(updated);
+}
+// +===========================================================================+
+// | [>] concurrent owners preserve lifecycle                    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("concurrent date server owners preserve lifecycle and dates") {
+  auto& value = date_server::get();
+  value.start();
+  std::atomic<bool> valid{true};
+  std::vector<std::thread> threads;
+  for (std::size_t thread = 0; thread < 4; ++thread) {
+    threads.emplace_back([&value, &valid] {
+      for (std::size_t iteration = 0; iteration < 100; ++iteration) {
+        value.start();
+        if (!valid_http_date(value.current())) valid.store(false);
+        value.stop();
+      }
+    });
+  }
+  for (auto& thread : threads) thread.join();
+  DOBA_EXPECT(valid.load());
+  DOBA_EXPECT(valid_http_date(value.current()));
+  value.stop();
 }

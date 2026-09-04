@@ -93,6 +93,19 @@ jobs:
         if: matrix.name == 'GCC Release'
         run: cmake --build out/build/package-consumer-release
 
+      - name: Configure add_subdirectory consumer
+        if: matrix.name == 'GCC Release'
+        run: >-
+          cmake -S tests/package -B out/build/add-subdirectory-consumer -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER=g++
+          -DDOBA_PACKAGE_USE_SOURCE=ON
+          -DDOBA_SOURCE_DIR=${{ github.workspace }}
+
+      - name: Build add_subdirectory consumer
+        if: matrix.name == 'GCC Release'
+        run: cmake --build out/build/add-subdirectory-consumer
+
   windows:
     name: Windows (MSVC ${{ matrix.build_type }})
     runs-on: windows-latest

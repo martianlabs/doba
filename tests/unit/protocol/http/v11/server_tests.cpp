@@ -22,6 +22,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <chrono>
 #include <coroutine>
 #include <exception>
 #include <functional>
@@ -31,6 +32,7 @@
 #include <stop_token>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <type_traits>
 #include <utility>
 
@@ -45,6 +47,7 @@ using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::protocol::http::v11::server;
 using martianlabs::doba::protocol::http::router_async_handler_lambda;
 using martianlabs::doba::protocol::http::router_handler_lambda;
+using martianlabs::doba::common::date_server;
 using martianlabs::doba::common::task;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -223,6 +226,7 @@ class fake_transport {
   // | [>] start                                                    ( public ) |
   // +=========================================================================+
   void start(const char port[]) {
+    if (throw_on_start) throw std::runtime_error("start failed");
     started = true;
     started_port = port;
   }
@@ -237,6 +241,7 @@ class fake_transport {
   static inline bad_request_callback on_bad_request;
   static inline std::function<void()> on_connection;
   static inline std::function<void()> on_disconnection;
+  static inline bool throw_on_start = false;
   static inline bool started = false;
   static inline std::string started_port;
 };
@@ -507,6 +512,34 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   // ---------------------------------------------------------------------------
   value.stop();
   DOBA_EXPECT(!test_transport::started);
+}
+// +===========================================================================+
+// | [>] failed starts release the date service                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("failed starts release the date server") {
+  auto& dates = date_server::get();
+  dates.start();
+  test_transport::throw_on_start = true;
+  test_server value;
+  bool threw = false;
+  try {
+    value.start("8080");
+  } catch (const std::runtime_error&) {
+    threw = true;
+  }
+  test_transport::throw_on_start = false;
+  dates.stop();
+  const std::string initial(dates.current());
+  std::this_thread::sleep_for(std::chrono::milliseconds(1200));
+  const bool stopped = dates.current() == initial;
+  dates.stop();
+  DOBA_EXPECT(threw);
+  DOBA_EXPECT(!test_transport::started);
+  DOBA_EXPECT(stopped);
+  value.start("8081");
+  DOBA_EXPECT(test_transport::started);
+  DOBA_EXPECT_EQUAL(test_transport::started_port, "8081");
+  value.stop();
 }
 // +===========================================================================+
 // | [>] server completes suspended async responses              ( test-case ) |

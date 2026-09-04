@@ -649,6 +649,11 @@ class decoder {
   static constexpr verdict dispatch(std::string_view sv, context&) {
     return CHty::check(sv) ? verdict::kAccept : verdict::kReject;
   }
+  // RFC 9110 S13.1.3/S13.1.4: recipients ignore invalid conditional dates.
+  static constexpr verdict dispatch_conditional_date(std::string_view,
+                                                     context&) {
+    return verdict::kAccept;
+  }
   // +=========================================================================+
   // | [>] dispatch_host (modelled header)                         ( private ) |
   // +=========================================================================+
@@ -902,10 +907,8 @@ class decoder {
            &dispatch<http::headers::if_match>},
           {"If-None-Match",  // check only!
            &dispatch<http::headers::if_none_match>},
-          {"If-Modified-Since",  // check only!
-           &dispatch<http::headers::if_modified_since>},
-          {"If-Unmodified-Since",  // check only!
-           &dispatch<http::headers::if_unmodified_since>},
+          {"If-Modified-Since", &dispatch_conditional_date},
+          {"If-Unmodified-Since", &dispatch_conditional_date},
           {"Cache-Control",  // check only!
            &dispatch<http::headers::cache_control>},
           {"Vary",  // check only!

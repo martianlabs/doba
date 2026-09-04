@@ -81,6 +81,7 @@ class writer {
   // | [>] finish                                                   ( public ) |
   // +=========================================================================+
   void finish(std::size_t bytes) {
+    if (finished_) return;
     storage_.finish(bytes);
     finished_ = true;
   }
