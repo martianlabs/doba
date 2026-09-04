@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -22,29 +22,36 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include "common/console_logger.h"
-#include "common/logo.h"
+#include <array>
+#include <string>
+
 #include "common/signaler.h"
-#include "protocol/http/common/method_names.h"
 #include "protocol/http/v11/server.h"
 
 using namespace martianlabs::doba::common;
-using namespace martianlabs::doba::protocol::http;
 using namespace martianlabs::doba::protocol::http::v11;
 
-int main(int argc, char* argv[]) {
+int main() {
   server http_server;
-  auto resource =
+  http_server.add_route(
+      "POST", "/echo",
       [](const request& req, response& res) {
-        res.ok_200()
-            .add_header("Content-Type", "text/plain; charset=utf-8")
-            .set_body("resource representation");
-      };
-  http_server.add_route(method_names::kGet, "/resource", resource);
-  // HEAD runs the same handler, then the server suppresses the message body.
-  http_server.add_route(method_names::kHead, "/resource", resource);
-  // The server handles 404, 405, and OPTIONS * without explicit routes.
+        std::array<std::byte, 1024> buffer{};
+        std::string body;
+        for (;;) {
+          const auto state = req.get_body_reader()->read(buffer);
+          if (state.has_error) {
+            res.bad_request_400();
+            return;
+          }
+          body.append(reinterpret_cast<const char*>(buffer.data()),
+                      state.produced);
+          if (state.complete) break;
+        }
+        res.ok_200().set_body(body);
+      });
   http_server.start("8080");
   signaler::wait();
   return 0;
 }
+

@@ -196,7 +196,7 @@ class tcpip_client {
     ::setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 #endif
   }
-  network::detail::environment environment_;
+  [[maybe_unused]] network::detail::environment environment_;
   socket_type socket_{invalid_socket()};
 };
 }  // namespace martianlabs::doba::tests::integration

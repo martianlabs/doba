@@ -324,9 +324,10 @@ martianlabs::doba::common::task<transport_response> make_cancellable_response(
 martianlabs::doba::common::task<transport_response> make_failed_response(
     std::shared_ptr<deferred_signal> signal, bool standard) {
   co_await *signal;
-  if (standard) throw std::runtime_error("Deferred handler error!");
-  throw 1;
-  co_return transport_response();
+  co_return [standard]() -> transport_response {
+    if (standard) throw std::runtime_error("Deferred handler error!");
+    throw 1;
+  }();
 }
 }  // namespace
 

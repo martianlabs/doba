@@ -35,13 +35,14 @@
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
-int main(int argc, char* argv[]) {
+int main() {
   server http_server;
   http_server.add_route(
       "GET", "/large",
-      [](const request& req, response& res) {
+      [](const request&, response& res) {
         // Storage spills to a temporary file after this in-memory threshold.
-        byte_storage_options options{.spill_threshold = 1024};
+        byte_storage_options options{.spill_threshold = 1024,
+                                     .spill_dir = {}};
         auto writer = body::body_writer::raw(options);
         const std::string block(1024, 'x');
         for (int i = 0; i < 8; i++) {

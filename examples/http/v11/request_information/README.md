@@ -14,4 +14,9 @@ inside the route handler.
 
 ```text
 curl -i -H "Connection: close" http://localhost:8080/request
+curl -i --request-target "http://localhost:8080/request" \
+  http://localhost:8080/request
 ```
+
+The first request uses origin-form. The second uses absolute-form and is
+routed to the same absolute path.

@@ -15,7 +15,7 @@ find_package(
 
 add_executable(
   doba_package_consumer
-  "${CMAKE_CURRENT_LIST_DIR}/main.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/protocol/http/v11/server_tests.cpp"
 )
 target_link_libraries(
   doba_package_consumer

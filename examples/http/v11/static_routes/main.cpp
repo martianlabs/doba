@@ -32,31 +32,31 @@ using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http;
 using namespace martianlabs::doba::protocol::http::v11;
 
-int main(int argc, char* argv[]) {
+int main() {
   server http_server;
   // A path can expose an independent handler for each HTTP method.
   http_server.add_route(
       method_names::kGet, "/resources",
-      [](const request& req, response& res) {
+      [](const request&, response& res) {
         res.ok_200()
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body("resource list");
       });
   http_server.add_route(
       method_names::kPost, "/resources",
-      [](const request& req, response& res) {
+      [](const request&, response& res) {
         res.created_201()
             .add_header("Location", "/resources/1")
             .set_body("resource created");
       });
   http_server.add_route(
       method_names::kPut, "/resources",
-      [](const request& req, response& res) {
+      [](const request&, response& res) {
         res.ok_200().set_body("resource replaced");
       });
   http_server.add_route(
       method_names::kDelete, "/resources",
-      [](const request& req, response& res) {
+      [](const request&, response& res) {
         // no_content_204() leaves the response without a message body.
         res.no_content_204();
       });

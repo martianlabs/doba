@@ -33,7 +33,7 @@ using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http;
 using namespace martianlabs::doba::protocol::http::v11;
 
-int main(int argc, char* argv[]) {
+int main() {
   server http_server;
   http_server.add_route(
       "GET", "/request",
@@ -46,12 +46,6 @@ int main(int argc, char* argv[]) {
             break;
           case target::kAbsoluteForm:
             target_form = "absolute-form";
-            break;
-          case target::kAuthorityForm:
-            target_form = "authority-form";
-            break;
-          case target::kAsteriskForm:
-            target_form = "asterisk-form";
             break;
           default:
             target_form = "unknown";
