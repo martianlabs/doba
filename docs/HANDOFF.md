@@ -1,30 +1,29 @@
-# Documentacion de doba
+# doba documentation
 
-Doba es un framework de servidor C++20 header-only con backends IOCP en
-Windows y epoll en Linux.
+Doba is a C++20 header-only server framework with an IOCP backend on Windows
+and an epoll backend on Linux.
 
-## Guia de lectura
+## Reading guide
 
-| Documento | Contenido y fuente de verdad |
+| Document | Content and source of truth |
 | --- | --- |
-| [Arquitectura](ARCHITECTURE.md) | Componentes, contratos, ownership y flujo de datos actuales. |
-| [Desarrollo](DEVELOPMENT.md) | Requisitos, build, estilo y validacion de cambios. |
-| [Calidad](QUALITY.md) | Pruebas disponibles, CI y evidencia de correcciones completadas. |
-| [Backlog](BACKLOG.md) | Todos los pendientes, dependencias y criterios de release. |
+| [Architecture](ARCHITECTURE.md) | Architectural principles, protocol separation, and memory and execution design. |
+| [Development](DEVELOPMENT.md) | Requirements, build, style, and change validation. |
+| [Quality](QUALITY.md) | Engineering rules, verification gates, and release requirements. |
+| [Backlog](BACKLOG.md) | All outstanding work, dependencies, and release criteria. |
 
-La implementacion dispone de pruebas unitarias, integracion sobre sockets
-reales y CI multiplataforma con sanitizers. El objetivo de la proxima beta
-y sus condiciones de salida se mantienen en el
-[backlog de release](BACKLOG.md#objetivo-de-release).
+The implementation has unit tests, integration tests over real sockets, and
+cross-platform CI with sanitizers. The next beta's scope and exit criteria
+are maintained in the [release backlog](BACKLOG.md#release-target).
 
-El [README del proyecto](../README.md) presenta la biblioteca y su consumo.
-Los [ejemplos](../examples/README.md) documentan usos concretos de la API.
+The [project README](../README.md) introduces the library and how to consume
+it. The [examples](../examples/README.md) document specific API use cases.
 
-## Mantenimiento
+## Maintenance
 
-Actualizar cada dato en su documento de referencia. Al cerrar un pendiente,
-trasladar la evidencia relevante a calidad y el contrato implementado a
-arquitectura; registrar su identificador como referencia historica y
-mantener actualizados el inventario y los enlaces del backlog.
-Los ejemplos y las instrucciones especificas de herramientas permanecen junto
-a sus componentes y se enlazan desde esta documentacion.
+Update each fact in its reference document. Keep architecture focused on
+design principles and quality focused on engineering rules. Record verification
+results with the corresponding change or release. When closing a backlog
+item, update any affected contract, the inventory, and its links.
+Examples and tool-specific instructions remain alongside their components
+and are linked from this documentation.

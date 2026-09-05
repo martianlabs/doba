@@ -1,178 +1,116 @@
-# Calidad y evidencia
+# Quality
 
-[Indice](HANDOFF.md)
+[Index](HANDOFF.md)
 
-Inventario contrastado el 2026-09-05 sobre
-`9aa4c1d64969179f450d7d3ec4f4badef2fc144d`.
-Este documento distingue implementacion, pruebas disponibles y resultados
-historicos. La reorganizacion documental no ejecuto builds ni CTest.
-El trabajo restante se mantiene en [BACKLOG.md](BACKLOG.md).
-Los identificadores marcados como historicos pertenecen a la clasificacion
-anterior; no designan los items actuales del backlog.
+**Correctness is a requirement. Confidence must be earned through verification.**
 
-## Contenido
+Doba's quality rules apply to implementation, tests, packaging, and releases.
+A change must preserve protocol behavior, ownership, and the contracts exposed
+to applications. Passing checks provide evidence for the paths and
+configurations exercised.
 
-- [Pruebas](#pruebas)
-- [Integracion continua](#integracion-continua)
-- [Compliance y rendimiento](#compliance-y-rendimiento)
-- [Correcciones y decisiones completadas](#correcciones-y-decisiones-completadas)
-- [Interpretacion de la evidencia](#interpretacion-de-la-evidencia)
+## Make correctness explicit
 
-## Pruebas
+- Base protocol behavior on the applicable RFC section and the documented
+  contract. Keep syntax validation separate from semantic decisions.
+- Reproduce a defect before correcting it. Add a focused regression that
+  fails before the fix and passes after it whenever the test infrastructure
+  supports the case.
+- Include the nearest meaningful valid, invalid, and boundary cases.
+- Fix the cause with the smallest relevant change. Preserve unrelated
+  behavior and existing public contracts.
+- Never weaken assertions, silently skip failures, or broaden accepted input
+  merely to obtain a passing result.
 
-| Suite | Ficheros de casos | Casos DOBA_TEST | Registro CTest |
-| --- | --- | --- | --- |
-| Unitaria | 115 | 401 | `doba_unit_tests` |
-| Integracion | 2 | 39 | `doba_integration_tests` |
+## Treat ownership and failure as part of the contract
 
-Los consumidores CMake de `tests/package` se compilan por separado; no se
-incluyen en ese recuento.
+- Use RAII for owned resources. Every view must have a valid backing lifetime,
+  including across moves, buffer reuse, asynchronous work, and cancellation.
+- Treat network input as sized bytes. Never assume null termination.
+- Review error paths alongside success paths: failed startup, partial I/O,
+  disconnects, serialization failure, and shutdown must have defined cleanup.
+- Keep concurrency rules explicit: which thread owns state, how it is
+  synchronized, and when outstanding work may still access it.
+- Document resource limits and failure behavior. A local buffer bound must
+  not be presented as a complete connection or request resource policy.
+- Preserve equivalent externally observable behavior on Windows and Linux.
 
-### Integracion de transporte (referencia historica QA1)
+## Verify behavior at the right boundary
 
-[Los tests TCP/IP](../tests/integration/transport/server/tcpip_tests.cpp)
-contienen 38 casos con sockets loopback reales. El mismo codigo selecciona
-IOCP en Windows y epoll en Linux. Cubren aceptacion, fragmentacion, envios
-acotados, desconexion, errores, streaming, orden y callbacks.
+Use focused unit tests for parsing, framing, value types, and object
+contracts. Use real-socket integration tests for behavior that depends on the
+transport: fragmentation, pipelining, response ordering, concurrent clients,
+cancellation, disconnects, and restart.
 
-[El test HTTP](../tests/integration/protocol/http/v11/server_tests.cpp)
-ejercita la composicion del servidor sobre TCP/IP, incluidos comportamientos
-automaticos e interinos.
+Changes to shared transport behavior require equivalent coverage in IOCP and
+epoll. A fake transport can isolate a failure path; it does not replace
+real-socket verification of network behavior.
 
-### Concurrencia y ciclo de vida (referencia historica QA2)
+Run focused regressions first, then the affected suites. The complete CI
+matrix validates the supported build configurations.
 
-La suite cubre pipelines sincronos y diferidos, respuestas fuera de orden,
-clientes concurrentes, excepciones de handler, cancelacion, apagado con estados
-mixtos y reinicio repetido. Los tests de `date_server` incluyen varios
-propietarios y `start()`/`stop()` concurrentes. El servidor HTTP tiene una
-regresion de rollback y reintento tras fallo del transporte.
+## Enforce the CI gates
 
-Esta cobertura funcional no demuestra todos los interleavings ni sustituye
-campanas prolongadas de estres. El trabajo adicional se recoge en el
-[backlog de QA](BACKLOG.md#calidad-y-validacion).
+The [CI workflow](../.github/workflows/ci.yml) defines the executable checks:
 
-## Integracion continua
-
-La fuente ejecutable es [.github/workflows/ci.yml](../.github/workflows/ci.yml).
-
-| Validacion configurada | Entorno |
+| Gate | Required validation |
 | --- | --- |
-| Build y CTest Debug/Release | GCC y Clang en Linux |
-| Build y CTest Debug/Release | MSVC en Windows |
-| ASan, UBSan y TSan | Clang Debug; suites unitaria e integracion |
-| Version minima de CMake | CMake 3.20.6 |
-| Instalacion y paquete | Consumidores externos Debug/Release |
-| Consumo del arbol fuente | Consumidor mediante `add_subdirectory` |
+| Compiler and configuration coverage | GCC and Clang on Linux; MSVC on Windows; Debug and Release. |
+| Strict warnings | `-Wall -Wextra -Wpedantic -Werror` or `/W4 /WX` for the project's builds. |
+| Memory safety checks | Unit and integration suites under Clang AddressSanitizer, with leak detection. |
+| Undefined behavior checks | Unit and integration suites under Clang UndefinedBehaviorSanitizer. |
+| Data race checks | Unit and integration suites under Clang ThreadSanitizer. |
+| Build compatibility | Configure, build, and test with CMake 3.20.6. |
+| Installed package | Build isolated Debug and Release consumers through `find_package`. |
+| Source integration | Build an `add_subdirectory` consumer without importing internal tests or examples. |
 
-### Compiladores y warnings (referencia historica RE1)
+Every gate must pass for a release. Investigate sanitizer findings as defects;
+do not suppress them merely to make the pipeline pass. Preserve strict warning
+settings instead of hiding diagnostics.
 
-CI activa `DOBA_ENABLE_STRICT_WARNINGS`: GCC/Clang usan
-`-Wall -Wextra -Wpedantic -Werror`; MSVC usa `/W4 /WX`.
-Los flags afectan al arbol propio y no se exportan al consumidor instalado.
+Sanitizers check executed paths. They complement regression tests and code
+review; they do not establish that unexecuted paths are safe.
 
-### Instalacion y consumo (referencia historica RE2)
+## Protect consumers
 
-CMake obtiene la version de [include/version.h](../include/version.h),
-instala headers y package config y exporta `martianlabs::doba`.
-CI instala en un prefijo aislado y compila consumidores externos mediante
-`find_package(doba CONFIG REQUIRED)`.
+- Preserve public signatures, ownership, exception guarantees, and observable
+  behavior unless a compatibility change is intentional and documented.
+- Keep internal warning and sanitizer flags out of the installed target's
+  interface.
+- Validate packaging from an isolated consumer, not just the library's own
+  build.
+- Keep source, examples, and documentation aligned with the supported API.
 
-[El consumidor de prueba](../tests/package/CMakeLists.txt) tambien usa
-`add_subdirectory` y comprueba que no se incorporan los ejemplos ni las
-suites internas. El target instalado aporta includes, C++20 y Threads.
+## Require evidence for performance claims
 
-### Compatibilidad y publicacion (referencias historicas RE3 y RE4)
+Changes justified by performance need reproducible measurements.
+Record the revision, compiler and flags, workload, environment, and repeated
+samples. Compare throughput and latency, and measure memory or allocations
+when those are the claimed benefit.
 
-CMake 3.20 es el minimo del proyecto. Los presets MSVC requieren 3.25.
-CI verifica 3.20.6 y utiliza los presets en Windows.
+Do not trade correctness for an assumed speedup. Do not describe an
+optimization as an improvement when its measured difference is within noise.
+Publish performance and compliance claims only at the scope supported by
+the evidence.
 
-El workflow permite crear manualmente una GitHub Release desde `main`
-despues de superar toda la matriz. Deriva `vMAJOR.MINOR.PATCH` de
-`include/version.h` y comprueba el destino de un tag ya existente.
-El mecanismo actual genera tags numericos; la publicacion de una etiqueta
-prerelease requiere resolver el punto indicado en
-[RE1](BACKLOG.md#re1-gobierno-y-trazabilidad-de-release).
+## Release only a traceable revision
 
-## Compliance y rendimiento
+The release workflow runs from `main` after the compiler, sanitizer, minimum
+CMake, and consumer checks succeed. It derives the version from
+`include/version.h` and rejects an existing tag that points elsewhere.
 
-Los adaptadores de [h1spec](../compliance/h1spec/README.md) y
-[Http11Probe](../compliance/http11probe/README.md) estan versionados y se
-ejecutan manualmente. Sus instrucciones permanecen junto a cada adaptador.
+Release decisions must refer to the actual revision and its CI results.
+A previous successful run does not validate later changes. Report which
+checks ran and any verification limits; never claim a test passed without
+execution.
 
-Existen adaptadores para
-[HttpArena](../benchmarks/httparena/http/v11/README.md) y
-[Web Frameworks Benchmark](../benchmarks/web-frameworks/http/v11/README.md).
-HttpArena fija la revision upstream; ambos Dockerfiles permiten fijar
-`DOBA_REF`. La existencia de estos adaptadores no equivale a un baseline
-de release ni a un resultado de rendimiento reproducible.
+## Keep documentation and changes reviewable
 
-## Correcciones y decisiones completadas
+All repository documentation is written in English. Text uses ASCII,
+UTF-8 without BOM, CRLF in the working tree, and a final newline.
+Changes preserve local code style and avoid unrelated formatting.
 
-### Fechas condicionales invalidas (referencia historica C7)
-
-El dispatcher convertia el fallo del checker estricto en rechazo de toda la
-request. El decoder ahora conserva `If-Modified-Since` e
-`If-Unmodified-Since` con fechas invalidas sin rechazar la peticion.
-La sintaxis general del field-value y los checkers independientes siguen
-siendo estrictos. La evaluacion de precondiciones y `If-Range` no cambiaron.
-
-Referencias: RFC 9110 S13.1.3 y S13.1.4. Hay regresiones para ambos campos en
-[decoder_tests.cpp](../tests/unit/protocol/http/v11/decoder_tests.cpp)
-y comprobacion sobre TCP/IP de respuesta 200 en lugar de 400.
-
-### Respuestas sin contenido
-
-La serializacion de 205 elimina el source y el cuerpo inline, retira
-`Transfer-Encoding` y fuerza `Content-Length: 0`. La regresion compartida
-con 1xx, 204 y 304 reside en
-[response_tests.cpp](../tests/unit/protocol/http/v11/response_tests.cpp).
-Referencia de 205: RFC 9110 S15.3.6.
-
-### Finalizacion del almacenamiento
-
-`finish()` sella el escritor y el storage: escribir despues falla y repetir
-la finalizacion conserva el tamano. El contrato se prueba con memoria y spill
-en [writer_tests.cpp](../tests/unit/common/writer_tests.cpp) y
-[byte_storage_tests.cpp](../tests/unit/common/byte_storage_tests.cpp).
-
-### Fecha compartida y rollback del servidor (referencia historica R1)
-
-El servicio de fecha cuenta propietarios bajo mutex y permanece activo hasta
-el ultimo `stop()`. Hay pruebas de propietarios simultaneos y concurrencia en
-[date_server_tests.cpp](../tests/unit/common/date_server_tests.cpp).
-
-Si `transport_.start()` lanza, la capa HTTP libera su adquisicion de fecha
-y relanza la excepcion original. Una instancia que no arranco no libera
-recursos ajenos al detenerse. El transporte fake reproduce el fallo y el
-reintento en [server_tests.cpp](../tests/unit/protocol/http/v11/server_tests.cpp).
-
-### Buffers propietarios bajo RAII (referencia historica DT1)
-
-`decoder` y `request` usan `std::unique_ptr<char[]>` y
-`make_unique_for_overwrite`, con destructores predeterminados y sin
-inicializacion adicional del buffer. Sus tests cubren lifetime de vistas,
-percent-decoding, dispatch incremental y bodies.
-
-El registro historico de DT1 conserva estos resultados:
-
-- Suites completas con GCC y MSVC Debug/Release y warnings estrictos.
-- GCC bajo ASan y UBSan.
-- GCC 13: `request` de 200 bytes y `decoder` de 712 bytes.
-- Cinco muestras de `/pipeline`, una conexion y profundidad 32: medianas
-  de 377142 req/s antes y 376937 req/s despues (-0,05%); p50 de 75 us
-  en ambos casos.
-
-Estas medidas se conservan como antecedente de la decision. No fueron
-repetidas durante la reorganizacion ni constituyen el baseline de release
-descrito en [QA3](BACKLOG.md#qa3-baseline-de-rendimiento).
-
-## Interpretacion de la evidencia
-
-Los recuentos anteriores describen el arbol, y la tabla CI describe lo que el
-workflow ejecuta. Para afirmar que una revision pasa, comprobar su ejecucion
-concreta de configuracion, build y CTest y la matriz remota correspondiente.
-
-Los sanitizers detectan defectos en los caminos ejecutados. Las pruebas
-actuales no demuestran conformidad exhaustiva ni ausencia de carreras en todos
-los interleavings. El fuzzing, la ampliacion sistematica de compliance y el
-baseline tienen entradas independientes en el backlog.
+For documentation changes, verify technical claims, relative links, and
+formatting. For implementation changes, also report the relevant tests and
+results. [Development](DEVELOPMENT.md) provides the build commands and
+conventions; [Backlog](BACKLOG.md) records outstanding work and release scope.

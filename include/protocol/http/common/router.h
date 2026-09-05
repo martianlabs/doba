@@ -266,7 +266,7 @@ class router {
       std::pair<std::string,
                 std::vector<router_handler_parametrized<RQty, RSty>>>;
   // +=========================================================================+
-  // | [>] count_parameters                                      ( private ) |
+  // | [>] count_parameters                                      ( private )   |
   // +=========================================================================+
   static std::size_t count_parameters(std::string_view route) {
     std::size_t count = 0;
@@ -286,7 +286,7 @@ class router {
     }
   }
   // +=========================================================================+
-  // | [>] invoke_async_handler                                   ( private ) |
+  // | [>] invoke_async_handler                                   ( private )  |
   // +=========================================================================+
   template <typename Hty>
   static common::task<RSty> invoke_async_handler(
@@ -296,7 +296,7 @@ class router {
     co_return co_await std::invoke(*handler, std::move(req), stop_token);
   }
   // +=========================================================================+
-  // | [>] make_handler_data                                      ( private ) |
+  // | [>] make_handler_data                                      ( private )  |
   // +=========================================================================+
   template <typename Hty>
   static handler_data make_handler_data(Hty handler) {

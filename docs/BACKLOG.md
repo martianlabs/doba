@@ -1,612 +1,615 @@
 # Backlog
 
-[Indice](HANDOFF.md)
+[Index](HANDOFF.md)
 
-Fuente de verdad para el trabajo pendiente de doba. Cada categoria tiene una
-numeracion consecutiva y cada item tiene una unica entrada. Los identificadores
-anteriores se conservan en la [tabla de equivalencias](#equivalencias).
-La evidencia de los elementos cerrados se conserva en
+Source of truth for doba's outstanding work. Each category has consecutive
+numbering, and each item has a single entry. Previous identifiers are
+preserved in the [identifier mapping](#identifier-mapping).
+Engineering and verification requirements are defined in
 [QUALITY.md](QUALITY.md).
 
-Un item pendiente no implica que su diseno este decidido. Los criterios
-siguientes sirven para preparar su implementacion; las decisiones abiertas
-se indican expresamente. Las prioridades sin valor previo figuran como
-"Sin fijar". Las etiquetas originales B/M/A estimaban complejidad y no se
-reinterpretan como severidad.
+An outstanding item does not imply that its design has been decided.
+The criteria below help prepare implementation; open decisions are stated
+explicitly. Priorities without a previous value are marked "Not set".
+The original B/M/A labels estimated complexity and are not reinterpreted
+as severity.
 
-## Contenido
+## Contents
 
-- [Objetivo de release](#objetivo-de-release)
-- [Inventario](#inventario)
-- [Hardening operativo](#hardening-operativo)
-- [Producto y conveniencia](#producto-y-conveniencia)
-- [Calidad y validacion](#calidad-y-validacion)
+- [Release target](#release-target)
+- [Inventory](#inventory)
+- [Operational hardening](#operational-hardening)
+- [Product and convenience](#product-and-convenience)
+- [Quality and validation](#quality-and-validation)
 - [Release engineering](#release-engineering)
-- [Mantenibilidad C++](#mantenibilidad-c)
-- [Documentacion publica](#documentacion-publica)
-- [Fuera de la primera release](#fuera-de-la-primera-release)
-- [Equivalencias](#equivalencias)
+- [C++ maintainability](#c-maintainability)
+- [Public documentation](#public-documentation)
+- [Beyond the first release](#beyond-the-first-release)
+- [Identifier mapping](#identifier-mapping)
 
-## Objetivo de release
+## Release target
 
-El objetivo vigente de `0.1.0-beta.1` es completar C1 y C3 y verificarlos
-sobre sockets reales en Windows y Linux. La salida requiere tambien conservar
-las validaciones de CI y consumo CMake y completar la parte restante de RE1.
+The current `0.1.0-beta.1` target is to complete C1 and C3 and verify them
+over real sockets on Windows and Linux. Release also requires preserving
+CI and CMake consumer validations and completing the remainder of RE1.
 
-Orden recomendado:
+Recommended order:
 
-1. C1: timeout unico de inactividad.
-2. C3: maximo global de conexiones activas.
-3. Cerrar RE1 y verificar toda la matriz de release.
+1. C1: a single inactivity timeout.
+2. C3: a global active connection limit.
+3. Close RE1 and verify the complete release matrix.
 
-C1 y C3 comparten configuracion generica previa a `start()` y ejecucion
-especifica en IOCP y epoll. Conviene definir esa parte comun antes de abordar
-cada cambio localizado. No se han elegido aun valores predeterminados ni la
-forma exacta de la API.
+C1 and C3 share generic configuration before `start()` and platform-specific
+execution in IOCP and epoll. Define the common part before addressing each
+localized change. Default values and the exact API shape have not yet
+been selected.
 
-C2, fuzzing y automatizacion de herramientas externas estan expresamente
-diferidos fuera del hardening actual. P5-P7 no son gates de compliance ni
-release. DT1 y DT2 tampoco bloquean automaticamente la primera release.
-Los demas pendientes no tienen una version asignada.
+C2, fuzzing, and external tool automation are explicitly deferred beyond
+the current hardening effort. P5-P7 are neither compliance nor release gates.
+DT1 and DT2 do not automatically block the first release either.
+Other outstanding items have no assigned version.
 
-## Inventario
+## Inventory
 
-26 items distribuidos en siete categorias. La numeracion identifica items;
-no expresa prioridad ni orden de implementacion.
+26 items across seven categories. Numbering identifies items; it does not
+express priority or implementation order.
 
-| Categoria | Identificadores | Total |
+| Category | Identifiers | Total |
 | --- | --- | --- |
-| Hardening operativo | C1-C3 | 3 |
-| Producto y conveniencia | P1-P7 | 7 |
-| Calidad y validacion | QA1-QA6 | 6 |
+| Operational hardening | C1-C3 | 3 |
+| Product and convenience | P1-P7 | 7 |
+| Quality and validation | QA1-QA6 | 6 |
 | Release engineering | RE1 | 1 |
-| Mantenibilidad C++ | DT1-DT2 | 2 |
-| Documentacion publica | DOC1-DOC2 | 2 |
-| Fuera de la primera release | F1-F5 | 5 |
+| C++ maintainability | DT1-DT2 | 2 |
+| Public documentation | DOC1-DOC2 | 2 |
+| Beyond the first release | F1-F5 | 5 |
 | **Total** | | **26** |
 
-| Item | Categoria | Estado | Prioridad | Objetivo |
+| Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
-| [C1](#c1-timeout-unico-de-inactividad) | Hardening | Pendiente | Objetivo beta | 0.1.0-beta.1 |
-| [C2](#c2-limites-efectivos-por-request) | Hardening | Diferido | Alta | Sin version |
-| [C3](#c3-maximo-global-de-conexiones-activas) | Hardening | Pendiente | Objetivo beta | 0.1.0-beta.1 |
-| [P1](#p1-handler-de-ficheros-estaticos) | Producto | Pendiente | Sin fijar | Sin version |
-| [P2](#p2-logging-de-acceso) | Producto | Pendiente | Sin fijar | Sin version |
-| [P3](#p3-cadena-de-middleware) | Producto | Pendiente | Sin fijar | Sin version |
-| [P4](#p4-parsing-de-formularios) | Producto | Pendiente | Sin fijar | Sin version |
-| [P5](#p5-condicionales-y-rangos-automaticos) | Producto | Diferido | Sin fijar | Sin version |
-| [P6](#p6-trailers-de-salida) | Producto | Diferido | Sin fijar | Sin version |
-| [P7](#p7-options-automatico-de-recurso) | Producto | Diferido | Sin fijar | Sin version |
-| [QA1](#qa1-suite-de-conformidad-exhaustiva) | QA | Pendiente | Sin fijar | Sin version |
-| [QA2](#qa2-fuzzing) | QA | Diferido | Alta | Sin version |
-| [QA3](#qa3-baseline-de-rendimiento) | QA | Pendiente | Media | Sin version |
-| [QA4](#qa4-diagnostico-y-aislamiento-del-harness) | QA | Pendiente | Media | Sin version |
-| [QA5](#qa5-campanas-de-estres) | QA | Pendiente | Sin fijar | Sin version |
-| [QA6](#qa6-automatizacion-de-compliance-externo) | QA | Diferido | Sin fijar | Sin version |
-| [RE1](#re1-gobierno-y-trazabilidad-de-release) | Release | Parcial | Media | 0.1.0-beta.1 |
-| [DT1](#dt1-dependencias-y-efectos-globales-de-platformh) | C++ | Pendiente | Media | Sin version |
-| [DT2](#dt2-contrato-de-getters-indexados) | C++ | Pendiente | Baja/Media | Sin version |
-| [DOC1](#doc1-ciclo-de-vida-del-transporte) | Documentacion | Pendiente | Sin fijar | Sin version |
-| [DOC2](#doc2-vistas-y-getters-de-request) | Documentacion | Pendiente | Sin fijar | Sin version |
-| [F1](#f1-tls) | Futuro | Diferido | Sin fijar | Fuera de 0.1 |
-| [F2](#f2-compresion-y-gzip) | Futuro | Diferido | Sin fijar | Fuera de 0.1 |
-| [F3](#f3-streaming-progresivo-y-sse) | Futuro | Diferido | Sin fijar | Fuera de 0.1 |
-| [F4](#f4-barrera-ordenada-de-upgrade) | Futuro | Diferido | Sin fijar | Fuera de 0.1 |
-| [F5](#f5-websockets) | Futuro | Diferido | Sin fijar | Fuera de 0.1 |
-
-## Hardening operativo
-
-### C1: Timeout unico de inactividad
-
-**Contexto.** Ningun backend cierra hoy una conexion abierta que deja de
-progresar. Estimacion original de complejidad: M.
-
-**Alcance.** Un unico `inactivity_timeout`, configurable antes de `start()`,
-aplicable a lectura, keep-alive y escritura. Recibir o enviar bytes renueva
-el plazo; la duracion total de una conexion o request no lo consume mientras
-exista progreso. Al vencer, el transporte cierra de forma segura.
-
-**Componentes.** Configuracion del transporte, `tcpip_windows.h`,
-`tcpip_linux.h` y tests de integracion TCP/IP.
-
-**Aceptacion y pruebas.**
+| [C1](#c1-single-inactivity-timeout) | Hardening | Pending | Beta target | 0.1.0-beta.1 |
+| [C2](#c2-effective-per-request-limits) | Hardening | Deferred | High | No assigned version |
+| [C3](#c3-global-active-connection-limit) | Hardening | Pending | Beta target | 0.1.0-beta.1 |
+| [P1](#p1-static-file-handler) | Product | Pending | Not set | No assigned version |
+| [P2](#p2-access-logging) | Product | Pending | Not set | No assigned version |
+| [P3](#p3-middleware-chain) | Product | Pending | Not set | No assigned version |
+| [P4](#p4-form-parsing) | Product | Pending | Not set | No assigned version |
+| [P5](#p5-automatic-conditionals-and-ranges) | Product | Deferred | Not set | No assigned version |
+| [P6](#p6-output-trailers) | Product | Deferred | Not set | No assigned version |
+| [P7](#p7-automatic-resource-options) | Product | Deferred | Not set | No assigned version |
+| [QA1](#qa1-exhaustive-compliance-suite) | QA | Pending | Not set | No assigned version |
+| [QA2](#qa2-fuzzing) | QA | Deferred | High | No assigned version |
+| [QA3](#qa3-performance-baseline) | QA | Pending | Medium | No assigned version |
+| [QA4](#qa4-harness-diagnostics-and-isolation) | QA | Pending | Medium | No assigned version |
+| [QA5](#qa5-stress-campaigns) | QA | Pending | Not set | No assigned version |
+| [QA6](#qa6-external-compliance-automation) | QA | Deferred | Not set | No assigned version |
+| [RE1](#re1-release-governance-and-traceability) | Release | Partial | Medium | 0.1.0-beta.1 |
+| [DT1](#dt1-platformh-dependencies-and-global-effects) | C++ | Pending | Medium | No assigned version |
+| [DT2](#dt2-indexed-getter-contract) | C++ | Pending | Low/Medium | No assigned version |
+| [DOC1](#doc1-transport-lifecycle) | Documentation | Pending | Not set | No assigned version |
+| [DOC2](#doc2-request-views-and-getters) | Documentation | Pending | Not set | No assigned version |
+| [F1](#f1-tls) | Future | Deferred | Not set | Beyond 0.1 |
+| [F2](#f2-compression-and-gzip) | Future | Deferred | Not set | Beyond 0.1 |
+| [F3](#f3-progressive-streaming-and-sse) | Future | Deferred | Not set | Beyond 0.1 |
+| [F4](#f4-ordered-upgrade-barrier) | Future | Deferred | Not set | Beyond 0.1 |
+| [F5](#f5-websockets) | Future | Deferred | Not set | Beyond 0.1 |
+
+## Operational hardening
+
+### C1: Single inactivity timeout
+
+**Context.** Neither backend currently closes an open connection that stops
+making progress. Original complexity estimate: M.
+
+**Scope.** A single `inactivity_timeout`, configurable before `start()`,
+applies to reads, keep-alive, and writes. Receiving or sending bytes renews
+the deadline; the total duration of a connection or request does not exhaust
+it while progress continues. On expiry, the transport closes safely.
+
+**Components.** Transport configuration, `tcpip_windows.h`,
+`tcpip_linux.h`, and TCP/IP integration tests.
+
+**Acceptance and tests.**
 
-- Una lectura fragmentada que progresa conserva la conexion.
-- Una request parcial detenida, un keep-alive inactivo y un cliente que no
-  lee provocan cierre al vencer el plazo aplicable.
-- Comprobar plazo, lifetime, orden y un unico callback por cierre.
-- Ejecutar escenarios equivalentes en IOCP y epoll.
-
-**Dependencias y decisiones.** Compartir con C3 la configuracion generica;
-determinar API, valor por defecto, posible desactivacion y tolerancia temporal
-de los tests antes de implementar.
+- A fragmented read that makes progress keeps the connection alive.
+- A stalled partial request, idle keep-alive, and a client that does not read
+  cause closure when the applicable deadline expires.
+- Check timing, lifetime, ordering, and exactly one callback per closure.
+- Run equivalent scenarios in IOCP and epoll.
 
-**Fuera de alcance.** Plazos separados por fase, duracion maxima absoluta,
-configuracion dinamica y generacion automatica de respuestas `408`.
+**Dependencies and decisions.** Share generic configuration with C3.
+Determine the API, default value, possible disabling behavior, and test timing
+tolerance before implementation.
 
-### C2: Limites efectivos por request
+**Out of scope.** Separate deadlines per phase, an absolute maximum duration,
+dynamic configuration, and automatic `408` responses.
 
-**Contexto.** `max_content_length`, `max_forwarding_hops`,
-`max_transfer_codings`, `max_uri_length` y `max_header_section_size` usan
-cero como ilimitado. El servidor por defecto no ofrece configuracion.
-El buffer interno acota el head, pero no proporciona una politica general
-de recursos. Los bodies pueden derramar a disco.
+### C2: Effective per-request limits
 
-**Alcance futuro.** Definir defaults seguros y una API minima previa a
-`start()`. Rechazar un Content-Length excesivo antes de consumir el body.
-Verificar por separado la politica aplicable a un body chunked, cuyo tamano
-no se conoce de antemano.
+**Context.** `max_content_length`, `max_forwarding_hops`,
+`max_transfer_codings`, `max_uri_length`, and `max_header_section_size`
+use zero for unlimited. The default server exposes no configuration.
+The internal buffer bounds the head but does not provide a general resource
+policy. Bodies can spill to disk.
 
-**Componentes.** `policies.h`, `limits.h`, `context.h`, `decoder.h`,
-reglas de headers, composicion del servidor y sus tests.
+**Future scope.** Define safe defaults and a minimal API before `start()`.
+Reject excessive Content-Length before consuming the body. Separately check
+the policy for chunked bodies, whose size is not known in advance.
 
-**Aceptacion y pruebas.**
+**Components.** `policies.h`, `limits.h`, `context.h`, `decoder.h`,
+header rules, server composition, and their tests.
 
-- Documentar que limita cada valor y como se aplica en el servidor estandar.
-- Probar el valor exacto, una unidad por encima y la semantica de cero.
-- Comprobar rechazo temprano y razon de rechazo correspondiente.
-- Verificar que la configuracion no cambia de forma insegura durante uso.
-- Medir si el cambio afecta al hot path.
+**Acceptance and tests.**
 
-**Dependencias y decisiones.** Requiere diseno propio de API y defaults.
-Se ha diferido expresamente; el plan actual no cambia estas politicas ni sus
-consumidores. No confundirlo con C3.
+- Document what each value limits and how it applies in the standard server.
+- Test the exact limit, one unit above it, and zero semantics.
+- Check early rejection and the corresponding rejection reason.
+- Verify that configuration cannot change unsafely during use.
+- Measure whether the change affects the hot path.
 
-### C3: Maximo global de conexiones activas
+**Dependencies and decisions.** Requires a dedicated API and defaults design.
+Explicitly deferred; the current plan does not change these policies or their
+consumers. Do not confuse this with C3.
 
-**Contexto.** `connections_` es observacional y no limita la admision.
-Estimacion original de complejidad: M.
+### C3: Global active connection limit
 
-**Alcance.** Un maximo global configurado antes de `start()`. Cada backend
-reserva el cupo atomicamente antes de admitir un contexto. Si se alcanza el
-limite, cierra inmediatamente la nueva conexion y conserva las ya admitidas.
+**Context.** `connections_` is observational and does not limit admission.
+Original complexity estimate: M.
 
-**Componentes.** Configuracion generica, admision y cierre en ambos backends,
-contador de conexiones y tests TCP/IP.
+**Scope.** A global maximum configured before `start()`. Each backend
+atomically reserves capacity before admitting a context. Once the limit is
+reached, it immediately closes the new connection while preserving those
+already admitted.
 
-**Aceptacion y pruebas.**
+**Components.** Generic configuration, admission and closure in both backends,
+the connection counter, and TCP/IP tests.
 
-- Superar el maximo con clientes concurrentes sin sobrepasar el cupo.
-- Las conexiones ya admitidas siguen atendidas.
-- Cada cierre libera exactamente una reserva, tambien ante errores.
-- Una nueva conexion puede entrar al recuperarse el cupo.
-- Verificar equivalencia en Windows y Linux.
+**Acceptance and tests.**
 
-**Dependencias y decisiones.** Coordinacion con C1; determinar defaults y
-semantica de un eventual valor ilimitado. C3 controla conexiones; C2 controla
-recursos por request.
+- Exceed the maximum with concurrent clients without exceeding capacity.
+- Previously admitted connections remain served.
+- Every closure releases exactly one reservation, including error paths.
+- A new connection can enter once capacity is available again.
+- Verify equivalent behavior on Windows and Linux.
 
-**Fuera de alcance.** Cuotas por worker, cambios dinamicos, backpressure de
-aceptacion, callbacks nuevos y respuestas HTTP de rechazo.
+**Dependencies and decisions.** Coordinate with C1; determine defaults and
+the semantics of any unlimited value. C3 controls connections; C2 controls
+resources per request.
 
-## Producto y conveniencia
+**Out of scope.** Per-worker quotas, dynamic changes, acceptance backpressure,
+new callbacks, and HTTP rejection responses.
 
-### P1: Handler de ficheros estaticos
+## Product and convenience
 
-**Contexto.** El drenaje de bodies de salida y el percent-decoding ya existen.
-Este ultimo es una dependencia de seguridad. Estimacion original: M.
+### P1: Static file handler
 
-**Alcance por definir.** Un handler de ficheros que use esas primitivas.
-`TransmitFile`/`sendfile` son opciones a evaluar con medidas, no un
-requisito arquitectonico decidido.
+**Context.** Output body draining and percent-decoding already exist.
+The latter is a security dependency. Original estimate: M.
 
-**Componentes.** Handler HTTP, resolucion de paths, body de salida y ejemplos.
+**Scope to define.** A file handler using those primitives.
+`TransmitFile`/`sendfile` are options to evaluate through measurements,
+not a decided architectural requirement.
 
-**Aceptacion propuesta.** Definir la raiz permitida, errores de acceso y
-lifetime del fichero; verificar paths codificados, traversal, ficheros
-inexistentes, cuerpo binario y salida grande con memoria acotada.
+**Components.** HTTP handler, path resolution, output body, and examples.
 
-**Dependencias.** Preservar la frontera generica si se introduce una ruta de
-envio especifica de plataforma. No presupone soporte automatico de rangos.
+**Proposed acceptance.** Define the allowed root, access errors, and file
+lifetime; verify encoded paths, traversal, missing files, binary bodies,
+and large output with bounded memory.
 
-### P2: Logging de acceso
+**Dependencies.** Preserve the generic boundary if a platform-specific send
+path is introduced. This does not assume automatic range support.
 
-**Contexto.** No existe un punto dedicado a logging de acceso. El transporte
-tiene callbacks de ciclo de vida y el logger comun no equivale a un registro
-de requests.
+### P2: Access logging
 
-**Alcance por definir.** Decidir el punto de observacion y los datos expuestos,
-incluyendo cuando una respuesta puede considerarse terminada.
+**Context.** There is no dedicated access logging hook. The transport has
+lifecycle callbacks, and the common logger is not a request log.
 
-**Componentes.** Composicion HTTP/transporte, logger, tests y ejemplos.
+**Scope to define.** Decide the observation point and exposed data, including
+when a response can be considered finished.
 
-**Aceptacion propuesta.** Comprobar registros de exito, rechazo, desconexion y
-fallo de envio sin duplicados; definir lifetime de datos y coste cuando el
-logging esta desactivado.
+**Components.** HTTP/transport composition, logger, tests, and examples.
 
-**Dependencias.** Decidir si necesita P3; no introducir esa dependencia por
-defecto ni exponer semantica HTTP dentro del transporte.
+**Proposed acceptance.** Check success, rejection, disconnection, and send
+failure records without duplicates; define data lifetime and the cost when
+logging is disabled.
 
-### P3: Cadena de middleware
+**Dependencies.** Decide whether P3 is needed; do not introduce that dependency
+by default or expose HTTP semantics inside the transport.
 
-**Contexto.** Componer logica transversal exige hoy repetirla en handlers.
-El diseno debe respetar la orientacion ligera del framework.
+### P3: Middleware chain
 
-**Alcance por definir.** Resolver primero los casos concretos de composicion y
-su interaccion con handlers sincronos y diferidos.
+**Context.** Composing cross-cutting logic currently requires repeating it
+in handlers. The design must respect the framework's lightweight approach.
 
-**Componentes.** API de registro de rutas, contratos de handlers y tests.
+**Scope to define.** First resolve concrete composition use cases and their
+interaction with synchronous and deferred handlers.
 
-**Aceptacion propuesta.** Especificar orden, interrupcion de cadena, errores,
-cancelacion y ownership; probarlos sin penalizar el camino sin middleware.
+**Components.** Route registration API, handler contracts, and tests.
 
-**Fuera de alcance.** No existe una arquitectura de middleware decidida ni
-justificacion para introducir un framework general de extensiones.
+**Proposed acceptance.** Specify ordering, short-circuiting, errors,
+cancellation, and ownership; test them without penalizing the path without
+middleware.
 
-### P4: Parsing de formularios
+**Out of scope.** No middleware architecture has been decided, and there is
+no justification for introducing a general extension framework.
 
-**Contexto.** No hay parsing de `application/x-www-form-urlencoded` ni
-`multipart/form-data`. Existe una primitiva de percent-decoding.
-Estimacion original: M.
+### P4: Form parsing
 
-**Alcance por definir.** Separar ambos formatos y decidir representacion de
-campos repetidos, payloads binarios y errores sin asumir que sus gramaticas
-coinciden con las de una query.
+**Context.** Neither `application/x-www-form-urlencoded` nor
+`multipart/form-data` parsing exists. A percent-decoding primitive is
+available. Original estimate: M.
 
-**Componentes.** Helpers HTTP, body reader, API de formularios y tests.
+**Scope to define.** Separate the two formats and decide how to represent
+repeated fields, binary payloads, and errors without assuming that their
+grammars match query syntax.
 
-**Aceptacion propuesta.** Casos validos y malformados, codificacion, campos
-vacios/repetidos, limites y boundaries fragmentados para multipart.
+**Components.** HTTP helpers, body reader, form API, and tests.
 
-**Dependencias.** Reutilizar las primitivas existentes solo donde coincida su
-semantica. Coordinar presupuestos de recursos con C2.
+**Proposed acceptance.** Valid and malformed cases, encoding, empty/repeated
+fields, limits, and fragmented boundaries for multipart.
 
-### P5: Condicionales y rangos automaticos
+**Dependencies.** Reuse existing primitives only where their semantics match.
+Coordinate resource budgets with C2.
 
-**Contexto.** Doba conserva campos condicionales; el handler dispone de los
-validadores del recurso. La aplicacion, cuando actua como origin server,
-es responsable de evaluar precondiciones. Los rangos son opcionales.
+### P5: Automatic conditionals and ranges
 
-**Alcance futuro.** Helpers para `304`, `412`, `206` o `416`, si se
-decide ofrecerlos. El framework no debe inventar metadatos de la
-representacion seleccionada.
+**Context.** Doba preserves conditional fields; the handler has the resource
+validators. The application, when acting as an origin server, is responsible
+for evaluating preconditions. Range support is optional.
 
-**Componentes.** API HTTP, headers condicionales, response y ejemplos.
+**Future scope.** Helpers for `304`, `412`, `206`, or `416`, if they
+are offered. The framework must not invent metadata for the selected
+representation.
 
-**Aceptacion y pruebas.** Definir el contrato de validadores aportados por la
-aplicacion, probar precedencia de precondiciones y conservar la posibilidad
-de ignorar Range y atender el GET normal.
+**Components.** HTTP API, conditional headers, response, and examples.
 
-**Referencias.** RFC 9110 S13.2, S13.2.2 y S14.
+**Acceptance and tests.** Define the contract for application-provided
+validators, test precondition precedence, and preserve the ability to ignore
+Range and serve a normal GET.
 
-**Fuera de alcance.** No es un gate de compliance del core ni de release.
-La correccion de fechas invalidas esta cerrada y documentada en calidad.
+**References.** RFC 9110 S13.2, S13.2.2, and S14.
 
-### P6: Trailers de salida
+**Out of scope.** This is neither a core compliance gate nor a release gate.
+Invalid conditional date handling is already implemented.
 
-**Contexto.** `response` no expone una API para emitir trailers.
+### P6: Output trailers
 
-**Alcance futuro.** Definir una API limitada al framing que los admite,
-con validacion de campos y finalizacion coherente del body.
+**Context.** `response` exposes no API for emitting trailers.
 
-**Componentes.** Response, writers de salida y sus tests.
+**Future scope.** Define an API limited to framing that supports trailers,
+with field validation and consistent body finalization.
 
-**Aceptacion y pruebas.** Verificar el wire completo, el terminador y las
-restricciones de campos de trailers; conservar la salida sin trailers.
+**Components.** Response, output writers, and their tests.
 
-**Referencia.** RFC 9110 S6.5.
+**Acceptance and tests.** Verify the complete wire output, terminator, and
+trailer field restrictions; preserve output without trailers.
 
-**Fuera de alcance.** Capacidad opcional, sin gate de release asignado.
+**Reference.** RFC 9110 S6.5.
 
-### P7: OPTIONS automatico de recurso
+**Out of scope.** Optional capability with no assigned release gate.
 
-**Contexto.** `OPTIONS *` ya es automatico. La aplicacion puede registrar
-handlers `OPTIONS` para recursos concretos.
+### P7: Automatic resource OPTIONS
 
-**Alcance futuro.** Sintetizar respuestas desde el router reutilizando el
-calculo de `Allow` empleado por `405`.
+**Context.** `OPTIONS *` is already automatic. The application can register
+`OPTIONS` handlers for specific resources.
 
-**Componentes.** Router, server HTTP y pruebas de rutas.
+**Future scope.** Synthesize responses through the router by reusing the
+`Allow` calculation used by `405`.
 
-**Aceptacion y pruebas.** Conservar prioridades de rutas estaticas,
-parametrizadas y wildcard; definir la precedencia de un handler explicito y
-probar recursos existentes y ausentes.
+**Components.** Router, HTTP server, and route tests.
 
-**Fuera de alcance.** Conveniencia opcional; no es gate de release.
+**Acceptance and tests.** Preserve static, parameterized, and wildcard route
+precedence; define precedence for an explicit handler and test existing and
+missing resources.
 
-## Calidad y validacion
+**Out of scope.** Optional convenience; not a release gate.
 
-### QA1: Suite de conformidad exhaustiva
+## Quality and validation
 
-**Contexto.** La integracion propia cubre framing, fragmentacion, pipelining
-y cierre con sockets reales. No constituye una matriz RFC exhaustiva.
+### QA1: Exhaustive compliance suite
 
-**Riesgo.** Una regresion puede depender de segmentacion TCP, requests
-concatenadas, limites o framing ambiguo y escapar a los casos actuales.
+**Context.** The project's integration suite covers framing, fragmentation,
+pipelining, and closure over real sockets. It is not an exhaustive RFC matrix.
 
-**Alcance.** Ampliar sistematicamente positivos y negativos de request
-smuggling, Content-Length/Transfer-Encoding, chunked, trailers y limites.
+**Risk.** A regression can depend on TCP segmentation, concatenated requests,
+limits, or ambiguous framing and escape existing cases.
 
-**Componentes.** Decoder, reglas de framing, request/response, contrato
-protocolo-transporte y ambos backends.
+**Scope.** Systematically expand positive and negative cases for request
+smuggling, Content-Length/Transfer-Encoding, chunked encoding, trailers,
+and limits.
 
-**Aceptacion y pruebas.** Trazar cada grupo de casos a la regla RFC, cubrir
-fragmentaciones relevantes y verificar resultados equivalentes en IOCP y
-epoll. Los casos de limites configurados dependen de lo decidido en C2.
+**Components.** Decoder, framing rules, request/response,
+protocol-transport contract, and both backends.
 
-**Referencias.** RFC 9110 y RFC 9112. La suite aporta evidencia a la declaracion
-de HTTP/1.1 estricto; no sustituye la revision del contrato.
+**Acceptance and tests.** Trace each group of cases to its RFC rule, cover
+relevant fragmentation points, and verify equivalent results in IOCP and
+epoll. Configured limit cases depend on the C2 decisions.
+
+**References.** RFC 9110 and RFC 9112. The suite provides evidence for the
+strict HTTP/1.1 claim; it does not replace contract review.
 
 ### QA2: Fuzzing
 
-**Contexto.** ASan, UBSan y TSan ya estan integrados. Los tests escritos
-ejecutan un conjunto finito de caminos.
+**Context.** ASan, UBSan, and TSan are already integrated. Written tests execute
+a finite set of paths.
 
-**Alcance futuro.** Preparar un plan independiente de fuzzing para helpers,
-decoder, framers/readers, rebasing de request, serializacion, byte storage y
-las fronteras relevantes del transporte.
+**Future scope.** Prepare a separate fuzzing plan for helpers, the decoder,
+framers/readers, request rebasing, serialization, byte storage, and relevant
+transport boundaries.
 
-**Aceptacion propuesta.** Definir targets, corpus inicial, presupuestos y
-reproduccion de fallos. Conservar cada fallo confirmado como regresion
-determinista y ejecutar los targets con el sanitizer adecuado.
+**Proposed acceptance.** Define targets, an initial corpus, budgets, and
+failure reproduction. Preserve every confirmed failure as a deterministic
+regression and run targets with the appropriate sanitizer.
 
-**Dependencias y limites.** Elegir infraestructura antes de incorporar
-dependencias. La integracion CI de fuzzing esta diferida fuera del hardening
-actual; no reabrir el trabajo ya completado de sanitizers.
+**Dependencies and limits.** Select infrastructure before adding
+dependencies. CI fuzzing integration is deferred beyond the current hardening
+effort; do not reopen the completed sanitizer work.
 
-### QA3: Baseline de rendimiento
+### QA3: Performance baseline
 
-**Contexto.** Hay adaptadores para HttpArena y Web Frameworks Benchmark.
-Falta un baseline persistente y un gate sobre throughput, latencia,
-asignaciones, memoria y escalado. El runner upstream de Web Frameworks no
-tiene un commit fijado.
+**Context.** Adapters exist for HttpArena and Web Frameworks Benchmark.
+A persistent baseline and a gate for throughput, latency, allocations,
+memory, and scaling are missing. The upstream Web Frameworks runner has no
+pinned commit.
 
-**Impacto.** No se puede cuantificar la promesa de alto rendimiento ni
-comparar con confianza decisiones sobre shared_ptr, std::function, spill
-o buffers.
+**Impact.** The high-performance claim cannot be quantified, and decisions
+about shared_ptr, std::function, spill, or buffers cannot be compared with
+confidence.
 
-**Alcance.** Fijar revisiones, escenarios y condiciones para request minima,
-headers grandes, body inline/streaming, pipelining y concurrencia.
+**Scope.** Pin revisions, scenarios, and conditions for minimal requests,
+large headers, inline/streaming bodies, pipelining, and concurrency.
 
-**Componentes.** Adaptadores, decoder, router, serializacion y transportes.
+**Components.** Adapters, decoder, router, serialization, and transports.
 
-**Aceptacion y pruebas.** Registrar toolchain, hardware, revisiones exactas,
-distribuciones de latencia y repeticion de muestras. Definir tolerancias
-segun ruido medido y una forma reproducible de comparar con la release.
+**Acceptance and tests.** Record the toolchain, hardware, exact revisions,
+latency distributions, and repeated samples. Define tolerances based on
+measured noise and a reproducible comparison with the release.
 
-**Dependencias.** Separar medicion de optimizacion. La medida historica de la
-migracion a RAII se conserva en calidad, pero no sustituye este baseline.
+**Dependencies.** Separate measurement from optimization. Individual
+optimization measurements do not replace this release baseline.
 
-### QA4: Diagnostico y aislamiento del harness
+### QA4: Harness diagnostics and isolation
 
-**Contexto.** El runner unitario invoca cada caso sin capturar excepciones.
-Una excepcion inesperada puede terminar el ejecutable. `expect` recibe
-expresion, fichero y linea, pero no los imprime. CTest registra toda la suite
-unitaria como un solo test.
+**Context.** The unit runner invokes each case without catching exceptions.
+An unexpected exception can terminate the executable. `expect` receives
+the expression, file, and line but does not print them. CTest registers the
+entire unit suite as a single test.
 
-**Impacto.** Los fallos intermitentes o excepcionales ofrecen poco diagnostico
-y pueden ocultar resultados de los casos posteriores.
+**Impact.** Intermittent or exceptional failures provide little diagnostic
+information and can hide the results of later cases.
 
-**Componentes.** `tests/unit/test_helper.h`, `test_helper.cpp` y registro
-CTest; revisar el helper de integracion si comparte el comportamiento.
+**Components.** `tests/unit/test_helper.h`, `test_helper.cpp`, and CTest
+registration; inspect the integration helper if it shares this behavior.
 
-**Aceptacion y pruebas.** Un caso que lanza debe identificarse como fallido y
-permitir reportar los siguientes. Cada asercion fallida muestra expresion y
-ubicacion. Evaluar granularidad CTest sin dependencias innecesarias.
+**Acceptance and tests.** A throwing case must be identified as failed and
+allow subsequent cases to be reported. Each failed assertion shows its
+expression and location. Evaluate CTest granularity without unnecessary
+dependencies.
 
-### QA5: Campanas de estres
+### QA5: Stress campaigns
 
-**Estado:** pendiente. **Prioridad:** sin fijar. **Objetivo:** sin version.
+**Status:** pending. **Priority:** not set. **Target:** no assigned version.
 
-**Contexto.** La cobertura funcional de integracion y concurrencia esta
-completada. Queda explorar soak tests prolongados y, cuando sea viable,
-interleavings controlados entre
-workers. Definir duracion, carga, recursos observados y reproduccion antes de
-crear nuevas pruebas; relacionarlas con C1/C3 y los escenarios de QA3.
+**Context.** Functional integration and concurrency coverage is complete.
+Extended soak tests and, where feasible, controlled worker interleavings
+remain to be explored. Define duration, load, observed resources, and
+reproduction before creating new tests; relate them to C1/C3 and QA3 scenarios.
 
-### QA6: Automatizacion de compliance externo
+### QA6: External compliance automation
 
-**Estado:** diferido. **Prioridad:** sin fijar. **Objetivo:** sin version.
+**Status:** deferred. **Priority:** not set. **Target:** no assigned version.
 
-**Contexto.** h1spec y Http11Probe se ejecutan
-manualmente. Su automatizacion esta diferida fuera del hardening actual.
-Al retomarla, usar los adaptadores versionados, fijar el entorno y distinguir
-fallos del runner de fallos de protocolo. Conservar logs y revisiones de cada
-ejecucion. Esta tarea complementa QA1.
+**Context.** h1spec and Http11Probe are run manually. Their automation is
+deferred beyond the current hardening effort. When resumed, use the versioned
+adapters, pin the environment, and distinguish runner failures from protocol
+failures. Preserve logs and revisions for each execution. This task
+complements QA1.
 
 ## Release engineering
 
-### RE1: Gobierno y trazabilidad de release
+### RE1: Release governance and traceability
 
-**Contexto.** La version procede de `include/version.h`. Existe licencia,
-README y un workflow de publicacion condicionado a toda la matriz CI.
-El trabajo implementado se describe en calidad.
+**Context.** The version comes from `include/version.h`. A license, README,
+and publishing workflow gated on the entire CI matrix exist.
+The existing gates are defined in the
+[CI workflow](../.github/workflows/ci.yml).
 
-**Pendiente.** Crear changelog, politica de seguridad y guia de contribucion.
-Definir canales para vulnerabilidades, compatibilidad y contribuciones.
+**Outstanding work.** Create a changelog, security policy, and contribution
+guide. Define channels for vulnerabilities, compatibility, and contributions.
 
-**Componentes.** Documentos publicos de proyecto, version y procedimiento de
-release; modificar el workflow solo si el mecanismo elegido lo requiere.
+**Components.** Public project documents, version, and release procedure;
+modify the workflow only if the selected mechanism requires it.
 
-**Aceptacion y verificacion.**
+**Acceptance and verification.**
 
-- Cada documento publica procedimientos y canales realmente disponibles.
-- Cada tag apunta a una revision con matriz CI verde y docs sincronizadas.
-- La version y las notas describen el contenido publicado.
-- Resolver como publicar `0.1.0-beta.1`: el workflow actual deriva solamente
-  `vMAJOR.MINOR.PATCH` y no expresa sufijos prerelease. Esta observacion del
-  workflow requiere una decision, no implica una modificacion ya acordada.
+- Each document publishes procedures and channels that are actually available.
+- Every tag points to a revision with a passing CI matrix and synchronized
+  documentation.
+- The version and notes describe the published content.
+- Resolve how to publish `0.1.0-beta.1`: the current workflow derives only
+  `vMAJOR.MINOR.PATCH` and does not express prerelease suffixes. This workflow
+  observation requires a decision; it does not imply an agreed modification.
 
-**Dependencias.** Las validaciones de CI y consumo CMake deben seguir verdes.
-C1/C3 deben superar sus pruebas sobre sockets reales para el objetivo beta.
-La guia de desarrollo no
-sustituye una guia de contribucion publica con canales y procedimiento.
+**Dependencies.** CI and CMake consumer validations must continue to pass.
+C1/C3 must pass their real-socket tests for the beta target. The development
+guide does not replace a public contribution guide with channels and a
+procedure.
 
-## Mantenibilidad C++
+## C++ maintainability
 
-### DT1: Dependencias y efectos globales de platform.h
+### DT1: platform.h dependencies and global effects
 
-**Contexto.** `platform.h` concentra headers estandar/de sistema, `INLINE`,
-macros Windows, desactivacion de warning 4996 y pragmas de enlace.
-En otras plataformas, `tcpip.h` no selecciona backend ni diagnostica
-explicitamente la falta de soporte.
+**Context.** `platform.h` centralizes standard/system headers, `INLINE`,
+Windows macros, warning 4996 suppression, and linker pragmas.
+On other platforms, `tcpip.h` neither selects a backend nor explicitly
+diagnoses the lack of support.
 
-**Riesgo.** Macros y warnings afectan al consumidor; los includes transitivos
-ocultan dependencias y producen errores confusos.
+**Risk.** Macros and warnings affect consumers; transitive includes hide
+dependencies and produce confusing errors.
 
-**Componentes.** `include/platform.h`, selectores y backends, y todos los
-headers que dependan de sus includes.
+**Components.** `include/platform.h`, selectors and backends, and every
+header relying on its includes.
 
-**Aceptacion y verificacion.** Inventariar usos reales, justificar cada
-macro/pragma y compilar los headers publicos de forma autosuficiente.
-Definir un diagnostico para plataformas no soportadas si ese es el contrato.
-Comprobar que no cambian inadvertidamente las opciones del consumidor.
+**Acceptance and verification.** Inventory actual uses, justify each
+macro/pragma, and compile public headers independently. Define a diagnostic
+for unsupported platforms if that is the contract. Check that consumer
+options do not change inadvertently.
 
-**Limites.** Cambios locales basados en evidencia; no se propone una
-reorganizacion general de includes ni ampliar plataformas por defecto.
+**Limits.** Local changes based on evidence; no general include reorganization
+or expansion of supported platforms is proposed by default.
 
-### DT2: Contrato de getters indexados
+### DT2: Indexed getter contract
 
-**Contexto.** `request::get_header(size_t)` y
-`get_query_parameter(size_t)` usan `operator[]`; un indice valido depende
-del caller. Otras APIs usan excepciones u optional para ausencia.
+**Context.** `request::get_header(size_t)` and
+`get_query_parameter(size_t)` use `operator[]`; callers must supply a valid
+index. Other APIs use exceptions or optional for absence.
 
-**Riesgo.** Un indice invalido produce UB si se incumple esa precondicion.
+**Risk.** An invalid index causes undefined behavior when that precondition
+is violated.
 
-**Componentes.** API de request, tests y documentacion publica.
+**Components.** Request API, tests, and public documentation.
 
-**Aceptacion y verificacion.** Decidir si la validez del indice es una
-precondicion documentada o requiere comprobacion. Especificar el contrato,
-probar los limites conforme a la decision y preservar compatibilidad.
-Medir el impacto si afecta recorridos frecuentes.
+**Acceptance and verification.** Decide whether index validity is a
+documented precondition or requires a check. Specify the contract, test
+boundaries according to the decision, and preserve compatibility.
+Measure the impact if frequent iterations are affected.
 
-**Dependencias.** Coordinar con la documentacion de vistas y getters siguiente.
-La inconsistencia no autoriza por si sola un cambio de API.
+**Dependencies.** Coordinate with the following view and getter documentation.
+Inconsistency alone does not authorize an API change.
 
-## Documentacion publica
+## Public documentation
 
-### DOC1: Ciclo de vida del transporte
+### DOC1: Transport lifecycle
 
-**Pendiente.** Documentar el uso directo del transporte fuera de
-`v11::server`.
+**Outstanding work.** Document direct transport use outside `v11::server`.
 
-**Contexto a conservar.** `stop()` se llama fuera de sus workers y los
-callbacks no cambian durante start/stop. El contrato distingue cierre
-ordenado y aborto fatal.
+**Context to preserve.** `stop()` is called outside its workers, and callbacks
+do not change during start/stop. The contract distinguishes graceful closure
+from fatal abort.
 
-**Aceptacion.** Contrastar y documentar orden de llamadas, hilos permitidos,
-callbacks, reinicio y errores de arranque con ejemplos publicos. Enlazar
-desde arquitectura y verificar cada ejemplo con los tests correspondientes.
+**Acceptance.** Verify and document call order, allowed threads, callbacks,
+restart, and startup errors with public examples. Link from architecture
+and validate each example against the corresponding tests.
 
-### DOC2: Vistas y getters de request
+### DOC2: Request views and getters
 
-**Pendiente.** Documentar propiedad y lifetime de string_view/header_view y
-precondiciones de getters indexados.
+**Outstanding work.** Document string_view/header_view ownership and lifetime,
+and indexed getter preconditions.
 
-**Contexto a conservar.** Los getters no entregan copias propietarias;
-request posee el buffer del head y rebasa las vistas. El reader prestado
-requiere un almacenamiento externo que sobreviva a sus usos.
+**Context to preserve.** Getters do not return owning copies; request owns
+the head buffer and rebases views. A borrowed reader requires external
+storage to outlive its uses.
 
-**Aceptacion.** Mostrar usos validos, invalidacion por destruccion y la
-precondicion elegida en DT2. Contrastar con las pruebas de lifetime y enlazar
-el contrato desde los ejemplos correspondientes.
+**Acceptance.** Show valid uses, invalidation on destruction, and the
+precondition chosen in DT2. Cross-check lifetime tests and link the contract
+from the corresponding examples.
 
-## Fuera de la primera release
+## Beyond the first release
 
-F1-F5 quedan diferidos fuera de los lotes 0.1. El aplazamiento no incluye
-limites, clientes lentos, estres ni baselines: esos trabajos conservan sus
-entradas anteriores.
+F1-F5 are deferred beyond the 0.1 batches. This deferral does not include
+limits, slow clients, stress testing, or baselines: those retain their
+previous entries.
 
 ### F1: TLS
 
-**Contexto.** El despliegue previsto para la primera release usa un terminador
-TLS, como un reverse proxy. Estimacion original: A.
+**Context.** The first release is intended to be deployed behind a TLS
+terminator, such as a reverse proxy. Original estimate: A.
 
-**Alcance futuro.** Integrar TLS preservando la frontera protocolo-transporte.
+**Future scope.** Integrate TLS while preserving the protocol-transport
+boundary.
 
-**Decisiones y verificacion.** Elegir dependencia y modelo de ownership antes
-de implementar; especificar handshake, cierre y errores con pruebas
-equivalentes en las plataformas soportadas.
+**Decisions and verification.** Select the dependency and ownership model
+before implementation; specify handshake, closure, and errors with equivalent
+tests on supported platforms.
 
-### F2: Compresion y GZIP
+### F2: Compression and GZIP
 
-**Contexto.** La negociacion `Accept-Encoding`/`Content-Encoding` y la
-gestion de `Vary` son capacidades opcionales.
+**Context.** `Accept-Encoding`/`Content-Encoding` negotiation and `Vary`
+handling are optional capabilities.
 
-**Decisiones.** Una biblioteca de compresion externa entra en conflicto con
-la promesa actual de cero dependencias. Resolver esa politica y el alcance
-de formatos antes de disenar la API.
+**Decisions.** An external compression library conflicts with the current
+zero-dependency claim. Resolve that policy and the set of formats before
+designing the API.
 
-**Aceptacion propuesta.** Negociacion y `Vary` coherentes, framing correcto
-y pruebas de cuerpos vacios, binarios y grandes.
+**Proposed acceptance.** Consistent negotiation and `Vary` handling, correct
+framing, and tests for empty, binary, and large bodies.
 
-### F3: Streaming progresivo y SSE
+### F3: Progressive streaming and SSE
 
-**Contexto.** El handler termina de producir el body antes de entregar la
-respuesta; el drenaje actual no constituye streaming progresivo.
-Estimacion original: A.
+**Context.** The handler finishes producing the body before handing off the
+response; current draining does not constitute progressive streaming.
+Original estimate: A.
 
-**Alcance futuro.** Representar inicio, fragmentos y final/error; aplicar
-backpressure por bytes y agrupar fragmentos pequenos.
+**Future scope.** Represent start, fragments, and completion/error; apply
+byte-based backpressure and batch small fragments.
 
-**Aceptacion propuesta.** Probar cancelacion, cliente lento, errores parciales
-y orden. Conservar el coste del camino one-shot y del hot path sincrono,
-comparandolo con QA3.
+**Proposed acceptance.** Test cancellation, slow clients, partial errors,
+and ordering. Preserve the cost of the one-shot path and synchronous hot
+path by comparing against QA3.
 
-### F4: Barrera ordenada de upgrade
+### F4: Ordered upgrade barrier
 
-**Contexto.** El `101` debe alcanzar la cabeza del orden de respuestas antes
-de transferir el canal. Estimacion original: A.
+**Context.** The `101` must reach the head of the response order before
+transferring the channel. Original estimate: A.
 
-**Alcance futuro.** Detener la decodificacion HTTP en el momento correcto,
-entregar los bytes residuales al nuevo codec y transferir el control.
+**Future scope.** Stop HTTP decoding at the correct point, deliver residual
+bytes to the new codec, and transfer control.
 
-**Aceptacion propuesta.** Probar primero con un codec ficticio: respuestas
-previas, bytes ya recibidos, cierre y errores. El contrato sigue siendo
-generico y no filtra HTTP a IOCP ni epoll.
+**Proposed acceptance.** Test first with a dummy codec: previous responses,
+already received bytes, closure, and errors. The contract remains generic
+and does not leak HTTP semantics into IOCP or epoll.
 
-**Dependencias.** Prerrequisito de F5 (WebSockets).
+**Dependencies.** Prerequisite for F5 (WebSockets).
 
 ### F5: WebSockets
 
-**Contexto.** `channel_intent::kUpgrade` esta definido y los headers
-Sec-WebSocket-* estan modelados, pero los transportes no manejan el upgrade.
-La primera release no declara esa capacidad. Estimacion original: A.
+**Context.** `channel_intent::kUpgrade` is defined and Sec-WebSocket-*
+headers are modeled, but transports do not handle the upgrade.
+The first release does not claim this capability. Original estimate: A.
 
-**Alcance futuro.** Handshake, framing, fragmentacion, ping/pong/close,
-envios iniciados externamente y backpressure bidireccional.
+**Future scope.** Handshake, framing, fragmentation, ping/pong/close,
+externally initiated sends, and bidirectional backpressure.
 
-**Aceptacion propuesta.** Definir primero el contrato y la conformidad del
-protocolo; probar mensajes fragmentados, cierre simultaneo, errores y
-clientes lentos en ambas plataformas.
+**Proposed acceptance.** First define the protocol contract and compliance;
+test fragmented messages, simultaneous closure, errors, and slow clients
+on both platforms.
 
-**Dependencias.** F4 (barrera ordenada de upgrade). Conservar lo ya modelado;
-aplazar esta funcionalidad no convierte por si solo el core en incumplidor
-de HTTP/1.1.
+**Dependencies.** F4 (ordered upgrade barrier). Preserve what is already
+modeled; deferring this feature does not by itself make the core
+noncompliant with HTTP/1.1.
 
-## Equivalencias
+## Identifier mapping
 
-La columna anterior corresponde al backlog previo a esta reorganizacion.
-Estos identificadores se conservan solo para interpretar referencias antiguas;
-los enlaces y dependencias actuales utilizan la columna nueva.
-Los items ya completados conservan referencias explicitamente historicas en
-[QUALITY.md](QUALITY.md) y no ocupan posiciones del backlog activo.
+The previous column refers to the backlog before renumbering.
+These identifiers are retained only to interpret older references;
+current links and dependencies use the new column.
+Completed items do not occupy positions in the active backlog.
 
-| Anterior | Nuevo | Item |
+| Previous | New | Item |
 | --- | --- | --- |
-| C1 | [C1](#c1-timeout-unico-de-inactividad) | Timeout unico de inactividad |
-| R2 | [C2](#c2-limites-efectivos-por-request) | Limites efectivos por request |
-| C5 | [C3](#c3-maximo-global-de-conexiones-activas) | Maximo global de conexiones activas |
-| P1 | [P1](#p1-handler-de-ficheros-estaticos) | Handler de ficheros estaticos |
-| P2 | [P2](#p2-logging-de-acceso) | Logging de acceso |
-| P3 | [P3](#p3-cadena-de-middleware) | Cadena de middleware |
-| P4 | [P4](#p4-parsing-de-formularios) | Parsing de formularios |
-| C2 | [P5](#p5-condicionales-y-rangos-automaticos) | Condicionales y rangos automaticos |
-| C3 | [P6](#p6-trailers-de-salida) | Trailers de salida |
-| C4 | [P7](#p7-options-automatico-de-recurso) | OPTIONS automatico de recurso |
-| P5 | [QA1](#qa1-suite-de-conformidad-exhaustiva) | Suite de conformidad exhaustiva |
+| C1 | [C1](#c1-single-inactivity-timeout) | Single inactivity timeout |
+| R2 | [C2](#c2-effective-per-request-limits) | Effective per-request limits |
+| C5 | [C3](#c3-global-active-connection-limit) | Global active connection limit |
+| P1 | [P1](#p1-static-file-handler) | Static file handler |
+| P2 | [P2](#p2-access-logging) | Access logging |
+| P3 | [P3](#p3-middleware-chain) | Middleware chain |
+| P4 | [P4](#p4-form-parsing) | Form parsing |
+| C2 | [P5](#p5-automatic-conditionals-and-ranges) | Automatic conditionals and ranges |
+| C3 | [P6](#p6-output-trailers) | Output trailers |
+| C4 | [P7](#p7-automatic-resource-options) | Automatic resource OPTIONS |
+| P5 | [QA1](#qa1-exhaustive-compliance-suite) | Exhaustive compliance suite |
 | QA3 | [QA2](#qa2-fuzzing) | Fuzzing |
-| QA4 | [QA3](#qa3-baseline-de-rendimiento) | Baseline de rendimiento |
-| QA5 | [QA4](#qa4-diagnostico-y-aislamiento-del-harness) | Diagnostico y aislamiento del harness |
-| Sin ID | [QA5](#qa5-campanas-de-estres) | Campanas de estres |
-| Sin ID | [QA6](#qa6-automatizacion-de-compliance-externo) | Automatizacion de compliance externo |
-| RE4 | [RE1](#re1-gobierno-y-trazabilidad-de-release) | Gobierno y trazabilidad de release |
-| DT4 | [DT1](#dt1-dependencias-y-efectos-globales-de-platformh) | Dependencias y efectos globales de platform.h |
-| DT5 | [DT2](#dt2-contrato-de-getters-indexados) | Contrato de getters indexados |
-| Sin ID | [DOC1](#doc1-ciclo-de-vida-del-transporte) | Ciclo de vida del transporte |
-| Sin ID | [DOC2](#doc2-vistas-y-getters-de-request) | Vistas y getters de request |
-| Sin ID | [F1](#f1-tls) | TLS |
-| Sin ID | [F2](#f2-compresion-y-gzip) | Compresion y GZIP |
-| Sin ID | [F3](#f3-streaming-progresivo-y-sse) | Streaming progresivo y SSE |
-| Sin ID | [F4](#f4-barrera-ordenada-de-upgrade) | Barrera ordenada de upgrade |
-| Sin ID | [F5](#f5-websockets) | WebSockets |
+| QA4 | [QA3](#qa3-performance-baseline) | Performance baseline |
+| QA5 | [QA4](#qa4-harness-diagnostics-and-isolation) | Harness diagnostics and isolation |
+| No ID | [QA5](#qa5-stress-campaigns) | Stress campaigns |
+| No ID | [QA6](#qa6-external-compliance-automation) | External compliance automation |
+| RE4 | [RE1](#re1-release-governance-and-traceability) | Release governance and traceability |
+| DT4 | [DT1](#dt1-platformh-dependencies-and-global-effects) | platform.h dependencies and global effects |
+| DT5 | [DT2](#dt2-indexed-getter-contract) | Indexed getter contract |
+| No ID | [DOC1](#doc1-transport-lifecycle) | Transport lifecycle |
+| No ID | [DOC2](#doc2-request-views-and-getters) | Request views and getters |
+| No ID | [F1](#f1-tls) | TLS |
+| No ID | [F2](#f2-compression-and-gzip) | Compression and GZIP |
+| No ID | [F3](#f3-progressive-streaming-and-sse) | Progressive streaming and SSE |
+| No ID | [F4](#f4-ordered-upgrade-barrier) | Ordered upgrade barrier |
+| No ID | [F5](#f5-websockets) | WebSockets |

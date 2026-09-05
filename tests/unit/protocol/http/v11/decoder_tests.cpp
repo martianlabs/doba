@@ -302,7 +302,7 @@ DOBA_TEST("pipelined requests remain available after first dispatch") {
                     "two.example");
 }
 // +===========================================================================+
-// | [>] invalid conditional dates are ignored                  ( test-case ) |
+// | [>] invalid conditional dates are ignored                  ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("invalid conditional dates do not reject requests") {
   struct test_case {

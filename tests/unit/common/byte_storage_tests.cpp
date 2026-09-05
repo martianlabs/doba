@@ -94,7 +94,7 @@ DOBA_TEST("spilling preserves existing files") {
   DOBA_EXPECT_EQUAL(content, "preserved");
 }
 // +===========================================================================+
-// | [>] truncated spill files fail the reader                  ( test-case ) |
+// | [>] truncated spill files fail the reader                  ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("truncated spill files fail the reader") {
   spill_directory directory;
