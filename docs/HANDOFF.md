@@ -24,6 +24,7 @@ Los [ejemplos](../examples/README.md) documentan usos concretos de la API.
 
 Actualizar cada dato en su documento de referencia. Al cerrar un pendiente,
 trasladar la evidencia relevante a calidad y el contrato implementado a
-arquitectura; conservar su identificador para mantener la trazabilidad.
+arquitectura; registrar su identificador como referencia historica y
+mantener actualizados el inventario y los enlaces del backlog.
 Los ejemplos y las instrucciones especificas de herramientas permanecen junto
 a sus componentes y se enlazan desde esta documentacion.

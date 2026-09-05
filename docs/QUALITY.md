@@ -7,6 +7,8 @@ Inventario contrastado el 2026-09-05 sobre
 Este documento distingue implementacion, pruebas disponibles y resultados
 historicos. La reorganizacion documental no ejecuto builds ni CTest.
 El trabajo restante se mantiene en [BACKLOG.md](BACKLOG.md).
+Los identificadores marcados como historicos pertenecen a la clasificacion
+anterior; no designan los items actuales del backlog.
 
 ## Contenido
 
@@ -26,7 +28,7 @@ El trabajo restante se mantiene en [BACKLOG.md](BACKLOG.md).
 Los consumidores CMake de `tests/package` se compilan por separado; no se
 incluyen en ese recuento.
 
-### Integracion de transporte (QA1)
+### Integracion de transporte (referencia historica QA1)
 
 [Los tests TCP/IP](../tests/integration/transport/server/tcpip_tests.cpp)
 contienen 38 casos con sockets loopback reales. El mismo codigo selecciona
@@ -37,7 +39,7 @@ acotados, desconexion, errores, streaming, orden y callbacks.
 ejercita la composicion del servidor sobre TCP/IP, incluidos comportamientos
 automaticos e interinos.
 
-### Concurrencia y ciclo de vida (QA2)
+### Concurrencia y ciclo de vida (referencia historica QA2)
 
 La suite cubre pipelines sincronos y diferidos, respuestas fuera de orden,
 clientes concurrentes, excepciones de handler, cancelacion, apagado con estados
@@ -62,13 +64,13 @@ La fuente ejecutable es [.github/workflows/ci.yml](../.github/workflows/ci.yml).
 | Instalacion y paquete | Consumidores externos Debug/Release |
 | Consumo del arbol fuente | Consumidor mediante `add_subdirectory` |
 
-### Compiladores y warnings (RE1)
+### Compiladores y warnings (referencia historica RE1)
 
 CI activa `DOBA_ENABLE_STRICT_WARNINGS`: GCC/Clang usan
 `-Wall -Wextra -Wpedantic -Werror`; MSVC usa `/W4 /WX`.
 Los flags afectan al arbol propio y no se exportan al consumidor instalado.
 
-### Instalacion y consumo (RE2)
+### Instalacion y consumo (referencia historica RE2)
 
 CMake obtiene la version de [include/version.h](../include/version.h),
 instala headers y package config y exporta `martianlabs::doba`.
@@ -79,7 +81,7 @@ CI instala en un prefijo aislado y compila consumidores externos mediante
 `add_subdirectory` y comprueba que no se incorporan los ejemplos ni las
 suites internas. El target instalado aporta includes, C++20 y Threads.
 
-### Compatibilidad y publicacion (RE3 y parte completada de RE4)
+### Compatibilidad y publicacion (referencias historicas RE3 y RE4)
 
 CMake 3.20 es el minimo del proyecto. Los presets MSVC requieren 3.25.
 CI verifica 3.20.6 y utiliza los presets en Windows.
@@ -89,7 +91,7 @@ despues de superar toda la matriz. Deriva `vMAJOR.MINOR.PATCH` de
 `include/version.h` y comprueba el destino de un tag ya existente.
 El mecanismo actual genera tags numericos; la publicacion de una etiqueta
 prerelease requiere resolver el punto indicado en
-[RE4](BACKLOG.md#re4-gobierno-y-trazabilidad-de-release).
+[RE1](BACKLOG.md#re1-gobierno-y-trazabilidad-de-release).
 
 ## Compliance y rendimiento
 
@@ -106,7 +108,7 @@ de release ni a un resultado de rendimiento reproducible.
 
 ## Correcciones y decisiones completadas
 
-### Fechas condicionales invalidas (C7)
+### Fechas condicionales invalidas (referencia historica C7)
 
 El dispatcher convertia el fallo del checker estricto en rechazo de toda la
 request. El decoder ahora conserva `If-Modified-Since` e
@@ -133,7 +135,7 @@ la finalizacion conserva el tamano. El contrato se prueba con memoria y spill
 en [writer_tests.cpp](../tests/unit/common/writer_tests.cpp) y
 [byte_storage_tests.cpp](../tests/unit/common/byte_storage_tests.cpp).
 
-### Fecha compartida y rollback del servidor (R1)
+### Fecha compartida y rollback del servidor (referencia historica R1)
 
 El servicio de fecha cuenta propietarios bajo mutex y permanece activo hasta
 el ultimo `stop()`. Hay pruebas de propietarios simultaneos y concurrencia en
@@ -144,14 +146,14 @@ y relanza la excepcion original. Una instancia que no arranco no libera
 recursos ajenos al detenerse. El transporte fake reproduce el fallo y el
 reintento en [server_tests.cpp](../tests/unit/protocol/http/v11/server_tests.cpp).
 
-### Buffers propietarios bajo RAII (DT1)
+### Buffers propietarios bajo RAII (referencia historica DT1)
 
 `decoder` y `request` usan `std::unique_ptr<char[]>` y
 `make_unique_for_overwrite`, con destructores predeterminados y sin
 inicializacion adicional del buffer. Sus tests cubren lifetime de vistas,
 percent-decoding, dispatch incremental y bodies.
 
-El registro anterior de DT1 conserva estos resultados historicos:
+El registro historico de DT1 conserva estos resultados:
 
 - Suites completas con GCC y MSVC Debug/Release y warnings estrictos.
 - GCC bajo ASan y UBSan.
@@ -162,7 +164,7 @@ El registro anterior de DT1 conserva estos resultados historicos:
 
 Estas medidas se conservan como antecedente de la decision. No fueron
 repetidas durante la reorganizacion ni constituyen el baseline de release
-descrito en [QA4](BACKLOG.md#qa4-baseline-de-rendimiento).
+descrito en [QA3](BACKLOG.md#qa3-baseline-de-rendimiento).
 
 ## Interpretacion de la evidencia
 
