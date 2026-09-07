@@ -1,6 +1,6 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="resources/doba-dark.png">
-  <img src="resources/doba.png" alt="doba" width="160">
+  <img src="resources/doba.png" alt="doba" width="640">
 </picture>
 <br><br>
 
