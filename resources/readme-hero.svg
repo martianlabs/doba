@@ -1,7 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 672 120"
      width="672" height="120" role="img" aria-labelledby="hero-title">
   <title id="hero-title">You write the handler. doba moves the bytes.</title>
-  <rect width="672" height="120" fill="#ffffff"/>
   <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif"
      font-size="44" font-weight="500" letter-spacing="-1.7">
     <text x="2" y="50" fill="#1f2328">You write the handler.</text>
