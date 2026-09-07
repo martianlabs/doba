@@ -332,7 +332,7 @@ martianlabs::doba::common::task<transport_response> make_failed_response(
 }  // namespace
 
 // +===========================================================================+
-// | [>] immediate response lifecycle                             ( test-case ) |
+// | [>] immediate response lifecycle                             ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip serves independent loopback connections") {
   martianlabs::doba::transport::server::tcpip<
@@ -385,7 +385,7 @@ DOBA_TEST("tcpip serves independent loopback connections") {
 }
 
 // +===========================================================================+
-// | [>] persistent connection reuse                              ( test-case ) |
+// | [>] persistent connection reuse                              ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip reuses a connection after each completed response") {
   martianlabs::doba::transport::server::tcpip<
@@ -427,7 +427,7 @@ DOBA_TEST("tcpip reuses a connection after each completed response") {
 }
 
 // +===========================================================================+
-// | [>] synchronous pipeline delivery                          ( test-case ) |
+// | [>] synchronous pipeline delivery                          ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("tcpip delivers batched synchronous responses in request order") {
   martianlabs::doba::transport::server::tcpip<
@@ -729,7 +729,7 @@ DOBA_TEST("tcpip rejects a successful decode without a request") {
 }
 
 // +===========================================================================+
-// | [>] decoder accumulation rejection                         ( test-case ) |
+// | [>] decoder accumulation rejection                         ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("tcpip rejects invalid decoder accumulation counts") {
   martianlabs::doba::transport::server::tcpip<
@@ -822,7 +822,7 @@ DOBA_TEST("tcpip sends a rejection response then closes the client channel") {
 }
 
 // +===========================================================================+
-// | [>] pipelined async response ordering                        ( test-case ) |
+// | [>] pipelined async response ordering                        ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip preserves response order for pipelined deferred requests") {
   martianlabs::doba::transport::server::tcpip<
@@ -872,7 +872,7 @@ DOBA_TEST("tcpip preserves response order for pipelined deferred requests") {
 }
 
 // +===========================================================================+
-// | [>] deferred response cancellation                            ( test-case ) |
+// | [>] deferred response cancellation                            ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip cooperatively cancels deferred responses") {
   martianlabs::doba::transport::server::tcpip<
@@ -944,7 +944,7 @@ DOBA_TEST("tcpip cooperatively cancels deferred responses") {
 }
 
 // +===========================================================================+
-// | [>] mixed response ordering                                  ( test-case ) |
+// | [>] mixed response ordering                                  ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip orders mixed synchronous and deferred responses") {
   martianlabs::doba::transport::server::tcpip<
@@ -1060,7 +1060,7 @@ DOBA_TEST("tcpip keeps an interim behind an earlier deferred response") {
 }
 
 // +===========================================================================+
-// | [>] synchronous channel close                              ( test-case ) |
+// | [>] synchronous channel close                              ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("tcpip drains a synchronous close response before eof") {
   martianlabs::doba::transport::server::tcpip<
@@ -1100,7 +1100,7 @@ DOBA_TEST("tcpip drains a synchronous close response before eof") {
 }
 
 // +===========================================================================+
-// | [>] deferred channel close                                 ( test-case ) |
+// | [>] deferred channel close                                 ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("tcpip drains a deferred close response before eof") {
   martianlabs::doba::transport::server::tcpip<
@@ -1145,7 +1145,7 @@ DOBA_TEST("tcpip drains a deferred close response before eof") {
 }
 
 // +===========================================================================+
-// | [>] empty response delivery                                  ( test-case ) |
+// | [>] empty response delivery                                  ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip removes an empty response without blocking its queue") {
   martianlabs::doba::transport::server::tcpip<
@@ -1231,7 +1231,7 @@ DOBA_TEST("tcpip streams response sources across send boundaries") {
 }
 
 // +===========================================================================+
-// | [>] large prefix delivery                                    ( test-case ) |
+// | [>] large prefix delivery                                    ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip sends prefixes larger than its bounded send buffer") {
   martianlabs::doba::transport::server::tcpip<
@@ -1314,7 +1314,7 @@ DOBA_TEST("tcpip completes a streamed response before its successor") {
 }
 
 // +===========================================================================+
-// | [>] slow client isolation                                    ( test-case ) |
+// | [>] slow client isolation                                    ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip serves another client while a large response is blocked") {
   martianlabs::doba::transport::server::tcpip<
@@ -1368,7 +1368,7 @@ DOBA_TEST("tcpip serves another client while a large response is blocked") {
 }
 
 // +===========================================================================+
-// | [>] reset during send recovery                             ( test-case ) |
+// | [>] reset during send recovery                             ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("tcpip recovers after a client resets a large response") {
   martianlabs::doba::transport::server::tcpip<
@@ -1422,7 +1422,7 @@ DOBA_TEST("tcpip recovers after a client resets a large response") {
 }
 
 // +===========================================================================+
-// | [>] synchronous handler failure                           ( test-case ) |
+// | [>] synchronous handler failure                           ( test-case )   |
 // +===========================================================================+
 DOBA_TEST("tcpip converts synchronous handler exceptions to errors") {
   martianlabs::doba::transport::server::tcpip<
@@ -1480,7 +1480,7 @@ DOBA_TEST("tcpip converts synchronous handler exceptions to errors") {
 }
 
 // +===========================================================================+
-// | [>] deferred handler failure                              ( test-case ) |
+// | [>] deferred handler failure                              ( test-case )   |
 // +===========================================================================+
 DOBA_TEST("tcpip converts deferred handler exceptions to errors") {
   martianlabs::doba::transport::server::tcpip<
@@ -1534,7 +1534,7 @@ DOBA_TEST("tcpip converts deferred handler exceptions to errors") {
 }
 
 // +===========================================================================+
-// | [>] ordered deferred failure                              ( test-case ) |
+// | [>] ordered deferred failure                              ( test-case )   |
 // +===========================================================================+
 DOBA_TEST("tcpip orders a deferred error before accepted successors") {
   martianlabs::doba::transport::server::tcpip<
@@ -2101,7 +2101,7 @@ DOBA_TEST("tcpip restarts the same server on the same port") {
 }
 
 // +===========================================================================+
-// | [>] connection callback failure                            ( test-case ) |
+// | [>] connection callback failure                            ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("tcpip survives a failing connection callback") {
   martianlabs::doba::transport::server::tcpip<
@@ -2147,7 +2147,7 @@ DOBA_TEST("tcpip survives a failing connection callback") {
 }
 
 // +===========================================================================+
-// | [>] disconnection callback failure                         ( test-case ) |
+// | [>] disconnection callback failure                         ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("tcpip survives failing disconnection callbacks") {
   martianlabs::doba::transport::server::tcpip<

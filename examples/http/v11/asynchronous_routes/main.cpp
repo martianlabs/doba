@@ -44,15 +44,15 @@ using namespace martianlabs::doba::protocol::http::v11;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] background_executor                                        ( class ) |
+// | [>] background_executor                                        ( class )  |
 // +---------------------------------------------------------------------------+
-// | Example executor that resumes continuations on one background thread.    |
+// | Example executor that resumes continuations on one background thread.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class background_executor {
  public:
   // +=========================================================================+
-  // | [>] awaiter                                                  ( class ) |
+  // | [>] awaiter                                                  ( class )  |
   // +=========================================================================+
   class awaiter {
    public:

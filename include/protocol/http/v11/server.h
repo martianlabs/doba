@@ -252,7 +252,7 @@ class server {
     }
   }
   // +=========================================================================+
-  // | [>] complete_async_response                                ( private ) |
+  // | [>] complete_async_response                                ( private )  |
   // +=========================================================================+
   static common::task<RSty> complete_async_response(
       std::shared_ptr<const RQty> req,

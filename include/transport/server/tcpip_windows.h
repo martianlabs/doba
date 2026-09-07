@@ -1205,7 +1205,7 @@ class tcpip {
     }
   }
   // +=========================================================================+
-  // | [>] start_deferred_response                                ( private ) |
+  // | [>] start_deferred_response                                ( private )  |
   // +=========================================================================+
   bool start_deferred_response(
       std::weak_ptr<context<RQty, RSty, DEty>> ctx,
@@ -1218,7 +1218,7 @@ class tcpip {
     return true;
   }
   // +=========================================================================+
-  // | [>] complete_deferred_response                             ( private ) |
+  // | [>] complete_deferred_response                             ( private )  |
   // +=========================================================================+
   detail::detached_operation complete_deferred_response(
       std::weak_ptr<context<RQty, RSty, DEty>> weak_ctx,

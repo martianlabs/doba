@@ -200,7 +200,7 @@ class accept {
       q_found = true;
       return true;
     }
-    // Regular parameter value: token or quoted-string, 
+    // Regular parameter value: token or quoted-string,
     // no whitespace around '='.
     return helpers::consume_parameter(sv, bytes_used, /*allow_bws=*/false);
   }
