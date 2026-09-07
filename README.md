@@ -1,7 +1,8 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/doba-small-dark.png">
-  <img src="resources/doba-small.png" alt="doba" width="160">
+  <source media="(prefers-color-scheme: dark)" srcset="resources/doba-dark.png">
+  <img src="resources/doba.png" alt="doba" width="160">
 </picture>
+<br><br>
 
 [![Build & Test](https://github.com/martianlabs/doba/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/martianlabs/doba/actions/workflows/ci.yml?query=branch%3Amain)
 
