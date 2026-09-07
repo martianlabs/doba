@@ -1,8 +1,11 @@
-<img src="resources/doba-small.png" alt="doba" width="160">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="resources/doba-small-dark.png">
+  <img src="resources/doba-small.png" alt="doba" width="160">
+</picture>
 
 [![Build & Test](https://github.com/martianlabs/doba/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/martianlabs/doba/actions/workflows/ci.yml?query=branch%3Amain)
 
-# You write the handler.<br>doba moves the bytes.
+<img src="resources/readme-hero.svg" alt="You write the handler. doba moves the bytes." width="672">
 
 Meet doba: a header-only C++20 server framework. Protocols and transports
 mind their own business. HTTP/1.1 comes first; the architecture leaves room
