@@ -60,13 +60,15 @@ DOBA_TEST("raw factory decodes only the declared body") {
   std::array<std::byte, 3> output{};
   std::string decoded;
   bool complete = false;
-  while (!complete) {
+  for (std::size_t iteration = 0; !complete && iteration <= 11;
+       iteration++) {
     const auto state = value.read(output);
     DOBA_EXPECT(!state.has_error);
     decoded.append(reinterpret_cast<const char*>(output.data()),
                    state.produced);
     complete = state.complete;
   }
+  DOBA_EXPECT(complete);
   DOBA_EXPECT_EQUAL(decoded, "payload");
 }
 // +===========================================================================+
@@ -79,12 +81,14 @@ DOBA_TEST("chunked factory removes wire framing and trailers") {
   std::array<std::byte, 2> output{};
   std::string decoded;
   bool complete = false;
-  while (!complete) {
+  for (std::size_t iteration = 0; !complete && iteration <= wire.size();
+       iteration++) {
     const auto state = value.read(output);
     DOBA_EXPECT(!state.has_error);
     decoded.append(reinterpret_cast<const char*>(output.data()),
                    state.produced);
     complete = state.complete;
   }
+  DOBA_EXPECT(complete);
   DOBA_EXPECT_EQUAL(decoded, "hello world");
 }

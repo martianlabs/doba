@@ -25,6 +25,9 @@
 #include "test_helper.h"
 
 #include <cstddef>
+#include <cstdio>
+#include <exception>
+#include <string>
 #include <vector>
 
 #include "common/console_logger.h"
@@ -65,6 +68,13 @@ std::size_t& failures() {
   static std::size_t value = 0;
   return value;
 }
+// +===========================================================================+
+// | [>] context                                                    ( method ) |
+// +===========================================================================+
+std::string& context() {
+  static std::string value;
+  return value;
+}
 }  // namespace
 
 // +===========================================================================+
@@ -78,16 +88,78 @@ bool test_helper::add(std::string_view file, int line, std::string_view name,
 // +===========================================================================+
 // | [>] expect                                                     ( method ) |
 // +===========================================================================+
-bool test_helper::expect(bool condition, std::string_view, std::string_view,
-                         int) {
+bool test_helper::expect(bool condition, std::string_view expression,
+                         std::string_view file, int line) {
   if (condition) return true;
   failures()++;
+  file = relative_test_path(file);
+  std::fprintf(stderr, "%.*s:%d - assertion failed: %.*s\n",
+               static_cast<int>(file.size()), file.data(), line,
+               static_cast<int>(expression.size()), expression.data());
+  if (!context().empty()) {
+    std::fprintf(stderr, "case: %s\n", context().c_str());
+  }
+  std::fflush(stderr);
   return false;
+}
+// +===========================================================================+
+// | [>] set_context                                                ( method ) |
+// +===========================================================================+
+void test_helper::set_context(std::string_view value) {
+  context().assign(value);
 }
 // +===========================================================================+
 // | [>] run                                                        ( method ) |
 // +===========================================================================+
-int test_helper::run() {
+int test_helper::run(int argc, char** argv) {
+  bool list = false;
+  std::string file;
+  std::string_view name;
+  std::string_view exclude;
+  for (int i = 1; i < argc; i++) {
+    const std::string_view argument{argv[i]};
+    if (argument == "--list") {
+      list = true;
+    } else if ((argument == "--file" || argument == "--name" ||
+                argument == "--exclude") && i + 1 < argc) {
+      const std::string_view value{argv[++i]};
+      if (argument == "--file") file = value;
+      if (argument == "--name") name = value;
+      if (argument == "--exclude") exclude = value;
+    } else {
+      std::fputs("Invalid test arguments\n", stderr);
+      return 2;
+    }
+  }
+  for (char& value : file) {
+    if (value == '\\') value = '/';
+  }
+  const auto matches = [&](const test_case& test) {
+    std::string normalized{test.file};
+    for (char& value : normalized) {
+      if (value == '\\') value = '/';
+    }
+    return (file.empty() || normalized.find(file) != std::string::npos) &&
+           (name.empty() || test.name == name) &&
+           (exclude.empty() || test.name != exclude);
+  };
+  std::size_t selected = 0;
+  for (const auto& test : tests()) {
+    if (matches(test)) selected++;
+  }
+  if (selected == 0) {
+    std::fputs("No tests matched\n", stderr);
+    return 2;
+  }
+  if (list) {
+    for (const auto& test : tests()) {
+      if (!matches(test)) continue;
+      std::printf("%.*s:%d - %.*s\n", static_cast<int>(test.file.size()),
+                  test.file.data(), test.line,
+                  static_cast<int>(test.name.size()), test.name.data());
+    }
+    return 0;
+  }
   common::console_logger logger{
       "integration_tests",
       common::console_logger_options{.show_function = false,
@@ -101,11 +173,25 @@ int test_helper::run() {
   std::fwrite(kText.data(), 1, kText.size(), stdout);
   std::fputc('\n', stdout);
   std::fflush(stdout);
-  logger.info() << "running " << tests().size() << " integration tests";
+  logger.info() << "running " << selected << " integration tests";
   std::size_t failed_tests = 0;
   for (const auto& test : tests()) {
+    if (!matches(test)) continue;
+    context().clear();
     const std::size_t failures_before = failures();
-    test.test();
+    std::printf("running %.*s:%d - %.*s\n",
+                static_cast<int>(test.file.size()), test.file.data(), test.line,
+                static_cast<int>(test.name.size()), test.name.data());
+    std::fflush(stdout);
+    try {
+      test.test();
+    } catch (const std::exception& error) {
+      failures()++;
+      std::fprintf(stderr, "Exception: %s\n", error.what());
+    } catch (...) {
+      failures()++;
+      std::fputs("Unknown exception\n", stderr);
+    }
     if (failures() != failures_before) {
       failed_tests++;
       logger.error() << test.file << ':' << test.line << " - " << test.name
@@ -126,4 +212,6 @@ int test_helper::run() {
 // +===========================================================================+
 // | [>] main                                                  ( entry-point ) |
 // +===========================================================================+
-int main() { return martianlabs::doba::tests::integration::test_helper::run(); }
+int main(int argc, char** argv) {
+  return martianlabs::doba::tests::integration::test_helper::run(argc, argv);
+}

@@ -64,7 +64,8 @@ DOBA_TEST("reads exactly content length for every output size") {
     std::array<std::byte, 16> output{};
     std::string decoded;
     bool complete = false;
-    while (!complete) {
+    for (std::size_t iteration = 0; !complete && iteration <= input.size();
+         iteration++) {
       auto state =
           value.read(source, std::span<std::byte>(output.data(), size));
       DOBA_EXPECT(!state.has_error);
@@ -72,8 +73,15 @@ DOBA_TEST("reads exactly content length for every output size") {
                      state.produced);
       complete = state.complete;
     }
-    DOBA_EXPECT_EQUAL(decoded, "payload");
+    DOBA_EXPECT(complete);
+  DOBA_EXPECT_EQUAL(decoded, "payload");
     DOBA_EXPECT(!source.eof());
+    std::array<std::byte, 5> next{};
+    DOBA_EXPECT_EQUAL(source.read(next), 4);
+    DOBA_EXPECT_EQUAL(
+        std::string_view(reinterpret_cast<const char*>(next.data()), 4),
+        "NEXT");
+    DOBA_EXPECT(source.eof());
   }
 }
 // +===========================================================================+

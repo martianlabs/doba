@@ -205,21 +205,43 @@ DOBA_TEST("rejects chunk size overflow") {
 // | [>] enforces extension and trailer size limits              ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("enforces extension and trailer size limits") {
-  std::string extension = "1;";
-  extension.append(limits::kMaxChunkedExtensionSize + 1, 'x');
-  framer_chunked extension_framer;
-  writer extension_destination;
-  auto state = extension_framer.write(bytes(extension), extension_destination);
-  DOBA_EXPECT(state.has_error);
-  DOBA_EXPECT_EQUAL(state.error,
-                    framer_error::chunk_extension_size_limit_exceeded);
-  std::string trailer = "0\r\n";
-  trailer.append(limits::kMaxChunkedTrailerSize + 1, 'x');
-  framer_chunked trailer_framer;
-  writer trailer_destination;
-  state = trailer_framer.write(bytes(trailer), trailer_destination);
-  DOBA_EXPECT(state.has_error);
-  DOBA_EXPECT_EQUAL(state.error, framer_error::trailer_size_limit_exceeded);
+  for (bool extension : {true, false}) {
+    const std::size_t limit = extension ? limits::kMaxChunkedExtensionSize
+                                        : limits::kMaxChunkedTrailerSize;
+    for (std::size_t length : {limit - 1, limit, limit + 1}) {
+      const std::string wire = extension
+          ? "1;" + std::string(length - 1, 'x') + "\r\na\r\n0\r\n\r\n"
+          : "0\r\nX: " + std::string(length - 7, 'x') + "\r\n\r\n";
+      const auto expected = extension
+          ? framer_error::chunk_extension_size_limit_exceeded
+          : framer_error::trailer_size_limit_exceeded;
+      for (std::size_t split = 0; split <= wire.size(); split++) {
+        martianlabs::doba::tests::unit::test_helper::set_context(
+            std::string(extension ? "extension " : "trailer ") +
+            std::to_string(length) + ", split " + std::to_string(split));
+        framer_chunked value;
+        writer destination;
+        const auto first = value.write(
+            bytes(std::string_view(wire).substr(0, split)), destination);
+        const auto second = value.write(
+            bytes(std::string_view(wire).substr(split)), destination);
+        if (length <= limit) {
+          DOBA_EXPECT(!first.has_error);
+          DOBA_EXPECT(!second.has_error);
+          DOBA_EXPECT(first.complete || second.complete);
+          DOBA_EXPECT_EQUAL(first.consumed + second.consumed, wire.size());
+          DOBA_EXPECT_EQUAL(release(destination), wire);
+        } else {
+          DOBA_EXPECT(second.has_error);
+          DOBA_EXPECT_EQUAL(second.error, expected);
+          const auto repeated = value.write(bytes("NEXT"), destination);
+          DOBA_EXPECT(repeated.has_error);
+          DOBA_EXPECT_EQUAL(repeated.error, expected);
+          DOBA_EXPECT_EQUAL(repeated.consumed, 0);
+        }
+      }
+    }
+  }
 }
 // +===========================================================================+
 // | [>] destination errors are reported and latched             ( test-case ) |
