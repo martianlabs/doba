@@ -4,7 +4,7 @@
 </picture>
 <br><br>
 
-<img src="resources/readme-hero.svg" alt="You write the handler. doba moves the bytes." width="672">
+<img src="resources/readme-hero.svg" alt="You write the handler. doba moves the bytes." width="400">
 
 [![Build & Test](https://github.com/martianlabs/doba/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/martianlabs/doba/actions/workflows/ci.yml?query=branch%3Amain)
 
