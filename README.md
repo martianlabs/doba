@@ -6,7 +6,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="resources/readme-hero-dark.svg">
-  <img src="resources/readme-hero.svg" alt="You write the handler. doba moves the bytes." width="640">
+  <img src="resources/readme-hero.svg" alt="You write the handler. doba moves the bytes." width="540">
 </picture>
 <br><br>
 
