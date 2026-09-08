@@ -237,14 +237,31 @@ DOBA_TEST("small bodies serialize inline including binary bytes") {
 // | [>] large bodies serialize through an owned source          ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("large bodies serialize through an owned source") {
-  const std::string payload(limits::kMaxResponseBodySizeInMemory + 1, 'x');
-  response value;
-  value.ok_200().set_header("Date", "fixed").set_body(payload);
-  DOBA_EXPECT_EQUAL(value.get_header("Content-Length").second,
-                    std::to_string(payload.size()));
-  auto serialized = value.serialize();
-  DOBA_EXPECT(serialized->source.has_value());
-  DOBA_EXPECT_EQUAL(read_source(*serialized->source), payload);
+  for (std::size_t size : {limits::kMaxResponseBodySizeInMemory - 1,
+                           limits::kMaxResponseBodySizeInMemory,
+                           limits::kMaxResponseBodySizeInMemory + 1}) {
+    std::string payload(size, '\0');
+    for (std::size_t i = 0; i < payload.size(); i++) {
+      payload[i] = static_cast<char>((i * 31 + i / 127) % 256);
+    }
+    response value;
+    value.ok_200().set_header("Date", "fixed").set_body(payload);
+    DOBA_EXPECT_EQUAL(value.get_header("Content-Length").second,
+                      std::to_string(payload.size()));
+    auto serialized = value.serialize();
+    const auto boundary = serialized->prefix.find("\r\n\r\n");
+    DOBA_EXPECT(boundary != std::string::npos);
+    DOBA_EXPECT_EQUAL(serialized->source.has_value(),
+                      size > limits::kMaxResponseBodySizeInMemory);
+    std::string actual = serialized->prefix.substr(boundary + 4);
+    if (serialized->source.has_value()) {
+      DOBA_EXPECT(actual.empty());
+      actual += read_source(*serialized->source);
+      DOBA_EXPECT(serialized->source->eof());
+      DOBA_EXPECT(!serialized->source->failed());
+    }
+    DOBA_EXPECT_EQUAL(actual, payload);
+  }
 }
 // +===========================================================================+
 // | [>] adopted raw and chunked writers set matching framing    ( test-case ) |
@@ -397,11 +414,17 @@ DOBA_TEST("informational 204 205 and 304 responses never serialize bodies") {
     (value.*set)();
     value.set_header("Date", "fixed").set_body("body");
     auto serialized = value.serialize();
-    DOBA_EXPECT(!serialized->prefix.ends_with("body"));
+    const auto boundary = serialized->prefix.find("\r\n\r\n");
+    DOBA_EXPECT(boundary != std::string::npos);
+    DOBA_EXPECT_EQUAL(serialized->prefix.substr(boundary + 4), "");
     DOBA_EXPECT(!serialized->source.has_value());
     DOBA_EXPECT(!value.has_header("Transfer-Encoding"));
     if (set == &response::reset_content_205) {
       DOBA_EXPECT_EQUAL(value.get_header("Content-Length").second, "0");
+    } else if (set == &response::not_modified_304) {
+      DOBA_EXPECT_EQUAL(value.get_header("Content-Length").second, "4");
+    } else {
+      DOBA_EXPECT(!value.has_header("Content-Length"));
     }
   }
   auto writer = body_writer::chunked();
@@ -411,6 +434,9 @@ DOBA_TEST("informational 204 205 and 304 responses never serialize bodies") {
       .set_header("Date", "fixed")
       .set_body(std::move(writer));
   const auto serialized = streamed.serialize();
+  const auto boundary = serialized->prefix.find("\r\n\r\n");
+  DOBA_EXPECT(boundary != std::string::npos);
+  DOBA_EXPECT_EQUAL(serialized->prefix.substr(boundary + 4), "");
   DOBA_EXPECT(!serialized->source.has_value());
   DOBA_EXPECT(!streamed.has_header("Transfer-Encoding"));
   DOBA_EXPECT_EQUAL(streamed.get_header("Content-Length").second, "0");

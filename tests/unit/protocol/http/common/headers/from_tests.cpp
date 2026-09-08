@@ -73,4 +73,20 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!from::check(std::string_view{"a\r", 2}));
   DOBA_EXPECT(!from::check(std::string_view{"a\n", 2}));
   DOBA_EXPECT(!from::check(std::string_view{"\x80", 1}));
+  constexpr std::string_view seed = "user@example.com";
+  const std::size_t positions[] = {0, seed.size() / 2, seed.size() - 1};
+  for (std::size_t position : positions) {
+    for (char control : {'\0', '\r', '\n', '\x7f'}) {
+      std::string source(seed);
+      source[position] = control;
+      martianlabs::doba::tests::unit::test_helper::set_context(
+          std::string(seed) + ", position " + std::to_string(position) +
+          ", byte " + std::to_string(static_cast<unsigned char>(control)));
+      DOBA_EXPECT(!from::check(source));
+    }
+  }
+  std::string padded(seed);
+  padded.push_back('\0');
+  padded += "suffix";
+  DOBA_EXPECT(from::check(std::string_view(padded.data(), seed.size())));
 }

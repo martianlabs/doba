@@ -51,25 +51,29 @@ Other outstanding items have no assigned version.
 
 ## Inventory
 
-26 items across seven categories. Numbering identifies items; it does not
-express priority or implementation order.
+29 entries across seven categories, including the completed QA4 entry
+retained for traceability. Numbering identifies items; it does not express
+priority or implementation order.
 
 | Category | Identifiers | Total |
 | --- | --- | --- |
-| Operational hardening | C1-C3 | 3 |
+| Operational hardening | C1-C6 | 6 |
 | Product and convenience | P1-P7 | 7 |
 | Quality and validation | QA1-QA6 | 6 |
 | Release engineering | RE1 | 1 |
 | C++ maintainability | DT1-DT2 | 2 |
 | Public documentation | DOC1-DOC2 | 2 |
 | Beyond the first release | F1-F5 | 5 |
-| **Total** | | **26** |
+| **Total** | | **29** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
 | [C1](#c1-single-inactivity-timeout) | Hardening | Pending | Beta target | 0.1.0-beta.1 |
 | [C2](#c2-effective-per-request-limits) | Hardening | Deferred | High | No assigned version |
 | [C3](#c3-global-active-connection-limit) | Hardening | Pending | Beta target | 0.1.0-beta.1 |
+| [C4](#c4-absolute-form-authority-precedence) | Hardening | Pending | Not set | No assigned version |
+| [C5](#c5-internal-decoder-capacity-overflow) | Hardening | Pending | Not set | No assigned version |
+| [C6](#c6-te-connection-option) | Hardening | Pending | Not set | No assigned version |
 | [P1](#p1-static-file-handler) | Product | Pending | Not set | No assigned version |
 | [P2](#p2-access-logging) | Product | Pending | Not set | No assigned version |
 | [P3](#p3-middleware-chain) | Product | Pending | Not set | No assigned version |
@@ -77,10 +81,10 @@ express priority or implementation order.
 | [P5](#p5-automatic-conditionals-and-ranges) | Product | Deferred | Not set | No assigned version |
 | [P6](#p6-output-trailers) | Product | Deferred | Not set | No assigned version |
 | [P7](#p7-automatic-resource-options) | Product | Deferred | Not set | No assigned version |
-| [QA1](#qa1-exhaustive-compliance-suite) | QA | Pending | Not set | No assigned version |
+| [QA1](#qa1-exhaustive-compliance-suite) | QA | Partial | Not set | No assigned version |
 | [QA2](#qa2-fuzzing) | QA | Deferred | High | No assigned version |
 | [QA3](#qa3-performance-baseline) | QA | Pending | Medium | No assigned version |
-| [QA4](#qa4-harness-diagnostics-and-isolation) | QA | Pending | Medium | No assigned version |
+| [QA4](#qa4-harness-diagnostics-and-isolation) | QA | Completed | Medium | No assigned version |
 | [QA5](#qa5-stress-campaigns) | QA | Pending | Not set | No assigned version |
 | [QA6](#qa6-external-compliance-automation) | QA | Deferred | Not set | No assigned version |
 | [RE1](#re1-release-governance-and-traceability) | Release | Partial | Medium | 0.1.0-beta.1 |
@@ -178,6 +182,89 @@ resources per request.
 
 **Out of scope.** Per-worker quotas, dynamic changes, acceptance backpressure,
 new callbacks, and HTTP rejection responses.
+
+### C4: Absolute-form authority precedence
+
+**Context.** GET http://a/ with Host: b is rejected. The routing rule
+requires equality between Host and the request-target authority, including
+absolute-form. This rejection was reproduced against the current decoder.
+
+**Scope.** Correct absolute-form origin-server authority processing to use
+the request-target authority. Preserve Host syntax/multiplicity validation,
+the raw header value and public signatures. Keep CONNECT/authority-form
+behavior separate.
+
+**Components.** HTTP routing rule, decoder request construction, routing
+unit tests, decoder tests and HTTP socket integration tests.
+
+**Acceptance and tests.**
+
+- Accept valid absolute-form requests whose Host differs from the target.
+- Check differing hosts/ports and default-port equivalence.
+- Verify effective authority and preservation of the received Host value.
+- Preserve rejection of missing, duplicate or syntactically invalid Host.
+- Run focused regressions and equivalent HTTP cases in IOCP and epoll.
+
+**Dependencies and decisions.** Define the existing get_host versus
+get_target_authority_host contract before implementation. A contract change
+must be explicit; adding these regressions does not itself correct routing.
+
+**Reference.** [RFC 9112 S3.2.2](https://www.rfc-editor.org/rfc/rfc9112.html#section-3.2.2).
+
+### C5: Internal decoder capacity overflow
+
+**Context.** Two capacity problems were reproduced. A request with 129
+query pairs succeeds
+with only 128 visible pairs, while limits.h describes rejection. A complete
+5121-byte head fills the 5120-byte buffer, then accumulate consumes zero and
+deserialize still reports MoreBytesNeeded. The latter reproduces decoder
+non-progress; a permanent end-to-end server hang has not been demonstrated.
+
+**Scope.** Resolve the query rejection/truncation contract and detect an
+incomplete head that cannot fit. Return a terminal error when the decoder
+cannot progress, preserving public signatures and unrelated parsing rules.
+
+**Components.** decoder.h, limits.h, the split_query_parameters contract in
+HTTP common helpers, their unit tests and HTTP socket integration tests.
+
+**Acceptance and tests.**
+
+- Check 127/128/129 query pairs, including empty pair separators.
+- Check complete heads of 5119/5120/5121 bytes and fragmented delivery.
+- Verify a terminal outcome for exhausted capacity and the selected reason.
+- Verify that rejected input is not dispatched and the socket closes safely.
+- Preserve accepted boundary inputs and equivalent results in both backends.
+
+**Dependencies and decisions.** Select rejection versus truncation and the
+error/status contract before implementation; no automatic 431 policy is
+assumed. Correctness of existing fixed capacities is separate from the
+configurable resource-limit API deferred in C2.
+
+### C6: TE connection option
+
+**Context.** TE: trailers together with Connection: TE is rejected because
+the directives rule forbids the te connection option. This rejection was
+reproduced against the current decoder. A TE sender must include that option.
+
+**Scope.** Remove the specific inappropriate te prohibition, update its
+rule documentation and preserve all unrelated directive validation.
+
+**Components.** HTTP directives rule, its unit tests and decoder tests.
+
+**Acceptance and tests.**
+
+- Accept TE: trailers with Connection: TE.
+- Reject TE: gzip;q=1.001 in the same context.
+- Exercise canonical/lower/upper field names with and without OWS.
+- Prove that the invalid value reaches its field validator; rejection of
+  the request context must not mask a missing TE value check.
+- Preserve existing unrelated connection-directive tests.
+
+**Dependencies and decisions.** Correct the directive rule so that the
+positive and negative cases can exercise TE value validation independently.
+No public API or protocol-upgrade feature is required.
+
+**Reference.** [RFC 9110 S10.1.4](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.1.4).
 
 ## Product and convenience
 
@@ -308,6 +395,14 @@ missing resources.
 
 ### QA1: Exhaustive compliance suite
 
+**Status:** partial. The test expansion completed on 2026-09-07 added
+184 functional cases and reinforced 84 existing cases, with 556 unit and
+71 integration registrations passing the local compiler/sanitizer matrix.
+Confirmed implementation problems are tracked in
+[C4](#c4-absolute-form-authority-precedence),
+[C5](#c5-internal-decoder-capacity-overflow) and [C6](#c6-te-connection-option).
+The count is not an exhaustive compliance claim.
+
 **Context.** The project's integration suite covers framing, fragmentation,
 pipelining, and closure over real sockets. It is not an exhaustive RFC matrix.
 
@@ -324,6 +419,21 @@ protocol-transport contract, and both backends.
 **Acceptance and tests.** Trace each group of cases to its RFC rule, cover
 relevant fragmentation points, and verify equivalent results in IOCP and
 epoll. Configured limit cases depend on the C2 decisions.
+
+**Remaining validation and infrastructure.**
+
+- Force a collision with an actual spill filename candidate; check existing
+  file preservation, retry, error classification and cleanup. Concurrent
+  owners with distinct filenames do not establish collision handling.
+- Prove that output remains pending while another client is served, and
+  test the absolute send_all deadline against a non-reading local peer.
+  Response serialization alone does not prove socket backpressure.
+- Reproduce and resolve the gap between releasing a reserved test port and
+  server bind; distinguish address-in-use from unrelated startup failures.
+- Exercise a genuinely pending connect with a deterministic local mechanism
+  on Windows and Linux; a refused connection does not cover that timeout.
+- After C2 defines configurable limits, test zero, limit-1, limit and limit+1,
+  early rejection and encoded/decoded chunked accounting.
 
 **References.** RFC 9110 and RFC 9112. The suite provides evidence for the
 strict HTTP/1.1 claim; it does not replace contract review.
@@ -370,27 +480,29 @@ optimization measurements do not replace this release baseline.
 
 ### QA4: Harness diagnostics and isolation
 
-**Context.** The unit runner invokes each case without catching exceptions.
-An unexpected exception can terminate the executable. `expect` receives
-the expression, file, and line but does not print them. CTest registers the
-entire unit suite as a single test.
+**Status:** completed for the stated harness criteria on 2026-09-07.
 
-**Impact.** Intermittent or exceptional failures provide little diagnostic
-information and can hide the results of later cases.
+**Implemented.** Both runners identify and flush the active case, report
+assertion expression/location and row context, catch standard and unknown
+exceptions per case, continue afterwards, and support listing and file/name
+filters. CTest bounds the suites and isolated probe verifiers. The existing
+fatal-return assertion behavior and dependency-free runner are preserved.
 
-**Components.** `tests/unit/test_helper.h`, `test_helper.cpp`, and CTest
-registration; inspect the integration helper if it shares this behavior.
+**Evidence.** Ten named checks per runner plus an active-transport cleanup
+probe passed on MSVC/GCC/Clang, Debug/Release, ASan/UBSan/TSan and CMake
+3.20.6. An additional forced-suspension failure exposed and then verified
+removal of a fixture leak under ASan.
 
-**Acceptance and tests.** A throwing case must be identified as failed and
-allow subsequent cases to be reported. Each failed assertion shows its
-expression and location. Evaluate CTest granularity without unnecessary
-dependencies.
+**Limits.** Functional cases remain grouped into two executables. A native
+crash or termination still stops its aggregate process; active-case output
+and filters support focused diagnosis. This completion does not imply
+per-case process isolation or exhaustive concurrency validation.
 
 ### QA5: Stress campaigns
 
 **Status:** pending. **Priority:** not set. **Target:** no assigned version.
 
-**Context.** Functional integration and concurrency coverage is complete.
+**Context.** Functional integration and concurrency cases are in place.
 Extended soak tests and, where feasible, controlled worker interleavings
 remain to be explored. Define duration, load, observed resources, and
 reproduction before creating new tests; relate them to C1/C3 and QA3 scenarios.
@@ -583,7 +695,8 @@ noncompliant with HTTP/1.1.
 The previous column refers to the backlog before renumbering.
 These identifiers are retained only to interpret older references;
 current links and dependencies use the new column.
-Completed items do not occupy positions in the active backlog.
+Completed entries retained for traceability keep their identifiers and are
+marked in the inventory.
 
 | Previous | New | Item |
 | --- | --- | --- |

@@ -22,7 +22,10 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <array>
 #include <atomic>
+#include <barrier>
+#include <chrono>
 #include <coroutine>
 #include <cstddef>
 #include <exception>
@@ -78,52 +81,75 @@ scheduled_probe increment(std::atomic<std::size_t>& value) {
 // | [>] executor resumes a bounded batch exactly once           ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("executor resumes a bounded batch exactly once") {
-  martianlabs::doba::transport::server::detail::executor value;
-  std::atomic<std::size_t> resumed = 0;
-  std::vector<scheduled_probe> probes;
-  probes.reserve(65);
-  for (std::size_t i = 0; i < 65; i++) {
-    probes.emplace_back(increment(resumed));
-    DOBA_EXPECT(value.schedule(probes.back().get_coroutine()));
+  for (std::size_t count : {63, 64, 65}) {
+    std::array<std::atomic<std::size_t>, 65> resumed{};
+    std::vector<scheduled_probe> probes;
+    probes.reserve(count);
+    martianlabs::doba::transport::server::detail::executor value;
+    for (std::size_t i = 0; i < count; i++) {
+      probes.emplace_back(increment(resumed[i]));
+      DOBA_EXPECT(value.schedule(probes.back().get_coroutine()));
+    }
+    DOBA_EXPECT_EQUAL(value.run(), count > 64);
+    for (std::size_t i = 0; i < count; i++) {
+      DOBA_EXPECT_EQUAL(resumed[i].load(), i < 64 ? 1 : 0);
+    }
+    DOBA_EXPECT(!value.run());
+    DOBA_EXPECT(!value.run());
+    for (std::size_t i = 0; i < count; i++) {
+      DOBA_EXPECT_EQUAL(resumed[i].load(), 1);
+    }
   }
-  DOBA_EXPECT(value.run());
-  DOBA_EXPECT_EQUAL(resumed.load(), 64);
-  DOBA_EXPECT(!value.run());
-  DOBA_EXPECT_EQUAL(resumed.load(), 65);
-  DOBA_EXPECT(!value.run());
-  DOBA_EXPECT_EQUAL(resumed.load(), 65);
 }
 // +===========================================================================+
 // | [>] executor supports concurrent producers and consumers    ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("executor supports concurrent producers and consumers") {
-  martianlabs::doba::transport::server::detail::executor value;
-  std::atomic<std::size_t> resumed = 0;
+  std::array<std::atomic<std::size_t>, 256> resumed{};
   std::atomic<bool> scheduled = true;
+  std::atomic<std::size_t> producers_left = 4;
+  std::array<bool, 4> overlapped{};
   std::vector<scheduled_probe> probes;
-  probes.reserve(256);
-  for (std::size_t i = 0; i < 256; i++) {
-    probes.emplace_back(increment(resumed));
-  }
-  std::vector<std::jthread> producers;
-  for (std::size_t producer = 0; producer < 4; producer++) {
-    producers.emplace_back([&value, &probes, &scheduled, producer]() {
+  probes.reserve(resumed.size());
+  for (auto& count : resumed) probes.emplace_back(increment(count));
+  martianlabs::doba::transport::server::detail::executor value;
+  std::barrier start(8);
+  const auto deadline = std::chrono::steady_clock::now() +
+                        std::chrono::seconds(3);
+  std::array<std::jthread, 4> producers;
+  std::array<std::jthread, 4> consumers;
+  for (std::size_t producer = 0; producer < producers.size(); producer++) {
+    producers[producer] = std::jthread([&, producer]() {
+      start.arrive_and_wait();
       const std::size_t begin = producer * 64;
-      for (std::size_t i = begin; i < begin + 64; i++) {
-        if (!value.schedule(probes[i].get_coroutine())) {
-          scheduled.store(false);
-        }
+      if (!value.schedule(probes[begin].get_coroutine())) scheduled = false;
+      while (resumed[begin].load() == 0 &&
+             std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::yield();
+      }
+      overlapped[producer] = resumed[begin].load() == 1;
+      for (std::size_t i = begin + 1; i < begin + 64; i++) {
+        if (!value.schedule(probes[i].get_coroutine())) scheduled = false;
+      }
+      producers_left.fetch_sub(1);
+    });
+  }
+  for (auto& consumer : consumers) {
+    consumer = std::jthread([&]() {
+      start.arrive_and_wait();
+      while (std::chrono::steady_clock::now() < deadline) {
+        const bool finished = producers_left.load() == 0;
+        const bool more = value.run();
+        if (finished && !more) break;
+        std::this_thread::yield();
       }
     });
   }
-  producers.clear();
+  for (auto& producer : producers) producer.join();
+  for (auto& consumer : consumers) consumer.join();
   DOBA_EXPECT(scheduled.load());
-  std::vector<std::jthread> consumers;
-  for (std::size_t consumer = 0; consumer < 4; consumer++) {
-    consumers.emplace_back([&value]() { value.run(); });
-  }
-  consumers.clear();
-  DOBA_EXPECT_EQUAL(resumed.load(), 256);
+  for (bool overlap : overlapped) DOBA_EXPECT(overlap);
+  for (const auto& count : resumed) DOBA_EXPECT_EQUAL(count.load(), 1);
   DOBA_EXPECT(!value.run());
 }
 // +===========================================================================+
@@ -171,4 +197,83 @@ DOBA_TEST("executor start requires an empty queue") {
   DOBA_EXPECT(!value.run());
   DOBA_EXPECT_EQUAL(resumed.load(), 1);
   DOBA_EXPECT(value.start());
+}
+
+// +===========================================================================+
+// | [>] concurrent stop acceptance                              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("executor stop separates accepted and rejected concurrent work") {
+  std::array<std::atomic<std::size_t>, 258> resumed{};
+  std::array<bool, 258> accepted{};
+  std::vector<scheduled_probe> probes;
+  probes.reserve(resumed.size());
+  for (auto& count : resumed) probes.emplace_back(increment(count));
+  martianlabs::doba::transport::server::detail::executor value;
+  accepted[0] = value.schedule(probes[0].get_coroutine());
+  std::atomic<std::size_t> producers_left = 4;
+  std::barrier start(6);
+  const auto deadline = std::chrono::steady_clock::now() +
+                        std::chrono::seconds(3);
+  std::array<std::jthread, 4> producers;
+  for (std::size_t producer = 0; producer < producers.size(); producer++) {
+    producers[producer] = std::jthread([&, producer]() {
+      start.arrive_and_wait();
+      for (std::size_t i = 1 + producer * 64; i <= (producer + 1) * 64; i++) {
+        accepted[i] = value.schedule(probes[i].get_coroutine());
+        std::this_thread::yield();
+      }
+      producers_left.fetch_sub(1);
+    });
+  }
+  std::jthread consumer([&]() {
+    start.arrive_and_wait();
+    while (std::chrono::steady_clock::now() < deadline) {
+      const bool finished = producers_left.load() == 0;
+      const bool more = value.run();
+      if (finished && !more) break;
+      std::this_thread::yield();
+    }
+  });
+  start.arrive_and_wait();
+  value.stop();
+  accepted[257] = value.schedule(probes[257].get_coroutine());
+  for (auto& producer : producers) producer.join();
+  consumer.join();
+  for (std::size_t i = 0; i < 5; i++) value.run();
+  DOBA_EXPECT(accepted[0]);
+  DOBA_EXPECT(!accepted[257]);
+  for (std::size_t i = 0; i < resumed.size(); i++) {
+    DOBA_EXPECT_EQUAL(resumed[i].load(), accepted[i] ? 1 : 0);
+  }
+  DOBA_EXPECT(!value.run());
+  DOBA_EXPECT(value.start());
+  DOBA_EXPECT(value.schedule(probes[257].get_coroutine()));
+  DOBA_EXPECT(!value.run());
+  DOBA_EXPECT_EQUAL(resumed[257].load(), 1);
+}
+
+// +===========================================================================+
+// | [>] continuation schedules successor                        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("executor continuations can schedule a successor") {
+  martianlabs::doba::transport::server::detail::executor value;
+  std::atomic<std::size_t> first_count = 0;
+  std::atomic<std::size_t> second_count = 0;
+  bool accepted = false;
+  auto second = increment(second_count);
+  const auto schedule_next = [&]() -> scheduled_probe {
+    first_count.fetch_add(1);
+    accepted = value.schedule(second.get_coroutine());
+    co_return;
+  };
+  auto first = schedule_next();
+  DOBA_EXPECT(value.schedule(first.get_coroutine()));
+  DOBA_EXPECT(!value.run());
+  DOBA_EXPECT(accepted);
+  DOBA_EXPECT_EQUAL(first_count.load(), 1);
+  DOBA_EXPECT_EQUAL(second_count.load(), 0);
+  DOBA_EXPECT(!value.run());
+  DOBA_EXPECT_EQUAL(first_count.load(), 1);
+  DOBA_EXPECT_EQUAL(second_count.load(), 1);
+  DOBA_EXPECT(!value.run());
 }

@@ -30,6 +30,7 @@
 #include <coroutine>
 #include <cstdint>
 #include <functional>
+#include <initializer_list>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -83,6 +84,26 @@ class deferred_signal {
   std::mutex mutex_;
   std::condition_variable condition_;
   std::coroutine_handle<> continuation_;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] deferred_cleanup                                            ( class ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+class deferred_cleanup {
+ public:
+  explicit deferred_cleanup(
+      std::initializer_list<std::shared_ptr<deferred_signal>> signals)
+      : signals_(signals) {}
+  deferred_cleanup(const deferred_cleanup&) = delete;
+  deferred_cleanup& operator=(const deferred_cleanup&) = delete;
+  ~deferred_cleanup() {
+    for (const auto& signal : signals_) signal->resume();
+  }
+
+ private:
+  std::vector<std::shared_ptr<deferred_signal>> signals_;
 };
 
 struct transport_request {
@@ -335,15 +356,15 @@ martianlabs::doba::common::task<transport_response> make_failed_response(
 // | [>] immediate response lifecycle                             ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip serves independent loopback connections") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> connected = 0;
   std::atomic<std::size_t> disconnected = 0;
   std::atomic<std::size_t> requests = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>& request,
                   transport_response& response,
@@ -388,13 +409,13 @@ DOBA_TEST("tcpip serves independent loopback connections") {
 // | [>] persistent connection reuse                              ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip reuses a connection after each completed response") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> requests = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>& request,
                   transport_response& response,
@@ -430,12 +451,12 @@ DOBA_TEST("tcpip reuses a connection after each completed response") {
 // | [>] synchronous pipeline delivery                          ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("tcpip delivers batched synchronous responses in request order") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
          transport_response& response,
@@ -467,13 +488,13 @@ DOBA_TEST("tcpip delivers batched synchronous responses in request order") {
 // | [>] fragmented request delivery                             ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip waits for every fragment before dispatching a request") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, framed_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> requests = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, framed_decoder>
+      server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>& request,
                   transport_response& response,
@@ -512,13 +533,13 @@ DOBA_TEST("tcpip waits for every fragment before dispatching a request") {
 // | [>] interim response delivery                               ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip sends one interim response before final dispatch") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, framed_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> requests = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, framed_decoder>
+      server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>& request,
                   transport_response& response,
@@ -559,12 +580,12 @@ DOBA_TEST("tcpip sends one interim response before final dispatch") {
 // | [>] buffered request delivery                               ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip dispatches every complete buffered request") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, framed_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, framed_decoder>
+      server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
          transport_response& response,
@@ -598,14 +619,14 @@ DOBA_TEST("tcpip dispatches every complete buffered request") {
 // | [>] receive buffer boundaries                               ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip preserves requests across receive buffer boundaries") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, sized_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<bool> valid = true;
   std::atomic<std::size_t> expected_size = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, sized_decoder>
+      server;
   server.set_on_request(
       [&valid, &expected_size](
           const std::shared_ptr<transport_request>& request,
@@ -648,12 +669,12 @@ DOBA_TEST("tcpip preserves requests across receive buffer boundaries") {
 // | [>] binary request delivery                                 ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip preserves binary request payloads") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, sized_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, sized_decoder>
+      server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
          transport_response& response,
@@ -689,14 +710,14 @@ DOBA_TEST("tcpip preserves binary request payloads") {
 // | [>] null decoded request rejection                          ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip rejects a successful decode without a request") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> requests = 0;
   std::atomic<int> rejection_code = -1;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>&,
                   transport_response&,
@@ -732,15 +753,15 @@ DOBA_TEST("tcpip rejects a successful decode without a request") {
 // | [>] decoder accumulation rejection                         ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("tcpip rejects invalid decoder accumulation counts") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> requests = 0;
   std::atomic<std::size_t> rejections = 0;
   std::atomic<int> rejection_code = -1;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>&,
                   transport_response&,
@@ -782,14 +803,14 @@ DOBA_TEST("tcpip rejects invalid decoder accumulation counts") {
 // | [>] decoder rejection delivery                              ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip sends a rejection response then closes the client channel") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> requests = 0;
   std::atomic<int> rejection_code = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>&,
                   transport_response&,
@@ -825,9 +846,6 @@ DOBA_TEST("tcpip sends a rejection response then closes the client channel") {
 // | [>] pipelined async response ordering                        ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip preserves response order for pipelined deferred requests") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -835,6 +853,10 @@ DOBA_TEST("tcpip preserves response order for pipelined deferred requests") {
   auto second_signal = std::make_shared<deferred_signal>();
   auto serialized = std::make_shared<std::atomic<std::size_t>>(0);
   std::atomic<std::size_t> deferred = 0;
+  deferred_cleanup cleanup({first_signal, second_signal});
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&deferred, &first_signal, &second_signal, &serialized](
           const std::shared_ptr<transport_request>& request,
@@ -875,9 +897,6 @@ DOBA_TEST("tcpip preserves response order for pipelined deferred requests") {
 // | [>] deferred response cancellation                            ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip cooperatively cancels deferred responses") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -892,6 +911,10 @@ DOBA_TEST("tcpip cooperatively cancels deferred responses") {
   std::atomic<std::size_t> deferred = 0;
   std::atomic<std::size_t> cancelled = 0;
   std::atomic<std::size_t> disconnected = 0;
+  deferred_cleanup cleanup({client_signal, stop_signal});
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&client_signal, &stop_signal, &serialized, &completed,
        &client_cancellation, &stop_cancellation, &deferred, &cancelled](
@@ -947,9 +970,6 @@ DOBA_TEST("tcpip cooperatively cancels deferred responses") {
 // | [>] mixed response ordering                                  ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip orders mixed synchronous and deferred responses") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -958,6 +978,10 @@ DOBA_TEST("tcpip orders mixed synchronous and deferred responses") {
   (*signals)[0] = std::make_shared<deferred_signal>();
   (*signals)[1] = std::make_shared<deferred_signal>();
   std::atomic<std::size_t> deferred = 0;
+  deferred_cleanup cleanup({(*signals)[0], (*signals)[1]});
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&signals, &deferred](
           const std::shared_ptr<transport_request>& request,
@@ -1011,13 +1035,14 @@ DOBA_TEST("tcpip orders mixed synchronous and deferred responses") {
 // | [>] ordered interim response                                ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip keeps an interim behind an earlier deferred response") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, framed_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto signal = std::make_shared<deferred_signal>();
+  deferred_cleanup cleanup({signal});
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, framed_decoder>
+      server;
   server.set_on_request(
       [&signal](const std::shared_ptr<transport_request>& request,
                 transport_response& response,
@@ -1063,13 +1088,13 @@ DOBA_TEST("tcpip keeps an interim behind an earlier deferred response") {
 // | [>] synchronous channel close                              ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("tcpip drains a synchronous close response before eof") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> requests = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>& request,
                   transport_response& response,
@@ -1103,14 +1128,15 @@ DOBA_TEST("tcpip drains a synchronous close response before eof") {
 // | [>] deferred channel close                                 ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("tcpip drains a deferred close response before eof") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto signal = std::make_shared<deferred_signal>();
   std::atomic<std::size_t> requests = 0;
+  deferred_cleanup cleanup({signal});
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&signal, &requests](
           const std::shared_ptr<transport_request>& request,
@@ -1148,12 +1174,12 @@ DOBA_TEST("tcpip drains a deferred close response before eof") {
 // | [>] empty response delivery                                  ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip removes an empty response without blocking its queue") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
          transport_response& response,
@@ -1185,15 +1211,15 @@ DOBA_TEST("tcpip removes an empty response without blocking its queue") {
 // | [>] streamed response boundaries                            ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip streams response sources across send boundaries") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   constexpr std::array<std::size_t, 8> sizes = {
       0, 8191, 8192, 8193, 65535, 65536, 65537, 131089};
   std::atomic<std::size_t> index = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&index, &sizes](const std::shared_ptr<transport_request>&,
                        transport_response& response,
@@ -1202,8 +1228,11 @@ DOBA_TEST("tcpip streams response sources across send boundaries") {
               martianlabs::doba::common::task<transport_response>> {
         std::size_t current = index.fetch_add(1);
         response.value = "p";
-        response.source.assign(sizes[current],
-                               static_cast<char>('a' + current));
+        response.source.resize(sizes[current]);
+        for (std::size_t i = 0; i < response.source.size(); i++) {
+          response.source[i] =
+              static_cast<char>((i * 37 + i / 251 + current) % 256);
+        }
         response.behavior = serialization_behavior::kSource;
         return std::nullopt;
       });
@@ -1222,9 +1251,11 @@ DOBA_TEST("tcpip streams response sources across send boundaries") {
     auto response = client.receive(sizes[current] + 1);
     DOBA_EXPECT(response.has_value());
     DOBA_EXPECT_EQUAL((*response)[0], 'p');
-    DOBA_EXPECT_EQUAL(response->substr(1),
-                      std::string(sizes[current],
-                                  static_cast<char>('a' + current)));
+    std::string expected(sizes[current], '\0');
+    for (std::size_t i = 0; i < expected.size(); i++) {
+      expected[i] = static_cast<char>((i * 37 + i / 251 + current) % 256);
+    }
+    DOBA_EXPECT_EQUAL(response->substr(1), expected);
   }
   client.close();
   server.stop();
@@ -1234,20 +1265,23 @@ DOBA_TEST("tcpip streams response sources across send boundaries") {
 // | [>] large prefix delivery                                    ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip sends prefixes larger than its bounded send buffer") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   constexpr std::size_t response_size = 131089;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>&,
          transport_response& response,
          const std::stop_token&)
           -> std::optional<
               martianlabs::doba::common::task<transport_response>> {
-        response.value.assign(response_size, 'p');
+        response.value.resize(response_size);
+        for (std::size_t i = 0; i < response.value.size(); i++) {
+          response.value[i] = static_cast<char>((i * 19 + i / 127) % 256);
+        }
         return std::nullopt;
       });
   server.set_on_bad_request(
@@ -1263,7 +1297,11 @@ DOBA_TEST("tcpip sends prefixes larger than its bounded send buffer") {
   DOBA_EXPECT(client.send_all("B"));
   auto response = client.receive(response_size);
   DOBA_EXPECT(response.has_value());
-  DOBA_EXPECT_EQUAL(*response, std::string(response_size, 'p'));
+  std::string expected(response_size, '\0');
+  for (std::size_t i = 0; i < expected.size(); i++) {
+    expected[i] = static_cast<char>((i * 19 + i / 127) % 256);
+  }
+  DOBA_EXPECT_EQUAL(*response, expected);
   client.close();
   server.stop();
 }
@@ -1272,13 +1310,13 @@ DOBA_TEST("tcpip sends prefixes larger than its bounded send buffer") {
 // | [>] streamed pipeline delivery                              ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip completes a streamed response before its successor") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   constexpr std::size_t source_size = 70001;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
          transport_response& response,
@@ -1287,7 +1325,10 @@ DOBA_TEST("tcpip completes a streamed response before its successor") {
               martianlabs::doba::common::task<transport_response>> {
         if (request->value == 'B') {
           response.value = "prefix";
-          response.source.assign(source_size, 'b');
+          response.source.resize(source_size);
+          for (std::size_t i = 0; i < response.source.size(); i++) {
+            response.source[i] = static_cast<char>((i * 23 + i / 131) % 256);
+          }
           response.behavior = serialization_behavior::kSource;
         } else {
           response.value = "tail";
@@ -1307,8 +1348,12 @@ DOBA_TEST("tcpip completes a streamed response before its successor") {
   DOBA_EXPECT(client.send_all("BS"));
   auto response = client.receive(source_size + 10);
   DOBA_EXPECT(response.has_value());
-  DOBA_EXPECT_EQUAL(*response,
-                    "prefix" + std::string(source_size, 'b') + "tail");
+  std::string expected(source_size, '\0');
+  for (std::size_t i = 0; i < expected.size(); i++) {
+    expected[i] = static_cast<char>((i * 23 + i / 131) % 256);
+  }
+  DOBA_EXPECT_EQUAL(*response, "prefix" + expected + "tail");
+  DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(100)));
   client.close();
   server.stop();
 }
@@ -1317,15 +1362,15 @@ DOBA_TEST("tcpip completes a streamed response before its successor") {
 // | [>] slow client isolation                                    ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip serves another client while a large response is blocked") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client slow_client;
   martianlabs::doba::tests::integration::tcpip_client fast_client;
   uint16_t port = slow_client.find_available_port();
   DOBA_EXPECT(port != 0);
   constexpr std::size_t source_size = 128 * 1024;
   auto serialized = std::make_shared<std::atomic<std::size_t>>(0);
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&serialized](const std::shared_ptr<transport_request>& request,
                     transport_response& response,
@@ -1371,9 +1416,6 @@ DOBA_TEST("tcpip serves another client while a large response is blocked") {
 // | [>] reset during send recovery                             ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("tcpip recovers after a client resets a large response") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client reset_client;
   martianlabs::doba::tests::integration::tcpip_client next_client;
   uint16_t port = reset_client.find_available_port();
@@ -1381,6 +1423,9 @@ DOBA_TEST("tcpip recovers after a client resets a large response") {
   constexpr std::size_t source_size = 4 * 1024 * 1024;
   auto serialized = std::make_shared<std::atomic<std::size_t>>(0);
   std::atomic<std::size_t> disconnected = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&serialized](const std::shared_ptr<transport_request>& request,
                     transport_response& response,
@@ -1388,7 +1433,10 @@ DOBA_TEST("tcpip recovers after a client resets a large response") {
           -> std::optional<
               martianlabs::doba::common::task<transport_response>> {
         if (request->value == 'L') {
-          response.source.assign(source_size, 'r');
+          response.source.resize(source_size);
+          for (std::size_t i = 0; i < response.source.size(); i++) {
+            response.source[i] = static_cast<char>((i * 29 + i / 137) % 256);
+          }
           response.behavior = serialization_behavior::kSource;
           response.serialized = serialized;
         } else {
@@ -1410,6 +1458,12 @@ DOBA_TEST("tcpip recovers after a client resets a large response") {
   DOBA_EXPECT(reset_client.set_receive_buffer_size(4096));
   DOBA_EXPECT(reset_client.send_all("L"));
   DOBA_EXPECT(wait_for_count(*serialized, 1));
+  auto prefix = reset_client.receive(8193);
+  DOBA_EXPECT(prefix.has_value());
+  for (std::size_t i = 0; i < prefix->size(); i++) {
+    DOBA_EXPECT_EQUAL((*prefix)[i],
+                      static_cast<char>((i * 29 + i / 137) % 256));
+  }
   reset_client.abort();
   DOBA_EXPECT(wait_for_count(disconnected, 1));
   DOBA_EXPECT(next_client.connect(port));
@@ -1425,14 +1479,14 @@ DOBA_TEST("tcpip recovers after a client resets a large response") {
 // | [>] synchronous handler failure                           ( test-case )   |
 // +===========================================================================+
 DOBA_TEST("tcpip converts synchronous handler exceptions to errors") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> errors = 0;
   std::atomic<int> rejection_code = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
          transport_response& response,
@@ -1483,9 +1537,6 @@ DOBA_TEST("tcpip converts synchronous handler exceptions to errors") {
 // | [>] deferred handler failure                              ( test-case )   |
 // +===========================================================================+
 DOBA_TEST("tcpip converts deferred handler exceptions to errors") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -1495,6 +1546,10 @@ DOBA_TEST("tcpip converts deferred handler exceptions to errors") {
   std::atomic<std::size_t> deferred = 0;
   std::atomic<std::size_t> errors = 0;
   std::atomic<std::size_t> disconnected = 0;
+  deferred_cleanup cleanup({signals[0], signals[1]});
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&signals, &deferred](
           const std::shared_ptr<transport_request>&,
@@ -1537,13 +1592,14 @@ DOBA_TEST("tcpip converts deferred handler exceptions to errors") {
 // | [>] ordered deferred failure                              ( test-case )   |
 // +===========================================================================+
 DOBA_TEST("tcpip orders a deferred error before accepted successors") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto signal = std::make_shared<deferred_signal>();
+  deferred_cleanup cleanup({signal});
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&signal](const std::shared_ptr<transport_request>& request,
                 transport_response& response,
@@ -1581,13 +1637,13 @@ DOBA_TEST("tcpip orders a deferred error before accepted successors") {
 // | [>] synchronous serialization failure                       ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip handles synchronous serialization failures") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> errors = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
          transport_response& response,
@@ -1645,9 +1701,6 @@ DOBA_TEST("tcpip handles synchronous serialization failures") {
 // | [>] deferred serialization failure                          ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip handles deferred serialization failures") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -1657,6 +1710,10 @@ DOBA_TEST("tcpip handles deferred serialization failures") {
       std::make_shared<deferred_signal>()};
   std::atomic<std::size_t> deferred = 0;
   std::atomic<std::size_t> errors = 0;
+  deferred_cleanup cleanup({signals[0], signals[1], signals[2]});
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&signals, &deferred](
           const std::shared_ptr<transport_request>&,
@@ -1711,13 +1768,13 @@ DOBA_TEST("tcpip handles deferred serialization failures") {
 // | [>] error generation failure                                ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip recovers when error response generation fails") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> errors = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>&,
          transport_response& response,
@@ -1769,13 +1826,13 @@ DOBA_TEST("tcpip recovers when error response generation fails") {
 // | [>] completed request half close                            ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip drains a response after the client half closes") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> disconnected = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>&,
          transport_response& response,
@@ -1810,14 +1867,14 @@ DOBA_TEST("tcpip drains a response after the client half closes") {
 // | [>] incomplete request half close                           ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip closes silently after a partial request eof") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, framed_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> requests = 0;
   std::atomic<std::size_t> errors = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, framed_decoder>
+      server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>&,
                   transport_response&,
@@ -1852,15 +1909,16 @@ DOBA_TEST("tcpip closes silently after a partial request eof") {
 // | [>] deferred request half close                             ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip cancels a deferred response after input eof") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto signal = std::make_shared<deferred_signal>();
   auto serialized = std::make_shared<std::atomic<std::size_t>>(0);
   std::atomic<std::size_t> disconnected = 0;
+  deferred_cleanup cleanup({signal});
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&signal, &serialized](
           const std::shared_ptr<transport_request>&,
@@ -1898,14 +1956,14 @@ DOBA_TEST("tcpip cancels a deferred response after input eof") {
 // | [>] reset during fragmented receive                         ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip recovers after a reset during request reception") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, framed_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client reset_client;
   martianlabs::doba::tests::integration::tcpip_client next_client;
   uint16_t port = reset_client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> disconnected = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, framed_decoder>
+      server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
          transport_response& response,
@@ -1942,15 +2000,15 @@ DOBA_TEST("tcpip recovers after a reset during request reception") {
 // | [>] concurrent fragmented clients                           ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip isolates interleaved requests from concurrent clients") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, framed_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client port_client;
   uint16_t port = port_client.find_available_port();
   DOBA_EXPECT(port != 0);
   constexpr std::size_t client_count = 8;
   std::atomic<std::size_t> connected = 0;
   std::atomic<std::size_t> disconnected = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, framed_decoder>
+      server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
          transport_response& response,
@@ -2003,71 +2061,83 @@ DOBA_TEST("tcpip isolates interleaved requests from concurrent clients") {
 // | [>] mixed state server stop                                 ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip stops idle blocked and deferred clients exactly once") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
-  martianlabs::doba::tests::integration::tcpip_client idle_client;
-  martianlabs::doba::tests::integration::tcpip_client slow_client;
-  martianlabs::doba::tests::integration::tcpip_client deferred_client;
-  uint16_t port = idle_client.find_available_port();
-  DOBA_EXPECT(port != 0);
-  constexpr std::size_t source_size = 4 * 1024 * 1024;
-  auto signal = std::make_shared<deferred_signal>();
-  auto serialized = std::make_shared<std::atomic<std::size_t>>(0);
-  std::atomic<std::size_t> connected = 0;
-  std::atomic<std::size_t> disconnected = 0;
-  server.set_on_request(
-      [&signal, &serialized](
-          const std::shared_ptr<transport_request>& request,
-          transport_response& response,
-          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
-        if (request->value == 'D') {
-          transport_response deferred;
-          deferred.value = "deferred";
-          deferred.serialized = serialized;
-          return make_deferred_response(signal, std::move(deferred));
-        }
-        response.source.assign(source_size, 's');
-        response.behavior = serialization_behavior::kSource;
-        return std::nullopt;
-      });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
-  server.set_on_connection([&connected]() { connected.fetch_add(1); });
-  server.set_on_disconnection(
-      [&disconnected]() { disconnected.fetch_add(1); });
-  std::string port_text = std::to_string(port);
-  server.start(port_text.c_str());
+  for (std::string_view scenario : {"mixed", "idle", "blocked", "deferred"}) {
+    martianlabs::doba::tests::integration::test_helper::set_context(scenario);
+    martianlabs::doba::tests::integration::tcpip_client idle_client;
+    martianlabs::doba::tests::integration::tcpip_client slow_client;
+    martianlabs::doba::tests::integration::tcpip_client deferred_client;
+    uint16_t port = idle_client.find_available_port();
+    DOBA_EXPECT(port != 0);
+    constexpr std::size_t source_size = 4 * 1024 * 1024;
+    auto signal = std::make_shared<deferred_signal>();
+    auto serialized = std::make_shared<std::atomic<std::size_t>>(0);
+    std::atomic<std::size_t> connected = 0;
+    std::atomic<std::size_t> disconnected = 0;
+    deferred_cleanup cleanup({signal});
+    martianlabs::doba::transport::server::tcpip<
+        transport_request, transport_response, transport_decoder>
+        server;
+    server.set_on_request(
+        [&signal, &serialized](
+            const std::shared_ptr<transport_request>& request,
+            transport_response& response,
+            const std::stop_token&)
+            -> std::optional<
+                martianlabs::doba::common::task<transport_response>> {
+          if (request->value == 'D') {
+            transport_response deferred;
+            deferred.value = "deferred";
+            deferred.serialized = serialized;
+            return make_deferred_response(signal, std::move(deferred));
+          }
+          response.source.assign(source_size, 's');
+          response.behavior = serialization_behavior::kSource;
+          return std::nullopt;
+        });
+    server.set_on_bad_request(
+        [](int, std::string_view, transport_response& response) {
+          response.value = "error";
+        });
+    server.set_on_connection([&connected]() { connected.fetch_add(1); });
+    server.set_on_disconnection(
+        [&disconnected]() { disconnected.fetch_add(1); });
+    std::string port_text = std::to_string(port);
+    server.start(port_text.c_str());
 
-  DOBA_EXPECT(idle_client.connect(port));
-  DOBA_EXPECT(slow_client.connect(port));
-  DOBA_EXPECT(slow_client.set_receive_buffer_size(4096));
-  DOBA_EXPECT(slow_client.send_all("L"));
-  DOBA_EXPECT(deferred_client.connect(port));
-  DOBA_EXPECT(deferred_client.send_all("D"));
-  DOBA_EXPECT(signal->wait());
-  DOBA_EXPECT(wait_for_count(connected, 3));
-  server.stop();
-  DOBA_EXPECT(wait_for_count(disconnected, 3));
-  signal->resume();
-  DOBA_EXPECT(remains_equal(*serialized, 0));
+    if (scenario == "mixed" || scenario == "idle") {
+      DOBA_EXPECT(idle_client.connect(port));
+    }
+    if (scenario == "mixed" || scenario == "blocked") {
+      DOBA_EXPECT(slow_client.set_receive_buffer_size(4096));
+      DOBA_EXPECT(slow_client.connect(port));
+      DOBA_EXPECT(slow_client.send_all("L"));
+    }
+    if (scenario == "mixed" || scenario == "deferred") {
+      DOBA_EXPECT(deferred_client.connect(port));
+      DOBA_EXPECT(deferred_client.send_all("D"));
+      DOBA_EXPECT(signal->wait());
+    }
+    const std::size_t expected = scenario == "mixed" ? 3 : 1;
+    DOBA_EXPECT(wait_for_count(connected, expected));
+    server.stop();
+    DOBA_EXPECT_EQUAL(connected.load(), expected);
+    DOBA_EXPECT_EQUAL(disconnected.load(), expected);
+    if (scenario == "mixed" || scenario == "deferred") signal->resume();
+    DOBA_EXPECT(remains_equal(*serialized, 0));
+  }
 }
 
 // +===========================================================================+
 // | [>] server restart                                          ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip restarts the same server on the same port") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> requests = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>&,
                   transport_response& response,
@@ -2104,13 +2174,13 @@ DOBA_TEST("tcpip restarts the same server on the same port") {
 // | [>] connection callback failure                            ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("tcpip survives a failing connection callback") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> connections = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>&,
          transport_response& response,
@@ -2150,13 +2220,13 @@ DOBA_TEST("tcpip survives a failing connection callback") {
 // | [>] disconnection callback failure                         ( test-case )  |
 // +===========================================================================+
 DOBA_TEST("tcpip survives failing disconnection callbacks") {
-  martianlabs::doba::transport::server::tcpip<
-      transport_request, transport_response, transport_decoder>
-      server;
   martianlabs::doba::tests::integration::tcpip_client client;
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> disconnected = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>&,
          transport_response& response,
