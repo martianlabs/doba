@@ -630,7 +630,8 @@ class response {
     }
     char* out = &memory_[sln_len_ + hdr_len_];
     std::memcpy(out, kDatePrefix.data(), kDatePrefix.size());
-    common::date_server::get().copy_current(out + kDatePrefix.size());
+    const auto current = common::date_server::get().current();
+    std::memcpy(out + kDatePrefix.size(), current.data(), kDateLength);
     out[kDateLineLength - 2] = '\r';
     out[kDateLineLength - 1] = '\n';
     hdr_len_ += kDateLineLength;

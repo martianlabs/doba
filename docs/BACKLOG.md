@@ -185,9 +185,9 @@ new callbacks, and HTTP rejection responses.
 
 ### C4: Absolute-form authority precedence
 
-**Context.** Confirmed by [audit Q01](TEST_AUDIT.md#q01-absolute-form-authority-and-host):
-GET http://a/ with Host: b is rejected. The routing rule requires equality
-between Host and the request-target authority, including absolute-form.
+**Context.** GET http://a/ with Host: b is rejected. The routing rule
+requires equality between Host and the request-target authority, including
+absolute-form. This rejection was reproduced against the current decoder.
 
 **Scope.** Correct absolute-form origin-server authority processing to use
 the request-target authority. Preserve Host syntax/multiplicity validation,
@@ -213,8 +213,8 @@ must be explicit; adding these regressions does not itself correct routing.
 
 ### C5: Internal decoder capacity overflow
 
-**Context.** [Audit Q02](TEST_AUDIT.md#q02-query-overflow-and-a-full-incomplete-head)
-confirmed two capacity problems. A request with 129 query pairs succeeds
+**Context.** Two capacity problems were reproduced. A request with 129
+query pairs succeeds
 with only 128 visible pairs, while limits.h describes rejection. A complete
 5121-byte head fills the 5120-byte buffer, then accumulate consumes zero and
 deserialize still reports MoreBytesNeeded. The latter reproduces decoder
@@ -242,9 +242,9 @@ configurable resource-limit API deferred in C2.
 
 ### C6: TE connection option
 
-**Context.** Confirmed by [audit Q08](TEST_AUDIT.md#q08-te-with-connection-te):
-TE: trailers together with Connection: TE is rejected because the directives
-rule forbids the te connection option. A TE sender must include that option.
+**Context.** TE: trailers together with Connection: TE is rejected because
+the directives rule forbids the te connection option. This rejection was
+reproduced against the current decoder. A TE sender must include that option.
 
 **Scope.** Remove the specific inappropriate te prohibition, update its
 rule documentation and preserve all unrelated directive validation.
@@ -253,15 +253,15 @@ rule documentation and preserve all unrelated directive validation.
 
 **Acceptance and tests.**
 
-- Accept TE: trailers with Connection: TE (audit candidate Q08-M01-P).
-- Reject TE: gzip;q=1.001 in the same context (Q08-M01-N).
+- Accept TE: trailers with Connection: TE.
+- Reject TE: gzip;q=1.001 in the same context.
 - Exercise canonical/lower/upper field names with and without OWS.
 - Prove that the invalid value reaches its field validator; rejection of
   the request context must not mask a missing TE value check.
 - Preserve existing unrelated connection-directive tests.
 
-**Dependencies and decisions.** These two regression candidates were
-excluded from the completed 184-case expansion until this rule is corrected.
+**Dependencies and decisions.** Correct the directive rule so that the
+positive and negative cases can exercise TE value validation independently.
 No public API or protocol-upgrade feature is required.
 
 **Reference.** [RFC 9110 S10.1.4](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.1.4).
@@ -395,13 +395,13 @@ missing resources.
 
 ### QA1: Exhaustive compliance suite
 
-**Status:** partial. The 2026-09-07 [test audit](TEST_AUDIT.md) added
+**Status:** partial. The test expansion completed on 2026-09-07 added
 184 functional cases and reinforced 84 existing cases, with 556 unit and
 71 integration registrations passing the local compiler/sanitizer matrix.
-Implementation findings Q01/Q02/Q08 are tracked in [C4](#c4-absolute-form-authority-precedence),
+Confirmed implementation problems are tracked in
+[C4](#c4-absolute-form-authority-precedence),
 [C5](#c5-internal-decoder-capacity-overflow) and [C6](#c6-te-connection-option).
-Q03..Q07 remain open for tests, infrastructure or contract decisions; the
-count is not an exhaustive compliance claim.
+The count is not an exhaustive compliance claim.
 
 **Context.** The project's integration suite covers framing, fragmentation,
 pipelining, and closure over real sockets. It is not an exhaustive RFC matrix.
@@ -419,6 +419,21 @@ protocol-transport contract, and both backends.
 **Acceptance and tests.** Trace each group of cases to its RFC rule, cover
 relevant fragmentation points, and verify equivalent results in IOCP and
 epoll. Configured limit cases depend on the C2 decisions.
+
+**Remaining validation and infrastructure.**
+
+- Force a collision with an actual spill filename candidate; check existing
+  file preservation, retry, error classification and cleanup. Concurrent
+  owners with distinct filenames do not establish collision handling.
+- Prove that output remains pending while another client is served, and
+  test the absolute send_all deadline against a non-reading local peer.
+  Response serialization alone does not prove socket backpressure.
+- Reproduce and resolve the gap between releasing a reserved test port and
+  server bind; distinguish address-in-use from unrelated startup failures.
+- Exercise a genuinely pending connect with a deterministic local mechanism
+  on Windows and Linux; a refused connection does not cover that timeout.
+- After C2 defines configurable limits, test zero, limit-1, limit and limit+1,
+  early rejection and encoded/decoded chunked accounting.
 
 **References.** RFC 9110 and RFC 9112. The suite provides evidence for the
 strict HTTP/1.1 claim; it does not replace contract review.
@@ -476,8 +491,7 @@ fatal-return assertion behavior and dependency-free runner are preserved.
 **Evidence.** Ten named checks per runner plus an active-transport cleanup
 probe passed on MSVC/GCC/Clang, Debug/Release, ASan/UBSan/TSan and CMake
 3.20.6. An additional forced-suspension failure exposed and then verified
-removal of a fixture leak under ASan. See the [test audit](TEST_AUDIT.md)
-for exact names, counts, logs and timeout margins.
+removal of a fixture leak under ASan.
 
 **Limits.** Functional cases remain grouped into two executables. A native
 crash or termination still stops its aggregate process; active-case output
@@ -488,8 +502,7 @@ per-case process isolation or exhaustive concurrency validation.
 
 **Status:** pending. **Priority:** not set. **Target:** no assigned version.
 
-**Context.** Functional integration and concurrency cases are in place;
-the [test audit](TEST_AUDIT.md) records finite coverage and open gaps.
+**Context.** Functional integration and concurrency cases are in place.
 Extended soak tests and, where feasible, controlled worker interleavings
 remain to be explored. Define duration, load, observed resources, and
 reproduction before creating new tests; relate them to C1/C3 and QA3 scenarios.
@@ -713,12 +726,3 @@ marked in the inventory.
 | No ID | [F3](#f3-progressive-streaming-and-sse) | Progressive streaming and SSE |
 | No ID | [F4](#f4-ordered-upgrade-barrier) | Ordered upgrade barrier |
 | No ID | [F5](#f5-websockets) | WebSockets |
-
-Audit identifiers are preserved in the [test audit](TEST_AUDIT.md). Their
-implementation work is tracked in these backlog entries:
-
-| Audit | Backlog | Item |
-| --- | --- | --- |
-| Q01 | [C4](#c4-absolute-form-authority-precedence) | Absolute-form authority precedence |
-| Q02 | [C5](#c5-internal-decoder-capacity-overflow) | Internal decoder capacity overflow |
-| Q08 | [C6](#c6-te-connection-option) | TE connection option |
