@@ -28,7 +28,6 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
-#include <cstdint>
 #include <cstring>
 #include <ctime>
 #include <mutex>
@@ -49,12 +48,7 @@ class date_server {
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                            ( private ) |
   // +=========================================================================+
-#ifdef _MSC_VER
-  __declspec(noinline)
-#else
-  __attribute__((noinline))
-#endif
-  date_server() { std::jthread([this] { update(); }).join(); }
+  date_server() { update(); }
 
  public:
   // +=========================================================================+
@@ -87,14 +81,10 @@ class date_server {
   void start() {
     std::lock_guard<std::mutex> lock(lifecycle_mutex_);
     if (owners_++ > 0) return;
-    std::unique_lock<std::mutex> wait(wait_mutex_);
-    ready_ = false;
+    update();
     try {
       jthread_ = std::jthread([this](std::stop_token stop) {
         std::unique_lock<std::mutex> lock(wait_mutex_);
-        update();
-        ready_ = true;
-        wake_.notify_all();
         while (!stop.stop_requested()) {
           wake_.wait_for(lock, stop, std::chrono::seconds(1), [] {
             return false;
@@ -106,7 +96,6 @@ class date_server {
       owners_ = 0;
       throw;
     }
-    wake_.wait(wait, [this] { return ready_; });
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
@@ -122,11 +111,12 @@ class date_server {
   // | [>] current                                                  ( public ) |
   // +=========================================================================+
   std::string_view current() const noexcept {
-    const std::uint64_t current = generation_.load(std::memory_order_seq_cst);
-    thread_local std::uint64_t previous = 0;
+    const std::time_t current = seconds_.load(std::memory_order_relaxed);
+    thread_local std::time_t previous = 0;
     thread_local char buffer[kBufSize]{};
-    if (previous != current) {
-      previous = refresh(buffer, current);
+    if (previous != current || buffer[0] == '\0') {
+      write_date(buffer, current);
+      previous = current;
     }
     return {buffer, kDateLen};
   }
@@ -135,7 +125,6 @@ class date_server {
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
   // +=========================================================================+
-  static_assert(std::atomic<std::uint64_t>::is_always_lock_free);
   static constexpr std::size_t kDateLen = 29;
   static constexpr std::size_t kBufSize = kDateLen + 1;
   static constexpr const char* kWeekDays[] = {"Sun", "Mon", "Tue", "Wed",
@@ -143,28 +132,6 @@ class date_server {
   static constexpr const char* kMonths[] = {"Jan", "Feb", "Mar", "Apr",
                                             "May", "Jun", "Jul", "Aug",
                                             "Sep", "Oct", "Nov", "Dec"};
-  // +=========================================================================+
-  // | [>] refresh                                                 ( private ) |
-  // +=========================================================================+
-#ifdef _MSC_VER
-  __declspec(noinline)
-#else
-  __attribute__((noinline))
-#endif
-  std::uint64_t refresh(char* out, std::uint64_t current) const noexcept {
-    std::uint64_t words[4];
-    // Atomic words allow a retry even if the buffer is reused.
-    for (;;) {
-      for (std::size_t i = 0; i < 4; ++i) {
-        words[i] = buffers_[current & 1][i].load(std::memory_order_seq_cst);
-      }
-      const std::uint64_t next = generation_.load(std::memory_order_seq_cst);
-      if (next == current) break;
-      current = next;
-    }
-    std::memcpy(out, words, kBufSize);
-    return current;
-  }
   // +=========================================================================+
   // | [>] two_digits                                              ( private ) |
   // +=========================================================================+
@@ -209,26 +176,16 @@ class date_server {
   // | [>] update                                                  ( private ) |
   // +=========================================================================+
   void update() noexcept {
-    char buffer[sizeof(std::uint64_t) * 4]{};
-    write_date(buffer, std::time(nullptr));
-    std::uint64_t words[4];
-    std::memcpy(words, buffer, sizeof(words));
-    const std::uint64_t next = generation_.load(std::memory_order_seq_cst) + 1;
-    for (std::size_t i = 0; i < 4; ++i) {
-      buffers_[next & 1][i].store(words[i], std::memory_order_seq_cst);
-    }
-    generation_.store(next, std::memory_order_seq_cst);
+    seconds_.store(std::time(nullptr), std::memory_order_relaxed);
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  std::atomic<std::uint64_t> generation_{0};
-  std::atomic<std::uint64_t> buffers_[2][4]{};
+  std::atomic<std::time_t> seconds_{0};
   std::condition_variable_any wake_;
   std::mutex lifecycle_mutex_;
   std::mutex wait_mutex_;
   std::size_t owners_{0};
-  bool ready_{false};
   std::jthread jthread_;
 };
 }  // namespace martianlabs::doba::common

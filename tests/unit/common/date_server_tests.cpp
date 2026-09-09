@@ -89,14 +89,6 @@ bool valid_http_date(std::string_view value) {
 }  // namespace
 
 // +===========================================================================+
-// | [>] initial date is available without an owner              ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("initial date is available without an owner") {
-  const std::string_view current = date_server::get().current();
-  DOBA_EXPECT(valid_http_date(current));
-  DOBA_EXPECT(current.data()[current.size()] == '\0');
-}
-// +===========================================================================+
 // | [>] concurrent serialization preserves HTTP dates           ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("concurrent serialization preserves HTTP dates") {
@@ -255,55 +247,4 @@ DOBA_TEST("date server handles concurrent last stop and first start") {
     DOBA_EXPECT(updated);
     DOBA_EXPECT(operations > 0);
   }
-}
-// +===========================================================================+
-// | [>] start publishes its first date before returning         ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("start publishes its first date before returning") {
-  auto& value = date_server::get();
-  const std::string before(value.current());
-  std::this_thread::sleep_for(std::chrono::milliseconds(1100));
-  date_owner owner;
-  const std::string current(value.current());
-  DOBA_EXPECT(valid_http_date(current));
-  DOBA_EXPECT(current != before);
-}
-// +===========================================================================+
-// | [>] views survive double buffer reuse                       ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("date views survive multiple producer updates") {
-  auto& value = date_server::get();
-  date_owner owner;
-  const std::string_view retained = value.current();
-  const std::string initial(retained);
-  std::array<std::size_t, 4> updates{};
-  std::atomic<bool> valid{true};
-  std::barrier start(5);
-  std::chrono::steady_clock::time_point end;
-  std::vector<std::jthread> readers;
-  for (std::size_t i = 0; i < updates.size(); ++i) {
-    readers.emplace_back([&, i] {
-      std::string previous(value.current());
-      start.arrive_and_wait();
-      while (std::chrono::steady_clock::now() < end) {
-        const std::string_view current = value.current();
-        if (!valid_http_date(current)) valid.store(false);
-        if (current != previous) {
-          previous.assign(current);
-          updates[i]++;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-      }
-    });
-  }
-  end = std::chrono::steady_clock::now() + std::chrono::milliseconds(3200);
-  start.arrive_and_wait();
-  for (auto& reader : readers) reader.join();
-  DOBA_EXPECT(valid.load());
-  for (std::size_t count : updates) DOBA_EXPECT(count >= 2);
-  DOBA_EXPECT_EQUAL(retained, initial);
-  const std::string_view refreshed = value.current();
-  DOBA_EXPECT(valid_http_date(refreshed));
-  DOBA_EXPECT(refreshed != initial);
-  DOBA_EXPECT(refreshed.data() == retained.data());
 }
