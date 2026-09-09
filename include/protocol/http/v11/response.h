@@ -25,6 +25,7 @@
 #ifndef martianlabs_doba_protocol_http_v11_response_h
 #define martianlabs_doba_protocol_http_v11_response_h
 
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <utility>
@@ -59,14 +60,14 @@ class response {
   response() = default;
   response(const response&) = delete;
   response(response&& in) noexcept
-      : sln_len_(in.sln_len_),
+      : memory_(std::move(in.memory_)),
+        sln_len_(in.sln_len_),
         hdr_len_(in.hdr_len_),
         bdy_beg_(in.bdy_beg_),
         bdy_len_(in.bdy_len_),
         status_code_(in.status_code_),
         has_date_header_(in.has_date_header_),
         bdy_writer_(std::move(in.bdy_writer_)) {
-    std::memcpy(memory_, in.memory_, sizeof(memory_));
     in.sln_len_ = 0;
     in.hdr_len_ = 0;
     in.bdy_len_ = 0;
@@ -81,7 +82,7 @@ class response {
   response& operator=(const response&) = delete;
   response& operator=(response&& in) noexcept {
     if (this == &in) return *this;
-    std::memcpy(memory_, in.memory_, sizeof(memory_));
+    memory_ = std::move(in.memory_);
     sln_len_ = in.sln_len_;
     hdr_len_ = in.hdr_len_;
     bdy_beg_ = in.bdy_beg_;
@@ -140,7 +141,7 @@ class response {
       memory_[sln_plus_hdr_len++] = '\n';
     }
     auto result = std::make_unique<protocol::serialization_result>();
-    result->prefix.assign(memory_, sln_plus_hdr_len);
+    result->prefix.assign(memory_.get(), sln_plus_hdr_len);
     if (!must_omit_body && bdy_len_ > 0) {
       result->prefix.append(&memory_[bdy_beg_], bdy_len_);
     }
@@ -178,6 +179,10 @@ class response {
       // Not enough space to add this header without overrunning the body
       // region!
       throw std::out_of_range("not enough space to add header!");
+    }
+    if (!memory_) {
+      memory_ = std::make_unique_for_overwrite<char[]>(
+          limits::kMaxResponseSizeInMemory);
     }
     std::memcpy(&memory_[sln_len_ + hdr_len_], k.data(), k.size());
     hdr_len_ += k.size();
@@ -361,6 +366,10 @@ class response {
     std::size_t body_size = sv.size();
     reset_body();
     if (body_size <= limits::kMaxResponseBodySizeInMemory) {
+      if (!memory_) {
+        memory_ = std::make_unique_for_overwrite<char[]>(
+            limits::kMaxResponseSizeInMemory);
+      }
       std::memcpy(&memory_[bdy_beg_], sv.data(), body_size);
       bdy_len_ = body_size;
       set_header("Content-Length", body_size);
@@ -628,6 +637,10 @@ class response {
     if (kDateLineLength + 2 > space_left) {
       throw std::out_of_range("not enough space to add header!");
     }
+    if (!memory_) {
+      memory_ = std::make_unique_for_overwrite<char[]>(
+          limits::kMaxResponseSizeInMemory);
+    }
     char* out = &memory_[sln_len_ + hdr_len_];
     std::memcpy(out, kDatePrefix.data(), kDatePrefix.size());
     const auto current = common::date_server::get().current();
@@ -719,6 +732,10 @@ class response {
   // | [>] sln                                                     ( private ) |
   // +=========================================================================+
   response& sln(auto&& status_line, int status_code) {
+    if (!memory_) {
+      memory_ = std::make_unique_for_overwrite<char[]>(
+          limits::kMaxResponseSizeInMemory);
+    }
     std::size_t len = strlen(status_line);
     // Reset framing state first, then copy the status line only if it fits
     // before the body region. This keeps the object in a coherent state even
@@ -733,7 +750,7 @@ class response {
       throw std::out_of_range("not enough space to set status line!");
     }
     sln_len_ = len;
-    std::memcpy(memory_, status_line, sln_len_);
+    std::memcpy(memory_.get(), status_line, sln_len_);
     // Default Content-Length to 0 for this (still bodiless) status line; a
     // later set_body() call will overwrite it with the real size. Skipped for
     // 1xx and 204, where Content-Length is forbidden (RFC 9110 S8.6), and for
@@ -749,7 +766,7 @@ class response {
   // +=========================================================================+
   // | [>] ATTRIBUTES                                              ( private ) |
   // +=========================================================================+
-  char memory_[limits::kMaxResponseSizeInMemory]{0};
+  std::unique_ptr<char[]> memory_;
   std::size_t sln_len_{0};
   std::size_t hdr_len_{0};
   std::size_t bdy_beg_{limits::kMaxResponseSizeInMemory -

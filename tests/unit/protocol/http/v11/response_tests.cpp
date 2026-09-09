@@ -48,6 +48,7 @@ std::string read_source(reader& source) {
 // | [>] response is movable but not copyable                    ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("response is movable but not copyable") {
+  static_assert(std::is_nothrow_default_constructible_v<response>);
   static_assert(!std::is_copy_constructible_v<response>);
   static_assert(!std::is_copy_assignable_v<response>);
   static_assert(std::is_nothrow_move_constructible_v<response>);
@@ -74,6 +75,86 @@ DOBA_TEST("moving preserves response state and owned body writers") {
   DOBA_EXPECT(serialized->prefix.starts_with("HTTP/1.1 201 Created\r\n"));
   DOBA_EXPECT_EQUAL(read_source(*serialized->source),
                     "4\r\nbody\r\n0\r\n\r\n");
+}
+// +===========================================================================+
+// | [>] moves preserve the full in-memory body                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("moves preserve the full in-memory body") {
+  std::string body(limits::kMaxResponseBodySizeInMemory, '\0');
+  for (std::size_t i = 0; i < body.size(); i++) {
+    body[i] = static_cast<char>(i % 256);
+  }
+  response source;
+  source.created_201().set_header("Date", "fixed").set_body(body);
+  response constructed(std::move(source));
+  response assigned;
+  assigned.ok_200().set_body("replaced");
+  assigned = std::move(constructed);
+  response& alias = assigned;
+  assigned = std::move(alias);
+  auto serialized = assigned.serialize();
+  DOBA_EXPECT(serialized->prefix.starts_with("HTTP/1.1 201 Created\r\n"));
+  DOBA_EXPECT(serialized->prefix.ends_with(body));
+  DOBA_EXPECT(!serialized->source.has_value());
+  DOBA_EXPECT_EQUAL(assigned.get_header("Content-Length").second,
+                    std::to_string(body.size()));
+}
+// +===========================================================================+
+// | [>] moved responses can be reused through each write path   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("moved responses can be reused through each write path") {
+  for (int operation = 0; operation < 4; operation++) {
+    auto reuse = [operation](response& value) {
+      DOBA_EXPECT_EQUAL(value.get_headers_length(), 0);
+      DOBA_EXPECT(!value.has_header("X-Original"));
+      value.clear_body().remove_header("missing");
+      if (operation == 0) {
+        value.accepted_202().set_header("Date", "fixed");
+        DOBA_EXPECT(value.serialize()->prefix.starts_with(
+            "HTTP/1.1 202 Accepted\r\n"));
+      } else if (operation == 1) {
+        value.add_header("X-Reused", "new").set_header("Date", "fixed");
+        DOBA_EXPECT_EQUAL(value.get_header("X-Reused").second, "new");
+        DOBA_EXPECT(value.serialize()->prefix.find("X-Reused: new\r\n") !=
+                    std::string::npos);
+      } else if (operation == 2) {
+        value.set_body("new").set_header("Date", "fixed");
+        DOBA_EXPECT(value.serialize()->prefix.ends_with("new"));
+      } else {
+        auto serialized = value.serialize();
+        DOBA_EXPECT(value.has_header("Date"));
+        DOBA_EXPECT(serialized->prefix.starts_with("Date: "));
+        DOBA_EXPECT(serialized->prefix.ends_with("\r\n\r\n"));
+      }
+    };
+    response source;
+    source.ok_200().set_header("Date", "fixed")
+        .add_header("X-Original", "kept").set_body("original");
+    const auto expected = source.serialize()->prefix;
+    response constructed(std::move(source));
+    reuse(source);
+    DOBA_EXPECT_EQUAL(constructed.serialize()->prefix, expected);
+    source = std::move(constructed);
+    reuse(constructed);
+    DOBA_EXPECT_EQUAL(source.serialize()->prefix, expected);
+  }
+}
+// +===========================================================================+
+// | [>] empty responses remain usable after chained moves      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("empty responses remain usable after chained moves") {
+  response source;
+  response constructed(std::move(source));
+  response assigned;
+  assigned.ok_200().set_body("replaced");
+  assigned = std::move(constructed);
+  for (response* value : {&source, &constructed, &assigned}) {
+    value->set_body("").set_header("Date", "fixed");
+    auto serialized = value->serialize();
+    DOBA_EXPECT(serialized->prefix.find("Content-Length: 0\r\n") !=
+                std::string::npos);
+    DOBA_EXPECT(!serialized->source.has_value());
+  }
 }
 // +===========================================================================+
 // | [>] headers support mutation lookup removal and indexes     ( test-case ) |
