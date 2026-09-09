@@ -104,11 +104,11 @@ DOBA_TEST("probe failure cleans up active transport") {
            const std::stop_token&)
             -> std::variant<protocol::http::v11::response,
                             common::task<protocol::http::v11::response>> {
-          protocol::http::v11::response res;
+          protocol::http::v11::response res = protocol::http::v11::response::ok_200();
           return res;
         });
     server.set_on_bad_request([](int, std::string_view) {
-      protocol::http::v11::response res;
+      protocol::http::v11::response res = protocol::http::v11::response::ok_200();
       return res;
     });
     server.set_on_connection([&]() { connected.fetch_add(1); });

@@ -464,7 +464,10 @@ struct context
         if (sending_buffer_.size() >= kSendBufferMaxSz) break;
         if (!itr->response) break;
         if (!itr->state) {
-          sending_buffer_.append(itr->response->prefix);
+          if (itr->response->prefix_size) {
+            sending_buffer_.append(itr->response->prefix.get(),
+                                   itr->response->prefix_size);
+          }
           itr->state = 1;
           continue;
         }
@@ -1134,7 +1137,11 @@ class tcpip {
             // later response.
             if (!result.interim.empty()) {
               auto interim = std::make_unique<protocol::serialization_result>();
-              interim->prefix.assign(result.interim);
+              interim->prefix_size = result.interim.size();
+              interim->prefix = std::make_unique_for_overwrite<char[]>(
+                  interim->prefix_size);
+              std::memcpy(interim->prefix.get(), result.interim.data(),
+                          interim->prefix_size);
               if (!ctx->enqueue_response(std::move(interim))) {
                 ctx->fail_response();
                 return;

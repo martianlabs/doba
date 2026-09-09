@@ -33,22 +33,21 @@ int main() {
   http_server.add_route(
       "POST", "/resources",
       [](const request&) {
-        response res;
-        res.created_201().add_header("Location", "/resources/1");
+        response res = response::created_201();
+        res.add_header("Location", "/resources/1");
         return res;
       });
   http_server.add_route(
       "GET", "/redirect",
       [](const request&) {
-        response res;
-        res.temporary_redirect_307().add_header("Location", "/resources/1");
+        response res = response::temporary_redirect_307();
+        res.add_header("Location", "/resources/1");
         return res;
       });
   http_server.add_route(
       "DELETE", "/resources/1",
       [](const request&) {
-        response res;
-        res.no_content_204();
+        response res = response::no_content_204();
         return res;
       });
   http_server.start("8080");

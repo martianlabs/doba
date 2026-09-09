@@ -144,12 +144,11 @@ int main() {
       [&executor](std::shared_ptr<const request> req,
                   std::stop_token stop_token) -> task<response> {
         co_await executor.schedule(stop_token);
-        if (stop_token.stop_requested()) co_return response();
+        if (stop_token.stop_requested()) co_return response::ok_200();
         std::string body = "completed ";
         body += req->get_absolute_path();
-        response res;
-        res.ok_200()
-            .add_header("Content-Type", "text/plain; charset=utf-8")
+        response res = response::ok_200();
+        res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(body);
         co_return res;
       });

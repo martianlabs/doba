@@ -37,7 +37,7 @@ int main() {
   http_server.add_route(
       "GET", "/search",
       [](const request& req) {
-        response res;
+        response res = response::ok_200();
         std::string body;
         // Lookup by name is optional because the parameter may be absent.
         const auto query = req.get_query_parameter("q");
@@ -52,8 +52,7 @@ int main() {
           body.append(value);
           body.push_back('\n');
         }
-        res.ok_200()
-            .add_header("Content-Type", "text/plain; charset=utf-8")
+        res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(body);
         return res;
       });

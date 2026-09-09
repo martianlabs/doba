@@ -33,8 +33,8 @@ int main() {
   http_server.add_route(
       "GET", "/date",
       [](const request&) {
-        response res;
-        res.ok_200().set_body("dated");
+        response res = response::ok_200();
+        res.set_body("dated");
         return res;
       });
   http_server.start("8080");

@@ -226,18 +226,20 @@ bool parse_route_parameters_(
 // |   Args - route parameters being used                                      |
 // +---------------------------------------------------------------------------+
 // | Invokes the handler with the request and parsed route parameters.         |
-// | Returns an empty response if the path or parameters do not match.         |
+// | Throws if the path or parameters do not match.                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename Hty, typename RQty, typename RSty, typename... Args>
 RSty invoke_route_handler(Hty& handler, const RQty& req,
                           std::string_view pattern, std::string_view path) {
   std::array<std::string_view, sizeof...(Args)> parameters;
-  if (!extract_route_parameters(pattern, path, parameters)) return {};
+  if (!extract_route_parameters(pattern, path, parameters)) {
+    throw std::runtime_error("The route parameters could not be extracted");
+  }
   std::tuple<std::decay_t<Args>...> values;
   if (!parse_route_parameters_<Args...>(parameters, values,
                                         std::index_sequence_for<Args...>{})) {
-    return {};
+    throw std::runtime_error("The route parameters could not be parsed");
   }
   return std::apply(
       [&handler, &req](auto&... value) {

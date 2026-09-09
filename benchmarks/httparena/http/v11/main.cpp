@@ -83,30 +83,30 @@ int main(int argc, char* argv[]) {
   http_server.add_route(
       "GET", "/baseline11",
       [](const request& req) {
-        response res;
+        response res = response::ok_200();
         std::int64_t value = 0;
         if (!read_query_sum(req, value)) {
-          res.bad_request_400().set_body("invalid request");
+          res = response::bad_request_400();
+          res.set_body("invalid request");
           return res;
         }
-        res.ok_200()
-            .add_header("Content-Type", "text/plain")
+        res.add_header("Content-Type", "text/plain")
             .set_body(std::to_string(value));
         return res;
       });
   http_server.add_route(
       "POST", "/baseline11",
       [](const request& req) {
-        response res;
+        response res = response::ok_200();
         std::int64_t value = 0;
         std::int64_t body_value = 0;
         if (!read_query_sum(req, value) ||
             !read_body_integer(req, body_value)) {
-          res.bad_request_400().set_body("invalid request");
+          res = response::bad_request_400();
+          res.set_body("invalid request");
           return res;
         }
-        res.ok_200()
-            .add_header("Content-Type", "text/plain")
+        res.add_header("Content-Type", "text/plain")
             .set_body(std::to_string(value + body_value));
         return res;
       });
@@ -114,16 +114,17 @@ int main(int argc, char* argv[]) {
   http_server.add_route(
       "GET", "/pipeline",
       [](const request& req) {
-        response res;
-        res.ok_200().add_header("Content-Type", "text/plain").set_body("ok");
+        response res = response::ok_200();
+        res.add_header("Content-Type", "text/plain").set_body("ok");
         return res;
       });
   http_server.add_route(
       "POST", "/upload",
       [](const request& req) {
-        response res;
+        response res = response::ok_200();
         if (!req.has_body_reader()) {
-          res.bad_request_400().set_body("request body required");
+          res = response::bad_request_400();
+          res.set_body("request body required");
           return res;
         }
         // HttpArena requires counting bytes read, not Content-Length.
@@ -132,14 +133,14 @@ int main(int argc, char* argv[]) {
         for (;;) {
           const auto state = req.get_body_reader()->read(buffer);
           if (state.has_error) {
-            res.bad_request_400().set_body("unable to read request body");
+            res = response::bad_request_400();
+            res.set_body("unable to read request body");
             return res;
           }
           bytes += state.produced;
           if (state.complete) break;
         }
-        res.ok_200()
-            .add_header("Content-Type", "text/plain")
+        res.add_header("Content-Type", "text/plain")
             .set_body(std::to_string(bytes));
         return res;
       });

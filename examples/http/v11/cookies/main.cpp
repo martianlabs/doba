@@ -37,7 +37,7 @@ int main() {
   http_server.add_route(
       "GET", "/cookies",
       [](const request& req) {
-        response res;
+        response res = response::ok_200();
         std::string body = "session: ";
         // Cookie lookup parses the Cookie field on demand.
         const auto session = req.get_cookie("session");
@@ -49,8 +49,7 @@ int main() {
           body.append(value);
           body.push_back('\n');
         }
-        res.ok_200()
-            .add_header("Content-Type", "text/plain; charset=utf-8")
+        res.add_header("Content-Type", "text/plain; charset=utf-8")
             // Keep each Set-Cookie value as a separate header field.
             .add_header("Set-Cookie", "session=doba; Path=/; HttpOnly")
             .add_header("Set-Cookie", "theme=dark; Path=/; SameSite=Lax")

@@ -110,11 +110,10 @@ class server {
               } else {
                 std::string allowed_methods =
                     router_.allowed_methods(abs_path);
-                res.emplace();
                 if (allowed_methods.empty()) {
-                  res->not_found_404();
+                  res.emplace(RSty::not_found_404());
                 } else {
-                  res->method_not_allowed_405();
+                  res.emplace(RSty::method_not_allowed_405());
                   res->set_header(header_names::kAllow, allowed_methods);
                 }
               }
@@ -128,16 +127,16 @@ class server {
               // drive the raw-byte relay, keeping this server-side transport
               // agnostic of CONNECT. Until that module exists, the request
               // must not be left unanswered.
-              res.emplace().not_implemented_501();
+              res.emplace(RSty::not_implemented_501());
               break;
             case target::kAsteriskForm:
               // OPTIONS * (RFC 9110 S9.3.7) addresses the server in general
               // rather than a specific resource; acknowledge it without
               // routing to a handler.
-              res.emplace().ok_200();
+              res.emplace(RSty::ok_200());
               break;
             default:
-              res.emplace().bad_request_400();
+              res.emplace(RSty::bad_request_400());
               break;
           }
           apply_response_rules(*req, *res);
@@ -145,39 +144,39 @@ class server {
         });
     transport_.set_on_bad_request(
         [](int code, std::string_view reason) {
-          RSty res;
+          std::optional<RSty> res;
           // The transport hands back the neutral reason recorded by the
           // decoder; only the HTTP layer knows how to translate it into a
           // status code (RFC 9110 semantics live here, not in the transport).
           switch (static_cast<rejection_reason>(code)) {
             case rejection_reason::kPayloadTooLarge:
-              res.content_too_large_413().set_body(reason);
+              res.emplace(RSty::content_too_large_413()).set_body(reason);
               break;
             case rejection_reason::kUnsupportedFeature:
-              res.not_implemented_501().set_body(reason);
+              res.emplace(RSty::not_implemented_501()).set_body(reason);
               break;
             case rejection_reason::kVersionNotSupported:
-              res.http_version_not_supported_505().set_body(reason);
+              res.emplace(RSty::http_version_not_supported_505()).set_body(reason);
               break;
             case rejection_reason::kUriTooLong:
-              res.uri_too_long_414().set_body(reason);
+              res.emplace(RSty::uri_too_long_414()).set_body(reason);
               break;
             case rejection_reason::kHeaderFieldsTooLarge:
-              res.request_header_fields_too_large_431().set_body(reason);
+              res.emplace(RSty::request_header_fields_too_large_431()).set_body(reason);
               break;
             case rejection_reason::kHandlerError:
-              res.internal_server_error_500().set_body(reason);
+              res.emplace(RSty::internal_server_error_500()).set_body(reason);
               break;
             case rejection_reason::kExpectationFailed:
-              res.expectation_failed_417().set_body(reason);
+              res.emplace(RSty::expectation_failed_417()).set_body(reason);
               break;
             case rejection_reason::kSyntax:
             case rejection_reason::kNone:
             default:
-              res.bad_request_400().set_body(reason);
+              res.emplace(RSty::bad_request_400()).set_body(reason);
               break;
           }
-          return res;
+          return std::move(*res);
         });
     transport_.set_on_connection([this]() { connections_++; });
     transport_.set_on_disconnection([this]() { connections_--; });

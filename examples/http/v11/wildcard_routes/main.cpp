@@ -38,11 +38,10 @@ int main() {
   server http_server;
   http_server.add_route(
       method_names::kGet, "/assets/*", [](const request& req) {
-        response res;
+        response res = response::ok_200();
         std::string body = "requested asset: ";
         body.append(req.get_absolute_path());
-        res.ok_200()
-            .add_header("Content-Type", "text/plain; charset=utf-8")
+        res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(std::move(body));
         return res;
       });

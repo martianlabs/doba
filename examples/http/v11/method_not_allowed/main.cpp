@@ -33,8 +33,8 @@ int main() {
   http_server.add_route(
       "GET", "/resource",
       [](const request&) {
-        response res;
-        res.ok_200().set_body("resource");
+        response res = response::ok_200();
+        res.set_body("resource");
         return res;
       });
   http_server.start("8080");

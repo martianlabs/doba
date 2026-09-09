@@ -38,42 +38,38 @@ int main() {
   http_server.add_route(
       "GET", "/text",
       [](const request&) {
-        response res;
+        response res = response::ok_200();
         const std::string text = "body stored in the response buffer";
         // set_body() copies the value; text need not outlive this handler.
-        res.ok_200()
-            .add_header("Content-Type", "text/plain; charset=utf-8")
+        res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(text);
         return res;
       });
   http_server.add_route(
       "GET", "/binary",
       [](const request&) {
-        response res;
+        response res = response::ok_200();
         const char bytes[] = {'d', 'o', 'b', 'a', '\0'};
         // An explicit size preserves embedded zero bytes.
-        res.ok_200()
-            .add_header("Content-Type", "application/octet-stream")
+        res.add_header("Content-Type", "application/octet-stream")
             .set_body(std::string_view(bytes, sizeof(bytes)));
         return res;
       });
   http_server.add_route(
       "GET", "/integer",
       [](const request&) {
-        response res;
+        response res = response::ok_200();
         // Arithmetic values use the constrained numeric set_body() overload.
-        res.ok_200()
-            .add_header("Content-Type", "text/plain; charset=utf-8")
+        res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(42);
         return res;
       });
   http_server.add_route(
       "GET", "/floating-point",
       [](const request&) {
-        response res;
+        response res = response::ok_200();
         // Numeric bodies follow std::to_string formatting.
-        res.ok_200()
-            .add_header("Content-Type", "text/plain; charset=utf-8")
+        res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(3.14);
         return res;
       });

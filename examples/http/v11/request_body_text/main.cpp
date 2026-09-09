@@ -39,10 +39,11 @@ int main() {
   http_server.add_route(
       "POST", "/echo",
       [](const request& req) {
-        response res;
+        response res = response::ok_200();
         // The reader hides Content-Length and chunked request framing.
         if (!req.has_body_reader()) {
-          res.bad_request_400().set_body("request body required");
+          res = response::bad_request_400();
+          res.set_body("request body required");
           return res;
         }
         std::array<std::byte, 1024> buffer{};
@@ -51,15 +52,15 @@ int main() {
           // produced is the valid byte count; complete ends the read loop.
           const auto state = req.get_body_reader()->read(buffer);
           if (state.has_error) {
-            res.bad_request_400().set_body("unable to read request body");
+            res = response::bad_request_400();
+            res.set_body("unable to read request body");
             return res;
           }
           text.append(reinterpret_cast<const char*>(buffer.data()),
                       state.produced);
           if (state.complete) break;
         }
-        res.ok_200()
-            .add_header("Content-Type", "text/plain; charset=utf-8")
+        res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(text);
         return res;
       });

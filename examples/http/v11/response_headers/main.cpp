@@ -35,9 +35,8 @@ int main() {
   http_server.add_route(
       "GET", "/headers",
       [](const request&) {
-        response res;
-        res.ok_200()
-            .add_header("X-Example", "first")
+        response res = response::ok_200();
+        res.add_header("X-Example", "first")
             .set_header("X-Example", "replaced")
             .add_header("X-Remove", "value")
             .remove_header("X-Remove");

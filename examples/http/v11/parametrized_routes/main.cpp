@@ -40,11 +40,10 @@ int main() {
   http_server.add_route(
       method_names::kGet, "/resources/:id/:detailed",
       [](const request&, std::uint64_t id, bool detailed) {
-        response res;
+        response res = response::ok_200();
         std::string body = "resource " + std::to_string(id);
         if (detailed) body += " with details";
-        res.ok_200()
-            .add_header("Content-Type", "text/plain; charset=utf-8")
+        res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(std::move(body));
         return res;
       });

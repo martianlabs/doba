@@ -38,7 +38,7 @@ int main() {
   http_server.add_route(
       "GET", "/request",
       [](const request& req) {
-        response res;
+        response res = response::ok_200();
         // Target and host syntax are parsed before the handler is called.
         std::string target_form;
         switch (req.get_target()) {
@@ -82,8 +82,7 @@ int main() {
         body.append(host_type);
         body.append("\nconnection close: ");
         body.append(req.wants_connection_close() ? "true" : "false");
-        res.ok_200()
-            .add_header("Content-Type", "text/plain; charset=utf-8")
+        res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(body);
         return res;
       });

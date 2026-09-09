@@ -36,10 +36,9 @@ int main() {
   http_server.add_route(
       "GET", "/pipeline",
       [](const request&) {
-        response res;
+        response res = response::ok_200();
         // Response mutators return response&, so they can be chained.
-        res.ok_200()
-            .add_header("Server", "doba.")
+        res.add_header("Server", "doba.")
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body("ok");
         return res;

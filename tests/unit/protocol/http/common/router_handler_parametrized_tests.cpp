@@ -155,9 +155,9 @@ DOBA_TEST("invoke passes parsed values to the callback") {
   DOBA_EXPECT_EQUAL(res.value, "doba");
 }
 // +===========================================================================+
-// | [>] invoke ignores paths with invalid parameters            ( test-case ) |
+// | [>] invoke rejects paths with invalid parameters            ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("invoke ignores paths with invalid parameters") {
+DOBA_TEST("invoke rejects paths with invalid parameters") {
   bool invoked = false;
   auto handler = make_router_handler_parametrized<request, response, int>(
       "/items/:id",
@@ -168,7 +168,23 @@ DOBA_TEST("invoke ignores paths with invalid parameters") {
       });
   request req;
   response res;
-  res = handler.invoke(req, "/items/value");
+  bool threw = false;
+  try {
+    res = handler.invoke(req, "/items/value");
+  } catch (const std::runtime_error& error) {
+    threw = std::string_view(error.what()) ==
+            "The route parameters could not be parsed";
+  }
+  DOBA_EXPECT(threw);
+  DOBA_EXPECT(!invoked);
+  threw = false;
+  try {
+    res = handler.invoke(req, "/items");
+  } catch (const std::runtime_error& error) {
+    threw = std::string_view(error.what()) ==
+            "The route parameters could not be extracted";
+  }
+  DOBA_EXPECT(threw);
   DOBA_EXPECT(!invoked);
 }
 // +===========================================================================+
@@ -498,7 +514,14 @@ DOBA_TEST("route conversion rejects integer overflow") {
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
       response res;
-      res = handler.invoke(req, path);
+      bool sync_threw = false;
+      try {
+        res = handler.invoke(req, path);
+      } catch (const std::runtime_error& error) {
+        sync_threw = std::string_view(error.what()) ==
+                     "The route parameters could not be parsed";
+      }
+      DOBA_EXPECT(sync_threw);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       std::optional<response> result;
       auto probe = collect(
@@ -550,7 +573,14 @@ DOBA_TEST("route conversion rejects integer overflow") {
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
       response res;
-      res = handler.invoke(req, path);
+      bool sync_threw = false;
+      try {
+        res = handler.invoke(req, path);
+      } catch (const std::runtime_error& error) {
+        sync_threw = std::string_view(error.what()) ==
+                     "The route parameters could not be parsed";
+      }
+      DOBA_EXPECT(sync_threw);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       std::optional<response> result;
       auto probe = collect(
@@ -611,7 +641,14 @@ DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
       response res;
-      res = handler.invoke(req, path);
+      bool sync_threw = false;
+      try {
+        res = handler.invoke(req, path);
+      } catch (const std::runtime_error& error) {
+        sync_threw = std::string_view(error.what()) ==
+                     "The route parameters could not be parsed";
+      }
+      DOBA_EXPECT(sync_threw);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       std::optional<response> result;
       auto probe = collect(
@@ -664,7 +701,14 @@ DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
       response res;
-      res = handler.invoke(req, path);
+      bool sync_threw = false;
+      try {
+        res = handler.invoke(req, path);
+      } catch (const std::runtime_error& error) {
+        sync_threw = std::string_view(error.what()) ==
+                     "The route parameters could not be parsed";
+      }
+      DOBA_EXPECT(sync_threw);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       std::optional<response> result;
       auto probe = collect(
@@ -722,7 +766,14 @@ DOBA_TEST("route conversion rejects negative unsigned values") {
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
     response res;
-    res = handler.invoke(req, path);
+    bool sync_threw = false;
+    try {
+      res = handler.invoke(req, path);
+    } catch (const std::runtime_error& error) {
+      sync_threw = std::string_view(error.what()) ==
+                   "The route parameters could not be parsed";
+    }
+    DOBA_EXPECT(sync_threw);
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     std::optional<response> result;
     auto probe = collect(
@@ -839,7 +890,14 @@ DOBA_TEST("route conversion rejects floating point range errors") {
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
     response res;
-    res = handler.invoke(req, path);
+    bool sync_threw = false;
+    try {
+      res = handler.invoke(req, path);
+    } catch (const std::runtime_error& error) {
+      sync_threw = std::string_view(error.what()) ==
+                   "The route parameters could not be parsed";
+    }
+    DOBA_EXPECT(sync_threw);
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     std::optional<response> result;
     auto probe = collect(

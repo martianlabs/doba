@@ -31,6 +31,8 @@ docker run --rm --publish 8080:8080 doba-httparena-http-v11
 ```
 
 The Dockerfile accepts `DOBA_REF` as a build argument and defaults to `main`.
+The local `main.cpp` and the headers selected by `DOBA_REF` must use the same
+handler and response-factory API.
 Use a published tag or commit when a reproducible benchmark image is required:
 
 ```text

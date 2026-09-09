@@ -133,7 +133,11 @@ struct transport_response {
     if (behavior == serialization_behavior::kThrowUnknown) throw 1;
     auto result = std::make_unique<
         martianlabs::doba::protocol::serialization_result>();
-    result->prefix = std::move(value);
+    result->prefix_size = value.size();
+    if (result->prefix_size) {
+      result->prefix = std::make_unique_for_overwrite<char[]>(result->prefix_size);
+      std::memcpy(result->prefix.get(), value.data(), result->prefix_size);
+    }
     if (behavior == serialization_behavior::kSource) {
       martianlabs::doba::common::byte_storage storage;
       storage.write(source.data(), source.size());

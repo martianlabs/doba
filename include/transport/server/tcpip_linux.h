@@ -410,7 +410,10 @@ struct context
       response_data& data = responses_.front();
       if (!data.response) break;
       if (!data.state) {
-        sending_buffer_.append(data.response->prefix);
+        if (data.response->prefix_size) {
+          sending_buffer_.append(data.response->prefix.get(),
+                                 data.response->prefix_size);
+        }
         data.state = 1;
         continue;
       }
@@ -756,7 +759,11 @@ struct worker {
         // response.
         if (!result.interim.empty()) {
           auto interim = std::make_unique<protocol::serialization_result>();
-          interim->prefix.assign(result.interim);
+          interim->prefix_size = result.interim.size();
+          interim->prefix = std::make_unique_for_overwrite<char[]>(
+              interim->prefix_size);
+          std::memcpy(interim->prefix.get(), result.interim.data(),
+                      interim->prefix_size);
           ctx->enqueue_response(std::move(interim));
         }
         return;

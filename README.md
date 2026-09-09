@@ -54,9 +54,8 @@ int main() {
   srv.add_route(
       "GET", "/hello",
       [](const request&) {
-        response res;
-        res.ok_200()
-            .add_header("Content-Type", "text/plain")
+        response res = response::ok_200();
+        res.add_header("Content-Type", "text/plain")
             .set_body("hello from doba");
         return res;
       });

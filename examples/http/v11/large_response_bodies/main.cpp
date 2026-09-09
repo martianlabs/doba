@@ -40,7 +40,7 @@ int main() {
   http_server.add_route(
       "GET", "/large",
       [](const request&) {
-        response res;
+        response res = response::ok_200();
         // Storage spills to a temporary file after this in-memory threshold.
         byte_storage_options options{.spill_threshold = 1024,
                                      .spill_dir = {}};
@@ -48,12 +48,11 @@ int main() {
         const std::string block(1024, 'x');
         for (int i = 0; i < 8; i++) {
           if (!writer.write(block)) {
-            res.internal_server_error_500();
+            res = response::internal_server_error_500();
             return res;
           }
         }
-        res.ok_200()
-            .add_header("Content-Type", "application/octet-stream")
+        res.add_header("Content-Type", "application/octet-stream")
             // The response adopts the writer and its storage.
             .set_body(std::move(writer));
         return res;
