@@ -111,20 +111,6 @@ class date_server {
   // | [>] current                                                  ( public ) |
   // +=========================================================================+
   std::string_view current() const noexcept {
-
-    /*
-    pepe
-    */
-
-    static const char kSValidDate[] = "Mon, 01 Jan 2000 00:00:00 GMT";
-    static constexpr std::size_t kSDateLen = sizeof(kSValidDate) - 1;
-    return {kSValidDate, kSDateLen};
-
-    /*
-    pepe fin
-    */
-
-    /*
     const std::time_t current = seconds_.load(std::memory_order_relaxed);
     thread_local std::time_t previous = 0;
     thread_local char buffer[kBufSize]{};
@@ -133,7 +119,6 @@ class date_server {
       previous = current;
     }
     return {buffer, kDateLen};
-    */
   }
 
  private:
