@@ -34,7 +34,8 @@ using namespace martianlabs::doba::protocol::http::v11;
 int main() {
   server http_server;
   // h1spec expects successful routes to echo the decoded request body.
-  const auto echo_body = [](const request& req, response& res) {
+  const auto echo_body = [](const request& req) {
+    response res;
     std::string body;
     if (req.has_body_reader()) {
       std::array<std::byte, 4096> buffer{};
@@ -42,7 +43,7 @@ int main() {
         const auto state = req.get_body_reader()->read(buffer);
         if (state.has_error) {
           res.bad_request_400();
-          return;
+          return res;
         }
         body.append(reinterpret_cast<const char*>(buffer.data()),
                     state.produced);
@@ -50,6 +51,7 @@ int main() {
       }
     }
     res.ok_200().add_header("Content-Type", "text/plain").set_body(body);
+    return res;
   };
   http_server.add_route("GET", "/", echo_body);
   http_server.add_route("POST", "/", echo_body);

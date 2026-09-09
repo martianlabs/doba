@@ -37,23 +37,30 @@ int main() {
   // Root routes cover baseline, response metadata, and method handling probes.
   http_server.add_route(
       "GET", "/",
-      [](const request&, response& res) {
+      [](const request&) {
+        response res;
         res.ok_200().add_header("Content-Type", "text/plain").set_body("OK");
+        return res;
       });
   http_server.add_route(
       "HEAD", "/",
-      [](const request&, response& res) {
+      [](const request&) {
+        response res;
         res.ok_200().add_header("Content-Type", "text/plain");
+        return res;
       });
   http_server.add_route(
       "OPTIONS", "/",
-      [](const request&, response& res) {
+      [](const request&) {
+        response res;
         res.ok_200().add_header("Allow", "GET, HEAD, POST, OPTIONS");
+        return res;
       });
   // Echo decoded bytes so both request body framing modes are exercised.
   http_server.add_route(
       "POST", "/",
-      [](const request& req, response& res) {
+      [](const request& req) {
+        response res;
         std::string body;
         if (req.has_body_reader()) {
           std::array<std::byte, 4096> buffer{};
@@ -61,7 +68,7 @@ int main() {
             const auto state = req.get_body_reader()->read(buffer);
             if (state.has_error) {
               res.bad_request_400();
-              return;
+              return res;
             }
             body.append(reinterpret_cast<const char*>(buffer.data()),
                         state.produced);
@@ -69,9 +76,11 @@ int main() {
           }
         }
         res.ok_200().add_header("Content-Type", "text/plain").set_body(body);
+        return res;
       });
   // Http11Probe uses /echo to inspect received header fields verbatim.
-  const auto echo_headers = [](const request& req, response& res) {
+  const auto echo_headers = [](const request& req) {
+    response res;
     std::string body;
     for (std::size_t i = 0; i < req.get_headers_length(); i++) {
       const auto header = req.get_header(i);
@@ -81,13 +90,15 @@ int main() {
       body.push_back('\n');
     }
     res.ok_200().add_header("Content-Type", "text/plain").set_body(body);
+    return res;
   };
   http_server.add_route("GET", "/echo", echo_headers);
   http_server.add_route("POST", "/echo", echo_headers);
   // The parsed-cookie probes query only these four fixed names.
   http_server.add_route(
       "GET", "/cookie",
-      [](const request& req, response& res) {
+      [](const request& req) {
+        response res;
         constexpr std::string_view cookie_names[] = {"foo", "a", "b", "c"};
         std::string body;
         for (const auto name : cookie_names) {
@@ -99,6 +110,7 @@ int main() {
           body.push_back('\n');
         }
         res.ok_200().add_header("Content-Type", "text/plain").set_body(body);
+        return res;
       });
   http_server.start("8080");
   // The test harness owns process shutdown; wait after the server starts.

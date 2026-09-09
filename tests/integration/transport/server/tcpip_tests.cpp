@@ -367,18 +367,19 @@ DOBA_TEST("tcpip serves independent loopback connections") {
       server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>& request,
-                  transport_response& response,
                   const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         requests.fetch_add(1);
         response.value = request->value == 'S' ? "sync" : "unexpected";
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([&connected]() { connected.fetch_add(1); });
   server.set_on_disconnection(
       [&disconnected]() { disconnected.fetch_add(1); });
@@ -418,18 +419,19 @@ DOBA_TEST("tcpip reuses a connection after each completed response") {
       server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>& request,
-                  transport_response& response,
                   const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         requests.fetch_add(1);
         response.value.assign(1, request->value);
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -459,17 +461,18 @@ DOBA_TEST("tcpip delivers batched synchronous responses in request order") {
       server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
-         transport_response& response,
          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         response.value.assign(1, request->value);
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -497,18 +500,19 @@ DOBA_TEST("tcpip waits for every fragment before dispatching a request") {
       server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>& request,
-                  transport_response& response,
                   const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         requests.fetch_add(1);
         response.value = request->payload;
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -542,18 +546,19 @@ DOBA_TEST("tcpip sends one interim response before final dispatch") {
       server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>& request,
-                  transport_response& response,
                   const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         requests.fetch_add(1);
         response.value = request->payload;
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -588,17 +593,18 @@ DOBA_TEST("tcpip dispatches every complete buffered request") {
       server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
-         transport_response& response,
          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         response.value = request->payload;
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -630,22 +636,23 @@ DOBA_TEST("tcpip preserves requests across receive buffer boundaries") {
   server.set_on_request(
       [&valid, &expected_size](
           const std::shared_ptr<transport_request>& request,
-          transport_response& response,
           const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         std::size_t expected = expected_size.load();
         if (request->payload.size() != expected ||
             request->payload != std::string(expected, 'x')) {
           valid.store(false);
         }
         response.value = "ok";
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -677,17 +684,18 @@ DOBA_TEST("tcpip preserves binary request payloads") {
       server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
-         transport_response& response,
          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         response.value = request->payload;
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -720,19 +728,19 @@ DOBA_TEST("tcpip rejects a successful decode without a request") {
       server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>&,
-                  transport_response&,
                   const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response res;
         requests.fetch_add(1);
-        return std::nullopt;
+        return res;
       });
-  server.set_on_bad_request(
-      [&rejection_code](int code, std::string_view,
-                        transport_response& response) {
-        rejection_code.store(code);
-        response.value = "invalid";
-      });
+  server.set_on_bad_request([&rejection_code](int code, std::string_view) {
+    transport_response response;
+    rejection_code.store(code);
+    response.value = "invalid";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -764,19 +772,20 @@ DOBA_TEST("tcpip rejects invalid decoder accumulation counts") {
       server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>&,
-                  transport_response&,
                   const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response res;
         requests.fetch_add(1);
-        return std::nullopt;
+        return res;
       });
   server.set_on_bad_request(
-      [&rejections, &rejection_code](int code, std::string_view,
-                                     transport_response& response) {
+      [&rejections, &rejection_code](int code, std::string_view) {
+        transport_response response;
         rejections.fetch_add(1);
         rejection_code.store(code);
         response.value = "invalid";
+        return response;
       });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
@@ -813,19 +822,19 @@ DOBA_TEST("tcpip sends a rejection response then closes the client channel") {
       server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>&,
-                  transport_response&,
                   const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response res;
         requests.fetch_add(1);
-        return std::nullopt;
+        return res;
       });
-  server.set_on_bad_request(
-      [&rejection_code](int code, std::string_view,
-                        transport_response& response) {
-        rejection_code.store(code);
-        response.value = "invalid";
-      });
+  server.set_on_bad_request([&rejection_code](int code, std::string_view) {
+    transport_response response;
+    rejection_code.store(code);
+    response.value = "invalid";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -860,19 +869,19 @@ DOBA_TEST("tcpip preserves response order for pipelined deferred requests") {
   server.set_on_request(
       [&deferred, &first_signal, &second_signal, &serialized](
           const std::shared_ptr<transport_request>& request,
-          transport_response&,
           const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
         std::size_t index = deferred.fetch_add(1);
         return make_response(std::shared_ptr<const transport_request>(request),
                              index == 0 ? first_signal : second_signal,
                              serialized);
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -919,10 +928,9 @@ DOBA_TEST("tcpip cooperatively cancels deferred responses") {
       [&client_signal, &stop_signal, &serialized, &completed,
        &client_cancellation, &stop_cancellation, &deferred, &cancelled](
           const std::shared_ptr<transport_request>&,
-          transport_response&,
           const std::stop_token& stop_token)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
         std::size_t index = deferred.fetch_add(1);
         std::shared_ptr<deferred_signal> signal =
             index == 0 ? client_signal : stop_signal;
@@ -937,10 +945,11 @@ DOBA_TEST("tcpip cooperatively cancels deferred responses") {
         }
         return make_cancellable_response(signal, serialized, completed);
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection(
       [&disconnected]() { disconnected.fetch_add(1); });
@@ -985,23 +994,24 @@ DOBA_TEST("tcpip orders mixed synchronous and deferred responses") {
   server.set_on_request(
       [&signals, &deferred](
           const std::shared_ptr<transport_request>& request,
-          transport_response& response,
           const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         if (request->value == 'S') {
           response.value = "sync";
-          return std::nullopt;
+          return response;
         }
         transport_response result;
         result.value = "async";
         std::size_t index = deferred.fetch_add(1);
         return make_deferred_response((*signals)[index], std::move(result));
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -1045,22 +1055,23 @@ DOBA_TEST("tcpip keeps an interim behind an earlier deferred response") {
       server;
   server.set_on_request(
       [&signal](const std::shared_ptr<transport_request>& request,
-                transport_response& response,
                 const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         if (request->value == 'D') {
           transport_response result;
           result.value = request->payload;
           return make_deferred_response(signal, std::move(result));
         }
         response.value = request->payload;
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -1097,18 +1108,19 @@ DOBA_TEST("tcpip drains a synchronous close response before eof") {
       server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>& request,
-                  transport_response& response,
                   const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         requests.fetch_add(1);
         response.value = request->value == 'C' ? "close" : "unexpected";
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -1140,19 +1152,19 @@ DOBA_TEST("tcpip drains a deferred close response before eof") {
   server.set_on_request(
       [&signal, &requests](
           const std::shared_ptr<transport_request>& request,
-          transport_response&,
           const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
         requests.fetch_add(1);
         transport_response response;
         response.value = request->value == 'C' ? "close" : "unexpected";
         return make_deferred_response(signal, std::move(response));
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -1182,17 +1194,18 @@ DOBA_TEST("tcpip removes an empty response without blocking its queue") {
       server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
-         transport_response& response,
          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         if (request->value == 'S') response.value = "sync";
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -1222,10 +1235,10 @@ DOBA_TEST("tcpip streams response sources across send boundaries") {
       server;
   server.set_on_request(
       [&index, &sizes](const std::shared_ptr<transport_request>&,
-                       transport_response& response,
                        const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         std::size_t current = index.fetch_add(1);
         response.value = "p";
         response.source.resize(sizes[current]);
@@ -1234,12 +1247,13 @@ DOBA_TEST("tcpip streams response sources across send boundaries") {
               static_cast<char>((i * 37 + i / 251 + current) % 256);
         }
         response.behavior = serialization_behavior::kSource;
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -1274,20 +1288,21 @@ DOBA_TEST("tcpip sends prefixes larger than its bounded send buffer") {
       server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>&,
-         transport_response& response,
          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         response.value.resize(response_size);
         for (std::size_t i = 0; i < response.value.size(); i++) {
           response.value[i] = static_cast<char>((i * 19 + i / 127) % 256);
         }
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -1319,10 +1334,10 @@ DOBA_TEST("tcpip completes a streamed response before its successor") {
       server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
-         transport_response& response,
          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         if (request->value == 'B') {
           response.value = "prefix";
           response.source.resize(source_size);
@@ -1333,12 +1348,13 @@ DOBA_TEST("tcpip completes a streamed response before its successor") {
         } else {
           response.value = "tail";
         }
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -1373,10 +1389,10 @@ DOBA_TEST("tcpip serves another client while a large response is blocked") {
       server;
   server.set_on_request(
       [&serialized](const std::shared_ptr<transport_request>& request,
-                    transport_response& response,
                     const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         if (request->value == 'L') {
           response.source.assign(source_size, 'l');
           response.behavior = serialization_behavior::kSource;
@@ -1384,12 +1400,13 @@ DOBA_TEST("tcpip serves another client while a large response is blocked") {
         } else {
           response.value = "fast";
         }
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -1428,10 +1445,10 @@ DOBA_TEST("tcpip recovers after a client resets a large response") {
       server;
   server.set_on_request(
       [&serialized](const std::shared_ptr<transport_request>& request,
-                    transport_response& response,
                     const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         if (request->value == 'L') {
           response.source.resize(source_size);
           for (std::size_t i = 0; i < response.source.size(); i++) {
@@ -1442,12 +1459,13 @@ DOBA_TEST("tcpip recovers after a client resets a large response") {
         } else {
           response.value = "next";
         }
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection(
       [&disconnected]() { disconnected.fetch_add(1); });
@@ -1489,23 +1507,24 @@ DOBA_TEST("tcpip converts synchronous handler exceptions to errors") {
       server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
-         transport_response& response,
          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         if (request->value == 'A') {
           throw std::runtime_error("Handler error!");
         }
         if (request->value == 'B') throw 1;
         response.value = "next";
-        return std::nullopt;
+        return response;
       });
   server.set_on_bad_request(
-      [&errors, &rejection_code](int code, std::string_view,
-                                 transport_response& response) {
+      [&errors, &rejection_code](int code, std::string_view) {
+        transport_response response;
         errors.fetch_add(1);
         rejection_code.store(code);
         response.value = "error";
+        return response;
       });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
@@ -1553,19 +1572,18 @@ DOBA_TEST("tcpip converts deferred handler exceptions to errors") {
   server.set_on_request(
       [&signals, &deferred](
           const std::shared_ptr<transport_request>&,
-          transport_response&,
           const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
         std::size_t index = deferred.fetch_add(1);
         return make_failed_response(signals[index], index == 0);
       });
-  server.set_on_bad_request(
-      [&errors](int code, std::string_view,
-                transport_response& response) {
-        if (code == 7) errors.fetch_add(1);
-        response.value = "error";
-      });
+  server.set_on_bad_request([&errors](int code, std::string_view) {
+    transport_response response;
+    if (code == 7) errors.fetch_add(1);
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection(
       [&disconnected]() { disconnected.fetch_add(1); });
@@ -1602,20 +1620,21 @@ DOBA_TEST("tcpip orders a deferred error before accepted successors") {
       server;
   server.set_on_request(
       [&signal](const std::shared_ptr<transport_request>& request,
-                transport_response& response,
                 const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         if (request->value == 'A') {
           return make_failed_response(signal, true);
         }
         response.value = "sync";
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -1646,10 +1665,10 @@ DOBA_TEST("tcpip handles synchronous serialization failures") {
       server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
-         transport_response& response,
          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         if (request->value == 'T') {
           response.behavior = serialization_behavior::kThrowStandard;
         } else if (request->value == 'U') {
@@ -1659,14 +1678,14 @@ DOBA_TEST("tcpip handles synchronous serialization failures") {
         } else {
           response.value = "next";
         }
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [&errors](int code, std::string_view,
-                transport_response& response) {
-        if (code == 7) errors.fetch_add(1);
-        response.value = "error";
-      });
+  server.set_on_bad_request([&errors](int code, std::string_view) {
+    transport_response response;
+    if (code == 7) errors.fetch_add(1);
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -1717,10 +1736,9 @@ DOBA_TEST("tcpip handles deferred serialization failures") {
   server.set_on_request(
       [&signals, &deferred](
           const std::shared_ptr<transport_request>&,
-          transport_response&,
           const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
         std::size_t index = deferred.fetch_add(1);
         transport_response response;
         if (index == 0) {
@@ -1732,12 +1750,12 @@ DOBA_TEST("tcpip handles deferred serialization failures") {
         }
         return make_deferred_response(signals[index], std::move(response));
       });
-  server.set_on_bad_request(
-      [&errors](int code, std::string_view,
-                transport_response& response) {
-        if (code == 7) errors.fetch_add(1);
-        response.value = "error";
-      });
+  server.set_on_bad_request([&errors](int code, std::string_view) {
+    transport_response response;
+    if (code == 7) errors.fetch_add(1);
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -1777,23 +1795,24 @@ DOBA_TEST("tcpip recovers when error response generation fails") {
       server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>&,
-         transport_response& response,
          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         response.value = "next";
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [&errors](int, std::string_view, transport_response& response) {
-        std::size_t error = errors.fetch_add(1);
-        if (error == 0) throw std::runtime_error("Error callback failed!");
-        if (error == 1) {
-          response.behavior = serialization_behavior::kThrowStandard;
-          return;
-        }
-        response.value = "error";
-      });
+  server.set_on_bad_request([&errors](int, std::string_view) {
+    transport_response response;
+    std::size_t error = errors.fetch_add(1);
+    if (error == 0) throw std::runtime_error("Error callback failed!");
+    if (error == 1) {
+      response.behavior = serialization_behavior::kThrowStandard;
+      return response;
+    }
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -1835,17 +1854,18 @@ DOBA_TEST("tcpip drains a response after the client half closes") {
       server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>&,
-         transport_response& response,
          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         response.value = "sync";
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection(
       [&disconnected]() { disconnected.fetch_add(1); });
@@ -1877,18 +1897,19 @@ DOBA_TEST("tcpip closes silently after a partial request eof") {
       server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>&,
-                  transport_response&,
                   const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response res;
         requests.fetch_add(1);
-        return std::nullopt;
+        return res;
       });
-  server.set_on_bad_request(
-      [&errors](int, std::string_view, transport_response& response) {
-        errors.fetch_add(1);
-        response.value = "error";
-      });
+  server.set_on_bad_request([&errors](int, std::string_view) {
+    transport_response response;
+    errors.fetch_add(1);
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -1922,19 +1943,19 @@ DOBA_TEST("tcpip cancels a deferred response after input eof") {
   server.set_on_request(
       [&signal, &serialized](
           const std::shared_ptr<transport_request>&,
-          transport_response&,
           const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
         transport_response response;
         response.value = "deferred";
         response.serialized = serialized;
         return make_deferred_response(signal, std::move(response));
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection(
       [&disconnected]() { disconnected.fetch_add(1); });
@@ -1966,17 +1987,18 @@ DOBA_TEST("tcpip recovers after a reset during request reception") {
       server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
-         transport_response& response,
          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         response.value = request->payload;
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection(
       [&disconnected]() { disconnected.fetch_add(1); });
@@ -2011,17 +2033,18 @@ DOBA_TEST("tcpip isolates interleaved requests from concurrent clients") {
       server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>& request,
-         transport_response& response,
          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         response.value = request->payload;
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([&connected]() { connected.fetch_add(1); });
   server.set_on_disconnection(
       [&disconnected]() { disconnected.fetch_add(1); });
@@ -2080,10 +2103,10 @@ DOBA_TEST("tcpip stops idle blocked and deferred clients exactly once") {
     server.set_on_request(
         [&signal, &serialized](
             const std::shared_ptr<transport_request>& request,
-            transport_response& response,
             const std::stop_token&)
-            -> std::optional<
-                martianlabs::doba::common::task<transport_response>> {
+            -> std::variant<transport_response, martianlabs::doba::common::task<
+                                                    transport_response>> {
+          transport_response response;
           if (request->value == 'D') {
             transport_response deferred;
             deferred.value = "deferred";
@@ -2092,12 +2115,13 @@ DOBA_TEST("tcpip stops idle blocked and deferred clients exactly once") {
           }
           response.source.assign(source_size, 's');
           response.behavior = serialization_behavior::kSource;
-          return std::nullopt;
+          return response;
         });
-    server.set_on_bad_request(
-        [](int, std::string_view, transport_response& response) {
-          response.value = "error";
-        });
+    server.set_on_bad_request([](int, std::string_view) {
+      transport_response response;
+      response.value = "error";
+      return response;
+    });
     server.set_on_connection([&connected]() { connected.fetch_add(1); });
     server.set_on_disconnection(
         [&disconnected]() { disconnected.fetch_add(1); });
@@ -2140,18 +2164,19 @@ DOBA_TEST("tcpip restarts the same server on the same port") {
       server;
   server.set_on_request(
       [&requests](const std::shared_ptr<transport_request>&,
-                  transport_response& response,
                   const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         requests.fetch_add(1);
         response.value = "sync";
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   std::string port_text = std::to_string(port);
@@ -2183,17 +2208,18 @@ DOBA_TEST("tcpip survives a failing connection callback") {
       server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>&,
-         transport_response& response,
          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         response.value = "sync";
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([&connections]() {
     if (connections.fetch_add(1) == 0) {
       throw std::runtime_error("Connection callback error!");
@@ -2229,17 +2255,18 @@ DOBA_TEST("tcpip survives failing disconnection callbacks") {
       server;
   server.set_on_request(
       [](const std::shared_ptr<transport_request>&,
-         transport_response& response,
          const std::stop_token&)
-          -> std::optional<
-              martianlabs::doba::common::task<transport_response>> {
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
         response.value = "sync";
-        return std::nullopt;
+        return response;
       });
-  server.set_on_bad_request(
-      [](int, std::string_view, transport_response& response) {
-        response.value = "error";
-      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
   server.set_on_connection([]() {});
   server.set_on_disconnection([&disconnected]() {
     disconnected.fetch_add(1);

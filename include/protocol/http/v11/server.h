@@ -78,9 +78,10 @@ class server {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     if (locked_) return;
     transport_.set_on_request(
-        [this](const std::shared_ptr<RQty>& req, RSty& res,
+        [this](const std::shared_ptr<RQty>& req,
                const std::stop_token& stop_token)
-            -> std::optional<common::task<RSty>> {
+            -> std::variant<RSty, common::task<RSty>> {
+          std::optional<RSty> res;
           switch (req->get_target()) {
             case target::kOriginForm:
             case target::kAbsoluteForm: {
@@ -97,7 +98,7 @@ class server {
                       async_req,
                       match.handler->async_callback(async_req, stop_token));
                 }
-                match.handler->callback(*req, res);
+                res.emplace(match.handler->callback(*req));
               } else if (match.parametrized_handler) {
                 if (match.parametrized_handler->is_async()) {
                   std::shared_ptr<const RQty> async_req(req);
@@ -105,15 +106,16 @@ class server {
                       async_req, match.parametrized_handler->invoke_async(
                                      async_req, stop_token, abs_path));
                 }
-                match.parametrized_handler->invoke(*req, res, abs_path);
+                res.emplace(match.parametrized_handler->invoke(*req, abs_path));
               } else {
                 std::string allowed_methods =
                     router_.allowed_methods(abs_path);
+                res.emplace();
                 if (allowed_methods.empty()) {
-                  res.not_found_404();
+                  res->not_found_404();
                 } else {
-                  res.method_not_allowed_405();
-                  res.set_header(header_names::kAllow, allowed_methods);
+                  res->method_not_allowed_405();
+                  res->set_header(header_names::kAllow, allowed_methods);
                 }
               }
               break;
@@ -126,23 +128,24 @@ class server {
               // drive the raw-byte relay, keeping this server-side transport
               // agnostic of CONNECT. Until that module exists, the request
               // must not be left unanswered.
-              res.not_implemented_501();
+              res.emplace().not_implemented_501();
               break;
             case target::kAsteriskForm:
               // OPTIONS * (RFC 9110 S9.3.7) addresses the server in general
               // rather than a specific resource; acknowledge it without
               // routing to a handler.
-              res.ok_200();
+              res.emplace().ok_200();
               break;
             default:
-              res.bad_request_400();
+              res.emplace().bad_request_400();
               break;
           }
-          apply_response_rules(*req, res);
-          return std::nullopt;
+          apply_response_rules(*req, *res);
+          return std::move(*res);
         });
     transport_.set_on_bad_request(
-        [](int code, std::string_view reason, RSty& res) {
+        [](int code, std::string_view reason) {
+          RSty res;
           // The transport hands back the neutral reason recorded by the
           // decoder; only the HTTP layer knows how to translate it into a
           // status code (RFC 9110 semantics live here, not in the transport).
@@ -174,6 +177,7 @@ class server {
               res.bad_request_400().set_body(reason);
               break;
           }
+          return res;
         });
     transport_.set_on_connection([this]() { connections_++; });
     transport_.set_on_disconnection([this]() { connections_--; });

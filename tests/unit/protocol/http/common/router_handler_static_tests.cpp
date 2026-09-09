@@ -45,24 +45,33 @@ using martianlabs::doba::protocol::http::router_handler_static;
 DOBA_TEST("alias accepts and invokes the documented callback") {
   static_assert(
       std::same_as<router_handler_static<request, response>,
-                   std::function<void(const request&, response&)>>);
+                   std::function<response(const request&)>>);
   bool invoked = false;
   router_handler_static<request, response> handler =
-      [&invoked](const request&, response&) { invoked = true; };
+      [&invoked](const request&) {
+        response res;
+        invoked = true;
+        return res;
+      };
   request req;
   response res;
-  handler(req, res);
+  res = handler(req);
   DOBA_EXPECT(invoked);
 }
 // +===========================================================================+
 // | [>] handler concepts distinguish sync and async callbacks   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("handler concepts distinguish sync and async callbacks") {
-  auto sync = [](const request&, response&) {};
+  auto sync = [](const request&) {
+    response res;
+    return res;
+  };
   auto async = [](std::shared_ptr<const request>,
                   std::stop_token) -> task<response> {
     co_return response{};
   };
+  auto legacy = [](const request&, response&) {};
+  static_assert(!router_handler_lambda<decltype(legacy)>);
   static_assert(router_handler_lambda<decltype(sync)>);
   static_assert(!router_async_handler_lambda<decltype(sync)>);
   static_assert(!router_handler_lambda<decltype(async)>);

@@ -32,7 +32,11 @@ int main() {
   server http_server;
   http_server.add_route(
       "GET", "/resource",
-      [](const request&, response& res) { res.ok_200().set_body("resource"); });
+      [](const request&) {
+        response res;
+        res.ok_200().set_body("resource");
+        return res;
+      });
   http_server.start("8080");
   signaler::wait();
   return 0;

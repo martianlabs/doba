@@ -36,7 +36,8 @@ int main() {
   server http_server;
   http_server.add_route(
       "GET", "/search",
-      [](const request& req, response& res) {
+      [](const request& req) {
+        response res;
         std::string body;
         // Lookup by name is optional because the parameter may be absent.
         const auto query = req.get_query_parameter("q");
@@ -54,6 +55,7 @@ int main() {
         res.ok_200()
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(body);
+        return res;
       });
   http_server.start("8080");
   signaler::wait();

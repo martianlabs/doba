@@ -32,7 +32,11 @@ int main() {
   server http_server;
   http_server.add_route(
       "GET", "/date",
-      [](const request&, response& res) { res.ok_200().set_body("dated"); });
+      [](const request&) {
+        response res;
+        res.ok_200().set_body("dated");
+        return res;
+      });
   http_server.start("8080");
   signaler::wait();
   return 0;

@@ -97,7 +97,7 @@ class fake_router {
   // | [>] TYPEs                                                    ( public ) |
   // +=========================================================================+
   struct handler_data {
-    std::function<void(const RQty&, RSty&)> callback;
+    std::function<RSty(const RQty&)> callback;
     std::function<task<RSty>(std::shared_ptr<const RQty>,
                              std::stop_token)> async_callback;
     bool is_async() const {
@@ -105,7 +105,7 @@ class fake_router {
     }
   };
   struct parametrized_handler_data {
-    void invoke(const RQty&, RSty&, std::string_view) const {}
+    RSty invoke(const RQty&, std::string_view) const { return {}; }
     task<RSty> invoke_async(std::shared_ptr<const RQty> req,
                             std::stop_token stop_token,
                             std::string_view path) const {
@@ -134,8 +134,8 @@ class fake_router {
     last_method = method;
     last_route = route;
     if constexpr (router_handler_lambda<Hty>) {
-      matched_handler = {
-          std::function<void(const RQty&, RSty&)>(std::move(handler)), {}};
+      matched_handler = {std::function<RSty(const RQty&)>(std::move(handler)),
+                         {}};
     } else if constexpr (router_async_handler_lambda<Hty>) {
       async_handler = {
           {}, std::function<task<RSty>(std::shared_ptr<const RQty>,
@@ -193,11 +193,9 @@ class fake_transport {
   // | [>] TYPEs                                                    ( public ) |
   // +=========================================================================+
   using request_callback =
-      std::function<std::optional<martianlabs::doba::common::task<RSty>>(
-          const std::shared_ptr<RQty>&, RSty&,
-          const std::stop_token&)>;
-  using bad_request_callback =
-      std::function<void(int, std::string_view, RSty&)>;
+      std::function<std::variant<RSty, martianlabs::doba::common::task<RSty>>(
+          const std::shared_ptr<RQty>&, const std::stop_token&)>;
+  using bad_request_callback = std::function<RSty(int, std::string_view)>;
   // +=========================================================================+
   // | [>] set_on_request                                           ( public ) |
   // +=========================================================================+
@@ -320,16 +318,18 @@ std::string send_request(const request& req) {
   response res;
   auto shared_request = std::make_shared<request>(req);
   std::stop_token stop_token;
-  auto response_task =
-      test_transport::on_request(shared_request, res, stop_token);
-  if (response_task) {
+  auto response_task = test_transport::on_request(shared_request, stop_token);
+  if (response_task.index() == 1) {
     std::optional<response> result;
-    auto probe = collect(std::move(*response_task), result);
+    auto probe =
+        collect(std::get<task<response>>(std::move(response_task)), result);
     probe.rethrow_if_failed();
     if (!probe.done() || !result) {
       throw std::runtime_error("The asynchronous response did not complete");
     }
     res = std::move(*result);
+  } else {
+    res = std::get<response>(std::move(response_task));
   }
   res.set_header("Date", "fixed");
   return res.serialize()->prefix;
@@ -355,9 +355,11 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   // ---------------------------------------------------------------------------
   test_router::additions = 0;
   test_server value;
-  auto handler = [](const request&, response& res) {
+  auto handler = [](const request&) {
+    response res;
     res.ok_200();
     if (test_router::write_body) res.set_body("body");
+    return res;
   };
   DOBA_EXPECT_EQUAL(&value.add_route("GET", "/", handler), &value);
   DOBA_EXPECT_EQUAL(test_router::additions, 1);
@@ -499,9 +501,8 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
        "HTTP/1.1 417 Expectation Failed\r\n"},
   };
   for (const auto& test : rejection_cases) {
-    response res;
-    test_transport::on_bad_request(static_cast<int>(test.reason), "reason",
-                                   res);
+    response res =
+        test_transport::on_bad_request(static_cast<int>(test.reason), "reason");
     res.set_header("Date", "fixed");
     const auto serialized = res.serialize();
     DOBA_EXPECT(serialized->prefix.starts_with(test.status));
@@ -553,7 +554,11 @@ DOBA_TEST("server completes suspended async responses") {
   test_server value;
   value.add_route(
       "GET", "/",
-      [](const request&, response& res) { res.ok_200(); });
+      [](const request&) {
+        response res;
+        res.ok_200();
+        return res;
+      });
   value.add_route(
       "GET", "/async",
       [&event, &stop_source, &stop_token_received](
@@ -565,9 +570,9 @@ DOBA_TEST("server completes suspended async responses") {
 
   auto req = std::make_shared<request>();
   response sync_response;
-  auto sync_task = test_transport::on_request(
-      req, sync_response, stop_source.get_token());
-  DOBA_EXPECT(!sync_task.has_value());
+  auto sync_task = test_transport::on_request(req, stop_source.get_token());
+  DOBA_EXPECT(sync_task.index() == 0);
+  sync_response = std::get<response>(std::move(sync_task));
   DOBA_EXPECT(
       sync_response.serialize()->prefix.starts_with("HTTP/1.1 200 OK\r\n"));
 
@@ -575,17 +580,15 @@ DOBA_TEST("server completes suspended async responses") {
   req->path = "/async";
   req->close = true;
   std::weak_ptr<request> request_lifetime = req;
-  response immediate_response;
-  auto response_task = test_transport::on_request(
-      req, immediate_response, stop_source.get_token());
-  DOBA_EXPECT(response_task.has_value());
+  auto response_task = test_transport::on_request(req, stop_source.get_token());
+  DOBA_EXPECT(response_task.index() == 1);
   DOBA_EXPECT(stop_token_received);
-  DOBA_EXPECT(!immediate_response.has_header("Connection"));
   req.reset();
   DOBA_EXPECT(!request_lifetime.expired());
 
   std::optional<response> result;
-  auto probe = collect(std::move(*response_task), result);
+  auto probe =
+      collect(std::get<task<response>>(std::move(response_task)), result);
   DOBA_EXPECT(!probe.done());
   DOBA_EXPECT(!result.has_value());
   event.resume();
@@ -619,13 +622,12 @@ DOBA_TEST("server propagates async handler exceptions") {
 
   auto req = std::make_shared<request>();
   req->path = "/async";
-  response immediate_response;
   std::stop_token stop_token;
-  auto response_task =
-      test_transport::on_request(req, immediate_response, stop_token);
-  DOBA_EXPECT(response_task.has_value());
+  auto response_task = test_transport::on_request(req, stop_token);
+  DOBA_EXPECT(response_task.index() == 1);
   std::optional<response> result;
-  auto probe = collect(std::move(*response_task), result);
+  auto probe =
+      collect(std::get<task<response>>(std::move(response_task)), result);
   DOBA_EXPECT(probe.done());
   bool threw = false;
   try {
@@ -659,13 +661,12 @@ DOBA_TEST("server invokes parametrized async handlers") {
 
   auto req = std::make_shared<request>();
   req->path = "/parametrized/42";
-  response immediate_response;
   std::stop_token stop_token;
-  auto response_task =
-      test_transport::on_request(req, immediate_response, stop_token);
-  DOBA_EXPECT(response_task.has_value());
+  auto response_task = test_transport::on_request(req, stop_token);
+  DOBA_EXPECT(response_task.index() == 1);
   std::optional<response> result;
-  auto probe = collect(std::move(*response_task), result);
+  auto probe =
+      collect(std::get<task<response>>(std::move(response_task)), result);
   probe.rethrow_if_failed();
   DOBA_EXPECT(probe.done());
   DOBA_EXPECT(result.has_value());

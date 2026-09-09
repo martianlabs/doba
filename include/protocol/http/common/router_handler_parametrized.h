@@ -225,27 +225,25 @@ bool parse_route_parameters_(
 // |   RSty - response being used                                              |
 // |   Args - route parameters being used                                      |
 // +---------------------------------------------------------------------------+
-// | This function invokes a route handler with the provided request,          |
-// | response, pattern, and path. It extracts the route parameters from the    |
-// | pattern and path, parses them into the appropriate types, and then        |
-// | invokes the handler with the request, response, and parsed parameters.    |
-// | If the route parameters cannot be extracted or parsed, it returns         |
-// | without invoking the handler.                                             |
+// | Invokes the handler with the request and parsed route parameters.         |
+// | Returns an empty response if the path or parameters do not match.         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename Hty, typename RQty, typename RSty, typename... Args>
-void invoke_route_handler(Hty& handler, const RQty& req, RSty& res,
+RSty invoke_route_handler(Hty& handler, const RQty& req,
                           std::string_view pattern, std::string_view path) {
   std::array<std::string_view, sizeof...(Args)> parameters;
-  if (!extract_route_parameters(pattern, path, parameters)) return;
+  if (!extract_route_parameters(pattern, path, parameters)) return {};
   std::tuple<std::decay_t<Args>...> values;
   if (!parse_route_parameters_<Args...>(parameters, values,
                                         std::index_sequence_for<Args...>{})) {
-    return;
+    return {};
   }
-  std::apply([&handler, &req, &res](
-                 auto&... value) { std::invoke(handler, req, res, value...); },
-             values);
+  return std::apply(
+      [&handler, &req](auto&... value) {
+        return std::invoke(handler, req, value...);
+      },
+      values);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -305,8 +303,8 @@ class router_handler_parametrized {
   // | [>] TYPEs                                                    ( public ) |
   // +=========================================================================+
   using matcher_type = bool (*)(std::string_view, std::string_view);
-  using callback_type = std::function<void(const RQty&, RSty&, std::string_view,
-                                           std::string_view)>;
+  using callback_type =
+      std::function<RSty(const RQty&, std::string_view, std::string_view)>;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
@@ -332,8 +330,8 @@ class router_handler_parametrized {
   // +=========================================================================+
   // | [>] invoke                                                   ( public ) |
   // +=========================================================================+
-  void invoke(const RQty& req, RSty& res, std::string_view path) const {
-    callback_(req, res, pattern_, path);
+  RSty invoke(const RQty& req, std::string_view path) const {
+    return callback_(req, pattern_, path);
   }
   // +=========================================================================+
   // | [>] invoke_async                                             ( public ) |
@@ -375,8 +373,7 @@ class router_handler_parametrized {
 // | This function creates a router_handler_parametrized object for a          |
 // | synchronous route handler. It takes a pattern and a handler as input,     |
 // | and returns a router_handler_parametrized object that can be used to      |
-// | match and invoke the handler with the appropriate request, response, and  |
-// | parsed route parameters.                                                  |
+// | match and invoke the handler with the request and parsed parameters.      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename... Args, typename Hty>
@@ -385,10 +382,10 @@ auto make_router_handler_parametrized(std::string_view pattern, Hty&& handler) {
   return router_handler_parametrized<RQty, RSty>(
       std::string(pattern), &detail::match_route_parameters<Args...>,
       [handler = handler_type(std::forward<Hty>(handler))](
-          const RQty& req, RSty& res, std::string_view route_pattern,
+          const RQty& req, std::string_view route_pattern,
           std::string_view path) mutable {
-        detail::invoke_route_handler<handler_type, RQty, RSty, Args...>(
-            handler, req, res, route_pattern, path);
+        return detail::invoke_route_handler<handler_type, RQty, RSty, Args...>(
+            handler, req, route_pattern, path);
       });
 }
 

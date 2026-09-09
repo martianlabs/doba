@@ -35,12 +35,14 @@ int main() {
   // Routes are selected by both the HTTP method and the absolute path.
   http_server.add_route(
       "GET", "/pipeline",
-      [](const request&, response& res) {
+      [](const request&) {
+        response res;
         // Response mutators return response&, so they can be chained.
         res.ok_200()
             .add_header("Server", "doba.")
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body("ok");
+        return res;
       });
   http_server.start("8080");
   // start() returns after opening the listener; wait for a shutdown signal.

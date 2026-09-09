@@ -69,9 +69,15 @@ or an outstanding I/O operation.
 
 ## Keep the common path direct
 
-Synchronous handlers run directly and produce a response without requiring a
-coroutine task. Deferred handlers use C++20 coroutines, retain the request
-for their lifetime, and receive a cancellation token.
+Synchronous handlers run directly and return a move-only response by value:
+`response(const request&, ...)`. Deferred handlers retain
+`task<response>(shared_ptr<const request>, stop_token, ...)`, keeping the
+request alive and receiving a cancellation token.
+
+The server-to-transport callback returns `variant<Response, task<Response>>`.
+Error callbacks also return a response by value. The transport serializes
+each immediate or completed response before enqueuing its owned prefix and
+optional body reader.
 
 A deferred response reserves its position in the connection's response order.
 Completion can happen out of order; transmission follows the reserved order.

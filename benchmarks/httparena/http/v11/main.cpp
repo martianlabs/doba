@@ -82,42 +82,49 @@ int main(int argc, char* argv[]) {
   // Parse every baseline value; HttpArena randomizes them to detect shortcuts.
   http_server.add_route(
       "GET", "/baseline11",
-      [](const request& req, response& res) {
+      [](const request& req) {
+        response res;
         std::int64_t value = 0;
         if (!read_query_sum(req, value)) {
           res.bad_request_400().set_body("invalid request");
-          return;
+          return res;
         }
         res.ok_200()
             .add_header("Content-Type", "text/plain")
             .set_body(std::to_string(value));
+        return res;
       });
   http_server.add_route(
       "POST", "/baseline11",
-      [](const request& req, response& res) {
+      [](const request& req) {
+        response res;
         std::int64_t value = 0;
         std::int64_t body_value = 0;
         if (!read_query_sum(req, value) ||
             !read_body_integer(req, body_value)) {
           res.bad_request_400().set_body("invalid request");
-          return;
+          return res;
         }
         res.ok_200()
             .add_header("Content-Type", "text/plain")
             .set_body(std::to_string(value + body_value));
+        return res;
       });
   // Keep this handler minimal so the profile isolates pipelining overhead.
   http_server.add_route(
       "GET", "/pipeline",
-      [](const request& req, response& res) {
+      [](const request& req) {
+        response res;
         res.ok_200().add_header("Content-Type", "text/plain").set_body("ok");
+        return res;
       });
   http_server.add_route(
       "POST", "/upload",
-      [](const request& req, response& res) {
+      [](const request& req) {
+        response res;
         if (!req.has_body_reader()) {
           res.bad_request_400().set_body("request body required");
-          return;
+          return res;
         }
         // HttpArena requires counting bytes read, not Content-Length.
         std::array<std::byte, 65536> buffer{};
@@ -126,7 +133,7 @@ int main(int argc, char* argv[]) {
           const auto state = req.get_body_reader()->read(buffer);
           if (state.has_error) {
             res.bad_request_400().set_body("unable to read request body");
-            return;
+            return res;
           }
           bytes += state.produced;
           if (state.complete) break;
@@ -134,6 +141,7 @@ int main(int argc, char* argv[]) {
         res.ok_200()
             .add_header("Content-Type", "text/plain")
             .set_body(std::to_string(bytes));
+        return res;
       });
   http_server.start("8080");
   // Docker owns process shutdown; wait after the server starts.

@@ -109,8 +109,10 @@ DOBA_TEST("matches routes with typed parameters") {
   auto handler = make_router_handler_parametrized<
       request, response, std::uint64_t, bool, double, std::string_view>(
       "/items/:id/:enabled/:score/:name",
-      [](const request&, response&, std::uint64_t, bool, double,
-         std::string_view) {});
+      [](const request&, std::uint64_t, bool, double, std::string_view) {
+        response res;
+        return res;
+      });
   DOBA_EXPECT(handler.matches("/items/42/TRUE/1.5/doba"));
   DOBA_EXPECT(!handler.matches("/items/x/true/1.5/doba"));
   DOBA_EXPECT(!handler.matches("/items/42/yes/1.5/doba"));
@@ -121,7 +123,11 @@ DOBA_TEST("matches routes with typed parameters") {
 // +===========================================================================+
 DOBA_TEST("matching requires the complete route shape") {
   auto handler = make_router_handler_parametrized<request, response, int>(
-      "/items/:id", [](const request&, response&, int) {});
+      "/items/:id",
+      [](const request&, int) {
+        response res;
+        return res;
+      });
   DOBA_EXPECT(handler.matches("/items/42"));
   DOBA_EXPECT(!handler.matches("/items/"));
   DOBA_EXPECT(!handler.matches("/items/42/"));
@@ -135,14 +141,16 @@ DOBA_TEST("invoke passes parsed values to the callback") {
   auto handler = make_router_handler_parametrized<
       request, response, std::uint64_t, bool, double, std::string>(
       "/items/:id/:enabled/:score/:name",
-      [&invoked](const request&, response& res, std::uint64_t id, bool enabled,
+      [&invoked](const request&, std::uint64_t id, bool enabled,
                  double score, const std::string& name) {
+        response res;
         invoked = id == 42 && enabled && score == 1.5 && name == "doba";
         res.value = name;
+        return res;
       });
   request req;
   response res;
-  handler.invoke(req, res, "/items/42/true/1.5/doba");
+  res = handler.invoke(req, "/items/42/true/1.5/doba");
   DOBA_EXPECT(invoked);
   DOBA_EXPECT_EQUAL(res.value, "doba");
 }
@@ -153,10 +161,14 @@ DOBA_TEST("invoke ignores paths with invalid parameters") {
   bool invoked = false;
   auto handler = make_router_handler_parametrized<request, response, int>(
       "/items/:id",
-      [&invoked](const request&, response&, int) { invoked = true; });
+      [&invoked](const request&, int) {
+        response res;
+        invoked = true;
+        return res;
+      });
   request req;
   response res;
-  handler.invoke(req, res, "/items/value");
+  res = handler.invoke(req, "/items/value");
   DOBA_EXPECT(!invoked);
 }
 // +===========================================================================+
@@ -295,9 +307,11 @@ DOBA_TEST("route conversion accepts every boolean spelling") {
     auto handler = make_router_handler_parametrized<
         request, response, parameter>(
         "/value/:value",
-        [&](const request&, response&, parameter value) {
+        [&](const request&, parameter value) {
+          response res;
           sync_calls++;
           sync_value = value;
+          return res;
         });
     auto async_handler =
         make_router_handler_parametrized_async<request, response, parameter>(
@@ -312,7 +326,7 @@ DOBA_TEST("route conversion accepts every boolean spelling") {
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
     response res;
-    handler.invoke(req, res, path);
+    res = handler.invoke(req, path);
     DOBA_EXPECT_EQUAL(sync_calls, 1);
     DOBA_EXPECT_EQUAL(sync_value, test.expected);
     std::optional<response> result;
@@ -353,9 +367,11 @@ DOBA_TEST("route conversion accepts signed integer boundaries") {
     auto handler = make_router_handler_parametrized<
         request, response, parameter>(
         "/value/:value",
-        [&](const request&, response&, parameter value) {
+        [&](const request&, parameter value) {
+          response res;
           sync_calls++;
           sync_value = value;
+          return res;
         });
     auto async_handler =
         make_router_handler_parametrized_async<request, response, parameter>(
@@ -370,7 +386,7 @@ DOBA_TEST("route conversion accepts signed integer boundaries") {
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
     response res;
-    handler.invoke(req, res, path);
+    res = handler.invoke(req, path);
     DOBA_EXPECT_EQUAL(sync_calls, 1);
     DOBA_EXPECT_EQUAL(sync_value, test.expected);
     std::optional<response> result;
@@ -409,9 +425,11 @@ DOBA_TEST("route conversion accepts unsigned integer boundaries") {
     auto handler = make_router_handler_parametrized<
         request, response, parameter>(
         "/value/:value",
-        [&](const request&, response&, parameter value) {
+        [&](const request&, parameter value) {
+          response res;
           sync_calls++;
           sync_value = value;
+          return res;
         });
     auto async_handler =
         make_router_handler_parametrized_async<request, response, parameter>(
@@ -426,7 +444,7 @@ DOBA_TEST("route conversion accepts unsigned integer boundaries") {
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
     response res;
-    handler.invoke(req, res, path);
+    res = handler.invoke(req, path);
     DOBA_EXPECT_EQUAL(sync_calls, 1);
     DOBA_EXPECT_EQUAL(sync_value, test.expected);
     std::optional<response> result;
@@ -463,8 +481,10 @@ DOBA_TEST("route conversion rejects integer overflow") {
       auto handler = make_router_handler_parametrized<
           request, response, parameter>(
           "/value/:value",
-          [&](const request&, response&, parameter) {
+          [&](const request&, parameter) {
+            response res;
             sync_calls++;
+            return res;
           });
       auto async_handler =
           make_router_handler_parametrized_async<request, response, parameter>(
@@ -478,7 +498,7 @@ DOBA_TEST("route conversion rejects integer overflow") {
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
       response res;
-      handler.invoke(req, res, path);
+      res = handler.invoke(req, path);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       std::optional<response> result;
       auto probe = collect(
@@ -513,8 +533,10 @@ DOBA_TEST("route conversion rejects integer overflow") {
       auto handler = make_router_handler_parametrized<
           request, response, parameter>(
           "/value/:value",
-          [&](const request&, response&, parameter) {
+          [&](const request&, parameter) {
+            response res;
             sync_calls++;
+            return res;
           });
       auto async_handler =
           make_router_handler_parametrized_async<request, response, parameter>(
@@ -528,7 +550,7 @@ DOBA_TEST("route conversion rejects integer overflow") {
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
       response res;
-      handler.invoke(req, res, path);
+      res = handler.invoke(req, path);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       std::optional<response> result;
       auto probe = collect(
@@ -572,8 +594,10 @@ DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
       auto handler = make_router_handler_parametrized<
           request, response, parameter>(
           "/value/:value",
-          [&](const request&, response&, parameter) {
+          [&](const request&, parameter) {
+            response res;
             sync_calls++;
+            return res;
           });
       auto async_handler =
           make_router_handler_parametrized_async<request, response, parameter>(
@@ -587,7 +611,7 @@ DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
       response res;
-      handler.invoke(req, res, path);
+      res = handler.invoke(req, path);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       std::optional<response> result;
       auto probe = collect(
@@ -623,8 +647,10 @@ DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
       auto handler = make_router_handler_parametrized<
           request, response, parameter>(
           "/value/:value",
-          [&](const request&, response&, parameter) {
+          [&](const request&, parameter) {
+            response res;
             sync_calls++;
+            return res;
           });
       auto async_handler =
           make_router_handler_parametrized_async<request, response, parameter>(
@@ -638,7 +664,7 @@ DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
       response res;
-      handler.invoke(req, res, path);
+      res = handler.invoke(req, path);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       std::optional<response> result;
       auto probe = collect(
@@ -679,8 +705,10 @@ DOBA_TEST("route conversion rejects negative unsigned values") {
     auto handler = make_router_handler_parametrized<
         request, response, parameter>(
         "/value/:value",
-        [&](const request&, response&, parameter) {
+        [&](const request&, parameter) {
+          response res;
           sync_calls++;
+          return res;
         });
     auto async_handler =
         make_router_handler_parametrized_async<request, response, parameter>(
@@ -694,7 +722,7 @@ DOBA_TEST("route conversion rejects negative unsigned values") {
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
     response res;
-    handler.invoke(req, res, path);
+    res = handler.invoke(req, path);
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     std::optional<response> result;
     auto probe = collect(
@@ -739,9 +767,11 @@ DOBA_TEST("route conversion accepts finite floating point values") {
     auto handler = make_router_handler_parametrized<
         request, response, parameter>(
         "/value/:value",
-        [&](const request&, response&, parameter value) {
+        [&](const request&, parameter value) {
+          response res;
           sync_calls++;
           sync_value = value;
+          return res;
         });
     auto async_handler =
         make_router_handler_parametrized_async<request, response, parameter>(
@@ -756,7 +786,7 @@ DOBA_TEST("route conversion accepts finite floating point values") {
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
     response res;
-    handler.invoke(req, res, path);
+    res = handler.invoke(req, path);
     DOBA_EXPECT_EQUAL(sync_calls, 1);
     DOBA_EXPECT_EQUAL(sync_value, test.expected);
     std::optional<response> result;
@@ -792,8 +822,10 @@ DOBA_TEST("route conversion rejects floating point range errors") {
     auto handler = make_router_handler_parametrized<
         request, response, parameter>(
         "/value/:value",
-        [&](const request&, response&, parameter) {
+        [&](const request&, parameter) {
+          response res;
           sync_calls++;
+          return res;
         });
     auto async_handler =
         make_router_handler_parametrized_async<request, response, parameter>(
@@ -807,7 +839,7 @@ DOBA_TEST("route conversion rejects floating point range errors") {
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
     response res;
-    handler.invoke(req, res, path);
+    res = handler.invoke(req, path);
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     std::optional<response> result;
     auto probe = collect(

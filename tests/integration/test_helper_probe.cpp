@@ -101,12 +101,16 @@ DOBA_TEST("probe failure cleans up active transport") {
         protocol::http::v11::decoder> server;
     server.set_on_request(
         [](const std::shared_ptr<protocol::http::v11::request>&,
-           protocol::http::v11::response&, const std::stop_token&)
-            -> std::optional<common::task<protocol::http::v11::response>> {
-          return std::nullopt;
+           const std::stop_token&)
+            -> std::variant<protocol::http::v11::response,
+                            common::task<protocol::http::v11::response>> {
+          protocol::http::v11::response res;
+          return res;
         });
-    server.set_on_bad_request(
-        [](int, std::string_view, protocol::http::v11::response&) {});
+    server.set_on_bad_request([](int, std::string_view) {
+      protocol::http::v11::response res;
+      return res;
+    });
     server.set_on_connection([&]() { connected.fetch_add(1); });
     server.set_on_disconnection([&]() { disconnected.fetch_add(1); });
     const std::string port_text = std::to_string(port);

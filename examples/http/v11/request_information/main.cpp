@@ -37,7 +37,8 @@ int main() {
   server http_server;
   http_server.add_route(
       "GET", "/request",
-      [](const request& req, response& res) {
+      [](const request& req) {
+        response res;
         // Target and host syntax are parsed before the handler is called.
         std::string target_form;
         switch (req.get_target()) {
@@ -84,6 +85,7 @@ int main() {
         res.ok_200()
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(body);
+        return res;
       });
   http_server.start("8080");
   signaler::wait();

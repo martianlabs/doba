@@ -1094,8 +1094,7 @@ class tcpip {
   void enqueue_error_response(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
                                int reason_code, std::string_view reason) {
     try {
-      RSty response;
-      on_bad_request_(reason_code, reason, response);
+      RSty response = on_bad_request_(reason_code, reason);
       auto serialized = response.serialize();
       if (!serialized ||
           !ctx->enqueue_error_response(std::move(serialized))) {
@@ -1158,11 +1157,9 @@ class tcpip {
             }
             try {
               // Let's call user handler!
-              RSty response;
-              std::optional<common::task<RSty>> response_task =
-                  on_request_(result.request, response,
-                              ctx->get_stop_token());
-              if (response_task) {
+              auto response = on_request_(result.request, ctx->get_stop_token());
+              if (auto* response_task =
+                      std::get_if<common::task<RSty>>(&response)) {
                 std::size_t response_id = 0;
                 if (!ctx->reserve_response(response_id)) {
                   ctx->abort();
@@ -1175,7 +1172,7 @@ class tcpip {
                 }
                 if (close_channel) ctx->close();
               } else {
-                auto serialized = response.serialize();
+                auto serialized = std::get<RSty>(response).serialize();
                 if (!serialized ||
                     !ctx->enqueue_response(std::move(serialized))) {
                   ctx->fail_response();
@@ -1282,8 +1279,7 @@ class tcpip {
       const std::shared_ptr<context<RQty, RSty, DEty>>& ctx,
       std::size_t response_id, int reason_code, std::string_view reason) {
     try {
-      RSty response;
-      on_bad_request_(reason_code, reason, response);
+      RSty response = on_bad_request_(reason_code, reason);
       auto serialized = response.serialize();
       if (!ctx->complete_response(response_id, std::move(serialized))) {
         return false;

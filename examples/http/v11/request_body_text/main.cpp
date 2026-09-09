@@ -38,11 +38,12 @@ int main() {
   server http_server;
   http_server.add_route(
       "POST", "/echo",
-      [](const request& req, response& res) {
+      [](const request& req) {
+        response res;
         // The reader hides Content-Length and chunked request framing.
         if (!req.has_body_reader()) {
           res.bad_request_400().set_body("request body required");
-          return;
+          return res;
         }
         std::array<std::byte, 1024> buffer{};
         std::string text;
@@ -51,7 +52,7 @@ int main() {
           const auto state = req.get_body_reader()->read(buffer);
           if (state.has_error) {
             res.bad_request_400().set_body("unable to read request body");
-            return;
+            return res;
           }
           text.append(reinterpret_cast<const char*>(buffer.data()),
                       state.produced);
@@ -60,6 +61,7 @@ int main() {
         res.ok_200()
             .add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(text);
+        return res;
       });
   http_server.start("8080");
   signaler::wait();
