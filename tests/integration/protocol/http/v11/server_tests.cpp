@@ -722,6 +722,68 @@ DOBA_TEST("HTTP/1.1 emits no HEAD body before the following GET") {
 }
 
 // +===========================================================================+
+// | [>] preserves streamed HEAD framing before another reply   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("HTTP/1.1 preserves streamed HEAD framing before another reply") {
+  for (bool chunked : {false, true}) {
+    tcpip_client client;
+    const uint16_t port = client.find_available_port();
+    DOBA_EXPECT(port != 0);
+    server http_server;
+    http_server.add_route(
+        "HEAD", "/resource",
+        [chunked](const request&) {
+          using martianlabs::doba::protocol::http::v11::body::body_writer;
+          auto writer = chunked ? body_writer::chunked() : body_writer::raw();
+          if (!writer.write("resource")) {
+            return response::internal_server_error_500();
+          }
+          response res = response::ok_200();
+          res.set_body(std::move(writer));
+          return res;
+        });
+    http_server.add_route(
+        "GET", "/resource",
+        [](const request&) {
+          response res = response::ok_200();
+          res.set_body("resource");
+          return res;
+        });
+    const std::string port_text = std::to_string(port);
+    http_server.start(port_text.c_str());
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send_all(
+        "HEAD /resource HTTP/1.1\r\nHost: example.com\r\n\r\n"
+        "GET /resource HTTP/1.1\r\nHost: example.com\r\n\r\n"));
+    std::string head;
+    const auto deadline = std::chrono::steady_clock::now() +
+                          std::chrono::seconds(3);
+    while (!head.ends_with("\r\n\r\n")) {
+      DOBA_EXPECT(head.size() < 16384);
+      const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+          deadline - std::chrono::steady_clock::now());
+      DOBA_EXPECT(remaining.count() > 0);
+      const auto byte = client.receive(1, remaining);
+      DOBA_EXPECT(byte.has_value());
+      head += *byte;
+    }
+    DOBA_EXPECT(head.starts_with("HTTP/1.1 200 OK\r\n"));
+    if (chunked) {
+      DOBA_EXPECT(head.find("Transfer-Encoding: chunked\r\n") !=
+                  std::string::npos);
+      DOBA_EXPECT(head.find("Content-Length:") == std::string::npos);
+    } else {
+      DOBA_EXPECT(head.find("Content-Length: 8\r\n") != std::string::npos);
+      DOBA_EXPECT(head.find("Transfer-Encoding:") == std::string::npos);
+    }
+    const auto get = receive_http_response(client);
+    DOBA_EXPECT(get.has_value());
+    DOBA_EXPECT_EQUAL(get->body, "resource");
+    DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(100)));
+  }
+}
+
+// +===========================================================================+
 // | [>] delimits a 204 before a following response              ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 delimits a 204 before a following response") {

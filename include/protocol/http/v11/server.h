@@ -236,22 +236,8 @@ class server {
       res.set_header(header_names::kConnection, "close");
     }
     if (req.get_method() == method_names::kHead) {
-      // RFC 9110 S9.3.2: a HEAD response must describe the same
-      // headers a matching GET would have produced, but must never
-      // carry a message body. clear_body() also drops the framing
-      // headers, so they are captured beforehand and restored right
-      // after, using only the response's already public API.
-      bool had_cl = res.has_header(header_names::kContentLength);
-      std::string cl =
-          had_cl ? res.get_header(header_names::kContentLength).second
-                 : std::string();
-      bool had_te = res.has_header(header_names::kTransferEncoding);
-      std::string te =
-          had_te ? res.get_header(header_names::kTransferEncoding).second
-                 : std::string();
-      res.clear_body();
-      if (had_cl) res.set_header(header_names::kContentLength, cl);
-      if (had_te) res.set_header(header_names::kTransferEncoding, te);
+      // RFC 9110 S9.3.2: preserve GET framing without sending its body.
+      res.clear_body(true);
     }
   }
   // +=========================================================================+

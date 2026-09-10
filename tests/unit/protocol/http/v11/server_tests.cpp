@@ -601,9 +601,10 @@ DOBA_TEST("server completes suspended async responses") {
   DOBA_EXPECT(result.has_value());
   DOBA_EXPECT(result->has_header("Connection"));
   DOBA_EXPECT_EQUAL(result->get_header("Connection").second, "close");
-  DOBA_EXPECT(result->has_header("Content-Length"));
-  DOBA_EXPECT_EQUAL(result->get_header("Content-Length").second, "5");
-  DOBA_EXPECT(!serialize_prefix(*result).ends_with("async"));
+  DOBA_EXPECT(!result->has_header("Content-Length"));
+  const std::string prefix = serialize_prefix(*result);
+  DOBA_EXPECT(prefix.find("Content-Length: 5\r\n") != std::string::npos);
+  DOBA_EXPECT(!prefix.ends_with("async"));
   DOBA_EXPECT(request_lifetime.expired());
 
   value.stop();

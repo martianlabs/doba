@@ -25,6 +25,7 @@
 #ifndef martianlabs_doba_protocol_http_v11_response_h
 #define martianlabs_doba_protocol_http_v11_response_h
 
+#include <charconv>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -66,6 +67,10 @@ class response {
         bdy_len_(in.bdy_len_),
         status_code_(in.status_code_),
         has_date_header_(in.has_date_header_),
+        has_content_length_header_(in.has_content_length_header_),
+        has_transfer_encoding_header_(in.has_transfer_encoding_header_),
+        content_length_(in.content_length_),
+        chunked_(in.chunked_),
         bdy_writer_(std::move(in.bdy_writer_)) {
     in.sln_len_ = 0;
     in.hdr_len_ = 0;
@@ -88,6 +93,10 @@ class response {
     bdy_len_ = in.bdy_len_;
     status_code_ = in.status_code_;
     has_date_header_ = in.has_date_header_;
+    has_content_length_header_ = in.has_content_length_header_;
+    has_transfer_encoding_header_ = in.has_transfer_encoding_header_;
+    content_length_ = in.content_length_;
+    chunked_ = in.chunked_;
     bdy_writer_ = std::move(in.bdy_writer_);
     in.sln_len_ = 0;
     in.hdr_len_ = 0;
@@ -105,9 +114,6 @@ class response {
   // | The transport drains the reader in bounded segments.                    |
   // +=========================================================================+
   [[nodiscard]] std::unique_ptr<protocol::serialization_result> serialize() {
-    if (!has_date_header_) {
-      add_date_header();
-    }
     // RFC 9110 S8.6/S15.3.5/S15.3.6/S15.4.5: 1xx, 204, 205 and 304 responses
     // must never carry a message body, regardless of what a handler may have
     // set via set_body(). 1xx/204 must not advertise any body framing at all,
@@ -119,12 +125,25 @@ class response {
                           status_code_ == SC_205_RESET_CONTENT ||
                           status_code_ == SC_304_NOT_MODIFIED;
     if (must_omit_body) {
-      remove_header(header_names::kTransferEncoding);
-      if (is_informational || status_code_ == SC_204_NO_CONTENT) {
-        remove_header(header_names::kContentLength);
-      } else if (status_code_ == SC_205_RESET_CONTENT) {
-        set_header(header_names::kContentLength, "0");
+      while (has_transfer_encoding_header_) {
+        remove_header(header_names::kTransferEncoding);
       }
+      chunked_ = false;
+      if (is_informational || status_code_ == SC_204_NO_CONTENT) {
+        while (has_content_length_header_) {
+          remove_header(header_names::kContentLength);
+        }
+        content_length_.reset();
+      } else if (status_code_ == SC_205_RESET_CONTENT) {
+        while (has_content_length_header_) {
+          remove_header(header_names::kContentLength);
+        }
+        content_length_ = 0;
+      }
+    }
+    apply_body_framing();
+    if (!has_date_header_) {
+      add_date_header();
     }
     std::size_t sln_plus_hdr_len = sln_len_ + hdr_len_;
     // Write the header-terminating CRLF (plus an extra CRLF when there are no
@@ -195,6 +214,12 @@ class response {
     memory_[sln_len_ + hdr_len_] = '\n';
     hdr_len_++;
     if (iequals(k, header_names::kDate)) has_date_header_ = true;
+    if (iequals(k, header_names::kContentLength)) {
+      has_content_length_header_ = true;
+    }
+    if (iequals(k, header_names::kTransferEncoding)) {
+      has_transfer_encoding_header_ = true;
+    }
     return *this;
   }
   // +=========================================================================+
@@ -262,6 +287,7 @@ class response {
   // | control flow) of catching the exception thrown by get_header.           |
   // +-------------------------------------------------------------------------+
   bool has_header(std::string_view k) const {
+    // Automatic framing headers are emitted only by serialize().
     std::size_t line_off, val_off, val_len, line_len;
     return find_header(k, line_off, val_off, val_len, line_len);
   }
@@ -350,6 +376,12 @@ class response {
     std::memmove(&memory_[line_off], &memory_[tail_off], tail_len);
     hdr_len_ -= line_len;
     if (iequals(k, header_names::kDate)) has_date_header_ = false;
+    if (iequals(k, header_names::kContentLength)) {
+      has_content_length_header_ = has_header(k);
+    }
+    if (iequals(k, header_names::kTransferEncoding)) {
+      has_transfer_encoding_header_ = has_header(k);
+    }
     return *this;
   }
   // +=========================================================================+
@@ -366,7 +398,7 @@ class response {
     if (body_size <= limits::kMaxResponseBodySizeInMemory) {
       std::memcpy(&memory_[bdy_beg_], sv.data(), body_size);
       bdy_len_ = body_size;
-      set_header("Content-Length", body_size);
+      content_length_ = body_size;
       return *this;
     }
     // Payload does not fit in the in-memory body region: spill it into a raw
@@ -376,7 +408,7 @@ class response {
       throw std::runtime_error("unable to write body!");
     }
     bdy_writer_.emplace(std::move(writer));
-    apply_body_framing();
+    content_length_ = bdy_writer_->bytes_written();
     return *this;
   }
   // +=========================================================================+
@@ -384,23 +416,20 @@ class response {
   // +=========================================================================+
   // | Adopts a caller-built body::body_writer (possibly already written to)   |
   // | as the response body, replacing any previously set body. Framing        |
-  // | headers are derived from the writer: chunked writers get                |
-  // | 'Transfer-Encoding: chunked', raw ones a 'Content-Length' matching the  |
-  // | bytes written so far.                                                   |
+  // | headers are emitted at serialization from the writer's mode and size.   |
   // +-------------------------------------------------------------------------+
   response& set_body(body::body_writer&& writer) {
     reset_body();
     bdy_writer_.emplace(std::move(writer));
-    apply_body_framing();
+    chunked_ = bdy_writer_->is_chunked();
+    if (!chunked_) content_length_ = bdy_writer_->bytes_written();
     return *this;
   }
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
   // +=========================================================================+
   // | Convenience overload for numeric types: converts the value to a string  |
-  // | and stores it as the response body. Framing headers are derived from    |
-  // | the writer: chunked writers get 'Transfer-Encoding: chunked',           |
-  // | raw ones a 'Content-Length' matching the bytes written so far.          |
+  // | and stores it as the response body with deferred framing.               |
   // +-------------------------------------------------------------------------+
   template <typename T>
     requires std::is_arithmetic_v<T>
@@ -410,17 +439,22 @@ class response {
   // +=========================================================================+
   // | [>] clear_body                                               ( public ) |
   // +=========================================================================+
-  // | Discards any body bytes previously set via set_body(), and removes the  |
-  // | framing headers that described it (Content-Length/Transfer-Encoding),   |
-  // | leaving the response as if set_body() had never been called. Symmetric  |
-  // | counterpart to set_body(): it never leaves a framing header pointing    |
-  // | to bytes that are no longer sent.                                       |
+  // | Discards body bytes and explicit and deferred framing.                  |
+  // | preserve_framing retains the advertised framing for HEAD responses.     |
   // +-------------------------------------------------------------------------+
-  response& clear_body() {
+  response& clear_body(bool preserve_framing = false) {
     bdy_len_ = 0;
     bdy_writer_.reset();
-    remove_header(header_names::kContentLength);
-    remove_header(header_names::kTransferEncoding);
+    if (!preserve_framing) {
+      content_length_.reset();
+      chunked_ = false;
+      while (has_content_length_header_) {
+        remove_header(header_names::kContentLength);
+      }
+      while (has_transfer_encoding_header_) {
+        remove_header(header_names::kTransferEncoding);
+      }
+    }
     return *this;
   }
   // +=========================================================================+
@@ -648,23 +682,46 @@ class response {
   // | former body instead of accumulating state.                              |
   // +-------------------------------------------------------------------------+
   void reset_body() {
-    bdy_len_ = 0;
-    bdy_writer_.reset();
-    remove_header("Transfer-Encoding");
-    remove_header("Content-Length");
+    clear_body();
   }
   // +=========================================================================+
   // | [>] apply_body_framing                                      ( private ) |
   // +=========================================================================+
-  // | Emits the framing header matching the currently owned body writer:      |
-  // | 'Transfer-Encoding: chunked' for chunked writers, otherwise a           |
-  // | 'Content-Length' derived from the raw bytes written so far.             |
+  // | Emits deferred framing unless an explicit header already supplies it.   |
   // +-------------------------------------------------------------------------+
   void apply_body_framing() {
-    if (bdy_writer_->is_chunked()) {
-      set_header("Transfer-Encoding", "chunked");
-    } else {
-      set_header("Content-Length", bdy_writer_->bytes_written());
+    // RFC 9112 S6.2: a sender must not combine Content-Length and TE.
+    if (has_content_length_header_ &&
+        (has_transfer_encoding_header_ || chunked_)) {
+      throw std::invalid_argument("conflicting response framing headers!");
+    }
+    if (has_content_length_header_ || has_transfer_encoding_header_) return;
+    std::size_t space_left = bdy_beg_ - sln_len_ - hdr_len_;
+    char* out = &memory_[sln_len_ + hdr_len_];
+    if (chunked_) {
+      constexpr std::string_view line = "Transfer-Encoding: chunked\r\n";
+      if (line.size() + 2 > space_left) {
+        throw std::out_of_range("not enough space to serialize response!");
+      }
+      std::memcpy(out, line.data(), line.size());
+      hdr_len_ += line.size();
+      has_transfer_encoding_header_ = true;
+    } else if (content_length_) {
+      constexpr std::string_view prefix = "Content-Length: ";
+      if (prefix.size() + 1 + 4 > space_left) {
+        throw std::out_of_range("not enough space to serialize response!");
+      }
+      const auto converted = std::to_chars(
+          out + prefix.size(), memory_.get() + bdy_beg_ - 4,
+          *content_length_);
+      if (converted.ec != std::errc()) {
+        throw std::out_of_range("not enough space to serialize response!");
+      }
+      std::memcpy(out, prefix.data(), prefix.size());
+      converted.ptr[0] = '\r';
+      converted.ptr[1] = '\n';
+      hdr_len_ += static_cast<std::size_t>(converted.ptr - out) + 2;
+      has_content_length_header_ = true;
     }
   }
   // +=========================================================================+
@@ -732,9 +789,9 @@ class response {
     std::memcpy(memory_.get(), status_line.data(), sln_len_);
     // RFC 9110 S8.6: 1xx/204 forbid Content-Length; 304 needs a known size.
     bool is_informational = status_code < SC_200_OK;
-    if (!is_informational && status_code != SC_204_NO_CONTENT &&
-        status_code != SC_304_NOT_MODIFIED) {
-      set_header("Content-Length", 0);
+    if (is_informational || status_code == SC_204_NO_CONTENT ||
+        status_code == SC_304_NOT_MODIFIED) {
+      content_length_.reset();
     }
   }
   // +=========================================================================+
@@ -748,6 +805,10 @@ class response {
   std::size_t bdy_len_{0};
   int status_code_{SC_200_OK};
   bool has_date_header_{false};
+  bool has_content_length_header_{false};
+  bool has_transfer_encoding_header_{false};
+  std::optional<std::size_t> content_length_{0};
+  bool chunked_{false};
   std::optional<body::body_writer> bdy_writer_;
 };
 }  // namespace martianlabs::doba::protocol::http::v11
