@@ -102,12 +102,14 @@ DOBA_TEST("concurrent serialization preserves HTTP dates") {
     threads.emplace_back([&, thread] {
       start.arrive_and_wait();
       while (std::chrono::steady_clock::now() < end) {
-        response value;
+        response value = response::ok_200();
         auto serialized = value.serialize();
-        const std::size_t begin = serialized->prefix.find("Date: ");
+        const std::string serialized_prefix(serialized->prefix.get(),
+                                            serialized->prefix_size);
+        const std::size_t begin = serialized_prefix.find("Date: ");
         operations[thread]++;
         if (begin == std::string::npos ||
-            !valid_http_date(serialized->prefix.substr(begin + 6, 29))) {
+            !valid_http_date(serialized_prefix.substr(begin + 6, 29))) {
           valid.store(false);
           return;
         }

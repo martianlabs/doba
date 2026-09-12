@@ -35,20 +35,22 @@ int main() {
   server http_server;
   http_server.add_route(
       "POST", "/echo",
-      [](const request& req, response& res) {
+      [](const request& req) {
+        response res = response::ok_200();
         std::array<std::byte, 1024> buffer{};
         std::string body;
         for (;;) {
           const auto state = req.get_body_reader()->read(buffer);
           if (state.has_error) {
-            res.bad_request_400();
-            return;
+            res = response::bad_request_400();
+            return res;
           }
           body.append(reinterpret_cast<const char*>(buffer.data()),
                       state.produced);
           if (state.complete) break;
         }
-        res.ok_200().set_body(body);
+        res.set_body(body);
+        return res;
       });
   http_server.start("8080");
   signaler::wait();

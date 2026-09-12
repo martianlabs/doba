@@ -32,6 +32,7 @@
 #include <optional>
 #include <stop_token>
 #include <utility>
+#include <variant>
 
 #include "common/task.h"
 #include "platform.h"
@@ -45,12 +46,10 @@ namespace martianlabs::doba::transport::server {
 struct types {
   template <typename RQty, typename RSty>
   using on_request_delegate =
-      std::function<std::optional<common::task<RSty>>(
-          const std::shared_ptr<RQty>&, RSty&,
-          const std::stop_token&)>;
+      std::function<std::variant<RSty, common::task<RSty>>(
+          const std::shared_ptr<RQty>&, const std::stop_token&)>;
   template <typename RSty>
-  using on_bad_request_delegate =
-      std::function<void(int, std::string_view, RSty&)>;
+  using on_bad_request_delegate = std::function<RSty(int, std::string_view)>;
   using on_client_connected_delegate = std::function<void()>;
   using on_client_disconnected_delegate = std::function<void()>;
 };

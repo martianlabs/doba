@@ -53,10 +53,11 @@ int main() {
   server srv;
   srv.add_route(
       "GET", "/hello",
-      [](const request&, response& res) {
-        res.ok_200()
-            .add_header("Content-Type", "text/plain")
+      [](const request&) {
+        response res = response::ok_200();
+        res.add_header("Content-Type", "text/plain")
             .set_body("hello from doba");
+        return res;
       });
   srv.start("8080");
   signaler::wait();

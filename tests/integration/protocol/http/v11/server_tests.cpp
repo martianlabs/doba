@@ -46,7 +46,7 @@ using martianlabs::doba::common::task;
 
 void echo_request(const request& req, response& res) {
   if (!req.has_body_reader()) {
-    res.bad_request_400();
+    res = response::bad_request_400();
     return;
   }
   std::array<std::byte, 4096> buffer{};
@@ -54,16 +54,17 @@ void echo_request(const request& req, response& res) {
   for (std::size_t i = 0; i < 1024; i++) {
     const auto state = req.get_body_reader()->read(buffer);
     if (state.has_error) {
-      res.bad_request_400();
+      res = response::bad_request_400();
       return;
     }
     body.append(reinterpret_cast<const char*>(buffer.data()), state.produced);
     if (state.complete) {
-      res.ok_200().set_body(body);
+      res = response::ok_200();
+      res.set_body(body);
       return;
     }
   }
-  res.bad_request_400();
+  res = response::bad_request_400();
 }
 }  // namespace
 
@@ -78,7 +79,11 @@ DOBA_TEST("HTTP/1.1 echoes a body after 100 Continue") {
   server http_server;
   http_server.add_route(
       "POST", "/echo",
-      [](const request& req, response& res) { echo_request(req, res); });
+      [](const request& req) {
+        response res = response::ok_200();
+        echo_request(req, res);
+        return res;
+      });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -109,7 +114,11 @@ DOBA_TEST("HTTP/1.1 ignores invalid If-Modified-Since") {
   server http_server;
   http_server.add_route(
       "GET", "/resource",
-      [](const request&, response& res) { res.ok_200().set_body("resource"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("resource");
+        return res;
+      });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -133,7 +142,11 @@ DOBA_TEST("HTTP/1.1 ignores invalid If-Unmodified-Since") {
   server http_server;
   http_server.add_route(
       "GET", "/resource",
-      [](const request&, response& res) { res.ok_200().set_body("resource"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("resource");
+        return res;
+      });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -157,7 +170,11 @@ DOBA_TEST("HTTP/1.1 reports the allowed method") {
   server http_server;
   http_server.add_route(
       "GET", "/resource",
-      [](const request&, response& res) { res.ok_200().set_body("resource"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("resource");
+        return res;
+      });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -182,13 +199,25 @@ DOBA_TEST("HTTP/1.1 reuses a connection for sequential requests") {
   server http_server;
   http_server.add_route(
       "GET", "/one",
-      [](const request&, response& res) { res.ok_200().set_body("one"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("one");
+        return res;
+      });
   http_server.add_route(
       "GET", "/two",
-      [](const request&, response& res) { res.ok_200().set_body("two"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("two");
+        return res;
+      });
   http_server.add_route(
       "GET", "/three",
-      [](const request&, response& res) { res.ok_200().set_body("three"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("three");
+        return res;
+      });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -217,13 +246,25 @@ DOBA_TEST("HTTP/1.1 orders three synchronous pipelined responses") {
   server http_server;
   http_server.add_route(
       "GET", "/one",
-      [](const request&, response& res) { res.ok_200().set_body("one"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("one");
+        return res;
+      });
   http_server.add_route(
       "GET", "/two",
-      [](const request&, response& res) { res.ok_200().set_body("two"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("two");
+        return res;
+      });
   http_server.add_route(
       "GET", "/three",
-      [](const request&, response& res) { res.ok_200().set_body("three"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("three");
+        return res;
+      });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -263,15 +304,16 @@ DOBA_TEST("HTTP/1.1 keeps synchronous responses behind a suspended handler") {
         std::stop_callback cancellation(
             token, [signal]() { signal->resume(); });
         co_await *signal;
-        response res;
-        res.ok_200().set_body("first");
+        response res = response::ok_200();
+        res.set_body("first");
         co_return res;
       });
-  http_server.add_route(
-      "GET", "/second", [&](const request&, response& res) {
-        second_calls.fetch_add(1);
-        res.ok_200().set_body("second");
-      });
+  http_server.add_route("GET", "/second", [&](const request&) {
+    response res = response::ok_200();
+    second_calls.fetch_add(1);
+    res.set_body("second");
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -311,8 +353,8 @@ DOBA_TEST("HTTP/1.1 orders asynchronous responses by request order") {
         std::stop_callback cancellation(
             token, [first_signal]() { first_signal->resume(); });
         co_await *first_signal;
-        response res;
-        res.ok_200().set_body("first");
+        response res = response::ok_200();
+        res.set_body("first");
         co_return res;
       });
   http_server.add_route(
@@ -323,8 +365,8 @@ DOBA_TEST("HTTP/1.1 orders asynchronous responses by request order") {
             token, [second_signal]() { second_signal->resume(); });
         co_await *second_signal;
         second_completed.fetch_add(1);
-        response res;
-        res.ok_200().set_body("second");
+        response res = response::ok_200();
+        res.set_body("second");
         co_return res;
       });
   const std::string port_text = std::to_string(port);
@@ -359,14 +401,19 @@ DOBA_TEST("HTTP/1.1 preserves pipeline framing after a raw body") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "POST", "/echo", [&](const request& req, response& res) {
-        calls.fetch_add(1);
-        echo_request(req, res);
-      });
+  http_server.add_route("POST", "/echo", [&](const request& req) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    echo_request(req, res);
+    return res;
+  });
   http_server.add_route(
       "GET", "/next",
-      [](const request&, response& res) { res.ok_200().set_body("next"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("next");
+        return res;
+      });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -396,14 +443,19 @@ DOBA_TEST("HTTP/1.1 preserves pipeline framing after a chunked body") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "POST", "/echo", [&](const request& req, response& res) {
-        calls.fetch_add(1);
-        echo_request(req, res);
-      });
+  http_server.add_route("POST", "/echo", [&](const request& req) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    echo_request(req, res);
+    return res;
+  });
   http_server.add_route(
       "GET", "/next",
-      [](const request&, response& res) { res.ok_200().set_body("next"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("next");
+        return res;
+      });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -433,11 +485,12 @@ DOBA_TEST("HTTP/1.1 waits for the final head delimiter") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "GET", "/resource", [&](const request&, response& res) {
-        calls.fetch_add(1);
-        res.ok_200().set_body("resource");
-      });
+  http_server.add_route("GET", "/resource", [&](const request&) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    res.set_body("resource");
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -465,11 +518,12 @@ DOBA_TEST("HTTP/1.1 waits for a complete fragmented raw body") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "POST", "/echo", [&](const request& req, response& res) {
-        calls.fetch_add(1);
-        echo_request(req, res);
-      });
+  http_server.add_route("POST", "/echo", [&](const request& req) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    echo_request(req, res);
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -505,11 +559,12 @@ DOBA_TEST("HTTP/1.1 waits for a complete fragmented chunked body") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "POST", "/echo", [&](const request& req, response& res) {
-        calls.fetch_add(1);
-        echo_request(req, res);
-      });
+  http_server.add_route("POST", "/echo", [&](const request& req) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    echo_request(req, res);
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -547,11 +602,12 @@ DOBA_TEST("HTTP/1.1 echoes raw bodies across the spill threshold") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "POST", "/echo", [&](const request& req, response& res) {
-        calls.fetch_add(1);
-        echo_request(req, res);
-      });
+  http_server.add_route("POST", "/echo", [&](const request& req) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    echo_request(req, res);
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -586,11 +642,12 @@ DOBA_TEST("HTTP/1.1 echoes chunked bodies across the spill threshold") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "POST", "/echo", [&](const request& req, response& res) {
-        calls.fetch_add(1);
-        echo_request(req, res);
-      });
+  http_server.add_route("POST", "/echo", [&](const request& req) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    echo_request(req, res);
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -634,10 +691,18 @@ DOBA_TEST("HTTP/1.1 emits no HEAD body before the following GET") {
   server http_server;
   http_server.add_route(
       "GET", "/resource",
-      [](const request&, response& res) { res.ok_200().set_body("resource"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("resource");
+        return res;
+      });
   http_server.add_route(
       "HEAD", "/resource",
-      [](const request&, response& res) { res.ok_200().set_body("resource"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("resource");
+        return res;
+      });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -657,6 +722,68 @@ DOBA_TEST("HTTP/1.1 emits no HEAD body before the following GET") {
 }
 
 // +===========================================================================+
+// | [>] preserves streamed HEAD framing before another reply   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("HTTP/1.1 preserves streamed HEAD framing before another reply") {
+  for (bool chunked : {false, true}) {
+    tcpip_client client;
+    const uint16_t port = client.find_available_port();
+    DOBA_EXPECT(port != 0);
+    server http_server;
+    http_server.add_route(
+        "HEAD", "/resource",
+        [chunked](const request&) {
+          using martianlabs::doba::protocol::http::v11::body::body_writer;
+          auto writer = chunked ? body_writer::chunked() : body_writer::raw();
+          if (!writer.write("resource")) {
+            return response::internal_server_error_500();
+          }
+          response res = response::ok_200();
+          res.set_body(std::move(writer));
+          return res;
+        });
+    http_server.add_route(
+        "GET", "/resource",
+        [](const request&) {
+          response res = response::ok_200();
+          res.set_body("resource");
+          return res;
+        });
+    const std::string port_text = std::to_string(port);
+    http_server.start(port_text.c_str());
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send_all(
+        "HEAD /resource HTTP/1.1\r\nHost: example.com\r\n\r\n"
+        "GET /resource HTTP/1.1\r\nHost: example.com\r\n\r\n"));
+    std::string head;
+    const auto deadline = std::chrono::steady_clock::now() +
+                          std::chrono::seconds(3);
+    while (!head.ends_with("\r\n\r\n")) {
+      DOBA_EXPECT(head.size() < 16384);
+      const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+          deadline - std::chrono::steady_clock::now());
+      DOBA_EXPECT(remaining.count() > 0);
+      const auto byte = client.receive(1, remaining);
+      DOBA_EXPECT(byte.has_value());
+      head += *byte;
+    }
+    DOBA_EXPECT(head.starts_with("HTTP/1.1 200 OK\r\n"));
+    if (chunked) {
+      DOBA_EXPECT(head.find("Transfer-Encoding: chunked\r\n") !=
+                  std::string::npos);
+      DOBA_EXPECT(head.find("Content-Length:") == std::string::npos);
+    } else {
+      DOBA_EXPECT(head.find("Content-Length: 8\r\n") != std::string::npos);
+      DOBA_EXPECT(head.find("Transfer-Encoding:") == std::string::npos);
+    }
+    const auto get = receive_http_response(client);
+    DOBA_EXPECT(get.has_value());
+    DOBA_EXPECT_EQUAL(get->body, "resource");
+    DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(100)));
+  }
+}
+
+// +===========================================================================+
 // | [>] delimits a 204 before a following response              ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 delimits a 204 before a following response") {
@@ -666,12 +793,18 @@ DOBA_TEST("HTTP/1.1 delimits a 204 before a following response") {
   server http_server;
   http_server.add_route(
       "GET", "/empty",
-      [](const request&, response& res) {
-        res.no_content_204().set_body("hidden");
+      [](const request&) {
+        response res = response::no_content_204();
+        res.set_body("hidden");
+        return res;
       });
   http_server.add_route(
       "GET", "/resource",
-      [](const request&, response& res) { res.ok_200().set_body("resource"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("resource");
+        return res;
+      });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -699,11 +832,12 @@ DOBA_TEST("HTTP/1.1 rejects invalid header syntax and its successor") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "GET", "/resource", [&](const request&, response& res) {
-        calls.fetch_add(1);
-        res.ok_200().set_body("unexpected");
-      });
+  http_server.add_route("GET", "/resource", [&](const request&) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    res.set_body("unexpected");
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -729,11 +863,12 @@ DOBA_TEST("HTTP/1.1 rejects invalid dispatched header values and its successor")
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "GET", "/resource", [&](const request&, response& res) {
-        calls.fetch_add(1);
-        res.ok_200().set_body("unexpected");
-      });
+  http_server.add_route("GET", "/resource", [&](const request&) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    res.set_body("unexpected");
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -772,15 +907,16 @@ DOBA_TEST("HTTP/1.1 retains suspended request views across later heads") {
                            query.has_value() && query->second == "value" &&
                            req->get_header("X-Id").second == "first" &&
                            req->get_header("Host").second == "first.example";
-        response res;
-        res.ok_200().set_body(valid ? "retained" : "corrupt");
+        response res = response::ok_200();
+        res.set_body(valid ? "retained" : "corrupt");
         co_return res;
       });
-  http_server.add_route(
-      "GET", "/later", [&](const request& req, response& res) {
-        later_calls.fetch_add(1);
-        res.ok_200().set_body(req.get_header("X-Id").second);
-      });
+  http_server.add_route("GET", "/later", [&](const request& req) {
+    response res = response::ok_200();
+    later_calls.fetch_add(1);
+    res.set_body(req.get_header("X-Id").second);
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -821,11 +957,12 @@ DOBA_TEST("HTTP/1.1 drains a complete request after a half close") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "POST", "/echo", [&](const request& req, response& res) {
-        calls.fetch_add(1);
-        echo_request(req, res);
-      });
+  http_server.add_route("POST", "/echo", [&](const request& req) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    echo_request(req, res);
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -851,11 +988,12 @@ DOBA_TEST("HTTP/1.1 closes incomplete raw input without dispatch") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "POST", "/echo", [&](const request& req, response& res) {
-        calls.fetch_add(1);
-        echo_request(req, res);
-      });
+  http_server.add_route("POST", "/echo", [&](const request& req) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    echo_request(req, res);
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -880,11 +1018,12 @@ DOBA_TEST("HTTP/1.1 closes incomplete chunked input without dispatch") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "POST", "/echo", [&](const request& req, response& res) {
-        calls.fetch_add(1);
-        echo_request(req, res);
-      });
+  http_server.add_route("POST", "/echo", [&](const request& req) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    echo_request(req, res);
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -909,11 +1048,12 @@ DOBA_TEST("HTTP/1.1 preserves binary raw payload bytes") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "POST", "/echo", [&](const request& req, response& res) {
-        calls.fetch_add(1);
-        echo_request(req, res);
-      });
+  http_server.add_route("POST", "/echo", [&](const request& req) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    echo_request(req, res);
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -943,11 +1083,12 @@ DOBA_TEST("HTTP/1.1 omits interim responses when the body is already complete") 
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "POST", "/echo", [&](const request& req, response& res) {
-        calls.fetch_add(1);
-        echo_request(req, res);
-      });
+  http_server.add_route("POST", "/echo", [&](const request& req) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    echo_request(req, res);
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -971,11 +1112,12 @@ DOBA_TEST("HTTP/1.1 sends one interim while a fragmented body is pending") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
   server http_server;
-  http_server.add_route(
-      "POST", "/echo", [&](const request& req, response& res) {
-        calls.fetch_add(1);
-        echo_request(req, res);
-      });
+  http_server.add_route("POST", "/echo", [&](const request& req) {
+    response res = response::ok_200();
+    calls.fetch_add(1);
+    echo_request(req, res);
+    return res;
+  });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -1015,10 +1157,18 @@ DOBA_TEST("HTTP/1.1 completes a large response before a short successor") {
   server http_server;
   http_server.add_route(
       "GET", "/large",
-      [&](const request&, response& res) { res.ok_200().set_body(payload); });
+      [&](const request&) {
+        response res = response::ok_200();
+        res.set_body(payload);
+        return res;
+      });
   http_server.add_route(
       "GET", "/next",
-      [](const request&, response& res) { res.ok_200().set_body("next"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("next");
+        return res;
+      });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));
@@ -1059,13 +1209,17 @@ DOBA_TEST("HTTP/1.1 cancels a suspended request after client reset") {
         });
         co_await *signal;
         completed.fetch_add(1);
-        response res;
-        res.ok_200().set_body("cancelled");
+        response res = response::ok_200();
+        res.set_body("cancelled");
         co_return res;
       });
   http_server.add_route(
       "GET", "/next",
-      [](const request&, response& res) { res.ok_200().set_body("next"); });
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("next");
+        return res;
+      });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   DOBA_EXPECT(client.connect(port));

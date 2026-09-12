@@ -69,9 +69,15 @@ or an outstanding I/O operation.
 
 ## Keep the common path direct
 
-Synchronous handlers run directly and produce a response without requiring a
-coroutine task. Deferred handlers use C++20 coroutines, retain the request
-for their lifetime, and receive a cancellation token.
+Synchronous handlers run directly and return a move-only response by value:
+`response(const request&, ...)`. Deferred handlers retain
+`task<response>(shared_ptr<const request>, stop_token, ...)`, keeping the
+request alive and receiving a cancellation token.
+
+The server-to-transport callback returns `variant<Response, task<Response>>`.
+Error callbacks also return a response by value. The transport serializes
+each immediate or completed response before enqueuing its owned prefix and
+optional body reader.
 
 A deferred response reserves its position in the connection's response order.
 Completion can happen out of order; transmission follows the reserved order.
@@ -94,6 +100,39 @@ This keeps mutable connection state close to the work that consumes it.
 Both backends obey the same ordering, cancellation, and lifecycle contracts.
 Graceful closure drains responses that are safe to send; fatal failure stops
 transmission when continuing would corrupt the stream.
+
+## Construct and transfer responses
+
+Create each response through its status factory, for example:
+
+```cpp
+auto res = response::ok_200();
+res.set_body("ok");
+return res;
+```
+
+The constructor that allocates storage is private. Status factories write
+the status line and establish the header offset before any fields are added.
+The buffer has fixed capacity and is allocated without zero initialization.
+Move construction and move assignment remain public and noexcept.
+To replace a status, assign a fresh response, such as
+`res = response::not_found_404()`. This discards the previous fields and body.
+Synchronous parametrized invocation throws when extraction or conversion
+fails, matching the asynchronous adapter; it never returns an uninitialized
+response or invokes the handler on invalid parameters.
+
+Serialization consumes the response. The returned serialization_result owns
+`prefix` as a unique_ptr<char[]> and bounds its initialized bytes with
+`prefix_size`. A zero length may use a null pointer. Any body reader is owned
+by the result as before. After serialization or moving from a response, only
+destroy it or assign another response before using it again.
+
+The status line and headers are already in their final positions. Serialization
+adds the terminating CRLF, compacts any inline body with memmove (the regions
+may overlap), and transfers the buffer. It does not copy the header block into
+a separate string. Both transports still copy these bytes into their send
+buffers at the existing point in the queue; serialization timing is unchanged.
+Existing HTTP field, framing and body-suppression rules remain unchanged.
 
 ## Control data movement as bodies grow
 

@@ -25,8 +25,9 @@
 #ifndef martianlabs_doba_protocol_serialization_h
 #define martianlabs_doba_protocol_serialization_h
 
+#include <cstddef>
+#include <memory>
 #include <optional>
-#include <string>
 
 #include "common/reader.h"
 
@@ -35,17 +36,17 @@ namespace martianlabs::doba::protocol {
 // +---------------------------------------------------------------------------+
 // | [>] serialization_result                                       ( struct ) |
 // +---------------------------------------------------------------------------+
-// | An owned protocol-to-transport handoff. prefix contains all bytes already |
-// | materialized by the protocol (typically control data and any small inline |
-// | payload). source, when present, is a generic byte reader owned by the     |
-// | transport and consumed later in bounded segments.                         |
+// | Owns prefix_size initialized bytes in prefix. An empty prefix may be null.|
+// | source, when present, is a generic byte reader owned by the transport     |
+// | and consumed later in bounded segments.                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct serialization_result {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +=========================================================================+
-  std::string prefix;
+  std::unique_ptr<char[]> prefix;
+  std::size_t prefix_size{0};
   std::optional<common::reader> source;
 };
 }  // namespace martianlabs::doba::protocol

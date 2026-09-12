@@ -34,13 +34,14 @@ int main() {
   server http_server;
   http_server.add_route(
       "GET", "/headers",
-      [](const request&, response& res) {
-        res.ok_200()
-            .add_header("X-Example", "first")
+      [](const request&) {
+        response res = response::ok_200();
+        res.add_header("X-Example", "first")
             .set_header("X-Example", "replaced")
             .add_header("X-Remove", "value")
             .remove_header("X-Remove");
         res.set_body(res.get_header("X-Example").second);
+        return res;
       });
   http_server.start("8080");
   signaler::wait();

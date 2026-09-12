@@ -78,9 +78,10 @@ class server {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     if (locked_) return;
     transport_.set_on_request(
-        [this](const std::shared_ptr<RQty>& req, RSty& res,
+        [this](const std::shared_ptr<RQty>& req,
                const std::stop_token& stop_token)
-            -> std::optional<common::task<RSty>> {
+            -> std::variant<RSty, common::task<RSty>> {
+          std::optional<RSty> res;
           switch (req->get_target()) {
             case target::kOriginForm:
             case target::kAbsoluteForm: {
@@ -97,7 +98,7 @@ class server {
                       async_req,
                       match.handler->async_callback(async_req, stop_token));
                 }
-                match.handler->callback(*req, res);
+                res.emplace(match.handler->callback(*req));
               } else if (match.parametrized_handler) {
                 if (match.parametrized_handler->is_async()) {
                   std::shared_ptr<const RQty> async_req(req);
@@ -105,15 +106,15 @@ class server {
                       async_req, match.parametrized_handler->invoke_async(
                                      async_req, stop_token, abs_path));
                 }
-                match.parametrized_handler->invoke(*req, res, abs_path);
+                res.emplace(match.parametrized_handler->invoke(*req, abs_path));
               } else {
                 std::string allowed_methods =
                     router_.allowed_methods(abs_path);
                 if (allowed_methods.empty()) {
-                  res.not_found_404();
+                  res.emplace(RSty::not_found_404());
                 } else {
-                  res.method_not_allowed_405();
-                  res.set_header(header_names::kAllow, allowed_methods);
+                  res.emplace(RSty::method_not_allowed_405());
+                  res->set_header(header_names::kAllow, allowed_methods);
                 }
               }
               break;
@@ -126,54 +127,56 @@ class server {
               // drive the raw-byte relay, keeping this server-side transport
               // agnostic of CONNECT. Until that module exists, the request
               // must not be left unanswered.
-              res.not_implemented_501();
+              res.emplace(RSty::not_implemented_501());
               break;
             case target::kAsteriskForm:
               // OPTIONS * (RFC 9110 S9.3.7) addresses the server in general
               // rather than a specific resource; acknowledge it without
               // routing to a handler.
-              res.ok_200();
+              res.emplace(RSty::ok_200());
               break;
             default:
-              res.bad_request_400();
+              res.emplace(RSty::bad_request_400());
               break;
           }
-          apply_response_rules(*req, res);
-          return std::nullopt;
+          apply_response_rules(*req, *res);
+          return std::move(*res);
         });
     transport_.set_on_bad_request(
-        [](int code, std::string_view reason, RSty& res) {
+        [](int code, std::string_view reason) {
+          std::optional<RSty> res;
           // The transport hands back the neutral reason recorded by the
           // decoder; only the HTTP layer knows how to translate it into a
           // status code (RFC 9110 semantics live here, not in the transport).
           switch (static_cast<rejection_reason>(code)) {
             case rejection_reason::kPayloadTooLarge:
-              res.content_too_large_413().set_body(reason);
+              res.emplace(RSty::content_too_large_413()).set_body(reason);
               break;
             case rejection_reason::kUnsupportedFeature:
-              res.not_implemented_501().set_body(reason);
+              res.emplace(RSty::not_implemented_501()).set_body(reason);
               break;
             case rejection_reason::kVersionNotSupported:
-              res.http_version_not_supported_505().set_body(reason);
+              res.emplace(RSty::http_version_not_supported_505()).set_body(reason);
               break;
             case rejection_reason::kUriTooLong:
-              res.uri_too_long_414().set_body(reason);
+              res.emplace(RSty::uri_too_long_414()).set_body(reason);
               break;
             case rejection_reason::kHeaderFieldsTooLarge:
-              res.request_header_fields_too_large_431().set_body(reason);
+              res.emplace(RSty::request_header_fields_too_large_431()).set_body(reason);
               break;
             case rejection_reason::kHandlerError:
-              res.internal_server_error_500().set_body(reason);
+              res.emplace(RSty::internal_server_error_500()).set_body(reason);
               break;
             case rejection_reason::kExpectationFailed:
-              res.expectation_failed_417().set_body(reason);
+              res.emplace(RSty::expectation_failed_417()).set_body(reason);
               break;
             case rejection_reason::kSyntax:
             case rejection_reason::kNone:
             default:
-              res.bad_request_400().set_body(reason);
+              res.emplace(RSty::bad_request_400()).set_body(reason);
               break;
           }
+          return std::move(*res);
         });
     transport_.set_on_connection([this]() { connections_++; });
     transport_.set_on_disconnection([this]() { connections_--; });
@@ -233,22 +236,8 @@ class server {
       res.set_header(header_names::kConnection, "close");
     }
     if (req.get_method() == method_names::kHead) {
-      // RFC 9110 S9.3.2: a HEAD response must describe the same
-      // headers a matching GET would have produced, but must never
-      // carry a message body. clear_body() also drops the framing
-      // headers, so they are captured beforehand and restored right
-      // after, using only the response's already public API.
-      bool had_cl = res.has_header(header_names::kContentLength);
-      std::string cl =
-          had_cl ? res.get_header(header_names::kContentLength).second
-                 : std::string();
-      bool had_te = res.has_header(header_names::kTransferEncoding);
-      std::string te =
-          had_te ? res.get_header(header_names::kTransferEncoding).second
-                 : std::string();
-      res.clear_body();
-      if (had_cl) res.set_header(header_names::kContentLength, cl);
-      if (had_te) res.set_header(header_names::kTransferEncoding, te);
+      // RFC 9110 S9.3.2: preserve GET framing without sending its body.
+      res.clear_body(true);
     }
   }
   // +=========================================================================+

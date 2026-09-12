@@ -25,6 +25,8 @@
 #ifndef martianlabs_doba_protocol_http_v11_response_h
 #define martianlabs_doba_protocol_http_v11_response_h
 
+#include <charconv>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <utility>
@@ -56,17 +58,20 @@ class response {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  response() = default;
   response(const response&) = delete;
   response(response&& in) noexcept
-      : sln_len_(in.sln_len_),
+      : memory_(std::move(in.memory_)),
+        sln_len_(in.sln_len_),
         hdr_len_(in.hdr_len_),
         bdy_beg_(in.bdy_beg_),
         bdy_len_(in.bdy_len_),
         status_code_(in.status_code_),
         has_date_header_(in.has_date_header_),
+        has_content_length_header_(in.has_content_length_header_),
+        has_transfer_encoding_header_(in.has_transfer_encoding_header_),
+        content_length_(in.content_length_),
+        chunked_(in.chunked_),
         bdy_writer_(std::move(in.bdy_writer_)) {
-    std::memcpy(memory_, in.memory_, sizeof(memory_));
     in.sln_len_ = 0;
     in.hdr_len_ = 0;
     in.bdy_len_ = 0;
@@ -81,13 +86,17 @@ class response {
   response& operator=(const response&) = delete;
   response& operator=(response&& in) noexcept {
     if (this == &in) return *this;
-    std::memcpy(memory_, in.memory_, sizeof(memory_));
+    memory_ = std::move(in.memory_);
     sln_len_ = in.sln_len_;
     hdr_len_ = in.hdr_len_;
     bdy_beg_ = in.bdy_beg_;
     bdy_len_ = in.bdy_len_;
     status_code_ = in.status_code_;
     has_date_header_ = in.has_date_header_;
+    has_content_length_header_ = in.has_content_length_header_;
+    has_transfer_encoding_header_ = in.has_transfer_encoding_header_;
+    content_length_ = in.content_length_;
+    chunked_ = in.chunked_;
     bdy_writer_ = std::move(in.bdy_writer_);
     in.sln_len_ = 0;
     in.hdr_len_ = 0;
@@ -100,14 +109,11 @@ class response {
   // +=========================================================================+
   // | [>] serialize                                                ( public ) |
   // +=========================================================================+
-  // | Finalizes and transfers the wire prefix plus an optional streaming body |
-  // | to the transport. It never drains a streaming body; the receiver owns   |
-  // | the reader and controls bounded reads after response is destroyed.      |
+  // | Transfers owned bytes and an optional body reader to the transport.     |
+  // | Consumes this response; destroy or reassign it before further use.      |
+  // | The transport drains the reader in bounded segments.                    |
   // +=========================================================================+
   [[nodiscard]] std::unique_ptr<protocol::serialization_result> serialize() {
-    if (!has_date_header_) {
-      add_date_header();
-    }
     // RFC 9110 S8.6/S15.3.5/S15.3.6/S15.4.5: 1xx, 204, 205 and 304 responses
     // must never carry a message body, regardless of what a handler may have
     // set via set_body(). 1xx/204 must not advertise any body framing at all,
@@ -119,12 +125,25 @@ class response {
                           status_code_ == SC_205_RESET_CONTENT ||
                           status_code_ == SC_304_NOT_MODIFIED;
     if (must_omit_body) {
-      remove_header(header_names::kTransferEncoding);
-      if (is_informational || status_code_ == SC_204_NO_CONTENT) {
-        remove_header(header_names::kContentLength);
-      } else if (status_code_ == SC_205_RESET_CONTENT) {
-        set_header(header_names::kContentLength, "0");
+      while (has_transfer_encoding_header_) {
+        remove_header(header_names::kTransferEncoding);
       }
+      chunked_ = false;
+      if (is_informational || status_code_ == SC_204_NO_CONTENT) {
+        while (has_content_length_header_) {
+          remove_header(header_names::kContentLength);
+        }
+        content_length_.reset();
+      } else if (status_code_ == SC_205_RESET_CONTENT) {
+        while (has_content_length_header_) {
+          remove_header(header_names::kContentLength);
+        }
+        content_length_ = 0;
+      }
+    }
+    apply_body_framing();
+    if (!has_date_header_) {
+      add_date_header();
     }
     std::size_t sln_plus_hdr_len = sln_len_ + hdr_len_;
     // Write the header-terminating CRLF (plus an extra CRLF when there are no
@@ -140,10 +159,6 @@ class response {
       memory_[sln_plus_hdr_len++] = '\n';
     }
     auto result = std::make_unique<protocol::serialization_result>();
-    result->prefix.assign(memory_, sln_plus_hdr_len);
-    if (!must_omit_body && bdy_len_ > 0) {
-      result->prefix.append(&memory_[bdy_beg_], bdy_len_);
-    }
     if (bdy_writer_.has_value()) {
       if (!must_omit_body) {
         // Finalizes the framing and transfers the accumulated bytes to the
@@ -153,6 +168,13 @@ class response {
       }
       bdy_writer_.reset();
     }
+    if (!must_omit_body && bdy_len_ > 0) {
+      // The final body position can overlap its reserved region.
+      std::memmove(&memory_[sln_plus_hdr_len], &memory_[bdy_beg_], bdy_len_);
+      sln_plus_hdr_len += bdy_len_;
+    }
+    result->prefix = std::move(memory_);
+    result->prefix_size = sln_plus_hdr_len;
     return result;
   }
   // +=========================================================================+
@@ -192,6 +214,12 @@ class response {
     memory_[sln_len_ + hdr_len_] = '\n';
     hdr_len_++;
     if (iequals(k, header_names::kDate)) has_date_header_ = true;
+    if (iequals(k, header_names::kContentLength)) {
+      has_content_length_header_ = true;
+    }
+    if (iequals(k, header_names::kTransferEncoding)) {
+      has_transfer_encoding_header_ = true;
+    }
     return *this;
   }
   // +=========================================================================+
@@ -259,6 +287,7 @@ class response {
   // | control flow) of catching the exception thrown by get_header.           |
   // +-------------------------------------------------------------------------+
   bool has_header(std::string_view k) const {
+    // Automatic framing headers are emitted only by serialize().
     std::size_t line_off, val_off, val_len, line_len;
     return find_header(k, line_off, val_off, val_len, line_len);
   }
@@ -347,6 +376,12 @@ class response {
     std::memmove(&memory_[line_off], &memory_[tail_off], tail_len);
     hdr_len_ -= line_len;
     if (iequals(k, header_names::kDate)) has_date_header_ = false;
+    if (iequals(k, header_names::kContentLength)) {
+      has_content_length_header_ = has_header(k);
+    }
+    if (iequals(k, header_names::kTransferEncoding)) {
+      has_transfer_encoding_header_ = has_header(k);
+    }
     return *this;
   }
   // +=========================================================================+
@@ -363,7 +398,7 @@ class response {
     if (body_size <= limits::kMaxResponseBodySizeInMemory) {
       std::memcpy(&memory_[bdy_beg_], sv.data(), body_size);
       bdy_len_ = body_size;
-      set_header("Content-Length", body_size);
+      content_length_ = body_size;
       return *this;
     }
     // Payload does not fit in the in-memory body region: spill it into a raw
@@ -373,7 +408,7 @@ class response {
       throw std::runtime_error("unable to write body!");
     }
     bdy_writer_.emplace(std::move(writer));
-    apply_body_framing();
+    content_length_ = bdy_writer_->bytes_written();
     return *this;
   }
   // +=========================================================================+
@@ -381,23 +416,20 @@ class response {
   // +=========================================================================+
   // | Adopts a caller-built body::body_writer (possibly already written to)   |
   // | as the response body, replacing any previously set body. Framing        |
-  // | headers are derived from the writer: chunked writers get                |
-  // | 'Transfer-Encoding: chunked', raw ones a 'Content-Length' matching the  |
-  // | bytes written so far.                                                   |
+  // | headers are emitted at serialization from the writer's mode and size.   |
   // +-------------------------------------------------------------------------+
   response& set_body(body::body_writer&& writer) {
     reset_body();
     bdy_writer_.emplace(std::move(writer));
-    apply_body_framing();
+    chunked_ = bdy_writer_->is_chunked();
+    if (!chunked_) content_length_ = bdy_writer_->bytes_written();
     return *this;
   }
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
   // +=========================================================================+
   // | Convenience overload for numeric types: converts the value to a string  |
-  // | and stores it as the response body. Framing headers are derived from    |
-  // | the writer: chunked writers get 'Transfer-Encoding: chunked',           |
-  // | raw ones a 'Content-Length' matching the bytes written so far.          |
+  // | and stores it as the response body with deferred framing.               |
   // +-------------------------------------------------------------------------+
   template <typename T>
     requires std::is_arithmetic_v<T>
@@ -407,209 +439,214 @@ class response {
   // +=========================================================================+
   // | [>] clear_body                                               ( public ) |
   // +=========================================================================+
-  // | Discards any body bytes previously set via set_body(), and removes the  |
-  // | framing headers that described it (Content-Length/Transfer-Encoding),   |
-  // | leaving the response as if set_body() had never been called. Symmetric  |
-  // | counterpart to set_body(): it never leaves a framing header pointing    |
-  // | to bytes that are no longer sent.                                       |
+  // | Discards body bytes and explicit and deferred framing.                  |
+  // | preserve_framing retains the advertised framing for HEAD responses.     |
   // +-------------------------------------------------------------------------+
-  response& clear_body() {
+  response& clear_body(bool preserve_framing = false) {
     bdy_len_ = 0;
     bdy_writer_.reset();
-    remove_header(header_names::kContentLength);
-    remove_header(header_names::kTransferEncoding);
+    if (!preserve_framing) {
+      content_length_.reset();
+      chunked_ = false;
+      while (has_content_length_header_) {
+        remove_header(header_names::kContentLength);
+      }
+      while (has_transfer_encoding_header_) {
+        remove_header(header_names::kTransferEncoding);
+      }
+    }
     return *this;
   }
   // +=========================================================================+
   // | [>] STATUS-LINEs                                             ( public ) |
   // +=========================================================================+
-  response& continue_100() {
+  [[nodiscard]] static response continue_100() {
     // 100_CONTINUE
-    return sln(status_lines::k100, SC_100_CONTINUE);
+    return response(status_lines::k100, SC_100_CONTINUE);
   }
-  response& switching_protocols_101() {
+  [[nodiscard]] static response switching_protocols_101() {
     // 101_SWITCHING_PROTOCOLS
-    return sln(status_lines::k101, SC_101_SWITCHING_PROTOCOLS);
+    return response(status_lines::k101, SC_101_SWITCHING_PROTOCOLS);
   }
-  response& ok_200() {
+  [[nodiscard]] static response ok_200() {
     // 200_OK
-    return sln(status_lines::k200, SC_200_OK);
+    return response(status_lines::k200, SC_200_OK);
   }
-  response& created_201() {
+  [[nodiscard]] static response created_201() {
     // 201_CREATED
-    return sln(status_lines::k201, SC_201_CREATED);
+    return response(status_lines::k201, SC_201_CREATED);
   }
-  response& accepted_202() {
+  [[nodiscard]] static response accepted_202() {
     // 202_ACCEPTED
-    return sln(status_lines::k202, SC_202_ACCEPTED);
+    return response(status_lines::k202, SC_202_ACCEPTED);
   }
-  response& non_authoritative_info_203() {
+  [[nodiscard]] static response non_authoritative_info_203() {
     // 203_NON_AUTHORITATIVE_INFORMATION
-    return sln(status_lines::k203, SC_203_NON_AUTHORITATIVE_INFORMATION);
+    return response(status_lines::k203, SC_203_NON_AUTHORITATIVE_INFORMATION);
   }
-  response& no_content_204() {
+  [[nodiscard]] static response no_content_204() {
     // 204_NO_CONTENT
-    return sln(status_lines::k204, SC_204_NO_CONTENT);
+    return response(status_lines::k204, SC_204_NO_CONTENT);
   }
-  response& reset_content_205() {
+  [[nodiscard]] static response reset_content_205() {
     // 205_RESET_CONTENT
-    return sln(status_lines::k205, SC_205_RESET_CONTENT);
+    return response(status_lines::k205, SC_205_RESET_CONTENT);
   }
-  response& partial_content_206() {
+  [[nodiscard]] static response partial_content_206() {
     // 206_PARTIAL_CONTENT
-    return sln(status_lines::k206, SC_206_PARTIAL_CONTENT);
+    return response(status_lines::k206, SC_206_PARTIAL_CONTENT);
   }
-  response& multiple_choices_300() {
+  [[nodiscard]] static response multiple_choices_300() {
     // 300_MULTIPLE_CHOICES
-    return sln(status_lines::k300, SC_300_MULTIPLE_CHOICES);
+    return response(status_lines::k300, SC_300_MULTIPLE_CHOICES);
   }
-  response& moved_permanently_301() {
+  [[nodiscard]] static response moved_permanently_301() {
     // 301_MOVED_PERMANENTLY
-    return sln(status_lines::k301, SC_301_MOVED_PERMANENTLY);
+    return response(status_lines::k301, SC_301_MOVED_PERMANENTLY);
   }
-  response& found_302() {
+  [[nodiscard]] static response found_302() {
     // 302_FOUND
-    return sln(status_lines::k302, SC_302_FOUND);
+    return response(status_lines::k302, SC_302_FOUND);
   }
-  response& see_other_303() {
+  [[nodiscard]] static response see_other_303() {
     // 303_SEE_OTHER
-    return sln(status_lines::k303, SC_303_SEE_OTHER);
+    return response(status_lines::k303, SC_303_SEE_OTHER);
   }
-  response& not_modified_304() {
+  [[nodiscard]] static response not_modified_304() {
     // 304_NOT_MODIFIED
-    return sln(status_lines::k304, SC_304_NOT_MODIFIED);
+    return response(status_lines::k304, SC_304_NOT_MODIFIED);
   }
-  response& use_proxy_305() {
+  [[nodiscard]] static response use_proxy_305() {
     // 305_USE_PROXY
-    return sln(status_lines::k305, SC_305_USE_PROXY);
+    return response(status_lines::k305, SC_305_USE_PROXY);
   }
-  response& unused_306() {
+  [[nodiscard]] static response unused_306() {
     // 306_UNUSED
-    return sln(status_lines::k306, SC_306_UNUSED);
+    return response(status_lines::k306, SC_306_UNUSED);
   }
-  response& temporary_redirect_307() {
+  [[nodiscard]] static response temporary_redirect_307() {
     // 307_TEMPORARY_REDIRECT
-    return sln(status_lines::k307, SC_307_TEMPORARY_REDIRECT);
+    return response(status_lines::k307, SC_307_TEMPORARY_REDIRECT);
   }
-  response& permanent_redirect_308() {
+  [[nodiscard]] static response permanent_redirect_308() {
     // 308_PERMANENT_REDIRECT
-    return sln(status_lines::k308, SC_308_PERMANENT_REDIRECT);
+    return response(status_lines::k308, SC_308_PERMANENT_REDIRECT);
   }
-  response& bad_request_400() {
+  [[nodiscard]] static response bad_request_400() {
     // 400_BAD_REQUEST
-    return sln(status_lines::k400, SC_400_BAD_REQUEST);
+    return response(status_lines::k400, SC_400_BAD_REQUEST);
   }
-  response& unauthorized_401() {
+  [[nodiscard]] static response unauthorized_401() {
     // 401_UNAUTHORIZED
-    return sln(status_lines::k401, SC_401_UNAUTHORIZED);
+    return response(status_lines::k401, SC_401_UNAUTHORIZED);
   }
-  response& payment_required_402() {
+  [[nodiscard]] static response payment_required_402() {
     // 402_PAYMENT_REQUIRED
-    return sln(status_lines::k402, SC_402_PAYMENT_REQUIRED);
+    return response(status_lines::k402, SC_402_PAYMENT_REQUIRED);
   }
-  response& forbidden_403() {
+  [[nodiscard]] static response forbidden_403() {
     // 403_FORBIDDEN
-    return sln(status_lines::k403, SC_403_FORBIDDEN);
+    return response(status_lines::k403, SC_403_FORBIDDEN);
   }
-  response& not_found_404() {
+  [[nodiscard]] static response not_found_404() {
     // 404_NOT_FOUND
-    return sln(status_lines::k404, SC_404_NOT_FOUND);
+    return response(status_lines::k404, SC_404_NOT_FOUND);
   }
-  response& method_not_allowed_405() {
+  [[nodiscard]] static response method_not_allowed_405() {
     // 405_METHOD_NOT_ALLOWED
-    return sln(status_lines::k405, SC_405_METHOD_NOT_ALLOWED);
+    return response(status_lines::k405, SC_405_METHOD_NOT_ALLOWED);
   }
-  response& not_acceptable_406() {
+  [[nodiscard]] static response not_acceptable_406() {
     // 406_NOT_ACCEPTABLE
-    return sln(status_lines::k406, SC_406_NOT_ACCEPTABLE);
+    return response(status_lines::k406, SC_406_NOT_ACCEPTABLE);
   }
-  response& proxy_auth_required_407() {
+  [[nodiscard]] static response proxy_auth_required_407() {
     // 407_PROXY_AUTHENTICATION_REQUIRED
-    return sln(status_lines::k407, SC_407_PROXY_AUTHENTICATION_REQUIRED);
+    return response(status_lines::k407, SC_407_PROXY_AUTHENTICATION_REQUIRED);
   }
-  response& request_timeout_408() {
+  [[nodiscard]] static response request_timeout_408() {
     // 408_REQUEST_TIMEOUT
-    return sln(status_lines::k408, SC_408_REQUEST_TIMEOUT);
+    return response(status_lines::k408, SC_408_REQUEST_TIMEOUT);
   }
-  response& conflict_409() {
+  [[nodiscard]] static response conflict_409() {
     // 409_CONFLICT
-    return sln(status_lines::k409, SC_409_CONFLICT);
+    return response(status_lines::k409, SC_409_CONFLICT);
   }
-  response& gone_410() {
+  [[nodiscard]] static response gone_410() {
     // 410_GONE
-    return sln(status_lines::k410, SC_410_GONE);
+    return response(status_lines::k410, SC_410_GONE);
   }
-  response& length_required_411() {
+  [[nodiscard]] static response length_required_411() {
     // 411_LENGTH_REQUIRED
-    return sln(status_lines::k411, SC_411_LENGTH_REQUIRED);
+    return response(status_lines::k411, SC_411_LENGTH_REQUIRED);
   }
-  response& precondition_failed_412() {
+  [[nodiscard]] static response precondition_failed_412() {
     // 412_PRECONDITION_FAILED
-    return sln(status_lines::k412, SC_412_PRECONDITION_FAILED);
+    return response(status_lines::k412, SC_412_PRECONDITION_FAILED);
   }
-  response& content_too_large_413() {
+  [[nodiscard]] static response content_too_large_413() {
     // 413_CONTENT_TOO_LARGE
-    return sln(status_lines::k413, SC_413_CONTENT_TOO_LARGE);
+    return response(status_lines::k413, SC_413_CONTENT_TOO_LARGE);
   }
-  response& uri_too_long_414() {
+  [[nodiscard]] static response uri_too_long_414() {
     // 414_URI_TOO_LONG
-    return sln(status_lines::k414, SC_414_URI_TOO_LONG);
+    return response(status_lines::k414, SC_414_URI_TOO_LONG);
   }
-  response& unsupported_media_type_415() {
+  [[nodiscard]] static response unsupported_media_type_415() {
     // 415_UNSUPPORTED_MEDIA_TYPE
-    return sln(status_lines::k415, SC_415_UNSUPPORTED_MEDIA_TYPE);
+    return response(status_lines::k415, SC_415_UNSUPPORTED_MEDIA_TYPE);
   }
-  response& range_not_satisfiable_416() {
+  [[nodiscard]] static response range_not_satisfiable_416() {
     // 416_RANGE_NOT_SATISFIABLE
-    return sln(status_lines::k416, SC_416_RANGE_NOT_SATISFIABLE);
+    return response(status_lines::k416, SC_416_RANGE_NOT_SATISFIABLE);
   }
-  response& expectation_failed_417() {
+  [[nodiscard]] static response expectation_failed_417() {
     // 417_EXPECTATION_FAILED
-    return sln(status_lines::k417, SC_417_EXPECTATION_FAILED);
+    return response(status_lines::k417, SC_417_EXPECTATION_FAILED);
   }
-  response& unused_418() {
+  [[nodiscard]] static response unused_418() {
     // 418_IM_A_TEAPOT
-    return sln(status_lines::k418, SC_418_IM_A_TEAPOT);
+    return response(status_lines::k418, SC_418_IM_A_TEAPOT);
   }
-  response& misdirected_request_421() {
+  [[nodiscard]] static response misdirected_request_421() {
     // 421_MISDIRECTED_REQUEST
-    return sln(status_lines::k421, SC_421_MISDIRECTED_REQUEST);
+    return response(status_lines::k421, SC_421_MISDIRECTED_REQUEST);
   }
-  response& unprocessable_content_422() {
+  [[nodiscard]] static response unprocessable_content_422() {
     // 422_UNPROCESSABLE_CONTENT
-    return sln(status_lines::k422, SC_422_UNPROCESSABLE_CONTENT);
+    return response(status_lines::k422, SC_422_UNPROCESSABLE_CONTENT);
   }
-  response& upgrade_required_426() {
+  [[nodiscard]] static response upgrade_required_426() {
     // 426_UPGRADE_REQUIRED
-    return sln(status_lines::k426, SC_426_UPGRADE_REQUIRED);
+    return response(status_lines::k426, SC_426_UPGRADE_REQUIRED);
   }
-  response& request_header_fields_too_large_431() {
+  [[nodiscard]] static response request_header_fields_too_large_431() {
     // 431_REQUEST_HEADER_FIELDS_TOO_LARGE
-    return sln(status_lines::k431, SC_431_REQUEST_HEADER_FIELDS_TOO_LARGE);
+    return response(status_lines::k431, SC_431_REQUEST_HEADER_FIELDS_TOO_LARGE);
   }
-  response& internal_server_error_500() {
+  [[nodiscard]] static response internal_server_error_500() {
     // 500_INTERNAL_SERVER_ERROR
-    return sln(status_lines::k500, SC_500_INTERNAL_SERVER_ERROR);
+    return response(status_lines::k500, SC_500_INTERNAL_SERVER_ERROR);
   }
-  response& not_implemented_501() {
+  [[nodiscard]] static response not_implemented_501() {
     // 501_NOT_IMPLEMENTED
-    return sln(status_lines::k501, SC_501_NOT_IMPLEMENTED);
+    return response(status_lines::k501, SC_501_NOT_IMPLEMENTED);
   }
-  response& bad_gateway_502() {
+  [[nodiscard]] static response bad_gateway_502() {
     // 502_BAD_GATEWAY
-    return sln(status_lines::k502, SC_502_BAD_GATEWAY);
+    return response(status_lines::k502, SC_502_BAD_GATEWAY);
   }
-  response& service_unavailable_503() {
+  [[nodiscard]] static response service_unavailable_503() {
     // 503_SERVICE_UNAVAILABLE
-    return sln(status_lines::k503, SC_503_SERVICE_UNAVAILABLE);
+    return response(status_lines::k503, SC_503_SERVICE_UNAVAILABLE);
   }
-  response& gateway_timeout_504() {
+  [[nodiscard]] static response gateway_timeout_504() {
     // 504_GATEWAY_TIMEOUT
-    return sln(status_lines::k504, SC_504_GATEWAY_TIMEOUT);
+    return response(status_lines::k504, SC_504_GATEWAY_TIMEOUT);
   }
-  response& http_version_not_supported_505() {
+  [[nodiscard]] static response http_version_not_supported_505() {
     // 505_HTTP_VERSION_NOT_SUPPORTED
-    return sln(status_lines::k505, SC_505_HTTP_VERSION_NOT_SUPPORTED);
+    return response(status_lines::k505, SC_505_HTTP_VERSION_NOT_SUPPORTED);
   }
 
  private:
@@ -645,23 +682,46 @@ class response {
   // | former body instead of accumulating state.                              |
   // +-------------------------------------------------------------------------+
   void reset_body() {
-    bdy_len_ = 0;
-    bdy_writer_.reset();
-    remove_header("Transfer-Encoding");
-    remove_header("Content-Length");
+    clear_body();
   }
   // +=========================================================================+
   // | [>] apply_body_framing                                      ( private ) |
   // +=========================================================================+
-  // | Emits the framing header matching the currently owned body writer:      |
-  // | 'Transfer-Encoding: chunked' for chunked writers, otherwise a           |
-  // | 'Content-Length' derived from the raw bytes written so far.             |
+  // | Emits deferred framing unless an explicit header already supplies it.   |
   // +-------------------------------------------------------------------------+
   void apply_body_framing() {
-    if (bdy_writer_->is_chunked()) {
-      set_header("Transfer-Encoding", "chunked");
-    } else {
-      set_header("Content-Length", bdy_writer_->bytes_written());
+    // RFC 9112 S6.2: a sender must not combine Content-Length and TE.
+    if (has_content_length_header_ &&
+        (has_transfer_encoding_header_ || chunked_)) {
+      throw std::invalid_argument("conflicting response framing headers!");
+    }
+    if (has_content_length_header_ || has_transfer_encoding_header_) return;
+    std::size_t space_left = bdy_beg_ - sln_len_ - hdr_len_;
+    char* out = &memory_[sln_len_ + hdr_len_];
+    if (chunked_) {
+      constexpr std::string_view line = "Transfer-Encoding: chunked\r\n";
+      if (line.size() + 2 > space_left) {
+        throw std::out_of_range("not enough space to serialize response!");
+      }
+      std::memcpy(out, line.data(), line.size());
+      hdr_len_ += line.size();
+      has_transfer_encoding_header_ = true;
+    } else if (content_length_) {
+      constexpr std::string_view prefix = "Content-Length: ";
+      if (prefix.size() + 1 + 4 > space_left) {
+        throw std::out_of_range("not enough space to serialize response!");
+      }
+      const auto converted = std::to_chars(
+          out + prefix.size(), memory_.get() + bdy_beg_ - 4,
+          *content_length_);
+      if (converted.ec != std::errc()) {
+        throw std::out_of_range("not enough space to serialize response!");
+      }
+      std::memcpy(out, prefix.data(), prefix.size());
+      converted.ptr[0] = '\r';
+      converted.ptr[1] = '\n';
+      hdr_len_ += static_cast<std::size_t>(converted.ptr - out) + 2;
+      has_content_length_header_ = true;
     }
   }
   // +=========================================================================+
@@ -716,40 +776,28 @@ class response {
     return false;
   }
   // +=========================================================================+
-  // | [>] sln                                                     ( private ) |
+  // | [>] CONSTRUCTOR                                             ( private ) |
   // +=========================================================================+
-  response& sln(auto&& status_line, int status_code) {
-    std::size_t len = strlen(status_line);
-    // Reset framing state first, then copy the status line only if it fits
-    // before the body region. This keeps the object in a coherent state even
-    // if an oversized status line is ever supplied.
-    hdr_len_ = 0;
-    bdy_len_ = 0;
-    has_date_header_ = false;
-    bdy_writer_.reset();
-    status_code_ = status_code;
-    if (len > bdy_beg_) {
-      sln_len_ = 0;
+  response(std::string_view status_line, int status_code)
+      : memory_(std::make_unique_for_overwrite<char[]>(
+            limits::kMaxResponseSizeInMemory)),
+        sln_len_(status_line.size()),
+        status_code_(status_code) {
+    if (sln_len_ > bdy_beg_) {
       throw std::out_of_range("not enough space to set status line!");
     }
-    sln_len_ = len;
-    std::memcpy(memory_, status_line, sln_len_);
-    // Default Content-Length to 0 for this (still bodiless) status line; a
-    // later set_body() call will overwrite it with the real size. Skipped for
-    // 1xx and 204, where Content-Length is forbidden (RFC 9110 S8.6), and for
-    // 304, whose value must mirror a hypothetical 200 response this class has
-    // no way to know.
+    std::memcpy(memory_.get(), status_line.data(), sln_len_);
+    // RFC 9110 S8.6: 1xx/204 forbid Content-Length; 304 needs a known size.
     bool is_informational = status_code < SC_200_OK;
-    if (!is_informational && status_code != SC_204_NO_CONTENT &&
-        status_code != SC_304_NOT_MODIFIED) {
-      set_header("Content-Length", 0);
+    if (is_informational || status_code == SC_204_NO_CONTENT ||
+        status_code == SC_304_NOT_MODIFIED) {
+      content_length_.reset();
     }
-    return *this;
   }
   // +=========================================================================+
   // | [>] ATTRIBUTES                                              ( private ) |
   // +=========================================================================+
-  char memory_[limits::kMaxResponseSizeInMemory]{0};
+  std::unique_ptr<char[]> memory_;
   std::size_t sln_len_{0};
   std::size_t hdr_len_{0};
   std::size_t bdy_beg_{limits::kMaxResponseSizeInMemory -
@@ -757,6 +805,10 @@ class response {
   std::size_t bdy_len_{0};
   int status_code_{SC_200_OK};
   bool has_date_header_{false};
+  bool has_content_length_header_{false};
+  bool has_transfer_encoding_header_{false};
+  std::optional<std::size_t> content_length_{0};
+  bool chunked_{false};
   std::optional<body::body_writer> bdy_writer_;
 };
 }  // namespace martianlabs::doba::protocol::http::v11

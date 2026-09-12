@@ -410,7 +410,10 @@ struct context
       response_data& data = responses_.front();
       if (!data.response) break;
       if (!data.state) {
-        sending_buffer_.append(data.response->prefix);
+        if (data.response->prefix_size) {
+          sending_buffer_.append(data.response->prefix.get(),
+                                 data.response->prefix_size);
+        }
         data.state = 1;
         continue;
       }
@@ -756,7 +759,11 @@ struct worker {
         // response.
         if (!result.interim.empty()) {
           auto interim = std::make_unique<protocol::serialization_result>();
-          interim->prefix.assign(result.interim);
+          interim->prefix_size = result.interim.size();
+          interim->prefix = std::make_unique_for_overwrite<char[]>(
+              interim->prefix_size);
+          std::memcpy(interim->prefix.get(), result.interim.data(),
+                      interim->prefix_size);
           ctx->enqueue_response(std::move(interim));
         }
         return;
@@ -771,10 +778,9 @@ struct worker {
         return;
       }
       try {
-        RSty response;
-        std::optional<common::task<RSty>> response_task =
-            on_request_(result.request, response, ctx->get_stop_token());
-        if (response_task) {
+        auto response = on_request_(result.request, ctx->get_stop_token());
+        if (auto* response_task =
+                std::get_if<common::task<RSty>>(&response)) {
           std::size_t response_id = 0;
           if (!ctx->reserve_response(response_id)) {
             abort_context(ctx);
@@ -788,7 +794,7 @@ struct worker {
           }
           if (result.channel == protocol::channel_intent::kClose) ctx->close();
         } else {
-          auto serialized = response.serialize();
+          auto serialized = std::get<RSty>(response).serialize();
           if (!serialized || !ctx->enqueue_response(std::move(serialized))) {
             ctx->fail_response();
             return;
@@ -885,8 +891,7 @@ struct worker {
                                std::size_t response_id, int reason_code,
                                std::string_view reason) {
     try {
-      RSty response;
-      on_bad_request_(reason_code, reason, response);
+      RSty response = on_bad_request_(reason_code, reason);
       auto serialized = response.serialize();
       if (!ctx->complete_response(response_id, std::move(serialized))) {
         return false;
@@ -903,8 +908,7 @@ struct worker {
   void enqueue_error_response(context<RQty, RSty, DEty>* ctx,
                               int reason_code, std::string_view reason) {
     try {
-      RSty response;
-      on_bad_request_(reason_code, reason, response);
+      RSty response = on_bad_request_(reason_code, reason);
       auto serialized = response.serialize();
       if (!serialized || !ctx->enqueue_error_response(std::move(serialized))) {
         ctx->fail_response();
