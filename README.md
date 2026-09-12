@@ -12,22 +12,37 @@
 
 [![Build & Test](https://github.com/martianlabs/doba/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/martianlabs/doba/actions/workflows/ci.yml?query=branch%3Amain)
 
-Meet doba: a header-only C++20 server framework. Protocols and transports
+**Meet doba:** a header-only C++20 server framework. Protocols and transports
 mind their own business. HTTP/1.1 comes first; the architecture leaves room
 for more.
 
-Native IOCP on Windows. Native epoll on Linux. No external libraries to chase.
+**Native IOCP on Windows. Native epoll on Linux.**
+No external libraries to chase.
 
 [Try the examples](examples/README.md) /
 [Peek under the hood](docs/ARCHITECTURE.md)
 
-## Okay, how fast?
+<a name="okay-how-fast"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/readme-performance-dark.svg">
+    <img src="resources/readme-performance.svg" alt="Okay, how fast?" width="280">
+  </picture>
+</h2>
 
 Big throughput numbers are fun. Waiting for a response isn't. Let's look at both.
 
 > Benchmark charts coming soon. Reproducible results, not imaginary bars.
 
-## No magic. A few deliberate choices.
+<a name="no-magic-a-few-deliberate-choices"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/readme-design-dark.svg">
+    <img src="resources/readme-design.svg" alt="No magic." width="175">
+  </picture>
+</h2>
+
+*A few deliberate choices.*
 
 - **HTTP does HTTP. I/O does I/O.** Protocols handle message rules; transports
   move bytes. The same HTTP implementation runs on both native backends.
@@ -40,7 +55,15 @@ Big throughput numbers are fun. Waiting for a response isn't. Let's look at both
   When work needs to wait, coroutine handlers support cancellation and keep
   responses in order.
 
-## Hello, world. Let's not overcomplicate it.
+<a name="hello-world-lets-not-overcomplicate-it"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/readme-hello-dark.svg">
+    <img src="resources/readme-hello.svg" alt="Hello, world." width="220">
+  </picture>
+</h2>
+
+*Let's not overcomplicate it.*
 
 ```cpp
 #include "common/signaler.h"
@@ -97,13 +120,21 @@ For compiler setup, presets, build options, and test commands, see
 
 </details>
 
-## Fast is nice. Correct is non-negotiable.
+<a name="fast-is-nice-correct-is-non-negotiable"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/readme-correctness-dark.svg">
+    <img src="resources/readme-correctness.svg" alt="Fast is nice." width="203">
+  </picture>
+</h2>
+
+*Correct is non-negotiable.*
 
 We like fast code. We also like sleeping at night. HTTP/1.1 parsing and framing
 follow RFC rules; CI checks GCC, Clang, and MSVC builds, strict warnings, and
 ASan, UBSan, and TSan runs.
 
-We're working toward 0.1. TLS and compression aren't in the first release,
+**We're working toward 0.1.** TLS and compression aren't in the first release,
 and operational hardening is still in progress.
 Here's [what's left to do](docs/BACKLOG.md).
 
