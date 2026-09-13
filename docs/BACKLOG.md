@@ -19,6 +19,7 @@ as severity.
 - [Release target](#release-target)
 - [Inventory](#inventory)
 - [Operational hardening](#operational-hardening)
+- [Bugs](#bugs)
 - [Product and convenience](#product-and-convenience)
 - [Quality and validation](#quality-and-validation)
 - [Release engineering](#release-engineering)
@@ -51,20 +52,26 @@ Other outstanding items have no assigned version.
 
 ## Inventory
 
-29 entries across seven categories, including the completed QA4 entry
+35 entries across eight categories, including the completed QA4 entry
 retained for traceability. Numbering identifies items; it does not express
 priority or implementation order.
+
+C4-C6 and B1-B6 track the ten issues behind 15 failing unit tests. C5 owns
+two capacity defects. B4 records an incorrect test expectation; the other
+entries concern production behavior. C4-C6 retain their hardening identifiers
+and are not duplicated in the Bugs category.
 
 | Category | Identifiers | Total |
 | --- | --- | --- |
 | Operational hardening | C1-C6 | 6 |
+| Bugs | B1-B6 | 6 |
 | Product and convenience | P1-P7 | 7 |
 | Quality and validation | QA1-QA6 | 6 |
 | Release engineering | RE1 | 1 |
 | C++ maintainability | DT1-DT2 | 2 |
 | Public documentation | DOC1-DOC2 | 2 |
 | Beyond the first release | F1-F5 | 5 |
-| **Total** | | **29** |
+| **Total** | | **35** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
@@ -74,6 +81,12 @@ priority or implementation order.
 | [C4](#c4-absolute-form-authority-precedence) | Hardening | Pending | Not set | No assigned version |
 | [C5](#c5-internal-decoder-capacity-overflow) | Hardening | Pending | Not set | No assigned version |
 | [C6](#c6-te-connection-option) | Hardening | Pending | Not set | No assigned version |
+| [B1](#b1-entity-tag-backslash-rejection) | Bug | Pending | Not set | No assigned version |
+| [B2](#b2-via-escaped-comment-rejection) | Bug | Pending | Not set | No assigned version |
+| [B3](#b3-via-comment-comma-splitting) | Bug | Pending | Not set | No assigned version |
+| [B4](#b4-incorrect-ipv6-expectation-in-via-test) | Bug | Pending | Not set | No assigned version |
+| [B5](#b5-duplicate-automatic-date-after-header-removal) | Bug | Pending | Not set | No assigned version |
+| [B6](#b6-noexcept-handler-signature-rejection) | Bug | Pending | Not set | No assigned version |
 | [P1](#p1-static-file-handler) | Product | Pending | Not set | No assigned version |
 | [P2](#p2-access-logging) | Product | Pending | Not set | No assigned version |
 | [P3](#p3-middleware-chain) | Product | Pending | Not set | No assigned version |
@@ -185,6 +198,8 @@ new callbacks, and HTTP rejection responses.
 
 ### C4: Absolute-form authority precedence
 
+**Type.** Confirmed bug (HTTP processing).
+
 **Context.** GET http://a/ with Host: b is rejected. The routing rule
 requires equality between Host and the request-target authority, including
 absolute-form. This rejection was reproduced against the current decoder.
@@ -194,8 +209,18 @@ the request-target authority. Preserve Host syntax/multiplicity validation,
 the raw header value and public signatures. Keep CONNECT/authority-form
 behavior separate.
 
-**Components.** HTTP routing rule, decoder request construction, routing
-unit tests, decoder tests and HTTP socket integration tests.
+**Components.** [routing.h](../include/protocol/http/v11/headers/rules/routing.h),
+[decoder.h](../include/protocol/http/v11/decoder.h), routing unit tests,
+decoder tests and HTTP socket integration tests.
+
+**Existing failing unit tests.**
+
+- [routing_tests.cpp](../tests/unit/protocol/http/v11/headers/rules/routing_tests.cpp):
+  `absolute form accepts differing Host ports`.
+- [routing_tests.cpp](../tests/unit/protocol/http/v11/headers/rules/routing_tests.cpp):
+  `absolute form authority overrides a different Host name`.
+- [decoder_tests.cpp](../tests/unit/protocol/http/v11/decoder_tests.cpp):
+  `absolute form uses its authority when Host differs`.
 
 **Acceptance and tests.**
 
@@ -213,19 +238,36 @@ must be explicit; adding these regressions does not itself correct routing.
 
 ### C5: Internal decoder capacity overflow
 
+**Type.** Confirmed bugs (decoder capacity).
+
 **Context.** Two capacity problems were reproduced. A request with 129
-query pairs succeeds
-with only 128 visible pairs, while limits.h describes rejection. A complete
-5121-byte head fills the 5120-byte buffer, then accumulate consumes zero and
-deserialize still reports MoreBytesNeeded. The latter reproduces decoder
+query pairs succeeds with only 128 visible pairs, while limits.h describes
+rejection. A complete 5121-byte head fills the 5120-byte buffer, then
+accumulate consumes zero and deserialize still reports MoreBytesNeeded. The latter reproduces decoder
 non-progress; a permanent end-to-end server hang has not been demonstrated.
 
-**Scope.** Resolve the query rejection/truncation contract and detect an
-incomplete head that cannot fit. Return a terminal error when the decoder
+**Cause and expected behavior.** `split_query_parameters` returns only the
+count that fits the fixed arrays; `mount_request_getter` does not propagate
+overflow. Reject the 129-pair request instead of exposing a truncated query.
+Separately, incomplete head parsing returns `kMoreBytesNeeded` even when
+`accumulate` has exhausted capacity. Return a terminal rejection when no
+progress is possible. These are internal capacity contracts, not RFC limits.
+
+**Scope.** Reject query overflow and detect an incomplete head that cannot
+fit. Return a terminal error when the decoder
 cannot progress, preserving public signatures and unrelated parsing rules.
 
-**Components.** decoder.h, limits.h, the split_query_parameters contract in
-HTTP common helpers, their unit tests and HTTP socket integration tests.
+**Components.** [decoder.h](../include/protocol/http/v11/decoder.h),
+[limits.h](../include/protocol/http/v11/limits.h),
+[helpers.h](../include/protocol/http/common/helpers.h), their unit tests
+and HTTP socket integration tests.
+
+**Existing failing unit tests.**
+
+- [decoder_tests.cpp](../tests/unit/protocol/http/v11/decoder_tests.cpp):
+  `rejects query parameter overflow without truncating`.
+- [decoder_tests.cpp](../tests/unit/protocol/http/v11/decoder_tests.cpp):
+  `a full incomplete head terminates instead of stalling`.
 
 **Acceptance and tests.**
 
@@ -235,12 +277,15 @@ HTTP common helpers, their unit tests and HTTP socket integration tests.
 - Verify that rejected input is not dispatched and the socket closes safely.
 - Preserve accepted boundary inputs and equivalent results in both backends.
 
-**Dependencies and decisions.** Select rejection versus truncation and the
-error/status contract before implementation; no automatic 431 policy is
-assumed. Correctness of existing fixed capacities is separate from the
-configurable resource-limit API deferred in C2.
+**Dependencies and decisions.** The active regressions require rejection
+rather than silent truncation. Select the error/status contract before
+implementation; no automatic 431 policy is assumed. Correctness of existing
+fixed capacities is separate from the configurable resource-limit API
+deferred in C2.
 
 ### C6: TE connection option
+
+**Type.** Confirmed bug (HTTP processing).
 
 **Context.** TE: trailers together with Connection: TE is rejected because
 the directives rule forbids the te connection option. This rejection was
@@ -249,7 +294,15 @@ reproduced against the current decoder. A TE sender must include that option.
 **Scope.** Remove the specific inappropriate te prohibition, update its
 rule documentation and preserve all unrelated directive validation.
 
-**Components.** HTTP directives rule, its unit tests and decoder tests.
+**Components.** [directives.h](../include/protocol/http/v11/headers/rules/directives.h),
+[decoder.h](../include/protocol/http/v11/decoder.h), their unit tests.
+
+**Existing failing unit tests.**
+
+- [directives_tests.cpp](../tests/unit/protocol/http/v11/headers/rules/directives_tests.cpp):
+  `accepts the TE connection option`.
+- [decoder_tests.cpp](../tests/unit/protocol/http/v11/decoder_tests.cpp):
+  `accepts TE with its required connection option`.
 
 **Acceptance and tests.**
 
@@ -265,6 +318,201 @@ positive and negative cases can exercise TE value validation independently.
 No public API or protocol-upgrade feature is required.
 
 **Reference.** [RFC 9110 S10.1.4](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.1.4).
+
+## Bugs
+
+B1-B6 are pending fixes. C4-C6 also record confirmed bugs under Operational
+hardening; their identifiers and acceptance criteria remain authoritative.
+The existing tests below failed in the 2026-09-13 Linux GCC, Windows MSVC,
+and Linux Clang/ASan runs. Test failure alone does not prove a parser defect:
+B4 identifies an incorrect expectation in the unit suite.
+
+### B1: Entity-tag backslash rejection
+
+**Type.** Confirmed bug (conditional header syntax).
+
+**Context.** Both If-Match and If-None-Match reject a strong or weak entity-tag
+whose opaque value is the single byte 0x5c. The byte-matrix tests reproduce
+this with DQUOTE, 0x5c, DQUOTE, optionally prefixed by W/.
+
+**Cause.** The header checks use `for_each_list_element`, which treats the
+backslash as a quoted-string escape and skips the closing quote.
+
+**Scope.** Accept the literal byte as `etagc` without changing it. Preserve
+the syntax/semantic distinction for weak tags and existing list handling.
+
+**Components.** [helpers.h](../include/protocol/http/common/helpers.h),
+[if_match.h](../include/protocol/http/common/headers/if_match.h),
+[if_none_match.h](../include/protocol/http/common/headers/if_none_match.h).
+
+**Existing failing unit tests.**
+
+- [if_match_tests.cpp](../tests/unit/protocol/http/common/headers/if_match_tests.cpp):
+  `check applies the entity tag byte grammar`.
+- [if_none_match_tests.cpp](../tests/unit/protocol/http/common/headers/if_none_match_tests.cpp):
+  `check applies the entity tag byte grammar`.
+
+**Acceptance and tests.** Make both byte-matrix regressions pass; retain the
+valid/invalid octet boundaries, tag lists, and wildcard cases.
+
+**Dependencies and decisions.** B2 and B3 share the list helper but have
+different grammars. Preserve quoted-string handling for other consumers.
+
+**Reference.** [RFC 9110 S8.8.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.8.3).
+
+### B2: Via escaped comment rejection
+
+**Type.** Confirmed bug (Via comment syntax).
+
+**Context.** `Via: 1.1 proxy (a\)b\(c)` is rejected by `via::check`.
+The comment contains escaped parentheses.
+
+**Cause.** `for_each_list_element` rejects a backslash outside a quoted
+string before Via can validate the comment.
+
+**Scope.** Accept valid quoted-pairs in comments and preserve the parsed
+comment bytes.
+
+**Components.** [via.h](../include/protocol/http/v11/headers/via.h),
+[helpers.h](../include/protocol/http/common/helpers.h).
+
+**Existing failing unit tests.**
+
+- [via_tests.cpp](../tests/unit/protocol/http/v11/headers/via_tests.cpp):
+  `check accepts protocol and comment boundaries`.
+
+**Acceptance and tests.** Make the escaped-parentheses case pass; preserve
+nested-comment acceptance and rejection of incomplete escapes, unterminated
+comments, and trailing junk.
+
+**Dependencies and decisions.** Coordinate with B3 at the shared list
+boundary; do not broaden unrelated header grammars.
+
+**References.** [RFC 9110 S5.6.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.5)
+and [S7.6.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-7.6.3).
+
+### B3: Via comment comma splitting
+
+**Type.** Confirmed bug (Via list separation).
+
+**Context.** `Via: 1.1 proxy (a,b), 1.0 other` is rejected.
+
+**Cause.** The list helper tracks quoted strings but not comment nesting,
+so it interprets the comma inside the comment as a member separator.
+
+**Scope.** Parse two members, preserving `(a,b)` as the first comment and
+`other` as the second received-by value.
+
+**Components.** [via.h](../include/protocol/http/v11/headers/via.h),
+[helpers.h](../include/protocol/http/common/helpers.h).
+
+**Existing failing unit tests.**
+
+- [via_tests.cpp](../tests/unit/protocol/http/v11/headers/via_tests.cpp):
+  `check keeps commas inside comments in one member`.
+
+**Acceptance and tests.** Make the two-member regression pass. Keep commas
+inside nested comments and preserve separation outside comments, whitespace
+handling, and invalid-comment rejection.
+
+**Dependencies and decisions.** Coordinate with B2; retain B1's distinct
+entity-tag grammar and the behavior of other list consumers.
+
+**References.** [RFC 9110 S5.6.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.5)
+and [S7.6.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-7.6.3).
+
+### B4: Incorrect IPv6 expectation in Via test
+
+**Type.** Confirmed bug (unit-test expectation and RFC comment).
+
+**Context.** The unit test expects `via::check("HTTP/1.1 [::1]:8080", parsed)`
+to succeed. It returns false. The test's comment incorrectly claims that
+RFC 9110 S7.6.3 allows `uri-host` in received-by.
+
+**Cause.** The expectation uses an obsolete grammar. RFC 9110 defines
+received-by using a token pseudonym and optional port; its appendix B.2
+records the removal of `uri-host`. Bracketed IPv6 does not match that grammar.
+
+**Scope.** Correct the expectation and RFC comment to verify rejection under
+the current contract. Rename the case to describe its negative expectation.
+Do not change the production parser to satisfy the erroneous positive test.
+
+**Components.** [via_tests.cpp](../tests/unit/protocol/http/v11/headers/via_tests.cpp).
+Compare against [via.h](../include/protocol/http/v11/headers/via.h).
+
+**Existing failing unit tests.**
+
+- [via_tests.cpp](../tests/unit/protocol/http/v11/headers/via_tests.cpp):
+  `check accepts an IPv6 received by host`.
+
+**Acceptance and tests.** Retain the exact bracketed IPv6 input as a negative
+case. Preserve valid pseudonyms with optional ports and the separate comment
+regressions tracked by B2/B3. Correcting this test must not hide those bugs.
+
+**References.** [RFC 9110 S7.6.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-7.6.3)
+and [appendix B.2](https://www.rfc-editor.org/rfc/rfc9110.html#appendix-B.2).
+
+### B5: Duplicate automatic Date after header removal
+
+**Type.** Confirmed bug (response header mutation).
+
+**Context.** Add Date fields with values `first` and `remaining`, remove
+`date` once, then serialize. The remaining explicit field is still present,
+but serialization appends an additional automatic Date.
+
+**Cause.** `remove_header` clears `has_date_header_` without checking whether
+another Date field remains. `serialize` then adds the automatic field.
+
+**Scope.** Preserve the remaining explicit Date and prevent an extra automatic
+field. The marker values reproduce the generic header-mutation contract;
+this case does not request acceptance of duplicate Date fields on the wire.
+
+**Components.** [response.h](../include/protocol/http/v11/response.h).
+
+**Existing failing unit tests.**
+
+- [response_tests.cpp](../tests/unit/protocol/http/v11/response_tests.cpp):
+  `removing one Date preserves the remaining explicit Date`.
+
+**Acceptance and tests.** Make the exact serialized-prefix regression pass.
+Check that removing the last explicit Date still permits automatic Date
+generation, and preserve case-insensitive name handling and other headers.
+
+**Dependencies and decisions.** Keep the existing add/remove/serialize API
+and mutation semantics; changing header validation is a separate decision.
+
+### B6: Noexcept handler signature rejection
+
+**Type.** Confirmed bug (handler signature compatibility).
+
+**Context.** A synchronous lambda taking `const request&` and returning
+`response` is rejected by `router_handler_lambda` when declared `noexcept`.
+The asynchronous equivalent taking `shared_ptr<const request>` and
+`stop_token`, returning `task<response>`, is likewise rejected by
+`router_async_handler_lambda`.
+
+**Cause.** The member-function-pointer specializations cover const and
+non-const call operators, but omit their noexcept-qualified counterparts.
+
+**Scope.** Recognize the same supported handler shapes when noexcept is
+added. Preserve argument/return validation and additional parameter counts.
+
+**Components.** [router_handler_signature.h](../include/protocol/http/common/router_handler_signature.h).
+
+**Existing failing unit tests.**
+
+- [router_handler_signature_tests.cpp](../tests/unit/protocol/http/common/router_handler_signature_tests.cpp):
+  `noexcept sync handlers retain signature compatibility`.
+- [router_handler_signature_tests.cpp](../tests/unit/protocol/http/common/router_handler_signature_tests.cpp):
+  `noexcept async handlers retain signature compatibility`.
+
+**Acceptance and tests.** Make both signature regressions pass, retain the
+existing ordinary and mutable handler cases, and preserve rejection of
+unsupported request/return signatures.
+
+**Dependencies and decisions.** Confirm the exact supported qualifier
+combinations before implementation. This is an API compatibility issue,
+not a protocol or demonstrated memory-safety defect.
 
 ## Product and convenience
 
