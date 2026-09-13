@@ -88,3 +88,41 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(range::check(std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts unit and list alternatives                ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts unit and list alternatives") {
+  constexpr std::string_view cases[] = {
+      "BYTES=0-0",
+      "bytes=-0",
+      "bytes=9-1",
+      "bytes=, ,0-1, ,",
+      "bytes=\t0-1\t, -2",
+      "example=:-/!",
+      "items=-",
+      "example=abc,0-1,-2",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(range::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects unit and list alternatives                ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects unit and list alternatives") {
+  constexpr std::string_view cases[] = {
+      "BYTES=abc",
+      "bytes=+1-2",
+      "bytes=0-+2",
+      "bytes=0-1x",
+      "bytes=0-1,-",
+      "bytes=, ,",
+      "items=abc\tdef",
+      "example=abc,def ghi",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!range::check(source));
+  }
+}

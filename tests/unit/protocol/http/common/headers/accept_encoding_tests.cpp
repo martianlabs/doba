@@ -97,3 +97,37 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(accept_encoding::check(
       std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts weight boundaries                         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts weight boundaries") {
+  constexpr std::string_view cases[] = {
+      "gzip;Q=0.000",
+      "gzip;q=1.",
+      "gzip\t;\tq=0.001",
+      "gzip;q=1.00",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(accept_encoding::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects weight boundaries                         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects weight boundaries") {
+  constexpr std::string_view cases[] = {
+      "gzip;q=0;q=1",
+      "gzip;q=+0",
+      "gzip;q=00.5",
+      "gzip;q=1.0000",
+      "gzip;q=0.5x",
+      "gzip;q =0.5",
+      "gzip;q= 0.5",
+      "gzip;q=0.5;x=y",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!accept_encoding::check(source));
+  }
+}

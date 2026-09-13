@@ -98,3 +98,36 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(access_control_allow_origin::check(
       std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts single origin boundaries                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts single origin boundaries") {
+  constexpr std::string_view cases[] = {
+      "http://[::1]:0",
+      "a+b.c-d://host:99999",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(access_control_allow_origin::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects single origin boundaries                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects single origin boundaries") {
+  constexpr std::string_view cases[] = {
+      "nullx",
+      "**",
+      "https://a https://b",
+      "https://user@host",
+      "https://host?x",
+      "https://host#x",
+      "https://[::1]junk",
+      "1http://host",
+      "https://host:abc",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!access_control_allow_origin::check(source));
+  }
+}

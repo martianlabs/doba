@@ -78,3 +78,50 @@ DOBA_TEST("interpret accepts parsed schemes") {
   DOBA_EXPECT_EQUAL(x_forwarded_proto::interpret(parsed, state, policy),
                     verdict::kAccept);
 }
+// +===========================================================================+
+// | [>] check appends ordered views from repeated fields        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check appends ordered views from repeated fields") {
+  const std::string first = "https";
+  const std::string second = "custom+secure";
+  parsed_token_list parsed;
+  DOBA_EXPECT(x_forwarded_proto::check(first, parsed));
+  DOBA_EXPECT(x_forwarded_proto::check(second, parsed));
+  DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
+  DOBA_EXPECT_EQUAL(parsed.elements[0], first);
+  DOBA_EXPECT_EQUAL(parsed.elements[1], second);
+  DOBA_EXPECT_EQUAL(parsed.elements[0].data(), first.data());
+  DOBA_EXPECT_EQUAL(parsed.elements[1].data(), second.data());
+  DOBA_EXPECT(x_forwarded_proto::check(",,", parsed));
+  DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
+}
+// +===========================================================================+
+// | [>] check accepts scheme boundaries                         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts scheme boundaries") {
+  constexpr std::string_view cases[] = {
+      "a",
+      "A1+.-",
+      "HTTP, HTTPS",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_token_list parsed;
+    DOBA_EXPECT(x_forwarded_proto::check(source, parsed));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects scheme boundaries                         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects scheme boundaries") {
+  constexpr std::string_view cases[] = {
+      "https://",
+      "http_https",
+      "http;https",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_token_list parsed;
+    DOBA_EXPECT(!x_forwarded_proto::check(source, parsed));
+  }
+}

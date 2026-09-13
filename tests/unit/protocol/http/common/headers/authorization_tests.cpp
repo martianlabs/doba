@@ -98,3 +98,37 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(authorization::check(
       std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts credential alternatives                   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts credential alternatives") {
+  constexpr std::string_view cases[] = {
+      "Scheme   abc+/~._-==",
+      "Scheme a=\"x,y\",b=\"\"",
+      "Scheme a\t=\tvalue",
+      "Scheme ,a=b,,",
+      "Scheme  ",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(authorization::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects credential alternatives                   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects credential alternatives") {
+  constexpr std::string_view cases[] = {
+      "Scheme\tabc",
+      "Scheme abc==x",
+      "Scheme a=\"x\"z",
+      "Scheme a=\"x\\",
+      "Scheme a=b,Other token",
+      "Scheme a=b;c=d",
+      "Scheme a=b, c",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!authorization::check(source));
+  }
+}

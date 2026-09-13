@@ -78,3 +78,56 @@ DOBA_TEST("handler concepts distinguish sync and async callbacks") {
   static_assert(router_async_handler_lambda<decltype(async)>);
   DOBA_EXPECT(true);
 }
+// +===========================================================================+
+// | [>] mutable handler signatures retain their argument count  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("mutable handler signatures retain their argument count") {
+  auto sync = [](const request&, int) mutable {
+    return response{};
+  };
+  auto async = [](std::shared_ptr<const request>,
+                           std::stop_token, int) mutable -> task<response> {
+    co_return response{};
+  };
+  using namespace martianlabs::doba::protocol::http;
+  static_assert(router_handler_lambda<decltype(sync)>);
+  static_assert(router_async_handler_lambda<decltype(async)>);
+  DOBA_EXPECT_EQUAL(
+      router_handler_signature<decltype(&decltype(sync)::operator())>::
+          parameter_count, 1);
+  DOBA_EXPECT_EQUAL(
+      router_async_handler_signature<decltype(&decltype(async)::operator())>::
+          parameter_count, 1);
+}
+// +===========================================================================+
+// | [>] noexcept sync handlers retain signature compatibility   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("noexcept sync handlers retain signature compatibility") {
+  auto handler = [](const request&) noexcept {
+    return response{};
+  };
+  DOBA_EXPECT(router_handler_lambda<decltype(handler)>);
+}
+// +===========================================================================+
+// | [>] noexcept async handlers retain signature compatibility  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("noexcept async handlers retain signature compatibility") {
+  auto handler = [](std::shared_ptr<const request>,
+                     std::stop_token) noexcept -> task<response> {
+    co_return response{};
+  };
+  DOBA_EXPECT(router_async_handler_lambda<decltype(handler)>);
+}
+// +===========================================================================+
+// | [>] sync signatures reject mutable and value requests       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("sync signatures reject mutable and value requests") {
+  auto mutable_request = [](request&) { return response{}; };
+  auto value_request = [](request) { return response{}; };
+  auto rvalue_request = [](const request&&) { return response{}; };
+  auto no_result = [](const request&) {};
+  DOBA_EXPECT(!router_handler_lambda<decltype(mutable_request)>);
+  DOBA_EXPECT(!router_handler_lambda<decltype(value_request)>);
+  DOBA_EXPECT(!router_handler_lambda<decltype(rvalue_request)>);
+  DOBA_EXPECT(!router_handler_lambda<decltype(no_result)>);
+}

@@ -103,3 +103,25 @@ DOBA_TEST("interpret applies the configured limit") {
   DOBA_EXPECT_EQUAL(content_length::interpret(11, connection, policies),
                     verdict::kReject);
 }
+// +===========================================================================+
+// | [>] check preserves output at the decimal overflow boundary ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check preserves output at the decimal overflow boundary") {
+  const std::string maximum =
+      std::to_string(std::numeric_limits<std::size_t>::max());
+  std::string overflow = maximum;
+  for (std::size_t position = overflow.size(); position != 0; --position) {
+    if (overflow[position - 1] != '9') {
+      ++overflow[position - 1];
+      break;
+    }
+    overflow[position - 1] = '0';
+  }
+  std::size_t parsed = 42;
+  DOBA_EXPECT(!content_length::check(overflow, parsed));
+  DOBA_EXPECT_EQUAL(parsed, 42);
+  DOBA_EXPECT(!content_length::check(maximum + "x", parsed));
+  DOBA_EXPECT_EQUAL(parsed, 42);
+  DOBA_EXPECT(content_length::check(std::string(64, '0') + maximum, parsed));
+  DOBA_EXPECT_EQUAL(parsed, std::numeric_limits<std::size_t>::max());
+}

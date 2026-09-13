@@ -735,3 +735,189 @@ DOBA_TEST("case and query helpers preserve views") {
   DOBA_EXPECT_EQUAL(helpers::split_query_parameters("a=1", no_keys, no_values),
                     0);
 }
+// +===========================================================================+
+// | [>] percent decoding preserves adjacent bytes               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("percent decoding preserves adjacent bytes and decodes once") {
+  constexpr std::string_view digits = "0123456789ABCDEF";
+  for (unsigned int byte = 0; byte <= 255; ++byte) {
+    std::string encoded = "/%";
+    encoded += digits[byte >> 4];
+    encoded += digits[byte & 15];
+    encoded += "/%252F+";
+    DOBA_EXPECT_EQUAL(helpers::percent_decode_validate(encoded), byte != 0);
+    if (byte == 0) continue;
+    std::string storage = "!" + encoded + "?query=kept!";
+    std::string_view value(storage.data() + 1, encoded.size());
+    helpers::percent_decode_in_place(value);
+    const std::string expected =
+        std::string("/") + static_cast<char>(byte) + "/%2F+";
+    DOBA_EXPECT_EQUAL(value, expected);
+    DOBA_EXPECT_EQUAL(value.data(), storage.data() + 1);
+    DOBA_EXPECT_EQUAL(storage.front(), '!');
+    DOBA_EXPECT_EQUAL(std::string_view(storage).substr(1 + encoded.size()),
+                      "?query=kept!");
+  }
+}
+// +===========================================================================+
+// | [>] parameter iterators reject invalid consumer progress    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("parameter iterators reject invalid consumer progress") {
+  for (const std::size_t used : {std::size_t{0}, std::size_t{4},
+                                 std::numeric_limits<std::size_t>::max()}) {
+    std::size_t calls = 0;
+    DOBA_EXPECT(!helpers::for_each_parameter(
+        ";a=b", true, [&](std::string_view, std::size_t& consumed) {
+          ++calls;
+          consumed = used;
+          return true;
+        }));
+    DOBA_EXPECT_EQUAL(calls, 1);
+  }
+  std::size_t calls = 0;
+  DOBA_EXPECT(!helpers::for_each_parameter(
+      ";a=b;c=d", true, [&](std::string_view source, std::size_t& used) {
+        ++calls;
+        if (calls == 2) return false;
+        return helpers::consume_parameter(source, used, false);
+      }));
+  DOBA_EXPECT_EQUAL(calls, 2);
+}
+// +===========================================================================+
+// | [>] quoted pair consumers validate every escaped byte       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("quoted pair consumers validate every escaped byte") {
+  for (unsigned int byte = 0; byte <= 255; ++byte) {
+    const bool expected = byte == 9 || (byte >= 32 && byte != 127);
+    std::string quoted = "\"\\";
+    quoted += static_cast<char>(byte);
+    quoted += "\"suffix";
+    const auto value = helpers::consume_quoted_string(quoted);
+    DOBA_EXPECT_EQUAL(!value.empty(), expected);
+    if (expected) DOBA_EXPECT_EQUAL(value.size(), 4);
+    std::string comment = "(\\";
+    comment += static_cast<char>(byte);
+    comment += ")suffix";
+    const auto consumed = helpers::consume_comment(comment);
+    DOBA_EXPECT_EQUAL(!consumed.empty(), expected);
+    if (expected) DOBA_EXPECT_EQUAL(consumed.size(), 4);
+  }
+}
+// +===========================================================================+
+// | [>] IPv6 validates every mixed IPv4 compression boundary    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("IPv6 validates every mixed IPv4 compression boundary") {
+  struct test_case {
+    std::string_view source;
+    bool valid;
+  };
+  constexpr test_case cases[] = {
+      {"1:2:3:4:5:6:192.0.2.1", true},
+      {"1:2:3:4:5:192.0.2.1", false},
+      {"1:2:3:4:5:6:260.0.2.1", false},
+      {"::192.0.2.1", true},
+      {"1:2:3:4:5::192.0.2.1", true},
+      {"1:2:3:4:5:6::192.0.2.1", false},
+      {"1::2:3:4:5:192.0.2.1", true},
+      {"1::2:3:4:5:6:192.0.2.1", false},
+      {"::gg:192.0.2.1", false},
+      {"::192.0.2.1:1", false},
+      {"1:2:3:4:5:6:7:", false},
+  };
+  for (const auto& value : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(value.source);
+    DOBA_EXPECT_EQUAL(helpers::is_ip_v6_address(value.source), value.valid);
+  }
+  DOBA_EXPECT(!helpers::is_ip_v_future("vg.name"));
+  DOBA_EXPECT(!helpers::is_ip_v_future("v1.name%20"));
+}
+// +===========================================================================+
+// | [>] absolute URI parsing preserves every component view     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("absolute URI parsing preserves every component view") {
+  struct test_case {
+    std::string_view source;
+    std::string_view scheme;
+    std::string_view host;
+    std::string_view port;
+    std::string_view path;
+    std::string_view query;
+    bool authority;
+  };
+  constexpr test_case cases[] = {
+      {"h+1.-://u:p%2f@a%2fb:009/a%2f?x=%25", "h+1.-", "a%2fb", "009",
+       "/a%2f", "x=%25", true},
+      {"http://[::1]:80/%20", "http", "[::1]", "80", "/%20", "", true},
+      {"custom:/a%2f?x=%25", "custom", "", "", "/a%2f", "x=%25", false},
+      {"urn:part%2f?x=%20", "urn", "", "", "part%2f", "x=%20", false},
+      {"urn:", "urn", "", "", "", "", false},
+  };
+  for (const auto& value : cases) {
+    const std::string source = std::string(value.source) + " HTTP/1.1";
+    std::string_view path, query, host, port, scheme;
+    helpers::host_type type = helpers::host_type::kUnknown;
+    bool authority = false;
+    std::size_t used = 99;
+    const auto status = helpers::try_to_deserialize_as_absolute_form(
+        source, path, query, authority, host, port, type, scheme, used);
+    DOBA_EXPECT_EQUAL(status, deserialization_status::kSucceeded);
+    DOBA_EXPECT_EQUAL(used, value.source.size());
+    DOBA_EXPECT_EQUAL(path, value.path);
+    DOBA_EXPECT_EQUAL(query, value.query);
+    DOBA_EXPECT_EQUAL(scheme, value.scheme);
+    DOBA_EXPECT_EQUAL(authority, value.authority);
+    if (authority) {
+      DOBA_EXPECT_EQUAL(host, value.host);
+      DOBA_EXPECT_EQUAL(port, value.port);
+      DOBA_EXPECT_EQUAL(host.data(), source.data() + source.find(value.host));
+      DOBA_EXPECT_EQUAL(type, value.host.front() == '[' ?
+                        helpers::host_type::kIpLiteral :
+                        helpers::host_type::kRegName);
+    }
+    if (!value.path.empty()) {
+      DOBA_EXPECT_EQUAL(path.data(), source.data() + source.find(value.path));
+    }
+    if (!value.query.empty()) {
+      DOBA_EXPECT_EQUAL(query.data(), source.data() + source.find(value.query));
+    }
+  }
+}
+// +===========================================================================+
+// | [>] absolute URI errors distinguish truncation from syntax  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("absolute URI errors distinguish truncation from syntax") {
+  struct test_case {
+    std::string_view source;
+    deserialization_status expected;
+  };
+  constexpr test_case cases[] = {
+      {"", deserialization_status::kMoreBytesNeeded},
+      {"http", deserialization_status::kMoreBytesNeeded},
+      {"1http:", deserialization_status::kInvalidSource},
+      {"h_:", deserialization_status::kInvalidSource},
+      {"http://a%", deserialization_status::kMoreBytesNeeded},
+      {"http://a%0", deserialization_status::kMoreBytesNeeded},
+      {"http://a%gg/", deserialization_status::kInvalidSource},
+      {"http://[::1", deserialization_status::kMoreBytesNeeded},
+      {"http://[v1.]/", deserialization_status::kInvalidSource},
+      {"http://[u]@host/", deserialization_status::kInvalidSource},
+      {"http://host:x/", deserialization_status::kInvalidSource},
+      {"http://host/a%", deserialization_status::kMoreBytesNeeded},
+      {"http://host/a%g0", deserialization_status::kInvalidSource},
+      {"urn:a%0", deserialization_status::kMoreBytesNeeded},
+      {"urn:a%g0", deserialization_status::kInvalidSource},
+      {"urn:a?%0", deserialization_status::kMoreBytesNeeded},
+      {"urn:a?%g0", deserialization_status::kInvalidSource},
+  };
+  for (const auto& value : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(value.source);
+    std::string_view path, query, host, port, scheme;
+    helpers::host_type type = helpers::host_type::kUnknown;
+    bool authority = true;
+    std::size_t used = 99;
+    DOBA_EXPECT_EQUAL(helpers::try_to_deserialize_as_absolute_form(
+        value.source, path, query, authority, host, port, type, scheme, used),
+        value.expected);
+    DOBA_EXPECT_EQUAL(used, 0);
+  }
+}

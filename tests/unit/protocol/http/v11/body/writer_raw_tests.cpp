@@ -72,3 +72,14 @@ DOBA_TEST("empty buffers and repeated end calls write nothing") {
   DOBA_EXPECT(writer_raw::end(destination));
   DOBA_EXPECT(release(destination).empty());
 }
+// +===========================================================================+
+// | [>] write overloads propagate a sealed sink failure         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("write overloads propagate a sealed sink failure") {
+  writer destination;
+  destination.finish(0);
+  DOBA_EXPECT(!writer_raw::write(std::string_view("a"), destination));
+  const std::byte payload[]{std::byte{'a'}};
+  DOBA_EXPECT(!writer_raw::write(payload, destination));
+  DOBA_EXPECT(release(destination).empty());
+}

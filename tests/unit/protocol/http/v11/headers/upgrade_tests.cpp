@@ -83,3 +83,73 @@ DOBA_TEST("interpret applies upgrade policy") {
                     verdict::kReject);
   DOBA_EXPECT_EQUAL(denied.upgrade_offer.size(), 2u);
 }
+// +===========================================================================+
+// | [>] check appends ordered views from repeated fields        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check appends ordered views from repeated fields") {
+  const std::string first = "websocket";
+  const std::string second = "custom/2";
+  parsed_token_list parsed;
+  DOBA_EXPECT(upgrade::check(first, parsed));
+  DOBA_EXPECT(upgrade::check(second, parsed));
+  DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
+  DOBA_EXPECT_EQUAL(parsed.elements[0], first);
+  DOBA_EXPECT_EQUAL(parsed.elements[1], second);
+  DOBA_EXPECT_EQUAL(parsed.elements[0].data(), first.data());
+  DOBA_EXPECT_EQUAL(parsed.elements[1].data(), second.data());
+  DOBA_EXPECT(upgrade::check(",,", parsed));
+  DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
+}
+// +===========================================================================+
+// | [>] check accepts protocol version boundaries               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts protocol version boundaries") {
+  constexpr std::string_view cases[] = {
+      "x/!#$%&'*+-.^_`|~",
+      ",,x/1,,y,",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_token_list parsed;
+    DOBA_EXPECT(upgrade::check(source, parsed));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects protocol version boundaries               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects protocol version boundaries") {
+  constexpr std::string_view cases[] = {
+      "x/",
+      "x//1",
+      "x/1/2",
+      "x /1",
+      "x/ 1",
+      "x/1;v=2",
+      "x/1,y/",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_token_list parsed;
+    DOBA_EXPECT(!upgrade::check(source, parsed));
+  }
+}
+// +===========================================================================+
+// | [>] interpret applies policy to accumulated offers          ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("interpret applies policy to accumulated offers") {
+  connection state;
+  policies policy;
+  policy.allow_upgrade = true;
+  parsed_token_list first{{"websocket"}};
+  parsed_token_list second{{"custom/2"}};
+  DOBA_EXPECT_EQUAL(upgrade::interpret(first, state, policy), verdict::kAccept);
+  DOBA_EXPECT_EQUAL(upgrade::interpret(second, state, policy),
+                    verdict::kAccept);
+  DOBA_EXPECT_EQUAL(state.upgrade_offer.size(), 2);
+  DOBA_EXPECT_EQUAL(state.upgrade_offer[0], "websocket");
+  DOBA_EXPECT_EQUAL(state.upgrade_offer[1], "custom/2");
+  policy.allow_upgrade = false;
+  DOBA_EXPECT_EQUAL(upgrade::interpret({}, state, policy), verdict::kReject);
+  connection empty;
+  DOBA_EXPECT_EQUAL(upgrade::interpret({}, empty, policy), verdict::kAccept);
+}

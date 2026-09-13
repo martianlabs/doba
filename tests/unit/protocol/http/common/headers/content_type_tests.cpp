@@ -108,3 +108,35 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(content_type::check("text/plain;note=\"" + obs_text + "\""));
   DOBA_EXPECT(!content_type::check("text/" + obs_text + "plain"));
 }
+// +===========================================================================+
+// | [>] check accepts parameter delimiters                      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts parameter delimiters") {
+  constexpr std::string_view cases[] = {
+      "x/y;;a=b",
+      "x/y;a=\"a,b;c\";b=\"\"",
+      "x/y;a=\"a\\\"b\\\\c\"",
+      "x/y; ;a=b",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(content_type::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects parameter delimiters                      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects parameter delimiters") {
+  constexpr std::string_view cases[] = {
+      "x/y;a= b",
+      "x/y;a=b c",
+      "x/y;a=\"a\"b",
+      "x/y;a=\"a\\",
+      "x/y;=b",
+      "x/y;a=b,other/type",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!content_type::check(source));
+  }
+}

@@ -99,3 +99,35 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(authentication_info::check(
       std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts authentication parameter boundaries       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts authentication parameter boundaries") {
+  constexpr std::string_view cases[] = {
+      "a=\"\", b=token",
+      "a\t=\t\"x,y;z\"",
+      ",,a=\"x\\\"y\",,b=z,",
+      "a=\"x\\\\y\"",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(authentication_info::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects authentication parameter boundaries       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects authentication parameter boundaries") {
+  constexpr std::string_view cases[] = {
+      "a=b,c",
+      "a=b,c=",
+      "a=\"x\"junk",
+      "a=\"x\\",
+      "a=b;c=d",
+      "=x,a=b",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!authentication_info::check(source));
+  }
+}

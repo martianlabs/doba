@@ -79,3 +79,39 @@ DOBA_TEST("interpret records trailer names") {
   DOBA_EXPECT_EQUAL(state.trailer_names.size(), 2u);
   DOBA_EXPECT_EQUAL(state.trailer_names[1], "Digest");
 }
+// +===========================================================================+
+// | [>] check appends ordered views from repeated fields        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check appends ordered views from repeated fields") {
+  const std::string first = "Digest";
+  const std::string second = "X-Checksum";
+  parsed_token_list parsed;
+  DOBA_EXPECT(trailer::check(first, parsed));
+  DOBA_EXPECT(trailer::check(second, parsed));
+  DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
+  DOBA_EXPECT_EQUAL(parsed.elements[0], first);
+  DOBA_EXPECT_EQUAL(parsed.elements[1], second);
+  DOBA_EXPECT_EQUAL(parsed.elements[0].data(), first.data());
+  DOBA_EXPECT_EQUAL(parsed.elements[1].data(), second.data());
+  DOBA_EXPECT(trailer::check(",,", parsed));
+  DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
+}
+// +===========================================================================+
+// | [>] interpret appends trailers without changing framing     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("interpret appends trailers without changing framing") {
+  connection state;
+  state.chunked = true;
+  state.trailer_names.push_back("Existing");
+  parsed_token_list parsed;
+  DOBA_EXPECT(trailer::check(",Digest,,X-Checksum,", parsed));
+  policies policy;
+  DOBA_EXPECT_EQUAL(trailer::interpret(parsed, state, policy),
+                    verdict::kAccept);
+  DOBA_EXPECT_EQUAL(state.trailer_names.size(), 3);
+  DOBA_EXPECT_EQUAL(state.trailer_names[0], "Existing");
+  DOBA_EXPECT_EQUAL(state.trailer_names[1], "Digest");
+  DOBA_EXPECT_EQUAL(state.trailer_names[2], "X-Checksum");
+  DOBA_EXPECT(state.chunked);
+  DOBA_EXPECT(state.options.empty());
+}

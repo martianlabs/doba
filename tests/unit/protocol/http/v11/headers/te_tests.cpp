@@ -94,3 +94,57 @@ DOBA_TEST("interpret records codings and trailers") {
   DOBA_EXPECT_EQUAL(state.te_codings[0], "gzip");
   DOBA_EXPECT_EQUAL(state.te_codings[1], "deflate");
 }
+// +===========================================================================+
+// | [>] check accepts quality and quoted parameter boundaries   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts quality and quoted parameter boundaries") {
+  constexpr std::string_view cases[] = {
+      "gzip;p=\"a,b;c\";q=0.001",
+      "gzip;Q=1.",
+      "gzip;p = \"\";q=0.000",
+      "TRAILERS;q=1.000",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_parameter_list parsed;
+    DOBA_EXPECT(te::check(source, parsed));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects quality and quoted parameter boundaries   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects quality and quoted parameter boundaries") {
+  constexpr std::string_view cases[] = {
+      "gzip;q=1.0000",
+      "gzip;q=00.5",
+      "gzip;q= 1",
+      "gzip;q =1",
+      "gzip;q=\"1\"",
+      "gzip;q=0.5x",
+      "gzip;p=\"x\\",
+      "gzip;;p=v",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_parameter_list parsed;
+    DOBA_EXPECT(!te::check(source, parsed));
+  }
+}
+// +===========================================================================+
+// | [>] interpret accumulates codings without losing trailers   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("interpret accumulates codings without losing trailers") {
+  connection state;
+  policies policy;
+  parsed_parameter_list first;
+  DOBA_EXPECT(te::check("TRAILERS;q=1, gzip;p=\"x,y\";q=0", first));
+  DOBA_EXPECT_EQUAL(te::interpret(first, state, policy), verdict::kAccept);
+  parsed_parameter_list second;
+  DOBA_EXPECT(te::check("deflate", second));
+  DOBA_EXPECT_EQUAL(te::interpret(second, state, policy), verdict::kAccept);
+  DOBA_EXPECT(state.accepts_trailers);
+  DOBA_EXPECT_EQUAL(state.te_codings.size(), 2);
+  DOBA_EXPECT_EQUAL(state.te_codings[0], "gzip");
+  DOBA_EXPECT_EQUAL(state.te_codings[1], "deflate");
+  DOBA_EXPECT(state.transfer_codings.empty());
+}

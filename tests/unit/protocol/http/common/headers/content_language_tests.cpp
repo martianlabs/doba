@@ -90,3 +90,78 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(content_language::check(
       std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts language tag alternatives                 ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts language tag alternatives") {
+  constexpr std::string_view cases[] = {
+      "ab",
+      "abc",
+      "abcd",
+      "abcde",
+      "abcdefgh",
+      "ab-cde-fgh-ijk",
+      "ab-Latn-US",
+      "ab-419",
+      "ab-1234",
+      "ab-abcde",
+      "ab-abcdefgh",
+      "ab-a-ab",
+      "ab-a-abcdefgh-b-cd",
+      "ab-x-a",
+      "ab-X-12345678",
+      "x-a",
+      "X-abcdefgh",
+      "zh-cmn-Hans-CN-a-extend-x-private",
+      "EN-gb-OED",
+      "I-AMI",
+      "i-bnn",
+      "i-default",
+      "i-enochian",
+      "i-hak",
+      "i-lux",
+      "i-mingo",
+      "i-navajo",
+      "i-pwn",
+      "i-tao",
+      "i-tay",
+      "i-tsu",
+      "sgn-BE-FR",
+      "sgn-BE-NL",
+      "sgn-CH-DE",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(content_language::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects language tag alternatives                 ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects language tag alternatives") {
+  constexpr std::string_view cases[] = {
+      "a",
+      "abcdefghi",
+      "ab-cde-fgh-ijk-lmn",
+      "abcd-abc",
+      "ab-12",
+      "ab-1234a!",
+      "ab-a",
+      "ab-a-b",
+      "ab-a-abcdefghi",
+      "ab-x",
+      "ab-x-abcdefghi",
+      "ab-x-",
+      "x-",
+      "x-abcdefghi",
+      "ab--US",
+      "ab-US-Latn",
+      "ab-a-ab-",
+      "ab-abcde!",
+      "i-unknown",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!content_language::check(source));
+  }
+}

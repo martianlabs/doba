@@ -97,3 +97,43 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(retry_after::check(std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check scans the complete decimal value                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check scans the complete decimal value") {
+  for (unsigned int byte = 0; byte <= 255; ++byte) {
+    std::string source(64, '9');
+    source += static_cast<char>(byte);
+    martianlabs::doba::tests::unit::test_helper::set_context(
+        "byte " + std::to_string(byte));
+    DOBA_EXPECT_EQUAL(retry_after::check(source), byte >= '0' && byte <= '9');
+  }
+}
+// +===========================================================================+
+// | [>] check accepts date alternative boundaries               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts date alternative boundaries") {
+  constexpr std::string_view cases[] = {
+      "Wednesday, 01-Jan-00 00:00:00 GMT",
+      "Mon Jan  1 00:00:00 2001",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(retry_after::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects date alternative boundaries               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects date alternative boundaries") {
+  constexpr std::string_view cases[] = {
+      "Sun, 06 Nov 1994 08:49:37 GMT,1",
+      "1,Sun, 06 Nov 1994 08:49:37 GMT",
+      "Sun, 06 Nov 1994 08:49:37 GM",
+      "Sun Nov  6 08:49:37 199",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!retry_after::check(source));
+  }
+}

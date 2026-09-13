@@ -724,3 +724,111 @@ DOBA_TEST("deferred length respects the exact header boundary") {
     }
   }
 }
+// +===========================================================================+
+// | [>] removing one Date preserves the remaining explicit Date ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("removing one Date preserves the remaining explicit Date") {
+  response value = response::ok_200();
+  value.add_header("Date", "first").add_header("Date", "remaining");
+  value.remove_header("date");
+  DOBA_EXPECT_EQUAL(value.get_header("Date").second, "remaining");
+  const auto serialized = value.serialize();
+  const std::string_view prefix(serialized->prefix.get(),
+                                serialized->prefix_size);
+  DOBA_EXPECT_EQUAL(prefix,
+                    "HTTP/1.1 200 OK\r\nDate: remaining\r\n"
+                    "Content-Length: 0\r\n\r\n");
+}
+// +===========================================================================+
+// | [>] header names validate every byte before mutation        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("header names validate every byte before mutation") {
+  for (unsigned int byte = 0; byte < 256; byte++) {
+    martianlabs::doba::tests::unit::test_helper::set_context(
+        std::to_string(byte));
+    const char ch = static_cast<char>(byte);
+    const std::string candidate = std::string("a") + ch + "b";
+    const bool valid = (byte >= '0' && byte <= '9') ||
+                       (byte >= 'A' && byte <= 'Z') ||
+                       (byte >= 'a' && byte <= 'z') || byte == 96 ||
+                       std::string_view("!#$%&'*+-.^_|~").find(ch) !=
+                           std::string_view::npos;
+    for (bool replace : {false, true}) {
+      response value = response::ok_200();
+      value.add_header("X-Keep", "original");
+      bool threw = false;
+      try {
+        if (replace) value.set_header(candidate, "new");
+        else value.add_header(candidate, "new");
+      } catch (const std::invalid_argument&) {
+        threw = true;
+      }
+      DOBA_EXPECT_EQUAL(threw, !valid);
+      DOBA_EXPECT_EQUAL(value.get_header("X-Keep").second, "original");
+      DOBA_EXPECT_EQUAL(value.get_headers_length(), valid ? 2 : 1);
+      if (valid) DOBA_EXPECT_EQUAL(value.get_header(candidate).second, "new");
+    }
+  }
+}
+// +===========================================================================+
+// | [>] header values validate every byte before mutation       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("header values validate every byte before mutation") {
+  for (unsigned int byte = 0; byte < 256; byte++) {
+    martianlabs::doba::tests::unit::test_helper::set_context(
+        std::to_string(byte));
+    const char ch = static_cast<char>(byte);
+    const std::string candidate = std::string("a") + ch + "b";
+    const bool valid = byte == 9 || (byte >= 32 && byte != 127);
+    for (bool replace : {false, true}) {
+      response value = response::ok_200();
+      value.add_header("X-Keep", "original");
+      bool threw = false;
+      try {
+        if (replace) value.set_header("X-Keep", candidate);
+        else value.add_header("X-New", candidate);
+      } catch (const std::invalid_argument&) {
+        threw = true;
+      }
+      DOBA_EXPECT_EQUAL(threw, !valid);
+      DOBA_EXPECT_EQUAL(value.get_header("X-Keep").second,
+                        valid && replace ? candidate : "original");
+      DOBA_EXPECT_EQUAL(value.get_headers_length(), valid && !replace ? 2 : 1);
+      if (valid && !replace) {
+        DOBA_EXPECT_EQUAL(value.get_header("X-New").second, candidate);
+      }
+    }
+  }
+}
+// +===========================================================================+
+// | [>] header growth at capacity preserves neighbors and body  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("header growth at capacity preserves neighbors and body") {
+  response value = response::ok_200();
+  const std::string head =
+      "HTTP/1.1 200 OK\r\nDate: fixed\r\nContent-Length: 4\r\nX: ";
+  const std::string tail = "\r\nY: sentinel\r\n\r\n";
+  const std::size_t body_begin = limits::kMaxResponseSizeInMemory -
+                                 limits::kMaxResponseBodySizeInMemory;
+  const std::string padding(body_begin - head.size() - tail.size(), 'x');
+  value.set_body("body").set_header("Date", "fixed")
+      .set_header("Content-Length", "4").add_header("X", "small")
+      .add_header("Y", "sentinel");
+  value.set_header("X", padding);
+  bool threw = false;
+  try {
+    value.set_header("X", padding + "x");
+  } catch (const std::out_of_range&) {
+    threw = true;
+  }
+  DOBA_EXPECT(threw);
+  DOBA_EXPECT_EQUAL(value.get_header("X").second, padding);
+  DOBA_EXPECT_EQUAL(value.get_header("Y").second, "sentinel");
+  value.set_header("X", "short").set_header("X", "equal");
+  DOBA_EXPECT_EQUAL(value.get_header("Y").second, "sentinel");
+  value.set_header("X", padding);
+  const auto serialized = value.serialize();
+  DOBA_EXPECT_EQUAL(
+      std::string_view(serialized->prefix.get(), serialized->prefix_size),
+      head + padding + tail + "body");
+}

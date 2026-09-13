@@ -110,3 +110,23 @@ DOBA_TEST("destination errors are reported and latched") {
   DOBA_EXPECT_EQUAL(state.error, framer_error::io_error);
   DOBA_EXPECT_EQUAL(state.consumed, 0);
 }
+// +===========================================================================+
+// | [>] a sealed destination fails after earlier progress       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("a sealed destination fails after earlier progress") {
+  framer_raw value(3);
+  writer destination;
+  const auto first = value.write(bytes("a"), destination);
+  DOBA_EXPECT_EQUAL(first.consumed, 1);
+  destination.finish(1);
+  const auto failed = value.write(bytes("bc"), destination);
+  DOBA_EXPECT(failed.has_error);
+  DOBA_EXPECT_EQUAL(failed.error, framer_error::io_error);
+  DOBA_EXPECT_EQUAL(failed.consumed, 0);
+  writer replacement;
+  const auto repeated = value.write(bytes("bc"), replacement);
+  DOBA_EXPECT(repeated.has_error);
+  DOBA_EXPECT_EQUAL(repeated.consumed, 0);
+  DOBA_EXPECT_EQUAL(release(destination), "a");
+  DOBA_EXPECT(release(replacement).empty());
+}

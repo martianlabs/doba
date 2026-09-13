@@ -93,3 +93,57 @@ DOBA_TEST("interpret limits via hops") {
   policy.max_forwarding_hops = 1;
   DOBA_EXPECT_EQUAL(via::interpret(parsed, state, policy), verdict::kReject);
 }
+// +===========================================================================+
+// | [>] check accepts protocol and comment boundaries           ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts protocol and comment boundaries") {
+  constexpr std::string_view cases[] = {
+      "custom/2\tproxy:001\t(a(b)c)",
+      "1.1 proxy (a\\)b\\(c)",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_via_list parsed;
+    DOBA_EXPECT(via::check(source, parsed));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects protocol and comment boundaries           ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects protocol and comment boundaries") {
+  constexpr std::string_view cases[] = {
+      "HTTP/ proxy",
+      "HTTP/1/2 proxy",
+      "1.1 proxy:abc",
+      "1.1 proxy (x)junk",
+      "1.1 proxy (x\\",
+      "1.1 proxy (x) (y)",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_via_list parsed;
+    DOBA_EXPECT(!via::check(source, parsed));
+  }
+}
+// +===========================================================================+
+// | [>] check accepts an IPv6 received by host                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts an IPv6 received by host") {
+  // RFC 9110 S7.6.3: received-by permits uri-host and an optional port.
+  parsed_via_list parsed;
+  DOBA_EXPECT(via::check("HTTP/1.1 [::1]:8080", parsed));
+  DOBA_EXPECT_EQUAL(parsed.elements.size(), 1);
+  DOBA_EXPECT_EQUAL(parsed.elements[0].received_protocol, "HTTP/1.1");
+  DOBA_EXPECT_EQUAL(parsed.elements[0].received_by, "[::1]:8080");
+}
+// +===========================================================================+
+// | [>] check keeps commas inside comments in one member        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check keeps commas inside comments in one member") {
+  // RFC 9110 S5.6.5: a comma is valid ctext inside a comment.
+  parsed_via_list parsed;
+  DOBA_EXPECT(via::check("1.1 proxy (a,b), 1.0 other", parsed));
+  DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
+  DOBA_EXPECT_EQUAL(parsed.elements[0].comment, "(a,b)");
+  DOBA_EXPECT_EQUAL(parsed.elements[1].received_by, "other");
+}

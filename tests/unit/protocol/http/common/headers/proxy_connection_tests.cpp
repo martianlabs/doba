@@ -96,3 +96,32 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(x_proxy_connection::check(
       std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts extension options                         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts extension options") {
+  constexpr std::string_view cases[] = {
+      "X-Custom, CLOSE, keep-alive",
+      ",,upgrade,,",
+      "!#$%&'*",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(x_proxy_connection::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects extension options                         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects extension options") {
+  constexpr std::string_view cases[] = {
+      "close;timeout=1",
+      "close=1",
+      "close,upgrade/1",
+      "close\tkeep-alive",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!x_proxy_connection::check(source));
+  }
+}

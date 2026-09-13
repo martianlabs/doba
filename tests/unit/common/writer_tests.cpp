@@ -22,7 +22,9 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <span>
 #include <string>
+#include <utility>
 
 #include "common/reader.h"
 #include "common/writer.h"
@@ -48,4 +50,37 @@ DOBA_TEST("finishing seals the writer") {
   std::string output;
   DOBA_EXPECT_EQUAL(source.read_all(output), 4);
   DOBA_EXPECT_EQUAL(output, "body");
+}
+// +===========================================================================+
+// | [>] write overloads preserve binary bytes and total size    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("write overloads preserve binary bytes and total size") {
+  writer value;
+  const std::string bytes("a\0b\xff", 4);
+  DOBA_EXPECT(value.write(nullptr, 0));
+  DOBA_EXPECT(value.write(bytes.data(), 1));
+  DOBA_EXPECT(value.write(std::string_view(bytes).substr(1, 2)));
+  DOBA_EXPECT(value.write(std::as_bytes(std::span(bytes)).last(1)));
+  reader source(value.release());
+  DOBA_EXPECT_EQUAL(source.size().value(), bytes.size());
+  std::string output;
+  DOBA_EXPECT_EQUAL(source.read_all(output), bytes.size());
+  DOBA_EXPECT_EQUAL(output, bytes);
+}
+// +===========================================================================+
+// | [>] moving a writer preserves unfinished byte accounting    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("moving a writer preserves unfinished byte accounting") {
+  writer source;
+  DOBA_EXPECT(source.write("ab"));
+  writer moved(std::move(source));
+  writer target;
+  DOBA_EXPECT(target.write("discarded"));
+  target = std::move(moved);
+  DOBA_EXPECT(target.write("cd"));
+  reader input(target.release());
+  DOBA_EXPECT_EQUAL(input.size().value(), 4);
+  std::string output;
+  DOBA_EXPECT_EQUAL(input.read_all(output), 4);
+  DOBA_EXPECT_EQUAL(output, "abcd");
 }

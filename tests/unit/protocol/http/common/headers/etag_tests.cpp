@@ -88,3 +88,19 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(etag::check("\"" + obs_text + "\""));
   DOBA_EXPECT(!etag::check(obs_text));
 }
+// +===========================================================================+
+// | [>] check applies the entity tag byte grammar               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check applies the entity tag byte grammar") {
+  for (unsigned int byte = 0; byte <= 255; ++byte) {
+    std::string source = "\"";
+    source += static_cast<char>(byte);
+    source += '"';
+    const bool expected = byte == 0x21 ||
+                          (byte >= 0x23 && byte <= 0x7e) || byte >= 0x80;
+    martianlabs::doba::tests::unit::test_helper::set_context(
+        "byte " + std::to_string(byte));
+    DOBA_EXPECT_EQUAL(etag::check(source), expected);
+    DOBA_EXPECT_EQUAL(etag::check("W/" + source), expected);
+  }
+}

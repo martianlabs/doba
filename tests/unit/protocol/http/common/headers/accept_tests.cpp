@@ -223,3 +223,38 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(accept::check("text/plain;note=\"" + obs_text + "\""));
   DOBA_EXPECT(!accept::check("text/" + obs_text + "plain"));
 }
+// +===========================================================================+
+// | [>] check accepts weight and parameter boundaries           ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts weight and parameter boundaries") {
+  constexpr std::string_view cases[] = {
+      "text/a;q=0.001;x=\"a,b;c\"",
+      "text/a;Q=1.;x=y",
+      "text/a;q=0.999,text/b;q=1",
+      "text/a;;;q=0.0;;p=v",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(accept::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects weight and parameter boundaries           ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects weight and parameter boundaries") {
+  constexpr std::string_view cases[] = {
+      "text/a;q=0;q=1",
+      "text/a;Q=1;q=0",
+      "text/a;q=0.5x",
+      "text/a;q=1.0000",
+      "text/a;q= 1",
+      "text/a;p=",
+      "text/a;p=\"a\"junk",
+      "text/a;p=\"a\\",
+      "text/a;=v",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!accept::check(source));
+  }
+}

@@ -260,3 +260,128 @@ DOBA_TEST("chunked reader preserves the following request bytes") {
     DOBA_EXPECT(source.eof());
   }
 }
+// +===========================================================================+
+// | [>] quoted extensions respect output bounds and sentinels   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("quoted extensions decode with bounded output and sentinels") {
+  const std::string wire =
+      "1 \t; flag \t; name \t= \t\"a\\\"b\\\\c\" \t"
+      "; token = v \t; bare \t\r\nx\r\n"
+      "0;end=\"\"\r\nX:\t v\r\nY:\r\n\r\nNEXT";
+  for (std::size_t size : {1, 2, 8}) {
+    auto source = reader::borrowed(bytes(wire));
+    reader_chunked value;
+    std::array<std::byte, 10> output;
+    output.fill(std::byte{0x5a});
+    const auto state = value.read(source, std::span(output).subspan(1, size));
+    DOBA_EXPECT(!state.has_error);
+    DOBA_EXPECT(state.complete);
+    DOBA_EXPECT_EQUAL(state.produced, 1);
+    DOBA_EXPECT_EQUAL(output[0], std::byte{0x5a});
+    DOBA_EXPECT_EQUAL(output[1], std::byte{'x'});
+    DOBA_EXPECT_EQUAL(output[2], std::byte{0x5a});
+    DOBA_EXPECT_EQUAL(source.read(output), 4);
+    DOBA_EXPECT_EQUAL(
+        std::string_view(reinterpret_cast<const char*>(output.data()), 4),
+        "NEXT");
+  }
+}
+// +===========================================================================+
+// | [>] truncation covers extension and trailer transitions     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("truncation covers extension and trailer transitions") {
+  const std::string wire =
+      "1 \t; flag \t; name \t= \t\"a\\\"b\\\\c\" \t"
+      "; token = v \t; bare \t\r\nx\r\n"
+      "0;end=\"\"\r\nX:\t v\r\nY:\r\n\r\n";
+  for (std::size_t length = 0; length < wire.size(); ++length) {
+    martianlabs::doba::tests::unit::test_helper::set_context(
+        "prefix " + std::to_string(length));
+    auto source =
+        reader::borrowed(bytes(std::string_view(wire).substr(0, length)));
+    reader_chunked value;
+    std::array<std::byte, 8> output{};
+    const auto state = value.read(source, output);
+    DOBA_EXPECT(state.has_error);
+    DOBA_EXPECT(!state.complete);
+    DOBA_EXPECT_EQUAL(state.error, reader_error::chunked_incomplete);
+    DOBA_EXPECT(state.produced <= 1);
+    const auto repeated = value.read(source, output);
+    DOBA_EXPECT(repeated.has_error);
+    DOBA_EXPECT_EQUAL(repeated.error, reader_error::chunked_incomplete);
+    DOBA_EXPECT_EQUAL(repeated.produced, 0);
+  }
+}
+// +===========================================================================+
+// | [>] rejects invalid bytes after extension transitions       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("rejects invalid bytes after extension transitions") {
+  constexpr std::string_view cases[] = {
+      "1 ;=x\r\n",
+      "1;name /\r\n",
+      "1;name= /\r\n",
+      "1;name=token/\r\n",
+      "1;name=\"x\"/\r\n",
+      "1;name=\"x\\\001\"\r\n",
+      "1;name=\"x\177\"\r\n",
+  };
+  for (const auto wire : cases) {
+    reader_chunked value;
+    auto source = reader::borrowed(bytes(wire));
+    std::byte output{};
+    const auto state = value.read(source, std::span(&output, 1));
+    DOBA_EXPECT(state.has_error);
+    DOBA_EXPECT_EQUAL(state.error, reader_error::invalid_chunk_size);
+  }
+}
+// +===========================================================================+
+// | [>] maximum chunk size reports missing data                 ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("maximum chunk size reports missing data without overflow") {
+  const std::string wire = std::string(sizeof(std::size_t) * 2, 'f') + "\r\n";
+  auto source = reader::borrowed(bytes(wire));
+  reader_chunked value;
+  std::byte output{};
+  const auto state = value.read(source, std::span(&output, 1));
+  DOBA_EXPECT(state.has_error);
+  DOBA_EXPECT_EQUAL(state.error, reader_error::chunked_incomplete);
+  DOBA_EXPECT_EQUAL(state.produced, 0);
+}
+// +===========================================================================+
+// | [>] extension budget resets for each chunk                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("extension budget resets for each chunk") {
+  const std::string chunk =
+      "1;" + std::string(limits::kMaxChunkedExtensionSize - 1, 'x') +
+      "\r\na\r\n";
+  const std::string wire = chunk + chunk + std::string(64, '0') + "\r\n\r\n";
+  reader_chunked value;
+  auto source = reader::borrowed(bytes(wire));
+  std::array<std::byte, 3> output{};
+  const auto state = value.read(source, output);
+  DOBA_EXPECT(!state.has_error);
+  DOBA_EXPECT(state.complete);
+  DOBA_EXPECT_EQUAL(state.produced, 2);
+  DOBA_EXPECT_EQUAL(output[0], std::byte{'a'});
+  DOBA_EXPECT_EQUAL(output[1], std::byte{'a'});
+}
+// +===========================================================================+
+// | [>] trailer budget includes all fields and the final line   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("trailer budget includes all fields and the final line") {
+  const auto limit = limits::kMaxChunkedTrailerSize;
+  for (const std::size_t length : {limit - 1, limit, limit + 1}) {
+    const std::string wire =
+        "0\r\nA:\r\nB:" + std::string(length - 10, 'x') + "\r\n\r\n";
+    reader_chunked value;
+    auto source = reader::borrowed(bytes(wire));
+    std::byte output{};
+    const auto state = value.read(source, std::span(&output, 1));
+    DOBA_EXPECT_EQUAL(state.has_error, length > limit);
+    DOBA_EXPECT_EQUAL(state.complete, length <= limit);
+    if (length > limit) {
+      DOBA_EXPECT_EQUAL(state.error,
+                        reader_error::trailer_size_limit_exceeded);
+    }
+  }
+}

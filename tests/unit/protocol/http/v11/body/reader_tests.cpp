@@ -92,3 +92,29 @@ DOBA_TEST("chunked factory removes wire framing and trailers") {
   DOBA_EXPECT(complete);
   DOBA_EXPECT_EQUAL(decoded, "hello world");
 }
+// +===========================================================================+
+// | [>] moves preserve partially consumed body states           ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("moves preserve partially consumed raw and chunked states") {
+  for (const bool chunked : {false, true}) {
+    constexpr std::string_view raw = "abc";
+    constexpr std::string_view wire = "3\r\nabc\r\n0\r\n\r\n";
+    auto value = chunked
+                     ? reader::chunked(common_reader::borrowed(bytes(wire)))
+                     : reader::raw(common_reader::borrowed(bytes(raw)), 3);
+    std::array<std::byte, 2> output{};
+    auto first = value.read(std::span(output).first(1));
+    DOBA_EXPECT_EQUAL(first.produced, 1);
+    DOBA_EXPECT(!first.complete);
+    reader moved(std::move(value));
+    auto target = reader::raw(common_reader::borrowed(bytes("old")), 3);
+    target = std::move(moved);
+    const auto state = target.read(output);
+    DOBA_EXPECT(!state.has_error);
+    DOBA_EXPECT(state.complete);
+    DOBA_EXPECT_EQUAL(state.produced, 2);
+    DOBA_EXPECT_EQUAL(output[0], std::byte{'b'});
+    DOBA_EXPECT_EQUAL(output[1], std::byte{'c'});
+    DOBA_EXPECT_EQUAL(target.read(output).produced, 0);
+  }
+}

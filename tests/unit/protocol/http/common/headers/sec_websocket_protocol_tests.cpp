@@ -85,3 +85,31 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(sec_websocket_protocol::check(
       std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts protocol list boundaries                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts protocol list boundaries") {
+  constexpr std::string_view cases[] = {
+      "!#$%&'*+-.^_`|~",
+      ",,chat,,superchat,",
+      "chat,CHAT",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(sec_websocket_protocol::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects protocol list boundaries                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects protocol list boundaries") {
+  constexpr std::string_view cases[] = {
+      "chat/superchat",
+      "chat, \"superchat\"",
+      "chat,superchat=1",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!sec_websocket_protocol::check(source));
+  }
+}

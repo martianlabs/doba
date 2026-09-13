@@ -22,41 +22,43 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include "common/hash_map.h"
-
 #include <string>
 #include <string_view>
 
+#include "common/hash_base.h"
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::common::hash_map;
-}
+using martianlabs::doba::common::ascii_to_lower;
+using martianlabs::doba::common::base_equal;
+using martianlabs::doba::common::base_hash;
+}  // namespace
 
 // +===========================================================================+
-// | [>] hash map header is self contained                       ( test-case ) |
+// | [>] ascii folding preserves every non-uppercase byte        ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("hash map header is self contained") {
-  hash_map<std::string_view, int> values;
-  values.emplace("key", 1);
-  DOBA_EXPECT_EQUAL(values.at("KEY"), 1);
+DOBA_TEST("ascii folding preserves every non-uppercase byte") {
+  for (unsigned int byte = 0; byte <= 255; ++byte) {
+    const auto expected = static_cast<unsigned char>(
+        byte >= 'A' && byte <= 'Z' ? byte + 32 : byte);
+    DOBA_EXPECT_EQUAL(ascii_to_lower(static_cast<unsigned char>(byte)),
+                      expected);
+  }
 }
 // +===========================================================================+
-// | [>] owned keys use complete case insensitive lookup         ( test-case ) |
+// | [>] hash equality includes embedded nulls and high bytes    ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("owned keys use complete case insensitive lookup") {
-  hash_map<std::string, int> values;
-  std::string key = "Content-Length";
-  values.emplace(key, 7);
-  key.assign("changed");
-  DOBA_EXPECT(!values.emplace("CONTENT-LENGTH", 9).second);
-  const auto found = values.find(std::string_view("content-length"));
-  DOBA_EXPECT(found != values.end());
-  DOBA_EXPECT_EQUAL(found->second, 7);
-  values.emplace(std::string("x\0a", 3), 1);
-  values.emplace(std::string("x\0b", 3), 2);
-  DOBA_EXPECT_EQUAL(values.at(std::string("X\0A", 3)), 1);
-  DOBA_EXPECT_EQUAL(values.at(std::string("X\0B", 3)), 2);
-  DOBA_EXPECT(values.find("x") == values.end());
-  DOBA_EXPECT_EQUAL(values.size(), 3);
+DOBA_TEST("hash equality includes embedded nulls and high bytes") {
+  base_hash hash;
+  base_equal equal;
+  for (unsigned int byte = 0; byte <= 255; ++byte) {
+    const std::string upper = std::string("A\0", 2) + static_cast<char>(byte);
+    const std::string lower = std::string("a\0", 2) + static_cast<char>(byte);
+    DOBA_EXPECT(equal(upper, lower));
+    DOBA_EXPECT_EQUAL(hash(upper), hash(lower));
+    DOBA_EXPECT(!equal(upper, std::string_view(upper).substr(0, 2)));
+    DOBA_EXPECT(!equal(upper, std::string("b\0", 2) + static_cast<char>(byte)));
+  }
+  DOBA_EXPECT(equal({}, {}));
+  DOBA_EXPECT_EQUAL(hash({}), hash(""));
 }

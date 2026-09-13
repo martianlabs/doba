@@ -22,41 +22,31 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include "common/hash_map.h"
-
 #include <string>
 #include <string_view>
 
+#include "common/hash_set.h"
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::common::hash_map;
-}
+using martianlabs::doba::common::hash_set;
+}  // namespace
 
 // +===========================================================================+
-// | [>] hash map header is self contained                       ( test-case ) |
+// | [>] owned keys retain case insensitive identity             ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("hash map header is self contained") {
-  hash_map<std::string_view, int> values;
-  values.emplace("key", 1);
-  DOBA_EXPECT_EQUAL(values.at("KEY"), 1);
-}
-// +===========================================================================+
-// | [>] owned keys use complete case insensitive lookup         ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("owned keys use complete case insensitive lookup") {
-  hash_map<std::string, int> values;
-  std::string key = "Content-Length";
-  values.emplace(key, 7);
+DOBA_TEST("owned keys retain case insensitive identity") {
+  hash_set<std::string> values;
+  std::string key = "Content-Type";
+  DOBA_EXPECT(values.emplace(key).second);
   key.assign("changed");
-  DOBA_EXPECT(!values.emplace("CONTENT-LENGTH", 9).second);
-  const auto found = values.find(std::string_view("content-length"));
-  DOBA_EXPECT(found != values.end());
-  DOBA_EXPECT_EQUAL(found->second, 7);
-  values.emplace(std::string("x\0a", 3), 1);
-  values.emplace(std::string("x\0b", 3), 2);
-  DOBA_EXPECT_EQUAL(values.at(std::string("X\0A", 3)), 1);
-  DOBA_EXPECT_EQUAL(values.at(std::string("X\0B", 3)), 2);
-  DOBA_EXPECT(values.find("x") == values.end());
+  DOBA_EXPECT(!values.emplace("CONTENT-TYPE").second);
+  DOBA_EXPECT(values.contains(std::string_view("content-type")));
+  DOBA_EXPECT_EQUAL(values.size(), 1);
+  DOBA_EXPECT(!values.contains(key));
+  values.emplace(std::string("x\0a", 3));
+  values.emplace(std::string("x\0b", 3));
+  DOBA_EXPECT(values.contains(std::string_view("X\0A", 3)));
   DOBA_EXPECT_EQUAL(values.size(), 3);
+  DOBA_EXPECT(!values.contains("x"));
 }

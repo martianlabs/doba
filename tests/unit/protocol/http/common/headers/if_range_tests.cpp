@@ -93,3 +93,32 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(if_range::check(std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts alternative boundaries                    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts alternative boundaries") {
+  constexpr std::string_view cases[] = {
+      "\"\"",
+      "W/\"\"",
+      "\"a,b;c\"",
+      "Mon Jan  1 00:00:00 2001",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(if_range::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects alternative boundaries                    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects alternative boundaries") {
+  constexpr std::string_view cases[] = {
+      "0",
+      "W/ \"a\"",
+      "Sun, 06 Nov 1994 08:49:37 GMTx",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!if_range::check(source));
+  }
+}

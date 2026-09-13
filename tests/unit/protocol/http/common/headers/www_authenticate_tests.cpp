@@ -97,3 +97,41 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(www_authenticate::check(
       std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts challenge transitions                     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts challenge transitions") {
+  constexpr std::string_view cases[] = {
+      "Scheme abc==, Other",
+      "Scheme a=\"x,y\", b=z, Other token",
+      "Scheme a=b, , c=d,Other e=f, g=h",
+      "Scheme a=\"\",Other b=\"x\\\"y\"",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(www_authenticate::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects challenge transitions                     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects challenge transitions") {
+  constexpr std::string_view cases[] = {
+      "a=b",
+      "Scheme token, a=b",
+      "Scheme, a=b",
+      "Scheme a=b, Other token, c=d",
+      "Scheme\ttoken",
+      "Scheme a=\"x\"z",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!www_authenticate::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check accepts BWS in continuing auth parameters         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts BWS in a continuing authentication parameter") {
+  DOBA_EXPECT(www_authenticate::check("Scheme a=b, Other =x"));
+}

@@ -65,11 +65,22 @@ DOBA_TEST("upgrade option requires an offered protocol") {
 DOBA_TEST("rejects nominated control fields case insensitively") {
   constexpr std::string_view fields[] = {
       "connection",        "HOST", "Content-Length",
-      "transfer-encoding", "Te",   "TRAILER",
+      "transfer-encoding", "TRAILER",
   };
   for (const auto field : fields) {
     context ctx;
     ctx.connection.options = {field};
     DOBA_EXPECT_EQUAL(directives::apply(ctx), verdict::kReject);
+  }
+}
+// +===========================================================================+
+// | [>] accepts the TE connection option                        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("accepts the TE connection option") {
+  // RFC 9110 S10.1.4: TE senders include the TE connection option.
+  for (const std::string_view option : {"TE", "Te", "te"}) {
+    context ctx;
+    ctx.connection.options = {option};
+    DOBA_EXPECT_EQUAL(directives::apply(ctx), verdict::kAccept);
   }
 }

@@ -113,3 +113,15 @@ DOBA_TEST("writes after the terminating chunk are rejected") {
   DOBA_EXPECT(!value.write(std::span<const std::byte>{}, destination));
   DOBA_EXPECT_EQUAL(release(destination), "6\r\nbefore\r\n0\r\n\r\n");
 }
+// +===========================================================================+
+// | [>] failed chunk and terminator writes are reported         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("failed chunk and terminator writes are reported") {
+  writer destination;
+  destination.finish(0);
+  writer_chunked value;
+  DOBA_EXPECT(!value.write("a", destination));
+  DOBA_EXPECT(!value.end(destination));
+  DOBA_EXPECT(!value.end(destination));
+  DOBA_EXPECT(release(destination).empty());
+}

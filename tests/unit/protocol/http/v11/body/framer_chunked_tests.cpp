@@ -258,3 +258,110 @@ DOBA_TEST("destination errors are reported and latched") {
   DOBA_EXPECT_EQUAL(state.error, framer_error::io_error);
   DOBA_EXPECT_EQUAL(state.consumed, 0);
 }
+// +===========================================================================+
+// | [>] quoted extensions survive fragmented and empty writes   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("quoted extensions survive three fragments and empty writes") {
+  const std::string body =
+      "1 \t; flag \t; name \t= \t\"a\\\"b\\\\c\" \t"
+      "; token = v \t; bare \t\r\nx\r\n"
+      "0;end=\"\"\r\nX:\t v\r\nY:\r\n\r\n";
+  const std::string source = body + "NEXT";
+  for (std::size_t split = 0; split <= body.size(); ++split) {
+    framer_chunked value;
+    writer destination;
+    std::size_t offset = 0;
+    std::size_t total = 0;
+    bool complete = false;
+    for (const std::size_t end :
+         {split, std::min(split + 1, body.size()), source.size()}) {
+      const auto fragment =
+          std::string_view(source).substr(offset, end - offset);
+      const auto state = value.write(bytes(fragment), destination);
+      DOBA_EXPECT(!state.has_error);
+      DOBA_EXPECT(state.consumed <= fragment.size());
+      total += state.consumed;
+      complete = state.complete;
+      const auto empty = value.write({}, destination);
+      DOBA_EXPECT_EQUAL(empty.consumed, 0);
+      DOBA_EXPECT_EQUAL(empty.complete, complete);
+      DOBA_EXPECT(!empty.has_error);
+      offset = end;
+    }
+    DOBA_EXPECT(complete);
+    DOBA_EXPECT_EQUAL(total, body.size());
+    DOBA_EXPECT_EQUAL(release(destination), body);
+  }
+}
+// +===========================================================================+
+// | [>] rejects invalid bytes after extension transitions       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("rejects invalid bytes after extension transitions") {
+  constexpr std::string_view cases[] = {
+      "1 ;=x\r\n",
+      "1;name /\r\n",
+      "1;name= /\r\n",
+      "1;name=token/\r\n",
+      "1;name=\"x\"/\r\n",
+      "1;name=\"x\\\001\"\r\n",
+      "1;name=\"x\177\"\r\n",
+  };
+  for (const auto wire : cases) {
+    framer_chunked value;
+    writer destination;
+    const auto state = value.write(bytes(wire), destination);
+    DOBA_EXPECT(state.has_error);
+    DOBA_EXPECT_EQUAL(state.error, framer_error::invalid_chunk_size);
+  }
+}
+// +===========================================================================+
+// | [>] maximum chunk size is valid until the next hex digit    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("maximum chunk size is valid until the next hex digit") {
+  const std::string maximum(sizeof(std::size_t) * 2, 'F');
+  framer_chunked value;
+  writer destination;
+  auto state = value.write(bytes(maximum), destination);
+  DOBA_EXPECT(!state.has_error);
+  DOBA_EXPECT(!state.complete);
+  DOBA_EXPECT_EQUAL(state.consumed, maximum.size());
+  state = value.write(bytes("0"), destination);
+  DOBA_EXPECT(state.has_error);
+  DOBA_EXPECT_EQUAL(state.error, framer_error::chunk_size_overflow);
+  DOBA_EXPECT_EQUAL(state.consumed, 0);
+}
+// +===========================================================================+
+// | [>] extension budget resets for each chunk                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("extension budget resets for each chunk") {
+  const std::string chunk =
+      "1;" + std::string(limits::kMaxChunkedExtensionSize - 1, 'x') +
+      "\r\na\r\n";
+  const std::string wire = chunk + chunk + std::string(64, '0') + "\r\n\r\n";
+  framer_chunked value;
+  writer destination;
+  const auto state = value.write(bytes(wire), destination);
+  DOBA_EXPECT(!state.has_error);
+  DOBA_EXPECT(state.complete);
+  DOBA_EXPECT_EQUAL(state.consumed, wire.size());
+  DOBA_EXPECT_EQUAL(release(destination), wire);
+}
+// +===========================================================================+
+// | [>] trailer budget includes all fields and the final line   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("trailer budget includes all fields and the final line") {
+  const auto limit = limits::kMaxChunkedTrailerSize;
+  for (const std::size_t length : {limit - 1, limit, limit + 1}) {
+    const std::string wire =
+        "0\r\nA:\r\nB:" + std::string(length - 10, 'x') + "\r\n\r\n";
+    framer_chunked value;
+    writer destination;
+    const auto state = value.write(bytes(wire), destination);
+    DOBA_EXPECT_EQUAL(state.has_error, length > limit);
+    DOBA_EXPECT_EQUAL(state.complete, length <= limit);
+    if (length > limit) {
+      DOBA_EXPECT_EQUAL(state.error,
+                        framer_error::trailer_size_limit_exceeded);
+    }
+  }
+}

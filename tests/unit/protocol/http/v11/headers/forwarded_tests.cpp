@@ -89,3 +89,55 @@ DOBA_TEST("interpret limits forwarding hops") {
   DOBA_EXPECT_EQUAL(forwarded::interpret(parsed, state, policy),
                     verdict::kReject);
 }
+// +===========================================================================+
+// | [>] check accepts pair delimiter boundaries                 ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts pair delimiter boundaries") {
+  constexpr std::string_view cases[] = {
+      "for=\"a,b;c\";by=\"a\\\"b\"",
+      "for=\"\";proto=HTTPS",
+      ";for=a;;proto=https;",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_forwarded_list parsed;
+    DOBA_EXPECT(forwarded::check(source, parsed));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects pair delimiter boundaries                 ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects pair delimiter boundaries") {
+  constexpr std::string_view cases[] = {
+      "for=a;by",
+      "for=a;by=",
+      "for=a;by =x",
+      "for=a;by= x",
+      "for=\"a\"junk",
+      "for=\"a\\",
+      "for=a,by=",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_forwarded_list parsed;
+    DOBA_EXPECT(!forwarded::check(source, parsed));
+  }
+}
+// +===========================================================================+
+// | [>] check preserves quoted pairs and accumulated order      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check preserves quoted pairs and accumulated order") {
+  const std::string source = "for=\"a,b;c\";BY=\"x\\\"y\"";
+  parsed_forwarded_list parsed;
+  DOBA_EXPECT(forwarded::check(source, parsed));
+  DOBA_EXPECT(forwarded::check("proto=https", parsed));
+  DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
+  DOBA_EXPECT_EQUAL(parsed.elements[0].pairs.size(), 2);
+  DOBA_EXPECT_EQUAL(parsed.elements[0].pairs[0].name, "for");
+  DOBA_EXPECT_EQUAL(parsed.elements[0].pairs[0].value, "\"a,b;c\"");
+  DOBA_EXPECT_EQUAL(parsed.elements[0].pairs[1].name, "BY");
+  DOBA_EXPECT_EQUAL(parsed.elements[0].pairs[1].value, "\"x\\\"y\"");
+  DOBA_EXPECT_EQUAL(parsed.elements[0].pairs[0].name.data(), source.data());
+  DOBA_EXPECT_EQUAL(parsed.elements[1].pairs[0].name, "proto");
+  DOBA_EXPECT_EQUAL(parsed.elements[1].pairs[0].value, "https");
+}

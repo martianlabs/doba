@@ -681,3 +681,66 @@ DOBA_TEST("server invokes parametrized async handlers") {
   value.stop();
   test_router::parametrized_handler.async_callback = {};
 }
+// +===========================================================================+
+// | [>] sync handler failure preserves subsequent dispatch      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("sync handler failure preserves subsequent dispatch") {
+  test_router::match_available = true;
+  test_router::allowed_methods_result.clear();
+  bool fail = true;
+  test_server value;
+  value.add_route("GET", "/", [&](const request&) {
+    if (fail) throw std::runtime_error("sync failure");
+    return response::created_201();
+  });
+  value.start("8080");
+  bool threw = false;
+  try {
+    send_request(request{});
+  } catch (const std::runtime_error& error) {
+    threw = std::string_view(error.what()) == "sync failure";
+  }
+  DOBA_EXPECT(threw);
+  fail = false;
+  DOBA_EXPECT(send_request(request{}).starts_with("HTTP/1.1 201 Created\r\n"));
+  value.stop();
+  test_router::matched_handler = {};
+}
+// +===========================================================================+
+// | [>] async handler observes cancellation after suspension    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("async handler observes cancellation after suspension") {
+  manual_event event;
+  std::stop_source stop_source;
+  bool cancelled = false;
+  test_router::match_available = true;
+  test_server value;
+  value.add_route(
+      "GET", "/async",
+      [&](std::shared_ptr<const request>, std::stop_token token)
+          -> task<response> {
+        co_await event;
+        cancelled = token.stop_requested();
+        co_return response::no_content_204();
+      });
+  value.start("8080");
+  auto req = std::make_shared<request>();
+  req->path = "/async";
+  req->close = true;
+  auto pending = test_transport::on_request(req, stop_source.get_token());
+  DOBA_EXPECT_EQUAL(pending.index(), 1);
+  std::optional<response> result;
+  auto probe = collect(std::get<task<response>>(std::move(pending)), result);
+  DOBA_EXPECT(!probe.done());
+  stop_source.request_stop();
+  event.resume();
+  probe.rethrow_if_failed();
+  DOBA_EXPECT(probe.done());
+  DOBA_EXPECT(cancelled);
+  DOBA_EXPECT(result.has_value());
+  DOBA_EXPECT_EQUAL(result->get_header("Connection").second, "close");
+  DOBA_EXPECT(
+      serialize_prefix(*result).starts_with("HTTP/1.1 204 No Content\r\n"));
+  value.stop();
+  test_router::async_handler = {};
+}

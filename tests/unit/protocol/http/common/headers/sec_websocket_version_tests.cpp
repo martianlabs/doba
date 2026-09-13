@@ -84,3 +84,46 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(sec_websocket_version::check(
       std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts decimal octet boundaries                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts decimal octet boundaries") {
+  constexpr std::string_view cases[] = {
+      "9",
+      "10",
+      "99",
+      "100",
+      "199",
+      "200",
+      "249",
+      "250",
+      "254",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(sec_websocket_version::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects decimal octet boundaries                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects decimal octet boundaries") {
+  constexpr std::string_view cases[] = {
+      "00",
+      "000",
+      "009",
+      "010",
+      "099",
+      "1000",
+      "257",
+      "259",
+      "260",
+      "300",
+      "255,256",
+      "255x",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!sec_websocket_version::check(source));
+  }
+}

@@ -95,3 +95,74 @@ DOBA_TEST("interpret applies transfer policies") {
                     verdict::kReject);
   DOBA_EXPECT(limited.transfer_codings.empty());
 }
+// +===========================================================================+
+// | [>] check accepts coding parameter boundaries               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts coding parameter boundaries") {
+  constexpr std::string_view cases[] = {
+      "gzip;p=\"a,b;c\", CHUNKED",
+      "gzip;p = \"\"",
+      "x;p=\"a\\\"b\\\\c\"",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_parameter_list parsed;
+    DOBA_EXPECT(transfer_encoding::check(source, parsed));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects coding parameter boundaries               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects coding parameter boundaries") {
+  constexpr std::string_view cases[] = {
+      "gzip;p=",
+      "gzip;p",
+      "gzip;p=\"x\"junk",
+      "gzip;p=\"x\\",
+      "gzip;;p=v",
+      "gzip;p=v;",
+      "gzip;p=v, chunked/1",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_parameter_list parsed;
+    DOBA_EXPECT(!transfer_encoding::check(source, parsed));
+  }
+}
+// +===========================================================================+
+// | [>] interpret combines repeated fields in wire order        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("interpret combines repeated fields in wire order") {
+  connection state;
+  policies policy;
+  parsed_parameter_list first;
+  DOBA_EXPECT(transfer_encoding::check("gzip;p=\"a,b\"", first));
+  DOBA_EXPECT_EQUAL(transfer_encoding::interpret(first, state, policy),
+                    verdict::kAccept);
+  DOBA_EXPECT(!state.chunked);
+  parsed_parameter_list second;
+  DOBA_EXPECT(transfer_encoding::check("CHUNKED", second));
+  DOBA_EXPECT_EQUAL(transfer_encoding::interpret(second, state, policy),
+                    verdict::kAccept);
+  DOBA_EXPECT(state.chunked);
+  DOBA_EXPECT_EQUAL(state.transfer_codings.size(), 2);
+  DOBA_EXPECT_EQUAL(state.transfer_codings[0], "gzip");
+  DOBA_EXPECT_EQUAL(state.transfer_codings[1], "CHUNKED");
+  DOBA_EXPECT(state.te_codings.empty());
+}
+// +===========================================================================+
+// | [>] interpret limits coding count before appending          ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("interpret checks the parsed coding count before appending") {
+  for (std::size_t limit : {0, 1, 2, 3}) {
+    parsed_parameter_list parsed;
+    DOBA_EXPECT(transfer_encoding::check("gzip,chunked", parsed));
+    connection state;
+    policies policy;
+    policy.max_transfer_codings = limit;
+    const auto expected = limit == 1 ? verdict::kReject : verdict::kAccept;
+    DOBA_EXPECT_EQUAL(transfer_encoding::interpret(parsed, state, policy),
+                      expected);
+    DOBA_EXPECT_EQUAL(state.transfer_codings.size(), limit == 1 ? 0 : 2);
+  }
+}

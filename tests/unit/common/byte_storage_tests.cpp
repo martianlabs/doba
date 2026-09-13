@@ -621,3 +621,35 @@ DOBA_TEST("moving a borrowed reader preserves the view and cursor") {
   DOBA_EXPECT(destination.eof());
   DOBA_EXPECT(!destination.failed());
 }
+// +===========================================================================+
+// | [>] memory storage grows after its read cursor reaches EOF  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("memory storage can grow after its read cursor reaches EOF") {
+  byte_storage value;
+  DOBA_EXPECT(!value.total_size().has_value());
+  DOBA_EXPECT(value.write("ab", 2));
+  std::array<char, 4> output{'!', '!', '!', '!'};
+  DOBA_EXPECT_EQUAL(value.read(output.data(), 1), 1);
+  DOBA_EXPECT_EQUAL(output[0], 'a');
+  std::byte next{};
+  DOBA_EXPECT(value.fetch(next));
+  DOBA_EXPECT_EQUAL(next, std::byte{'b'});
+  DOBA_EXPECT(value.exhausted());
+  const std::string tail(8193, 'x');
+  DOBA_EXPECT(value.write(tail.data(), tail.size()));
+  DOBA_EXPECT(!value.exhausted());
+  value.finish(tail.size() + 2);
+  std::string read_back;
+  while (!value.exhausted()) {
+    const std::size_t got = value.read(output.data(), 3);
+    DOBA_EXPECT(got > 0);
+    DOBA_EXPECT_EQUAL(output[3], '!');
+    read_back.append(output.data(), got);
+  }
+  DOBA_EXPECT_EQUAL(read_back, tail);
+  DOBA_EXPECT_EQUAL(*value.total_size(), tail.size() + 2);
+  next = std::byte{'!'};
+  DOBA_EXPECT(!value.fetch(next));
+  DOBA_EXPECT_EQUAL(next, std::byte{'!'});
+  DOBA_EXPECT(value.ok());
+}

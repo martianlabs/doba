@@ -96,3 +96,22 @@ DOBA_TEST("finalized chunked writers reject additional payloads") {
   DOBA_EXPECT_EQUAL(value.bytes_written(), 6);
   DOBA_EXPECT_EQUAL(release(value), "6\r\nbefore\r\n0\r\n\r\n");
 }
+// +===========================================================================+
+// | [>] moves preserve encoding mode and payload accounting     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("moves preserve encoding mode and payload accounting") {
+  for (const bool chunked : {false, true}) {
+    auto value = chunked ? body_writer::chunked() : body_writer::raw();
+    DOBA_EXPECT(value.write("a"));
+    body_writer moved(std::move(value));
+    auto target = chunked ? body_writer::raw() : body_writer::chunked();
+    DOBA_EXPECT(target.write("discarded"));
+    target = std::move(moved);
+    DOBA_EXPECT_EQUAL(target.is_chunked(), chunked);
+    DOBA_EXPECT_EQUAL(target.bytes_written(), 1);
+    DOBA_EXPECT(target.write("bc"));
+    DOBA_EXPECT_EQUAL(target.bytes_written(), 3);
+    DOBA_EXPECT_EQUAL(release(target),
+                      chunked ? "1\r\na\r\n2\r\nbc\r\n0\r\n\r\n" : "abc");
+  }
+}
