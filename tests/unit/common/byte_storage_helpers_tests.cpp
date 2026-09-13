@@ -22,34 +22,23 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <functional>
 #include <type_traits>
 
-#include "protocol/http/common/router_handler_static.h"
+#include "common/byte_storage_helpers.h"
 #include "test_helper.h"
 
-namespace {
-struct request {};
-struct response {};
-using martianlabs::doba::protocol::http::router_handler_static;
-}  // namespace
-
 // +===========================================================================+
-// | [>] alias accepts and invokes the documented callback       ( test-case ) |
+// | [>] byte_storage_helpers selects its platform               ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("alias accepts and invokes the documented callback") {
-  static_assert(
-      std::same_as<router_handler_static<request, response>,
-                   std::function<response(const request&)>>);
-  bool invoked = false;
-  router_handler_static<request, response> handler =
-      [&invoked](const request&) {
-        response res;
-        invoked = true;
-        return res;
-      };
-  request req;
-  response res;
-  res = handler(req);
-  DOBA_EXPECT(invoked);
+DOBA_TEST("byte_storage_helpers selects the platform implementation") {
+#ifdef _WIN32
+#ifndef martianlabs_doba_common_byte_storage_helpers_windows_h
+#error Windows implementation was not selected
+#endif
+#elif __linux__
+#ifndef martianlabs_doba_common_byte_storage_helpers_linux_h
+#error Linux implementation was not selected
+#endif
+#endif
+  static_assert(std::is_class_v<martianlabs::doba::common::byte_storage_file>);
 }

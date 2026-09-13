@@ -34,13 +34,11 @@
 #include <string>
 
 #include "common/byte_storage.h"
-#include "common/reader.h"
 #include "test_helper.h"
 
 namespace {
 using martianlabs::doba::common::byte_storage;
 using martianlabs::doba::common::byte_storage_options;
-using martianlabs::doba::common::reader;
 
 class spill_directory {
  public:
@@ -96,35 +94,6 @@ DOBA_TEST("spilling preserves existing files") {
   std::ifstream stream(existing, std::ios::binary);
   std::string content((std::istreambuf_iterator<char>(stream)), {});
   DOBA_EXPECT_EQUAL(content, "preserved");
-}
-// +===========================================================================+
-// | [>] truncated spill files fail the reader                  ( test-case )  |
-// +===========================================================================+
-DOBA_TEST("truncated spill files fail the reader") {
-  spill_directory directory;
-  {
-    byte_storage storage(
-        byte_storage_options{.spill_threshold = 1,
-                             .spill_dir = directory.path().string()});
-    DOBA_EXPECT(storage.write("abcdef", 6));
-    storage.finish(6);
-    DOBA_EXPECT_EQUAL(
-        std::distance(std::filesystem::directory_iterator(directory.path()),
-                      std::filesystem::directory_iterator()), 1);
-    const auto spill_file = only_spill_file(directory.path());
-    DOBA_EXPECT(!spill_file.empty());
-    std::filesystem::resize_file(spill_file, 2);
-    reader source(std::move(storage));
-    std::array<std::byte, 6> output{};
-    DOBA_EXPECT_EQUAL(source.read(output), 2);
-    DOBA_EXPECT(source.failed());
-    DOBA_EXPECT(!source.eof());
-    DOBA_EXPECT_EQUAL(source.read(output), 0);
-    std::byte byte{};
-    DOBA_EXPECT(!source.fetch(byte));
-    DOBA_EXPECT(source.failed());
-  }
-  DOBA_EXPECT(std::filesystem::is_empty(directory.path()));
 }
 // +===========================================================================+
 // | [>] finishing seals memory and spilled storage              ( test-case ) |
@@ -523,34 +492,6 @@ DOBA_TEST("read and fetch share one storage cursor") {
 }
 
 // +===========================================================================+
-// | [>] reader owns moved storage                               ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("reader owns storage after the moved source is destroyed") {
-  spill_directory directory;
-  for (std::size_t threshold : {0, 1}) {
-    {
-      std::optional<reader> destination;
-      {
-        byte_storage storage(
-            byte_storage_options{.spill_threshold = threshold,
-                                 .spill_dir = directory.path().string()});
-        DOBA_EXPECT(storage.write("abcdef", 6));
-        storage.finish(6);
-        destination.emplace(std::move(storage));
-      }
-      DOBA_EXPECT_EQUAL(std::filesystem::is_empty(directory.path()),
-                        threshold == 0);
-      std::string output;
-      DOBA_EXPECT_EQUAL(destination->read_all(output), 6);
-      DOBA_EXPECT_EQUAL(output, "abcdef");
-      DOBA_EXPECT(destination->eof());
-      DOBA_EXPECT(!destination->failed());
-    }
-    DOBA_EXPECT(std::filesystem::is_empty(directory.path()));
-  }
-}
-
-// +===========================================================================+
 // | [>] concurrent spill ownership                              ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("concurrent spill owners keep distinct files and contents") {
@@ -603,24 +544,6 @@ DOBA_TEST("empty storage finishes without an error") {
   DOBA_EXPECT(storage.ok());
 }
 
-// +===========================================================================+
-// | [>] borrowed reader move semantics                          ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("moving a borrowed reader preserves the view and cursor") {
-  std::string backing = "abcdef";
-  auto source = reader::borrowed(std::as_bytes(std::span(backing)));
-  std::array<std::byte, 2> prefix{};
-  DOBA_EXPECT_EQUAL(source.read(prefix), 2);
-  DOBA_EXPECT_EQUAL(
-      std::string_view(reinterpret_cast<const char*>(prefix.data()), 2), "ab");
-  reader destination(std::move(source));
-  backing[2] = 'C';
-  std::string output;
-  DOBA_EXPECT_EQUAL(destination.read_all(output), 4);
-  DOBA_EXPECT_EQUAL(output, "Cdef");
-  DOBA_EXPECT(destination.eof());
-  DOBA_EXPECT(!destination.failed());
-}
 // +===========================================================================+
 // | [>] memory storage grows after its read cursor reaches EOF  ( test-case ) |
 // +===========================================================================+

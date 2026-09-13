@@ -22,34 +22,20 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <functional>
+#ifdef _WIN32
+
 #include <type_traits>
 
-#include "protocol/http/common/router_handler_static.h"
+#include "common/signaler_windows.h"
 #include "test_helper.h"
 
-namespace {
-struct request {};
-struct response {};
-using martianlabs::doba::protocol::http::router_handler_static;
-}  // namespace
-
 // +===========================================================================+
-// | [>] alias accepts and invokes the documented callback       ( test-case ) |
+// | [>] signaler exposes a static nonconstructible wait         ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("alias accepts and invokes the documented callback") {
-  static_assert(
-      std::same_as<router_handler_static<request, response>,
-                   std::function<response(const request&)>>);
-  bool invoked = false;
-  router_handler_static<request, response> handler =
-      [&invoked](const request&) {
-        response res;
-        invoked = true;
-        return res;
-      };
-  request req;
-  response res;
-  res = handler(req);
-  DOBA_EXPECT(invoked);
+DOBA_TEST("signaler exposes a static nonconstructible wait") {
+  using martianlabs::doba::common::signaler;
+  static_assert(!std::is_default_constructible_v<signaler>);
+  static_assert(std::is_same_v<decltype(&signaler::wait), void (*)()>);
 }
+
+#endif

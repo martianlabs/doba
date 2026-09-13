@@ -22,34 +22,27 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <functional>
-#include <type_traits>
+#include "platform.h"
 
-#include "protocol/http/common/router_handler_static.h"
 #include "test_helper.h"
 
-namespace {
-struct request {};
-struct response {};
-using martianlabs::doba::protocol::http::router_handler_static;
-}  // namespace
-
 // +===========================================================================+
-// | [>] alias accepts and invokes the documented callback       ( test-case ) |
+// | [>] platform exposes its native socket and event types      ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("alias accepts and invokes the documented callback") {
-  static_assert(
-      std::same_as<router_handler_static<request, response>,
-                   std::function<response(const request&)>>);
-  bool invoked = false;
-  router_handler_static<request, response> handler =
-      [&invoked](const request&) {
-        response res;
-        invoked = true;
-        return res;
-      };
-  request req;
-  response res;
-  res = handler(req);
-  DOBA_EXPECT(invoked);
+DOBA_TEST("platform exposes its native socket and event types") {
+#ifdef _WIN32
+#ifndef NOMINMAX
+#error platform must disable the Windows min and max macros
+#endif
+#ifndef _WIN32_DCOM
+#error platform must enable DCOM declarations
+#endif
+  static_assert(sizeof(SOCKET) == sizeof(UINT_PTR));
+  static_assert(sizeof(OVERLAPPED::Internal) == sizeof(ULONG_PTR));
+  static_assert(sizeof(sockaddr_storage) >= sizeof(sockaddr_in6));
+#elif __linux__
+  static_assert(sizeof(epoll_data_t) >= sizeof(uint64_t));
+  static_assert(sizeof(eventfd_t) == sizeof(uint64_t));
+  static_assert(sizeof(sockaddr_storage) >= sizeof(sockaddr_in6));
+#endif
 }

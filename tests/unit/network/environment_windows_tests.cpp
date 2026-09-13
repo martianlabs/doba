@@ -22,34 +22,25 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <functional>
+#ifdef _WIN32
+
 #include <type_traits>
 
-#include "protocol/http/common/router_handler_static.h"
+#include "platform.h"
+#include "network/environment_windows.h"
 #include "test_helper.h"
 
-namespace {
-struct request {};
-struct response {};
-using martianlabs::doba::protocol::http::router_handler_static;
-}  // namespace
-
 // +===========================================================================+
-// | [>] alias accepts and invokes the documented callback       ( test-case ) |
+// | [>] environment retains exclusive lifecycle ownership       ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("alias accepts and invokes the documented callback") {
-  static_assert(
-      std::same_as<router_handler_static<request, response>,
-                   std::function<response(const request&)>>);
-  bool invoked = false;
-  router_handler_static<request, response> handler =
-      [&invoked](const request&) {
-        response res;
-        invoked = true;
-        return res;
-      };
-  request req;
-  response res;
-  res = handler(req);
-  DOBA_EXPECT(invoked);
+DOBA_TEST("environment retains exclusive lifecycle ownership") {
+  using martianlabs::doba::network::detail::environment;
+  static_assert(std::is_default_constructible_v<environment>);
+  static_assert(std::is_nothrow_destructible_v<environment>);
+  static_assert(!std::is_copy_constructible_v<environment>);
+  static_assert(!std::is_copy_assignable_v<environment>);
+  static_assert(!std::is_move_constructible_v<environment>);
+  static_assert(!std::is_move_assignable_v<environment>);
 }
+
+#endif

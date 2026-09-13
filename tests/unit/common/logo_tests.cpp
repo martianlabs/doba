@@ -22,34 +22,15 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <functional>
 #include <type_traits>
 
-#include "protocol/http/common/router_handler_static.h"
+#include "common/logo.h"
 #include "test_helper.h"
 
-namespace {
-struct request {};
-struct response {};
-using martianlabs::doba::protocol::http::router_handler_static;
-}  // namespace
-
 // +===========================================================================+
-// | [>] alias accepts and invokes the documented callback       ( test-case ) |
+// | [>] logo exposes a static dump entry point                  ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("alias accepts and invokes the documented callback") {
-  static_assert(
-      std::same_as<router_handler_static<request, response>,
-                   std::function<response(const request&)>>);
-  bool invoked = false;
-  router_handler_static<request, response> handler =
-      [&invoked](const request&) {
-        response res;
-        invoked = true;
-        return res;
-      };
-  request req;
-  response res;
-  res = handler(req);
-  DOBA_EXPECT(invoked);
+DOBA_TEST("logo exposes a static dump entry point") {
+  using martianlabs::doba::common::logo;
+  static_assert(std::is_same_v<decltype(&logo::dump), void (*)()>);
 }
