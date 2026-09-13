@@ -56,10 +56,23 @@ Other outstanding items have no assigned version.
 retained for traceability. Numbering identifies items; it does not express
 priority or implementation order.
 
-C4-C6 and B1-B6 track the ten issues behind 15 failing unit tests. C5 owns
-two capacity defects. B4 records an incorrect test expectation; the other
-entries concern production behavior. C4-C6 retain their hardening identifiers
-and are not duplicated in the Bugs category.
+C4-C6 and B1-B6 track ten findings behind 15 failing unit tests. The reviewed
+classification is seven confirmed production bugs, one confirmed test bug,
+and two contract decisions. C5 separates query truncation from full-buffer
+handling. B6 remains under its existing identifier for traceability, but is
+not counted as a confirmed bug. Category totals below count entries, not bugs.
+
+| Classification | Findings | Failing unit tests |
+| --- | --- | --- |
+| Confirmed production bugs | B1-B3, B5, C4, C5 query overflow, C6 | 11 |
+| Confirmed test bug | B4 | 1 |
+| Contract pending | C5 full buffer, B6 | 3 |
+
+The 2026-09-13 revalidation reran the eight affected suites using existing
+Windows MSVC and Linux GCC binaries: 202 cases passed and the same 15 failed
+on each platform. All 23 helper cases also passed on Windows. These results
+reproduce the findings; failing tests alone do not establish a bug.
+C4-C6 retain their hardening identifiers and are not duplicated below.
 
 | Category | Identifiers | Total |
 | --- | --- | --- |
@@ -79,14 +92,14 @@ and are not duplicated in the Bugs category.
 | [C2](#c2-effective-per-request-limits) | Hardening | Deferred | High | No assigned version |
 | [C3](#c3-global-active-connection-limit) | Hardening | Pending | Beta target | 0.1.0-beta.1 |
 | [C4](#c4-absolute-form-authority-precedence) | Hardening | Pending | Not set | No assigned version |
-| [C5](#c5-internal-decoder-capacity-overflow) | Hardening | Pending | Not set | No assigned version |
+| [C5](#c5-internal-decoder-capacity-overflow) | Hardening | Fix / contract pending | Not set | No assigned version |
 | [C6](#c6-te-connection-option) | Hardening | Pending | Not set | No assigned version |
 | [B1](#b1-entity-tag-backslash-rejection) | Bug | Pending | Not set | No assigned version |
 | [B2](#b2-via-escaped-comment-rejection) | Bug | Pending | Not set | No assigned version |
 | [B3](#b3-via-comment-comma-splitting) | Bug | Pending | Not set | No assigned version |
 | [B4](#b4-incorrect-ipv6-expectation-in-via-test) | Bug | Pending | Not set | No assigned version |
 | [B5](#b5-duplicate-automatic-date-after-header-removal) | Bug | Pending | Not set | No assigned version |
-| [B6](#b6-noexcept-handler-signature-rejection) | Bug | Pending | Not set | No assigned version |
+| [B6](#b6-noexcept-handler-signature-rejection) | Compatibility | Contract pending | Not set | No assigned version |
 | [P1](#p1-static-file-handler) | Product | Pending | Not set | No assigned version |
 | [P2](#p2-access-logging) | Product | Pending | Not set | No assigned version |
 | [P3](#p3-middleware-chain) | Product | Pending | Not set | No assigned version |
@@ -238,50 +251,68 @@ must be explicit; adding these regressions does not itself correct routing.
 
 ### C5: Internal decoder capacity overflow
 
-**Type.** Confirmed bugs (decoder capacity).
+**Type.** Confirmed query overflow bug; full-buffer contract pending.
 
-**Context.** Two capacity problems were reproduced. A request with 129
-query pairs succeeds with only 128 visible pairs, while limits.h describes
-rejection. A complete 5121-byte head fills the 5120-byte buffer, then
-accumulate consumes zero and deserialize still reports MoreBytesNeeded. The latter reproduces decoder
-non-progress; a permanent end-to-end server hang has not been demonstrated.
+**Query overflow - confirmed bug.** A request with 129 query pairs succeeds
+with only 128 visible pairs, while limits.h documents rejection above 128.
+The decoder exposes a truncated query without reporting the overflow.
 
-**Cause and expected behavior.** `split_query_parameters` returns only the
-count that fits the fixed arrays; `mount_request_getter` does not propagate
-overflow. Reject the 129-pair request instead of exposing a truncated query.
-Separately, incomplete head parsing returns `kMoreBytesNeeded` even when
-`accumulate` has exhausted capacity. Return a terminal rejection when no
-progress is possible. These are internal capacity contracts, not RFC limits.
-
-**Scope.** Reject query overflow and detect an incomplete head that cannot
-fit. Return a terminal error when the decoder
-cannot progress, preserving public signatures and unrelated parsing rules.
+**Cause and scope.** `split_query_parameters` explicitly documents dropping
+pairs beyond the output capacity and meets that helper contract.
+`mount_request_getter` does not detect the excess before mounting the request.
+Reject query overflow as documented in limits.h; do not classify the helper
+as independently defective. Preserve accepted queries and public signatures.
 
 **Components.** [decoder.h](../include/protocol/http/v11/decoder.h),
-[limits.h](../include/protocol/http/v11/limits.h),
-[helpers.h](../include/protocol/http/common/helpers.h), their unit tests
-and HTTP socket integration tests.
+[limits.h](../include/protocol/http/v11/limits.h) and
+[helpers.h](../include/protocol/http/common/helpers.h), with their unit tests.
 
-**Existing failing unit tests.**
+**Existing failing unit test.**
 
 - [decoder_tests.cpp](../tests/unit/protocol/http/v11/decoder_tests.cpp):
   `rejects query parameter overflow without truncating`.
+
+**Acceptance and tests.** Check 127/128/129 query pairs, including empty pair
+separators. Verify that overflow returns a rejection without a partial request
+and that accepted boundary inputs retain every pair.
+
+**Full buffer - contract pending.** A complete 5121-byte head fills the
+5120-byte buffer. Deserialization reports `kMoreBytesNeeded`; a subsequent
+accumulation consumes zero and deserialization reports the same status.
+This reproduces decoder non-progress, not a permanent server hang.
+
+Both [Linux](../include/transport/server/tcpip_linux.h) and
+[Windows](../include/transport/server/tcpip_windows.h) detect zero consumption
+when more received bytes remain to be delivered and enter their error path.
+This protection was verified by code inspection, not a new socket test.
+If no further bytes arrive, inactivity handling remains the separate C1 issue.
+
+**Scope to define.** Decide whether the decoder must reject an incomplete
+head immediately at capacity or whether the existing transport detection
+satisfies the contract. No explicit immediate-rejection requirement was found
+in the reviewed decoder contract. Do not count the current test expectation
+as proof of a server stability or memory-safety defect.
+
+**Components.** [decoder.h](../include/protocol/http/v11/decoder.h),
+[limits.h](../include/protocol/http/v11/limits.h), both transport backends,
+decoder unit tests and HTTP socket integration tests.
+
+**Existing failing unit test.**
+
 - [decoder_tests.cpp](../tests/unit/protocol/http/v11/decoder_tests.cpp):
   `a full incomplete head terminates instead of stalling`.
 
-**Acceptance and tests.**
+**Proposed acceptance and tests.** After selecting the contract, check complete
+heads of 5119/5120/5121 bytes and fragmented delivery. Distinguish the decoder
+result from transport rejection. Verify that oversized requests are not
+dispatched and that both backends terminate safely when excess bytes arrive.
 
-- Check 127/128/129 query pairs, including empty pair separators.
-- Check complete heads of 5119/5120/5121 bytes and fragmented delivery.
-- Verify a terminal outcome for exhausted capacity and the selected reason.
-- Verify that rejected input is not dispatched and the socket closes safely.
-- Preserve accepted boundary inputs and equivalent results in both backends.
-
-**Dependencies and decisions.** The active regressions require rejection
-rather than silent truncation. Select the error/status contract before
-implementation; no automatic 431 policy is assumed. Correctness of existing
-fixed capacities is separate from the configurable resource-limit API
-deferred in C2.
+**Dependencies and decisions.** Select the query overflow error/status and
+the full-buffer responsibility before implementing the respective changes.
+The full-buffer test currently assumes immediate `kInvalidSource`; its
+expectation must be justified against the selected contract. These are
+internal capacity policies, not RFC limits, and no automatic 431 policy is
+assumed. Keep them separate from the configurable resource-limit API in C2.
 
 ### C6: TE connection option
 
@@ -321,11 +352,16 @@ No public API or protocol-upgrade feature is required.
 
 ## Bugs
 
-B1-B6 are pending fixes. C4-C6 also record confirmed bugs under Operational
-hardening; their identifiers and acceptance criteria remain authoritative.
-The existing tests below failed in the 2026-09-13 Linux GCC, Windows MSVC,
-and Linux Clang/ASan runs. Test failure alone does not prove a parser defect:
-B4 identifies an incorrect expectation in the unit suite.
+B1-B5 are confirmed pending fixes; B4 is a unit-test error. B6 is a reproduced
+compatibility limitation awaiting a support-contract decision, retained here
+under its existing identifier. C4, the query part of C5, and C6 record confirmed
+production bugs under Operational hardening. The full-buffer part of C5 is a
+separate contract decision. None of these entries is duplicated.
+
+The existing tests below also failed in the earlier 2026-09-13 Linux
+Clang/ASan run. The subsequent MSVC/GCC revalidation is recorded in the
+inventory. Reproduction alone does not settle the C5 full-buffer or B6
+expectations, and B4 requires correcting the test rather than the parser.
 
 ### B1: Entity-tag backslash rejection
 
@@ -483,21 +519,32 @@ and mutation semantics; changing header validation is a separate decision.
 
 ### B6: Noexcept handler signature rejection
 
-**Type.** Confirmed bug (handler signature compatibility).
+**Type.** Confirmed compatibility limitation; support contract pending.
 
 **Context.** A synchronous lambda taking `const request&` and returning
 `response` is rejected by `router_handler_lambda` when declared `noexcept`.
 The asynchronous equivalent taking `shared_ptr<const request>` and
 `stop_token`, returning `task<response>`, is likewise rejected by
-`router_async_handler_lambda`.
+`router_async_handler_lambda`. The constraints on `router::add` prevent
+registration of these handlers.
 
 **Cause.** The member-function-pointer specializations cover const and
 non-const call operators, but omit their noexcept-qualified counterparts.
 
-**Scope.** Recognize the same supported handler shapes when noexcept is
-added. Preserve argument/return validation and additional parameter counts.
+**Contract evidence.** The [architecture](ARCHITECTURE.md) describes handler
+argument and return shapes without explicitly guaranteeing noexcept support.
+The tests demonstrate the limitation; their positive expectations do not
+independently establish a previously required compatibility guarantee.
 
-**Components.** [router_handler_signature.h](../include/protocol/http/common/router_handler_signature.h).
+**Scope to define.** Decide whether those otherwise supported handler shapes
+must also work with noexcept. If support is required, recognize the selected
+qualifier combinations while preserving argument/return checks and additional
+parameter counts. Otherwise, document the restriction and justify the test
+expectations against that contract.
+
+**Components.** [router_handler_signature.h](../include/protocol/http/common/router_handler_signature.h),
+[router.h](../include/protocol/http/common/router.h), handler documentation
+and signature unit tests.
 
 **Existing failing unit tests.**
 
@@ -506,13 +553,14 @@ added. Preserve argument/return validation and additional parameter counts.
 - [router_handler_signature_tests.cpp](../tests/unit/protocol/http/common/router_handler_signature_tests.cpp):
   `noexcept async handlers retain signature compatibility`.
 
-**Acceptance and tests.** Make both signature regressions pass, retain the
-existing ordinary and mutable handler cases, and preserve rejection of
-unsupported request/return signatures.
+**Proposed acceptance and tests.** Record the supported qualifiers, then align
+implementation and focused tests with that decision. Preserve existing
+ordinary and mutable handlers, parameter counts, and rejection of unsupported
+request/return signatures.
 
-**Dependencies and decisions.** Confirm the exact supported qualifier
-combinations before implementation. This is an API compatibility issue,
-not a protocol or demonstrated memory-safety defect.
+**Dependencies and decisions.** Keep this finding pending without counting it
+as a confirmed production bug until the support contract is established.
+It is not a protocol violation or a demonstrated memory-safety defect.
 
 ## Product and convenience
 
@@ -646,7 +694,7 @@ missing resources.
 **Status:** partial. The test expansion completed on 2026-09-07 added
 184 functional cases and reinforced 84 existing cases, with 556 unit and
 71 integration registrations passing the local compiler/sanitizer matrix.
-Confirmed implementation problems are tracked in
+The resulting bugs and capacity contract decision are tracked in
 [C4](#c4-absolute-form-authority-precedence),
 [C5](#c5-internal-decoder-capacity-overflow) and [C6](#c6-te-connection-option).
 The count is not an exhaustive compliance claim.

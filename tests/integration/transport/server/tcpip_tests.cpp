@@ -157,6 +157,8 @@ class transport_decoder {
  public:
   std::size_t accumulate(char* buffer, std::size_t size) {
     if (!size || ready_) return 0;
+    if (*buffer == '\x01') throw std::runtime_error("Accumulation error!");
+    if (*buffer == '\x02') throw 1;
     if (*buffer == 'Z') return 0;
     if (*buffer == 'O') return size + 1;
     value_ = *buffer;
@@ -169,6 +171,8 @@ class transport_decoder {
                   kMoreBytesNeeded};
     }
     ready_ = false;
+    if (value_ == '\x03') throw std::runtime_error("Deserialization error!");
+    if (value_ == '\x04') throw 1;
     if (value_ == 'E') {
       return {martianlabs::doba::protocol::deserialization_status::
                   kInvalidSource,
@@ -2288,5 +2292,330 @@ DOBA_TEST("tcpip survives failing disconnection callbacks") {
     client.close();
     DOBA_EXPECT(wait_for_count(disconnected, iteration + 1));
   }
+  server.stop();
+}
+
+// +===========================================================================+
+// | [>] invalid ports leave a reusable server                    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tcpip rejects every invalid port form and remains reusable") {
+  martianlabs::doba::tests::integration::tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
+  server.set_on_request(
+      [](const std::shared_ptr<transport_request>&,
+         const std::stop_token&)
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
+        response.value = "sync";
+        return response;
+      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
+  server.set_on_connection([]() {});
+  server.set_on_disconnection([]() {});
+
+  bool threw = false;
+  try {
+    server.start(nullptr);
+  } catch (const std::runtime_error&) {
+    threw = true;
+  }
+  DOBA_EXPECT(threw);
+  constexpr const char* invalid[] = {
+      "", "0", "-1", "65536", " 80", "80 ", "80x",
+      "+80", "999999999999999999999999999999999999",
+  };
+  for (const char* value : invalid) {
+    martianlabs::doba::tests::integration::test_helper::set_context(value);
+    threw = false;
+    try {
+      server.start(value);
+    } catch (const std::runtime_error&) {
+      threw = true;
+    }
+    DOBA_EXPECT(threw);
+    server.stop();
+  }
+
+  const std::string port_text = std::to_string(port);
+  server.start(port_text.c_str());
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("S"));
+  const auto response = client.receive(4);
+  DOBA_EXPECT(response.has_value());
+  if (response.has_value()) DOBA_EXPECT_EQUAL(*response, "sync");
+  client.close();
+  server.stop();
+}
+
+// +===========================================================================+
+// | [>] active callbacks are immutable                           ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tcpip rejects every callback mutation while active") {
+  martianlabs::doba::tests::integration::tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
+  server.set_on_request(
+      [](const std::shared_ptr<transport_request>&,
+         const std::stop_token&)
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        return transport_response{};
+      });
+  server.set_on_bad_request([](int, std::string_view) {
+    return transport_response{};
+  });
+  server.set_on_connection([]() {});
+  server.set_on_disconnection([]() {});
+  const std::string port_text = std::to_string(port);
+  server.start(port_text.c_str());
+
+  std::array<bool, 4> threw{};
+  try {
+    server.set_on_request(
+        [](const std::shared_ptr<transport_request>&,
+           const std::stop_token&)
+            -> std::variant<transport_response,
+                            martianlabs::doba::common::task<transport_response>> {
+          return transport_response{};
+        });
+  } catch (const std::runtime_error&) {
+    threw[0] = true;
+  }
+  try {
+    server.set_on_bad_request([](int, std::string_view) {
+      return transport_response{};
+    });
+  } catch (const std::runtime_error&) {
+    threw[1] = true;
+  }
+  try {
+    server.set_on_connection([]() {});
+  } catch (const std::runtime_error&) {
+    threw[2] = true;
+  }
+  try {
+    server.set_on_disconnection([]() {});
+  } catch (const std::runtime_error&) {
+    threw[3] = true;
+  }
+  for (bool result : threw) DOBA_EXPECT(result);
+  DOBA_EXPECT(client.connect(port));
+  client.close();
+  server.stop();
+
+  bool mutable_after_stop = true;
+  try {
+    server.set_on_connection([]() {});
+    server.set_on_disconnection([]() {});
+  } catch (...) {
+    mutable_after_stop = false;
+  }
+  DOBA_EXPECT(mutable_after_stop);
+}
+
+// +===========================================================================+
+// | [>] stop is safe under concurrent callers                    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tcpip serializes concurrent and repeated stop calls") {
+  martianlabs::doba::tests::integration::tcpip_client port_client;
+  const uint16_t port = port_client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  std::atomic<std::size_t> connected = 0;
+  std::atomic<std::size_t> disconnected = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
+  server.set_on_request(
+      [](const std::shared_ptr<transport_request>&,
+         const std::stop_token&)
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        return transport_response{};
+      });
+  server.set_on_bad_request([](int, std::string_view) {
+    return transport_response{};
+  });
+  server.set_on_connection([&connected]() { connected.fetch_add(1); });
+  server.set_on_disconnection(
+      [&disconnected]() { disconnected.fetch_add(1); });
+  const std::string port_text = std::to_string(port);
+  server.start(port_text.c_str());
+
+  constexpr std::size_t client_count = 4;
+  std::array<martianlabs::doba::tests::integration::tcpip_client,
+             client_count> clients;
+  for (auto& client : clients) DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(wait_for_count(connected, client_count));
+  std::array<bool, client_count> stopped{};
+  std::array<std::thread, client_count> threads;
+  for (std::size_t index = 0; index < client_count; index++) {
+    threads[index] = std::thread([&, index]() {
+      try {
+        server.stop();
+        stopped[index] = true;
+      } catch (...) {
+      }
+    });
+  }
+  for (auto& thread : threads) thread.join();
+  for (bool result : stopped) DOBA_EXPECT(result);
+  DOBA_EXPECT_EQUAL(disconnected.load(), client_count);
+  server.stop();
+  server.stop();
+}
+
+// +===========================================================================+
+// | [>] worker initiated stop is rejected                        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tcpip rejects stop from a request callback without deadlock") {
+  martianlabs::doba::tests::integration::tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
+  server.set_on_request(
+      [&server](const std::shared_ptr<transport_request>&,
+                const std::stop_token&)
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
+        try {
+          server.stop();
+          response.value = "bad";
+        } catch (const std::runtime_error&) {
+          response.value = "safe";
+        }
+        return response;
+      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
+  server.set_on_connection([]() {});
+  server.set_on_disconnection([]() {});
+  const std::string port_text = std::to_string(port);
+  server.start(port_text.c_str());
+
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("S"));
+  const auto response = client.receive(4);
+  DOBA_EXPECT(response.has_value());
+  if (response.has_value()) DOBA_EXPECT_EQUAL(*response, "safe");
+  client.close();
+  server.stop();
+}
+
+// +===========================================================================+
+// | [>] decoder exceptions remain channel local                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tcpip survives accumulation and deserialization exceptions") {
+  martianlabs::doba::tests::integration::tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  std::atomic<std::size_t> requests = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
+  server.set_on_request(
+      [&requests](const std::shared_ptr<transport_request>&,
+                  const std::stop_token&)
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        requests.fetch_add(1);
+        transport_response response;
+        response.value = "sync";
+        return response;
+      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
+  server.set_on_connection([]() {});
+  server.set_on_disconnection([]() {});
+  const std::string port_text = std::to_string(port);
+  server.start(port_text.c_str());
+
+  for (const char marker : {'\x01', '\x02', '\x03', '\x04'}) {
+    martianlabs::doba::tests::integration::test_helper::set_context(
+        std::string(1, marker));
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send_all(std::string(1, marker)));
+    const auto response = client.receive(1, std::chrono::seconds(3));
+    DOBA_EXPECT(!response.has_value());
+    DOBA_EXPECT(client.error() != "timeout");
+    DOBA_EXPECT_EQUAL(requests.load(), 0);
+    client.close();
+  }
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("S"));
+  const auto recovery = client.receive(4);
+  DOBA_EXPECT(recovery.has_value());
+  if (recovery.has_value()) DOBA_EXPECT_EQUAL(*recovery, "sync");
+  DOBA_EXPECT_EQUAL(requests.load(), 1);
+  client.close();
+  server.stop();
+}
+
+// +===========================================================================+
+// | [>] large synchronous pipeline is fully drained              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tcpip drains a large synchronous request pipeline in order") {
+  martianlabs::doba::tests::integration::tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  std::atomic<std::size_t> requests = 0;
+  martianlabs::doba::transport::server::tcpip<
+      transport_request, transport_response, transport_decoder>
+      server;
+  server.set_on_request(
+      [&requests](const std::shared_ptr<transport_request>&,
+                  const std::stop_token&)
+          -> std::variant<transport_response,
+                          martianlabs::doba::common::task<transport_response>> {
+        transport_response response;
+        requests.fetch_add(1);
+        response.value = "sync";
+        return response;
+      });
+  server.set_on_bad_request([](int, std::string_view) {
+    transport_response response;
+    response.value = "error";
+    return response;
+  });
+  server.set_on_connection([]() {});
+  server.set_on_disconnection([]() {});
+  const std::string port_text = std::to_string(port);
+  server.start(port_text.c_str());
+
+  constexpr std::size_t request_count = 256;
+  std::string expected;
+  expected.reserve(request_count * 4);
+  for (std::size_t index = 0; index < request_count; index++) {
+    expected += "sync";
+  }
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all(std::string(request_count, 'S')));
+  const auto response = client.receive(request_count * 4);
+  DOBA_EXPECT(response.has_value());
+  if (response.has_value()) {
+    DOBA_EXPECT_EQUAL(*response, expected);
+  }
+  DOBA_EXPECT_EQUAL(requests.load(), request_count);
+  client.close();
   server.stop();
 }

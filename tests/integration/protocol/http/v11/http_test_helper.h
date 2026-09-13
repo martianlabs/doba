@@ -49,15 +49,50 @@ namespace martianlabs::doba::tests::integration {
 struct http_test_response {
   std::string status;
   std::vector<std::pair<std::string, std::string>> headers;
+  std::vector<std::pair<std::string, std::string>> trailers;
   std::string body;
+  std::string wire_body;
 
   std::optional<std::string_view> header(std::string_view name) const {
     for (const auto& field : headers) {
-      if (field.first == name) return field.second;
+      if (field.first.size() != name.size()) continue;
+      bool equal = true;
+      for (std::size_t i = 0; i < name.size(); i++) {
+        char left = field.first[i];
+        char right = name[i];
+        if (left >= 'A' && left <= 'Z') left += 'a' - 'A';
+        if (right >= 'A' && right <= 'Z') right += 'a' - 'A';
+        if (left != right) {
+          equal = false;
+          break;
+        }
+      }
+      if (equal) return field.second;
     }
     return std::nullopt;
   }
 };
+
+// +===========================================================================+
+// | [>] receive_http_line                                          ( method ) |
+// +===========================================================================+
+inline std::optional<std::string> receive_http_line(
+    tcpip_client& client, std::chrono::steady_clock::time_point deadline,
+    std::size_t maximum = 16384) {
+  std::string line;
+  while (!line.ends_with("\r\n")) {
+    if (line.size() >= maximum) return std::nullopt;
+    const auto remaining =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            deadline - std::chrono::steady_clock::now());
+    if (remaining.count() <= 0) return std::nullopt;
+    const auto byte = client.receive(1, remaining);
+    if (!byte.has_value()) return std::nullopt;
+    line += *byte;
+  }
+  line.resize(line.size() - 2);
+  return line;
+}
 
 // +===========================================================================+
 // | [>] valid_http_date                                            ( method ) |
@@ -143,7 +178,8 @@ inline std::optional<http_test_response> receive_http_response(
     if (!date.has_value() || !valid_http_date(*date)) return std::nullopt;
   }
   const auto length = result.header("Content-Length");
-  if (result.header("Transfer-Encoding").has_value()) return std::nullopt;
+  const auto transfer_encoding = result.header("Transfer-Encoding");
+  if (length.has_value() && transfer_encoding.has_value()) return std::nullopt;
   std::size_t size = 0;
   if (length.has_value()) {
     const auto parsed = std::from_chars(
@@ -154,12 +190,62 @@ inline std::optional<http_test_response> receive_http_response(
     }
   }
   if ((status >= 100 && status < 200) || status == 204) {
-    if (length.has_value()) return std::nullopt;
+    if (length.has_value() || transfer_encoding.has_value()) {
+      return std::nullopt;
+    }
     size = 0;
   } else if (head || status == 304) {
     size = 0;
-  } else if (!length.has_value()) {
+  } else if (status == 205) {
+    if (transfer_encoding.has_value() || size != 0) return std::nullopt;
+  } else if (!length.has_value() && !transfer_encoding.has_value()) {
     return std::nullopt;
+  }
+  if (transfer_encoding.has_value() && !head && status != 304) {
+    if (*transfer_encoding != "chunked") return std::nullopt;
+    for (;;) {
+      const auto line = receive_http_line(client, deadline, 4096);
+      if (!line.has_value() || line->empty()) return std::nullopt;
+      result.wire_body += *line + "\r\n";
+      const std::size_t extension = line->find(';');
+      const std::string_view digits(*line);
+      const std::string_view chunk_size = digits.substr(0, extension);
+      std::size_t chunk = 0;
+      const auto parsed = std::from_chars(
+          chunk_size.data(), chunk_size.data() + chunk_size.size(), chunk, 16);
+      if (chunk_size.empty() || parsed.ec != std::errc{} ||
+          parsed.ptr != chunk_size.data() + chunk_size.size()) {
+        return std::nullopt;
+      }
+      if (chunk == 0) {
+        for (;;) {
+          const auto trailer = receive_http_line(client, deadline);
+          if (!trailer.has_value()) return std::nullopt;
+          result.wire_body += *trailer + "\r\n";
+          if (trailer->empty()) return result;
+          const std::size_t colon = trailer->find(':');
+          if (colon == std::string::npos || colon == 0) return std::nullopt;
+          std::size_t begin = colon + 1;
+          while (begin < trailer->size() &&
+                 ((*trailer)[begin] == ' ' || (*trailer)[begin] == '\t')) {
+            begin++;
+          }
+          result.trailers.emplace_back(
+              trailer->substr(0, colon), trailer->substr(begin));
+        }
+      }
+      if (chunk > 1024 * 1024 - result.body.size()) return std::nullopt;
+      const auto remaining =
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              deadline - std::chrono::steady_clock::now());
+      if (remaining.count() <= 0) return std::nullopt;
+      const auto bytes = client.receive(chunk + 2, remaining);
+      if (!bytes.has_value() || !bytes->ends_with("\r\n")) {
+        return std::nullopt;
+      }
+      result.wire_body += *bytes;
+      result.body.append(bytes->data(), chunk);
+    }
   }
   if (size > 1024 * 1024) return std::nullopt;
   const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -168,6 +254,7 @@ inline std::optional<http_test_response> receive_http_response(
   const auto body = client.receive(size, remaining);
   if (!body.has_value()) return std::nullopt;
   result.body = *body;
+  result.wire_body = *body;
   return result;
 }
 
