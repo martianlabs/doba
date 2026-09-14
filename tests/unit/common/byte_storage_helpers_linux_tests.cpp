@@ -28,7 +28,6 @@
 #include <atomic>
 #include <chrono>
 #include <filesystem>
-#include <optional>
 #include <string>
 #include <utility>
 
@@ -176,22 +175,20 @@ DOBA_TEST("independent files keep distinct paths and contents") {
 // +===========================================================================+
 DOBA_TEST("file moves transfer ownership and preserve contents") {
   spill_directory directory;
-  std::optional<byte_storage_file> moved;
+  byte_storage_file destination;
   std::filesystem::path source_path;
+  std::filesystem::path previous_path;
+  DOBA_EXPECT(destination.open(directory.path(), previous_path));
+  DOBA_EXPECT(destination.write("old", 3));
   {
     byte_storage_file source;
     DOBA_EXPECT(source.open(directory.path(), source_path));
     DOBA_EXPECT(source.write("abcdef", 6));
-    moved.emplace(std::move(source));
+    byte_storage_file moved{std::move(source)};
     DOBA_EXPECT(!source.write("x", 1));
+    destination = std::move(moved);
+    DOBA_EXPECT(!moved.write("x", 1));
   }
-  byte_storage_file destination;
-  std::filesystem::path previous_path;
-  DOBA_EXPECT(destination.open(directory.path(), previous_path));
-  DOBA_EXPECT(destination.write("old", 3));
-  destination = std::move(*moved);
-  DOBA_EXPECT(!moved->write("x", 1));
-  moved.reset();
   byte_storage_file& same = destination;
   destination = std::move(same);
   std::array<char, 4> output{};
