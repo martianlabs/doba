@@ -1881,15 +1881,22 @@ DOBA_TEST("decoder accepts complete heads at the buffer boundary") {
   for (std::size_t size : {5119, 5120}) {
     const std::string padding(size - prefix.size() - 4, 'x');
     const std::string source = prefix + padding + "\r\n\r\n";
-    test_decoder value;
-    DOBA_EXPECT_EQUAL(source.size(), size);
-    DOBA_EXPECT_EQUAL(accumulate(value, source), size);
-    const auto result = value.deserialize();
-    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-    DOBA_EXPECT(result.request != nullptr);
-    DOBA_EXPECT_EQUAL(result.request->get_header("X-Pad").second, padding);
-    DOBA_EXPECT_EQUAL(value.deserialize().code,
-                      deserialization_status::kMoreBytesNeeded);
+    for (const std::size_t split : {std::size_t{0}, size / 2, size - 1}) {
+      test_decoder value;
+      DOBA_EXPECT_EQUAL(source.size(), size);
+      DOBA_EXPECT_EQUAL(
+          accumulate(value, std::string_view(source).substr(0, split)), split);
+      DOBA_EXPECT_EQUAL(value.deserialize().code,
+                        deserialization_status::kMoreBytesNeeded);
+      DOBA_EXPECT_EQUAL(
+          accumulate(value, std::string_view(source).substr(split)), size - split);
+      const auto result = value.deserialize();
+      DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+      DOBA_EXPECT(result.request != nullptr);
+      DOBA_EXPECT_EQUAL(result.request->get_header("X-Pad").second, padding);
+      DOBA_EXPECT_EQUAL(value.deserialize().code,
+                        deserialization_status::kMoreBytesNeeded);
+    }
   }
 }
 
@@ -1898,24 +1905,27 @@ DOBA_TEST("decoder accepts complete heads at the buffer boundary") {
 // +===========================================================================+
 DOBA_TEST("decoder preserves every query pair at the supported limit") {
   for (std::size_t count : {127, 128}) {
-    std::string source = "GET /?";
-    for (std::size_t i = 0; i < count; i++) {
-      if (i != 0) source += '&';
-      source += "k" + std::to_string(i) + "=v" + std::to_string(i);
-    }
-    source += " HTTP/1.1\r\nHost: example.com\r\n\r\n";
-    DOBA_EXPECT(source.size() < 5120);
-    test_decoder value;
-    DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
-    const auto result = value.deserialize();
-    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-    DOBA_EXPECT(result.request != nullptr);
-    DOBA_EXPECT_EQUAL(result.request->get_query_parameters_length(), count);
-    for (std::size_t i = 0; i < count; i++) {
-      const auto parameter =
-          result.request->get_query_parameter("k" + std::to_string(i));
-      DOBA_EXPECT(parameter.has_value());
-      DOBA_EXPECT_EQUAL(parameter->second, "v" + std::to_string(i));
+    for (bool empty_pairs : {false, true}) {
+      std::string source = empty_pairs ? "GET /?&&" : "GET /?";
+      for (std::size_t i = 0; i < count; i++) {
+        if (i != 0) source += empty_pairs ? "&&" : "&";
+        source += "k" + std::to_string(i) + "=v" + std::to_string(i);
+      }
+      if (empty_pairs) source += "&&";
+      source += " HTTP/1.1\r\nHost: example.com\r\n\r\n";
+      DOBA_EXPECT(source.size() < limits::kDecodingBufferSize);
+      test_decoder value;
+      DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
+      const auto result = value.deserialize();
+      DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+      DOBA_EXPECT(result.request != nullptr);
+      DOBA_EXPECT_EQUAL(result.request->get_query_parameters_length(), count);
+      for (std::size_t i = 0; i < count; i++) {
+        const auto parameter =
+            result.request->get_query_parameter("k" + std::to_string(i));
+        DOBA_EXPECT(parameter.has_value());
+        DOBA_EXPECT_EQUAL(parameter->second, "v" + std::to_string(i));
+      }
     }
   }
 }
@@ -2188,30 +2198,67 @@ DOBA_TEST("absolute form uses its authority when Host differs") {
     DOBA_EXPECT_EQUAL(result.request->get_target_authority_port(),
                       source.find(":8080") != std::string_view::npos ?
                           "8080" : "");
+    const auto host_start = source.find("Host: ") + 6;
+    const auto host = source.substr(
+        host_start, source.find("\r\n", host_start) - host_start);
+    const auto colon = host.find(':');
+    DOBA_EXPECT_EQUAL(result.request->get_header("Host").second, host);
+    DOBA_EXPECT_EQUAL(result.request->get_host(), host.substr(0, colon));
+    DOBA_EXPECT_EQUAL(result.request->get_host_port(),
+                      colon == std::string_view::npos ? "" :
+                          host.substr(colon + 1));
+  }
+}
+// +===========================================================================+
+// | [>] absolute form retains Host validation                   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("absolute form retains Host validation") {
+  for (const auto headers : {"", "Host: a\r\nHost: b\r\n", "Host: [bad\r\n"}) {
+    const std::string source =
+        std::string("GET http://a/path HTTP/1.1\r\n") + headers + "\r\n";
+    test_decoder value;
+    DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
+    const auto result = value.deserialize();
+    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+    DOBA_EXPECT(result.request == nullptr);
   }
 }
 // +===========================================================================+
 // | [>] accepts TE with its required connection option          ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("accepts TE with its required connection option") {
-  check_header("TE", "trailers", true, "GET / HTTP/1.1\r\n",
-               "Connection: TE\r\n");
+  for (const auto connection : {"Connection: TE\r\n",
+                                "connection:\t te \t\r\n",
+                                "CONNECTION: Te\r\n"}) {
+    check_header("TE", "trailers", true, "GET / HTTP/1.1\r\n", connection);
+  }
 }
 // +===========================================================================+
 // | [>] rejects query parameter overflow without truncating     ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("rejects query parameter overflow without truncating") {
-  std::string source = "GET /?";
-  for (std::size_t index = 0; index <= limits::kMaxQueryParameters; ++index) {
-    if (index != 0) source += '&';
-    source += "p" + std::to_string(index) + "=v";
+  for (bool empty_pairs : {false, true}) {
+    for (bool body : {false, true}) {
+      std::string source = empty_pairs ? "GET /?&&" : "GET /?";
+      for (std::size_t index = 0; index <= limits::kMaxQueryParameters;
+           ++index) {
+        if (index != 0) source += empty_pairs ? "&&" : "&";
+        source += "p" + std::to_string(index) + "=v";
+      }
+      if (empty_pairs) source += "&&";
+      source += " HTTP/1.1\r\nHost: example.com\r\n";
+      if (body) source += "Content-Length: 1\r\n";
+      source += "\r\n";
+      if (body) source += 'x';
+      test_decoder value;
+      DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
+      const auto result = value.deserialize();
+      DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+      DOBA_EXPECT_EQUAL(result.reason,
+                        static_cast<int>(rejection_reason::kNone));
+      DOBA_EXPECT(result.request == nullptr);
+    }
   }
-  source += " HTTP/1.1\r\nHost: example.com\r\n\r\n";
-  test_decoder value;
-  DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
-  const auto result = value.deserialize();
-  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-  DOBA_EXPECT(result.request == nullptr);
 }
 // +===========================================================================+
 // | [>] a full incomplete head terminates instead of stalling   ( test-case ) |
@@ -2220,12 +2267,69 @@ DOBA_TEST("a full incomplete head terminates instead of stalling") {
   std::string source = "GET / HTTP/1.1\r\nHost: example.com\r\nX-Pad: ";
   source.append(limits::kDecodingBufferSize + 1 - source.size() - 4, 'a');
   source += "\r\n\r\n";
-  test_decoder value;
-  const auto consumed = accumulate(value, source);
-  DOBA_EXPECT_EQUAL(consumed, limits::kDecodingBufferSize);
-  const auto result = value.deserialize();
-  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-  DOBA_EXPECT(result.request == nullptr);
+  for (const std::size_t split : {std::size_t{0},
+                                   limits::kDecodingBufferSize / 2,
+                                   limits::kDecodingBufferSize - 1}) {
+    test_decoder value;
+    DOBA_EXPECT_EQUAL(
+        accumulate(value, std::string_view(source).substr(0, split)), split);
+    DOBA_EXPECT_EQUAL(value.deserialize().code,
+                      deserialization_status::kMoreBytesNeeded);
+    const auto consumed =
+        accumulate(value, std::string_view(source).substr(split));
+    DOBA_EXPECT_EQUAL(consumed, limits::kDecodingBufferSize - split);
+    const auto result = value.deserialize();
+    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+    DOBA_EXPECT_EQUAL(result.reason, static_cast<int>(rejection_reason::kNone));
+    DOBA_EXPECT(result.request == nullptr);
+    DOBA_EXPECT_EQUAL(value.deserialize().code,
+                      deserialization_status::kInvalidSource);
+  }
+}
+// +===========================================================================+
+// | [>] full body buffers remain consumable                     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("full body buffers remain consumable") {
+  const std::string payload(limits::kDecodingBufferSize * 2, 'x');
+  for (bool chunked : {false, true}) {
+    const std::string source =
+        std::string("POST / HTTP/1.1\r\nHost: a\r\n") +
+        (chunked ? "Transfer-Encoding: chunked\r\n\r\n2800\r\n" :
+                   "Content-Length: " + std::to_string(payload.size()) +
+                       "\r\n\r\n") +
+        payload + (chunked ? "\r\n0\r\n\r\n" : "");
+    test_decoder value;
+    std::shared_ptr<request> request_value;
+    for (std::size_t offset = 0; offset < source.size();) {
+      const auto count =
+          accumulate(value, std::string_view(source).substr(offset));
+      DOBA_EXPECT(count > 0);
+      offset += count;
+      const auto result = value.deserialize();
+      if (offset < source.size()) {
+        DOBA_EXPECT_EQUAL(result.code,
+                          deserialization_status::kMoreBytesNeeded);
+        DOBA_EXPECT(result.request == nullptr);
+      } else {
+        DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+        request_value = result.request;
+      }
+    }
+    DOBA_EXPECT(request_value != nullptr);
+    if (!request_value) continue;
+    std::array<std::byte, limits::kDecodingBufferSize> output{};
+    std::string decoded;
+    bool complete = false;
+    for (std::size_t i = 0; !complete && i <= payload.size(); i++) {
+      const auto state = request_value->get_body_reader()->read(output);
+      DOBA_EXPECT(!state.has_error);
+      decoded.append(reinterpret_cast<const char*>(output.data()),
+                     state.produced);
+      complete = state.complete;
+    }
+    DOBA_EXPECT(complete);
+    DOBA_EXPECT_EQUAL(decoded, payload);
+  }
 }
 // +===========================================================================+
 // | [>] unknown headers retain their complete normalized values ( test-case ) |
@@ -2238,6 +2342,10 @@ DOBA_TEST("unknown headers retain their complete normalized values") {
 // | [>] rejects invalid TE quality with its connection option   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("rejects invalid TE quality with its connection option") {
-  check_header("TE", "gzip;q=1.001", false, "GET / HTTP/1.1\r\n",
-               "Connection: TE\r\n");
+  for (const auto connection : {"Connection: TE\r\n",
+                                "connection:\t te \t\r\n",
+                                "CONNECTION: Te\r\n"}) {
+    check_header("TE", "gzip;q=1.001", false, "GET / HTTP/1.1\r\n",
+                 connection);
+  }
 }

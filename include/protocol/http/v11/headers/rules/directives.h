@@ -49,7 +49,7 @@ namespace martianlabs::doba::protocol::http::v11::headers::rules {
 // |    any protocol is rejected.                                              |
 // | 2. RFC 9110 S7.6.1: a connection option names a header field that is      |
 // |    hop-by-hop for this connection, but control headers with connection-   |
-// |    wide semantics (Host, Content-Length, Transfer-Encoding, TE, Trailer,  |
+// |    wide semantics (Host, Content-Length, Transfer-Encoding, Trailer,      |
 // |    Upgrade, and Connection itself) MUST NOT be nominated; doing so is     |
 // |    rejected.                                                              |
 // |                                                                           |
@@ -74,7 +74,6 @@ class directives {
           helpers::iequals(option, "host") ||
           helpers::iequals(option, "content-length") ||
           helpers::iequals(option, "transfer-encoding") ||
-          helpers::iequals(option, "te") ||
           helpers::iequals(option, "trailer") ||
           helpers::iequals(option, "upgrade")) {
         return verdict::kReject;

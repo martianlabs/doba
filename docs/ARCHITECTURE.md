@@ -67,12 +67,33 @@ borrowed views require their backing storage to remain alive. Shared
 ownership is used where a request or connection must survive deferred work
 or an outstanding I/O operation.
 
+For absolute-form HTTP/1.1 requests, the target authority is effective
+even when Host differs ([RFC 9112 S3.2.2](https://www.rfc-editor.org/rfc/rfc9112.html#section-3.2.2)).
+`get_host()` and its port/type getters expose the received Host;
+`get_target_authority_host()` and its port/type getters expose the target
+authority. The raw Host header remains available. Host syntax and
+multiplicity checks and CONNECT/authority-form behavior are preserved.
+
+The decoder rejects more than 128 non-empty query pairs before mounting a
+request. Empty pairs between '&' separators do not count. It also rejects
+an incomplete head immediately when its 5120-byte buffer fills. Complete
+heads of exactly that size remain accepted, and bodies can span multiple
+buffers. Both capacity failures return `kInvalidSource` with the existing
+generic reason, which the standard server maps to 400 Bad Request.
+These internal capacities are distinct from configurable resource policies
+and transport inactivity timeouts.
+
 ## Keep the common path direct
 
 Synchronous handlers run directly and return a move-only response by value:
 `response(const request&, ...)`. Deferred handlers retain
 `task<response>(shared_ptr<const request>, stop_token, ...)`, keeping the
 request alive and receiving a cancellation token.
+
+Both shapes support const and mutable call operators, with or without
+`noexcept`. The qualifiers do not relax request, return, cancellation or
+routing-parameter checks. The async concept identifies a task-returning
+shape; registration validates its exact request, cancellation and result types.
 
 The server-to-transport callback returns `variant<Response, task<Response>>`.
 Error callbacks also return a response by value. The transport serializes

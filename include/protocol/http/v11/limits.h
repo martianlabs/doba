@@ -76,7 +76,8 @@ struct limits {
   // headers and, when applicable, body framing) the decoder holds in memory
   // at once (decoder.h). Must be able to hold a full request head (see
   // kMaxRequestHeadSize above), since the decoder buffers it whole before
-  // mounting the request object.
+  // mounting the request object. An incomplete head at this capacity is
+  // rejected immediately with 400 Bad Request; bodies can span buffers.
   static constexpr std::size_t kDecodingBufferSize = kMaxRequestHeadSize;
   // Size, in octets, of response's internal in-memory buffer, holding the
   // status line, headers and (when small enough) the body (response.h).
@@ -97,7 +98,8 @@ struct limits {
   static constexpr std::size_t kMaxChunkedTrailerSize =
       kDefaultMaxHeaderSectionSize;
   // Maximum number of query parameters accepted in a request-target's query
-  // component before the request is rejected (decoder.h).
+  // component before rejection with 400 Bad Request (decoder.h). Empty
+  // pairs between '&' separators do not count toward this limit.
   static constexpr std::size_t kMaxQueryParameters = 128;
 };
 }  // namespace martianlabs::doba::protocol::http::v11

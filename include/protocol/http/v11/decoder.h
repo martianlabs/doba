@@ -180,6 +180,10 @@ class decoder {
   deserialization_result<RQty> deserialize() {
     deserialization_result<RQty> result =
         body_framer_ ? parse_body() : parse_core();
+    if (result.code == deserialization_status::kMoreBytesNeeded &&
+        !body_framer_ && off_ == limits::kDecodingBufferSize) {
+      result.code = deserialization_status::kInvalidSource;
+    }
     // Any rejection reason recorded along the way (by a header interpreter,
     // a transversal rule, or the HTTP-version check) is surfaced here, at the
     // single point where every parsing path converges, so callers only ever
@@ -373,6 +377,10 @@ class decoder {
             // source is invalid and we cannot parse the request!
             return deserialization_status::kInvalidSource;
           }
+          // Mount the request object and keep the result!
+          if (!mount_request_getter(i)) {
+            return deserialization_status::kInvalidSource;
+          }
           // Check for the presence of a body and build the body writer for this
           // request. We only support chunked and raw framing, and only if the
           // request has a body.
@@ -390,8 +398,6 @@ class decoder {
               body_framer_ = body::framer_raw(context_.content_length);
             }
           }
-          // Mount the request object and keep the result!
-          mount_request_getter(i);
           // In case of no body writer, we are done and can return the request.
           // Otherwise, we need to continue parsing the body, so we remove the
           // already consumed bytes from the input and call parse() again to
@@ -488,14 +494,15 @@ class decoder {
   // +=========================================================================+
   // | [>] mount_request                                            ( public ) |
   // +=========================================================================+
-  void mount_request_getter(std::size_t bytes_used) {
+  bool mount_request_getter(std::size_t bytes_used) {
     // Only if the query part is not empty, we will split it into key-value
     // pairs and set it in the request.
     std::vector<query_parameter_view> query_parameters;
     if (!query_.empty()) {
-      std::array<std::string_view, kMaxQueryParameters> keys;
-      std::array<std::string_view, kMaxQueryParameters> values;
+      std::array<std::string_view, kMaxQueryParameters + 1> keys;
+      std::array<std::string_view, kMaxQueryParameters + 1> values;
       std::size_t qc = helpers::split_query_parameters(query_, keys, values);
+      if (qc > kMaxQueryParameters) return false;
       query_parameters.reserve(qc);
       for (std::size_t q = 0; q < qc; q++) {
         query_parameters.emplace_back(keys[q], values[q]);
@@ -531,6 +538,7 @@ class decoder {
     std::memmove(buffer_.get(), buffer_.get() + bytes_used,
                  off_ - bytes_used);
     off_ -= bytes_used;
+    return true;
   }
   // +=========================================================================+
   // | [>] dispatch                                                ( private ) |

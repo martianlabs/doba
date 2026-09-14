@@ -375,7 +375,7 @@ class response {
     std::size_t tail_len = (sln_len_ + hdr_len_) - tail_off;
     std::memmove(&memory_[line_off], &memory_[tail_off], tail_len);
     hdr_len_ -= line_len;
-    if (iequals(k, header_names::kDate)) has_date_header_ = false;
+    if (iequals(k, header_names::kDate)) has_date_header_ = has_header(k);
     if (iequals(k, header_names::kContentLength)) {
       has_content_length_header_ = has_header(k);
     }

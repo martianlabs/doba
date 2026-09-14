@@ -44,15 +44,12 @@ namespace martianlabs::doba::protocol::http::v11::headers::rules {
 // |                                                                           |
 // | 1. RFC 9112 S3.2: a client MUST send exactly one Host header field in an  |
 // |    HTTP/1.1 request; a missing or duplicated Host is rejected.            |
-// | 2. RFC 9112 S3.2.2 / S3.3: when the request-target carries an authority   |
-// |    (absolute-form or authority-form), the server MUST use that authority  |
-// |    and it MUST agree with Host; a mismatch is rejected.                   |
+// | 2. RFC 9112 S3.2.2: absolute-form uses the target authority regardless    |
+// |    of the received Host value.                                           |
+// | 3. Authority-form retains the requirement that its authority match Host. |
 // |                                                                           |
-// | Host authority comparison is case-insensitive on the host and compares    |
-// | ports by effective value: an absolute-form target's scheme default port   |
-// | ("80" for http, "443" for https) is treated as equivalent to an omitted   |
-// | port, so the two forms reconcile. Authority-form targets carry no scheme  |
-// | and fall back to exact port equality.                                     |
+// | Authority-form comparison is case-insensitive on the host and requires    |
+// | exact port equality. A non-empty scheme identifies absolute-form.        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class routing {
@@ -63,15 +60,13 @@ class routing {
   static constexpr verdict apply(const context& ctx) {
     // Exactly one Host header is mandatory in HTTP/1.1.
     if (!ctx.has_host || ctx.multiple_host) return verdict::kReject;
-    // When the request-target carried an authority it must match Host.
+    // Only authority-form requires equality with Host.
     if (ctx.has_target_authority) {
+      if (!ctx.target_authority.scheme.empty()) return verdict::kAccept;
       if (!helpers::iequals(ctx.target_authority.host, ctx.host.host)) {
         return verdict::kReject;
       }
-      // Compare ports by effective value: an absolute-form target that omits
-      // the port (or spells out the scheme default) still matches a Host that
-      // does the opposite. The scheme is empty for authority-form targets, so
-      // that path degrades to exact string equality.
+      // Authority-form has no scheme and requires exact port equality.
       if (!helpers::ports_equivalent(ctx.target_authority.scheme,
                                      ctx.target_authority.port,
                                      ctx.host.port)) {

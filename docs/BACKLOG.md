@@ -52,52 +52,41 @@ Other outstanding items have no assigned version.
 
 ## Inventory
 
-35 entries across eight categories, including the completed QA4 entry
+35 entries across eight categories. C4-C6, B1-B6 and QA4 are completed and
 retained for traceability. Numbering identifies items; it does not express
 priority or implementation order.
 
-C4-C6 and B1-B6 track ten findings behind 15 failing unit tests. The reviewed
-classification is seven confirmed production bugs, one confirmed test bug,
-and two contract decisions. C5 separates query truncation from full-buffer
-handling. B6 remains under its existing identifier for traceability, but is
-not counted as a confirmed bug. Category totals below count entries, not bugs.
+C4-C6 and B1-B6 tracked ten findings behind 15 failing unit tests. The
+original classification remains seven production bugs, one test bug and two
+contract decisions. C5 separates query truncation from full-buffer handling;
+B6 records a compatibility extension, not a previously guaranteed behavior.
+Category totals count entries, not bugs.
 
-| Classification | Findings | Failing unit tests |
+| Original classification | Findings | Originally failing unit tests |
 | --- | --- | --- |
 | Confirmed production bugs | B1-B3, B5, C4, C5 query overflow, C6 | 11 |
 | Confirmed test bug | B4 | 1 |
-| Contract pending | C5 full buffer, B6 | 3 |
+| Contract decisions | C5 full buffer, B6 | 3 |
 
-The 2026-09-13 revalidation reran the eight affected suites using existing
-Windows MSVC and Linux GCC binaries: 202 cases passed and the same 15 failed
-on each platform. All 23 helper cases also passed on Windows. These results
-reproduce the findings; failing tests alone do not establish a bug.
-C4-C6 retain their hardening identifiers and are not duplicated below.
+The 2026-09-13 revalidation recorded 202 passing and 15 failing cases across
+the eight affected suites on Windows/MSVC and Linux/GCC. Rebuilding and
+running without exclusions on 2026-09-14 reproduced the same baseline.
+The corrected suites now pass all 222 cases on both platforms. Additional
+router and real-socket tests cover handler registration, authority getters,
+query overflow and fragmented head capacity on IOCP and epoll.
 
-**Temporary CI bypass (2026-09-14).** The unit CMake option
-`DOBA_SKIP_BACKLOG_UNIT_TESTS` defaults to OFF and is explicitly enabled in
-the CI compiler, sanitizer and minimum-CMake jobs. Its exact file/name list
-in [tests/unit/CMakeLists.txt](../tests/unit/CMakeLists.txt) excludes the 15
-cases above: 11 production-bug regressions, the B4 test error and three
-contract-dependent cases. This exception permits generation while those
-findings remain pending; a green run does not mean they have been fixed.
+Final local validation passed with strict warnings: MSVC, GCC and Clang in
+Debug and Release; Clang ASan with leak detection, UBSan and TSan; and
+CMake 3.20.6. Each configuration passed the complete unit/integration suites
+and both harness checks. Windows runs 816 unit cases, Linux runs 815, and
+both run 95 integration cases. Installed Debug/Release consumers and the
+`add_subdirectory` consumer also built and ran successfully.
 
-Configure output lists every exclusion, and the unit runner reports each
-omitted case as skipped. Other unit tests, integration tests, harness checks
-and sanitizer failures still determine the result. No assertion or test
-body is changed by the bypass.
-
-To run all unit cases, configure with
-`-DDOBA_SKIP_BACKLOG_UNIT_TESTS=OFF` or invoke `doba_unit_tests` directly
-without exclusions. The runner accepts repeated
-`--exclude "tests/unit/path_tests.cpp::case name"` arguments; a plain name
-retains its existing name-only matching behavior.
-
-When resolving an entry, reproduce its failure without the bypass, fix the
-implementation or justified test expectation, and remove the corresponding
-exclusion in the same change. Once the list is empty, remove the temporary
-option and its CI activation. Keep B4 and the C5/B6 contract decisions in
-their reviewed classifications until they are resolved.
+**Temporary CI bypass removed (2026-09-14).** All 15 regressions are active,
+including the corrected negative B4 case and the approved C5/B6 contracts.
+The temporary `DOBA_SKIP_BACKLOG_UNIT_TESTS` option, its exclusion list and
+its CI activation have been removed. The runner's general `--exclude`
+support and its harness checks remain available.
 
 | Category | Identifiers | Total |
 | --- | --- | --- |
@@ -116,15 +105,15 @@ their reviewed classifications until they are resolved.
 | [C1](#c1-single-inactivity-timeout) | Hardening | Pending | Beta target | 0.1.0-beta.1 |
 | [C2](#c2-effective-per-request-limits) | Hardening | Deferred | High | No assigned version |
 | [C3](#c3-global-active-connection-limit) | Hardening | Pending | Beta target | 0.1.0-beta.1 |
-| [C4](#c4-absolute-form-authority-precedence) | Hardening | Pending | Not set | No assigned version |
-| [C5](#c5-internal-decoder-capacity-overflow) | Hardening | Fix / contract pending | Not set | No assigned version |
-| [C6](#c6-te-connection-option) | Hardening | Pending | Not set | No assigned version |
-| [B1](#b1-entity-tag-backslash-rejection) | Bug | Pending | Not set | No assigned version |
-| [B2](#b2-via-escaped-comment-rejection) | Bug | Pending | Not set | No assigned version |
-| [B3](#b3-via-comment-comma-splitting) | Bug | Pending | Not set | No assigned version |
-| [B4](#b4-incorrect-ipv6-expectation-in-via-test) | Bug | Pending | Not set | No assigned version |
-| [B5](#b5-duplicate-automatic-date-after-header-removal) | Bug | Pending | Not set | No assigned version |
-| [B6](#b6-noexcept-handler-signature-rejection) | Compatibility | Contract pending | Not set | No assigned version |
+| [C4](#c4-absolute-form-authority-precedence) | Hardening | Completed | Not set | No assigned version |
+| [C5](#c5-internal-decoder-capacity-overflow) | Hardening | Completed | Not set | No assigned version |
+| [C6](#c6-te-connection-option) | Hardening | Completed | Not set | No assigned version |
+| [B1](#b1-entity-tag-backslash-rejection) | Bug | Completed | Not set | No assigned version |
+| [B2](#b2-via-escaped-comment-rejection) | Bug | Completed | Not set | No assigned version |
+| [B3](#b3-via-comment-comma-splitting) | Bug | Completed | Not set | No assigned version |
+| [B4](#b4-incorrect-ipv6-expectation-in-via-test) | Bug | Completed | Not set | No assigned version |
+| [B5](#b5-duplicate-automatic-date-after-header-removal) | Bug | Completed | Not set | No assigned version |
+| [B6](#b6-noexcept-handler-signature-rejection) | Compatibility | Completed | Not set | No assigned version |
 | [P1](#p1-static-file-handler) | Product | Pending | Not set | No assigned version |
 | [P2](#p2-access-logging) | Product | Pending | Not set | No assigned version |
 | [P3](#p3-middleware-chain) | Product | Pending | Not set | No assigned version |
@@ -236,6 +225,17 @@ new callbacks, and HTTP rejection responses.
 
 ### C4: Absolute-form authority precedence
 
+**Status.** Completed 2026-09-14.
+
+**Resolution.** Absolute-form no longer requires equality with Host. The target
+authority is effective; `get_host()` and its port/type getters retain the
+received Host, while `get_target_authority_host()` and its port/type getters
+expose the target authority. The raw header, Host validation and CONNECT
+behavior are preserved. Unit and real-socket tests verify differing hosts,
+ports, default-port cases and getter values on both platforms.
+
+**Historical finding and acceptance criteria.**
+
 **Type.** Confirmed bug (HTTP processing).
 
 **Context.** GET http://a/ with Host: b is rejected. The routing rule
@@ -275,6 +275,22 @@ must be explicit; adding these regressions does not itself correct routing.
 **Reference.** [RFC 9112 S3.2.2](https://www.rfc-editor.org/rfc/rfc9112.html#section-3.2.2).
 
 ### C5: Internal decoder capacity overflow
+
+**Status.** Completed 2026-09-14.
+
+**Resolution.** The decoder collects up to 129 query pairs and rejects an excess
+before mounting a request or initializing body storage. Empty pairs do not
+count. The bounded-output helper remains unchanged.
+
+The approved full-buffer contract rejects an incomplete head immediately
+at capacity. Both capacity failures return `kInvalidSource` with the existing
+generic reason, yielding 400 Bad Request. A complete 5120-byte head remains
+accepted; raw and chunked bodies can span buffers. Unit and socket tests cover
+127/128/129 pairs, empty separators, 5119/5120/5121-byte heads, fragmented
+delivery with the excess byte withheld, connection closure and no dispatch
+on rejection. The transport backends required no changes.
+
+**Historical finding and acceptance criteria.**
 
 **Type.** Confirmed query overflow bug; full-buffer contract pending.
 
@@ -341,6 +357,15 @@ assumed. Keep them separate from the configurable resource-limit API in C2.
 
 ### C6: TE connection option
 
+**Status.** Completed 2026-09-14.
+
+**Resolution.** The specific `te` prohibition and its rule comment were removed.
+The existing TE dispatcher required no change. Tests accept `TE: trailers`
+with `Connection: TE` and reject `gzip;q=1.001` through value validation,
+covering field-name case and OWS variants.
+
+**Historical finding and acceptance criteria.**
+
 **Type.** Confirmed bug (HTTP processing).
 
 **Context.** TE: trailers together with Connection: TE is rejected because
@@ -377,18 +402,23 @@ No public API or protocol-upgrade feature is required.
 
 ## Bugs
 
-B1-B5 are confirmed pending fixes; B4 is a unit-test error. B6 is a reproduced
-compatibility limitation awaiting a support-contract decision, retained here
-under its existing identifier. C4, the query part of C5, and C6 record confirmed
-production bugs under Operational hardening. The full-buffer part of C5 is a
-separate contract decision. None of these entries is duplicated.
-
-The existing tests below also failed in the earlier 2026-09-13 Linux
-Clang/ASan run. The subsequent MSVC/GCC revalidation is recorded in the
-inventory. Reproduction alone does not settle the C5 full-buffer or B6
-expectations, and B4 requires correcting the test rather than the parser.
+B1-B5 are completed fixes; B4 corrected a unit-test expectation. B6 is a
+completed compatibility extension under an explicitly approved contract.
+C4, C5 query overflow and C6 retain their hardening identifiers. C5 full-buffer
+handling is a separate approved contract. The historical findings below retain
+their original classification and acceptance criteria for traceability.
 
 ### B1: Entity-tag backslash rejection
+
+**Status.** Completed 2026-09-14.
+
+**Resolution.** If-Match and If-None-Match now delimit opaque entity-tags locally
+and validate each member with `is_entity_tag`. Backslash remains literal.
+Both 256-byte matrices and the expanded list boundaries pass. The shared list
+helper, weak-tag syntax, wildcard and recipient OWS/empty-element contracts
+are unchanged.
+
+**Historical finding and acceptance criteria.**
 
 **Type.** Confirmed bug (conditional header syntax).
 
@@ -423,6 +453,15 @@ different grammars. Preserve quoted-string handling for other consumers.
 
 ### B2: Via escaped comment rejection
 
+**Status.** Completed 2026-09-14.
+
+**Resolution.** Via now delimits its list locally, consuming complete comments
+with the existing `consume_comment` helper. Escapes, nested comments and
+literal quotes retain their bytes. The expanded valid/invalid comment
+regressions pass; shared helpers are unchanged.
+
+**Historical finding and acceptance criteria.**
+
 **Type.** Confirmed bug (Via comment syntax).
 
 **Context.** `Via: 1.1 proxy (a\)b\(c)` is rejected by `via::check`.
@@ -454,6 +493,15 @@ and [S7.6.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-7.6.3).
 
 ### B3: Via comment comma splitting
 
+**Status.** Completed 2026-09-14.
+
+**Resolution.** The Via scan consumes each comment before considering separators.
+Tests verify two members for the original input, nested commas, escaped
+parentheses, empty list elements and OWS. This shares the localized B2 fix
+and preserves the other list consumers.
+
+**Historical finding and acceptance criteria.**
+
 **Type.** Confirmed bug (Via list separation).
 
 **Context.** `Via: 1.1 proxy (a,b), 1.0 other` is rejected.
@@ -483,6 +531,15 @@ entity-tag grammar and the behavior of other list consumers.
 and [S7.6.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-7.6.3).
 
 ### B4: Incorrect IPv6 expectation in Via test
+
+**Status.** Completed 2026-09-14.
+
+**Resolution.** The exact IPv6 input is now a negative regression named
+`check rejects an IPv6 received by host`. Its expectation and RFC comment
+were corrected. No production parser change was made for B4; valid
+pseudonyms and optional ports retain their coverage.
+
+**Historical finding and acceptance criteria.**
 
 **Type.** Confirmed bug (unit-test expectation and RFC comment).
 
@@ -515,6 +572,16 @@ and [appendix B.2](https://www.rfc-editor.org/rfc/rfc9110.html#appendix-B.2).
 
 ### B5: Duplicate automatic Date after header removal
 
+**Status.** Completed 2026-09-14.
+
+**Resolution.** After removing Date, the marker is recalculated from the remaining
+headers, matching the existing Content-Length/Transfer-Encoding pattern.
+The original serialized-prefix regression and a new last-Date removal test
+pass, covering case-insensitive names, automatic generation and other headers.
+The add/remove/serialize API and ownership contract are unchanged.
+
+**Historical finding and acceptance criteria.**
+
 **Type.** Confirmed bug (response header mutation).
 
 **Context.** Add Date fields with values `first` and `remaining`, remove
@@ -543,6 +610,17 @@ generation, and preserve case-insensitive name handling and other headers.
 and mutation semantics; changing header validation is a separate decision.
 
 ### B6: Noexcept handler signature rejection
+
+**Status.** Completed 2026-09-14.
+
+**Resolution.** The approved contract supports const and mutable `noexcept`
+call operators for the existing sync and async shapes. Four specializations
+reuse the current signature bases. Tests cover qualifiers, routing parameter
+counts and actual registration/execution. Compilation probes also verify
+rejection of incompatible request, cancellation and return types with and
+without `noexcept`. The router implementation required no changes.
+
+**Historical finding and acceptance criteria.**
 
 **Type.** Confirmed compatibility limitation; support contract pending.
 

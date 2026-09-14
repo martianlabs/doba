@@ -119,6 +119,8 @@ DOBA_TEST("check accepts tag list boundaries") {
   constexpr std::string_view cases[] = {
       "\"\", W/\"\", \"a,b\", W/\"c;d\"",
       ",,\"a\",,W/\"b\",",
+      "\"\\\", W/\"\\\", \"a\\,b\"",
+      "\"a\" \t,\t W/\"\\\",,",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
@@ -136,6 +138,10 @@ DOBA_TEST("check rejects tag list boundaries") {
       "\"a\"junk",
       "\"a\",W/",
       "\"a\",W/\"b",
+      "\"a\" ",
+      " \"a\"",
+      "\"a\", \"b\" ",
+      "\"a\\\"b\"",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);

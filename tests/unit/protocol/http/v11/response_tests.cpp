@@ -740,6 +740,25 @@ DOBA_TEST("removing one Date preserves the remaining explicit Date") {
                     "Content-Length: 0\r\n\r\n");
 }
 // +===========================================================================+
+// | [>] removing the last Date restores automatic generation    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("removing the last Date restores automatic generation") {
+  response value = response::ok_200();
+  value.add_header("DATE", "first").add_header("date", "remaining");
+  value.add_header("X-Keep", "kept");
+  value.remove_header("DaTe").remove_header("DATE");
+  DOBA_EXPECT(!value.has_header("Date"));
+  const auto serialized = value.serialize();
+  const std::string_view prefix(serialized->prefix.get(),
+                                serialized->prefix_size);
+  DOBA_EXPECT(prefix.find("\r\nX-Keep: kept\r\n") != std::string_view::npos);
+  const auto date = prefix.find("\r\nDate: ");
+  DOBA_EXPECT(date != std::string_view::npos);
+  DOBA_EXPECT_EQUAL(prefix.find("\r\n", date + 2), date + 8 + 29);
+  DOBA_EXPECT_EQUAL(prefix.find("\r\nDate: ", date + 1),
+                    std::string_view::npos);
+}
+// +===========================================================================+
 // | [>] header names validate every byte before mutation        ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("header names validate every byte before mutation") {
