@@ -58,7 +58,7 @@ namespace {
 class deferred_signal {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                   ( public )|
+  // | [>] METHODs                                                  ( public ) |
   // +=========================================================================+
   bool await_ready() const noexcept { return false; }
   void await_suspend(std::coroutine_handle<> continuation) {
@@ -85,7 +85,7 @@ class deferred_signal {
 
  private:
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( private )|
+  // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   std::mutex mutex_;
   std::condition_variable condition_;
@@ -100,7 +100,7 @@ class deferred_signal {
 class deferred_cleanup {
  public:
   // +=========================================================================+
-  // | [>] CONSTRUCTORs/DESTRUCTORs                                  ( public )|
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   explicit deferred_cleanup(
       std::initializer_list<std::shared_ptr<deferred_signal>> signals)
@@ -116,19 +116,19 @@ class deferred_cleanup {
 
  private:
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( private )|
+  // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   std::vector<std::shared_ptr<deferred_signal>> signals_;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] transport_request                                           ( struct )|
+// | [>] transport_request                                          ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct transport_request {
   // +=========================================================================+
-  // | [>] CONSTRUCTORs/DESTRUCTORs                                  ( public )|
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   explicit transport_request(char in_value) : value(in_value) {}
   transport_request(char in_value, std::string in_payload)
@@ -150,7 +150,7 @@ enum class serialization_behavior {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] transport_response                                          ( struct )|
+// | [>] transport_response                                         ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct transport_response {
@@ -192,14 +192,14 @@ struct transport_response {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] transport_decoder                                            ( class )|
+// | [>] transport_decoder                                           ( class ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty>
 class transport_decoder {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                   ( public )|
+  // | [>] METHODs                                                  ( public ) |
   // +=========================================================================+
   std::size_t accumulate(char* buffer, std::size_t size) {
     if (!size || ready_) return 0;
@@ -236,7 +236,7 @@ class transport_decoder {
 
  private:
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( private )|
+  // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   char value_{0};
   bool ready_{false};
@@ -244,14 +244,14 @@ class transport_decoder {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] framed_decoder                                               ( class )|
+// | [>] framed_decoder                                              ( class ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty>
 class framed_decoder {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                   ( public )|
+  // | [>] METHODs                                                  ( public ) |
   // +=========================================================================+
   std::size_t accumulate(char* buffer, std::size_t size) {
     data_.append(buffer, size);
@@ -286,7 +286,7 @@ class framed_decoder {
 
  private:
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( private )|
+  // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   std::string data_;
   bool interim_sent_{false};
@@ -294,14 +294,14 @@ class framed_decoder {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] sized_decoder                                                ( class )|
+// | [>] sized_decoder                                               ( class ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty>
 class sized_decoder {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                   ( public )|
+  // | [>] METHODs                                                  ( public ) |
   // +=========================================================================+
   std::size_t accumulate(char* buffer, std::size_t size) {
     data_.append(buffer, size);
@@ -334,7 +334,7 @@ class sized_decoder {
 
  private:
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( private )|
+  // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   std::string data_;
 };
@@ -432,7 +432,7 @@ martianlabs::doba::common::task<transport_response> make_failed_response(
 }  // namespace
 
 // +===========================================================================+
-// | [>] immediate response lifecycle                             ( test-case )|
+// | [>] immediate response lifecycle                            ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip serves independent loopback connections") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -486,7 +486,7 @@ DOBA_TEST("tcpip serves independent loopback connections") {
 }
 
 // +===========================================================================+
-// | [>] persistent connection reuse                              ( test-case )|
+// | [>] persistent connection reuse                             ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip reuses a connection after each completed response") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -931,7 +931,7 @@ DOBA_TEST("tcpip sends a rejection response then closes the client channel") {
 }
 
 // +===========================================================================+
-// | [>] pipelined async response ordering                        ( test-case )|
+// | [>] pipelined async response ordering                       ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip preserves response order for pipelined deferred requests") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -982,7 +982,7 @@ DOBA_TEST("tcpip preserves response order for pipelined deferred requests") {
 }
 
 // +===========================================================================+
-// | [>] deferred response cancellation                           ( test-case )|
+// | [>] deferred response cancellation                          ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip cooperatively cancels deferred responses") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -1055,7 +1055,7 @@ DOBA_TEST("tcpip cooperatively cancels deferred responses") {
 }
 
 // +===========================================================================+
-// | [>] mixed response ordering                                  ( test-case )|
+// | [>] mixed response ordering                                 ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip orders mixed synchronous and deferred responses") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -1262,7 +1262,7 @@ DOBA_TEST("tcpip drains a deferred close response before eof") {
 }
 
 // +===========================================================================+
-// | [>] empty response delivery                                  ( test-case )|
+// | [>] empty response delivery                                 ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip removes an empty response without blocking its queue") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -1355,7 +1355,7 @@ DOBA_TEST("tcpip streams response sources across send boundaries") {
 }
 
 // +===========================================================================+
-// | [>] large prefix delivery                                    ( test-case )|
+// | [>] large prefix delivery                                   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip sends prefixes larger than its bounded send buffer") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -1454,7 +1454,7 @@ DOBA_TEST("tcpip completes a streamed response before its successor") {
 }
 
 // +===========================================================================+
-// | [>] slow client isolation                                    ( test-case )|
+// | [>] slow client isolation                                   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip serves another client while a large response is blocked") {
   martianlabs::doba::tests::integration::tcpip_client slow_client;
@@ -2367,7 +2367,7 @@ DOBA_TEST("tcpip survives failing disconnection callbacks") {
 }
 
 // +===========================================================================+
-// | [>] invalid ports leave a reusable server                    ( test-case )|
+// | [>] invalid ports leave a reusable server                   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip rejects every invalid port form and remains reusable") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -2428,7 +2428,7 @@ DOBA_TEST("tcpip rejects every invalid port form and remains reusable") {
 }
 
 // +===========================================================================+
-// | [>] active callbacks are immutable                           ( test-case )|
+// | [>] active callbacks are immutable                          ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip rejects every callback mutation while active") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -2498,7 +2498,7 @@ DOBA_TEST("tcpip rejects every callback mutation while active") {
 }
 
 // +===========================================================================+
-// | [>] stop is safe under concurrent callers                    ( test-case )|
+// | [>] stop is safe under concurrent callers                   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip serializes concurrent and repeated stop calls") {
   martianlabs::doba::tests::integration::tcpip_client port_client;
@@ -2549,7 +2549,7 @@ DOBA_TEST("tcpip serializes concurrent and repeated stop calls") {
 }
 
 // +===========================================================================+
-// | [>] worker initiated stop is rejected                        ( test-case )|
+// | [>] worker initiated stop is rejected                       ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip rejects stop from a request callback without deadlock") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -2592,7 +2592,7 @@ DOBA_TEST("tcpip rejects stop from a request callback without deadlock") {
 }
 
 // +===========================================================================+
-// | [>] decoder exceptions remain channel local                  ( test-case )|
+// | [>] decoder exceptions remain channel local                 ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip survives accumulation and deserialization exceptions") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -2644,7 +2644,7 @@ DOBA_TEST("tcpip survives accumulation and deserialization exceptions") {
 }
 
 // +===========================================================================+
-// | [>] large synchronous pipeline is fully drained              ( test-case )|
+// | [>] large synchronous pipeline is fully drained             ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tcpip drains a large synchronous request pipeline in order") {
   martianlabs::doba::tests::integration::tcpip_client client;

@@ -73,7 +73,7 @@ namespace martianlabs::doba::protocol::http::headers {
 // | host                | IP-literal / IPv4address / reg-name                 |
 // | port                | *DIGIT                                              |
 // | IP-literal          | "[" ( IPv6address / IPvFuture ) "]"                 |
-// | IPvFuture           | "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )|
+// | IPvFuture           | "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":") |
 // | reg-name            | *( unreserved / pct-encoded / sub-delims )          |
 // | pct-encoded         | "%" HEXDIG HEXDIG                                   |
 // | unreserved          | ALPHA / DIGIT / "-" / "." / "_" / "~"               |

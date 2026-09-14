@@ -60,7 +60,7 @@ response read_body(const request& req) {
 }  // namespace
 
 // +===========================================================================+
-// | [>] complete head capacity boundaries                        ( test-case )|
+// | [>] complete head capacity boundaries                       ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 terminates complete heads around decoder capacity") {
   tcpip_client client;
@@ -123,7 +123,7 @@ DOBA_TEST("HTTP/1.1 terminates complete heads around decoder capacity") {
 }
 
 // +===========================================================================+
-// | [>] query storage supported boundaries                       ( test-case )|
+// | [>] query storage supported boundaries                      ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 preserves every query parameter at supported boundaries") {
   tcpip_client client;
@@ -179,7 +179,7 @@ DOBA_TEST("HTTP/1.1 preserves every query parameter at supported boundaries") {
 }
 
 // +===========================================================================+
-// | [>] chunk extension and trailer boundaries                   ( test-case )|
+// | [>] chunk extension and trailer boundaries                  ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 enforces chunk extension and trailer wire limits") {
   tcpip_client client;

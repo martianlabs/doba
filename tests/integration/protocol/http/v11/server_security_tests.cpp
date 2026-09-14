@@ -77,7 +77,7 @@ DOBA_TEST("HTTP/1.1 rejects hostile requests without dispatching successors") {
   http_server.start(port_text.c_str());
 
   // +=========================================================================+
-  // | [>] test_case                                                 ( struct )|
+  // | [>] test_case                                                ( struct ) |
   // +=========================================================================+
   struct test_case {
     // +=======================================================================+
@@ -227,7 +227,7 @@ DOBA_TEST("HTTP/1.1 rejects hostile requests without dispatching successors") {
 }
 
 // +===========================================================================+
-// | [>] case insensitive framing and target forms                ( test-case )|
+// | [>] case insensitive framing and target forms               ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 accepts case insensitive framing and valid target forms") {
   tcpip_client client;
@@ -246,7 +246,7 @@ DOBA_TEST("HTTP/1.1 accepts case insensitive framing and valid target forms") {
   http_server.start(port_text.c_str());
 
   // +=========================================================================+
-  // | [>] test_case                                                 ( struct )|
+  // | [>] test_case                                                ( struct ) |
   // +=========================================================================+
   struct test_case {
     // +=======================================================================+
@@ -307,7 +307,7 @@ DOBA_TEST("HTTP/1.1 absolute authority preserves the received Host") {
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
   // +=========================================================================+
-  // | [>] test_case                                                 ( struct )|
+  // | [>] test_case                                                ( struct ) |
   // +=========================================================================+
   struct test_case {
     // +=======================================================================+
@@ -342,7 +342,7 @@ DOBA_TEST("HTTP/1.1 absolute authority preserves the received Host") {
 }
 
 // +===========================================================================+
-// | [>] slow inputs do not starve complete clients               ( test-case )|
+// | [>] slow inputs do not starve complete clients              ( test-case ) |
 // +===========================================================================+
 DOBA_TEST(
     "HTTP/1.1 isolates incomplete heads and bodies from healthy clients") {

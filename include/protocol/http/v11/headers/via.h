@@ -51,7 +51,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // +-------------------+-------------------------------------------------------+
 // | Field             | Definition                                            |
 // +-------------------+-------------------------------------------------------+
-// | Via               | #( received-protocol RWS received-by [ RWS comment ] )|
+// | Via               | #( received-protocol RWS received-by [ RWS comment ]) |
 // | received-protocol | [ protocol-name "/" ] protocol-version                |
 // | received-by       | pseudonym [ ":" port ]                                |
 // | pseudonym         | token                                                 |

@@ -722,7 +722,7 @@ DOBA_TEST("HTTP/1.1 emits no HEAD body before the following GET") {
 }
 
 // +===========================================================================+
-// | [>] preserves streamed HEAD framing before another reply     ( test-case )|
+// | [>] preserves streamed HEAD framing before another reply    ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 preserves streamed HEAD framing before another reply") {
   for (bool chunked : {false, true}) {

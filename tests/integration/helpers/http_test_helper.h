@@ -272,7 +272,7 @@ inline std::optional<http_test_response> receive_http_response(
 class http_test_signal {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                   ( public )|
+  // | [>] METHODs                                                  ( public ) |
   // +=========================================================================+
   bool await_ready() const noexcept { return false; }
   bool await_suspend(std::coroutine_handle<> continuation) {
@@ -300,7 +300,7 @@ class http_test_signal {
 
  private:
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( private )|
+  // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   std::mutex mutex_;
   std::condition_variable condition_;

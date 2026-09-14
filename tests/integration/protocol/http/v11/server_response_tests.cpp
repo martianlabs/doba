@@ -44,7 +44,7 @@ using martianlabs::doba::tests::integration::tcpip_client;
 }  // namespace
 
 // +===========================================================================+
-// | [>] outgoing chunk boundaries survive the transport          ( test-case )|
+// | [>] outgoing chunk boundaries survive the transport         ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 transmits and terminates every outgoing chunk") {
   tcpip_client client;
@@ -90,7 +90,7 @@ DOBA_TEST("HTTP/1.1 transmits and terminates every outgoing chunk") {
 }
 
 // +===========================================================================+
-// | [>] inline and streamed response body boundary               ( test-case )|
+// | [>] inline and streamed response body boundary              ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 preserves binary responses across the spill boundary") {
   tcpip_client client;
@@ -132,7 +132,7 @@ DOBA_TEST("HTTP/1.1 preserves binary responses across the spill boundary") {
 }
 
 // +===========================================================================+
-// | [>] all bodyless final statuses delimit a pipeline           ( test-case )|
+// | [>] all bodyless final statuses delimit a pipeline          ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 suppresses 205 and 304 bodies before successors") {
   tcpip_client client;
@@ -212,7 +212,7 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
   http_server.start(port_text.c_str());
 
   // +=========================================================================+
-  // | [>] failure_case                                              ( struct )|
+  // | [>] failure_case                                             ( struct ) |
   // +=========================================================================+
   struct failure_case {
     // +=======================================================================+
