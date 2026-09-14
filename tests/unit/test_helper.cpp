@@ -115,7 +115,7 @@ int test_helper::run(int argc, char** argv) {
   bool list = false;
   std::string file;
   std::string_view name;
-  std::string_view exclude;
+  std::vector<std::string> exclude;
   for (int i = 1; i < argc; i++) {
     const std::string_view argument{argv[i]};
     if (argument == "--list") {
@@ -125,7 +125,7 @@ int test_helper::run(int argc, char** argv) {
       const std::string_view value{argv[++i]};
       if (argument == "--file") file = value;
       if (argument == "--name") name = value;
-      if (argument == "--exclude") exclude = value;
+      if (argument == "--exclude") exclude.emplace_back(value);
     } else {
       std::fputs("Invalid test arguments\n", stderr);
       return 2;
@@ -134,18 +134,41 @@ int test_helper::run(int argc, char** argv) {
   for (char& value : file) {
     if (value == '\\') value = '/';
   }
+  for (std::string& value : exclude) {
+    const std::size_t separator = value.find("::");
+    if (separator == std::string::npos) continue;
+    for (std::size_t i = 0; i < separator; i++) {
+      if (value[i] == '\\') value[i] = '/';
+    }
+  }
+  const auto is_excluded = [&](const test_case& test) {
+    std::string normalized{test.file};
+    for (char& value : normalized) {
+      if (value == '\\') value = '/';
+    }
+    for (const std::string& value : exclude) {
+      const std::string_view entry{value};
+      const std::size_t separator = entry.find("::");
+      if (separator == std::string_view::npos) {
+        if (test.name == entry) return true;
+      } else if (normalized == entry.substr(0, separator) &&
+                 test.name == entry.substr(separator + 2)) {
+        return true;
+      }
+    }
+    return false;
+  };
   const auto matches = [&](const test_case& test) {
     std::string normalized{test.file};
     for (char& value : normalized) {
       if (value == '\\') value = '/';
     }
     return (file.empty() || normalized.find(file) != std::string::npos) &&
-           (name.empty() || test.name == name) &&
-           (exclude.empty() || test.name != exclude);
+           (name.empty() || test.name == name);
   };
   std::size_t selected = 0;
   for (const auto& test : tests()) {
-    if (matches(test)) selected++;
+    if (matches(test) && !is_excluded(test)) selected++;
   }
   if (selected == 0) {
     std::fputs("No tests matched\n", stderr);
@@ -153,7 +176,7 @@ int test_helper::run(int argc, char** argv) {
   }
   if (list) {
     for (const auto& test : tests()) {
-      if (!matches(test)) continue;
+      if (!matches(test) || is_excluded(test)) continue;
       std::printf("%.*s:%d - %.*s\n", static_cast<int>(test.file.size()),
                   test.file.data(), test.line,
                   static_cast<int>(test.name.size()), test.name.data());
@@ -174,8 +197,18 @@ int test_helper::run(int argc, char** argv) {
   std::fflush(stdout);
   logger.info() << "running " << selected << " unit tests";
   std::size_t failed_tests = 0;
+  std::size_t skipped_tests = 0;
   for (const auto& test : tests()) {
     if (!matches(test)) continue;
+    if (is_excluded(test)) {
+      skipped_tests++;
+      std::printf("skipped %.*s:%d - %.*s\n",
+                  static_cast<int>(test.file.size()), test.file.data(),
+                  test.line, static_cast<int>(test.name.size()),
+                  test.name.data());
+      std::fflush(stdout);
+      continue;
+    }
     context().clear();
     const std::size_t failures_before = failures();
     std::printf("running %.*s:%d - %.*s\n",
@@ -199,6 +232,10 @@ int test_helper::run(int argc, char** argv) {
       logger.info() << test.file << ':' << test.line << " - " << test.name
                     << common::console_log_color::kGreen << " passed";
     }
+  }
+  if (skipped_tests != 0) {
+    logger.info() << skipped_tests
+                  << " test(s) skipped by explicit exclusions";
   }
   if (failed_tests != 0) {
     logger.error() << failed_tests << " test(s) failed";

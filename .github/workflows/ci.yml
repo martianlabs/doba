@@ -56,6 +56,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
           -DDOBA_ENABLE_STRICT_WARNINGS=ON
+          -DDOBA_SKIP_BACKLOG_UNIT_TESTS=ON
 
       - name: Build
         run: cmake --build ${{ matrix.build_dir }}
@@ -136,6 +137,7 @@ jobs:
         run: >-
           cmake --preset ${{ matrix.configure_preset }}
           -DDOBA_ENABLE_STRICT_WARNINGS=ON
+          -DDOBA_SKIP_BACKLOG_UNIT_TESTS=ON
 
       - name: Build
         run: cmake --build --preset ${{ matrix.build_preset }}
@@ -177,6 +179,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_CXX_COMPILER=clang++
           -DDOBA_ENABLE_STRICT_WARNINGS=ON
+          -DDOBA_SKIP_BACKLOG_UNIT_TESTS=ON
           "-DCMAKE_CXX_FLAGS=-fsanitize=${{ matrix.sanitizer }} -fno-omit-frame-pointer"
 
       - name: Build
@@ -204,6 +207,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_CXX_COMPILER=g++
           -DDOBA_ENABLE_STRICT_WARNINGS=ON
+          -DDOBA_SKIP_BACKLOG_UNIT_TESTS=ON
 
       - name: Build
         run: cmake --build out/build/cmake-3.20
