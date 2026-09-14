@@ -36,43 +36,70 @@ Measured locally with the official HttpArena suite: **512 connections**,
 **lite mode**, **one run per server and profile**.
 [Full results](resources/benchmark-results.txt). `ntex/pipelined` was skipped.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-throughput-baseline-dark.svg">
-  <img src="resources/benchmark-throughput-baseline.svg" alt="HttpArena baseline throughput: requests per second, higher is better." width="100%">
-</picture>
+<a href="resources/benchmark-throughput-baseline.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-throughput-baseline-dark.svg">
+    <img src="resources/benchmark-throughput-baseline.svg" alt="HttpArena baseline throughput: requests per second, higher is better." width="100%">
+  </picture>
+</a>
+
+Full-size: [Light](resources/benchmark-throughput-baseline.svg) /
+[Dark](resources/benchmark-throughput-baseline-dark.svg).
 <br><br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-throughput-pipelined-dark.svg">
-  <img src="resources/benchmark-throughput-pipelined.svg" alt="HttpArena pipelined throughput: requests per second, higher is better." width="100%">
-</picture>
+<a href="resources/benchmark-throughput-pipelined.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-throughput-pipelined-dark.svg">
+    <img src="resources/benchmark-throughput-pipelined.svg" alt="HttpArena pipelined throughput: requests per second, higher is better." width="100%">
+  </picture>
+</a>
+
+Full-size: [Light](resources/benchmark-throughput-pipelined.svg) /
+[Dark](resources/benchmark-throughput-pipelined-dark.svg).
 <br><br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-latency-dark.svg">
-  <img src="resources/benchmark-latency.svg" alt="HttpArena p50, p99, and p99.9 latency for both profiles: milliseconds, lower is better." width="100%">
-</picture>
+<a href="resources/benchmark-latency.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-latency-dark.svg">
+    <img src="resources/benchmark-latency.svg" alt="HttpArena p50, p99, and p99.9 latency for both profiles: milliseconds, lower is better." width="100%">
+  </picture>
+</a>
 
-Full-size latency charts: [light](resources/benchmark-latency.svg) /
-[dark](resources/benchmark-latency-dark.svg).
+Full-size: [Light](resources/benchmark-latency.svg) /
+[Dark](resources/benchmark-latency-dark.svg).
 <br><br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-memory-dark.svg">
-  <img src="resources/benchmark-memory.svg" alt="HttpArena average memory for both profiles: lower is better." width="100%">
-</picture>
+<a href="resources/benchmark-memory.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-memory-dark.svg">
+    <img src="resources/benchmark-memory.svg" alt="HttpArena average memory for both profiles: lower is better." width="100%">
+  </picture>
+</a>
+
+Full-size: [Light](resources/benchmark-memory.svg) /
+[Dark](resources/benchmark-memory-dark.svg).
 <br><br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-cpu-efficiency-dark.svg">
-  <img src="resources/benchmark-cpu-efficiency.svg" alt="HttpArena requests per second per 100 percent of reported CPU usage: higher is better." width="100%">
-</picture>
+<a href="resources/benchmark-cpu-efficiency.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-cpu-efficiency-dark.svg">
+    <img src="resources/benchmark-cpu-efficiency.svg" alt="HttpArena requests per second per 100 percent of reported CPU usage: higher is better." width="100%">
+  </picture>
+</a>
+
+Full-size: [Light](resources/benchmark-cpu-efficiency.svg) /
+[Dark](resources/benchmark-cpu-efficiency-dark.svg).
 <br><br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-overall-dark.svg">
-  <img src="resources/benchmark-overall.svg" alt="HttpArena overall score: normalized throughput contributions from both profiles, out of 200 points." width="100%">
-</picture>
+<a href="resources/benchmark-overall.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-overall-dark.svg">
+    <img src="resources/benchmark-overall.svg" alt="HttpArena overall score: normalized throughput contributions from both profiles, out of 200 points." width="100%">
+  </picture>
+</a>
+
+Full-size: [Light](resources/benchmark-overall.svg) /
+[Dark](resources/benchmark-overall-dark.svg).
 <br><br>
 
 <a name="no-magic-a-few-deliberate-choices"></a>
