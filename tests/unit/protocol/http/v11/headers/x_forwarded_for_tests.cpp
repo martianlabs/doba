@@ -87,3 +87,57 @@ DOBA_TEST("interpret limits forwarding nodes") {
   DOBA_EXPECT_EQUAL(x_forwarded_for::interpret(parsed, state, policy),
                     verdict::kReject);
 }
+// +===========================================================================+
+// | [>] check appends ordered views from repeated fields        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check appends ordered views from repeated fields") {
+  const std::string first = "unknown";
+  const std::string second = "::1";
+  parsed_token_list parsed;
+  DOBA_EXPECT(x_forwarded_for::check(first, parsed));
+  DOBA_EXPECT(x_forwarded_for::check(second, parsed));
+  DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
+  DOBA_EXPECT_EQUAL(parsed.elements[0], first);
+  DOBA_EXPECT_EQUAL(parsed.elements[1], second);
+  DOBA_EXPECT_EQUAL(parsed.elements[0].data(), first.data());
+  DOBA_EXPECT_EQUAL(parsed.elements[1].data(), second.data());
+  DOBA_EXPECT(x_forwarded_for::check(",,", parsed));
+  DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
+}
+// +===========================================================================+
+// | [>] check accepts address alternatives                      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts address alternatives") {
+  constexpr std::string_view cases[] = {
+      "0.0.0.0,255.255.255.255",
+      "::",
+      "::ffff:192.0.2.1",
+      "[::1],unknown",
+      "[v1.a]",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_token_list parsed;
+    DOBA_EXPECT(x_forwarded_for::check(source, parsed));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects address alternatives                      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects address alternatives") {
+  constexpr std::string_view cases[] = {
+      "256.0.0.1",
+      "01.2.3.4",
+      "1.2.3",
+      "1.2.3.4:80",
+      "[::1]:80",
+      ":::",
+      "1::2::3",
+      "unknownx",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_token_list parsed;
+    DOBA_EXPECT(!x_forwarded_for::check(source, parsed));
+  }
+}

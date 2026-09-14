@@ -99,3 +99,65 @@ DOBA_TEST("interpret accepts parsed host") {
   policies policy;
   DOBA_EXPECT_EQUAL(host::interpret(parsed, state, policy), verdict::kAccept);
 }
+// +===========================================================================+
+// | [>] check preserves host types and exact port views         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check preserves host types and exact port views") {
+  struct test_case {
+    std::string_view source;
+    std::string_view host;
+    std::string_view port;
+    helpers::host_type type;
+  };
+  constexpr test_case cases[] = {
+      {":", "", "", helpers::host_type::kRegName},
+      {"[::1]:", "[::1]", "", helpers::host_type::kIpLiteral},
+      {"[v1.a]:9", "[v1.a]", "9", helpers::host_type::kIpLiteral},
+      {"host:99999", "host", "99999", helpers::host_type::kRegName},
+      {"host,other", "host,other", "", helpers::host_type::kRegName},
+      {"a%2Fb:000", "a%2Fb", "000", helpers::host_type::kRegName},
+      {"256.0.0.1", "256.0.0.1", "", helpers::host_type::kRegName},
+      {"0.0.0.0:0", "0.0.0.0", "0", helpers::host_type::kIpV4Address},
+  };
+  for (const auto& value : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(value.source);
+    parsed_host_port parsed;
+    parsed.host = "old";
+    parsed.port = "123";
+    DOBA_EXPECT(host::check(value.source, parsed));
+    DOBA_EXPECT_EQUAL(parsed.host, value.host);
+    DOBA_EXPECT_EQUAL(parsed.port, value.port);
+    DOBA_EXPECT_EQUAL(parsed.type, value.type);
+    DOBA_EXPECT_EQUAL(parsed.host.data(), value.source.data());
+    if (!value.port.empty()) {
+      DOBA_EXPECT_EQUAL(parsed.port.data(),
+                        value.source.data() + value.source.size() -
+                            value.port.size());
+    }
+  }
+}
+// +===========================================================================+
+// | [>] check rejects authority delimiters                      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects authority delimiters") {
+  constexpr std::string_view cases[] = {
+      "[::1]]",
+      "[::1]suffix",
+      "[::1]:+1",
+      "host:1:2",
+      "user@host",
+      "host?x",
+      "host#x",
+      "a%",
+      "a%0",
+      "a%GG",
+      "[v.a]",
+      "[v1.]",
+      "host, other",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_host_port parsed;
+    DOBA_EXPECT(!host::check(source, parsed));
+  }
+}

@@ -99,3 +99,34 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(sec_websocket_extensions::check(
       std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts extension parameter boundaries            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts extension parameter boundaries") {
+  constexpr std::string_view cases[] = {
+      "x;p=\"\"",
+      "x;p=\"a,b;c\", y;flag",
+      "x;p=\"a\\\"b\\\\c\"",
+      "x;;flag;;p=v",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(sec_websocket_extensions::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects extension parameter boundaries            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects extension parameter boundaries") {
+  constexpr std::string_view cases[] = {
+      "x;p= v",
+      "x;p=\"v\"junk",
+      "x;p=\"v\\",
+      "x;p=v y",
+      "x;p=v, y;=z",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!sec_websocket_extensions::check(source));
+  }
+}

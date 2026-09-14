@@ -89,3 +89,58 @@ DOBA_TEST("interpret recognizes only 100 continue") {
   parsed.elements.push_back("extension");
   DOBA_EXPECT_EQUAL(expect::interpret(parsed, state, policy), verdict::kReject);
 }
+// +===========================================================================+
+// | [>] check accepts expectation parameter boundaries          ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts expectation parameter boundaries") {
+  constexpr std::string_view cases[] = {
+      "extension=\"a,b;c\";x=\"\"",
+      "foo=bar;;p=v;",
+      "100-CONTINUE,100-continue",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_parameter_list parsed;
+    DOBA_EXPECT(expect::check(source, parsed));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects expectation parameter boundaries          ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects expectation parameter boundaries") {
+  constexpr std::string_view cases[] = {
+      "foo=\"x\"junk",
+      "foo=\"x\\",
+      "foo=bar;p =v",
+      "foo=bar;p= v",
+      "foo=bar;p",
+      "100-continue;foo=bar",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_parameter_list parsed;
+    DOBA_EXPECT(!expect::check(source, parsed));
+  }
+}
+// +===========================================================================+
+// | [>] interpret separates extension syntax from support       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("interpret separates extension syntax from support") {
+  for (const std::string_view source : {"other", "100-continue=value",
+                                         "100-continue=\"\""}) {
+    parsed_parameter_list parsed;
+    DOBA_EXPECT(expect::check(source, parsed));
+    connection state;
+    policies policy;
+    DOBA_EXPECT_EQUAL(expect::interpret(parsed, state, policy),
+                      verdict::kReject);
+    DOBA_EXPECT(!state.expects_continue);
+  }
+  parsed_parameter_list parsed;
+  DOBA_EXPECT(expect::check("100-CONTINUE, 100-continue", parsed));
+  DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
+  connection state;
+  policies policy;
+  DOBA_EXPECT_EQUAL(expect::interpret(parsed, state, policy), verdict::kAccept);
+  DOBA_EXPECT(state.expects_continue);
+}

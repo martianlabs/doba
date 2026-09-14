@@ -103,3 +103,35 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(cache_control::check("note=\"" + obs_text + "\""));
   DOBA_EXPECT(!cache_control::check("max-" + obs_text + "age=60"));
 }
+// +===========================================================================+
+// | [>] check accepts quoted directive boundaries               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts quoted directive boundaries") {
+  constexpr std::string_view cases[] = {
+      "extension=\"\"",
+      "extension=\"a,b;c\", other=value",
+      "extension=\"a\\\"b\\\\c\"",
+      ",,extension=v,,",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(cache_control::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects quoted directive boundaries               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects quoted directive boundaries") {
+  constexpr std::string_view cases[] = {
+      "extension=\"a\"b",
+      "extension=\"a\\",
+      "extension =v",
+      "extension= v",
+      "extension=v;other=x",
+      "extension=v,other=",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!cache_control::check(source));
+  }
+}

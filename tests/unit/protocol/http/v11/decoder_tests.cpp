@@ -531,18 +531,10 @@ DOBA_TEST("rejects invalid cross header combinations") {
       "Transfer-Encoding: chunked\r\n\r\n",
       "POST / HTTP/1.1\r\nHost: a\r\n"
       "Transfer-Encoding: chunked, gzip\r\n\r\n",
-      "GET http://a/ HTTP/1.1\r\nHost: b\r\n\r\n",
       "GET / HTTP/1.1\r\nHost: a\r\nConnection: host\r\n\r\n",
       "GET / HTTP/1.1\r\nHost: a\r\nConnection: upgrade\r\n\r\n",
   };
   for (const auto source : cases) {
-    if (source.starts_with("GET http://a/")) {
-      test_decoder value;
-      DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
-      DOBA_EXPECT_EQUAL(value.deserialize().code,
-                        deserialization_status::kInvalidSource);
-      continue;
-    }
     for (std::size_t split = 0; split <= source.size() + 1; split++) {
       for (bool triple : {false, true}) {
         if (split == source.size() + 1 && triple) continue;
@@ -2169,4 +2161,83 @@ DOBA_TEST("decoder preserves encoded chunked bodies across the spill threshold")
     DOBA_EXPECT(complete);
     DOBA_EXPECT_EQUAL(decoded, payload);
   }
+}
+// +===========================================================================+
+// | [>] absolute form uses its authority when Host differs      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("absolute form uses its authority when Host differs") {
+  // RFC 9112 S3.2.2: absolute-form authority overrides Host.
+  constexpr std::string_view cases[] = {
+      "GET http://a/path HTTP/1.1\r\nHost: b\r\n\r\n",
+      "GET http://a:8080/path HTTP/1.1\r\nHost: a:80\r\n\r\n",
+      "GET https://a/path HTTP/1.1\r\nHost: b:443\r\n\r\n",
+  };
+  for (const auto source : cases) {
+    test_decoder value;
+    DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
+    const auto result = value.deserialize();
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    if (!martianlabs::doba::tests::unit::test_helper::expect(
+            result.code == deserialization_status::kSucceeded,
+            "absolute authority accepted", __FILE__, __LINE__)) continue;
+    DOBA_EXPECT(result.request != nullptr);
+    DOBA_EXPECT_EQUAL(result.request->get_target(), target::kAbsoluteForm);
+    DOBA_EXPECT_EQUAL(result.request->get_absolute_path(), "/path");
+    DOBA_EXPECT(result.request->has_target_authority());
+    DOBA_EXPECT_EQUAL(result.request->get_target_authority_host(), "a");
+    DOBA_EXPECT_EQUAL(result.request->get_target_authority_port(),
+                      source.find(":8080") != std::string_view::npos ?
+                          "8080" : "");
+  }
+}
+// +===========================================================================+
+// | [>] accepts TE with its required connection option          ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("accepts TE with its required connection option") {
+  check_header("TE", "trailers", true, "GET / HTTP/1.1\r\n",
+               "Connection: TE\r\n");
+}
+// +===========================================================================+
+// | [>] rejects query parameter overflow without truncating     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("rejects query parameter overflow without truncating") {
+  std::string source = "GET /?";
+  for (std::size_t index = 0; index <= limits::kMaxQueryParameters; ++index) {
+    if (index != 0) source += '&';
+    source += "p" + std::to_string(index) + "=v";
+  }
+  source += " HTTP/1.1\r\nHost: example.com\r\n\r\n";
+  test_decoder value;
+  DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
+  const auto result = value.deserialize();
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+  DOBA_EXPECT(result.request == nullptr);
+}
+// +===========================================================================+
+// | [>] a full incomplete head terminates instead of stalling   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("a full incomplete head terminates instead of stalling") {
+  std::string source = "GET / HTTP/1.1\r\nHost: example.com\r\nX-Pad: ";
+  source.append(limits::kDecodingBufferSize + 1 - source.size() - 4, 'a');
+  source += "\r\n\r\n";
+  test_decoder value;
+  const auto consumed = accumulate(value, source);
+  DOBA_EXPECT_EQUAL(consumed, limits::kDecodingBufferSize);
+  const auto result = value.deserialize();
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+  DOBA_EXPECT(result.request == nullptr);
+}
+// +===========================================================================+
+// | [>] unknown headers retain their complete normalized values ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("unknown headers retain their complete normalized values") {
+  check_header("Warning", "199 example \"diagnostic\"", true);
+  check_header("X-Extension", "a,b;c=\"x\"", true);
+}
+// +===========================================================================+
+// | [>] rejects invalid TE quality with its connection option   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("rejects invalid TE quality with its connection option") {
+  check_header("TE", "gzip;q=1.001", false, "GET / HTTP/1.1\r\n",
+               "Connection: TE\r\n");
 }

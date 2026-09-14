@@ -91,3 +91,44 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(location::check(std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts URI component boundaries                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts URI component boundaries") {
+  constexpr std::string_view cases[] = {
+      "//user:pass@[::1]:8080/a?b=c",
+      "../a%2Fb?q=%23",
+      "urn:example:test",
+      "?q=a/b?c",
+      "http://example.com:",
+      "/a%00b",
+      "#",
+      "/#a/b?c",
+      "http://example.com/#frag",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(location::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects URI component boundaries                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects URI component boundaries") {
+  constexpr std::string_view cases[] = {
+      "/a%",
+      "/a%0",
+      "/a%GG",
+      "//[::1",
+      "//[::1]suffix/a",
+      "//host:abc/a",
+      "//user@@host/a",
+      "/a b",
+      "/a\\b",
+      "/#a#b",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!location::check(source));
+  }
+}

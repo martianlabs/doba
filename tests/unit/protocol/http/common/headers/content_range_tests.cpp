@@ -99,3 +99,40 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(content_range::check(
       std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts range alternatives                        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts range alternatives") {
+  constexpr std::string_view cases[] = {
+      "bytes */0",
+      "bytes 1-0/0",
+      "bytes 0-0/0",
+      "BYTES 000-000/*",
+      "x 9-0/1",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(content_range::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects range alternatives                        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects range alternatives") {
+  constexpr std::string_view cases[] = {
+      "bytes\t0-1/2",
+      "bytes  0-1/2",
+      "bytes 0-1/*x",
+      "bytes 0-1/2x",
+      "bytes 0-1/+2",
+      "bytes 0-1/-2",
+      "bytes 0-1/2,bytes 2-3/4",
+      "bytes *//1",
+      "bytes **/1",
+      "bytes */1x",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!content_range::check(source));
+  }
+}

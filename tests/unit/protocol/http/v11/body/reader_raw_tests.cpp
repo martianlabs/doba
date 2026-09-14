@@ -115,3 +115,29 @@ DOBA_TEST("truncated source reports and latches raw incomplete") {
   DOBA_EXPECT_EQUAL(state.error, reader_error::raw_incomplete);
   DOBA_EXPECT_EQUAL(state.produced, 0);
 }
+// +===========================================================================+
+// | [>] partial reads preserve output guards and completion     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("partial reads preserve output guards and completion") {
+  auto source = reader::borrowed(bytes("abcNEXT"));
+  reader_raw value(3);
+  std::array<std::byte, 5> output;
+  output.fill(std::byte{0x5a});
+  auto state = value.read(source, std::span(output).subspan(1, 2));
+  DOBA_EXPECT_EQUAL(state.produced, 2);
+  DOBA_EXPECT(!state.complete);
+  DOBA_EXPECT(!state.has_error);
+  DOBA_EXPECT_EQUAL(output[0], std::byte{0x5a});
+  DOBA_EXPECT_EQUAL(output[3], std::byte{0x5a});
+  state = value.read(source, std::span(output).subspan(1, 2));
+  DOBA_EXPECT_EQUAL(state.produced, 1);
+  DOBA_EXPECT(state.complete);
+  DOBA_EXPECT_EQUAL(output[1], std::byte{'c'});
+  DOBA_EXPECT_EQUAL(output[2], std::byte{'b'});
+  state = value.read(source, output);
+  DOBA_EXPECT_EQUAL(state.produced, 0);
+  DOBA_EXPECT(state.complete);
+  std::byte next{};
+  DOBA_EXPECT(source.fetch(next));
+  DOBA_EXPECT_EQUAL(next, std::byte{'N'});
+}

@@ -80,3 +80,39 @@ DOBA_TEST("interpret applies all connection options") {
   DOBA_EXPECT(state.close_requested);
   DOBA_EXPECT(!state.persistent);
 }
+// +===========================================================================+
+// | [>] interpret preserves close across repeated fields        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("interpret preserves a close request across repeated fields") {
+  parsed_token_list first;
+  DOBA_EXPECT(header::check(",,CLOSE,,", first));
+  martianlabs::doba::protocol::http::v11::connection state;
+  policies policy;
+  DOBA_EXPECT_EQUAL(header::interpret(first, state, policy), verdict::kAccept);
+  parsed_token_list second;
+  DOBA_EXPECT(header::check("keep-alive, TE", second));
+  DOBA_EXPECT_EQUAL(header::interpret(second, state, policy), verdict::kAccept);
+  DOBA_EXPECT(state.close_requested);
+  DOBA_EXPECT(!state.persistent);
+  DOBA_EXPECT_EQUAL(state.options.size(), 3);
+  DOBA_EXPECT_EQUAL(state.options[0], "CLOSE");
+  DOBA_EXPECT_EQUAL(state.options[1], "keep-alive");
+  DOBA_EXPECT_EQUAL(state.options[2], "TE");
+}
+// +===========================================================================+
+// | [>] check appends ordered views from repeated fields        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check appends ordered views from repeated fields") {
+  const std::string first = "close";
+  const std::string second = "TE";
+  parsed_token_list parsed;
+  DOBA_EXPECT(header::check(first, parsed));
+  DOBA_EXPECT(header::check(second, parsed));
+  DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
+  DOBA_EXPECT_EQUAL(parsed.elements[0], first);
+  DOBA_EXPECT_EQUAL(parsed.elements[1], second);
+  DOBA_EXPECT_EQUAL(parsed.elements[0].data(), first.data());
+  DOBA_EXPECT_EQUAL(parsed.elements[1].data(), second.data());
+  DOBA_EXPECT(header::check(",,", parsed));
+  DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
+}

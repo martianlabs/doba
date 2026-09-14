@@ -90,3 +90,23 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(if_unmodified_since::check(
       std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check rejects incomplete and corrupted date fields      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects incomplete and corrupted date fields") {
+  constexpr std::string_view seeds[] = {
+      "Sun, 06 Nov 1994 08:49:37 GMT",
+      "Sunday, 06-Nov-94 08:49:37 GMT",
+      "Sun Nov  6 08:49:37 1994",
+  };
+  for (const auto seed : seeds) {
+    for (std::size_t position = 0; position < seed.size(); ++position) {
+      martianlabs::doba::tests::unit::test_helper::set_context(
+          std::string(seed) + ", position " + std::to_string(position));
+      DOBA_EXPECT(!if_unmodified_since::check(seed.substr(0, position)));
+      std::string source(seed);
+      source[position] = '!';
+      DOBA_EXPECT(!if_unmodified_since::check(source));
+    }
+  }
+}

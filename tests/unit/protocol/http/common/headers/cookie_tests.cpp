@@ -88,3 +88,38 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(cookie::check("a=b"));
   DOBA_EXPECT(!cookie::check("a=" + std::string(1, static_cast<char>(0x80))));
 }
+// +===========================================================================+
+// | [>] check accepts pair and separator boundaries             ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts pair and separator boundaries") {
+  constexpr std::string_view cases[] = {
+      "a=\"\"",
+      "a==",
+      "a=b=c",
+      "a=; b=; c=\"\"",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(cookie::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects pair and separator boundaries             ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects pair and separator boundaries") {
+  constexpr std::string_view cases[] = {
+      "a=\"b\\c\"",
+      "a=\"b,c\"",
+      "a=\"b;c\"",
+      "a=b;\tc=d",
+      "a=b; c",
+      "a=b; =d",
+      "a=b; c=\"d\"junk",
+      "a=\"b\"junk",
+      "a=b\nSet-Cookie: c=d",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!cookie::check(source));
+  }
+}

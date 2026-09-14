@@ -85,3 +85,20 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(header::check(std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check requires every byte of the literal true           ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check requires every byte of the literal true") {
+  constexpr std::string_view seed = "true";
+  for (std::size_t position = 0; position < seed.size(); ++position) {
+    for (unsigned int byte = 0; byte <= 255; ++byte) {
+      std::string source(seed);
+      source[position] = static_cast<char>(byte);
+      martianlabs::doba::tests::unit::test_helper::set_context(
+          "position " + std::to_string(position) + ", byte " +
+          std::to_string(byte));
+      DOBA_EXPECT_EQUAL(header::check(source),
+                        byte == static_cast<unsigned char>(seed[position]));
+    }
+  }
+}

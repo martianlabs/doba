@@ -657,3 +657,63 @@ DOBA_TEST("async routes validate pattern and handler shape") {
   }
   DOBA_EXPECT(threw);
 }
+// +===========================================================================+
+// | [>] registration owns method and all route pattern forms    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("registration owns method and all route pattern forms") {
+  router<request, response> value;
+  {
+    std::string method = "GET";
+    std::string fixed = "/fixed";
+    std::string parameter = "/value/:id";
+    std::string wildcard = "/assets/*";
+    value.add(method, fixed, [](const request&) {
+      return response{"fixed"};
+    });
+    value.add(method, parameter, [](const request&, int id) {
+      return response{std::to_string(id)};
+    });
+    value.add(method, wildcard, [](const request&) {
+      return response{"wildcard"};
+    });
+    method.assign(method.size(), 'x');
+    fixed.assign(fixed.size(), 'x');
+    parameter.assign(parameter.size(), 'x');
+    wildcard.assign(wildcard.size(), 'x');
+  }
+  request req;
+  const auto fixed = value.match("GET", "/fixed");
+  DOBA_EXPECT(fixed.handler != nullptr);
+  DOBA_EXPECT_EQUAL(fixed.handler->callback(req).value, "fixed");
+  const auto parameter = value.match("GET", "/value/42");
+  DOBA_EXPECT(parameter.parametrized_handler != nullptr);
+  DOBA_EXPECT_EQUAL(
+      parameter.parametrized_handler->invoke(req, "/value/42").value, "42");
+  const auto wildcard = value.match("GET", "/assets/one");
+  DOBA_EXPECT(wildcard.handler != nullptr);
+  DOBA_EXPECT_EQUAL(wildcard.handler->callback(req).value, "wildcard");
+}
+// +===========================================================================+
+// | [>] invalid registration preserves existing route selection ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("invalid registration preserves existing route selection") {
+  router<request, response> value;
+  value.add("GET", "/kept", [](const request&) {
+    return response{"kept"};
+  });
+  for (std::string_view pattern : {"/:", "/x/*/tail", "/x/:id/*"}) {
+    bool threw = false;
+    try {
+      value.add("GET", pattern, [](const request&, int) {
+        return response{"invalid"};
+      });
+    } catch (const std::invalid_argument&) {
+      threw = true;
+    }
+    DOBA_EXPECT(threw);
+    const auto match = value.match("GET", "/kept");
+    DOBA_EXPECT(match.handler != nullptr);
+    DOBA_EXPECT_EQUAL(match.handler->callback(request{}).value, "kept");
+    DOBA_EXPECT_EQUAL(value.allowed_methods("/kept"), "GET");
+  }
+}

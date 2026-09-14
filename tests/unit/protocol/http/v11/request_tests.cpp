@@ -254,3 +254,78 @@ DOBA_TEST("factory rejects components outside the source buffer") {
   }
   DOBA_EXPECT(threw);
 }
+// +===========================================================================+
+// | [>] factory owns authority views before invoking the getter ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("factory owns authority views before invoking the getter") {
+  const auto getter = [] {
+    const std::string source =
+        "GET http://target.example:81/a%252F%2Fb?key=unchanged HTTP/1.1\r\n"
+        "Host: source.example:82\r\nX-Tail: preserved\r\n\r\n";
+    return request::from(
+        source, part(source, "GET"), part(source, "/a%252F%2Fb"),
+        target::kAbsoluteForm,
+        {{part(source, "Host"), part(source, "source.example:82")},
+         {part(source, "X-Tail"), part(source, "preserved")}},
+        {{part(source, "key"), part(source, "unchanged")}},
+        part(source, "source.example"), part(source, "82"),
+        helpers::host_type::kRegName, part(source, "target.example"),
+        part(source, "81"), helpers::host_type::kRegName);
+  }();
+  const auto value = getter(std::nullopt);
+  DOBA_EXPECT_EQUAL(value->get_absolute_path(), "/a%2F/b");
+  DOBA_EXPECT_EQUAL(value->get_target(), target::kAbsoluteForm);
+  DOBA_EXPECT_EQUAL(value->get_header(1).first, "X-Tail");
+  DOBA_EXPECT_EQUAL(value->get_header(1).second, "preserved");
+  DOBA_EXPECT_EQUAL(value->get_query_parameter("key")->second, "unchanged");
+  DOBA_EXPECT_EQUAL(value->get_host(), "source.example");
+  DOBA_EXPECT_EQUAL(value->get_host_port(), "82");
+  DOBA_EXPECT(value->has_target_authority());
+  DOBA_EXPECT_EQUAL(value->get_target_authority_host(), "target.example");
+  DOBA_EXPECT_EQUAL(value->get_target_authority_port(), "81");
+  DOBA_EXPECT_EQUAL(value->get_target_authority_type(),
+                    helpers::host_type::kRegName);
+}
+// +===========================================================================+
+// | [>] factory validates each component before rebasing views  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("factory validates each component before rebasing views") {
+  const std::string source = "GET / HTTP/1.1\r\nHost: example:80\r\n\r\n";
+  const std::string foreign = "outside";
+  for (std::size_t i = 0; i < 9; i++) {
+    martianlabs::doba::tests::unit::test_helper::set_context(std::to_string(i));
+    const auto component = [&](std::size_t index) -> std::string_view {
+      return i == index ? std::string_view(foreign) : part(source, "80");
+    };
+    bool threw = false;
+    try {
+      request::from(
+          source, part(source, "GET"), component(0), target::kOriginForm,
+          {{component(1), component(2)}}, {{component(3), component(4)}},
+          component(5), component(6), helpers::host_type::kRegName,
+          component(7), component(8), helpers::host_type::kRegName);
+    } catch (const std::invalid_argument& error) {
+      threw = std::string_view(error.what()) ==
+              "request component is outside full buffer";
+    }
+    DOBA_EXPECT(threw);
+  }
+}
+// +===========================================================================+
+// | [>] duplicate cookies retain the first exact name           ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("duplicate cookies retain the first exact name") {
+  const std::string source =
+      "GET / HTTP/1.1\r\nCookie: sid=first; SID=upper; sid=last\r\n\r\n";
+  const auto value = request::from(
+      source, part(source, "GET"), part(source, "/"), target::kOriginForm,
+      {{part(source, "Cookie"),
+        part(source, "sid=first; SID=upper; sid=last")}},
+      {}, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
+      std::nullopt)(std::nullopt);
+  DOBA_EXPECT_EQUAL(*value->get_cookie("sid"), "first");
+  DOBA_EXPECT_EQUAL(*value->get_cookie("SID"), "upper");
+  const auto cookies = value->get_cookies();
+  DOBA_EXPECT_EQUAL(cookies.size(), 3);
+  DOBA_EXPECT_EQUAL(cookies[2].second, "last");
+}

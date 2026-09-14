@@ -23,8 +23,6 @@
 // permissions and limitations under the License.
 
 #include <functional>
-#include <memory>
-#include <stop_token>
 #include <type_traits>
 
 #include "protocol/http/common/router_handler_static.h"
@@ -33,9 +31,6 @@
 namespace {
 struct request {};
 struct response {};
-using martianlabs::doba::common::task;
-using martianlabs::doba::protocol::http::router_async_handler_lambda;
-using martianlabs::doba::protocol::http::router_handler_lambda;
 using martianlabs::doba::protocol::http::router_handler_static;
 }  // namespace
 
@@ -57,24 +52,4 @@ DOBA_TEST("alias accepts and invokes the documented callback") {
   response res;
   res = handler(req);
   DOBA_EXPECT(invoked);
-}
-// +===========================================================================+
-// | [>] handler concepts distinguish sync and async callbacks   ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("handler concepts distinguish sync and async callbacks") {
-  auto sync = [](const request&) {
-    response res;
-    return res;
-  };
-  auto async = [](std::shared_ptr<const request>,
-                  std::stop_token) -> task<response> {
-    co_return response{};
-  };
-  auto legacy = [](const request&, response&) {};
-  static_assert(!router_handler_lambda<decltype(legacy)>);
-  static_assert(router_handler_lambda<decltype(sync)>);
-  static_assert(!router_async_handler_lambda<decltype(sync)>);
-  static_assert(!router_handler_lambda<decltype(async)>);
-  static_assert(router_async_handler_lambda<decltype(async)>);
-  DOBA_EXPECT(true);
 }

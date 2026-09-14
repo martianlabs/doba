@@ -108,3 +108,57 @@ if(
     --name "probe failure cleans up active transport"
   )
 endif()
+
+if(
+  VERIFY_UNIT_EXCLUSIONS
+)
+  verify_case(
+    0 "probe passes"
+    --list
+    --exclude "probe assertion fails"
+    --exclude "probe row context"
+  )
+  if(
+    last_output MATCHES "probe assertion fails|probe row context"
+  )
+    message(
+      FATAL_ERROR "Repeated exclusions did not remove both tests"
+    )
+  endif()
+  verify_case(
+    0 "5 test\\(s\\) skipped by explicit exclusions"
+    --exclude "tests/unit/test_helper_probe.cpp::probe assertion fails"
+    --exclude "tests\\unit\\test_helper_probe.cpp::probe standard exception"
+    --exclude "probe unknown exception"
+    --exclude "probe row context"
+    --exclude "probe blocks"
+  )
+  if(
+    last_output MATCHES "assertion failed:|Exception:|Unknown exception"
+    OR NOT last_output MATCHES "probe body"
+    OR NOT last_output MATCHES "probe continued"
+  )
+    message(
+      FATAL_ERROR "Exclusions executed skipped tests or omitted passing tests"
+    )
+  endif()
+  verify_case(
+    1 "2 \\+ 2 == 5"
+    --name "probe assertion fails"
+    --exclude "tests/integration/test_helper_probe.cpp::probe assertion fails"
+  )
+  verify_case(
+    1 "Unknown exception"
+    --name "probe unknown exception"
+    --exclude "tests/unit/test_helper_probe.cpp::probe assertion fails"
+  )
+  verify_case(
+    2 "No tests matched"
+    --name "probe assertion fails"
+    --exclude "tests/unit/test_helper_probe.cpp::probe assertion fails"
+  )
+  verify_case(
+    2 "Invalid test arguments"
+    --exclude
+  )
+endif()

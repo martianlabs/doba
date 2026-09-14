@@ -121,6 +121,35 @@ task<int> await_moved_source(task<int> value) {
   [[maybe_unused]] task<int> moved(std::move(value));
   co_return co_await std::move(value);
 }
+
+class throwing_value {
+ public:
+  throwing_value(int& alive, int& moves, int throw_on)
+      : alive_(alive), moves_(moves), throw_on_(throw_on) {
+    ++alive_;
+  }
+  throwing_value(const throwing_value&) = delete;
+  throwing_value(throwing_value&& in)
+      : alive_(in.alive_), moves_(in.moves_), throw_on_(in.throw_on_) {
+    if (++moves_ == throw_on_) throw std::runtime_error("move failure");
+    ++alive_;
+  }
+  ~throwing_value() { --alive_; }
+
+ private:
+  int& alive_;
+  int& moves_;
+  int throw_on_;
+};
+
+task<throwing_value> throwing_result(int& alive, int& moves, int throw_on) {
+  co_return throwing_value(alive, moves, throw_on);
+}
+
+task<int> suspended_owner(manual_event& event, std::shared_ptr<int> owner) {
+  co_await event;
+  co_return *owner;
+}
 }  // namespace
 
 // +===========================================================================+
@@ -240,4 +269,60 @@ DOBA_TEST("nested tasks resume each continuation once") {
   DOBA_EXPECT(probe.done());
   DOBA_EXPECT_EQUAL(resumed, 1);
   DOBA_EXPECT_EQUAL(*result, 43);
+}
+// +===========================================================================+
+// | [>] task releases its result when a move throws             ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("task releases its result when a move throws") {
+  for (const int throw_on : {1, 2}) {
+    int alive = 0;
+    int moves = 0;
+    std::optional<throwing_value> result;
+    auto probe = collect(throwing_result(alive, moves, throw_on), result);
+    DOBA_EXPECT(probe.done());
+    bool threw = false;
+    try {
+      probe.rethrow_if_failed();
+    } catch (const std::runtime_error& error) {
+      threw = std::string_view(error.what()) == "move failure";
+    }
+    DOBA_EXPECT(threw);
+    DOBA_EXPECT(!result.has_value());
+    DOBA_EXPECT_EQUAL(moves, throw_on);
+    DOBA_EXPECT_EQUAL(alive, 0);
+  }
+}
+// +===========================================================================+
+// | [>] destroying a suspended parent releases its child frame  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("destroying a suspended parent releases its child frame") {
+  manual_event event;
+  auto owner = std::make_shared<int>(7);
+  std::weak_ptr<int> lifetime = owner;
+  std::optional<int> result;
+  {
+    auto probe = collect(suspended_owner(event, std::move(owner)), result);
+    DOBA_EXPECT(!probe.done());
+    DOBA_EXPECT(!lifetime.expired());
+  }
+  DOBA_EXPECT(lifetime.expired());
+  DOBA_EXPECT(!result.has_value());
+}
+// +===========================================================================+
+// | [>] a moved chain resumes each continuation once            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("a moved chain resumes each continuation once") {
+  int resumed = 0;
+  auto value = owned_value(std::make_shared<int>(7));
+  for (int index = 0; index < 32; ++index) {
+    value = add_one(std::move(value), resumed);
+  }
+  auto& same = value;
+  value = std::move(same);
+  std::optional<int> result;
+  auto probe = collect(std::move(value), result);
+  probe.rethrow_if_failed();
+  DOBA_EXPECT(probe.done());
+  DOBA_EXPECT_EQUAL(resumed, 32);
+  DOBA_EXPECT_EQUAL(result.value(), 39);
 }

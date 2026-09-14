@@ -84,3 +84,49 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(vary::check(std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts wildcard list members                     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts wildcard list members") {
+  constexpr std::string_view cases[] = {
+      "*, Accept",
+      "Accept, *",
+      "*,*",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(vary::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects wildcard list members                     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects wildcard list members") {
+  constexpr std::string_view cases[] = {
+      "*,Accept:",
+      "Accept,*;q=1",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!vary::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check validates every byte inside a token               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check validates every byte inside a token") {
+  constexpr std::string_view punctuation = "!#$%&'*+-.^_`|~";
+  for (unsigned int byte = 0; byte <= 255; ++byte) {
+    std::string source = "a";
+    source += static_cast<char>(byte);
+    source += 'b';
+    const bool expected =
+        (byte >= '0' && byte <= '9') || (byte >= 'A' && byte <= 'Z') ||
+        (byte >= 'a' && byte <= 'z') ||
+        punctuation.find(static_cast<char>(byte)) != std::string_view::npos ||
+        byte == ',';
+    martianlabs::doba::tests::unit::test_helper::set_context(
+        "byte " + std::to_string(byte));
+    DOBA_EXPECT_EQUAL(vary::check(source), expected);
+  }
+}

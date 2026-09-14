@@ -88,3 +88,16 @@ DOBA_TEST("rejects chunked unless it is the final coding") {
   ctx.connection.transfer_codings.clear();
   DOBA_EXPECT_EQUAL(framing::apply(ctx), verdict::kReject);
 }
+// +===========================================================================+
+// | [>] rejects chunked repeated in any coding position         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("rejects chunked repeated in any coding position") {
+  context ctx;
+  ctx.has_transfer_encoding = true;
+  for (const std::string_view spelling : {"chunked", "CHUNKED"}) {
+    ctx.connection.transfer_codings = {spelling, "chunked"};
+    DOBA_EXPECT_EQUAL(framing::apply(ctx), verdict::kReject);
+    ctx.connection.transfer_codings = {"gzip", spelling, "chunked"};
+    DOBA_EXPECT_EQUAL(framing::apply(ctx), verdict::kReject);
+  }
+}

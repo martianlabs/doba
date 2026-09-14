@@ -98,3 +98,35 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(set_cookie::check(std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts attribute boundaries                      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts attribute boundaries") {
+  constexpr std::string_view cases[] = {
+      "a=\"\"; Secure; Secure",
+      "a=b; Extension=one,two",
+      "a=b; Extension=\"x y\"",
+      "a=b; Max-Age=-1; Domain=.example.com",
+      "a=b; Expires=not-a-date",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(set_cookie::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects attribute boundaries                      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects attribute boundaries") {
+  constexpr std::string_view cases[] = {
+      "a=b; Path=/\r\nInjected: yes",
+      "a=b; Path=/\n",
+      "a=b; Path=/\177",
+      "a=b; Secure;\tHttpOnly",
+      "a=b; Path=/;Other=value",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!set_cookie::check(source));
+  }
+}

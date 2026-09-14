@@ -277,3 +277,50 @@ DOBA_TEST("executor continuations can schedule a successor") {
   DOBA_EXPECT_EQUAL(second_count.load(), 1);
   DOBA_EXPECT(!value.run());
 }
+// +===========================================================================+
+// | [>] queued completion is skipped without resuming twice     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("queued completion is skipped without resuming twice") {
+  martianlabs::doba::transport::server::detail::executor value;
+  std::atomic<std::size_t> resumed = 0;
+  auto pending = increment(resumed);
+  DOBA_EXPECT(value.schedule(pending.get_coroutine()));
+  pending.get_coroutine().resume();
+  DOBA_EXPECT_EQUAL(resumed.load(), 1);
+  DOBA_EXPECT(!value.run());
+  DOBA_EXPECT_EQUAL(resumed.load(), 1);
+  DOBA_EXPECT(!value.run());
+}
+// +===========================================================================+
+// | [>] stopped batches drain in FIFO order across a restart    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("stopped batches drain in FIFO order across a restart") {
+  martianlabs::doba::transport::server::detail::executor value;
+  std::vector<std::size_t> order;
+  std::vector<scheduled_probe> probes;
+  probes.reserve(129);
+  const auto record = [&](std::size_t id) -> scheduled_probe {
+    order.push_back(id);
+    co_return;
+  };
+  for (std::size_t i = 0; i < 129; i++) {
+    probes.emplace_back(record(i));
+    DOBA_EXPECT(value.schedule(probes.back().get_coroutine()));
+  }
+  value.stop();
+  value.stop();
+  DOBA_EXPECT(!value.start());
+  DOBA_EXPECT(value.run());
+  DOBA_EXPECT_EQUAL(order.size(), 64);
+  DOBA_EXPECT(!value.start());
+  DOBA_EXPECT(value.run());
+  DOBA_EXPECT_EQUAL(order.size(), 128);
+  DOBA_EXPECT(!value.run());
+  DOBA_EXPECT_EQUAL(order.size(), 129);
+  for (std::size_t i = 0; i < order.size(); i++) {
+    DOBA_EXPECT_EQUAL(order[i], i);
+  }
+  DOBA_EXPECT(value.start());
+  DOBA_EXPECT(value.start());
+  DOBA_EXPECT(!value.run());
+}

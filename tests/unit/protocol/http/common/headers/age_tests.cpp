@@ -82,3 +82,15 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(age::check(std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check scans the complete decimal value                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check scans the complete decimal value") {
+  for (unsigned int byte = 0; byte <= 255; ++byte) {
+    std::string source(64, '9');
+    source += static_cast<char>(byte);
+    martianlabs::doba::tests::unit::test_helper::set_context(
+        "byte " + std::to_string(byte));
+    DOBA_EXPECT_EQUAL(age::check(source), byte >= '0' && byte <= '9');
+  }
+}

@@ -95,3 +95,49 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(date::check(std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check rejects incomplete and corrupted date fields      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects incomplete and corrupted date fields") {
+  constexpr std::string_view seeds[] = {
+      "Sun, 06 Nov 1994 08:49:37 GMT",
+      "Sunday, 06-Nov-94 08:49:37 GMT",
+      "Sun Nov  6 08:49:37 1994",
+  };
+  for (const auto seed : seeds) {
+    for (std::size_t position = 0; position < seed.size(); ++position) {
+      martianlabs::doba::tests::unit::test_helper::set_context(
+          std::string(seed) + ", position " + std::to_string(position));
+      DOBA_EXPECT(!date::check(seed.substr(0, position)));
+      std::string source(seed);
+      source[position] = '!';
+      DOBA_EXPECT(!date::check(source));
+    }
+  }
+}
+// +===========================================================================+
+// | [>] check recognizes all weekday and month names            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check recognizes all weekday and month names") {
+  constexpr std::string_view short_days[] = {
+      "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+  constexpr std::string_view long_days[] = {
+      "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+      "Sunday"};
+  constexpr std::string_view months[] = {
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct",
+      "Nov", "Dec"};
+  for (std::size_t day = 0; day < 7; ++day) {
+    for (const auto month : months) {
+      const std::string imf = std::string(short_days[day]) + ", 01 " +
+                              std::string(month) + " 2000 00:00:00 GMT";
+      const std::string rfc850 = std::string(long_days[day]) + ", 01-" +
+                                 std::string(month) + "-00 00:00:00 GMT";
+      const std::string asctime = std::string(short_days[day]) + " " +
+                                  std::string(month) + "  1 00:00:00 2000";
+      DOBA_EXPECT(date::check(imf));
+      DOBA_EXPECT(date::check(rfc850));
+      DOBA_EXPECT(date::check(asctime));
+    }
+  }
+}

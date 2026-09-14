@@ -90,3 +90,40 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(from::check(std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts mailbox alternatives                      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts mailbox alternatives") {
+  constexpr std::string_view cases[] = {
+      "Display Name <first.last@example.com>",
+      "\"Display, Name\" <\"a b\"@[127.0.0.1]>",
+      "(before) user(comment)@(domain)example.com (after)",
+      "user@[IPv6:2001:db8::1]",
+      "\"a\\\"b\"@example.com",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(from::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects mailbox alternatives                      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects mailbox alternatives") {
+  constexpr std::string_view cases[] = {
+      ".user@example.com",
+      "user.@example.com",
+      "a..b@example.com",
+      "user@example..com",
+      "<user@example.com",
+      "user@example.com>",
+      "user@[unterminated",
+      "user@example.com,other@example.com",
+      "Name <user@example.com> junk",
+      "(unterminated user@example.com",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!from::check(source));
+  }
+}

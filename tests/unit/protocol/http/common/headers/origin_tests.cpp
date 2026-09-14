@@ -96,3 +96,37 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(origin::check(std::string_view(padded.data(), seed.size())));
 }
+// +===========================================================================+
+// | [>] check accepts serialized origin alternatives            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts serialized origin alternatives") {
+  constexpr std::string_view cases[] = {
+      "HTTP://example.com:0",
+      "a+b.c-d://[::1]:123",
+      "https://a https://b https://c",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(origin::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check rejects serialized origin alternatives            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects serialized origin alternatives") {
+  constexpr std::string_view cases[] = {
+      "https://a\thttps://b",
+      "https://user@host",
+      "https://host?x",
+      "https://host#x",
+      "https://[::1",
+      "https://host:abc",
+      "1http://host",
+      "null https://host",
+      "https://host null",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!origin::check(source));
+  }
+}

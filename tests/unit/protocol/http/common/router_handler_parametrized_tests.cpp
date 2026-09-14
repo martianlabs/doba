@@ -25,6 +25,7 @@
 #include <cstdint>
 #include <coroutine>
 #include <exception>
+#include <limits>
 #include <memory>
 #include <limits>
 #include <optional>
@@ -914,5 +915,123 @@ DOBA_TEST("route conversion rejects floating point range errors") {
     DOBA_EXPECT(threw);
     DOBA_EXPECT(!result.has_value());
     DOBA_EXPECT_EQUAL(async_calls, 0);
+  }
+}
+// +===========================================================================+
+// | [>] narrow integer conversions enforce each type boundary   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("narrow integer conversions enforce each type boundary") {
+  const auto check = []<typename T>() {
+    const long long minimum = std::numeric_limits<T>::min();
+    const long long maximum = std::numeric_limits<T>::max();
+    struct test_case {
+      long long input;
+      bool valid;
+    };
+    const test_case cases[] = {
+        {minimum - 1, false}, {minimum, true}, {0, true},
+        {maximum, true}, {maximum + 1, false},
+    };
+    for (const auto& test : cases) {
+      const std::string path = "/value/" + std::to_string(test.input);
+      martianlabs::doba::tests::unit::test_helper::set_context(path);
+      std::size_t calls = 0;
+      T converted{};
+      auto handler = make_router_handler_parametrized<request, response, T>(
+          "/value/:value", [&](const request&, T value) {
+            calls++;
+            converted = value;
+            return response{};
+          });
+      DOBA_EXPECT_EQUAL(handler.matches(path), test.valid);
+      bool threw = false;
+      try {
+        handler.invoke(request{}, path);
+      } catch (const std::runtime_error& error) {
+        threw = std::string_view(error.what()) ==
+                "The route parameters could not be parsed";
+      }
+      DOBA_EXPECT_EQUAL(threw, !test.valid);
+      DOBA_EXPECT_EQUAL(calls, test.valid ? 1 : 0);
+      if (test.valid) DOBA_EXPECT_EQUAL(converted, test.input);
+      auto async_handler =
+          make_router_handler_parametrized_async<request, response, T>(
+              "/value/:value",
+              [&](std::shared_ptr<const request>, std::stop_token,
+                  T value) -> task<response> {
+                calls++;
+                converted = value;
+                co_return response{};
+              });
+      DOBA_EXPECT_EQUAL(async_handler.matches(path), test.valid);
+      std::optional<response> result;
+      auto probe = collect(
+          async_handler.invoke_async(std::make_shared<const request>(),
+                                      std::stop_token{}, path), result);
+      DOBA_EXPECT(probe.done());
+      threw = false;
+      try {
+        probe.rethrow_if_failed();
+      } catch (const std::runtime_error& error) {
+        threw = std::string_view(error.what()) ==
+                "The route parameters could not be parsed";
+      }
+      DOBA_EXPECT_EQUAL(threw, !test.valid);
+      DOBA_EXPECT_EQUAL(result.has_value(), test.valid);
+      DOBA_EXPECT_EQUAL(calls, test.valid ? 2 : 0);
+      if (test.valid) DOBA_EXPECT_EQUAL(converted, test.input);
+    }
+  };
+  check.operator()<std::int8_t>();
+  check.operator()<std::uint8_t>();
+  check.operator()<std::int16_t>();
+  check.operator()<std::uint16_t>();
+  check.operator()<std::int32_t>();
+  check.operator()<std::uint32_t>();
+}
+// +===========================================================================+
+// | [>] later parameter failures never invoke either callback   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("later parameter failures never invoke either callback") {
+  std::size_t calls = 0;
+  auto handler = make_router_handler_parametrized<request, response, int, bool>(
+      "/:id/:enabled", [&](const request&, int, bool) {
+        calls++;
+        return response{};
+      });
+  auto async_handler =
+      make_router_handler_parametrized_async<request, response, int, bool>(
+          "/:id/:enabled",
+          [&](std::shared_ptr<const request>, std::stop_token,
+              int, bool) -> task<response> {
+            calls++;
+            co_return response{};
+          });
+  for (std::string_view path : {"/7/yes", "/7/truex", "/7/2"}) {
+    DOBA_EXPECT(!handler.matches(path));
+    DOBA_EXPECT(!async_handler.matches(path));
+    bool threw = false;
+    try {
+      handler.invoke(request{}, path);
+    } catch (const std::runtime_error& error) {
+      threw = std::string_view(error.what()) ==
+              "The route parameters could not be parsed";
+    }
+    DOBA_EXPECT(threw);
+    std::optional<response> result;
+    auto probe = collect(
+        async_handler.invoke_async(std::make_shared<const request>(),
+                                    std::stop_token{}, path), result);
+    DOBA_EXPECT(probe.done());
+    threw = false;
+    try {
+      probe.rethrow_if_failed();
+    } catch (const std::runtime_error& error) {
+      threw = std::string_view(error.what()) ==
+              "The route parameters could not be parsed";
+    }
+    DOBA_EXPECT(threw);
+    DOBA_EXPECT(!result.has_value());
+    DOBA_EXPECT_EQUAL(calls, 0);
   }
 }
