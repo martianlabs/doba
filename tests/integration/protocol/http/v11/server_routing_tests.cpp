@@ -51,7 +51,7 @@ response text_response(std::string_view text) {
 }  // namespace
 
 // +===========================================================================+
-// | [>] route precedence over a socket                           ( test-case ) |
+// | [>] route precedence over a socket                           ( test-case )|
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 applies static parametrized and wildcard precedence") {
   tcpip_client client;
@@ -88,7 +88,7 @@ DOBA_TEST("HTTP/1.1 applies static parametrized and wildcard precedence") {
 }
 
 // +===========================================================================+
-// | [>] typed route conversion boundaries                        ( test-case ) |
+// | [>] typed route conversion boundaries                        ( test-case )|
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 routes typed parameter boundaries without partial parses") {
   tcpip_client client;
@@ -153,7 +153,7 @@ DOBA_TEST("HTTP/1.1 routes typed parameter boundaries without partial parses") {
 }
 
 // +===========================================================================+
-// | [>] request views reach a routed handler                      ( test-case ) |
+// | [>] request views reach a routed handler                     ( test-case )|
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 exposes decoded path query headers and cookies to routes") {
   tcpip_client client;
@@ -188,7 +188,7 @@ DOBA_TEST("HTTP/1.1 exposes decoded path query headers and cookies to routes") {
 }
 
 // +===========================================================================+
-// | [>] allowed methods include every route kind                 ( test-case ) |
+// | [>] allowed methods include every route kind                 ( test-case )|
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 reports allowed methods across all matching route kinds") {
   tcpip_client client;
@@ -221,7 +221,7 @@ DOBA_TEST("HTTP/1.1 reports allowed methods across all matching route kinds") {
 }
 
 // +===========================================================================+
-// | [>] asynchronous typed route crosses the transport           ( test-case ) |
+// | [>] asynchronous typed route crosses the transport           ( test-case )|
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 invokes an asynchronous parametrized route over TCP") {
   tcpip_client client;
@@ -252,9 +252,10 @@ DOBA_TEST("HTTP/1.1 invokes an asynchronous parametrized route over TCP") {
 }
 
 // +===========================================================================+
-// | [>] running server rejects route mutation                    ( test-case ) |
+// | [>] running server rejects route mutation                    ( test-case )|
 // +===========================================================================+
-DOBA_TEST("HTTP/1.1 keeps routes immutable while running and reusable after stop") {
+DOBA_TEST(
+    "HTTP/1.1 keeps routes immutable while running and reusable after stop") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);

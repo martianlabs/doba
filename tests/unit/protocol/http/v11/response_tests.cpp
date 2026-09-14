@@ -326,8 +326,8 @@ DOBA_TEST("large bodies serialize through an owned source") {
     const std::string serialized_prefix(serialized->prefix.get(),
                                         serialized->prefix_size);
     DOBA_EXPECT(serialized_prefix.find("Content-Length: " +
-                                       std::to_string(payload.size()) + "\r\n") !=
-                std::string::npos);
+                                       std::to_string(payload.size()) +
+                                       "\r\n") != std::string::npos);
     const auto boundary = serialized_prefix.find("\r\n\r\n");
     DOBA_EXPECT(boundary != std::string::npos);
     DOBA_EXPECT_EQUAL(serialized->source.has_value(),
@@ -556,7 +556,7 @@ DOBA_TEST("serialized bytes outlive and detach from the response") {
                     "Content-Length: 8\r\n\r\noriginal");
 }
 // +===========================================================================+
-// | [>] inline body compaction handles overlapping regions     ( test-case ) |
+// | [>] inline body compaction handles overlapping regions       ( test-case )|
 // +===========================================================================+
 DOBA_TEST("inline body compaction handles overlapping regions") {
   std::string body(limits::kMaxResponseBodySizeInMemory, '\0');
@@ -579,7 +579,7 @@ DOBA_TEST("inline body compaction handles overlapping regions") {
   DOBA_EXPECT(!serialized->source.has_value());
 }
 // +===========================================================================+
-// | [>] automatic framing stays deferred until serialization   ( test-case ) |
+// | [>] automatic framing stays deferred until serialization     ( test-case )|
 // +===========================================================================+
 DOBA_TEST("automatic framing stays deferred until serialization") {
   response value = response::ok_200();
@@ -601,11 +601,12 @@ DOBA_TEST("automatic framing stays deferred until serialization") {
   const std::string_view prefix(serialized->prefix.get(),
                                 serialized->prefix_size);
   DOBA_EXPECT(prefix.find("Content-Length: 2\r\n") != std::string_view::npos);
-  DOBA_EXPECT(prefix.find("Content-Length:") == prefix.rfind("Content-Length:"));
+  DOBA_EXPECT(prefix.find("Content-Length:") ==
+              prefix.rfind("Content-Length:"));
   DOBA_EXPECT(prefix.ends_with("\r\n\r\nok"));
 }
 // +===========================================================================+
-// | [>] body replacement clears explicit framing duplicates    ( test-case ) |
+// | [>] body replacement clears explicit framing duplicates      ( test-case )|
 // +===========================================================================+
 DOBA_TEST("body replacement clears explicit framing duplicates") {
   response value = response::ok_200();
@@ -626,7 +627,7 @@ DOBA_TEST("body replacement clears explicit framing duplicates") {
   DOBA_EXPECT(prefix.ends_with("\r\n\r\nxy"));
 }
 // +===========================================================================+
-// | [>] explicit framing overrides deferred framing            ( test-case ) |
+// | [>] explicit framing overrides deferred framing              ( test-case )|
 // +===========================================================================+
 DOBA_TEST("explicit framing overrides deferred framing") {
   response value = response::ok_200();
@@ -670,7 +671,7 @@ DOBA_TEST("conflicting response framing is rejected before transmission") {
   }
 }
 // +===========================================================================+
-// | [>] HEAD preserves deferred framing through moves          ( test-case ) |
+// | [>] HEAD preserves deferred framing through moves            ( test-case )|
 // +===========================================================================+
 DOBA_TEST("HEAD preserves deferred framing through moves") {
   for (bool chunked : {false, true}) {
@@ -695,7 +696,7 @@ DOBA_TEST("HEAD preserves deferred framing through moves") {
   }
 }
 // +===========================================================================+
-// | [>] deferred length respects the exact header boundary     ( test-case ) |
+// | [>] deferred length respects the exact header boundary       ( test-case )|
 // +===========================================================================+
 DOBA_TEST("deferred length respects the exact header boundary") {
   for (std::size_t size : {0, 9, 10, 99, 100}) {

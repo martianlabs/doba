@@ -45,11 +45,11 @@ namespace martianlabs::doba::protocol::http::v11::headers::rules {
 // | 1. RFC 9112 S3.2: a client MUST send exactly one Host header field in an  |
 // |    HTTP/1.1 request; a missing or duplicated Host is rejected.            |
 // | 2. RFC 9112 S3.2.2: absolute-form uses the target authority regardless    |
-// |    of the received Host value.                                           |
-// | 3. Authority-form retains the requirement that its authority match Host. |
+// |    of the received Host value.                                            |
+// | 3. Authority-form retains the requirement that its authority match Host.  |
 // |                                                                           |
 // | Authority-form comparison is case-insensitive on the host and requires    |
-// | exact port equality. A non-empty scheme identifies absolute-form.        |
+// | exact port equality. A non-empty scheme identifies absolute-form.         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class routing {

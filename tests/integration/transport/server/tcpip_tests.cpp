@@ -135,7 +135,8 @@ struct transport_response {
         martianlabs::doba::protocol::serialization_result>();
     result->prefix_size = value.size();
     if (result->prefix_size) {
-      result->prefix = std::make_unique_for_overwrite<char[]>(result->prefix_size);
+      result->prefix =
+          std::make_unique_for_overwrite<char[]>(result->prefix_size);
       std::memcpy(result->prefix.get(), value.data(), result->prefix_size);
     }
     if (behavior == serialization_behavior::kSource) {
@@ -911,7 +912,7 @@ DOBA_TEST("tcpip preserves response order for pipelined deferred requests") {
 }
 
 // +===========================================================================+
-// | [>] deferred response cancellation                            ( test-case )|
+// | [>] deferred response cancellation                           ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip cooperatively cancels deferred responses") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -2296,7 +2297,7 @@ DOBA_TEST("tcpip survives failing disconnection callbacks") {
 }
 
 // +===========================================================================+
-// | [>] invalid ports leave a reusable server                    ( test-case ) |
+// | [>] invalid ports leave a reusable server                    ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip rejects every invalid port form and remains reusable") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -2357,7 +2358,7 @@ DOBA_TEST("tcpip rejects every invalid port form and remains reusable") {
 }
 
 // +===========================================================================+
-// | [>] active callbacks are immutable                           ( test-case ) |
+// | [>] active callbacks are immutable                           ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip rejects every callback mutation while active") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -2386,8 +2387,9 @@ DOBA_TEST("tcpip rejects every callback mutation while active") {
     server.set_on_request(
         [](const std::shared_ptr<transport_request>&,
            const std::stop_token&)
-            -> std::variant<transport_response,
-                            martianlabs::doba::common::task<transport_response>> {
+            -> std::variant<
+                transport_response,
+                martianlabs::doba::common::task<transport_response>> {
           return transport_response{};
         });
   } catch (const std::runtime_error&) {
@@ -2426,7 +2428,7 @@ DOBA_TEST("tcpip rejects every callback mutation while active") {
 }
 
 // +===========================================================================+
-// | [>] stop is safe under concurrent callers                    ( test-case ) |
+// | [>] stop is safe under concurrent callers                    ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip serializes concurrent and repeated stop calls") {
   martianlabs::doba::tests::integration::tcpip_client port_client;
@@ -2477,7 +2479,7 @@ DOBA_TEST("tcpip serializes concurrent and repeated stop calls") {
 }
 
 // +===========================================================================+
-// | [>] worker initiated stop is rejected                        ( test-case ) |
+// | [>] worker initiated stop is rejected                        ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip rejects stop from a request callback without deadlock") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -2520,7 +2522,7 @@ DOBA_TEST("tcpip rejects stop from a request callback without deadlock") {
 }
 
 // +===========================================================================+
-// | [>] decoder exceptions remain channel local                  ( test-case ) |
+// | [>] decoder exceptions remain channel local                  ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip survives accumulation and deserialization exceptions") {
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -2572,7 +2574,7 @@ DOBA_TEST("tcpip survives accumulation and deserialization exceptions") {
 }
 
 // +===========================================================================+
-// | [>] large synchronous pipeline is fully drained              ( test-case ) |
+// | [>] large synchronous pipeline is fully drained              ( test-case )|
 // +===========================================================================+
 DOBA_TEST("tcpip drains a large synchronous request pipeline in order") {
   martianlabs::doba::tests::integration::tcpip_client client;

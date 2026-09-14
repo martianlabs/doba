@@ -33,9 +33,11 @@
 DOBA_TEST("date helper selects the platform conversion") {
   using martianlabs::doba::common::gm_time;
 #ifdef _WIN32
-  static_assert(std::is_same_v<decltype(&gm_time), errno_t (*)(tm*, const time_t*)>);
+  static_assert(
+      std::is_same_v<decltype(&gm_time), errno_t (*)(tm*, const time_t*)>);
 #elif __linux__
-  static_assert(std::is_same_v<decltype(&gm_time), tm* (*)(tm*, const time_t*)>);
+  static_assert(
+      std::is_same_v<decltype(&gm_time), tm* (*)(tm*, const time_t*)>);
 #endif
   const auto conversion = &gm_time;
   DOBA_EXPECT(conversion != nullptr);

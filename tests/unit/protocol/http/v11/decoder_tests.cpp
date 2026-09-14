@@ -1889,7 +1889,8 @@ DOBA_TEST("decoder accepts complete heads at the buffer boundary") {
       DOBA_EXPECT_EQUAL(value.deserialize().code,
                         deserialization_status::kMoreBytesNeeded);
       DOBA_EXPECT_EQUAL(
-          accumulate(value, std::string_view(source).substr(split)), size - split);
+          accumulate(value, std::string_view(source).substr(split)),
+          size - split);
       const auto result = value.deserialize();
       DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
       DOBA_EXPECT(result.request != nullptr);
@@ -2119,7 +2120,8 @@ DOBA_TEST("decoder preserves raw bodies across the spill threshold") {
 // +===========================================================================+
 // | [>] encoded chunked body spill boundaries                   ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("decoder preserves encoded chunked bodies across the spill threshold") {
+DOBA_TEST(
+    "decoder preserves encoded chunked bodies across the spill threshold") {
   for (std::size_t size : {65534, 65535, 65536}) {
     std::string payload(size - 13, '\0');
     for (std::size_t i = 0; i < payload.size(); i++) {

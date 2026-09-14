@@ -1164,7 +1164,8 @@ class tcpip {
             }
             try {
               // Let's call user handler!
-              auto response = on_request_(result.request, ctx->get_stop_token());
+              auto response =
+                  on_request_(result.request, ctx->get_stop_token());
               if (auto* response_task =
                       std::get_if<common::task<RSty>>(&response)) {
                 std::size_t response_id = 0;

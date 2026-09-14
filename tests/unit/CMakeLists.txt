@@ -4,15 +4,20 @@ file(
   CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_LIST_DIR}/*_tests.cpp"
 )
+list(
+  REMOVE_ITEM
+  UNIT_TEST_SOURCES
+  "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper_tests.cpp"
+)
 add_executable(
   doba_unit_tests
-  "${CMAKE_CURRENT_LIST_DIR}/test_helper.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
   ${UNIT_TEST_SOURCES}
 )
 target_include_directories(
   doba_unit_tests
   PRIVATE
-  "${CMAKE_CURRENT_LIST_DIR}"
+  "${CMAKE_CURRENT_LIST_DIR}/helpers"
 )
 target_link_libraries(
   doba_unit_tests
@@ -26,21 +31,36 @@ add_test(
 
 add_executable(
   doba_unit_test_helper_probe
-  "${CMAKE_CURRENT_LIST_DIR}/test_helper.cpp"
-  "${CMAKE_CURRENT_LIST_DIR}/test_helper_probe.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper_probe.cpp"
 )
 target_link_libraries(
   doba_unit_test_helper_probe
   PRIVATE
   doba_headers
 )
+add_executable(
+  doba_unit_test_helper_tests
+  "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper_tests.cpp"
+)
+target_link_libraries(
+  doba_unit_test_helper_tests
+  PRIVATE
+  doba_headers
+)
+target_compile_definitions(
+  doba_unit_test_helper_tests
+  PRIVATE
+  DOBA_TEST_HELPER_PROGRAM="$<TARGET_FILE:doba_unit_test_helper_probe>"
+)
+add_dependencies(
+  doba_unit_test_helper_tests
+  doba_unit_test_helper_probe
+)
 add_test(
   NAME doba_unit_test_helper
-  COMMAND
-    "${CMAKE_COMMAND}"
-    "-DTEST_PROGRAM=$<TARGET_FILE:doba_unit_test_helper_probe>"
-    "-DVERIFY_UNIT_EXCLUSIONS=ON"
-    -P "${CMAKE_CURRENT_LIST_DIR}/../verify_test_helper.cmake"
+  COMMAND doba_unit_test_helper_tests
 )
 set_tests_properties(
   doba_unit_tests

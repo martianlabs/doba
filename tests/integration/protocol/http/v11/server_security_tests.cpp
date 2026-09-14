@@ -221,7 +221,7 @@ DOBA_TEST("HTTP/1.1 rejects hostile requests without dispatching successors") {
 }
 
 // +===========================================================================+
-// | [>] case insensitive framing and target forms                ( test-case ) |
+// | [>] case insensitive framing and target forms                ( test-case )|
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 accepts case insensitive framing and valid target forms") {
   tcpip_client client;
@@ -324,9 +324,10 @@ DOBA_TEST("HTTP/1.1 absolute authority preserves the received Host") {
 }
 
 // +===========================================================================+
-// | [>] slow inputs do not starve complete clients               ( test-case ) |
+// | [>] slow inputs do not starve complete clients               ( test-case )|
 // +===========================================================================+
-DOBA_TEST("HTTP/1.1 isolates incomplete heads and bodies from healthy clients") {
+DOBA_TEST(
+    "HTTP/1.1 isolates incomplete heads and bodies from healthy clients") {
   tcpip_client slow_head;
   tcpip_client slow_body;
   tcpip_client healthy;

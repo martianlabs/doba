@@ -226,7 +226,7 @@ bool parse_route_parameters_(
 // |   Args - route parameters being used                                      |
 // +---------------------------------------------------------------------------+
 // | Invokes the handler with the request and parsed route parameters.         |
-// | Throws if the path or parameters do not match.                           |
+// | Throws if the path or parameters do not match.                            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename Hty, typename RQty, typename RSty, typename... Args>
