@@ -211,7 +211,13 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
 
+  // +=========================================================================+
+  // | [>] failure_case                                              ( struct )|
+  // +=========================================================================+
   struct failure_case {
+    // +=======================================================================+
+    // | [>] ATTRIBUTEs                                             ( public ) |
+    // +=======================================================================+
     std::string_view path;
     std::string_view body;
   };

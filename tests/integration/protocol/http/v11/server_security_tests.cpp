@@ -76,7 +76,13 @@ DOBA_TEST("HTTP/1.1 rejects hostile requests without dispatching successors") {
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
 
+  // +=========================================================================+
+  // | [>] test_case                                                 ( struct )|
+  // +=========================================================================+
   struct test_case {
+    // +=======================================================================+
+    // | [>] ATTRIBUTEs                                             ( public ) |
+    // +=======================================================================+
     std::string name;
     std::string request;
     std::string_view status;
@@ -239,7 +245,13 @@ DOBA_TEST("HTTP/1.1 accepts case insensitive framing and valid target forms") {
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
 
+  // +=========================================================================+
+  // | [>] test_case                                                 ( struct )|
+  // +=========================================================================+
   struct test_case {
+    // +=======================================================================+
+    // | [>] ATTRIBUTEs                                             ( public ) |
+    // +=======================================================================+
     std::string_view request;
     std::string_view status;
     std::string_view body;
@@ -294,7 +306,13 @@ DOBA_TEST("HTTP/1.1 absolute authority preserves the received Host") {
   });
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
+  // +=========================================================================+
+  // | [>] test_case                                                 ( struct )|
+  // +=========================================================================+
   struct test_case {
+    // +=======================================================================+
+    // | [>] ATTRIBUTEs                                             ( public ) |
+    // +=======================================================================+
     std::string_view target;
     std::string_view host;
     std::string_view expected;

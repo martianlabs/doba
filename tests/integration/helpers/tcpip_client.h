@@ -44,12 +44,18 @@ namespace martianlabs::doba::tests::integration {
 // /////////////////////////////////////////////////////////////////////////////
 class tcpip_client {
  public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                  ( public )|
+  // +=========================================================================+
   tcpip_client() = default;
   tcpip_client(const tcpip_client&) = delete;
   tcpip_client(tcpip_client&&) noexcept = delete;
   ~tcpip_client() { close(); }
   tcpip_client& operator=(const tcpip_client&) = delete;
   tcpip_client& operator=(tcpip_client&&) noexcept = delete;
+  // +=========================================================================+
+  // | [>] METHODs                                                   ( public )|
+  // +=========================================================================+
   uint16_t find_available_port() const {
     socket_type socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (socket == invalid_socket()) return 0;
@@ -277,6 +283,9 @@ class tcpip_client {
   }
 
  private:
+  // +=========================================================================+
+  // | [>] TYPEs                                                    ( private )|
+  // +=========================================================================+
 #ifdef _WIN32
   using socket_type = SOCKET;
   static socket_type invalid_socket() { return INVALID_SOCKET; }
@@ -286,6 +295,9 @@ class tcpip_client {
   static socket_type invalid_socket() { return -1; }
   static void close_socket(socket_type socket) { ::close(socket); }
 #endif
+  // +=========================================================================+
+  // | [>] METHODs                                                  ( private )|
+  // +=========================================================================+
   static int socket_error() {
 #ifdef _WIN32
     return ::WSAGetLastError();
@@ -343,6 +355,9 @@ class tcpip_client {
       if (!pending(socket_error())) return fail_socket();
     }
   }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( private )|
+  // +=========================================================================+
   [[maybe_unused]] network::detail::environment environment_;
   socket_type socket_{invalid_socket()};
   int receive_buffer_size_ = 0;

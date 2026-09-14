@@ -116,7 +116,13 @@ DOBA_TEST("HTTP/1.1 routes typed parameter boundaries without partial parses") {
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
 
+  // +=========================================================================+
+  // | [>] test_case                                                 ( struct )|
+  // +=========================================================================+
   struct test_case {
+    // +=======================================================================+
+    // | [>] ATTRIBUTEs                                             ( public ) |
+    // +=======================================================================+
     std::string_view path;
     std::string_view status;
     std::string_view body;
