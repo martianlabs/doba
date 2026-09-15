@@ -38,9 +38,6 @@ using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http;
 using namespace martianlabs::doba::protocol::http::v11;
 
-// +---------------------------------------------------------------------------+
-// | [>] counter_controller                                          ( class ) |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] counter_controller                                          ( class ) |
