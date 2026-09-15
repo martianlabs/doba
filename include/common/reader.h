@@ -34,6 +34,7 @@
 #include <string>
 
 #include "common/byte_storage.h"
+#include "common/filesystem.h"
 
 namespace martianlabs::doba::common {
 // /////////////////////////////////////////////////////////////////////////////
@@ -60,13 +61,16 @@ class reader {
   // +=========================================================================+
   reader() = default;
   explicit reader(byte_storage storage) : storage_(std::move(storage)) {}
+  explicit reader(filesystem_file file) : file_(std::move(file)) {}
   reader(const reader&) = delete;
   reader(reader&& in) noexcept
       : storage_(std::move(in.storage_)),
+        file_(std::move(in.file_)),
         borrowed_(in.borrowed_),
         borrowed_pos_(in.borrowed_pos_),
         failed_(in.failed_),
         is_borrowed_(in.is_borrowed_) {
+    in.file_.reset();
     in.borrowed_ = {};
     in.borrowed_pos_ = 0;
     in.failed_ = false;
@@ -79,10 +83,12 @@ class reader {
   reader& operator=(reader&& in) noexcept {
     if (this == &in) return *this;
     storage_ = std::move(in.storage_);
+    file_ = std::move(in.file_);
     borrowed_ = in.borrowed_;
     borrowed_pos_ = in.borrowed_pos_;
     failed_ = in.failed_;
     is_borrowed_ = in.is_borrowed_;
+    in.file_.reset();
     in.borrowed_ = {};
     in.borrowed_pos_ = 0;
     in.failed_ = false;
@@ -94,6 +100,11 @@ class reader {
   // +=========================================================================+
   std::size_t read(std::span<std::byte> output) {
     if (output.empty()) return 0;
+    if (file_) {
+      const auto bytes = file_->read(output);
+      failed_ = file_->failed();
+      return bytes;
+    }
     if (is_borrowed_) {
       if (borrowed_pos_ == borrowed_.size()) return 0;
       std::size_t bytes =
@@ -111,6 +122,7 @@ class reader {
   // | [>] fetch                                                    ( public ) |
   // +=========================================================================+
   bool fetch(std::byte& byte) {
+    if (file_) return read(std::span<std::byte>(&byte, 1)) == 1;
     if (is_borrowed_) {
       if (borrowed_pos_ == borrowed_.size()) return false;
       byte = borrowed_[borrowed_pos_++];
@@ -124,6 +136,7 @@ class reader {
   // | [>] eof                                                      ( public ) |
   // +=========================================================================+
   [[nodiscard]] bool eof() const noexcept {
+    if (file_) return file_->eof();
     return is_borrowed_ ? borrowed_pos_ == borrowed_.size()
                         : storage_.exhausted();
   }
@@ -139,12 +152,14 @@ class reader {
   // | [>] ok                                                       ( public ) |
   // +=========================================================================+
   [[nodiscard]] bool ok() const noexcept {
+    if (file_) return !file_->failed();
     return is_borrowed_ || storage_.ok();
   }
   // +=========================================================================+
   // | [>] size                                                     ( public ) |
   // +=========================================================================+
   [[nodiscard]] std::optional<std::size_t> size() const noexcept {
+    if (file_) return file_->size();
     return is_borrowed_ ? std::optional<std::size_t>(borrowed_.size())
                         : storage_.total_size();
   }
@@ -177,6 +192,7 @@ class reader {
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   byte_storage storage_;
+  std::optional<filesystem_file> file_;
   std::span<const std::byte> borrowed_;
   std::size_t borrowed_pos_{0};
   bool failed_{false};

@@ -71,13 +71,15 @@ class response {
         has_transfer_encoding_header_(in.has_transfer_encoding_header_),
         content_length_(in.content_length_),
         chunked_(in.chunked_),
-        bdy_writer_(std::move(in.bdy_writer_)) {
+        bdy_writer_(std::move(in.bdy_writer_)),
+        bdy_reader_(std::move(in.bdy_reader_)) {
     in.sln_len_ = 0;
     in.hdr_len_ = 0;
     in.bdy_len_ = 0;
     in.status_code_ = SC_200_OK;
     in.has_date_header_ = false;
     in.bdy_writer_.reset();
+    in.bdy_reader_.reset();
   }
   ~response() = default;
   // +=========================================================================+
@@ -98,12 +100,14 @@ class response {
     content_length_ = in.content_length_;
     chunked_ = in.chunked_;
     bdy_writer_ = std::move(in.bdy_writer_);
+    bdy_reader_ = std::move(in.bdy_reader_);
     in.sln_len_ = 0;
     in.hdr_len_ = 0;
     in.bdy_len_ = 0;
     in.status_code_ = SC_200_OK;
     in.has_date_header_ = false;
     in.bdy_writer_.reset();
+    in.bdy_reader_.reset();
     return *this;
   }
   // +=========================================================================+
@@ -167,6 +171,10 @@ class response {
         result->source.emplace(bdy_writer_->release());
       }
       bdy_writer_.reset();
+    }
+    if (bdy_reader_) {
+      if (!must_omit_body) result->source = std::move(bdy_reader_);
+      bdy_reader_.reset();
     }
     if (!must_omit_body && bdy_len_ > 0) {
       // The final body position can overlap its reserved region.
@@ -437,6 +445,16 @@ class response {
     return set_body(std::to_string(val));
   }
   // +=========================================================================+
+  // | [>] set_body                                                 ( public ) |
+  // +=========================================================================+
+  // length is the exact number of bytes remaining in source.
+  response& set_body(common::reader&& source, std::size_t length) {
+    reset_body();
+    bdy_reader_.emplace(std::move(source));
+    content_length_ = length;
+    return *this;
+  }
+  // +=========================================================================+
   // | [>] clear_body                                               ( public ) |
   // +=========================================================================+
   // | Discards body bytes and explicit and deferred framing.                  |
@@ -444,6 +462,7 @@ class response {
   // +-------------------------------------------------------------------------+
   response& clear_body(bool preserve_framing = false) {
     bdy_len_ = 0;
+    bdy_reader_.reset();
     bdy_writer_.reset();
     if (!preserve_framing) {
       content_length_.reset();
@@ -810,6 +829,7 @@ class response {
   std::optional<std::size_t> content_length_{0};
   bool chunked_{false};
   std::optional<body::body_writer> bdy_writer_;
+  std::optional<common::reader> bdy_reader_;
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

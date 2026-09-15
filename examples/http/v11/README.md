@@ -13,6 +13,8 @@ one server at a time, and stop it with Ctrl+C.
 | Response construction | `response_statuses`, `response_headers`, `response_body_values`, `response_body_writers`, `large_response_bodies` |
 | Server behavior | `head_requests`, `automatic_not_found`, `method_not_allowed`, `options_asterisk`, `connection_close`, `automatic_date`, `request_rejections` |
 | Asynchrony | `asynchronous_routes` |
+| Controllers | `controllers` |
+| Static files | `static_file_server` |
 
 Each example README contains a `curl` command and its observable result.
 

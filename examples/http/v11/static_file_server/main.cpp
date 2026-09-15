@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -22,35 +22,27 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include "common/filesystem.h"
-#include "common/reader.h"
+#include <iostream>
+
+#include "common/console_logger.h"
+#include "common/logo.h"
+#include "common/signaler.h"
 #include "protocol/http/v11/server.h"
 #include "protocol/http/v11/static_file_server.h"
 
-namespace {
+using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
-class package_controller {
- public:
-  template <typename Rty>
-  void register_routes(Rty& routes) {
-    routes.add("GET", "/package/:id", &package_controller::get);
-  }
-  response get(const request&, int id) const {
-    auto result = response::ok_200();
-    result.set_body(id);
-    return result;
-  }
-};
-}  // namespace
 
-int main() {
-  std::error_code error;
-  const auto root = martianlabs::doba::common::filesystem_root(".", error);
-  if (error) return 1;
-  martianlabs::doba::common::filesystem_file file;
-  martianlabs::doba::common::reader input(std::move(file));
-  server<> value;
-  value.add_controller<package_controller>()
-      .add_controller<static_file_server>("/files", root);
+int main(int argc, char* argv[]) {
+  if (argc != 2) {
+    std::cerr << "Usage: static_file_server <root>\n";
+    return 1;
+  }
+  server http_server;
+  http_server.add_controller<static_file_server>("/assets", argv[1])
+      .add_controller<static_file_server>("/downloads", argv[1]);
+  http_server.start("8080");
+  signaler::wait();
+  http_server.stop();
   return 0;
 }

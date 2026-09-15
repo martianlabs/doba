@@ -239,6 +239,9 @@ if(
     ${CMAKE_CURRENT_LIST_DIR}/examples/common/reader
   )
   add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/common/filesystem
+  )
+  add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/common/console_logger
   )
   add_subdirectory(
@@ -258,6 +261,12 @@ if(
   )
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/asynchronous_routes
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/controllers
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/static_file_server
   )
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_information

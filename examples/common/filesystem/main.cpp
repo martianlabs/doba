@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -22,35 +22,35 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <array>
+#include <cstddef>
+#include <iostream>
+#include <utility>
+
 #include "common/filesystem.h"
 #include "common/reader.h"
-#include "protocol/http/v11/server.h"
-#include "protocol/http/v11/static_file_server.h"
 
-namespace {
-using namespace martianlabs::doba::protocol::http::v11;
-class package_controller {
- public:
-  template <typename Rty>
-  void register_routes(Rty& routes) {
-    routes.add("GET", "/package/:id", &package_controller::get);
-  }
-  response get(const request&, int id) const {
-    auto result = response::ok_200();
-    result.set_body(id);
-    return result;
-  }
-};
-}  // namespace
+using namespace martianlabs::doba::common;
 
-int main() {
+int main(int argc, char* argv[]) {
+  if (argc != 3) {
+    std::cerr << "Usage: common_filesystem <root> <relative-file>\n";
+    return 1;
+  }
   std::error_code error;
-  const auto root = martianlabs::doba::common::filesystem_root(".", error);
-  if (error) return 1;
-  martianlabs::doba::common::filesystem_file file;
-  martianlabs::doba::common::reader input(std::move(file));
-  server<> value;
-  value.add_controller<package_controller>()
-      .add_controller<static_file_server>("/files", root);
-  return 0;
+  const auto root = filesystem_root(argv[1], error);
+  filesystem_file file;
+  if (error || !file.open(root, argv[2], error)) {
+    std::cerr << error.message() << '\n';
+    return 1;
+  }
+  reader input(std::move(file));
+  std::array<std::byte, 4096> block{};
+  for (;;) {
+    const auto count = input.read(block);
+    if (!count) break;
+    std::cout.write(reinterpret_cast<const char*>(block.data()),
+                    static_cast<std::streamsize>(count));
+  }
+  return input.ok() && input.eof() && std::cout ? 0 : 1;
 }

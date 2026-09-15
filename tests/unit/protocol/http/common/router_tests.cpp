@@ -766,3 +766,171 @@ DOBA_TEST("invalid registration preserves existing route selection") {
     DOBA_EXPECT_EQUAL(value.allowed_methods("/kept"), "GET");
   }
 }
+
+namespace {
+class controller_probe {
+ public:
+  controller_probe(std::string prefix, int& alive, manual_event& event)
+      : prefix_(std::move(prefix)), alive_(alive), event_(event) { alive_++; }
+  controller_probe(const controller_probe&) = delete;
+  controller_probe(controller_probe&&) = delete;
+  ~controller_probe() { alive_--; }
+  template <typename Rty>
+  void register_routes(Rty& routes) {
+    routes.add("GET", prefix_ + "/count", &controller_probe::count);
+    routes.add("GET", prefix_ + "/value/:id", &controller_probe::value);
+    routes.add("GET", prefix_ + "/async", &controller_probe::delayed);
+    routes.add("GET", prefix_ + "/async/:id", &controller_probe::typed);
+    routes.add("GET", prefix_ + "/wild/*", &controller_probe::value_zero);
+  }
+  response count(const request&) { return {std::to_string(++count_)}; }
+  response value(const request&, int id) const noexcept {
+    return {std::to_string(count_ + id)};
+  }
+  response value_zero(const request&) const { return {prefix_}; }
+  task<response> delayed(std::shared_ptr<const request> req,
+                         std::stop_token token) {
+    co_await event_;
+    if (req->event == -1) throw std::runtime_error("controller failure");
+    co_return response{token.stop_requested() ? "cancelled" : prefix_};
+  }
+  task<response> typed(std::shared_ptr<const request>,
+                       std::stop_token, int id) const noexcept {
+    co_return response{std::to_string(id)};
+  }
+
+ private:
+  std::string prefix_;
+  int& alive_;
+  manual_event& event_;
+  int count_{0};
+};
+struct failing_controller {
+  explicit failing_controller(int mode) : mode_(mode) {
+    if (mode == 0) throw std::runtime_error("constructor");
+  }
+  template <typename Rty>
+  void register_routes(Rty& routes) {
+    if (mode_ == 1) return;
+    routes.add("GET", "/new", &failing_controller::get);
+    routes.add("POST", "/new", &failing_controller::get);
+    routes.add("GET", "/new/:id", &failing_controller::typed);
+    routes.add("GET", "/new/*", &failing_controller::get);
+    routes.add("POST", "/new/:id", &failing_controller::typed);
+    routes.add("POST", "/new/*", &failing_controller::get);
+    routes.add("GET", "/invalid/:id", &failing_controller::get);
+  }
+  response get(const request&) { return {}; }
+  response typed(const request&, int) { return {}; }
+  int mode_;
+};
+}  // namespace
+
+// +===========================================================================+
+// | [>] controllers share one instance per registration         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("controllers share one instance per registration") {
+  int alive = 0;
+  manual_event event;
+  {
+    router<request, response> value;
+    value.add_controller<controller_probe>("/a", alive, event);
+    value.add_controller<controller_probe>("/b", alive, event);
+    DOBA_EXPECT_EQUAL(alive, 2);
+    auto count = value.match("GET", "/a/count");
+    DOBA_EXPECT_EQUAL(count.handler->callback({}).value, "1");
+    DOBA_EXPECT_EQUAL(count.handler->callback({}).value, "2");
+    auto typed = value.match("GET", "/a/value/40");
+    DOBA_EXPECT_EQUAL(
+        typed.parametrized_handler->invoke({}, "/a/value/40").value, "42");
+    DOBA_EXPECT_EQUAL(
+        value.match("GET", "/b/count").handler->callback({}).value, "1");
+    DOBA_EXPECT_EQUAL(
+        value.match("GET", "/a/wild/x").handler->callback({}).value, "/a");
+    std::optional<response> result;
+    auto match = value.match("GET", "/a/async/42");
+    auto probe = collect(match.parametrized_handler->invoke_async(
+        std::make_shared<const request>(), {}, "/a/async/42"), result);
+    probe.rethrow_if_failed();
+    DOBA_EXPECT(probe.done());
+    DOBA_EXPECT_EQUAL(result->value, "42");
+  }
+  DOBA_EXPECT_EQUAL(alive, 0);
+}
+
+// +===========================================================================+
+// | [>] controller registration rolls back every route category ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("controller registration rolls back every route category") {
+  router<request, response> value;
+  value.add("GET", "/old", [](const request&) { return response{"old"}; });
+  value.add("GET", "/old/:id",
+            [](const request&, int) { return response{"typed"}; });
+  value.add("GET", "/old/*",
+            [](const request&) { return response{"wild"}; });
+  for (int mode : {0, 1, 2}) {
+    bool threw = false;
+    try {
+      value.add_controller<failing_controller>(mode);
+    } catch (const std::exception&) { threw = true; }
+    DOBA_EXPECT(threw);
+    DOBA_EXPECT(!value.match("GET", "/new"));
+    DOBA_EXPECT(!value.match("POST", "/new"));
+    DOBA_EXPECT(!value.match("GET", "/new/42"));
+    DOBA_EXPECT(!value.match("POST", "/new/x"));
+    DOBA_EXPECT_EQUAL(value.allowed_methods("/new/42"), "");
+    DOBA_EXPECT_EQUAL(
+        value.match("GET", "/old").handler->callback({}).value, "old");
+    DOBA_EXPECT(value.match("GET", "/old/42").parametrized_handler);
+    DOBA_EXPECT(value.match("GET", "/old/x").handler);
+  }
+}
+
+// +===========================================================================+
+// | [>] controller lifetime and cancellation                    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("suspended controller survives router and observes cancellation") {
+  manual_event event;
+  int alive = 0;
+  std::stop_source stop;
+  std::optional<response> result;
+  std::optional<task_probe> probe;
+  {
+    router<request, response> value;
+    value.add_controller<controller_probe>("/a", alive, event);
+    probe.emplace(collect(
+        value.match("GET", "/a/async").handler->async_callback(
+            std::make_shared<const request>(), stop.get_token()), result));
+    DOBA_EXPECT(!probe->done());
+  }
+  DOBA_EXPECT_EQUAL(alive, 1);
+  stop.request_stop();
+  event.resume();
+  probe->rethrow_if_failed();
+  DOBA_EXPECT_EQUAL(result->value, "cancelled");
+  DOBA_EXPECT_EQUAL(alive, 0);
+}
+
+// +===========================================================================+
+// | [>] suspended controller releases ownership after failure   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("suspended controller releases ownership after failure") {
+  manual_event event;
+  int alive = 0;
+  std::optional<response> result;
+  std::optional<task_probe> probe;
+  {
+    router<request, response> value;
+    value.add_controller<controller_probe>("/a", alive, event);
+    probe.emplace(collect(
+        value.match("GET", "/a/async").handler->async_callback(
+            std::make_shared<const request>(request{-1}), {}), result));
+  }
+  DOBA_EXPECT_EQUAL(alive, 1);
+  event.resume();
+  bool threw = false;
+  try { probe->rethrow_if_failed(); }
+  catch (const std::runtime_error&) { threw = true; }
+  DOBA_EXPECT(threw);
+  DOBA_EXPECT_EQUAL(alive, 0);
+}

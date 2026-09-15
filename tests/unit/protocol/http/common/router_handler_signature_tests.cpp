@@ -165,3 +165,26 @@ DOBA_TEST("sync signatures reject mutable and value requests") {
   DOBA_EXPECT(!router_handler_lambda<decltype(rvalue_request)>);
   DOBA_EXPECT(!router_handler_lambda<decltype(no_result)>);
 }
+
+namespace {
+struct signature_controller {
+  response get(const request&, int) const noexcept { return {}; }
+};
+}  // namespace
+
+// +===========================================================================+
+// | [>] controller signature binding                            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("bound controller methods retain argument and noexcept contracts") {
+  using namespace martianlabs::doba::protocol::http;
+  auto handler = router_handler_signature<decltype(&signature_controller::get)>
+      ::bind(std::make_shared<signature_controller>(),
+             &signature_controller::get);
+  static_assert(router_handler_lambda<decltype(handler)>);
+  static_assert(std::is_nothrow_invocable_v<decltype(handler), const request&,
+                                           int>);
+  static_assert(router_handler_signature<
+      decltype(&decltype(handler)::operator())>
+                    ::parameter_count == 1);
+  DOBA_EXPECT(true);
+}

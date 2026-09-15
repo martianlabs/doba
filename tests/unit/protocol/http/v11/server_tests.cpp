@@ -744,3 +744,47 @@ DOBA_TEST("async handler observes cancellation after suspension") {
   value.stop();
   test_router::async_handler = {};
 }
+
+namespace {
+struct server_controller {
+  explicit server_controller(int& alive) : alive_(alive) { alive_++; }
+  ~server_controller() { alive_--; }
+  template <typename Rty>
+  void register_routes(Rty& routes) {
+    routes.add("GET", "/", &server_controller::get);
+  }
+  response get(const request&) {
+    auto res = response::ok_200();
+    res.set_body(++calls_);
+    return res;
+  }
+  int& alive_;
+  int calls_{0};
+};
+}  // namespace
+
+// +===========================================================================+
+// | [>] server controller lifecycle                             ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("server retains controllers and rejects live registration") {
+  int alive = 0;
+  {
+    server<request, response, decoder, fake_transport> value;
+    DOBA_EXPECT_EQUAL(&value.add_controller<server_controller>(alive), &value);
+    DOBA_EXPECT_EQUAL(alive, 1);
+    value.start("8080");
+    DOBA_EXPECT(send_request({}).ends_with("1"));
+    bool threw = false;
+    try { value.add_controller<server_controller>(alive); }
+    catch (const std::runtime_error&) { threw = true; }
+    DOBA_EXPECT(threw);
+    DOBA_EXPECT_EQUAL(alive, 1);
+    value.stop();
+    DOBA_EXPECT_EQUAL(alive, 1);
+    value.start("8081");
+    DOBA_EXPECT(send_request({}).ends_with("2"));
+    value.stop();
+  }
+  DOBA_EXPECT_EQUAL(alive, 0);
+  test_transport::on_request = {};
+}

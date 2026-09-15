@@ -109,6 +109,23 @@ Protocol processing also has explicit stages: syntax checks, semantic rules,
 body framing, and payload reading. Incoming chunked data is validated as it
 arrives and decoded when the application reads the stored body.
 
+## Own controller instances
+
+`server.add_controller<Type>(args...)` constructs one instance and invokes its
+`register_routes(registrar&)` once. The registrar binds member function pointers
+to the existing route handlers, preserving typed arguments, async handlers, and
+route precedence. It is only valid during that registration call.
+
+All routes of a registration share their controller. Deferred invocations keep
+it alive until completion; `stop()` preserves registered instances, and
+cancellation does not destroy suspended user work. Controllers must synchronize
+their own mutable state because multiple requests can enter them concurrently.
+
+Registration is transactional: any exception removes the routes added by that
+call. An empty controller registration is rejected. Registration through the
+server is disabled while running. Controllers need no base class, reflection,
+or copy/move support. See the [controller example](../examples/http/v11/controllers).
+
 ## Use each platform's native execution model
 
 Windows uses IOCP and overlapped I/O. Connection ownership survives pending
@@ -163,9 +180,50 @@ The transport drains that reader in bounded chunks and pauses refilling when
 its send-buffer budget is reached.
 
 This separates body storage from network delivery and avoids requiring one
-large contiguous output allocation. Body production currently completes
-before the response is handed off; draining a stored body is distinct from
-progressive application streaming.
+large contiguous output allocation. Writer-backed body production completes
+before the response is handed off.
+
+`response.set_body(common::reader&& source, size_t length)` instead transfers
+an existing source at its current cursor. The caller must supply its exact
+remaining length. Replacing or clearing the body closes the previous source.
+Serialization moves it into the existing transport contract, while HEAD and
+bodyless statuses suppress it under the existing HTTP rules.
+
+`common/filesystem.h` provides `filesystem_root` and the move-only
+`filesystem_file`. The common header uses `std::filesystem` for paths and
+configuration, with native opening and reading isolated in `filesystem_linux.h`
+and `filesystem_windows.h`. Open calls reject symbolic links and reparse points;
+Windows also checks the final handle's resolved path to prevent concurrent
+attribute changes from escaping the root. The open file supplies its own size.
+Moving it into a `reader` transfers its cursor and resource ownership.
+
+`static_file_server(prefix, root)` uses this source for GET and supplies the
+same size without reading contents for HEAD
+([RFC 9110 S9.3.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.3.2)).
+There is no whole-file buffer or temporary-file copy. The transport reads in
+bounded chunks as send capacity becomes available. These disk reads are
+synchronous, so slow storage can block a worker.
+
+Each request opens the file again, with no application cache or validators.
+The initial size bounds each response; growth is ignored and premature EOF
+aborts transmission before any successor response. Concurrent writes can change
+the bytes: an owned handle is not an immutable content snapshot.
+
+Paths are taken from the already decoded request, with no second decoding
+([RFC 3986 S2.4](https://www.rfc-editor.org/rfc/rfc3986.html#section-2.4)).
+The configured root is resolved once; subsequent opens reject links even if
+the root's path has been replaced. Only regular files are served, with no
+automatic index or directory listing. Windows device names and alternate
+streams are rejected.
+
+This version does not serve ranges; ignoring Range is permitted by
+[RFC 9110 S14.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-14.2).
+Without entity tags, explicit If-Match cannot match. Existence-based `*`
+conditions still apply, in If-Match then If-None-Match order
+([RFC 9110 S13.2.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-13.2.2)).
+Caching, modification-date validators, compression, and asynchronous disk
+reads are deferred. See the [filesystem](../examples/common/filesystem) and
+[static file server](../examples/http/v11/static_file_server) examples.
 
 ## Keep the design measurable
 

@@ -852,3 +852,54 @@ DOBA_TEST("header growth at capacity preserves neighbors and body") {
       std::string_view(serialized->prefix.get(), serialized->prefix_size),
       head + padding + tail + "body");
 }
+
+// +===========================================================================+
+// | [>] response adopts a reader at its current position        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("response adopts a reader at its current position") {
+  const std::string bytes = "abcdef";
+  auto source = reader::borrowed(std::as_bytes(std::span(bytes)));
+  std::byte first{};
+  DOBA_EXPECT(source.fetch(first));
+  auto value = response::ok_200();
+  value.set_body(std::move(source), 5);
+  auto moved = std::move(value);
+  auto assigned = response::ok_200();
+  assigned.set_body("old");
+  assigned = std::move(moved);
+  auto serialized = assigned.serialize();
+  DOBA_EXPECT(serialized->source.has_value());
+  const std::string prefix(serialized->prefix.get(), serialized->prefix_size);
+  DOBA_EXPECT(prefix.find("Content-Length: 5\r\n") != prefix.npos);
+  DOBA_EXPECT_EQUAL(read_source(*serialized->source), "bcdef");
+}
+
+// +===========================================================================+
+// | [>] reader body replacement and suppression                 ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("reader bodies are replaced or suppressed without leaking bytes") {
+  const std::string bytes = "hidden";
+  auto value = response::ok_200();
+  value.set_body(reader::borrowed(std::as_bytes(std::span(bytes))), 6);
+  value.set_body("next");
+  auto serialized = value.serialize();
+  DOBA_EXPECT(!serialized->source);
+  DOBA_EXPECT(std::string_view(serialized->prefix.get(),
+                               serialized->prefix_size).ends_with("next"));
+  for (auto result : {0, 1, 2, 3, 4}) {
+    auto res = result == 0 ? response::ok_200()
+        : result == 1 ? response::no_content_204()
+        : result == 2 ? response::reset_content_205()
+        : result == 3 ? response::not_modified_304()
+                      : response::continue_100();
+    res.set_body(reader::borrowed(std::as_bytes(std::span(bytes))), 6);
+    if (result == 0) res.clear_body(true);
+    auto wire = res.serialize();
+    DOBA_EXPECT(!wire->source);
+    const std::string prefix(wire->prefix.get(), wire->prefix_size);
+    DOBA_EXPECT(!prefix.ends_with(bytes));
+    if (result == 0) {
+      DOBA_EXPECT(prefix.find("Content-Length: 6\r\n") != prefix.npos);
+    }
+  }
+}

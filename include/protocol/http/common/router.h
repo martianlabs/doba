@@ -176,6 +176,37 @@ class router {
     }
   }
   // +=========================================================================+
+  // | [>] add_controller                                           ( public ) |
+  // +=========================================================================+
+  template <typename Cty, typename... Args>
+  void add_controller(Args&&... args) {
+    auto instance = std::make_shared<Cty>(std::forward<Args>(args)...);
+    std::vector<std::size_t> static_sizes;
+    std::vector<std::size_t> parametrized_sizes;
+    std::vector<std::size_t> wildcard_sizes;
+    for (const auto& entry : handlers_) {
+      static_sizes.push_back(entry.second.size());
+    }
+    for (const auto& entry : parametrized_handlers_) {
+      parametrized_sizes.push_back(entry.second.size());
+    }
+    for (const auto& entry : wildcard_handlers_) {
+      wildcard_sizes.push_back(entry.second.size());
+    }
+    controller_routes<Cty> routes(*this, std::move(instance));
+    try {
+      routes.instance_->register_routes(routes);
+      if (!routes.count_) {
+        throw std::invalid_argument("The controller must register a route");
+      }
+    } catch (...) {
+      restore_routes(handlers_, static_sizes);
+      restore_routes(parametrized_handlers_, parametrized_sizes);
+      restore_routes(wildcard_handlers_, wildcard_sizes);
+      throw;
+    }
+  }
+  // +=========================================================================+
   // | [>] match                                                    ( public ) |
   // +=========================================================================+
   [[nodiscard]]
@@ -265,6 +296,43 @@ class router {
   using parametrized_handler_pair =
       std::pair<std::string,
                 std::vector<router_handler_parametrized<RQty, RSty>>>;
+  // +=========================================================================+
+  // | [>] controller_routes                                       ( private ) |
+  // +=========================================================================+
+  template <typename Cty>
+  class controller_routes {
+   public:
+    controller_routes(router& owner, std::shared_ptr<Cty> instance)
+        : owner_(owner), instance_(std::move(instance)) {}
+    controller_routes(const controller_routes&) = delete;
+    controller_routes& operator=(const controller_routes&) = delete;
+    template <typename Mty>
+      requires std::is_member_function_pointer_v<Mty>
+    void add(std::string_view method, std::string_view route, Mty member) {
+      owner_.add(method, route,
+                 router_handler_signature<Mty>::bind(instance_, member));
+      count_++;
+    }
+
+   private:
+    friend class router;
+    router& owner_;
+    std::shared_ptr<Cty> instance_;
+    std::size_t count_{0};
+  };
+  // +=========================================================================+
+  // | [>] restore_routes                                          ( private ) |
+  // +=========================================================================+
+  template <typename Tty>
+  static void restore_routes(
+      std::vector<Tty>& entries, const std::vector<std::size_t>& sizes) {
+    while (entries.size() > sizes.size()) entries.pop_back();
+    for (std::size_t i = 0; i < sizes.size(); i++) {
+      while (entries[i].second.size() > sizes[i]) {
+        entries[i].second.pop_back();
+      }
+    }
+  }
   // +=========================================================================+
   // | [>] count_parameters                                      ( private )   |
   // +=========================================================================+
