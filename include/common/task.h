@@ -42,6 +42,9 @@ namespace martianlabs::doba::common {
 template <typename Tty>
 class task {
  private:
+  // +=========================================================================+
+  // | [>] TYPEs                                                   ( private ) |
+  // +=========================================================================+
   class awaiter;
 
  public:
@@ -74,6 +77,9 @@ class task {
     }
 
    private:
+    // +=======================================================================+
+    // | [>] TYPEs                                                 ( private ) |
+    // +=======================================================================+
     friend class awaiter;
     std::optional<Tty> value_;
     std::exception_ptr exception_;
@@ -110,6 +116,9 @@ class task {
   // +=========================================================================+
   class awaiter {
    public:
+    // +=======================================================================+
+    // | [>] METHODs                                                ( public ) |
+    // +=======================================================================+
     explicit awaiter(std::coroutine_handle<promise_type> coroutine) noexcept
         : coroutine_(coroutine) {}
     awaiter(const awaiter&) = delete;
@@ -143,6 +152,9 @@ class task {
     }
 
    private:
+    // +=======================================================================+
+    // | [>] ATTRIBUTEs                                            ( private ) |
+    // +=======================================================================+
     std::coroutine_handle<promise_type> coroutine_;
   };
   // +=========================================================================+

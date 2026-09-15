@@ -214,7 +214,7 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
   http_server.start(port_text.c_str());
 
   // +=========================================================================+
-  // | [>] failure_case                                             ( struct ) |
+// | [>] failure_case                                               ( struct ) |
   // +=========================================================================+
   struct failure_case {
     // +=======================================================================+
@@ -254,8 +254,18 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
 namespace {
 namespace fs = std::filesystem;
 using martianlabs::doba::common::filesystem_file;
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] response_file_directory                                     ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class response_file_directory {
  public:
+  // +=========================================================================+
+  // | [>] METHODs                                                  ( public ) |
+  // +=========================================================================+
   response_file_directory() {
     static std::atomic<unsigned int> counter{0};
     const auto stamp =
@@ -280,6 +290,9 @@ class response_file_directory {
   }
 
  private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
   fs::path path_;
 };
 }  // namespace

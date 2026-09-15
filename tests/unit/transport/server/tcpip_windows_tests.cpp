@@ -36,8 +36,18 @@ namespace {
 using namespace martianlabs::doba::transport::server;
 using detail::executor_dispatcher;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] scheduled_probe                                             ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class scheduled_probe {
  public:
+  // +=========================================================================+
+  // | [>] TYPEs                                                    ( public ) |
+  // +=========================================================================+
   struct promise_type {
     scheduled_probe get_return_object() noexcept {
       return scheduled_probe(
@@ -64,6 +74,9 @@ class scheduled_probe {
   std::coroutine_handle<> get_coroutine() const noexcept { return coroutine_; }
 
  private:
+  // +=========================================================================+
+  // | [>] METHODs                                                 ( private ) |
+  // +=========================================================================+
   explicit scheduled_probe(
       std::coroutine_handle<promise_type> coroutine) noexcept
       : coroutine_(coroutine) {}
@@ -75,8 +88,18 @@ scheduled_probe increment(std::atomic<std::size_t>& value) {
   co_return;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] wake_resource                                               ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class wake_resource {
  public:
+  // +=========================================================================+
+  // | [>] METHODs                                                  ( public ) |
+  // +=========================================================================+
   wake_resource()
       : handle_(CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 1)) {}
   ~wake_resource() {
@@ -85,6 +108,9 @@ class wake_resource {
   HANDLE get() const { return handle_; }
 
  private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
   HANDLE handle_;
 };
 }  // namespace

@@ -41,8 +41,18 @@ using martianlabs::doba::common::task;
 using martianlabs::doba::tests::integration::tcpip_client;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::http_test_signal;
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] socket_controller                                           ( class ) |
+// +---------------------------------------------------------------------------+
+// | Controller implementation.                                                |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class socket_controller {
  public:
+  // +=========================================================================+
+  // | [>] METHODs                                                  ( public ) |
+  // +=========================================================================+
   socket_controller(std::string prefix, http_test_signal& signal,
                     std::atomic<bool>& cancelled)
       : prefix_(std::move(prefix)), signal_(signal), cancelled_(cancelled) {}
@@ -68,6 +78,9 @@ class socket_controller {
   response fail(const request&) { throw std::runtime_error("controller"); }
 
  private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
   std::string prefix_;
   http_test_signal& signal_;
   std::atomic<bool>& cancelled_;

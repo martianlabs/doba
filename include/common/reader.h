@@ -50,6 +50,9 @@ namespace martianlabs::doba::common {
 // /////////////////////////////////////////////////////////////////////////////
 class reader {
  public:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +=========================================================================+
   // Creates a non-owning reader over stable caller storage. The referenced
   // bytes must outlive this reader and every object to which it is moved.
   static reader borrowed(std::span<const std::byte> source) noexcept {

@@ -44,7 +44,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] background_executor                                        ( class )  |
+// | [>] background_executor                                         ( class ) |
 // +---------------------------------------------------------------------------+
 // | Example executor that resumes continuations on one background thread.     |
 // +---------------------------------------------------------------------------+
@@ -52,10 +52,13 @@ using namespace martianlabs::doba::protocol::http::v11;
 class background_executor {
  public:
   // +=========================================================================+
-  // | [>] awaiter                                                  ( class )  |
+// | [>] awaiter                                                     ( class ) |
   // +=========================================================================+
   class awaiter {
    public:
+    // +=======================================================================+
+    // | [>] METHODs                                                ( public ) |
+    // +=======================================================================+
     awaiter(background_executor& executor,
             std::stop_token stop_token) noexcept
         : executor_(executor), stop_token_(stop_token) {}
@@ -68,6 +71,9 @@ class background_executor {
     void await_resume() const noexcept {}
 
    private:
+    // +=======================================================================+
+    // | [>] ATTRIBUTEs                                            ( private ) |
+    // +=======================================================================+
     background_executor& executor_;
     std::stop_token stop_token_;
   };

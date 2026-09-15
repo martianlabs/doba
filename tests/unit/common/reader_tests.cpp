@@ -40,8 +40,18 @@ using martianlabs::doba::common::byte_storage;
 using martianlabs::doba::common::byte_storage_options;
 using martianlabs::doba::common::reader;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] spill_directory                                             ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class spill_directory {
  public:
+  // +=========================================================================+
+  // | [>] METHODs                                                  ( public ) |
+  // +=========================================================================+
   spill_directory() {
     namespace fs = std::filesystem;
     static std::atomic<std::size_t> sequence{0};
@@ -60,6 +70,9 @@ class spill_directory {
   const std::filesystem::path& path() const { return path_; }
 
  private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
   std::filesystem::path path_;
 };
 
@@ -260,8 +273,18 @@ DOBA_TEST("moving a borrowed reader preserves the view and cursor") {
 namespace {
 namespace fs = std::filesystem;
 using martianlabs::doba::common::filesystem_file;
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] reader_file_directory                                       ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class reader_file_directory {
  public:
+  // +=========================================================================+
+  // | [>] METHODs                                                  ( public ) |
+  // +=========================================================================+
   reader_file_directory() {
     static std::atomic<unsigned int> counter{0};
     const auto stamp =
@@ -286,6 +309,9 @@ class reader_file_directory {
   }
 
  private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
   fs::path path_;
 };
 }  // namespace
