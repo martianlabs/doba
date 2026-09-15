@@ -462,6 +462,55 @@ DOBA_TEST("sync and async routes share one router") {
   DOBA_EXPECT(wildcard.handler->is_async());
 }
 // +===========================================================================+
+// | [>] noexcept handlers register and execute                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("noexcept handlers register and execute") {
+  router<request, response> value;
+  value.add("GET", "/sync", [](const request&) noexcept {
+    return response{"sync"};
+  });
+  value.add("GET", "/mutable/:id", [](const request&, int id) mutable noexcept {
+    return response{std::to_string(id)};
+  });
+  value.add("GET", "/async",
+            [](std::shared_ptr<const request>,
+               std::stop_token) noexcept -> task<response> {
+              co_return response{"async"};
+            });
+  value.add("GET", "/async/:id",
+            [](std::shared_ptr<const request>, std::stop_token,
+               int id) mutable noexcept -> task<response> {
+              co_return response{std::to_string(id)};
+            });
+  request req;
+  const auto sync = value.match("GET", "/sync");
+  DOBA_EXPECT_EQUAL(sync.handler->callback(req).value, "sync");
+  const auto mutable_sync = value.match("GET", "/mutable/42");
+  DOBA_EXPECT_EQUAL(
+      mutable_sync.parametrized_handler->invoke(req, "/mutable/42").value,
+      "42");
+  const auto async = value.match("GET", "/async");
+  std::optional<response> async_result;
+  auto async_probe = collect(
+      async.handler->async_callback(std::make_shared<const request>(),
+                                    std::stop_token{}),
+      async_result);
+  DOBA_EXPECT(async_probe.done());
+  async_probe.rethrow_if_failed();
+  DOBA_EXPECT(async_result.has_value());
+  DOBA_EXPECT_EQUAL(async_result->value, "async");
+  const auto mutable_async = value.match("GET", "/async/42");
+  std::optional<response> mutable_result;
+  auto mutable_probe = collect(
+      mutable_async.parametrized_handler->invoke_async(
+          std::make_shared<const request>(), std::stop_token{}, "/async/42"),
+      mutable_result);
+  DOBA_EXPECT(mutable_probe.done());
+  mutable_probe.rethrow_if_failed();
+  DOBA_EXPECT(mutable_result.has_value());
+  DOBA_EXPECT_EQUAL(mutable_result->value, "42");
+}
+// +===========================================================================+
 // | [>] static async handler outlives its router                ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("static async handler outlives its router") {

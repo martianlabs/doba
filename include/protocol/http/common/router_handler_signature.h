@@ -155,6 +155,10 @@ template <typename Cty, typename Retty, typename Reqty, typename... Args>
 struct router_handler_signature<Retty (Cty::*)(Reqty, Args...) const>
     : router_handler_signature_base<Retty, Reqty, Args...> {};
 
+template <typename Cty, typename Retty, typename Reqty, typename... Args>
+struct router_handler_signature<Retty (Cty::*)(Reqty, Args...) const noexcept>
+    : router_handler_signature_base<Retty, Reqty, Args...> {};
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] router_handler_signature                                   ( struct ) |
@@ -174,6 +178,10 @@ struct router_handler_signature<Retty (Cty::*)(Reqty, Args...) const>
 // /////////////////////////////////////////////////////////////////////////////
 template <typename Cty, typename Retty, typename Reqty, typename... Args>
 struct router_handler_signature<Retty (Cty::*)(Reqty, Args...)>
+    : router_handler_signature_base<Retty, Reqty, Args...> {};
+
+template <typename Cty, typename Retty, typename Reqty, typename... Args>
+struct router_handler_signature<Retty (Cty::*)(Reqty, Args...) noexcept>
     : router_handler_signature_base<Retty, Reqty, Args...> {};
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -200,6 +208,12 @@ struct router_async_handler_signature<Retty (Cty::*)(Reqty, Cancelty, Args...)
                                           const>
     : router_async_handler_signature_base<Retty, Reqty, Cancelty, Args...> {};
 
+template <typename Cty, typename Retty, typename Reqty, typename Cancelty,
+          typename... Args>
+struct router_async_handler_signature<Retty (Cty::*)(Reqty, Cancelty, Args...)
+                                          const noexcept>
+    : router_async_handler_signature_base<Retty, Reqty, Cancelty, Args...> {};
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] router_async_handler_signature                             ( struct ) |
@@ -221,6 +235,12 @@ struct router_async_handler_signature<Retty (Cty::*)(Reqty, Cancelty, Args...)
 template <typename Cty, typename Retty, typename Reqty, typename Cancelty,
           typename... Args>
 struct router_async_handler_signature<Retty (Cty::*)(Reqty, Cancelty, Args...)>
+    : router_async_handler_signature_base<Retty, Reqty, Cancelty, Args...> {};
+
+template <typename Cty, typename Retty, typename Reqty, typename Cancelty,
+          typename... Args>
+struct router_async_handler_signature<Retty (Cty::*)(Reqty, Cancelty, Args...)
+                                          noexcept>
     : router_async_handler_signature_base<Retty, Reqty, Cancelty, Args...> {};
 
 // /////////////////////////////////////////////////////////////////////////////

@@ -41,6 +41,13 @@ DOBA_TEST("requires exactly one host field") {
   DOBA_EXPECT_EQUAL(routing::apply(ctx), verdict::kAccept);
   ctx.multiple_host = true;
   DOBA_EXPECT_EQUAL(routing::apply(ctx), verdict::kReject);
+  ctx.has_target_authority = true;
+  ctx.target_authority.host = "target.example";
+  ctx.target_authority.scheme = "http";
+  DOBA_EXPECT_EQUAL(routing::apply(ctx), verdict::kReject);
+  ctx.has_host = false;
+  ctx.multiple_host = false;
+  DOBA_EXPECT_EQUAL(routing::apply(ctx), verdict::kReject);
 }
 // +===========================================================================+
 // | [>] target and host names compare case insensitively        ( test-case ) |

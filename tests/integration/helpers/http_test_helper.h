@@ -47,12 +47,18 @@ namespace martianlabs::doba::tests::integration {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct http_test_response {
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +=========================================================================+
   std::string status;
   std::vector<std::pair<std::string, std::string>> headers;
   std::vector<std::pair<std::string, std::string>> trailers;
   std::string body;
   std::string wire_body;
 
+  // +=========================================================================+
+  // | [>] header                                                   ( public ) |
+  // +=========================================================================+
   std::optional<std::string_view> header(std::string_view name) const {
     for (const auto& field : headers) {
       if (field.first.size() != name.size()) continue;
@@ -265,6 +271,9 @@ inline std::optional<http_test_response> receive_http_response(
 // /////////////////////////////////////////////////////////////////////////////
 class http_test_signal {
  public:
+  // +=========================================================================+
+  // | [>] METHODs                                                  ( public ) |
+  // +=========================================================================+
   bool await_ready() const noexcept { return false; }
   bool await_suspend(std::coroutine_handle<> continuation) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -290,6 +299,9 @@ class http_test_signal {
   }
 
  private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
   std::mutex mutex_;
   std::condition_variable condition_;
   std::coroutine_handle<> continuation_;

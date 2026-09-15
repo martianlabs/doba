@@ -22,7 +22,9 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <algorithm>
 #include <array>
+#include <atomic>
 #include <string>
 #include <string_view>
 
@@ -58,14 +60,16 @@ response read_body(const request& req) {
 }  // namespace
 
 // +===========================================================================+
-// | [>] complete head capacity boundaries                        ( test-case ) |
+// | [>] complete head capacity boundaries                       ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 terminates complete heads around decoder capacity") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
+  std::atomic<std::size_t> calls{0};
   server<> http_server;
-  http_server.add_route("GET", "/ok", [](const request&) {
+  http_server.add_route("GET", "/ok", [&calls](const request&) {
+    calls.fetch_add(1);
     response res = response::ok_200();
     res.set_body("ok");
     return res;
@@ -78,38 +82,57 @@ DOBA_TEST("HTTP/1.1 terminates complete heads around decoder capacity") {
   for (const std::size_t size : {limits::kDecodingBufferSize - 1,
                                  limits::kDecodingBufferSize,
                                  limits::kDecodingBufferSize + 1}) {
-    martianlabs::doba::tests::integration::test_helper::set_context(
-        "head size " + std::to_string(size));
-    const std::string request_wire =
-        prefix + std::string(size - prefix.size() - 4, 'x') + "\r\n\r\n";
-    DOBA_EXPECT_EQUAL(request_wire.size(), size);
-    DOBA_EXPECT(client.connect(port));
-    DOBA_EXPECT(client.send_all(request_wire));
-    const auto result = receive_http_response(client);
-    DOBA_EXPECT(result.has_value());
-    if (result.has_value()) {
-      DOBA_EXPECT_EQUAL(result->status,
-                        size <= limits::kDecodingBufferSize
-                            ? "HTTP/1.1 200 OK"
-                            : "HTTP/1.1 400 Bad Request");
+    for (bool fragmented : {false, true}) {
+      martianlabs::doba::tests::integration::test_helper::set_context(
+          "head size " + std::to_string(size) +
+          (fragmented ? ", fragmented" : ", complete"));
+      const std::string request_wire =
+          prefix + std::string(size - prefix.size() - 4, 'x') + "\r\n\r\n";
+      DOBA_EXPECT_EQUAL(request_wire.size(), size);
+      const auto before = calls.load();
+      DOBA_EXPECT(client.connect(port));
+      if (fragmented) {
+        const auto split = limits::kDecodingBufferSize / 2;
+        DOBA_EXPECT(client.send_all(
+            std::string_view(request_wire).substr(0, split)));
+        DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(20)));
+        // Leave excess bytes unsent to verify rejection at capacity alone.
+        const auto end = std::min(size, limits::kDecodingBufferSize);
+        DOBA_EXPECT(client.send_all(
+            std::string_view(request_wire).substr(split, end - split)));
+      } else {
+        DOBA_EXPECT(client.send_all(request_wire));
+      }
+      const auto result = receive_http_response(client);
+      DOBA_EXPECT(result.has_value());
+      if (result.has_value()) {
+        DOBA_EXPECT_EQUAL(result->status,
+                          size <= limits::kDecodingBufferSize
+                              ? "HTTP/1.1 200 OK"
+                              : "HTTP/1.1 400 Bad Request");
+      }
+      if (size > limits::kDecodingBufferSize) {
+        DOBA_EXPECT(client.wait_for_close(std::chrono::seconds(3)));
+      }
+      DOBA_EXPECT_EQUAL(calls.load(),
+                        before + (size <= limits::kDecodingBufferSize ? 1 : 0));
+      client.close();
     }
-    if (size > limits::kDecodingBufferSize) {
-      DOBA_EXPECT(client.wait_for_close(std::chrono::seconds(3)));
-    }
-    client.close();
   }
   http_server.stop();
 }
 
 // +===========================================================================+
-// | [>] query storage supported boundaries                        ( test-case ) |
+// | [>] query storage supported boundaries                      ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 preserves every query parameter at supported boundaries") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
+  std::atomic<std::size_t> calls{0};
   server<> http_server;
-  http_server.add_route("GET", "/query", [](const request& req) {
+  http_server.add_route("GET", "/query", [&calls](const request& req) {
+    calls.fetch_add(1);
     response res = response::ok_200();
     res.set_body(req.get_query_parameters_length());
     return res;
@@ -118,28 +141,45 @@ DOBA_TEST("HTTP/1.1 preserves every query parameter at supported boundaries") {
   http_server.start(port_text.c_str());
 
   for (const std::size_t count : {limits::kMaxQueryParameters - 1,
-                                  limits::kMaxQueryParameters}) {
-    std::string wire = "GET /query?";
-    for (std::size_t index = 0; index < count; index++) {
-      if (index != 0) wire += '&';
-      wire += "p" + std::to_string(index) + "=v";
+                                  limits::kMaxQueryParameters,
+                                  limits::kMaxQueryParameters + 1}) {
+    for (bool empty_pairs : {false, true}) {
+      std::string wire = empty_pairs ? "GET /query?&&" : "GET /query?";
+      for (std::size_t index = 0; index < count; index++) {
+        if (index != 0) wire += empty_pairs ? "&&" : "&";
+        wire += "p" + std::to_string(index) + "=v";
+      }
+      if (empty_pairs) wire += "&&";
+      wire += " HTTP/1.1\r\nHost: a\r\n\r\n";
+      martianlabs::doba::tests::integration::test_helper::set_context(wire);
+      const auto before = calls.load();
+      DOBA_EXPECT(client.connect(port));
+      DOBA_EXPECT(client.send_all(wire));
+      const auto result = receive_http_response(client);
+      DOBA_EXPECT(result.has_value());
+      if (result.has_value()) {
+        DOBA_EXPECT_EQUAL(result->status,
+                          count <= limits::kMaxQueryParameters
+                              ? "HTTP/1.1 200 OK"
+                              : "HTTP/1.1 400 Bad Request");
+        if (count <= limits::kMaxQueryParameters) {
+          DOBA_EXPECT_EQUAL(result->body, std::to_string(count));
+        }
+      }
+      if (count > limits::kMaxQueryParameters) {
+        DOBA_EXPECT(client.wait_for_close(std::chrono::seconds(3)));
+      }
+      DOBA_EXPECT_EQUAL(calls.load(),
+                        before +
+                            (count <= limits::kMaxQueryParameters ? 1 : 0));
+      client.close();
     }
-    wire += " HTTP/1.1\r\nHost: a\r\n\r\n";
-    DOBA_EXPECT(client.connect(port));
-    DOBA_EXPECT(client.send_all(wire));
-    const auto result = receive_http_response(client);
-    DOBA_EXPECT(result.has_value());
-    if (result.has_value()) {
-      DOBA_EXPECT_EQUAL(result->status, "HTTP/1.1 200 OK");
-      DOBA_EXPECT_EQUAL(result->body, std::to_string(count));
-    }
-    client.close();
   }
   http_server.stop();
 }
 
 // +===========================================================================+
-// | [>] chunk extension and trailer boundaries                   ( test-case ) |
+// | [>] chunk extension and trailer boundaries                  ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 enforces chunk extension and trailer wire limits") {
   tcpip_client client;

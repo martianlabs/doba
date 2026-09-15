@@ -722,7 +722,7 @@ DOBA_TEST("HTTP/1.1 emits no HEAD body before the following GET") {
 }
 
 // +===========================================================================+
-// | [>] preserves streamed HEAD framing before another reply   ( test-case ) |
+// | [>] preserves streamed HEAD framing before another reply    ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 preserves streamed HEAD framing before another reply") {
   for (bool chunked : {false, true}) {
@@ -760,8 +760,9 @@ DOBA_TEST("HTTP/1.1 preserves streamed HEAD framing before another reply") {
                           std::chrono::seconds(3);
     while (!head.ends_with("\r\n\r\n")) {
       DOBA_EXPECT(head.size() < 16384);
-      const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
-          deadline - std::chrono::steady_clock::now());
+      const auto remaining =
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              deadline - std::chrono::steady_clock::now());
       DOBA_EXPECT(remaining.count() > 0);
       const auto byte = client.receive(1, remaining);
       DOBA_EXPECT(byte.has_value());
@@ -857,7 +858,8 @@ DOBA_TEST("HTTP/1.1 rejects invalid header syntax and its successor") {
 // +===========================================================================+
 // | [>] invalid field value rejects pipelined successor         ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("HTTP/1.1 rejects invalid dispatched header values and its successor") {
+DOBA_TEST(
+    "HTTP/1.1 rejects invalid dispatched header values and its successor") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -1077,7 +1079,8 @@ DOBA_TEST("HTTP/1.1 preserves binary raw payload bytes") {
 // +===========================================================================+
 // | [>] complete body omits interim response                    ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("HTTP/1.1 omits interim responses when the body is already complete") {
+DOBA_TEST(
+    "HTTP/1.1 omits interim responses when the body is already complete") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);

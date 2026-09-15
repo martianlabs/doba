@@ -136,7 +136,24 @@ class if_match {
     // with, or appear as a member of, the entity-tag list.
     if (sv == "*") return true;
     // Otherwise, If-Match is a (possibly empty) list of entity tags.
-    return helpers::for_each_list_element(sv, helpers::is_entity_tag);
+    bool follows_separator = false;
+    bool inside_tag = false;
+    std::size_t last = 0;
+    for (std::size_t i = 0; i < sv.size(); i++) {
+      // RFC 9110 S8.8.3: backslash is literal in opaque-tag.
+      if (sv[i] == '"') inside_tag = !inside_tag;
+      if (sv[i] != ',' || inside_tag) continue;
+      std::string_view element = sv.substr(last, i - last);
+      if (follows_separator) helpers::ows_ltrim(element);
+      helpers::ows_rtrim(element);
+      if (!element.empty() && !helpers::is_entity_tag(element)) return false;
+      follows_separator = true;
+      last = i + 1;
+    }
+    if (inside_tag) return false;
+    std::string_view element = sv.substr(last);
+    if (follows_separator) helpers::ows_ltrim(element);
+    return element.empty() || helpers::is_entity_tag(element);
   }
 };
 }  // namespace martianlabs::doba::protocol::http::headers

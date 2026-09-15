@@ -98,6 +98,61 @@ DOBA_TEST("noexcept async handlers retain signature compatibility") {
   DOBA_EXPECT(router_async_handler_lambda<decltype(handler)>);
 }
 // +===========================================================================+
+// | [>] noexcept qualifiers preserve routing parameter counts   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("noexcept qualifiers preserve routing parameter counts") {
+  auto sync = [](const request&, int) noexcept { return response{}; };
+  auto mutable_sync = [](const request&, int) mutable noexcept {
+    return response{};
+  };
+  auto async = [](std::shared_ptr<const request>,
+                  std::stop_token, int) noexcept -> task<response> {
+    co_return response{};
+  };
+  auto mutable_async = [](std::shared_ptr<const request>,
+                          std::stop_token, int) mutable noexcept
+      -> task<response> {
+    co_return response{};
+  };
+  using namespace martianlabs::doba::protocol::http;
+  static_assert(router_handler_lambda<decltype(sync)>);
+  static_assert(router_handler_lambda<decltype(mutable_sync)>);
+  static_assert(router_async_handler_lambda<decltype(async)>);
+  static_assert(router_async_handler_lambda<decltype(mutable_async)>);
+  DOBA_EXPECT_EQUAL(
+      router_handler_signature<decltype(&decltype(sync)::operator())>::
+          parameter_count, 1);
+  DOBA_EXPECT_EQUAL(
+      router_handler_signature<decltype(&decltype(mutable_sync)::operator())>::
+          parameter_count, 1);
+  DOBA_EXPECT_EQUAL(
+      router_async_handler_signature<decltype(&decltype(async)::operator())>::
+          parameter_count, 1);
+  DOBA_EXPECT_EQUAL(
+      router_async_handler_signature<
+          decltype(&decltype(mutable_async)::operator())>::parameter_count, 1);
+}
+// +===========================================================================+
+// | [>] noexcept handlers retain invalid signature rejection    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("noexcept handlers retain invalid signature rejection") {
+  auto mutable_request = [](request&) noexcept { return response{}; };
+  auto value_request = [](request) noexcept { return response{}; };
+  auto no_result = [](const request&) noexcept {};
+  auto no_task = [](std::shared_ptr<const request>, std::stop_token) noexcept {
+    return response{};
+  };
+  auto no_cancellation = [](std::shared_ptr<const request>) noexcept
+      -> task<response> {
+    co_return response{};
+  };
+  DOBA_EXPECT(!router_handler_lambda<decltype(mutable_request)>);
+  DOBA_EXPECT(!router_handler_lambda<decltype(value_request)>);
+  DOBA_EXPECT(!router_handler_lambda<decltype(no_result)>);
+  DOBA_EXPECT(!router_async_handler_lambda<decltype(no_task)>);
+  DOBA_EXPECT(!router_async_handler_lambda<decltype(no_cancellation)>);
+}
+// +===========================================================================+
 // | [>] sync signatures reject mutable and value requests       ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("sync signatures reject mutable and value requests") {

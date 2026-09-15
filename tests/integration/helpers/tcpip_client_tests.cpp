@@ -37,6 +37,9 @@ namespace {
 // +===========================================================================+
 class native_peer {
  public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
   explicit native_peer(bool listening = true) {
     listener_ = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (listener_ == invalid_socket()) return;
@@ -61,6 +64,9 @@ class native_peer {
     close();
     if (listener_ != invalid_socket()) close_socket(listener_);
   }
+  // +=========================================================================+
+  // | [>] METHODs                                                  ( public ) |
+  // +=========================================================================+
   uint16_t port() const { return port_; }
   bool accept() {
     fd_set selected;
@@ -97,6 +103,9 @@ class native_peer {
   }
 
  private:
+  // +=========================================================================+
+  // | [>] TYPEs                                                   ( private ) |
+  // +=========================================================================+
 #ifdef _WIN32
   using socket_type = SOCKET;
   static socket_type invalid_socket() { return INVALID_SOCKET; }
@@ -106,6 +115,9 @@ class native_peer {
   static socket_type invalid_socket() { return -1; }
   static void close_socket(socket_type socket) { ::close(socket); }
 #endif
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
   [[maybe_unused]] martianlabs::doba::network::detail::environment environment_;
   socket_type listener_{invalid_socket()};
   socket_type peer_{invalid_socket()};

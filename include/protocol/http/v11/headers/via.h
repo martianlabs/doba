@@ -51,7 +51,7 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // +-------------------+-------------------------------------------------------+
 // | Field             | Definition                                            |
 // +-------------------+-------------------------------------------------------+
-// | Via               | #( received-protocol RWS received-by [ RWS comment ] )|
+// | Via               | #( received-protocol RWS received-by [ RWS comment ]) |
 // | received-protocol | [ protocol-name "/" ] protocol-version                |
 // | received-by       | pseudonym [ ":" port ]                                |
 // | pseudonym         | token                                                 |
@@ -67,15 +67,31 @@ class via {
   // | [>] check                                                    ( public ) |
   // +=========================================================================+
   static bool check(std::string_view sv, parsed_via_list& out) {
-    // The producer overload validates each via-member exactly as the pure
-    // check() does and captures its received-protocol, received-by, and
-    // optional comment for every non-empty element, in order.
-    return helpers::for_each_list_element(sv, [&out](std::string_view element) {
-      parsed_via_element parsed;
-      if (!consume_via_member(element, &parsed)) return false;
-      out.elements.push_back(parsed);
-      return true;
-    });
+    bool follows_separator = false;
+    std::size_t i = 0;
+    std::size_t last = 0;
+    for (;;) {
+      if (i < sv.size() && sv[i] == '(') {
+        const std::string_view comment = helpers::consume_comment(sv.substr(i));
+        if (comment.empty()) return false;
+        i += comment.size();
+        continue;
+      }
+      if (i == sv.size() || sv[i] == ',') {
+        std::string_view element = sv.substr(last, i - last);
+        if (follows_separator) helpers::ows_ltrim(element);
+        if (i < sv.size()) helpers::ows_rtrim(element);
+        if (!element.empty()) {
+          parsed_via_element parsed;
+          if (!consume_via_member(element, &parsed)) return false;
+          out.elements.push_back(parsed);
+        }
+        if (i == sv.size()) return true;
+        follows_separator = true;
+        last = i + 1;
+      }
+      i++;
+    }
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |

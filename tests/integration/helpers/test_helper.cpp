@@ -32,12 +32,15 @@
 
 #include "common/console_logger.h"
 
+namespace martianlabs::doba::tests::integration {
+namespace {
 // +===========================================================================+
 // | [>] test_case                                                  ( struct ) |
 // +===========================================================================+
-namespace martianlabs::doba::tests::integration {
-namespace {
 struct test_case {
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +=========================================================================+
   std::string_view file;
   int line;
   std::string_view name;

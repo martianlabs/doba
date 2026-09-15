@@ -100,11 +100,16 @@ DOBA_TEST("check accepts protocol and comment boundaries") {
   constexpr std::string_view cases[] = {
       "custom/2\tproxy:001\t(a(b)c)",
       "1.1 proxy (a\\)b\\(c)",
+      "1.1 proxy (a\"b)",
+      "1.1 proxy (a\\\\b)",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
     parsed_via_list parsed;
     DOBA_EXPECT(via::check(source, parsed));
+    DOBA_EXPECT_EQUAL(parsed.elements.size(), 1);
+    DOBA_EXPECT_EQUAL(parsed.elements[0].comment,
+                      source.substr(source.find('(')));
   }
 }
 // +===========================================================================+
@@ -118,6 +123,12 @@ DOBA_TEST("check rejects protocol and comment boundaries") {
       "1.1 proxy (x)junk",
       "1.1 proxy (x\\",
       "1.1 proxy (x) (y)",
+      "1.1 proxy (a(b)",
+      "1.1 proxy (a\\))junk",
+      "1.1 proxy (a,b",
+      "1.1 proxy (a)\t",
+      " 1.1 proxy",
+      "1.1 proxy\\x",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
@@ -126,24 +137,31 @@ DOBA_TEST("check rejects protocol and comment boundaries") {
   }
 }
 // +===========================================================================+
-// | [>] check accepts an IPv6 received by host                  ( test-case ) |
+// | [>] check rejects an IPv6 received by host                  ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("check accepts an IPv6 received by host") {
-  // RFC 9110 S7.6.3: received-by permits uri-host and an optional port.
+DOBA_TEST("check rejects an IPv6 received by host") {
+  // RFC 9110 S7.6.3: received-by uses a token pseudonym, not uri-host.
   parsed_via_list parsed;
-  DOBA_EXPECT(via::check("HTTP/1.1 [::1]:8080", parsed));
-  DOBA_EXPECT_EQUAL(parsed.elements.size(), 1);
-  DOBA_EXPECT_EQUAL(parsed.elements[0].received_protocol, "HTTP/1.1");
-  DOBA_EXPECT_EQUAL(parsed.elements[0].received_by, "[::1]:8080");
+  DOBA_EXPECT(!via::check("HTTP/1.1 [::1]:8080", parsed));
+  DOBA_EXPECT(parsed.elements.empty());
 }
 // +===========================================================================+
 // | [>] check keeps commas inside comments in one member        ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("check keeps commas inside comments in one member") {
   // RFC 9110 S5.6.5: a comma is valid ctext inside a comment.
-  parsed_via_list parsed;
-  DOBA_EXPECT(via::check("1.1 proxy (a,b), 1.0 other", parsed));
-  DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
-  DOBA_EXPECT_EQUAL(parsed.elements[0].comment, "(a,b)");
-  DOBA_EXPECT_EQUAL(parsed.elements[1].received_by, "other");
+  for (const std::string_view comment : {"(a,b)", "(a(b,c),d)", "(a\\),b)"}) {
+    for (bool empty_elements : {false, true}) {
+      const std::string source =
+          std::string(empty_elements ? ",,1.1 proxy " : "1.1 proxy ") +
+          std::string(comment) +
+          (empty_elements ? " \t, ,\t1.0 other,," : ", 1.0 other");
+      martianlabs::doba::tests::unit::test_helper::set_context(source);
+      parsed_via_list parsed;
+      DOBA_EXPECT(via::check(source, parsed));
+      DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
+      DOBA_EXPECT_EQUAL(parsed.elements[0].comment, comment);
+      DOBA_EXPECT_EQUAL(parsed.elements[1].received_by, "other");
+    }
+  }
 }

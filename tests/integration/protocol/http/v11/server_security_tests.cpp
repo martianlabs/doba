@@ -76,7 +76,13 @@ DOBA_TEST("HTTP/1.1 rejects hostile requests without dispatching successors") {
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
 
+  // +=========================================================================+
+  // | [>] test_case                                                ( struct ) |
+  // +=========================================================================+
   struct test_case {
+    // +=======================================================================+
+    // | [>] ATTRIBUTEs                                             ( public ) |
+    // +=======================================================================+
     std::string name;
     std::string request;
     std::string_view status;
@@ -221,7 +227,7 @@ DOBA_TEST("HTTP/1.1 rejects hostile requests without dispatching successors") {
 }
 
 // +===========================================================================+
-// | [>] case insensitive framing and target forms                ( test-case ) |
+// | [>] case insensitive framing and target forms               ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 accepts case insensitive framing and valid target forms") {
   tcpip_client client;
@@ -239,7 +245,13 @@ DOBA_TEST("HTTP/1.1 accepts case insensitive framing and valid target forms") {
   const std::string port_text = std::to_string(port);
   http_server.start(port_text.c_str());
 
+  // +=========================================================================+
+  // | [>] test_case                                                ( struct ) |
+  // +=========================================================================+
   struct test_case {
+    // +=======================================================================+
+    // | [>] ATTRIBUTEs                                             ( public ) |
+    // +=======================================================================+
     std::string_view request;
     std::string_view status;
     std::string_view body;
@@ -276,9 +288,64 @@ DOBA_TEST("HTTP/1.1 accepts case insensitive framing and valid target forms") {
 }
 
 // +===========================================================================+
-// | [>] slow inputs do not starve complete clients               ( test-case ) |
+// | [>] absolute authority preserves the received Host          ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("HTTP/1.1 isolates incomplete heads and bodies from healthy clients") {
+DOBA_TEST("HTTP/1.1 absolute authority preserves the received Host") {
+  tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  server<> http_server;
+  http_server.add_route("GET", "/authority", [](const request& req) {
+    response res = response::ok_200();
+    res.set_body(std::string(req.get_target_authority_host()) + "|" +
+                 std::string(req.get_target_authority_port()) + "|" +
+                 std::string(req.get_host()) + "|" +
+                 std::string(req.get_host_port()) + "|" +
+                 std::string(req.get_header("Host").second));
+    return res;
+  });
+  const std::string port_text = std::to_string(port);
+  http_server.start(port_text.c_str());
+  // +=========================================================================+
+  // | [>] test_case                                                ( struct ) |
+  // +=========================================================================+
+  struct test_case {
+    // +=======================================================================+
+    // | [>] ATTRIBUTEs                                             ( public ) |
+    // +=======================================================================+
+    std::string_view target;
+    std::string_view host;
+    std::string_view expected;
+  };
+  constexpr test_case cases[] = {
+      {"http://a/authority", "b", "a||b||b"},
+      {"http://a:8080/authority", "a:80", "a|8080|a|80|a:80"},
+      {"https://a/authority", "b:443", "a||b|443|b:443"},
+      {"http://a/authority", "a:80", "a||a|80|a:80"},
+  };
+  for (const auto& test : cases) {
+    const std::string wire = "GET " + std::string(test.target) +
+                             " HTTP/1.1\r\nHost: " + std::string(test.host) +
+                             "\r\n\r\n";
+    martianlabs::doba::tests::integration::test_helper::set_context(wire);
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send_all(wire));
+    const auto result = receive_http_response(client);
+    DOBA_EXPECT(result.has_value());
+    if (result.has_value()) {
+      DOBA_EXPECT_EQUAL(result->status, "HTTP/1.1 200 OK");
+      DOBA_EXPECT_EQUAL(result->body, test.expected);
+    }
+    client.close();
+  }
+  http_server.stop();
+}
+
+// +===========================================================================+
+// | [>] slow inputs do not starve complete clients              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST(
+    "HTTP/1.1 isolates incomplete heads and bodies from healthy clients") {
   tcpip_client slow_head;
   tcpip_client slow_body;
   tcpip_client healthy;

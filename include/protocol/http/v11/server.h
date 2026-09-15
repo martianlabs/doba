@@ -156,13 +156,15 @@ class server {
               res.emplace(RSty::not_implemented_501()).set_body(reason);
               break;
             case rejection_reason::kVersionNotSupported:
-              res.emplace(RSty::http_version_not_supported_505()).set_body(reason);
+              res.emplace(RSty::http_version_not_supported_505())
+                  .set_body(reason);
               break;
             case rejection_reason::kUriTooLong:
               res.emplace(RSty::uri_too_long_414()).set_body(reason);
               break;
             case rejection_reason::kHeaderFieldsTooLarge:
-              res.emplace(RSty::request_header_fields_too_large_431()).set_body(reason);
+              res.emplace(RSty::request_header_fields_too_large_431())
+                  .set_body(reason);
               break;
             case rejection_reason::kHandlerError:
               res.emplace(RSty::internal_server_error_500()).set_body(reason);
