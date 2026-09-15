@@ -1,12 +1,12 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/doba-dark.png">
-  <img src="resources/doba.png" alt="doba" width="640">
+  <source media="(prefers-color-scheme: dark)" srcset="resources/branding/doba-dark.png">
+  <img src="resources/branding/doba.png" alt="doba" width="640">
 </picture>
 <br><br>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/readme-hero-dark.svg">
-  <img src="resources/readme-hero.svg" alt="You write the handler. doba moves the bytes." width="540">
+  <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-hero-dark.svg">
+  <img src="resources/readme/readme-hero.svg" alt="You write the handler. doba moves the bytes." width="540">
 </picture>
 <br><br>
 
@@ -25,8 +25,8 @@ No external libraries to chase.
 <a name="okay-how-fast"></a>
 <h2>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/readme-performance-dark.svg">
-    <img src="resources/readme-performance.svg" alt="Okay, how fast?" width="280">
+    <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-performance-dark.svg">
+    <img src="resources/readme/readme-performance.svg" alt="Okay, how fast?" width="280">
   </picture>
 </h2>
 
@@ -34,79 +34,79 @@ Big throughput numbers are fun. Waiting for a response isn't. Let's look at both
 
 Measured locally with the official HttpArena suite: **512 connections**,
 **lite mode**, **one run per server and profile**.
-[Full results](resources/benchmark-results.txt). `ntex/pipelined` was skipped.
+[Full results](resources/benchmarks/benchmark-results.txt). `ntex/pipelined` was skipped.
 
-<a href="resources/benchmark-throughput-baseline.svg" title="Open full-size light chart">
+<a href="resources/benchmarks/benchmark-throughput-baseline.svg" title="Open full-size light chart">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-throughput-baseline-dark.svg">
-    <img src="resources/benchmark-throughput-baseline.svg" alt="HttpArena baseline throughput: requests per second, higher is better." width="100%">
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/benchmark-throughput-baseline-dark.svg">
+    <img src="resources/benchmarks/benchmark-throughput-baseline.svg" alt="HttpArena baseline throughput: requests per second, higher is better." width="100%">
   </picture>
 </a>
 
-Full-size: [Light](resources/benchmark-throughput-baseline.svg) /
-[Dark](resources/benchmark-throughput-baseline-dark.svg).
+Full-size: [Light](resources/benchmarks/benchmark-throughput-baseline.svg) /
+[Dark](resources/benchmarks/benchmark-throughput-baseline-dark.svg).
 <br><br>
 
-<a href="resources/benchmark-throughput-pipelined.svg" title="Open full-size light chart">
+<a href="resources/benchmarks/benchmark-throughput-pipelined.svg" title="Open full-size light chart">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-throughput-pipelined-dark.svg">
-    <img src="resources/benchmark-throughput-pipelined.svg" alt="HttpArena pipelined throughput: requests per second, higher is better." width="100%">
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/benchmark-throughput-pipelined-dark.svg">
+    <img src="resources/benchmarks/benchmark-throughput-pipelined.svg" alt="HttpArena pipelined throughput: requests per second, higher is better." width="100%">
   </picture>
 </a>
 
-Full-size: [Light](resources/benchmark-throughput-pipelined.svg) /
-[Dark](resources/benchmark-throughput-pipelined-dark.svg).
+Full-size: [Light](resources/benchmarks/benchmark-throughput-pipelined.svg) /
+[Dark](resources/benchmarks/benchmark-throughput-pipelined-dark.svg).
 <br><br>
 
-<a href="resources/benchmark-latency.svg" title="Open full-size light chart">
+<a href="resources/benchmarks/benchmark-latency.svg" title="Open full-size light chart">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-latency-dark.svg">
-    <img src="resources/benchmark-latency.svg" alt="HttpArena p50, p99, and p99.9 latency for both profiles: milliseconds, lower is better." width="100%">
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/benchmark-latency-dark.svg">
+    <img src="resources/benchmarks/benchmark-latency.svg" alt="HttpArena p50, p99, and p99.9 latency for both profiles: milliseconds, lower is better." width="100%">
   </picture>
 </a>
 
-Full-size: [Light](resources/benchmark-latency.svg) /
-[Dark](resources/benchmark-latency-dark.svg).
+Full-size: [Light](resources/benchmarks/benchmark-latency.svg) /
+[Dark](resources/benchmarks/benchmark-latency-dark.svg).
 <br><br>
 
-<a href="resources/benchmark-memory.svg" title="Open full-size light chart">
+<a href="resources/benchmarks/benchmark-memory.svg" title="Open full-size light chart">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-memory-dark.svg">
-    <img src="resources/benchmark-memory.svg" alt="HttpArena average memory for both profiles: lower is better." width="100%">
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/benchmark-memory-dark.svg">
+    <img src="resources/benchmarks/benchmark-memory.svg" alt="HttpArena average memory for both profiles: lower is better." width="100%">
   </picture>
 </a>
 
-Full-size: [Light](resources/benchmark-memory.svg) /
-[Dark](resources/benchmark-memory-dark.svg).
+Full-size: [Light](resources/benchmarks/benchmark-memory.svg) /
+[Dark](resources/benchmarks/benchmark-memory-dark.svg).
 <br><br>
 
-<a href="resources/benchmark-cpu-efficiency.svg" title="Open full-size light chart">
+<a href="resources/benchmarks/benchmark-cpu-efficiency.svg" title="Open full-size light chart">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-cpu-efficiency-dark.svg">
-    <img src="resources/benchmark-cpu-efficiency.svg" alt="HttpArena requests per second per 100 percent of reported CPU usage: higher is better." width="100%">
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/benchmark-cpu-efficiency-dark.svg">
+    <img src="resources/benchmarks/benchmark-cpu-efficiency.svg" alt="HttpArena requests per second per 100 percent of reported CPU usage: higher is better." width="100%">
   </picture>
 </a>
 
-Full-size: [Light](resources/benchmark-cpu-efficiency.svg) /
-[Dark](resources/benchmark-cpu-efficiency-dark.svg).
+Full-size: [Light](resources/benchmarks/benchmark-cpu-efficiency.svg) /
+[Dark](resources/benchmarks/benchmark-cpu-efficiency-dark.svg).
 <br><br>
 
-<a href="resources/benchmark-overall.svg" title="Open full-size light chart">
+<a href="resources/benchmarks/benchmark-overall.svg" title="Open full-size light chart">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmark-overall-dark.svg">
-    <img src="resources/benchmark-overall.svg" alt="HttpArena overall score: normalized throughput contributions from both profiles, out of 200 points." width="100%">
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/benchmark-overall-dark.svg">
+    <img src="resources/benchmarks/benchmark-overall.svg" alt="HttpArena overall score: normalized throughput contributions from both profiles, out of 200 points." width="100%">
   </picture>
 </a>
 
-Full-size: [Light](resources/benchmark-overall.svg) /
-[Dark](resources/benchmark-overall-dark.svg).
+Full-size: [Light](resources/benchmarks/benchmark-overall.svg) /
+[Dark](resources/benchmarks/benchmark-overall-dark.svg).
 <br><br>
 
 <a name="no-magic-a-few-deliberate-choices"></a>
 <h2>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/readme-design-dark.svg">
-    <img src="resources/readme-design.svg" alt="No magic." width="175">
+    <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-design-dark.svg">
+    <img src="resources/readme/readme-design.svg" alt="No magic." width="175">
   </picture>
 </h2>
 
@@ -126,8 +126,8 @@ Full-size: [Light](resources/benchmark-overall.svg) /
 <a name="hello-world-lets-not-overcomplicate-it"></a>
 <h2>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/readme-hello-dark.svg">
-    <img src="resources/readme-hello.svg" alt="Hello, world." width="220">
+    <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-hello-dark.svg">
+    <img src="resources/readme/readme-hello.svg" alt="Hello, world." width="220">
   </picture>
 </h2>
 
@@ -191,8 +191,8 @@ For compiler setup, presets, build options, and test commands, see
 <a name="fast-is-nice-correct-is-non-negotiable"></a>
 <h2>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/readme-correctness-dark.svg">
-    <img src="resources/readme-correctness.svg" alt="Fast is nice." width="203">
+    <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-correctness-dark.svg">
+    <img src="resources/readme/readme-correctness.svg" alt="Fast is nice." width="203">
   </picture>
 </h2>
 

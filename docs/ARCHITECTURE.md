@@ -1,4 +1,10 @@
-# Architecture
+<a name="architecture"></a>
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/architecture/h1-architecture-dark.svg">
+    <img src="../resources/docs/architecture/h1-architecture.svg" alt="Architecture">
+  </picture>
+</h1>
 
 [Index](HANDOFF.md)
 
@@ -8,7 +14,15 @@ Doba is a C++20 header-only server framework built around a small boundary:
 protocols understand messages; transports move bytes. Application code sits
 above that boundary, while platform-specific I/O remains below it.
 
-## Separate meaning from movement
+<a name="separate-meaning-from-movement"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/architecture/h2-separate-meaning-from-movement-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/architecture/h2-separate-meaning-from-movement-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/architecture/h2-separate-meaning-from-movement-dark.svg">
+    <img src="../resources/docs/architecture/h2-separate-meaning-from-movement.svg" alt="Separate meaning from movement">
+  </picture>
+</h2>
 
 ```mermaid
 flowchart TB
@@ -36,7 +50,15 @@ This keeps protocol rules in one place and lets the same HTTP implementation
 run on both native backends. A different protocol can use the same transport
 contract without teaching IOCP or epoll its message semantics.
 
-## Compose with types
+<a name="compose-with-types"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/architecture/h2-compose-with-types-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/architecture/h2-compose-with-types-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/architecture/h2-compose-with-types-dark.svg">
+    <img src="../resources/docs/architecture/h2-compose-with-types.svg" alt="Compose with types">
+  </picture>
+</h2>
 
 The server composes its request, response, decoder, transport, and router
 through C++ template parameters. Platform selection happens at compile time.
@@ -47,7 +69,15 @@ The HTTP layer combines decoding, routing, and response rules. The transport
 depends on the generic contract. Neither needs a parallel implementation of
 the other's responsibilities.
 
-## Make every copy serve a purpose
+<a name="make-every-copy-serve-a-purpose"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/architecture/h2-make-every-copy-serve-a-purpose-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/architecture/h2-make-every-copy-serve-a-purpose-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/architecture/h2-make-every-copy-serve-a-purpose-dark.svg">
+    <img src="../resources/docs/architecture/h2-make-every-copy-serve-a-purpose.svg" alt="Make every copy serve a purpose">
+  </picture>
+</h2>
 
 Memory layout and ownership shape the request path:
 
@@ -83,7 +113,15 @@ generic reason, which the standard server maps to 400 Bad Request.
 These internal capacities are distinct from configurable resource policies
 and transport inactivity timeouts.
 
-## Keep the common path direct
+<a name="keep-the-common-path-direct"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/architecture/h2-keep-the-common-path-direct-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/architecture/h2-keep-the-common-path-direct-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/architecture/h2-keep-the-common-path-direct-dark.svg">
+    <img src="../resources/docs/architecture/h2-keep-the-common-path-direct.svg" alt="Keep the common path direct">
+  </picture>
+</h2>
 
 Synchronous handlers run directly and return a move-only response by value:
 `response(const request&, ...)`. Deferred handlers retain
@@ -109,7 +147,15 @@ Protocol processing also has explicit stages: syntax checks, semantic rules,
 body framing, and payload reading. Incoming chunked data is validated as it
 arrives and decoded when the application reads the stored body.
 
-## Own controller instances
+<a name="own-controller-instances"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/architecture/h2-own-controller-instances-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/architecture/h2-own-controller-instances-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/architecture/h2-own-controller-instances-dark.svg">
+    <img src="../resources/docs/architecture/h2-own-controller-instances.svg" alt="Own controller instances">
+  </picture>
+</h2>
 
 `server.add_controller<Type>(args...)` constructs one instance and invokes its
 `register_routes(registrar&)` once. The registrar binds member function pointers
@@ -126,7 +172,15 @@ call. An empty controller registration is rejected. Registration through the
 server is disabled while running. Controllers need no base class, reflection,
 or copy/move support. See the [controller example](../examples/http/v11/controllers).
 
-## Use each platform's native execution model
+<a name="use-each-platforms-native-execution-model"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/architecture/h2-use-each-platforms-native-execution-model-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/architecture/h2-use-each-platforms-native-execution-model-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/architecture/h2-use-each-platforms-native-execution-model-dark.svg">
+    <img src="../resources/docs/architecture/h2-use-each-platforms-native-execution-model.svg" alt="Use each platform's native execution model">
+  </picture>
+</h2>
 
 Windows uses IOCP and overlapped I/O. Connection ownership survives pending
 operations, and sending state is synchronized.
@@ -139,7 +193,15 @@ Both backends obey the same ordering, cancellation, and lifecycle contracts.
 Graceful closure drains responses that are safe to send; fatal failure stops
 transmission when continuing would corrupt the stream.
 
-## Construct and transfer responses
+<a name="construct-and-transfer-responses"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/architecture/h2-construct-and-transfer-responses-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/architecture/h2-construct-and-transfer-responses-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/architecture/h2-construct-and-transfer-responses-dark.svg">
+    <img src="../resources/docs/architecture/h2-construct-and-transfer-responses.svg" alt="Construct and transfer responses">
+  </picture>
+</h2>
 
 Create each response through its status factory, for example:
 
@@ -172,7 +234,15 @@ a separate string. Both transports still copy these bytes into their send
 buffers at the existing point in the queue; serialization timing is unchanged.
 Existing HTTP field, framing and body-suppression rules remain unchanged.
 
-## Control data movement as bodies grow
+<a name="control-data-movement-as-bodies-grow"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/architecture/h2-control-data-movement-as-bodies-grow-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/architecture/h2-control-data-movement-as-bodies-grow-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/architecture/h2-control-data-movement-as-bodies-grow-dark.svg">
+    <img src="../resources/docs/architecture/h2-control-data-movement-as-bodies-grow.svg" alt="Control data movement as bodies grow">
+  </picture>
+</h2>
 
 Body storage starts in memory and can spill to a temporary file. Serialization
 transfers an owned prefix and an optional body reader to the transport.
@@ -225,7 +295,15 @@ Caching, modification-date validators, compression, and asynchronous disk
 reads are deferred. See the [filesystem](../examples/common/filesystem) and
 [static file server](../examples/http/v11/static_file_server) examples.
 
-## Keep the design measurable
+<a name="keep-the-design-measurable"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/architecture/h2-keep-the-design-measurable-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/architecture/h2-keep-the-design-measurable-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/architecture/h2-keep-the-design-measurable-dark.svg">
+    <img src="../resources/docs/architecture/h2-keep-the-design-measurable.svg" alt="Keep the design measurable">
+  </picture>
+</h2>
 
 A new abstraction must earn its cost. Favor direct control flow, explicit
 ownership, and fewer allocations or copies where measurements justify them.

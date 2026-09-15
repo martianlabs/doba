@@ -1,4 +1,10 @@
-# Backlog
+<a name="backlog"></a>
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h1-backlog-dark.svg">
+    <img src="../resources/docs/backlog/h1-backlog.svg" alt="Backlog">
+  </picture>
+</h1>
 
 [Index](HANDOFF.md)
 
@@ -14,7 +20,13 @@ explicitly. Priorities without a previous value are marked "Not set".
 The original B/M/A labels estimated complexity and are not reinterpreted
 as severity.
 
-## Contents
+<a name="contents"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-contents-dark.svg">
+    <img src="../resources/docs/backlog/h2-contents.svg" alt="Contents">
+  </picture>
+</h2>
 
 - [Release target](#release-target)
 - [Inventory](#inventory)
@@ -28,7 +40,13 @@ as severity.
 - [Beyond the first release](#beyond-the-first-release)
 - [Identifier mapping](#identifier-mapping)
 
-## Release target
+<a name="release-target"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-release-target-dark.svg">
+    <img src="../resources/docs/backlog/h2-release-target.svg" alt="Release target">
+  </picture>
+</h2>
 
 The current `0.1.0-beta.1` target is to complete C1 and C3 and verify them
 over real sockets on Windows and Linux. Release also requires preserving
@@ -65,7 +83,13 @@ Existing deferrals remain in force. Feature parity with mature frameworks
 is not a release criterion; ORM, sessions, and integrated JSON are not added
 as requirements by this review.
 
-## Inventory
+<a name="inventory"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-inventory-dark.svg">
+    <img src="../resources/docs/backlog/h2-inventory.svg" alt="Inventory">
+  </picture>
+</h2>
 
 47 entries across eight categories. C4-C6, B1-B6 and QA4 are completed and
 retained for traceability. Numbering identifies items; it does not express
@@ -165,9 +189,25 @@ support and its harness checks remain available.
 | [F6](#f6-listener-and-worker-configuration) | Future | Deferred | Not set | Beyond 0.1 |
 | [F7](#f7-shutdown-with-draining) | Future | Deferred | Not set | Beyond 0.1 |
 
-## Operational hardening
+<a name="operational-hardening"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-operational-hardening-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-operational-hardening-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-operational-hardening-dark.svg">
+    <img src="../resources/docs/backlog/h2-operational-hardening.svg" alt="Operational hardening">
+  </picture>
+</h2>
 
-### C1: Single inactivity timeout
+<a name="c1-single-inactivity-timeout"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-c1-single-inactivity-timeout-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c1-single-inactivity-timeout-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-c1-single-inactivity-timeout-dark.svg">
+    <img src="../resources/docs/backlog/h3-c1-single-inactivity-timeout.svg" alt="C1: Single inactivity timeout">
+  </picture>
+</h3>
 
 **Context.** Neither backend currently closes an open connection that stops
 making progress. Original complexity estimate: M.
@@ -195,7 +235,15 @@ tolerance before implementation.
 **Out of scope.** Separate deadlines per phase, an absolute maximum duration,
 dynamic configuration, and automatic `408` responses.
 
-### C2: Effective per-request limits
+<a name="c2-effective-per-request-limits"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-c2-effective-per-request-limits-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c2-effective-per-request-limits-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-c2-effective-per-request-limits-dark.svg">
+    <img src="../resources/docs/backlog/h3-c2-effective-per-request-limits.svg" alt="C2: Effective per-request limits">
+  </picture>
+</h3>
 
 **Context.** `max_content_length`, `max_forwarding_hops`,
 `max_transfer_codings`, `max_uri_length`, and `max_header_section_size`
@@ -222,7 +270,15 @@ header rules, server composition, and their tests.
 Explicitly deferred; the current plan does not change these policies or their
 consumers. Do not confuse this with C3.
 
-### C3: Global active connection limit
+<a name="c3-global-active-connection-limit"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-c3-global-active-connection-limit-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c3-global-active-connection-limit-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-c3-global-active-connection-limit-dark.svg">
+    <img src="../resources/docs/backlog/h3-c3-global-active-connection-limit.svg" alt="C3: Global active connection limit">
+  </picture>
+</h3>
 
 **Context.** `connections_` is observational and does not limit admission.
 Original complexity estimate: M.
@@ -250,7 +306,15 @@ resources per request.
 **Out of scope.** Per-worker quotas, dynamic changes, acceptance backpressure,
 new callbacks, and HTTP rejection responses.
 
-### C4: Absolute-form authority precedence
+<a name="c4-absolute-form-authority-precedence"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-c4-absolute-form-authority-precedence-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c4-absolute-form-authority-precedence-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-c4-absolute-form-authority-precedence-dark.svg">
+    <img src="../resources/docs/backlog/h3-c4-absolute-form-authority-precedence.svg" alt="C4: Absolute-form authority precedence">
+  </picture>
+</h3>
 
 **Status.** Completed 2026-09-14.
 
@@ -301,7 +365,15 @@ must be explicit; adding these regressions does not itself correct routing.
 
 **Reference.** [RFC 9112 S3.2.2](https://www.rfc-editor.org/rfc/rfc9112.html#section-3.2.2).
 
-### C5: Internal decoder capacity overflow
+<a name="c5-internal-decoder-capacity-overflow"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-c5-internal-decoder-capacity-overflow-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c5-internal-decoder-capacity-overflow-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-c5-internal-decoder-capacity-overflow-dark.svg">
+    <img src="../resources/docs/backlog/h3-c5-internal-decoder-capacity-overflow.svg" alt="C5: Internal decoder capacity overflow">
+  </picture>
+</h3>
 
 **Status.** Completed 2026-09-14.
 
@@ -382,7 +454,15 @@ expectation must be justified against the selected contract. These are
 internal capacity policies, not RFC limits, and no automatic 431 policy is
 assumed. Keep them separate from the configurable resource-limit API in C2.
 
-### C6: TE connection option
+<a name="c6-te-connection-option"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-c6-te-connection-option-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c6-te-connection-option-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-c6-te-connection-option-dark.svg">
+    <img src="../resources/docs/backlog/h3-c6-te-connection-option.svg" alt="C6: TE connection option">
+  </picture>
+</h3>
 
 **Status.** Completed 2026-09-14.
 
@@ -427,7 +507,15 @@ No public API or protocol-upgrade feature is required.
 
 **Reference.** [RFC 9110 S10.1.4](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.1.4).
 
-### C7: Pending response and work budget
+<a name="c7-pending-response-and-work-budget"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-c7-pending-response-and-work-budget-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c7-pending-response-and-work-budget-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-c7-pending-response-and-work-budget-dark.svg">
+    <img src="../resources/docs/backlog/h3-c7-pending-response-and-work-budget.svg" alt="C7: Pending response and work budget">
+  </picture>
+</h3>
 
 **Status and evidence.** Verification pending. Source inspection found no
 per-connection budget at response insertion or deferred slot reservation.
@@ -458,7 +546,13 @@ backend pipelining. Implementation priority depends on demonstrated exposure.
 C3 bounds connections, not this queue; F3 concerns future progressive output.
 Coordinate validation with QA1/QA5 without duplicating those campaigns.
 
-## Bugs
+<a name="bugs"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-bugs-dark.svg">
+    <img src="../resources/docs/backlog/h2-bugs.svg" alt="Bugs">
+  </picture>
+</h2>
 
 B1-B5 are completed fixes; B4 corrected a unit-test expectation. B6 is a
 completed compatibility extension under an explicitly approved contract.
@@ -471,7 +565,15 @@ verification still pending. Their proposed tests are not reported as executed
 or failing. B10 includes an error-disclosure policy decision; B13 is limited
 to the benchmark adapter. Keep these distinct from the completed fixes above.
 
-### B1: Entity-tag backslash rejection
+<a name="b1-entity-tag-backslash-rejection"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b1-entity-tag-backslash-rejection-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b1-entity-tag-backslash-rejection-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b1-entity-tag-backslash-rejection-dark.svg">
+    <img src="../resources/docs/backlog/h3-b1-entity-tag-backslash-rejection.svg" alt="B1: Entity-tag backslash rejection">
+  </picture>
+</h3>
 
 **Status.** Completed 2026-09-14.
 
@@ -514,7 +616,15 @@ different grammars. Preserve quoted-string handling for other consumers.
 
 **Reference.** [RFC 9110 S8.8.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.8.3).
 
-### B2: Via escaped comment rejection
+<a name="b2-via-escaped-comment-rejection"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b2-via-escaped-comment-rejection-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b2-via-escaped-comment-rejection-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b2-via-escaped-comment-rejection-dark.svg">
+    <img src="../resources/docs/backlog/h3-b2-via-escaped-comment-rejection.svg" alt="B2: Via escaped comment rejection">
+  </picture>
+</h3>
 
 **Status.** Completed 2026-09-14.
 
@@ -554,7 +664,15 @@ boundary; do not broaden unrelated header grammars.
 **References.** [RFC 9110 S5.6.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.5)
 and [S7.6.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-7.6.3).
 
-### B3: Via comment comma splitting
+<a name="b3-via-comment-comma-splitting"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b3-via-comment-comma-splitting-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b3-via-comment-comma-splitting-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b3-via-comment-comma-splitting-dark.svg">
+    <img src="../resources/docs/backlog/h3-b3-via-comment-comma-splitting.svg" alt="B3: Via comment comma splitting">
+  </picture>
+</h3>
 
 **Status.** Completed 2026-09-14.
 
@@ -593,7 +711,15 @@ entity-tag grammar and the behavior of other list consumers.
 **References.** [RFC 9110 S5.6.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.5)
 and [S7.6.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-7.6.3).
 
-### B4: Incorrect IPv6 expectation in Via test
+<a name="b4-incorrect-ipv6-expectation-in-via-test"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b4-incorrect-ipv6-expectation-in-via-test-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b4-incorrect-ipv6-expectation-in-via-test-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b4-incorrect-ipv6-expectation-in-via-test-dark.svg">
+    <img src="../resources/docs/backlog/h3-b4-incorrect-ipv6-expectation-in-via-test.svg" alt="B4: Incorrect IPv6 expectation in Via test">
+  </picture>
+</h3>
 
 **Status.** Completed 2026-09-14.
 
@@ -633,7 +759,15 @@ regressions tracked by B2/B3. Correcting this test must not hide those bugs.
 **References.** [RFC 9110 S7.6.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-7.6.3)
 and [appendix B.2](https://www.rfc-editor.org/rfc/rfc9110.html#appendix-B.2).
 
-### B5: Duplicate automatic Date after header removal
+<a name="b5-duplicate-automatic-date-after-header-removal"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b5-duplicate-automatic-date-after-header-removal-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b5-duplicate-automatic-date-after-header-removal-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b5-duplicate-automatic-date-after-header-removal-dark.svg">
+    <img src="../resources/docs/backlog/h3-b5-duplicate-automatic-date-after-header-removal.svg" alt="B5: Duplicate automatic Date after header removal">
+  </picture>
+</h3>
 
 **Status.** Completed 2026-09-14.
 
@@ -672,7 +806,15 @@ generation, and preserve case-insensitive name handling and other headers.
 **Dependencies and decisions.** Keep the existing add/remove/serialize API
 and mutation semantics; changing header validation is a separate decision.
 
-### B6: Noexcept handler signature rejection
+<a name="b6-noexcept-handler-signature-rejection"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b6-noexcept-handler-signature-rejection-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b6-noexcept-handler-signature-rejection-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b6-noexcept-handler-signature-rejection-dark.svg">
+    <img src="../resources/docs/backlog/h3-b6-noexcept-handler-signature-rejection.svg" alt="B6: Noexcept handler signature rejection">
+  </picture>
+</h3>
 
 **Status.** Completed 2026-09-14.
 
@@ -728,7 +870,15 @@ request/return signatures.
 as a confirmed production bug until the support contract is established.
 It is not a protocol violation or a demonstrated memory-safety defect.
 
-### B7: Empty body in the expect-continue example
+<a name="b7-empty-body-in-the-expect-continue-example"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b7-empty-body-in-the-expect-continue-example-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b7-empty-body-in-the-expect-continue-example-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b7-empty-body-in-the-expect-continue-example-dark.svg">
+    <img src="../resources/docs/backlog/h3-b7-empty-body-in-the-expect-continue-example.svg" alt="B7: Empty body in the expect-continue example">
+  </picture>
+</h3>
 
 **Status.** Verification pending; high impact within the shipped example.
 
@@ -747,7 +897,15 @@ a local reader check consistent with existing examples; no API change.
 **Delivery.** Verify and correct before 0.1 if confirmed. Keep the regression
 focused on the example's handler and request-body contract.
 
-### B8: Response framing after clear_body
+<a name="b8-response-framing-after-clear_body"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b8-response-framing-after-clear_body-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b8-response-framing-after-clear_body-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b8-response-framing-after-clear_body-dark.svg">
+    <img src="../resources/docs/backlog/h3-b8-response-framing-after-clear_body.svg" alt="B8: Response framing after clear_body">
+  </picture>
+</h3>
 
 **Status.** Verification pending; medium severity.
 
@@ -769,7 +927,15 @@ tests; verify before 0.1. Coordinate with DT3 without requiring a redesign
 of explicit framing. A confirmed ordinary-response framing defect is not
 an optional feature gap.
 
-### B9: Response-driven Connection close
+<a name="b9-response-driven-connection-close"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b9-response-driven-connection-close-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b9-response-driven-connection-close-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b9-response-driven-connection-close-dark.svg">
+    <img src="../resources/docs/backlog/h3-b9-response-driven-connection-close.svg" alt="B9: Response-driven Connection close">
+  </picture>
+</h3>
 
 **Status.** Verification pending; medium severity.
 
@@ -789,7 +955,15 @@ and preserve ordinary keep-alive and request-driven closure.
 boundary; do not add HTTP header parsing to a transport or assume a public
 API extension is necessary before tracing the complete path.
 
-### B10: Internal exception details in 500 responses
+<a name="b10-internal-exception-details-in-500-responses"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b10-internal-exception-details-in-500-responses-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b10-internal-exception-details-in-500-responses-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b10-internal-exception-details-in-500-responses-dark.svg">
+    <img src="../resources/docs/backlog/h3-b10-internal-exception-details-in-500-responses.svg" alt="B10: Internal exception details in 500 responses">
+  </picture>
+</h3>
 
 **Status.** Verification and policy decision pending; medium severity.
 
@@ -814,7 +988,15 @@ contract is approved.
 **Delivery and limits.** Review before 0.1. A minimal safe default does not
 depend on P3, a general error-hook API, or a new logging framework.
 
-### B11: Body suppression for HEAD error responses
+<a name="b11-body-suppression-for-head-error-responses"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b11-body-suppression-for-head-error-responses-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b11-body-suppression-for-head-error-responses-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b11-body-suppression-for-head-error-responses-dark.svg">
+    <img src="../resources/docs/backlog/h3-b11-body-suppression-for-head-error-responses.svg" alt="B11: Body suppression for HEAD error responses">
+  </picture>
+</h3>
 
 **Status.** Verification pending; medium severity.
 
@@ -834,7 +1016,15 @@ HEAD metadata; limit method-aware behavior to requests whose method is known.
 response integration tests. Verify before 0.1; coordinate with B10 but retain
 separate assertions for disclosure and body suppression.
 
-### B12: Trailing data after an IP-literal authority
+<a name="b12-trailing-data-after-an-ip-literal-authority"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b12-trailing-data-after-an-ip-literal-authority-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b12-trailing-data-after-an-ip-literal-authority-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b12-trailing-data-after-an-ip-literal-authority-dark.svg">
+    <img src="../resources/docs/backlog/h3-b12-trailing-data-after-an-ip-literal-authority.svg" alt="B12: Trailing data after an IP-literal authority">
+  </picture>
+</h3>
 
 **Status.** Verification pending; medium severity.
 
@@ -859,7 +1049,15 @@ syntax in adjacent forms.
 **Delivery and scope.** Verify before 0.1. This concerns authority syntax,
 not C4's completed absolute-form versus Host precedence fix; do not reopen C4.
 
-### B13: Signed overflow in the HttpArena adapter
+<a name="b13-signed-overflow-in-the-httparena-adapter"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b13-signed-overflow-in-the-httparena-adapter-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b13-signed-overflow-in-the-httparena-adapter-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b13-signed-overflow-in-the-httparena-adapter-dark.svg">
+    <img src="../resources/docs/backlog/h3-b13-signed-overflow-in-the-httparena-adapter.svg" alt="B13: Signed overflow in the HttpArena adapter">
+  </picture>
+</h3>
 
 **Status.** Verification pending; medium severity, benchmark-only scope.
 
@@ -879,9 +1077,25 @@ the benchmark's expected arithmetic for valid inputs.
 This is not by itself a blocker for the core library release or evidence
 of arithmetic overflow inside the HTTP implementation.
 
-## Product and convenience
+<a name="product-and-convenience"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-product-and-convenience-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-product-and-convenience-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-product-and-convenience-dark.svg">
+    <img src="../resources/docs/backlog/h2-product-and-convenience.svg" alt="Product and convenience">
+  </picture>
+</h2>
 
-### P1: Static file handler
+<a name="p1-static-file-handler"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-p1-static-file-handler-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p1-static-file-handler-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p1-static-file-handler-dark.svg">
+    <img src="../resources/docs/backlog/h3-p1-static-file-handler.svg" alt="P1: Static file handler">
+  </picture>
+</h3>
 
 **Context.** Output body draining and percent-decoding already exist.
 The latter is a security dependency. Original estimate: M.
@@ -899,7 +1113,13 @@ and large output with bounded memory.
 **Dependencies.** Preserve the generic boundary if a platform-specific send
 path is introduced. This does not assume automatic range support.
 
-### P2: Access logging
+<a name="p2-access-logging"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p2-access-logging-dark.svg">
+    <img src="../resources/docs/backlog/h3-p2-access-logging.svg" alt="P2: Access logging">
+  </picture>
+</h3>
 
 **Context.** There is no dedicated access logging hook. The transport has
 lifecycle callbacks, and the common logger is not a request log.
@@ -923,7 +1143,15 @@ logging is disabled.
 **Dependencies.** Decide whether P3 is needed; do not introduce that dependency
 by default or expose HTTP semantics inside the transport.
 
-### P3: Middleware chain
+<a name="p3-middleware-chain"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-p3-middleware-chain-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p3-middleware-chain-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p3-middleware-chain-dark.svg">
+    <img src="../resources/docs/backlog/h3-p3-middleware-chain.svg" alt="P3: Middleware chain">
+  </picture>
+</h3>
 
 **Context.** Composing cross-cutting logic currently requires repeating it
 in handlers. The design must respect the framework's lightweight approach.
@@ -940,7 +1168,13 @@ middleware.
 **Out of scope.** No middleware architecture has been decided, and there is
 no justification for introducing a general extension framework.
 
-### P4: Form parsing
+<a name="p4-form-parsing"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p4-form-parsing-dark.svg">
+    <img src="../resources/docs/backlog/h3-p4-form-parsing.svg" alt="P4: Form parsing">
+  </picture>
+</h3>
 
 **Context.** Neither `application/x-www-form-urlencoded` nor
 `multipart/form-data` parsing exists. A percent-decoding primitive is
@@ -958,7 +1192,15 @@ fields, limits, and fragmented boundaries for multipart.
 **Dependencies.** Reuse existing primitives only where their semantics match.
 Coordinate resource budgets with C2.
 
-### P5: Automatic conditionals and ranges
+<a name="p5-automatic-conditionals-and-ranges"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-p5-automatic-conditionals-and-ranges-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p5-automatic-conditionals-and-ranges-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p5-automatic-conditionals-and-ranges-dark.svg">
+    <img src="../resources/docs/backlog/h3-p5-automatic-conditionals-and-ranges.svg" alt="P5: Automatic conditionals and ranges">
+  </picture>
+</h3>
 
 **Context.** Doba preserves conditional fields; the handler has the resource
 validators. The application, when acting as an origin server, is responsible
@@ -979,7 +1221,13 @@ Range and serve a normal GET.
 **Out of scope.** This is neither a core compliance gate nor a release gate.
 Invalid conditional date handling is already implemented.
 
-### P6: Output trailers
+<a name="p6-output-trailers"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p6-output-trailers-dark.svg">
+    <img src="../resources/docs/backlog/h3-p6-output-trailers.svg" alt="P6: Output trailers">
+  </picture>
+</h3>
 
 **Context.** `response` exposes no API for emitting trailers.
 
@@ -995,7 +1243,15 @@ trailer field restrictions; preserve output without trailers.
 
 **Out of scope.** Optional capability with no assigned release gate.
 
-### P7: Automatic resource OPTIONS
+<a name="p7-automatic-resource-options"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-p7-automatic-resource-options-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p7-automatic-resource-options-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p7-automatic-resource-options-dark.svg">
+    <img src="../resources/docs/backlog/h3-p7-automatic-resource-options.svg" alt="P7: Automatic resource OPTIONS">
+  </picture>
+</h3>
 
 **Context.** `OPTIONS *` is already automatic. The application can register
 `OPTIONS` handlers for specific resources.
@@ -1011,7 +1267,15 @@ missing resources.
 
 **Out of scope.** Optional convenience; not a release gate.
 
-### P8: 429 response construction
+<a name="p8-429-response-construction"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-p8-429-response-construction-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p8-429-response-construction-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p8-429-response-construction-dark.svg">
+    <img src="../resources/docs/backlog/h3-p8-429-response-construction.svg" alt="P8: 429 response construction">
+  </picture>
+</h3>
 
 **Context.** The response API provides named status factories but no 429
 factory, while the general status constructor is not public. Applications
@@ -1030,9 +1294,25 @@ Retry-After, body framing and HEAD behavior. Preserve existing factories.
 
 **Delivery.** Optional convenience with no assigned version; not a 0.1 gate.
 
-## Quality and validation
+<a name="quality-and-validation"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-quality-and-validation-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-quality-and-validation-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-quality-and-validation-dark.svg">
+    <img src="../resources/docs/backlog/h2-quality-and-validation.svg" alt="Quality and validation">
+  </picture>
+</h2>
 
-### QA1: Exhaustive compliance suite
+<a name="qa1-exhaustive-compliance-suite"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-qa1-exhaustive-compliance-suite-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-qa1-exhaustive-compliance-suite-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-qa1-exhaustive-compliance-suite-dark.svg">
+    <img src="../resources/docs/backlog/h3-qa1-exhaustive-compliance-suite.svg" alt="QA1: Exhaustive compliance suite">
+  </picture>
+</h3>
 
 **Status:** partial. The test expansion completed on 2026-09-07 added
 184 functional cases and reinforced 84 existing cases, with 556 unit and
@@ -1077,7 +1357,13 @@ epoll. Configured limit cases depend on the C2 decisions.
 **References.** RFC 9110 and RFC 9112. The suite provides evidence for the
 strict HTTP/1.1 claim; it does not replace contract review.
 
-### QA2: Fuzzing
+<a name="qa2-fuzzing"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-qa2-fuzzing-dark.svg">
+    <img src="../resources/docs/backlog/h3-qa2-fuzzing.svg" alt="QA2: Fuzzing">
+  </picture>
+</h3>
 
 **Context.** ASan, UBSan, and TSan are already integrated. Written tests execute
 a finite set of paths.
@@ -1094,7 +1380,15 @@ regression and run targets with the appropriate sanitizer.
 dependencies. CI fuzzing integration is deferred beyond the current hardening
 effort; do not reopen the completed sanitizer work.
 
-### QA3: Performance baseline
+<a name="qa3-performance-baseline"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-qa3-performance-baseline-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-qa3-performance-baseline-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-qa3-performance-baseline-dark.svg">
+    <img src="../resources/docs/backlog/h3-qa3-performance-baseline.svg" alt="QA3: Performance baseline">
+  </picture>
+</h3>
 
 **Context.** Adapters exist for HttpArena and Web Frameworks Benchmark.
 A persistent baseline and a gate for throughput, latency, allocations,
@@ -1117,7 +1411,15 @@ measured noise and a reproducible comparison with the release.
 **Dependencies.** Separate measurement from optimization. Individual
 optimization measurements do not replace this release baseline.
 
-### QA4: Harness diagnostics and isolation
+<a name="qa4-harness-diagnostics-and-isolation"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-qa4-harness-diagnostics-and-isolation-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-qa4-harness-diagnostics-and-isolation-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-qa4-harness-diagnostics-and-isolation-dark.svg">
+    <img src="../resources/docs/backlog/h3-qa4-harness-diagnostics-and-isolation.svg" alt="QA4: Harness diagnostics and isolation">
+  </picture>
+</h3>
 
 **Status:** completed for the stated harness criteria on 2026-09-07.
 
@@ -1137,7 +1439,15 @@ crash or termination still stops its aggregate process; active-case output
 and filters support focused diagnosis. This completion does not imply
 per-case process isolation or exhaustive concurrency validation.
 
-### QA5: Stress campaigns
+<a name="qa5-stress-campaigns"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-qa5-stress-campaigns-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-qa5-stress-campaigns-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-qa5-stress-campaigns-dark.svg">
+    <img src="../resources/docs/backlog/h3-qa5-stress-campaigns.svg" alt="QA5: Stress campaigns">
+  </picture>
+</h3>
 
 **Status:** pending. **Priority:** not set. **Target:** no assigned version.
 
@@ -1146,7 +1456,15 @@ Extended soak tests and, where feasible, controlled worker interleavings
 remain to be explored. Define duration, load, observed resources, and
 reproduction before creating new tests; relate them to C1/C3 and QA3 scenarios.
 
-### QA6: External compliance automation
+<a name="qa6-external-compliance-automation"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-qa6-external-compliance-automation-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-qa6-external-compliance-automation-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-qa6-external-compliance-automation-dark.svg">
+    <img src="../resources/docs/backlog/h3-qa6-external-compliance-automation.svg" alt="QA6: External compliance automation">
+  </picture>
+</h3>
 
 **Status:** deferred. **Priority:** not set. **Target:** no assigned version.
 
@@ -1156,9 +1474,25 @@ adapters, pin the environment, and distinguish runner failures from protocol
 failures. Preserve logs and revisions for each execution. This task
 complements QA1.
 
-## Release engineering
+<a name="release-engineering"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-release-engineering-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-release-engineering-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-release-engineering-dark.svg">
+    <img src="../resources/docs/backlog/h2-release-engineering.svg" alt="Release engineering">
+  </picture>
+</h2>
 
-### RE1: Release governance and traceability
+<a name="re1-release-governance-and-traceability"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-re1-release-governance-and-traceability-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-re1-release-governance-and-traceability-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-re1-release-governance-and-traceability-dark.svg">
+    <img src="../resources/docs/backlog/h3-re1-release-governance-and-traceability.svg" alt="RE1: Release governance and traceability">
+  </picture>
+</h3>
 
 **Context.** The version comes from `include/version.h`. A license, README,
 and publishing workflow gated on the entire CI matrix exist.
@@ -1186,9 +1520,25 @@ C1/C3 must pass their real-socket tests for the beta target. The development
 guide does not replace a public contribution guide with channels and a
 procedure.
 
-## C++ maintainability
+<a name="c-maintainability"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-c-maintainability-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-c-maintainability-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-c-maintainability-dark.svg">
+    <img src="../resources/docs/backlog/h2-c-maintainability.svg" alt="C++ maintainability">
+  </picture>
+</h2>
 
-### DT1: platform.h dependencies and global effects
+<a name="dt1-platformh-dependencies-and-global-effects"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-dt1-platformh-dependencies-and-global-effects-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-dt1-platformh-dependencies-and-global-effects-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-dt1-platformh-dependencies-and-global-effects-dark.svg">
+    <img src="../resources/docs/backlog/h3-dt1-platformh-dependencies-and-global-effects.svg" alt="DT1: platform.h dependencies and global effects">
+  </picture>
+</h3>
 
 **Context.** `platform.h` centralizes standard/system headers, `INLINE`,
 Windows macros, warning 4996 suppression, and linker pragmas.
@@ -1227,7 +1577,15 @@ installed-package consumers. The earlier check is compile-time evidence,
 not a runtime test. This narrow follow-up does not make the wider platform
 cleanup a release gate or require a duplicate bug entry.
 
-### DT2: Indexed getter contract
+<a name="dt2-indexed-getter-contract"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-dt2-indexed-getter-contract-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-dt2-indexed-getter-contract-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-dt2-indexed-getter-contract-dark.svg">
+    <img src="../resources/docs/backlog/h3-dt2-indexed-getter-contract.svg" alt="DT2: Indexed getter contract">
+  </picture>
+</h3>
 
 **Context.** `request::get_header(size_t)` and
 `get_query_parameter(size_t)` use `operator[]`; callers must supply a valid
@@ -1246,7 +1604,15 @@ Measure the impact if frequent iterations are affected.
 **Dependencies.** Coordinate with the following view and getter documentation.
 Inconsistency alone does not authorize an API change.
 
-### DT3: Response framing and capacity contract
+<a name="dt3-response-framing-and-capacity-contract"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-dt3-response-framing-and-capacity-contract-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-dt3-response-framing-and-capacity-contract-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-dt3-response-framing-and-capacity-contract-dark.svg">
+    <img src="../resources/docs/backlog/h3-dt3-response-framing-and-capacity-contract.svg" alt="DT3: Response framing and capacity contract">
+  </picture>
+</h3>
 
 **Status.** Decision pending; this is not a confirmed misuse-independent bug.
 
@@ -1278,9 +1644,25 @@ with B11. Publish concise response preconditions with the chosen behavior.
 claiming these combinations are supported. No dynamic buffers, new ownership
 model, broad serializer refactor or public API change is prescribed.
 
-## Public documentation
+<a name="public-documentation"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-public-documentation-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-public-documentation-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-public-documentation-dark.svg">
+    <img src="../resources/docs/backlog/h2-public-documentation.svg" alt="Public documentation">
+  </picture>
+</h2>
 
-### DOC1: Transport lifecycle
+<a name="doc1-transport-lifecycle"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-doc1-transport-lifecycle-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-doc1-transport-lifecycle-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-doc1-transport-lifecycle-dark.svg">
+    <img src="../resources/docs/backlog/h3-doc1-transport-lifecycle.svg" alt="DOC1: Transport lifecycle">
+  </picture>
+</h3>
 
 **Outstanding work.** Document direct transport use outside `v11::server`.
 
@@ -1292,7 +1674,15 @@ from fatal abort.
 restart, and startup errors with public examples. Link from architecture
 and validate each example against the corresponding tests.
 
-### DOC2: Request views and getters
+<a name="doc2-request-views-and-getters"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-doc2-request-views-and-getters-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-doc2-request-views-and-getters-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-doc2-request-views-and-getters-dark.svg">
+    <img src="../resources/docs/backlog/h3-doc2-request-views-and-getters.svg" alt="DOC2: Request views and getters">
+  </picture>
+</h3>
 
 **Outstanding work.** Document string_view/header_view ownership and lifetime,
 and indexed getter preconditions.
@@ -1305,13 +1695,27 @@ storage to outlive its uses.
 precondition chosen in DT2. Cross-check lifetime tests and link the contract
 from the corresponding examples.
 
-## Beyond the first release
+<a name="beyond-the-first-release"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-beyond-the-first-release-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-beyond-the-first-release-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-beyond-the-first-release-dark.svg">
+    <img src="../resources/docs/backlog/h2-beyond-the-first-release.svg" alt="Beyond the first release">
+  </picture>
+</h2>
 
 F1-F7 are deferred beyond the 0.1 batches. This deferral does not include
 limits, slow clients, stress testing, or baselines: those retain their
 previous entries.
 
-### F1: TLS
+<a name="f1-tls"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f1-tls-dark.svg">
+    <img src="../resources/docs/backlog/h3-f1-tls.svg" alt="F1: TLS">
+  </picture>
+</h3>
 
 **Context.** The first release is intended to be deployed behind a TLS
 terminator, such as a reverse proxy. Original estimate: A.
@@ -1323,7 +1727,15 @@ boundary.
 before implementation; specify handshake, closure, and errors with equivalent
 tests on supported platforms.
 
-### F2: Compression and GZIP
+<a name="f2-compression-and-gzip"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-f2-compression-and-gzip-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f2-compression-and-gzip-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f2-compression-and-gzip-dark.svg">
+    <img src="../resources/docs/backlog/h3-f2-compression-and-gzip.svg" alt="F2: Compression and GZIP">
+  </picture>
+</h3>
 
 **Context.** `Accept-Encoding`/`Content-Encoding` negotiation and `Vary`
 handling are optional capabilities.
@@ -1335,7 +1747,15 @@ designing the API.
 **Proposed acceptance.** Consistent negotiation and `Vary` handling, correct
 framing, and tests for empty, binary, and large bodies.
 
-### F3: Progressive streaming and SSE
+<a name="f3-progressive-streaming-and-sse"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-f3-progressive-streaming-and-sse-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f3-progressive-streaming-and-sse-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f3-progressive-streaming-and-sse-dark.svg">
+    <img src="../resources/docs/backlog/h3-f3-progressive-streaming-and-sse.svg" alt="F3: Progressive streaming and SSE">
+  </picture>
+</h3>
 
 **Context.** The handler finishes producing the body before handing off the
 response; current draining does not constitute progressive streaming.
@@ -1348,7 +1768,15 @@ byte-based backpressure and batch small fragments.
 and ordering. Preserve the cost of the one-shot path and synchronous hot
 path by comparing against QA3.
 
-### F4: Ordered upgrade barrier
+<a name="f4-ordered-upgrade-barrier"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-f4-ordered-upgrade-barrier-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f4-ordered-upgrade-barrier-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f4-ordered-upgrade-barrier-dark.svg">
+    <img src="../resources/docs/backlog/h3-f4-ordered-upgrade-barrier.svg" alt="F4: Ordered upgrade barrier">
+  </picture>
+</h3>
 
 **Context.** The `101` must reach the head of the response order before
 transferring the channel. Original estimate: A.
@@ -1362,7 +1790,13 @@ and does not leak HTTP semantics into IOCP or epoll.
 
 **Dependencies.** Prerequisite for F5 (WebSockets).
 
-### F5: WebSockets
+<a name="f5-websockets"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f5-websockets-dark.svg">
+    <img src="../resources/docs/backlog/h3-f5-websockets.svg" alt="F5: WebSockets">
+  </picture>
+</h3>
 
 **Context.** `channel_intent::kUpgrade` is defined and Sec-WebSocket-*
 headers are modeled, but transports do not handle the upgrade.
@@ -1379,7 +1813,15 @@ on both platforms.
 modeled; deferring this feature does not by itself make the core
 noncompliant with HTTP/1.1.
 
-### F6: Listener and worker configuration
+<a name="f6-listener-and-worker-configuration"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-f6-listener-and-worker-configuration-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f6-listener-and-worker-configuration-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f6-listener-and-worker-configuration-dark.svg">
+    <img src="../resources/docs/backlog/h3-f6-listener-and-worker-configuration.svg" alt="F6: Listener and worker configuration">
+  </picture>
+</h3>
 
 **Context.** The current TCP backends bind the IPv4 wildcard address and
 derive worker count from hardware concurrency. Applications cannot select
@@ -1399,7 +1841,15 @@ worker validation, startup failure cleanup and stop on both platforms.
 presenting these options as existing features. This is separate from C3's
 connection admission budget and requires no changes to that release target.
 
-### F7: Shutdown with draining
+<a name="f7-shutdown-with-draining"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-f7-shutdown-with-draining-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f7-shutdown-with-draining-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f7-shutdown-with-draining-dark.svg">
+    <img src="../resources/docs/backlog/h3-f7-shutdown-with-draining.svg" alt="F7: Shutdown with draining">
+  </picture>
+</h3>
 
 **Context.** The current stop lifecycle is not a public bounded-drain API
 for completing all accepted work during deployment shutdown. Graceful closure
@@ -1420,7 +1870,15 @@ document abrupt-stop limitations and verify any external deployment-draining
 procedure before relying on it. Coordinate public lifecycle documentation
 with DOC1; do not count documentation alone as implementation.
 
-## Identifier mapping
+<a name="identifier-mapping"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-identifier-mapping-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-identifier-mapping-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-identifier-mapping-dark.svg">
+    <img src="../resources/docs/backlog/h2-identifier-mapping.svg" alt="Identifier mapping">
+  </picture>
+</h2>
 
 The previous column refers to the backlog before renumbering.
 These identifiers are retained only to interpret older references;

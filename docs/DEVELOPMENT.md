@@ -1,8 +1,22 @@
-# Development
+<a name="development"></a>
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/development/h1-development-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/development/h1-development-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/development/h1-development-dark.svg">
+    <img src="../resources/docs/development/h1-development.svg" alt="Development">
+  </picture>
+</h1>
 
 [Index](HANDOFF.md)
 
-## Contents
+<a name="contents"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/development/h2-contents-dark.svg">
+    <img src="../resources/docs/development/h2-contents.svg" alt="Contents">
+  </picture>
+</h2>
 
 - [Requirements and layout](#requirements-and-layout)
 - [Build and tests](#build-and-tests)
@@ -10,7 +24,15 @@
 - [Repository style](#repository-style)
 - [Change validation](#change-validation)
 
-## Requirements and layout
+<a name="requirements-and-layout"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/development/h2-requirements-and-layout-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/development/h2-requirements-and-layout-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/development/h2-requirements-and-layout-dark.svg">
+    <img src="../resources/docs/development/h2-requirements-and-layout.svg" alt="Requirements and layout">
+  </picture>
+</h2>
 
 - C++20; backends are available for Windows and Linux.
 - CMake 3.20 or later for manual configuration.
@@ -23,7 +45,13 @@ Shared helpers and `CMakeLists.txt` files remain at each suite's root.
 See the [architectural principles](ARCHITECTURE.md) and
 [examples](../examples/README.md).
 
-## Build and tests
+<a name="build-and-tests"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/development/h2-build-and-tests-dark.svg">
+    <img src="../resources/docs/development/h2-build-and-tests.svg" alt="Build and tests">
+  </picture>
+</h2>
 
 Run commands from the project root. With a single-configuration generator and
 an available C++20 compiler:
@@ -59,7 +87,15 @@ The [CI gates](QUALITY.md#enforce-the-ci-gates) define the compiler and
 sanitizer validations. Exact commands are maintained in the
 [CI workflow](../.github/workflows/ci.yml).
 
-## CMake consumption
+<a name="cmake-consumption"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/development/h2-cmake-consumption-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/development/h2-cmake-consumption-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/development/h2-cmake-consumption-dark.svg">
+    <img src="../resources/docs/development/h2-cmake-consumption.svg" alt="CMake consumption">
+  </picture>
+</h2>
 
 Installation and consumers are documented in the [README](../README.md).
 Locate the package with `find_package(doba CONFIG REQUIRED)` and link
@@ -70,7 +106,15 @@ sanitizer flags are not part of its installed interface. When using
 `add_subdirectory`, doba's tests and examples are disabled by default,
 even when the parent project enables its own testing.
 
-## Repository style
+<a name="repository-style"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/development/h2-repository-style-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/development/h2-repository-style-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/development/h2-repository-style-dark.svg">
+    <img src="../resources/docs/development/h2-repository-style.svg" alt="Repository style">
+  </picture>
+</h2>
 
 All repository documentation must be written in English.
 
@@ -91,7 +135,15 @@ CMake passes `/utf-8` to MSVC to fix source and execution character sets.
 Check these conventions in tests and documentation as well, regardless of
 local editor configuration.
 
-## Change validation
+<a name="change-validation"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/development/h2-change-validation-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/development/h2-change-validation-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/development/h2-change-validation-dark.svg">
+    <img src="../resources/docs/development/h2-change-validation.svg" alt="Change validation">
+  </picture>
+</h2>
 
 1. Inspect the component, equivalent files, and its tests.
 2. Identify the cause and applicable contract; cite the RFC section when it
