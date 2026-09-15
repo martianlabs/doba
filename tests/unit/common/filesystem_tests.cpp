@@ -27,7 +27,6 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
-#include <span>
 #include <stdexcept>
 #include <string>
 #include <type_traits>

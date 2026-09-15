@@ -33,17 +33,13 @@
 #include <limits>
 #include <mutex>
 #include <optional>
-#include <queue>
 #include <system_error>
 #include <thread>
 #include <vector>
 #include <memory>
 #include <cstring>
-#include <sstream>
 #include <string>
 #include <variant>
-#include <inttypes.h>
-#include <iostream>
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] PLATFORM-DEPENDENT-INCLUDEs [windowsTM]                   ( section ) |
@@ -55,8 +51,6 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <mswsock.h>
-#include <mstcpip.h>
-#include <wbemidl.h>
 #pragma warning(disable : 4996)
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "wbemuuid.lib")
@@ -68,13 +62,11 @@
 // /////////////////////////////////////////////////////////////////////////////
 #elif __linux__
 #include <fcntl.h>
-#include <netdb.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
-#include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #endif

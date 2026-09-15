@@ -33,7 +33,6 @@
 #include <limits>
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace martianlabs::doba::common {
 // /////////////////////////////////////////////////////////////////////////////

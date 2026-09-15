@@ -30,7 +30,6 @@
 #include <stop_token>
 #include <string>
 #include <thread>
-#include <utility>
 
 #include "common/console_logger.h"
 #include "common/logo.h"

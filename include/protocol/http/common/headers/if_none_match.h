@@ -25,7 +25,6 @@
 #ifndef martianlabs_doba_protocol_http_headers_if_none_match_h
 #define martianlabs_doba_protocol_http_headers_if_none_match_h
 
-#include <ranges>
 #include <string_view>
 
 #include "protocol/http/common/helpers.h"

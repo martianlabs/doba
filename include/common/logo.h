@@ -25,8 +25,6 @@
 #ifndef martianlabs_doba_common_logo_h
 #define martianlabs_doba_common_logo_h
 
-#include <cstdio>
-#include <string_view>
 
 namespace martianlabs::doba::common {
 // /////////////////////////////////////////////////////////////////////////////

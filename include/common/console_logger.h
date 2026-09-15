@@ -25,10 +25,6 @@
 #ifndef martianlabs_doba_common_console_logger_h
 #define martianlabs_doba_common_console_logger_h
 
-#include <source_location>
-#include <string>
-#include <string_view>
-
 #include "platform.h"
 
 namespace martianlabs::doba::common {

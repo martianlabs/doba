@@ -22,8 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <algorithm>
 #include <cstddef>
-#include <limits>
 #include <span>
 #include <string>
 #include <string_view>

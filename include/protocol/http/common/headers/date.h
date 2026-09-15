@@ -27,7 +27,6 @@
 
 #include <string_view>
 
-#include "common/hash_set.h"
 #include "protocol/http/common/helpers.h"
 
 namespace martianlabs::doba::protocol::http::headers {

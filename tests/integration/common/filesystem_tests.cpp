@@ -27,10 +27,8 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
-#include <span>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
 
 #include "common/filesystem.h"
 #include "common/reader.h"

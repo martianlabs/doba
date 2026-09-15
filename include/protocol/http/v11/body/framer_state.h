@@ -26,7 +26,6 @@
 #define martianlabs_doba_protocol_http_v11_body_framer_state_h
 
 #include <cstddef>
-#include <cstdint>
 
 #include "protocol/http/v11/body/framer_error.h"
 

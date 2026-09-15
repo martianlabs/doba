@@ -27,6 +27,9 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
+
+#include "common/byte_storage.h"
 
 namespace martianlabs::doba::protocol::http {
 // /////////////////////////////////////////////////////////////////////////////

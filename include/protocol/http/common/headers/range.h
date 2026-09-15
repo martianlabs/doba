@@ -25,8 +25,6 @@
 #ifndef martianlabs_doba_protocol_http_headers_range_h
 #define martianlabs_doba_protocol_http_headers_range_h
 
-#include <ranges>
-
 #include "protocol/http/common/helpers.h"
 
 namespace martianlabs::doba::protocol::http::headers {

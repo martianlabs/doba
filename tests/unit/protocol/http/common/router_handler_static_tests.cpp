@@ -22,8 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <concepts>
 #include <functional>
-#include <type_traits>
 
 #include "protocol/http/common/router_handler_static.h"
 #include "test_helper.h"

@@ -26,7 +26,6 @@
 #define martianlabs_doba_protocol_http_v11_body_reader_state_h
 
 #include <cstddef>
-#include <cstdint>
 
 #include "protocol/http/v11/body/reader_error.h"
 

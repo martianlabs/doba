@@ -25,8 +25,7 @@
 #ifndef martianlabs_doba_transport_server_tcpip_windows_h
 #define martianlabs_doba_transport_server_tcpip_windows_h
 
-#include <array>
-#include <atomic>
+#include <algorithm>
 #include <charconv>
 #include <condition_variable>
 #include <cstddef>

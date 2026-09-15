@@ -26,9 +26,9 @@
 #define martianlabs_doba_common_writer_h
 
 #include <cstddef>
-#include <cstdint>
 #include <span>
 #include <string_view>
+#include <utility>
 
 #include "common/byte_storage.h"
 

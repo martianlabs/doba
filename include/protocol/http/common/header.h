@@ -25,8 +25,6 @@
 #ifndef martianlabs_doba_protocol_http_header_h
 #define martianlabs_doba_protocol_http_header_h
 
-#include <cstddef>
-#include <cstdint>
 #include <string>
 #include <string_view>
 #include <utility>
