@@ -24,18 +24,15 @@ above that boundary, while platform-specific I/O remains below it.
   </picture>
 </h2>
 
-```mermaid
-flowchart TB
-    A["Application - routes and handlers"]
-    P["Protocol - parsing, semantics, serialization"]
-    C["Shared contract - messages, byte sources, channel intent"]
-    W["Windows transport - IOCP"]
-    L["Linux transport - epoll"]
-    A <--> P
-    P <--> C
-    C <--> W
-    C <--> L
-```
+<a href="../resources/docs/architecture/diagram-protocol-transport.svg" title="Open full-size light diagram">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/architecture/diagram-protocol-transport-dark.svg">
+    <img src="../resources/docs/architecture/diagram-protocol-transport.svg" alt="Application and protocol connect through a shared contract to Windows IOCP and Linux epoll. All connections are bidirectional." width="100%">
+  </picture>
+</a>
+
+Full-size: [Light](../resources/docs/architecture/diagram-protocol-transport.svg) /
+[Dark](../resources/docs/architecture/diagram-protocol-transport-dark.svg).
 
 A transport never interprets HTTP methods, headers, or status codes.
 The protocol decides what a message means and whether its channel should
