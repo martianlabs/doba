@@ -33,6 +33,7 @@
 #include <utility>
 #include <vector>
 
+#include "protocol/http/common/router_controller_routes.h"
 #include "protocol/http/common/router_handler_signature.h"
 #include "protocol/http/common/router_handler_static.h"
 
@@ -193,7 +194,8 @@ class router {
     for (const auto& entry : wildcard_handlers_) {
       wildcard_sizes.push_back(entry.second.size());
     }
-    controller_routes<Cty> routes(*this, std::move(instance));
+    detail::router_controller_routes<RQty, RSty, Cty> routes(
+        *this, std::move(instance));
     try {
       routes.instance_->register_routes(routes);
       if (!routes.count_) {
@@ -296,43 +298,6 @@ class router {
   using parametrized_handler_pair =
       std::pair<std::string,
                 std::vector<router_handler_parametrized<RQty, RSty>>>;
-  // +=========================================================================+
-  // | [>] controller_routes                                       ( private ) |
-  // +=========================================================================+
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] controller_routes                                           ( class ) |
-// +---------------------------------------------------------------------------+
-// | Controller implementation.                                                |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-  template <typename Cty>
-  class controller_routes {
-   public:
-    // +=======================================================================+
-    // | [>] METHODs                                                ( public ) |
-    // +=======================================================================+
-    controller_routes(router& owner, std::shared_ptr<Cty> instance)
-        : owner_(owner), instance_(std::move(instance)) {}
-    controller_routes(const controller_routes&) = delete;
-    controller_routes& operator=(const controller_routes&) = delete;
-    template <typename Mty>
-      requires std::is_member_function_pointer_v<Mty>
-    void add(std::string_view method, std::string_view route, Mty member) {
-      owner_.add(method, route,
-                 router_handler_signature<Mty>::bind(instance_, member));
-      count_++;
-    }
-
-   private:
-    // +=======================================================================+
-    // | [>] TYPEs                                                 ( private ) |
-    // +=======================================================================+
-    friend class router;
-    router& owner_;
-    std::shared_ptr<Cty> instance_;
-    std::size_t count_{0};
-  };
   // +=========================================================================+
   // | [>] restore_routes                                          ( private ) |
   // +=========================================================================+
