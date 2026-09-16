@@ -1594,6 +1594,7 @@ DOBA_TEST("tcpip converts synchronous handler exceptions to errors") {
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> errors = 0;
+  std::atomic<std::size_t> diagnostics = 0;
   std::atomic<int> rejection_code = 0;
   martianlabs::doba::transport::server::tcpip<
       transport_request, transport_response, transport_decoder>
@@ -1612,9 +1613,14 @@ DOBA_TEST("tcpip converts synchronous handler exceptions to errors") {
         return response;
       });
   server.set_on_bad_request(
-      [&errors, &rejection_code](int code, std::string_view) {
+      [&errors, &diagnostics, &rejection_code](
+          int code, std::string_view reason) {
         transport_response response;
-        errors.fetch_add(1);
+        const auto index = errors.fetch_add(1);
+        if (reason == (index == 0 ? "Handler error!"
+                                 : "Request handler error!")) {
+          diagnostics.fetch_add(1);
+        }
         rejection_code.store(code);
         response.value = "error";
         return response;
@@ -1635,6 +1641,7 @@ DOBA_TEST("tcpip converts synchronous handler exceptions to errors") {
     client.close();
   }
   DOBA_EXPECT_EQUAL(errors.load(), 2);
+  DOBA_EXPECT_EQUAL(diagnostics.load(), 2);
   DOBA_EXPECT_EQUAL(rejection_code.load(), 7);
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("S"));
@@ -1657,6 +1664,7 @@ DOBA_TEST("tcpip converts deferred handler exceptions to errors") {
       std::make_shared<deferred_signal>()};
   std::atomic<std::size_t> deferred = 0;
   std::atomic<std::size_t> errors = 0;
+  std::atomic<std::size_t> diagnostics = 0;
   std::atomic<std::size_t> disconnected = 0;
   deferred_cleanup cleanup({signals[0], signals[1]});
   martianlabs::doba::transport::server::tcpip<
@@ -1671,12 +1679,19 @@ DOBA_TEST("tcpip converts deferred handler exceptions to errors") {
         std::size_t index = deferred.fetch_add(1);
         return make_failed_response(signals[index], index == 0);
       });
-  server.set_on_bad_request([&errors](int code, std::string_view) {
-    transport_response response;
-    if (code == 7) errors.fetch_add(1);
-    response.value = "error";
-    return response;
-  });
+  server.set_on_bad_request(
+      [&errors, &diagnostics](int code, std::string_view reason) {
+        transport_response response;
+        if (code == 7) {
+          const auto index = errors.fetch_add(1);
+          if (reason == (index == 0 ? "Deferred handler error!"
+                                   : "Request handler error!")) {
+            diagnostics.fetch_add(1);
+          }
+        }
+        response.value = "error";
+        return response;
+      });
   server.set_on_connection([]() {});
   server.set_on_disconnection(
       [&disconnected]() { disconnected.fetch_add(1); });
@@ -1696,6 +1711,7 @@ DOBA_TEST("tcpip converts deferred handler exceptions to errors") {
     client.close();
   }
   DOBA_EXPECT_EQUAL(errors.load(), 2);
+  DOBA_EXPECT_EQUAL(diagnostics.load(), 2);
   server.stop();
 }
 

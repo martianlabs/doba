@@ -167,7 +167,8 @@ class server {
                   .set_body(reason);
               break;
             case rejection_reason::kHandlerError:
-              res.emplace(RSty::internal_server_error_500()).set_body(reason);
+              res.emplace(RSty::internal_server_error_500())
+                  .set_body("Internal Server Error");
               break;
             case rejection_reason::kExpectationFailed:
               res.emplace(RSty::expectation_failed_417()).set_body(reason);

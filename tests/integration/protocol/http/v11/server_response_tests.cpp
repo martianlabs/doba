@@ -24,7 +24,9 @@
 
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <stdexcept>
+#include <stop_token>
 #include <string>
 #include <string_view>
 
@@ -36,11 +38,13 @@
 #include "test_helper.h"
 
 namespace {
+using martianlabs::doba::common::task;
 using martianlabs::doba::protocol::http::v11::body::body_writer;
 using martianlabs::doba::protocol::http::v11::limits;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::protocol::http::v11::server;
+using martianlabs::doba::tests::integration::http_test_signal;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 }  // namespace
@@ -240,7 +244,7 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
   DOBA_EXPECT(port != 0);
   server<> http_server;
   http_server.add_route("GET", "/throw", [](const request&) -> response {
-    throw std::runtime_error("standard handler failure");
+    throw std::runtime_error("doba-private-sync-token");
   });
   http_server.add_route("GET", "/unknown", [](const request&) -> response {
     throw 1;
@@ -267,12 +271,12 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
     // | [>] ATTRIBUTEs                                             ( public ) |
     // +=======================================================================+
     std::string_view path;
-    std::string_view body;
+    std::string_view detail;
   };
   constexpr failure_case cases[] = {
-      {"/throw", "standard handler failure"},
+      {"/throw", "doba-private-sync-token"},
       {"/unknown", "Request handler error!"},
-      {"/framing", ""},
+      {"/framing", "conflicting response framing headers!"},
   };
   for (const auto& test : cases) {
     martianlabs::doba::tests::integration::test_helper::set_context(test.path);
@@ -284,7 +288,14 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
     if (result.has_value()) {
       DOBA_EXPECT_EQUAL(result->status,
                         "HTTP/1.1 500 Internal Server Error");
-      if (!test.body.empty()) DOBA_EXPECT_EQUAL(result->body, test.body);
+      DOBA_EXPECT_EQUAL(result->body, "Internal Server Error");
+      DOBA_EXPECT_EQUAL(result->wire_body, "Internal Server Error");
+      DOBA_EXPECT_EQUAL(result->header("Content-Length").value(), "21");
+      DOBA_EXPECT(result->wire_body.find(test.detail) == std::string::npos);
+      for (const auto& header : result->headers) {
+        DOBA_EXPECT(header.first.find(test.detail) == std::string::npos);
+        DOBA_EXPECT(header.second.find(test.detail) == std::string::npos);
+      }
     }
     DOBA_EXPECT(client.wait_for_close(std::chrono::seconds(3)));
     client.close();
@@ -295,6 +306,75 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
   DOBA_EXPECT(recovery.has_value());
   if (recovery.has_value()) DOBA_EXPECT_EQUAL(recovery->body, "ok");
   http_server.stop();
+}
+
+// +===========================================================================+
+// | [>] deferred HTTP errors hide internal diagnostics          ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("HTTP/1.1 hides deferred handler and serializer diagnostics") {
+  for (std::string_view scenario : {"throw", "unknown", "framing"}) {
+    martianlabs::doba::tests::integration::test_helper::set_context(scenario);
+    tcpip_client client;
+    const uint16_t port = client.find_available_port();
+    DOBA_EXPECT(port != 0);
+    auto signal = std::make_shared<http_test_signal>();
+    server<> http_server;
+    http_server.add_route(
+        "GET", "/fail",
+        [signal, scenario](std::shared_ptr<const request>,
+                            std::stop_token token) -> task<response> {
+      std::stop_callback cancellation(
+          token, [signal]() { signal->resume(); });
+      co_await *signal;
+      if (scenario == "throw") {
+        throw std::runtime_error("doba-private-deferred-token");
+      }
+      if (scenario == "unknown") throw 1;
+      response result = response::ok_200();
+      result.set_header("Transfer-Encoding", "chunked");
+      result.set_header("Content-Length", "1");
+      co_return result;
+    });
+    http_server.add_route("GET", "/ok", [](const request&) {
+      response result = response::ok_200();
+      result.set_body("ok");
+      return result;
+    });
+    const std::string port_text = std::to_string(port);
+    http_server.start(port_text.c_str());
+
+    DOBA_EXPECT(client.connect(port));
+    const bool sent = client.send_all("GET /fail HTTP/1.1\r\nHost: a\r\n\r\n");
+    const bool waiting = signal->wait();
+    const bool premature = client.has_data(std::chrono::milliseconds(50));
+    signal->resume();
+    DOBA_EXPECT(sent);
+    DOBA_EXPECT(waiting);
+    DOBA_EXPECT(!premature);
+    const auto result = receive_http_response(client);
+    DOBA_EXPECT(result.has_value());
+    DOBA_EXPECT_EQUAL(result->status, "HTTP/1.1 500 Internal Server Error");
+    DOBA_EXPECT_EQUAL(result->body, "Internal Server Error");
+    DOBA_EXPECT_EQUAL(result->wire_body, "Internal Server Error");
+    DOBA_EXPECT_EQUAL(result->header("Content-Length").value(), "21");
+    const std::string_view detail = scenario == "throw"
+        ? "doba-private-deferred-token" : scenario == "unknown"
+        ? "Request handler error!" : "conflicting response framing headers!";
+    DOBA_EXPECT(result->wire_body.find(detail) == std::string::npos);
+    for (const auto& header : result->headers) {
+      DOBA_EXPECT(header.first.find(detail) == std::string::npos);
+      DOBA_EXPECT(header.second.find(detail) == std::string::npos);
+    }
+    DOBA_EXPECT(client.wait_for_close(std::chrono::seconds(3)));
+    client.close();
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send_all("GET /ok HTTP/1.1\r\nHost: a\r\n\r\n"));
+    const auto recovery = receive_http_response(client);
+    DOBA_EXPECT(recovery.has_value());
+    DOBA_EXPECT_EQUAL(recovery->status, "HTTP/1.1 200 OK");
+    DOBA_EXPECT_EQUAL(recovery->body, "ok");
+    http_server.stop();
+  }
 }
 
 namespace {

@@ -64,7 +64,7 @@ C2, fuzzing, and external tool automation remain deferred. P5-P7 are neither
 compliance nor release gates. DT1 and DT2 do not automatically block the
 first release either. Other outstanding items have no assigned version.
 
-**Pending defect verification.** B9-B11 require focused regressions before
+**Pending defect verification.** B9 and B11 require focused regressions before
 0.1 publication. Their source-level evidence does not establish that every
 reported runtime outcome has been reproduced. Confirmed memory-safety,
 information-disclosure, or wire-protocol defects require a fix or an explicit
@@ -85,7 +85,7 @@ not a release criterion.
   </picture>
 </h2>
 
-33 outstanding entries across eight categories. Each entry retains only
+32 outstanding entries across eight categories. Each entry retains only
 remaining work or an open decision, with source and test evidence checked
 against the current codebase. Verification pending means that the focused
 regressions or runtime measurements described by the entry remain to be run.
@@ -94,14 +94,14 @@ Category totals count entries, not confirmed bugs.
 | Category | Identifiers | Total |
 | --- | --- | --- |
 | Operational hardening | C1-C3, C7 | 4 |
-| Bugs | B9-B11, B13 | 4 |
+| Bugs | B9, B11, B13 | 3 |
 | Product and convenience | P2-P8 | 7 |
 | Quality and validation | QA1-QA3, QA5-QA6 | 5 |
 | Release engineering | RE1 | 1 |
 | C++ maintainability | DT1-DT3 | 3 |
 | Public documentation | DOC1-DOC2 | 2 |
 | Beyond the first release | F1-F7 | 7 |
-| **Total** | | **33** |
+| **Total** | | **32** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
@@ -110,7 +110,6 @@ Category totals count entries, not confirmed bugs.
 | [C3](#c3-global-active-connection-limit) | Hardening | Pending | Beta target | 0.1.0-beta.1 |
 | [C7](#c7-pending-response-and-work-budget) | Hardening | Verification pending | High | Assess before 0.1 |
 | [B9](#b9-response-driven-connection-close) | Bug | Verification pending | Medium | Verify before 0.1 |
-| [B10](#b10-internal-exception-details-in-500-responses) | Security policy | Verification pending | Medium | Verify before 0.1 |
 | [B11](#b11-body-suppression-for-head-error-responses) | Bug | Verification pending | Medium | Verify before 0.1 |
 | [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark bug | Verification pending | Medium | Before adapter publication |
 | [P2](#p2-access-logging) | Product | Pending | Not set | No assigned version |
@@ -308,10 +307,10 @@ Coordinate validation with QA1/QA5 without duplicating those campaigns.
   </picture>
 </h2>
 
-B9-B11 and B13 retain evidence in the current source. Focused runtime
+B9, B11 and B13 retain evidence in the current source. Focused runtime
 regressions and the resulting fixes or contract decisions remain outstanding.
-Proposed tests below are not recorded as executed or failing. B10 includes an
-error-disclosure policy decision; B13 is limited to the benchmark adapter.
+Proposed tests below are not recorded as executed or failing. B13 is limited
+to the benchmark adapter.
 
 <a name="b9-response-driven-connection-close"></a>
 <h3>
@@ -342,39 +341,6 @@ and preserve ordinary keep-alive and request-driven closure.
 boundary; do not add HTTP header parsing to a transport. Select the smallest
 way to convey response closure without assuming a public API extension.
 
-<a name="b10-internal-exception-details-in-500-responses"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b10-internal-exception-details-in-500-responses-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b10-internal-exception-details-in-500-responses-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b10-internal-exception-details-in-500-responses-dark.svg">
-    <img src="../resources/docs/backlog/h3-b10-internal-exception-details-in-500-responses.svg" alt="B10: Internal exception details in 500 responses">
-  </picture>
-</h3>
-
-**Status.** Verification and policy decision pending; medium severity.
-
-**Evidence.** Both TCP backends forward caught `std::exception::what()` to
-the error callback. The HTTP error mapping in
-[server.h](../include/protocol/http/v11/server.h) uses the supplied reason
-as the 500 body. Existing
-[server_response_tests.cpp](../tests/integration/protocol/http/v11/server_response_tests.cpp)
-expect handler failure text in that body; changing this requires an explicit
-public error contract, not silently weakening the tests.
-
-**Risk.** Application exception messages can contain internal paths, service
-details or other data that should not be returned to a remote client.
-
-**Acceptance and tests.** Decide on a generic public 500 body and where
-internal diagnostics may remain available. Throw a unique sensitive marker
-from synchronous and deferred handlers; verify its absence from the wire and
-the selected diagnostic behavior. Preserve legitimate non-500 rejection
-semantics. Update the previous disclosure expectation only after the new
-contract is approved.
-
-**Delivery and limits.** Review before 0.1. A minimal safe default does not
-depend on P3, a general error-hook API, or a new logging framework.
-
 <a name="b11-body-suppression-for-head-error-responses"></a>
 <h3>
   <picture>
@@ -401,8 +367,8 @@ next response or EOF on both backends. Preserve GET error bodies and valid
 HEAD metadata; limit method-aware behavior to requests whose method is known.
 
 **Components and delivery.** HTTP response rules, both TCP error paths and
-response integration tests. Verify before 0.1; coordinate with B10 but retain
-separate assertions for disclosure and body suppression.
+response integration tests. Verify before 0.1; preserve generic error
+responses while checking body suppression.
 
 <a name="b13-signed-overflow-in-the-httparena-adapter"></a>
 <h3>

@@ -537,7 +537,13 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
     const std::string serialized_prefix(serialized->prefix.get(),
                                         serialized->prefix_size);
     DOBA_EXPECT(serialized_prefix.starts_with(test.status));
-    DOBA_EXPECT(serialized_prefix.ends_with("reason"));
+    const auto boundary = serialized_prefix.find("\r\n\r\n");
+    DOBA_EXPECT(boundary != std::string::npos);
+    const std::string_view expected =
+        test.reason == rejection_reason::kHandlerError
+            ? "Internal Server Error" : "reason";
+    DOBA_EXPECT_EQUAL(serialized_prefix.substr(boundary + 4), expected);
+    DOBA_EXPECT(!serialized->source.has_value());
   }
   // ---------------------------------------------------------------------------
   // Stop
