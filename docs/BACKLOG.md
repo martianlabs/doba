@@ -64,7 +64,7 @@ C2, fuzzing, and external tool automation remain deferred. P5-P7 are neither
 compliance nor release gates. DT1 and DT2 do not automatically block the
 first release either. Other outstanding items have no assigned version.
 
-**Pending defect verification.** B7-B12 require focused regressions before
+**Pending defect verification.** B8-B12 require focused regressions before
 0.1 publication. Their source-level evidence does not establish that every
 reported runtime outcome has been reproduced. Confirmed memory-safety,
 information-disclosure, or wire-protocol defects require a fix or an explicit
@@ -85,7 +85,7 @@ not a release criterion.
   </picture>
 </h2>
 
-36 outstanding entries across eight categories. Each entry retains only
+35 outstanding entries across eight categories. Each entry retains only
 remaining work or an open decision, with source and test evidence checked
 against the current codebase. Verification pending means that the focused
 regressions or runtime measurements described by the entry remain to be run.
@@ -94,14 +94,14 @@ Category totals count entries, not confirmed bugs.
 | Category | Identifiers | Total |
 | --- | --- | --- |
 | Operational hardening | C1-C3, C7 | 4 |
-| Bugs | B7-B13 | 7 |
+| Bugs | B8-B13 | 6 |
 | Product and convenience | P2-P8 | 7 |
 | Quality and validation | QA1-QA3, QA5-QA6 | 5 |
 | Release engineering | RE1 | 1 |
 | C++ maintainability | DT1-DT3 | 3 |
 | Public documentation | DOC1-DOC2 | 2 |
 | Beyond the first release | F1-F7 | 7 |
-| **Total** | | **36** |
+| **Total** | | **35** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
@@ -109,7 +109,6 @@ Category totals count entries, not confirmed bugs.
 | [C2](#c2-effective-per-request-limits) | Hardening | Deferred | High | No assigned version |
 | [C3](#c3-global-active-connection-limit) | Hardening | Pending | Beta target | 0.1.0-beta.1 |
 | [C7](#c7-pending-response-and-work-budget) | Hardening | Verification pending | High | Assess before 0.1 |
-| [B7](#b7-empty-body-in-the-expect-continue-example) | Example bug | Verification pending | High | Verify before 0.1 |
 | [B8](#b8-response-framing-after-clear_body) | Bug | Verification pending | Medium | Verify before 0.1 |
 | [B9](#b9-response-driven-connection-close) | Bug | Verification pending | Medium | Verify before 0.1 |
 | [B10](#b10-internal-exception-details-in-500-responses) | Security policy | Verification pending | Medium | Verify before 0.1 |
@@ -311,39 +310,10 @@ Coordinate validation with QA1/QA5 without duplicating those campaigns.
   </picture>
 </h2>
 
-B7-B13 retain evidence in the current source. Focused runtime regressions
+B8-B13 retain evidence in the current source. Focused runtime regressions
 and the resulting fixes or contract decisions remain outstanding. Proposed
 tests below are not recorded as executed or failing. B10 includes an
 error-disclosure policy decision; B13 is limited to the benchmark adapter.
-
-<a name="b7-empty-body-in-the-expect-continue-example"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b7-empty-body-in-the-expect-continue-example-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b7-empty-body-in-the-expect-continue-example-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b7-empty-body-in-the-expect-continue-example-dark.svg">
-    <img src="../resources/docs/backlog/h3-b7-empty-body-in-the-expect-continue-example.svg" alt="B7: Empty body in the expect-continue example">
-  </picture>
-</h3>
-
-**Status.** Runtime regression pending; high impact within the shipped example.
-
-**Source evidence.** The `/echo` handler in
-[expect_continue/main.cpp](../examples/http/v11/expect_continue/main.cpp)
-dereferences `get_body_reader()` without checking availability. The
-[decoder](../include/protocol/http/v11/decoder.h) dispatches requests without
-body storage when neither chunked framing nor a positive Content-Length is
-present; the [request](../include/protocol/http/v11/request.h) then has no
-body reader. The missing check remains local to this example.
-
-**Acceptance and tests.** Reproduce POST requests without body framing and
-with `Content-Length: 0`, including the applicable Expect path. Define empty
-echo or explicit rejection and verify no null dereference. Preserve non-empty
-and chunked echo behavior. Use a local reader check consistent with existing
-examples; no API change is required.
-
-**Delivery.** Verify and correct before 0.1. Keep the regression focused on
-the example's handler and request-body contract.
 
 <a name="b8-response-framing-after-clear_body"></a>
 <h3>
