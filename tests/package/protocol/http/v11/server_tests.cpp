@@ -22,9 +22,45 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include "common/filesystem.h"
+#include "common/reader.h"
 #include "protocol/http/v11/server.h"
+#include "protocol/http/v11/static_file_server.h"
+
+namespace {
+using namespace martianlabs::doba::protocol::http::v11;
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] package_controller                                          ( class ) |
+// +---------------------------------------------------------------------------+
+// | Controller implementation.                                                |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+class package_controller {
+ public:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +=========================================================================+
+  template <typename Rty>
+  void register_routes(Rty& routes) {
+    routes.add("GET", "/package/:id", &package_controller::get);
+  }
+  response get(const request&, int id) const {
+    auto result = response::ok_200();
+    result.set_body(id);
+    return result;
+  }
+};
+}  // namespace
 
 int main() {
-  martianlabs::doba::protocol::http::v11::server server;
+  std::error_code error;
+  const auto root = martianlabs::doba::common::filesystem_root(".", error);
+  if (error) return 1;
+  martianlabs::doba::common::filesystem_file file;
+  martianlabs::doba::common::reader input(std::move(file));
+  server<> value;
+  value.add_controller<package_controller>()
+      .add_controller<static_file_server>("/files", root);
   return 0;
 }

@@ -25,8 +25,6 @@
 #ifndef martianlabs_doba_protocol_http_headers_range_h
 #define martianlabs_doba_protocol_http_headers_range_h
 
-#include <ranges>
-
 #include "protocol/http/common/helpers.h"
 
 namespace martianlabs::doba::protocol::http::headers {
@@ -135,8 +133,18 @@ namespace martianlabs::doba::protocol::http::headers {
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] range                                                       ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class range {
  public:
+  // +=========================================================================+
+  // | [>] METHODs                                                  ( public ) |
+  // +=========================================================================+
   static constexpr bool check(std::string_view sv) {
     std::size_t off = 0;
     const std::string_view range_unit = helpers::consume_token(sv);

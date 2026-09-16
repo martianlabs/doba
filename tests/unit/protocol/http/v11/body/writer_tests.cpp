@@ -23,7 +23,6 @@
 // permissions and limitations under the License.
 
 #include <cstddef>
-#include <span>
 #include <string>
 #include <string_view>
 #include <type_traits>

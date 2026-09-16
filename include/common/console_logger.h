@@ -25,10 +25,6 @@
 #ifndef martianlabs_doba_common_console_logger_h
 #define martianlabs_doba_common_console_logger_h
 
-#include <source_location>
-#include <string>
-#include <string_view>
-
 #include "platform.h"
 
 namespace martianlabs::doba::common {
@@ -59,6 +55,8 @@ enum class console_log_color {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] console_logger_options                                     ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct console_logger_options {

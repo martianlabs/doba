@@ -26,7 +26,6 @@
 #define martianlabs_doba_protocol_http_v11_policies_h
 
 #include <cstddef>
-#include <cstdint>
 
 namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////

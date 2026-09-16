@@ -37,8 +37,18 @@
 #include "test_helper.h"
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] scheduled_probe                                             ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class scheduled_probe {
  public:
+  // +=========================================================================+
+  // | [>] TYPEs                                                    ( public ) |
+  // +=========================================================================+
   struct promise_type {
     scheduled_probe get_return_object() noexcept {
       return scheduled_probe(
@@ -65,6 +75,9 @@ class scheduled_probe {
   std::coroutine_handle<> get_coroutine() const noexcept { return coroutine_; }
 
  private:
+  // +=========================================================================+
+  // | [>] METHODs                                                 ( private ) |
+  // +=========================================================================+
   explicit scheduled_probe(
       std::coroutine_handle<promise_type> coroutine) noexcept
       : coroutine_(coroutine) {}

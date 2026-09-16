@@ -22,6 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <filesystem>
+#include <fstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -212,7 +214,7 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
   http_server.start(port_text.c_str());
 
   // +=========================================================================+
-  // | [>] failure_case                                             ( struct ) |
+// | [>] failure_case                                               ( struct ) |
   // +=========================================================================+
   struct failure_case {
     // +=======================================================================+
@@ -247,4 +249,100 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
   DOBA_EXPECT(recovery.has_value());
   if (recovery.has_value()) DOBA_EXPECT_EQUAL(recovery->body, "ok");
   http_server.stop();
+}
+
+namespace {
+namespace fs = std::filesystem;
+using martianlabs::doba::common::filesystem_file;
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] response_file_directory                                     ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+class response_file_directory {
+ public:
+  // +=========================================================================+
+  // | [>] METHODs                                                  ( public ) |
+  // +=========================================================================+
+  response_file_directory() {
+    static std::atomic<unsigned int> counter{0};
+    const auto stamp =
+        std::chrono::steady_clock::now().time_since_epoch().count();
+    do {
+      path_ = fs::temp_directory_path() /
+          ("doba_files_" + std::to_string(stamp) + "_" +
+           std::to_string(counter.fetch_add(1)));
+    } while (!fs::create_directory(path_));
+  }
+  ~response_file_directory() {
+    std::error_code error;
+    fs::remove_all(path_, error);
+  }
+  const fs::path& path() const { return path_; }
+  void write(std::string_view name, std::string_view contents) {
+    const fs::path relative(std::u8string(name.begin(), name.end()));
+    std::ofstream output(path_ / relative, std::ios::binary);
+    output.write(contents.data(),
+                 static_cast<std::streamsize>(contents.size()));
+    if (!output) throw std::runtime_error("Unable to write fixture");
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
+  fs::path path_;
+};
+}  // namespace
+
+// +===========================================================================+
+// | [>] incomplete file response                                ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("HTTP closes incomplete file responses before subsequent bytes") {
+  response_file_directory directory;
+  directory.write("file", "abcdef");
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  server<> value;
+  value.add_route("GET", "/file", [&](const request&) {
+    filesystem_file file;
+    std::error_code error;
+    if (!file.open(directory.path(), "file", error)) {
+      throw std::runtime_error("Unable to open file");
+    }
+    auto result = response::ok_200();
+    const auto length = file.size();
+    result.set_body(martianlabs::doba::common::reader(std::move(file)), length);
+    fs::resize_file(directory.path() / "file", 1);
+    return result;
+  });
+  value.add_route("GET", "/next", [](const request&) {
+    auto result = response::ok_200();
+    result.set_body("must-not-be-transmitted");
+    return result;
+  });
+  value.start(std::to_string(port).c_str());
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all(
+      "GET /file HTTP/1.1\r\nHost: a\r\n\r\n"
+      "GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
+  std::string wire;
+  while (wire.size() < 8192) {
+    auto byte = client.receive(1);
+    if (!byte) break;
+    wire += *byte;
+  }
+#ifdef _WIN32
+  const int reset = WSAECONNRESET;
+#else
+  const int reset = ECONNRESET;
+#endif
+  DOBA_EXPECT(client.error() == "eof" ||
+              (client.error() == "socket" && client.native_error() == reset));
+  DOBA_EXPECT(wire.find("must-not-be-transmitted") == wire.npos);
+  DOBA_EXPECT(wire.find("abcdef") == wire.npos);
+  value.stop();
 }

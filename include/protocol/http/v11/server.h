@@ -203,6 +203,13 @@ class server {
   }
   // +=========================================================================+
   // | [>] add_route                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Template parameters:                                                    |
+  // |   Hty - handler being used                                              |
+  // +-------------------------------------------------------------------------+
+  // | This function adds a route to the server's router. It takes the HTTP    |
+  // | method, route, and handler as parameters. The handler needs to be a     |
+  // | synchronous function that processes the request and returns a response. |
   // +=========================================================================+
   template <router_handler_lambda Hty>
   server& add_route(std::string_view method, std::string_view route,
@@ -216,6 +223,16 @@ class server {
     router_.add(method, route, std::move(handler));
     return *this;
   }
+  // +=========================================================================+
+  // | [>] add_route                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Template parameters:                                                    |
+  // |   Hty - handler being used                                              |
+  // +-------------------------------------------------------------------------+
+  // | This function adds a route to the server's router. It takes the HTTP    |
+  // | method, route, and handler as parameters. The handler needs to be an    |
+  // | asynchronous function that processes the request and returns a response.|
+  // +=========================================================================+
   template <router_async_handler_lambda Hty>
   server& add_route(std::string_view method, std::string_view route,
                     Hty handler) {
@@ -226,6 +243,19 @@ class server {
       throw std::runtime_error("Cannot add route when the server is running");
     }
     router_.add(method, route, std::move(handler));
+    return *this;
+  }
+  // +=========================================================================+
+  // | [>] add_controller                                           ( public ) |
+  // +=========================================================================+
+  template <typename Cty, typename... Args>
+  server& add_controller(Args&&... args) {
+    std::lock_guard<std::mutex> lock(locked_mutex_);
+    if (locked_) {
+      throw std::runtime_error(
+          "Cannot add controller when the server is running");
+    }
+    router_.template add_controller<Cty>(std::forward<Args>(args)...);
     return *this;
   }
 

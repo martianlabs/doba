@@ -25,8 +25,9 @@
 #ifndef martianlabs_doba_protocol_http_headers_expires_h
 #define martianlabs_doba_protocol_http_headers_expires_h
 
+#include <string_view>
+
 #include "protocol/http/common/headers/date.h"
-#include "protocol/http/common/helpers.h"
 
 namespace martianlabs::doba::protocol::http::headers {
 // /////////////////////////////////////////////////////////////////////////////
@@ -116,6 +117,13 @@ namespace martianlabs::doba::protocol::http::headers {
 // | one HTTP-date.                                                            |
 // +---------------------------------------------------------------------------+
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] expires                                                     ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class expires {

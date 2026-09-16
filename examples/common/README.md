@@ -10,6 +10,7 @@ each directory.
 | `byte_storage` | In-memory storage that spills to a temporary file. |
 | `writer` | Incremental writing and ownership transfer. |
 | `reader` | Borrowed byte reading and end-of-input handling. |
+| `filesystem` | Confined file opening and direct reading with owned handles. |
 | `console_logger` | Structured console log levels and formatting options. |
 | `date_server` | Cached HTTP-date production and lifecycle. |
 

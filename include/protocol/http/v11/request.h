@@ -26,14 +26,13 @@
 #define martianlabs_doba_protocol_http_v11_request_h
 
 #include <cstddef>
-#include <cstdint>
+#include <cstring>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <utility>
 #include <vector>
 

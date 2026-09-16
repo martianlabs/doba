@@ -24,7 +24,6 @@
 
 #include <array>
 #include <cstddef>
-#include <cstdint>
 #include <limits>
 #include <span>
 #include <string>

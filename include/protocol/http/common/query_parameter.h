@@ -25,8 +25,9 @@
 #ifndef martianlabs_doba_protocol_http_query_parameter_h
 #define martianlabs_doba_protocol_http_query_parameter_h
 
-#include <cstddef>
-#include <cstdint>
+#include <string>
+#include <string_view>
+#include <utility>
 
 namespace martianlabs::doba::protocol::http {
 // /////////////////////////////////////////////////////////////////////////////

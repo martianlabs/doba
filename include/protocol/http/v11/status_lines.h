@@ -25,6 +25,8 @@
 #ifndef martianlabs_doba_protocol_http_v11_status_lines_h
 #define martianlabs_doba_protocol_http_v11_status_lines_h
 
+#include <cstddef>
+
 #include "protocol/http/common/status_codes.h"
 #include "reason_phrases.h"
 

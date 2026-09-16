@@ -22,9 +22,9 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <concepts>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <utility>
 
 #include "protocol/http/common/header.h"

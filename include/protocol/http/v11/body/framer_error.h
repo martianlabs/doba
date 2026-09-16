@@ -25,7 +25,6 @@
 #ifndef martianlabs_doba_protocol_http_v11_framer_error_h
 #define martianlabs_doba_protocol_http_v11_framer_error_h
 
-#include <cstddef>
 #include <cstdint>
 
 namespace martianlabs::doba::protocol::http::v11::body {

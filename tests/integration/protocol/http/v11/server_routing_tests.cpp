@@ -117,7 +117,7 @@ DOBA_TEST("HTTP/1.1 routes typed parameter boundaries without partial parses") {
   http_server.start(port_text.c_str());
 
   // +=========================================================================+
-  // | [>] test_case                                                ( struct ) |
+// | [>] test_case                                                  ( struct ) |
   // +=========================================================================+
   struct test_case {
     // +=======================================================================+

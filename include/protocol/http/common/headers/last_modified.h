@@ -25,11 +25,9 @@
 #ifndef martianlabs_doba_protocol_http_headers_last_modified_h
 #define martianlabs_doba_protocol_http_headers_last_modified_h
 
-#include <ranges>
 #include <string_view>
 
 #include "protocol/http/common/headers/date.h"
-#include "protocol/http/common/helpers.h"
 
 namespace martianlabs::doba::protocol::http::headers {
 // /////////////////////////////////////////////////////////////////////////////
@@ -129,6 +127,13 @@ namespace martianlabs::doba::protocol::http::headers {
 // |                                                                           |
 // +---------------------------------------------------------------------------+
 // | IMPORTANT: field-value is normalized (no OWS around the value).           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] last_modified                                               ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class last_modified {

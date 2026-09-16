@@ -26,16 +26,16 @@
 #define martianlabs_doba_common_writer_h
 
 #include <cstddef>
-#include <cstdint>
 #include <span>
 #include <string_view>
+#include <utility>
 
 #include "common/byte_storage.h"
 
 namespace martianlabs::doba::common {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] writer ( class )                                                      |
+// | [>] writer                                                      ( class ) |
 // +---------------------------------------------------------------------------+
 // | This class provides a writer interface for writing bytes to               |
 // | a byte_storage backend. It supports writing from a pointer, a string_view,|

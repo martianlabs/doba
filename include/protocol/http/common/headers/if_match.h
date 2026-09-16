@@ -25,7 +25,6 @@
 #ifndef martianlabs_doba_protocol_http_headers_if_match_h
 #define martianlabs_doba_protocol_http_headers_if_match_h
 
-#include <ranges>
 #include <string_view>
 
 #include "protocol/http/common/helpers.h"
@@ -123,6 +122,13 @@ namespace martianlabs::doba::protocol::http::headers {
 // | not strongly match either "xyzzy" or W/"xyzzy".                           |
 // +---------------------------------------------------------------------------+
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] if_match                                                    ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class if_match {

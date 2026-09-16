@@ -22,16 +22,23 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <concepts>
 #include <functional>
 #include <memory>
 #include <optional>
-#include <type_traits>
 
 #include "common/byte_storage.h"
 #include "protocol/http/common/request_getter.h"
 #include "test_helper.h"
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] request                                                    ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Test message representation.                                              |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct request {
   bool has_storage = false;
 };

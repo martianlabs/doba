@@ -27,6 +27,7 @@
 
 #include <concepts>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <stop_token>
 #include <string_view>
@@ -76,6 +77,15 @@ struct router_handler_signature_base {
   using request_type = LQty;
   using response_type = LOty;
   static constexpr std::size_t parameter_count = sizeof...(Args);
+  template <typename Cty, typename Mty>
+  static auto bind(std::shared_ptr<Cty> instance, Mty method) {
+    return [instance = std::move(instance), method](LQty req, Args... args)
+        noexcept(std::is_nothrow_invocable_v<Mty, Cty&, LQty, Args...>)
+        -> LOty {
+      return std::invoke(method, *instance, std::forward<LQty>(req),
+                         std::forward<Args>(args)...);
+    };
+  }
   template <typename RQty, typename RSty, typename Hty>
   static auto make_parametrized(std::string_view pattern, Hty&& handler) {
     return make_router_handler_parametrized<RQty, RSty, Args...>(
@@ -282,6 +292,13 @@ concept router_handler_lambda = requires {
 // | handler's return type is an asynchronous task.                            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] router_handler_returns_task                                ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 template <typename>
 struct router_handler_returns_task : std::false_type {};
 
@@ -296,6 +313,13 @@ struct router_handler_returns_task : std::false_type {};
 // | It inherits from std::false_type by default, and from std::true_type if   |
 // | T is a specialization of common::task. This can be used to determine if a |
 // | handler's return type is an asynchronous task.                            |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] router_handler_returns_task                                ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename T>

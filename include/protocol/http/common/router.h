@@ -33,6 +33,7 @@
 #include <utility>
 #include <vector>
 
+#include "protocol/http/common/router_controller_routes.h"
 #include "protocol/http/common/router_handler_signature.h"
 #include "protocol/http/common/router_handler_static.h"
 
@@ -176,6 +177,38 @@ class router {
     }
   }
   // +=========================================================================+
+  // | [>] add_controller                                           ( public ) |
+  // +=========================================================================+
+  template <typename Cty, typename... Args>
+  void add_controller(Args&&... args) {
+    auto instance = std::make_shared<Cty>(std::forward<Args>(args)...);
+    std::vector<std::size_t> static_sizes;
+    std::vector<std::size_t> parametrized_sizes;
+    std::vector<std::size_t> wildcard_sizes;
+    for (const auto& entry : handlers_) {
+      static_sizes.push_back(entry.second.size());
+    }
+    for (const auto& entry : parametrized_handlers_) {
+      parametrized_sizes.push_back(entry.second.size());
+    }
+    for (const auto& entry : wildcard_handlers_) {
+      wildcard_sizes.push_back(entry.second.size());
+    }
+    detail::router_controller_routes<RQty, RSty, Cty> routes(
+        *this, std::move(instance));
+    try {
+      routes.instance_->register_routes(routes);
+      if (!routes.count_) {
+        throw std::invalid_argument("The controller must register a route");
+      }
+    } catch (...) {
+      restore_routes(handlers_, static_sizes);
+      restore_routes(parametrized_handlers_, parametrized_sizes);
+      restore_routes(wildcard_handlers_, wildcard_sizes);
+      throw;
+    }
+  }
+  // +=========================================================================+
   // | [>] match                                                    ( public ) |
   // +=========================================================================+
   [[nodiscard]]
@@ -265,6 +298,19 @@ class router {
   using parametrized_handler_pair =
       std::pair<std::string,
                 std::vector<router_handler_parametrized<RQty, RSty>>>;
+  // +=========================================================================+
+  // | [>] restore_routes                                          ( private ) |
+  // +=========================================================================+
+  template <typename Tty>
+  static void restore_routes(
+      std::vector<Tty>& entries, const std::vector<std::size_t>& sizes) {
+    while (entries.size() > sizes.size()) entries.pop_back();
+    for (std::size_t i = 0; i < sizes.size(); i++) {
+      while (entries[i].second.size() > sizes[i]) {
+        entries[i].second.pop_back();
+      }
+    }
+  }
   // +=========================================================================+
   // | [>] count_parameters                                      ( private )   |
   // +=========================================================================+

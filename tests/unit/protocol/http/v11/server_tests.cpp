@@ -249,8 +249,18 @@ using test_server =
 using test_router = fake_router<request, response>;
 using test_transport = fake_transport<request, response, decoder>;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] task_probe                                                  ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class task_probe {
  public:
+  // +=========================================================================+
+  // | [>] TYPEs                                                    ( public ) |
+  // +=========================================================================+
   struct promise_type {
     task_probe get_return_object() noexcept {
       return task_probe(
@@ -278,13 +288,26 @@ class task_probe {
   }
 
  private:
+  // +=========================================================================+
+  // | [>] METHODs                                                 ( private ) |
+  // +=========================================================================+
   explicit task_probe(std::coroutine_handle<promise_type> coroutine) noexcept
       : coroutine_(coroutine) {}
   std::coroutine_handle<promise_type> coroutine_;
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] manual_event                                                ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class manual_event {
  public:
+  // +=========================================================================+
+  // | [>] METHODs                                                  ( public ) |
+  // +=========================================================================+
   bool await_ready() const noexcept { return false; }
   void await_suspend(std::coroutine_handle<> continuation) noexcept {
     continuation_ = continuation;
@@ -296,6 +319,9 @@ class manual_event {
   }
 
  private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
   std::coroutine_handle<> continuation_;
 };
 
@@ -743,4 +769,55 @@ DOBA_TEST("async handler observes cancellation after suspension") {
       serialize_prefix(*result).starts_with("HTTP/1.1 204 No Content\r\n"));
   value.stop();
   test_router::async_handler = {};
+}
+
+namespace {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] server_controller                                          ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Controller implementation.                                                |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct server_controller {
+  explicit server_controller(int& alive) : alive_(alive) { alive_++; }
+  ~server_controller() { alive_--; }
+  template <typename Rty>
+  void register_routes(Rty& routes) {
+    routes.add("GET", "/", &server_controller::get);
+  }
+  response get(const request&) {
+    auto res = response::ok_200();
+    res.set_body(++calls_);
+    return res;
+  }
+  int& alive_;
+  int calls_{0};
+};
+}  // namespace
+
+// +===========================================================================+
+// | [>] server controller lifecycle                             ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("server retains controllers and rejects live registration") {
+  int alive = 0;
+  {
+    server<request, response, decoder, fake_transport> value;
+    DOBA_EXPECT_EQUAL(&value.add_controller<server_controller>(alive), &value);
+    DOBA_EXPECT_EQUAL(alive, 1);
+    value.start("8080");
+    DOBA_EXPECT(send_request({}).ends_with("1"));
+    bool threw = false;
+    try { value.add_controller<server_controller>(alive); }
+    catch (const std::runtime_error&) { threw = true; }
+    DOBA_EXPECT(threw);
+    DOBA_EXPECT_EQUAL(alive, 1);
+    value.stop();
+    DOBA_EXPECT_EQUAL(alive, 1);
+    value.start("8081");
+    DOBA_EXPECT(send_request({}).ends_with("2"));
+    value.stop();
+  }
+  DOBA_EXPECT_EQUAL(alive, 0);
+  test_transport::on_request = {};
 }

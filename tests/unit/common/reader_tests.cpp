@@ -26,6 +26,7 @@
 #include <atomic>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <optional>
 #include <span>
 #include <string>
@@ -39,8 +40,18 @@ using martianlabs::doba::common::byte_storage;
 using martianlabs::doba::common::byte_storage_options;
 using martianlabs::doba::common::reader;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] spill_directory                                             ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class spill_directory {
  public:
+  // +=========================================================================+
+  // | [>] METHODs                                                  ( public ) |
+  // +=========================================================================+
   spill_directory() {
     namespace fs = std::filesystem;
     static std::atomic<std::size_t> sequence{0};
@@ -59,6 +70,9 @@ class spill_directory {
   const std::filesystem::path& path() const { return path_; }
 
  private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
   std::filesystem::path path_;
 };
 
@@ -254,4 +268,79 @@ DOBA_TEST("moving a borrowed reader preserves the view and cursor") {
   DOBA_EXPECT_EQUAL(output, "Cdef");
   DOBA_EXPECT(destination.eof());
   DOBA_EXPECT(!destination.failed());
+}
+
+namespace {
+namespace fs = std::filesystem;
+using martianlabs::doba::common::filesystem_file;
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] reader_file_directory                                       ( class ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+class reader_file_directory {
+ public:
+  // +=========================================================================+
+  // | [>] METHODs                                                  ( public ) |
+  // +=========================================================================+
+  reader_file_directory() {
+    static std::atomic<unsigned int> counter{0};
+    const auto stamp =
+        std::chrono::steady_clock::now().time_since_epoch().count();
+    do {
+      path_ = fs::temp_directory_path() /
+          ("doba_files_" + std::to_string(stamp) + "_" +
+           std::to_string(counter.fetch_add(1)));
+    } while (!fs::create_directory(path_));
+  }
+  ~reader_file_directory() {
+    std::error_code error;
+    fs::remove_all(path_, error);
+  }
+  const fs::path& path() const { return path_; }
+  void write(std::string_view name, std::string_view contents) {
+    const fs::path relative(std::u8string(name.begin(), name.end()));
+    std::ofstream output(path_ / relative, std::ios::binary);
+    output.write(contents.data(),
+                 static_cast<std::streamsize>(contents.size()));
+    if (!output) throw std::runtime_error("Unable to write fixture");
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
+  fs::path path_;
+};
+}  // namespace
+
+// +===========================================================================+
+// | [>] reader file ownership                                   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("reader adopts and moves an open file with a shared read cursor") {
+  reader_file_directory directory;
+  directory.write("file", "abcdef");
+  filesystem_file file;
+  std::error_code error;
+  DOBA_EXPECT(file.open(directory.path(), "file", error));
+  reader source(std::move(file));
+  std::byte first{};
+  DOBA_EXPECT(source.fetch(first));
+  DOBA_EXPECT_EQUAL(first, std::byte{'a'});
+  auto moved = std::move(source);
+  std::string output;
+  DOBA_EXPECT_EQUAL(moved.read_all(output), 5);
+  DOBA_EXPECT_EQUAL(output, "bcdef");
+  DOBA_EXPECT(moved.ok());
+  DOBA_EXPECT(moved.eof());
+  DOBA_EXPECT(source.eof());
+  DOBA_EXPECT_EQUAL(moved.size().value(), 6);
+  DOBA_EXPECT(file.open(directory.path(), "file", error));
+  reader failed(std::move(file));
+  fs::resize_file(directory.path() / "file", 0);
+  DOBA_EXPECT(!failed.fetch(first));
+  DOBA_EXPECT(failed.failed());
+  DOBA_EXPECT(!failed.ok());
 }
