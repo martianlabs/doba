@@ -88,7 +88,7 @@ class filesystem_file {
 
     const auto target = directory / std::filesystem::path(path);
     filesystem_file current;
-    current.file_ = ::open("/", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    current.file_ = ::open("/", O_PATH | O_DIRECTORY | O_CLOEXEC);
     if (current.file_ == -1) {
       error = std::error_code(errno, std::generic_category());
       return false;
@@ -100,8 +100,8 @@ class filesystem_file {
       // Pin each directory and never follow a request-path symlink.
       next.file_ = ::openat(
           current.file_, part->c_str(),
-          O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK |
-              (last ? 0 : O_DIRECTORY));
+          O_CLOEXEC | O_NOFOLLOW |
+              (last ? O_RDONLY | O_NONBLOCK : O_PATH | O_DIRECTORY));
       if (next.file_ == -1) {
         const int code = errno;
         struct stat link {};

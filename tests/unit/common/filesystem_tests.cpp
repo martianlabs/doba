@@ -27,6 +27,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -206,4 +207,164 @@ DOBA_TEST("filesystem opens UTF8 names and clears prior errors") {
       reinterpret_cast<char*>(bytes.data()), bytes.size()), "utf8");
   DOBA_EXPECT(!file.open(fs::path("relative"), "file", error));
   DOBA_EXPECT(error == std::errc::invalid_argument);
+}
+
+// +===========================================================================+
+// | [>] filesystem resolves roots and clears errors             ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("filesystem resolves roots and clears errors") {
+  file_directory directory;
+  directory.write("file", "data");
+  std::error_code error = std::make_error_code(std::errc::io_error);
+  const auto root = martianlabs::doba::common::filesystem_root(".", error);
+  DOBA_EXPECT(!error);
+  DOBA_EXPECT(root.is_absolute());
+  DOBA_EXPECT_EQUAL(root, fs::canonical(fs::current_path()));
+  DOBA_EXPECT(martianlabs::doba::common::filesystem_root(
+      directory.path() / "missing", error).empty());
+  DOBA_EXPECT(error == std::errc::no_such_file_or_directory);
+  DOBA_EXPECT(martianlabs::doba::common::filesystem_root(
+      directory.path() / "file", error).empty());
+  DOBA_EXPECT(error == std::errc::not_a_directory);
+  DOBA_EXPECT_EQUAL(martianlabs::doba::common::filesystem_root(
+      directory.path() / ".", error), fs::canonical(directory.path()));
+  DOBA_EXPECT(!error);
+}
+
+// +===========================================================================+
+// | [>] filesystem validates complete bounded paths             ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("filesystem validates complete bounded paths") {
+  file_directory directory;
+  directory.write("file", "data");
+  directory.write("..file", "dots");
+  filesystem_file file;
+  std::error_code error;
+  DOBA_EXPECT(!file.open(directory.path(), "", error));
+  DOBA_EXPECT(error == std::errc::is_a_directory);
+  for (std::string_view path : {".", "..", "/", "//", "file/", "file//",
+                                "./file", "file/."}) {
+    DOBA_EXPECT(!file.open(directory.path(), path, error));
+    DOBA_EXPECT(error == std::errc::permission_denied);
+  }
+  std::string path = "fi?le";
+  for (unsigned int value = 0; value <= 0x7f; value++) {
+    if (value >= 0x20 && value != 0x7f) continue;
+    path[2] = static_cast<char>(value);
+    DOBA_EXPECT(!file.open(directory.path(), path, error));
+    DOBA_EXPECT(error == std::errc::permission_denied);
+  }
+  DOBA_EXPECT(file.open(directory.path(), "..file", error));
+  DOBA_EXPECT(file.open(directory.path(),
+                         std::string_view("file/../outside", 4), error));
+  std::array<std::byte, 4> bytes{};
+  DOBA_EXPECT_EQUAL(file.read(bytes), bytes.size());
+  DOBA_EXPECT_EQUAL(std::string_view(
+      reinterpret_cast<char*>(bytes.data()), bytes.size()), "data");
+}
+
+// +===========================================================================+
+// | [>] filesystem reopens after open and read failures         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("filesystem reopens after open and read failures") {
+  file_directory directory;
+  directory.write("file", "abc");
+  filesystem_file file;
+  std::error_code error;
+  DOBA_EXPECT(file.open(directory.path(), "file", error));
+  std::array<std::byte, 1> byte{};
+  DOBA_EXPECT_EQUAL(file.read(byte), 1);
+  DOBA_EXPECT(!file.open(directory.path(), "missing", error));
+  DOBA_EXPECT_EQUAL(file.size(), 0);
+  DOBA_EXPECT(file.eof());
+  DOBA_EXPECT(!file.failed());
+  DOBA_EXPECT_EQUAL(file.read({}), 0);
+  DOBA_EXPECT(!file.failed());
+  DOBA_EXPECT_EQUAL(file.read(byte), 0);
+  DOBA_EXPECT(file.failed());
+  DOBA_EXPECT(file.open(directory.path(), "file", error));
+  DOBA_EXPECT(!error);
+  DOBA_EXPECT(!file.failed());
+  DOBA_EXPECT_EQUAL(file.read(byte), 1);
+  DOBA_EXPECT_EQUAL(byte[0], std::byte{'a'});
+  fs::resize_file(directory.path() / "file", 1);
+  DOBA_EXPECT_EQUAL(file.read(byte), 0);
+  DOBA_EXPECT(file.failed());
+  directory.write("file", "xyz");
+  DOBA_EXPECT_EQUAL(file.read(byte), 0);
+  DOBA_EXPECT_EQUAL(byte[0], std::byte{'a'});
+  DOBA_EXPECT(file.open(directory.path(), "file", error));
+  DOBA_EXPECT(!error);
+  DOBA_EXPECT(!file.failed());
+  DOBA_EXPECT_EQUAL(file.read(byte), 1);
+  DOBA_EXPECT_EQUAL(byte[0], std::byte{'x'});
+}
+
+// +===========================================================================+
+// | [>] filesystem moves preserve failed and closed states      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("filesystem moves preserve failed and closed states") {
+  file_directory directory;
+  directory.write("file", "abc");
+  filesystem_file file;
+  std::error_code error;
+  DOBA_EXPECT(file.open(directory.path(), "file", error));
+  auto& same = file;
+  file = std::move(same);
+  std::array<std::byte, 1> byte{};
+  DOBA_EXPECT_EQUAL(file.read(byte), 1);
+  DOBA_EXPECT_EQUAL(byte[0], std::byte{'a'});
+  fs::resize_file(directory.path() / "file", 1);
+  DOBA_EXPECT_EQUAL(file.read(byte), 0);
+  DOBA_EXPECT(file.failed());
+  filesystem_file moved(std::move(file));
+  DOBA_EXPECT(moved.failed());
+  DOBA_EXPECT(!moved.eof());
+  DOBA_EXPECT_EQUAL(moved.size(), 3);
+  DOBA_EXPECT(!file.failed());
+  DOBA_EXPECT(file.eof());
+  DOBA_EXPECT_EQUAL(file.size(), 0);
+  file = std::move(moved);
+  DOBA_EXPECT(file.failed());
+  DOBA_EXPECT(!file.eof());
+  DOBA_EXPECT_EQUAL(file.size(), 3);
+  DOBA_EXPECT(!moved.failed());
+  DOBA_EXPECT(moved.eof());
+  DOBA_EXPECT_EQUAL(moved.size(), 0);
+  file = std::move(moved);
+  DOBA_EXPECT(!file.failed());
+  DOBA_EXPECT(file.eof());
+  DOBA_EXPECT_EQUAL(file.size(), 0);
+  DOBA_EXPECT_EQUAL(file.read(byte), 0);
+  DOBA_EXPECT(file.failed());
+}
+
+// +===========================================================================+
+// | [>] filesystem reads preserve buffer boundaries             ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("filesystem reads preserve buffer boundaries") {
+  file_directory directory;
+  directory.write("file", "abc");
+  filesystem_file file;
+  std::error_code error;
+  DOBA_EXPECT(file.open(directory.path(), "file", error));
+  std::array<std::byte, 4> bytes;
+  bytes.fill(std::byte{'!'});
+  const auto output = std::span<std::byte>(bytes).subspan(1, 2);
+  DOBA_EXPECT_EQUAL(file.read(output), 2);
+  DOBA_EXPECT_EQUAL(bytes[0], std::byte{'!'});
+  DOBA_EXPECT_EQUAL(bytes[1], std::byte{'a'});
+  DOBA_EXPECT_EQUAL(bytes[2], std::byte{'b'});
+  DOBA_EXPECT_EQUAL(bytes[3], std::byte{'!'});
+  bytes.fill(std::byte{'!'});
+  DOBA_EXPECT_EQUAL(file.read(output), 1);
+  DOBA_EXPECT_EQUAL(bytes[0], std::byte{'!'});
+  DOBA_EXPECT_EQUAL(bytes[1], std::byte{'c'});
+  DOBA_EXPECT_EQUAL(bytes[2], std::byte{'!'});
+  DOBA_EXPECT_EQUAL(bytes[3], std::byte{'!'});
+  DOBA_EXPECT(file.eof());
+  DOBA_EXPECT(!file.failed());
+  bytes.fill(std::byte{'!'});
+  DOBA_EXPECT_EQUAL(file.read(output), 0);
+  for (const auto byte : bytes) DOBA_EXPECT_EQUAL(byte, std::byte{'!'});
 }

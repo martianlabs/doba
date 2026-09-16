@@ -85,7 +85,10 @@ class filesystem_file {
       error = std::make_error_code(std::errc::invalid_argument);
       return false;
     }
-    const auto directory = root.lexically_normal();
+    auto directory = root.lexically_normal();
+    if (directory.has_relative_path() && !directory.has_filename()) {
+      directory = directory.parent_path();
+    }
 
     std::filesystem::path relative;
     try {
@@ -132,6 +135,7 @@ class filesystem_file {
     }
     // Deny directory renames until the final file has been opened.
     std::vector<filesystem_file> directories;
+    std::wstring boundary;
     for (;;) {
       const bool last = current_path == target;
       filesystem_file next;
@@ -163,7 +167,7 @@ class filesystem_file {
             last ? std::errc::is_a_directory : std::errc::not_a_directory);
         return false;
       }
-      if (last) {
+      if (current_path == directory || last) {
         // Attribute writes can turn pinned directories into reparse points.
         const DWORD capacity =
             GetFinalPathNameByHandleW(next.file_, nullptr, 0, 0);
@@ -183,15 +187,15 @@ class filesystem_file {
           return false;
         }
         resolved.resize(path_length);
-        auto boundary = directory.native();
-        boundary = boundary.starts_with(L"\\\\")
-            ? L"\\\\?\\UNC\\" + boundary.substr(2)
-            : L"\\\\?\\" + boundary;
-        if (boundary.back() != L'\\') boundary += L'\\';
-        if (!resolved.starts_with(boundary)) {
+        if (!last) {
+          boundary = std::move(resolved);
+          if (boundary.back() != L'\\') boundary += L'\\';
+        } else if (!resolved.starts_with(boundary)) {
           error = std::make_error_code(std::errc::permission_denied);
           return false;
         }
+      }
+      if (last) {
         const std::uint64_t length =
             (static_cast<std::uint64_t>(info.nFileSizeHigh) << 32) |
             info.nFileSizeLow;

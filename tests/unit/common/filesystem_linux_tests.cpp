@@ -164,4 +164,61 @@ DOBA_TEST("filesystem Linux reports access denial") {
   DOBA_EXPECT(error == std::errc::permission_denied);
 }
 
+// +===========================================================================+
+// | [>] filesystem Linux traverses unreadable directories       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("filesystem Linux traverses unreadable directories") {
+  file_directory directory;
+  fs::create_directories(directory.path() / "root/sub");
+  directory.write("root/sub/file", "inside");
+  fs::permissions(directory.path(), fs::perms::all);
+  const auto root = directory.path() / "root";
+  const auto execute = fs::perms::owner_exec | fs::perms::group_exec |
+      fs::perms::others_exec;
+  fs::permissions(root / "sub/file", fs::perms::owner_read |
+      fs::perms::group_read | fs::perms::others_read);
+  fs::permissions(root / "sub", execute);
+  fs::permissions(root, execute);
+  filesystem_file file;
+  std::error_code error;
+  const int previous = ::setfsuid(static_cast<uid_t>(-1));
+  if (previous == 0) ::setfsuid(65534);
+  const int direct = ::open((root / "sub/file").c_str(), O_RDONLY);
+  if (direct != -1) ::close(direct);
+  const bool opened = file.open(root, "sub/file", error);
+  ::setfsuid(static_cast<uid_t>(previous));
+  fs::permissions(root, fs::perms::owner_all);
+  fs::permissions(root / "sub", fs::perms::owner_all);
+  DOBA_EXPECT(direct != -1);
+  DOBA_EXPECT(opened);
+  DOBA_EXPECT(!error);
+  std::array<std::byte, 6> bytes{};
+  DOBA_EXPECT_EQUAL(file.read(bytes), bytes.size());
+  DOBA_EXPECT_EQUAL(std::string_view(
+      reinterpret_cast<char*>(bytes.data()), bytes.size()), "inside");
+}
+
+// +===========================================================================+
+// | [>] filesystem Linux requires directory search permission   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("filesystem Linux requires directory search permission") {
+  file_directory directory;
+  fs::create_directory(directory.path() / "sub");
+  directory.write("sub/file", "inside");
+  fs::permissions(directory.path(), fs::perms::all);
+  fs::permissions(directory.path() / "sub/file", fs::perms::owner_read |
+      fs::perms::group_read | fs::perms::others_read);
+  fs::permissions(directory.path() / "sub", fs::perms::owner_read |
+      fs::perms::group_read | fs::perms::others_read);
+  filesystem_file file;
+  std::error_code error;
+  const int previous = ::setfsuid(static_cast<uid_t>(-1));
+  if (previous == 0) ::setfsuid(65534);
+  const bool opened = file.open(directory.path(), "sub/file", error);
+  ::setfsuid(static_cast<uid_t>(previous));
+  fs::permissions(directory.path() / "sub", fs::perms::owner_all);
+  DOBA_EXPECT(!opened);
+  DOBA_EXPECT(error == std::errc::permission_denied);
+}
+
 #endif

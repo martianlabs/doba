@@ -215,6 +215,17 @@ DOBA_TEST("filesystem Windows confines concurrent reparse mutations") {
   file_directory outside;
   const auto root = directory.path() / "root";
   fs::create_directory(root);
+  directory.write("root/control", "inside");
+  {
+    filesystem_file file;
+    std::error_code error;
+    DOBA_EXPECT(file.open(root, "control", error));
+    std::array<std::byte, 6> bytes{};
+    DOBA_EXPECT_EQUAL(file.read(bytes), bytes.size());
+    DOBA_EXPECT_EQUAL(std::string_view(
+        reinterpret_cast<char*>(bytes.data()), bytes.size()), "inside");
+  }
+  DOBA_EXPECT(fs::remove(root / "control"));
   outside.write("secret", "outside");
   struct junction_data {
     DWORD tag;
@@ -283,6 +294,56 @@ DOBA_TEST("filesystem Windows confines concurrent reparse mutations") {
   DOBA_EXPECT(!failed);
   DOBA_EXPECT(changes.load() > 0);
   DOBA_EXPECT_EQUAL(escaped, 0);
+}
+
+// +===========================================================================+
+// | [>] filesystem Windows resolves equivalent root paths       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("filesystem Windows resolves equivalent root paths") {
+  file_directory directory;
+  fs::create_directory(directory.path() / "MixedCaseRoot");
+  directory.write("MixedCaseRoot/file", "inside");
+  const auto root = fs::canonical(directory.path() / "MixedCaseRoot");
+  filesystem_file file;
+  std::error_code error;
+  for (const auto& path : {root, root / "", root / ".",
+                           root.parent_path() / "mIXEDcASErOOT"}) {
+    DOBA_EXPECT(file.open(path, "file", error));
+    DOBA_EXPECT(!error);
+    std::array<std::byte, 6> bytes{};
+    DOBA_EXPECT_EQUAL(file.read(bytes), bytes.size());
+    DOBA_EXPECT_EQUAL(std::string_view(
+        reinterpret_cast<char*>(bytes.data()), bytes.size()), "inside");
+  }
+  const auto relative = (root / "file").relative_path().generic_u8string();
+  DOBA_EXPECT(file.open(root.root_path(),
+                         std::string(relative.begin(), relative.end()), error));
+  DOBA_EXPECT(!error);
+  DOBA_EXPECT_EQUAL(file.size(), 6);
+}
+
+// +===========================================================================+
+// | [>] filesystem Windows resolves short root names            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("filesystem Windows resolves short root names") {
+  file_directory directory;
+  directory.write("file", "inside");
+  const auto root = fs::canonical(directory.path());
+  const DWORD capacity = GetShortPathNameW(root.c_str(), nullptr, 0);
+  DOBA_EXPECT(capacity > 0);
+  std::wstring shortened(capacity, L'\0');
+  const DWORD length =
+      GetShortPathNameW(root.c_str(), shortened.data(), capacity);
+  DOBA_EXPECT(length > 0 && length < capacity);
+  shortened.resize(length);
+  filesystem_file file;
+  std::error_code error;
+  DOBA_EXPECT(file.open(fs::path(shortened), "file", error));
+  DOBA_EXPECT(!error);
+  std::array<std::byte, 6> bytes{};
+  DOBA_EXPECT_EQUAL(file.read(bytes), bytes.size());
+  DOBA_EXPECT_EQUAL(std::string_view(
+      reinterpret_cast<char*>(bytes.data()), bytes.size()), "inside");
 }
 
 #endif
