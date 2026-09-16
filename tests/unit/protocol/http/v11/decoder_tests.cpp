@@ -2351,3 +2351,107 @@ DOBA_TEST("rejects invalid TE quality with its connection option") {
                  connection);
   }
 }
+
+// +===========================================================================+
+// | [>] absolute form rejects suffixes after IP literals        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("absolute form rejects suffixes after IP literals at every split") {
+  constexpr std::string_view cases[] = {
+      "http://[::1]junk/", "http://[::1]80/", "http://[::1]%3A80/",
+      "http://[::1];x?y=1", "http://[::1]]", "http://[v1.name]junk/",
+      "http://[v1.name]80?x=1", "https://[vF.a:b]!/",
+  };
+  for (const auto uri : cases) {
+    const std::string source =
+        "GET " + std::string(uri) + " HTTP/1.1\r\nHost: other.example\r\n\r\n";
+    for (std::size_t split = 0; split <= source.size() + 1; split++) {
+      martianlabs::doba::tests::unit::test_helper::set_context(
+          std::string(uri) + ", split " + std::to_string(split));
+      std::vector<std::size_t> ends;
+      if (split == source.size() + 1) {
+        for (std::size_t i = 1; i <= source.size(); i++) ends.push_back(i);
+      } else {
+        ends.push_back(split);
+        if (split < source.size()) ends.push_back(source.size());
+      }
+      test_decoder value;
+      auto result = value.deserialize();
+      std::size_t offset = 0;
+      for (const std::size_t end : ends) {
+        DOBA_EXPECT_EQUAL(
+            accumulate(
+                value, std::string_view(source).substr(offset, end - offset)),
+            end - offset);
+        offset = end;
+        result = value.deserialize();
+        DOBA_EXPECT(result.request == nullptr);
+        if (result.code == deserialization_status::kInvalidSource) break;
+        DOBA_EXPECT_EQUAL(result.code,
+                          deserialization_status::kMoreBytesNeeded);
+      }
+      DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+      DOBA_EXPECT(result.request == nullptr);
+    }
+  }
+}
+// +===========================================================================+
+// | [>] absolute form preserves valid IP literal authorities    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("absolute form preserves valid IP literals at every split") {
+  struct test_case {
+    std::string_view uri;
+    std::string_view host;
+    std::string_view port;
+  };
+  constexpr test_case cases[] = {
+      {"http://[::1]/path?x=1", "[::1]", ""},
+      {"http://[::1]:80/path?x=1", "[::1]", "80"},
+      {"http://[::1]:/path?x=1", "[::1]", ""},
+      {"http://[v1.name]/path?x=1", "[v1.name]", ""},
+      {"http://[vF.a:b]:009/path?x=1", "[vF.a:b]", "009"},
+      {"http://[v1.name]:/path?x=1", "[v1.name]", ""},
+  };
+  for (const auto& test : cases) {
+    const std::string source = "GET " + std::string(test.uri) +
+                               " HTTP/1.1\r\nHost: other.example:8080\r\n\r\n";
+    for (std::size_t split = 0; split <= source.size() + 1; split++) {
+      martianlabs::doba::tests::unit::test_helper::set_context(
+          std::string(test.uri) + ", split " + std::to_string(split));
+      std::vector<std::size_t> ends;
+      if (split == source.size() + 1) {
+        for (std::size_t i = 1; i <= source.size(); i++) ends.push_back(i);
+      } else {
+        ends.push_back(split);
+        if (split < source.size()) ends.push_back(source.size());
+      }
+      test_decoder value;
+      auto result = value.deserialize();
+      std::size_t offset = 0;
+      for (const std::size_t end : ends) {
+        DOBA_EXPECT_EQUAL(
+            accumulate(
+                value, std::string_view(source).substr(offset, end - offset)),
+            end - offset);
+        offset = end;
+        result = value.deserialize();
+        if (end < source.size()) {
+          DOBA_EXPECT_EQUAL(result.code,
+                            deserialization_status::kMoreBytesNeeded);
+          DOBA_EXPECT(result.request == nullptr);
+        }
+      }
+      DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+      DOBA_EXPECT(result.request != nullptr);
+      DOBA_EXPECT_EQUAL(result.request->get_target(), target::kAbsoluteForm);
+      DOBA_EXPECT(result.request->has_target_authority());
+      DOBA_EXPECT_EQUAL(result.request->get_target_authority_host(), test.host);
+      DOBA_EXPECT_EQUAL(result.request->get_target_authority_port(), test.port);
+      DOBA_EXPECT_EQUAL(result.request->get_absolute_path(), "/path");
+      DOBA_EXPECT_EQUAL(result.request->get_query_parameter("x")->second, "1");
+      DOBA_EXPECT_EQUAL(result.request->get_header("Host").second,
+                        "other.example:8080");
+      DOBA_EXPECT_EQUAL(result.request->get_host(), "other.example");
+      DOBA_EXPECT_EQUAL(result.request->get_host_port(), "8080");
+    }
+  }
+}

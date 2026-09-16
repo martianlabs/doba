@@ -64,7 +64,7 @@ C2, fuzzing, and external tool automation remain deferred. P5-P7 are neither
 compliance nor release gates. DT1 and DT2 do not automatically block the
 first release either. Other outstanding items have no assigned version.
 
-**Pending defect verification.** B8-B12 require focused regressions before
+**Pending defect verification.** B8-B11 require focused regressions before
 0.1 publication. Their source-level evidence does not establish that every
 reported runtime outcome has been reproduced. Confirmed memory-safety,
 information-disclosure, or wire-protocol defects require a fix or an explicit
@@ -85,7 +85,7 @@ not a release criterion.
   </picture>
 </h2>
 
-35 outstanding entries across eight categories. Each entry retains only
+34 outstanding entries across eight categories. Each entry retains only
 remaining work or an open decision, with source and test evidence checked
 against the current codebase. Verification pending means that the focused
 regressions or runtime measurements described by the entry remain to be run.
@@ -94,14 +94,14 @@ Category totals count entries, not confirmed bugs.
 | Category | Identifiers | Total |
 | --- | --- | --- |
 | Operational hardening | C1-C3, C7 | 4 |
-| Bugs | B8-B13 | 6 |
+| Bugs | B8-B11, B13 | 5 |
 | Product and convenience | P2-P8 | 7 |
 | Quality and validation | QA1-QA3, QA5-QA6 | 5 |
 | Release engineering | RE1 | 1 |
 | C++ maintainability | DT1-DT3 | 3 |
 | Public documentation | DOC1-DOC2 | 2 |
 | Beyond the first release | F1-F7 | 7 |
-| **Total** | | **35** |
+| **Total** | | **34** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
@@ -113,7 +113,6 @@ Category totals count entries, not confirmed bugs.
 | [B9](#b9-response-driven-connection-close) | Bug | Verification pending | Medium | Verify before 0.1 |
 | [B10](#b10-internal-exception-details-in-500-responses) | Security policy | Verification pending | Medium | Verify before 0.1 |
 | [B11](#b11-body-suppression-for-head-error-responses) | Bug | Verification pending | Medium | Verify before 0.1 |
-| [B12](#b12-trailing-data-after-an-ip-literal-authority) | Bug | Verification pending | Medium | Verify before 0.1 |
 | [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark bug | Verification pending | Medium | Before adapter publication |
 | [P2](#p2-access-logging) | Product | Pending | Not set | No assigned version |
 | [P3](#p3-middleware-chain) | Product | Pending | Not set | No assigned version |
@@ -310,9 +309,9 @@ Coordinate validation with QA1/QA5 without duplicating those campaigns.
   </picture>
 </h2>
 
-B8-B13 retain evidence in the current source. Focused runtime regressions
-and the resulting fixes or contract decisions remain outstanding. Proposed
-tests below are not recorded as executed or failing. B10 includes an
+B8-B11 and B13 retain evidence in the current source. Focused runtime
+regressions and the resulting fixes or contract decisions remain outstanding.
+Proposed tests below are not recorded as executed or failing. B10 includes an
 error-disclosure policy decision; B13 is limited to the benchmark adapter.
 
 <a name="b8-response-framing-after-clear_body"></a>
@@ -435,40 +434,6 @@ HEAD metadata; limit method-aware behavior to requests whose method is known.
 **Components and delivery.** HTTP response rules, both TCP error paths and
 response integration tests. Verify before 0.1; coordinate with B10 but retain
 separate assertions for disclosure and body suppression.
-
-<a name="b12-trailing-data-after-an-ip-literal-authority"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b12-trailing-data-after-an-ip-literal-authority-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b12-trailing-data-after-an-ip-literal-authority-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b12-trailing-data-after-an-ip-literal-authority-dark.svg">
-    <img src="../resources/docs/backlog/h3-b12-trailing-data-after-an-ip-literal-authority.svg" alt="B12: Trailing data after an IP-literal authority">
-  </picture>
-</h3>
-
-**Status.** Focused regression pending; medium severity.
-
-**Source evidence.** In
-[helpers.h](../include/protocol/http/common/helpers.h),
-`split_authority_host_port()` returns the position immediately after `]`
-for an IP-literal. The absolute-form caller validates the remaining authority
-only when that position contains `:`. A different suffix has no rejection
-branch, so its bytes can be ignored while parsing the host.
-
-**Reproduction candidate.**
-
-```text
-GET http://[::1]junk/ HTTP/1.1\r\nHost: a\r\n\r\n
-```
-
-**Acceptance and tests.** Verify rejection in the absolute-form helper and
-through request decoding. Cover valid bracketed hosts with and without a
-port, malformed suffixes and fragmented input. Enforce the existing authority
-grammar without adding unrelated semantic validation or rejecting permitted
-syntax in adjacent forms.
-
-**Delivery and scope.** Verify before 0.1. Correct authority syntax while
-preserving target-authority precedence over Host.
 
 <a name="b13-signed-overflow-in-the-httparena-adapter"></a>
 <h3>

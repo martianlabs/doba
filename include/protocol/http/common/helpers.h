@@ -2547,8 +2547,10 @@ struct helpers {
       if (type == host_type::kUnknown) {
         return deserialization_status::kInvalidSource;
       }
-      if (colon_at != std::string_view::npos && colon_at < host_port.size() &&
-          host_port[colon_at] == ':') {
+      if (colon_at != std::string_view::npos && colon_at < host_port.size()) {
+        if (host_port[colon_at] != ':') {
+          return deserialization_status::kInvalidSource;
+        }
         port = host_port.substr(colon_at + 1);
         for (std::size_t p = 0; p < port.size(); p++) {
           if (!is_digit(port[p])) {
