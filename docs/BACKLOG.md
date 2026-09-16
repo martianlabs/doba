@@ -45,37 +45,55 @@ a selected value are marked "Not set"; complexity estimates are separate.
   </picture>
 </h2>
 
-The current `0.1.0-beta.1` target is to complete C1 and C3 and verify them
-over real sockets on Windows and Linux. Release also requires preserving
-CI and CMake consumer validations and completing RE1.
+The frozen target is `0.1.0-beta1`, a beta for adoption and evaluation in
+controlled deployments. This section is the authoritative release scope.
+All other outstanding work is future work and does not block this beta.
 
-Recommended order:
+Implementation order:
 
-1. C1: a single inactivity timeout.
-2. C3: a global active connection limit.
-3. Close RE1 and verify the complete release matrix.
+1. B11: suppress bodies in HEAD error responses.
+2. B9: honor response-driven `Connection: close` after complete delivery.
+3. C1, C2, C3 and C7: implement and verify all operational limits.
+4. RE1: complete minimum documentation, the full existing CI and CMake consumer
+   validations, and coherent versioning and publication.
 
-C1 and C3 share generic configuration before `start()` and platform-specific
-execution in IOCP and epoll. Define the common part before addressing each
-localized change. Default values and the exact API shape have not yet
-been selected.
+**Operational policies.** C1, C2, C3 and C7 are mandatory for this release.
+Policies will be injected when the corresponding modules are created.
+A later design stage, before implementation and publication, will define
+policy contracts, module responsibilities, injection APIs, ownership,
+defaults, and boundary behavior. No concrete policy types or signatures are
+selected here. HTTP request limits belong to the protocol layer; connection,
+inactivity and pending-work limits belong to their responsible modules.
 
-C2, fuzzing, and external tool automation remain deferred. P5-P7 are neither
-compliance nor release gates. DT1 and DT2 do not automatically block the
-first release either. Other outstanding items have no assigned version.
+**Exit criteria.**
 
-**Pending defect verification.** B9 and B11 require focused regressions before
-0.1 publication. Their source-level evidence does not establish that every
-reported runtime outcome has been reproduced. Confirmed memory-safety,
-information-disclosure, or wire-protocol defects require a fix or an explicit
-release decision with documented impact and mitigation. B13 concerns the
-benchmark adapter, not the core release. Assess C7 resource exhaustion and
-deployment mitigations before deciding whether its implementation must join
-the release target.
+- Reproduce B11 and B9 with focused regressions and fix them. Verify synchronous
+  and deferred paths on Windows and Linux. The source evidence below is not
+  a claim that those runtime regressions have already been executed.
+- Implement C1, C2, C3 and C7 with focused boundary and real-socket tests on
+  IOCP and epoll. Include slow clients, resource release, ordering and
+  cancellation where relevant. Assessing or documenting a limit is not a
+  substitute for implementing it.
+- Pass every existing gate in [QUALITY.md](QUALITY.md) on the exact release
+  revision: compiler/configuration matrix, strict warnings, sanitizers,
+  minimum CMake, and isolated package and source consumers.
+- Publish minimum usage preconditions and deployment limitations, release
+  notes, a working vulnerability-reporting channel, and a version and tag
+  that consistently identify `0.1.0-beta1`.
 
-DT3 requires an explicit response contract. P8 and F6-F7 remain optional
-improvements, not new 0.1 gates. Feature parity with mature frameworks is
-not a release criterion.
+**Future work.** B13, P2-P8, QA1-QA3, QA5-QA6, DT1-DT3, DOC1-DOC2 and F1-F7
+remain outside this release. RE1 also retains the full contribution guide
+as future work. Minimum usage documentation is part of RE1; completing the
+broader documentation or API work in DT2/DT3/DOC1/DOC2 is not required.
+Focused tests for release items remain mandatory without requiring the
+exhaustive coverage, fuzzing, benchmarks, soak campaigns or external-tool
+automation described by the future QA entries.
+
+**Scope control.** Until publication, work is limited to the listed release
+items, their tests, and the minimum release closure. Optional functionality,
+refactoring and broader quality programs remain future work. Any addition
+requires an explicit release-scope decision, supported by concrete evidence
+when a newly reproduced defect affects the supported behavior.
 
 <a name="inventory"></a>
 <h2>
@@ -87,56 +105,58 @@ not a release criterion.
 
 32 outstanding entries across eight categories. Each entry retains only
 remaining work or an open decision, with source and test evidence checked
-against the current codebase. Verification pending means that the focused
-regressions or runtime measurements described by the entry remain to be run.
-Category totals count entries, not confirmed bugs.
+against the current codebase. Seven entries have release scope; twenty-five
+are future work. Verification pending means that the focused regressions or
+runtime measurements described by the entry remain to be run. Category totals
+count entries, not confirmed bugs; RE1 separates its minimum release work from
+the future contribution guide.
 
-| Category | Identifiers | Total |
-| --- | --- | --- |
-| Operational hardening | C1-C3, C7 | 4 |
-| Bugs | B9, B11, B13 | 3 |
-| Product and convenience | P2-P8 | 7 |
-| Quality and validation | QA1-QA3, QA5-QA6 | 5 |
-| Release engineering | RE1 | 1 |
-| C++ maintainability | DT1-DT3 | 3 |
-| Public documentation | DOC1-DOC2 | 2 |
-| Beyond the first release | F1-F7 | 7 |
-| **Total** | | **32** |
+| Category | Identifiers | Release | Future work | Total |
+| --- | --- | --- | --- | --- |
+| Operational hardening | C1-C3, C7 | 4 | 0 | 4 |
+| Bugs | B9, B11, B13 | 2 | 1 | 3 |
+| Product and convenience | P2-P8 | 0 | 7 | 7 |
+| Quality and validation | QA1-QA3, QA5-QA6 | 0 | 5 | 5 |
+| Release engineering | RE1 | 1 | 0 | 1 |
+| C++ maintainability | DT1-DT3 | 0 | 3 | 3 |
+| Public documentation | DOC1-DOC2 | 0 | 2 | 2 |
+| Beyond the first release | F1-F7 | 0 | 7 | 7 |
+| **Total** | | **7** | **25** | **32** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
-| [C1](#c1-single-inactivity-timeout) | Hardening | Pending | Beta target | 0.1.0-beta.1 |
-| [C2](#c2-effective-per-request-limits) | Hardening | Deferred | High | No assigned version |
-| [C3](#c3-global-active-connection-limit) | Hardening | Pending | Beta target | 0.1.0-beta.1 |
-| [C7](#c7-pending-response-and-work-budget) | Hardening | Verification pending | High | Assess before 0.1 |
-| [B9](#b9-response-driven-connection-close) | Bug | Verification pending | Medium | Verify before 0.1 |
-| [B11](#b11-body-suppression-for-head-error-responses) | Bug | Verification pending | Medium | Verify before 0.1 |
-| [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark bug | Verification pending | Medium | Before adapter publication |
-| [P2](#p2-access-logging) | Product | Pending | Not set | No assigned version |
-| [P3](#p3-middleware-chain) | Product | Pending | Not set | No assigned version |
-| [P4](#p4-form-parsing) | Product | Pending | Not set | No assigned version |
-| [P5](#p5-automatic-conditionals-and-ranges) | Product | Deferred | Not set | No assigned version |
-| [P6](#p6-output-trailers) | Product | Deferred | Not set | No assigned version |
-| [P7](#p7-automatic-resource-options) | Product | Deferred | Not set | No assigned version |
-| [P8](#p8-429-response-construction) | Product | Pending | Low | No assigned version |
-| [QA1](#qa1-exhaustive-compliance-suite) | QA | Pending | Not set | No assigned version |
-| [QA2](#qa2-fuzzing) | QA | Deferred | High | No assigned version |
-| [QA3](#qa3-performance-baseline) | QA | Pending | Medium | No assigned version |
-| [QA5](#qa5-stress-campaigns) | QA | Pending | Not set | No assigned version |
-| [QA6](#qa6-external-compliance-automation) | QA | Deferred | Not set | No assigned version |
-| [RE1](#re1-release-governance-and-traceability) | Release | Pending | Medium | 0.1.0-beta.1 |
-| [DT1](#dt1-platformh-dependencies-and-global-effects) | C++ | Pending | Medium | No assigned version |
-| [DT2](#dt2-indexed-getter-contract) | C++ | Pending | Low/Medium | No assigned version |
-| [DT3](#dt3-response-framing-and-capacity-contract) | C++ | Decision pending | Medium | No assigned version |
-| [DOC1](#doc1-transport-lifecycle) | Documentation | Pending | Not set | No assigned version |
-| [DOC2](#doc2-request-views-and-getters) | Documentation | Pending | Not set | No assigned version |
-| [F1](#f1-tls) | Future | Deferred | Not set | Beyond 0.1 |
-| [F2](#f2-compression-and-gzip) | Future | Deferred | Not set | Beyond 0.1 |
-| [F3](#f3-progressive-streaming-and-sse) | Future | Deferred | Not set | Beyond 0.1 |
-| [F4](#f4-ordered-upgrade-barrier) | Future | Deferred | Not set | Beyond 0.1 |
-| [F5](#f5-websockets) | Future | Deferred | Not set | Beyond 0.1 |
-| [F6](#f6-listener-and-worker-configuration) | Future | Deferred | Not set | Beyond 0.1 |
-| [F7](#f7-shutdown-with-draining) | Future | Deferred | Not set | Beyond 0.1 |
+| [C1](#c1-single-inactivity-timeout) | Hardening | Pending | Release gate | 0.1.0-beta1 |
+| [C2](#c2-effective-per-request-limits) | Hardening | Pending | Release gate | 0.1.0-beta1 |
+| [C3](#c3-global-active-connection-limit) | Hardening | Pending | Release gate | 0.1.0-beta1 |
+| [C7](#c7-pending-response-and-work-budget) | Hardening | Design and validation pending | Release gate | 0.1.0-beta1 |
+| [B9](#b9-response-driven-connection-close) | Bug | Verification pending | Release gate | 0.1.0-beta1 |
+| [B11](#b11-body-suppression-for-head-error-responses) | Bug | Verification pending | Release gate | 0.1.0-beta1 |
+| [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark bug | Verification pending | Medium | Future work |
+| [P2](#p2-access-logging) | Product | Pending | Not set | Future work |
+| [P3](#p3-middleware-chain) | Product | Pending | Not set | Future work |
+| [P4](#p4-form-parsing) | Product | Pending | Not set | Future work |
+| [P5](#p5-automatic-conditionals-and-ranges) | Product | Deferred | Not set | Future work |
+| [P6](#p6-output-trailers) | Product | Deferred | Not set | Future work |
+| [P7](#p7-automatic-resource-options) | Product | Deferred | Not set | Future work |
+| [P8](#p8-429-response-construction) | Product | Pending | Low | Future work |
+| [QA1](#qa1-exhaustive-compliance-suite) | QA | Pending | Not set | Future work |
+| [QA2](#qa2-fuzzing) | QA | Deferred | High | Future work |
+| [QA3](#qa3-performance-baseline) | QA | Pending | Medium | Future work |
+| [QA5](#qa5-stress-campaigns) | QA | Pending | Not set | Future work |
+| [QA6](#qa6-external-compliance-automation) | QA | Deferred | Not set | Future work |
+| [RE1](#re1-release-governance-and-traceability) | Release | Pending | Release gate | 0.1.0-beta1 |
+| [DT1](#dt1-platformh-dependencies-and-global-effects) | C++ | Pending | Medium | Future work |
+| [DT2](#dt2-indexed-getter-contract) | C++ | Pending | Low/Medium | Future work |
+| [DT3](#dt3-response-framing-and-capacity-contract) | C++ | Decision pending | Medium | Future work |
+| [DOC1](#doc1-transport-lifecycle) | Documentation | Pending | Not set | Future work |
+| [DOC2](#doc2-request-views-and-getters) | Documentation | Pending | Not set | Future work |
+| [F1](#f1-tls) | Future | Deferred | Not set | Future work |
+| [F2](#f2-compression-and-gzip) | Future | Deferred | Not set | Future work |
+| [F3](#f3-progressive-streaming-and-sse) | Future | Deferred | Not set | Future work |
+| [F4](#f4-ordered-upgrade-barrier) | Future | Deferred | Not set | Future work |
+| [F5](#f5-websockets) | Future | Deferred | Not set | Future work |
+| [F6](#f6-listener-and-worker-configuration) | Future | Deferred | Not set | Future work |
+| [F7](#f7-shutdown-with-draining) | Future | Deferred | Not set | Future work |
 
 <a name="operational-hardening"></a>
 <h2>
@@ -147,6 +167,9 @@ Category totals count entries, not confirmed bugs.
     <img src="../resources/docs/backlog/h2-operational-hardening.svg" alt="Operational hardening">
   </picture>
 </h2>
+
+C1, C2, C3 and C7 are all required for `0.1.0-beta1`. Their policies will
+be defined in the later design stage described in the release target.
 
 <a name="c1-single-inactivity-timeout"></a>
 <h3>
@@ -161,10 +184,11 @@ Category totals count entries, not confirmed bugs.
 **Context.** Neither backend currently closes an open connection that stops
 making progress. Original complexity estimate: M.
 
-**Scope.** A single `inactivity_timeout`, configurable before `start()`,
-applies to reads, keep-alive, and writes. Receiving or sending bytes renews
-the deadline; the total duration of a connection or request does not exhaust
-it while progress continues. On expiry, the transport closes safely.
+**Scope.** A single `inactivity_timeout`, supplied through a policy injected
+when the responsible module is created, applies to reads, keep-alive, and
+writes. Receiving or sending bytes renews the deadline; the total duration
+of a connection or request does not exhaust it while progress continues.
+On expiry, the transport closes safely.
 
 **Components.** Transport configuration, `tcpip_windows.h`,
 `tcpip_linux.h`, and TCP/IP integration tests.
@@ -177,9 +201,11 @@ it while progress continues. On expiry, the transport closes safely.
 - Check timing, lifetime, ordering, and exactly one callback per closure.
 - Run equivalent scenarios in IOCP and epoll.
 
-**Dependencies and decisions.** Share generic configuration with C3.
-Determine the API, default value, possible disabling behavior, and test timing
-tolerance before implementation.
+**Dependencies and decisions.** Follow the policy design stage shared by
+C1, C2, C3 and C7. Determine the injection contract, default value, possible
+disabling behavior, and test timing tolerance before implementation.
+
+**Delivery.** Required for `0.1.0-beta1`.
 
 **Out of scope.** Separate deadlines per phase, an absolute maximum duration,
 dynamic configuration, and automatic `408` responses.
@@ -194,9 +220,9 @@ dynamic configuration, and automatic `408` responses.
   </picture>
 </h3>
 
-**Remaining work.** Select defaults and expose a minimal pre-start API that
-passes request policies through the standard server to its decoder. Define
-and enforce the selected budget for chunked bodies, whose final size is not
+**Remaining work.** Define request policies injected at module creation and
+how the standard server supplies them to its decoder. Select defaults and
+enforce the selected budget for chunked bodies, whose final size is not
 known from the headers.
 
 **Evidence.** [policies.h](../include/protocol/http/v11/policies.h) defaults
@@ -220,9 +246,12 @@ their tests.
 - Verify that configuration cannot change unsafely during use.
 - Measure whether the change affects the hot path.
 
-**Dependencies and decisions.** API shape, defaults, and body accounting
-remain undecided. This item is deferred and controls resources per request;
-C3 separately limits active connections.
+**Dependencies and decisions.** Injection API shape, defaults, and body
+accounting will be defined in the C1/C2/C3/C7 policy design stage. C2 controls
+resources per request; C3 separately limits active connections.
+
+**Delivery.** Required for `0.1.0-beta1`, including cumulative chunked-body
+limits and their focused boundary tests.
 
 <a name="c3-global-active-connection-limit"></a>
 <h3>
@@ -237,10 +266,10 @@ C3 separately limits active connections.
 **Context.** `connections_` is observational and does not limit admission.
 Original complexity estimate: M.
 
-**Scope.** A global maximum configured before `start()`. Each backend
-atomically reserves capacity before admitting a context. Once the limit is
-reached, it immediately closes the new connection while preserving those
-already admitted.
+**Scope.** A global maximum supplied through a policy injected when the
+responsible module is created. Each backend atomically reserves capacity
+before admitting a context. Once the limit is reached, it immediately closes
+the new connection while preserving those already admitted.
 
 **Components.** Generic configuration, admission and closure in both backends,
 the connection counter, and TCP/IP tests.
@@ -253,9 +282,11 @@ the connection counter, and TCP/IP tests.
 - A new connection can enter once capacity is available again.
 - Verify equivalent behavior on Windows and Linux.
 
-**Dependencies and decisions.** Coordinate with C1; determine defaults and
-the semantics of any unlimited value. C3 controls connections; C2 controls
-resources per request.
+**Dependencies and decisions.** Follow the C1/C2/C3/C7 policy design stage;
+determine defaults and the semantics of any unlimited value. C3 controls
+connections; C2 controls resources per request and C7 controls pending work.
+
+**Delivery.** Required for `0.1.0-beta1`.
 
 **Out of scope.** Per-worker quotas, dynamic changes, acceptance backpressure,
 new callbacks, and HTTP rejection responses.
@@ -270,8 +301,9 @@ new callbacks, and HTTP rejection responses.
   </picture>
 </h3>
 
-**Status and evidence.** Verification pending. Source inspection found no
-per-connection budget at response insertion or deferred slot reservation.
+**Status and evidence.** Implementation and validation are required for
+`0.1.0-beta1`. Source inspection found no per-connection budget at response
+insertion or deferred slot reservation.
 A socket send buffer limit does not bound queued response bodies or work.
 Resource exhaustion has not been reproduced in a stress campaign.
 
@@ -283,21 +315,23 @@ retained request state while more requests are accepted.
 [tcpip_linux.h](../include/transport/server/tcpip_linux.h) and
 [tcpip_windows.h](../include/transport/server/tcpip_windows.h).
 
-**Scope to decide.** Measure retained work and bytes; define a bounded
-admission policy and its resume or rejection behavior only if required.
-Preserve ordering, cancellation and ownership across synchronous and deferred
-handlers. Do not prescribe a new queue abstraction or HTTP-specific transport.
+**Scope.** Implement limits on retained work and queued response bytes
+through policies injected at module creation. Define accounting, defaults,
+and admission/resume or rejection behavior in the C1/C2/C3/C7 policy design
+stage. Preserve ordering, cancellation and ownership across synchronous and
+deferred handlers without prescribing a new queue abstraction or an
+HTTP-specific transport.
 
 **Acceptance and tests.** Use a non-reading peer and a delayed first handler
-with pipelined successors on both platforms. Measure pending entries and
-retained memory, verify another connection remains serviceable, and check
+with pipelined successors on both platforms. Check the configured work and
+byte boundaries and the selected admission behavior. Measure pending entries
+and retained memory, verify another connection remains serviceable, and check
 resume, disconnect and stop without leaks or duplicate completion.
 
-**Release decision.** Assess before 0.1. Record the supported deployment
-envelope and verify any proxy mitigation; do not assume a proxy bounds
-backend pipelining. Implementation priority depends on demonstrated exposure.
-C3 bounds connections, not this queue; F3 concerns future progressive output.
-Coordinate validation with QA1/QA5 without duplicating those campaigns.
+**Delivery.** Required for `0.1.0-beta1`. Deployment restrictions or proxy
+mitigations do not replace this implementation. C3 bounds connections, not
+this queue; F3 concerns future progressive output. Focused validation belongs
+to C7 and does not depend on completing the future QA1/QA5 campaigns.
 
 <a name="bugs"></a>
 <h2>
@@ -307,10 +341,10 @@ Coordinate validation with QA1/QA5 without duplicating those campaigns.
   </picture>
 </h2>
 
-B9, B11 and B13 retain evidence in the current source. Focused runtime
-regressions and the resulting fixes or contract decisions remain outstanding.
-Proposed tests below are not recorded as executed or failing. B13 is limited
-to the benchmark adapter.
+B11 and B9 are required for `0.1.0-beta1`, in that implementation order.
+B13 is future work limited to the benchmark adapter. All three retain source
+evidence; the focused runtime regressions below are not recorded as executed
+or failing. Reproduce and fix the release defects before publication.
 
 <a name="b9-response-driven-connection-close"></a>
 <h3>
@@ -337,9 +371,10 @@ Include a pipelined successor and verify that it is not processed beyond
 the close boundary. Cover synchronous and deferred handlers on both platforms,
 and preserve ordinary keep-alive and request-driven closure.
 
-**Delivery and limits.** Verify before 0.1. Preserve the generic transport
-boundary; do not add HTTP header parsing to a transport. Select the smallest
-way to convey response closure without assuming a public API extension.
+**Delivery and limits.** Reproduce, fix and validate for `0.1.0-beta1` after
+B11. Preserve the generic transport boundary; do not add HTTP header parsing
+to a transport. Select the smallest way to convey response closure without
+assuming a public API extension.
 
 <a name="b11-body-suppression-for-head-error-responses"></a>
 <h3>
@@ -367,8 +402,8 @@ next response or EOF on both backends. Preserve GET error bodies and valid
 HEAD metadata; limit method-aware behavior to requests whose method is known.
 
 **Components and delivery.** HTTP response rules, both TCP error paths and
-response integration tests. Verify before 0.1; preserve generic error
-responses while checking body suppression.
+response integration tests. Reproduce, fix and validate for `0.1.0-beta1`
+before B9; preserve generic error responses while checking body suppression.
 
 <a name="b13-signed-overflow-in-the-httparena-adapter"></a>
 <h3>
@@ -394,8 +429,8 @@ inputs as controls. Select a deterministic invalid-request result and verify
 it with UBSan where available. Keep checks local to the adapter and preserve
 the benchmark's expected arithmetic for valid inputs.
 
-**Delivery.** Resolve before publishing the affected adapter as verified.
-This does not by itself block the core library release.
+**Delivery.** Future work; not a `0.1.0-beta1` gate. Resolve before publishing
+the affected adapter as verified.
 
 <a name="product-and-convenience"></a>
 <h2>
@@ -406,6 +441,8 @@ This does not by itself block the core library release.
     <img src="../resources/docs/backlog/h2-product-and-convenience.svg" alt="Product and convenience">
   </picture>
 </h2>
+
+P2-P8 are future work. None is a prerequisite for `0.1.0-beta1`.
 
 <a name="p2-access-logging"></a>
 <h3>
@@ -517,8 +554,7 @@ ability to ignore Range and serve a normal GET.
 
 **References.** RFC 9110 S13.2, S13.2.2, and S14.
 
-**Delivery.** Deferred optional functionality; neither a core compliance gate
-nor a release gate.
+**Delivery.** Future work; neither a core compliance gate nor a release gate.
 
 <a name="p6-output-trailers"></a>
 <h3>
@@ -540,7 +576,7 @@ trailer field restrictions; preserve output without trailers.
 
 **Reference.** RFC 9110 S6.5.
 
-**Out of scope.** Optional capability with no assigned release gate.
+**Delivery.** Future work; not a release gate.
 
 <a name="p7-automatic-resource-options"></a>
 <h3>
@@ -564,7 +600,7 @@ trailer field restrictions; preserve output without trailers.
 precedence; define precedence for an explicit handler and test existing and
 missing resources.
 
-**Out of scope.** Optional convenience; not a release gate.
+**Delivery.** Future work; not a release gate.
 
 <a name="p8-429-response-construction"></a>
 <h3>
@@ -591,7 +627,7 @@ decision, not required by this item. Do not add built-in rate limiting.
 **Acceptance and tests.** Verify the 429 status line, optional application-set
 Retry-After, body framing and HEAD behavior. Preserve existing factories.
 
-**Delivery.** Optional convenience with no assigned version; not a 0.1 gate.
+**Delivery.** Future work; not a `0.1.0-beta1` gate.
 
 <a name="quality-and-validation"></a>
 <h2>
@@ -602,6 +638,10 @@ Retry-After, body framing and HEAD behavior. Preserve existing factories.
     <img src="../resources/docs/backlog/h2-quality-and-validation.svg" alt="Quality and validation">
   </picture>
 </h2>
+
+QA1-QA3 and QA5-QA6 are future work. The existing CI gates and focused
+tests for B11, B9 and C1/C2/C3/C7 remain mandatory for `0.1.0-beta1`;
+completing these broader QA programs is not required.
 
 <a name="qa1-exhaustive-compliance-suite"></a>
 <h3>
@@ -637,12 +677,11 @@ equivalent results in IOCP and epoll.
   on Windows and Linux. The
   [client tests](../tests/integration/helpers/tcpip_client_tests.cpp) cover
   refusal and receive deadlines, not that connect timeout.
-- After C2 defines configurable limits, test zero, limit-1, limit, and limit+1,
-  early rejection, and encoded/decoded chunked accounting through the server.
 
 **Components.** Decoder and framing tests, storage tests, protocol-transport
-integration, and test helpers. Coordinate pending-response measurements with
-C7/QA5 rather than duplicating those campaigns.
+integration, and test helpers. Reuse C2 boundary tests and C7 pending-response
+measurements when this future work resumes; those focused tests belong to
+the release items and must not wait for QA1 or QA5.
 
 **Acceptance.** Record the rule or contract and missing boundary exercised by
 each new case. A passing test count is not an exhaustive compliance claim.
@@ -678,8 +717,9 @@ hardening effort.
 </h3>
 
 **Remaining work.** Turn the published HttpArena measurements into a repeatable
-release baseline with regression tolerances. Pin the Web Frameworks runner,
-whose adapter currently references an inspected branch rather than a commit.
+baseline for future releases, with regression tolerances. Pin the Web
+Frameworks runner, whose adapter currently references an inspected branch
+rather than a commit.
 
 **Evidence.** The [published results](../resources/benchmarks/benchmark-results.txt)
 record runner and doba revisions, throughput, latency, CPU, and memory for
@@ -708,7 +748,7 @@ Keep measurement separate from optimization.
   </picture>
 </h3>
 
-**Status:** pending. **Priority:** not set. **Target:** no assigned version.
+**Status:** pending. **Priority:** not set. **Target:** future work.
 
 **Context.** Functional integration and concurrency cases are in place.
 Extended soak tests and, where feasible, controlled worker interleavings
@@ -725,7 +765,7 @@ reproduction before creating new tests; relate them to C1/C3 and QA3 scenarios.
   </picture>
 </h3>
 
-**Status:** deferred. **Priority:** not set. **Target:** no assigned version.
+**Status:** deferred. **Priority:** not set. **Target:** future work.
 
 **Context.** h1spec and Http11Probe are run manually. Their automation is
 deferred beyond the current hardening effort. When resumed, use the versioned
@@ -753,27 +793,38 @@ complements QA1.
   </picture>
 </h3>
 
-**Outstanding work.** Create a changelog, security policy, and contribution
-guide. Define channels for vulnerabilities, compatibility, and contributions.
-Resolve how to publish `0.1.0-beta.1`: the
-[publishing workflow](../.github/workflows/ci.yml) currently derives only
+**Release scope.** Complete the minimum closure for `0.1.0-beta1`: release
+notes or changelog, a security policy with an available vulnerability-reporting
+channel, minimum usage documentation, and coherent versioning and publication.
+The [publishing workflow](../.github/workflows/ci.yml) currently derives only
 `vMAJOR.MINOR.PATCH` from `include/version.h`, without a prerelease suffix.
+Select a mechanism that publishes the agreed beta identifier consistently.
 
 **Components.** Public project documents, version, and release procedure;
 modify the workflow only if the selected mechanism requires it.
 
 **Acceptance and verification.**
 
-- Publish procedures and channels that are actually available.
-- Point the release tag to the exact revision with a passing CI matrix and
-  synchronized documentation, including CMake consumer validation.
-- Make the version and release notes describe the published content.
-- Verify C1/C3 over real sockets and resolve the defect and C7 release
-  decisions listed in the release target before publication.
+- Complete B11, B9 and C1/C2/C3/C7 with their focused regressions and equivalent
+  real-socket validation on Windows and Linux where applicable.
+- Pass the full existing CI matrix and CMake consumer checks on the exact
+  release revision. Include every required source, test and example in that
+  revision; local untracked files are not part of a published release.
+- Document current indexed-getter preconditions, request/view and borrowed
+  storage lifetimes, manual response-framing responsibilities and header
+  capacity, and allowed lifecycle/callback operations. This minimum does not
+  require completing DT2/DT3/DOC1/DOC2 or changing their APIs.
+- Describe the controlled-deployment scope, effective operational policies,
+  known limitations and omitted capabilities. Publish only channels and
+  procedures that are actually available.
+- Align version metadata, tag `v0.1.0-beta1`, release notes and documentation
+  with the tested content. Publish the beta as a prerelease.
 
-**Dependencies.** The development guide does not replace a public
-contribution guide with channels and a procedure. The prerelease mechanism
-remains a decision, not an agreed workflow modification.
+**Future work.** The full contribution guide and broader contribution and
+compatibility procedures remain outstanding here, outside the beta gate.
+They must not be mistaken for completed work when the minimum release closure
+is delivered. The prerelease publishing mechanism remains a design decision,
+not an authorization for a particular workflow modification.
 
 <a name="c-maintainability"></a>
 <h2>
@@ -784,6 +835,10 @@ remains a decision, not an agreed workflow modification.
     <img src="../resources/docs/backlog/h2-c-maintainability.svg" alt="C++ maintainability">
   </picture>
 </h2>
+
+DT1-DT3 are future work. RE1 covers the minimum documentation of current
+usage preconditions for `0.1.0-beta1`; these entries do not require API
+changes or a broader redesign before that release.
 
 <a name="dt1-platformh-dependencies-and-global-effects"></a>
 <h3>
@@ -869,9 +924,10 @@ automatic Date with deferred framing, and verify recovery cannot publish a
 partial malformed response. Coordinate method-aware error recovery with B11;
 keep header capacity distinct from body storage and progressive streaming.
 
-**Delivery and limits.** Publish the selected response preconditions. No
-automatic release gate, dynamic buffers, ownership redesign, broad serializer
-refactor, or public API change is prescribed.
+**Delivery and limits.** Future work. RE1 documents current response
+preconditions for the beta; the contract changes and extra coverage above
+remain outside its gate. No dynamic buffers, ownership redesign, broad
+serializer refactor, or public API change is prescribed.
 
 <a name="public-documentation"></a>
 <h2>
@@ -882,6 +938,9 @@ refactor, or public API change is prescribed.
     <img src="../resources/docs/backlog/h2-public-documentation.svg" alt="Public documentation">
   </picture>
 </h2>
+
+DOC1-DOC2 are future work for extended guides and examples. Minimum usage
+preconditions and deployment limitations belong to the RE1 release closure.
 
 <a name="doc1-transport-lifecycle"></a>
 <h3>
@@ -933,9 +992,9 @@ tests, and link the contract from the corresponding examples.
   </picture>
 </h2>
 
-F1-F7 are deferred beyond the 0.1 batches. This deferral does not include
-limits, slow clients, stress testing, or baselines: those retain their
-previous entries.
+F1-F7 are future work, outside `0.1.0-beta1`. C1/C2/C3/C7 and their focused
+slow-client and resource-limit tests remain required for the beta. The broader
+QA3 performance baseline and QA5 stress campaigns remain future work.
 
 <a name="f1-tls"></a>
 <h3>
@@ -1057,15 +1116,15 @@ a narrower listening address or a worker budget through the normal server
 configuration API.
 
 **Future scope.** Decide whether deployment requirements justify minimal
-pre-start bind-address and worker-count options, following the configuration
-contract selected for C1/C3. Do not introduce a general networking abstraction
-or expand supported address families by default.
+bind-address and worker-count options, following the module-creation policy
+contracts selected for C1/C2/C3/C7. Do not introduce a general networking
+abstraction or expand supported address families by default.
 
 **Components and acceptance.** Server configuration and both TCP backends.
 Test loopback-only binding, invalid or unavailable addresses, default behavior,
 worker validation, startup failure cleanup and stop on both platforms.
 
-**Delivery.** Beyond 0.1; record current deployment constraints without
+**Delivery.** Future work; record current deployment constraints without
 presenting these options as existing features. This is separate from C3's
 connection admission budget and requires no changes to that release target.
 
@@ -1093,7 +1152,7 @@ lifecycle integration tests. Cover active sends, idle keep-alive, pipelining,
 pending deferred work, deadline expiry and repeated stop; verify bounded
 completion and single cleanup on each platform.
 
-**Delivery.** Beyond 0.1, not an implied release blocker. Until implemented,
+**Delivery.** Future work, outside `0.1.0-beta1`. Until implemented,
 document abrupt-stop limitations and verify any external deployment-draining
 procedure before relying on it. Coordinate public lifecycle documentation
 with DOC1; do not count documentation alone as implementation.
