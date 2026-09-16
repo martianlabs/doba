@@ -8,17 +8,15 @@
 
 [Index](HANDOFF.md)
 
-Source of truth for doba's outstanding work. Each category has consecutive
-numbering, and each item has a single entry. Previous identifiers are
-preserved in the [identifier mapping](#identifier-mapping).
+Source of truth for doba's outstanding implementation, verification, and
+contract decisions. Identifiers remain stable when entries are removed;
+numbering does not express priority or implementation order.
 Engineering and verification requirements are defined in
 [QUALITY.md](QUALITY.md).
 
 An outstanding item does not imply that its design has been decided.
-The criteria below help prepare implementation; open decisions are stated
-explicitly. Priorities without a previous value are marked "Not set".
-The original B/M/A labels estimated complexity and are not reinterpreted
-as severity.
+Open decisions and deferred scope are stated explicitly. Priorities without
+a selected value are marked "Not set"; complexity estimates are separate.
 
 <a name="contents"></a>
 <h2>
@@ -38,7 +36,6 @@ as severity.
 - [C++ maintainability](#c-maintainability)
 - [Public documentation](#public-documentation)
 - [Beyond the first release](#beyond-the-first-release)
-- [Identifier mapping](#identifier-mapping)
 
 <a name="release-target"></a>
 <h2>
@@ -50,7 +47,7 @@ as severity.
 
 The current `0.1.0-beta.1` target is to complete C1 and C3 and verify them
 over real sockets on Windows and Linux. Release also requires preserving
-CI and CMake consumer validations and completing the remainder of RE1.
+CI and CMake consumer validations and completing RE1.
 
 Recommended order:
 
@@ -63,25 +60,22 @@ execution in IOCP and epoll. Define the common part before addressing each
 localized change. Default values and the exact API shape have not yet
 been selected.
 
-C2, fuzzing, and external tool automation are explicitly deferred beyond
-the current hardening effort. P5-P7 are neither compliance nor release gates.
-DT1 and DT2 do not automatically block the first release either.
-Other outstanding items have no assigned version.
+C2, fuzzing, and external tool automation remain deferred. P5-P7 are neither
+compliance nor release gates. DT1 and DT2 do not automatically block the
+first release either. Other outstanding items have no assigned version.
 
-**Delivery debt from the 2026-09-15 review.** B7-B12 require verification
-before 0.1 publication, not an assumption that every reported mechanism has
-already been reproduced. Confirmed memory-safety, information-disclosure,
-or wire-protocol defects require a fix or an explicit release decision with
-documented impact and mitigation. B13 concerns the benchmark adapter, not
-the core release. Assess C7 resource exhaustion and deployment mitigations
-before deciding whether its implementation must join the release target.
+**Pending defect verification.** B7-B12 require focused regressions before
+0.1 publication. Their source-level evidence does not establish that every
+reported runtime outcome has been reproduced. Confirmed memory-safety,
+information-disclosure, or wire-protocol defects require a fix or an explicit
+release decision with documented impact and mitigation. B13 concerns the
+benchmark adapter, not the core release. Assess C7 resource exhaustion and
+deployment mitigations before deciding whether its implementation must join
+the release target.
 
-DT1 has a localized header-compilation follow-up; it does not require a
-general include refactor. DT3 requires an explicit response contract, not a
-buffer redesign. P8 and F6-F7 are optional improvements, not new 0.1 gates.
-Existing deferrals remain in force. Feature parity with mature frameworks
-is not a release criterion; ORM, sessions, and integrated JSON are not added
-as requirements by this review.
+DT3 requires an explicit response contract. P8 and F6-F7 remain optional
+improvements, not new 0.1 gates. Feature parity with mature frameworks is
+not a release criterion.
 
 <a name="inventory"></a>
 <h2>
@@ -91,69 +85,30 @@ as requirements by this review.
   </picture>
 </h2>
 
-47 entries across eight categories. C4-C6, B1-B6 and QA4 are completed and
-retained for traceability. Numbering identifies items; it does not express
-priority or implementation order.
-
-C4-C6 and B1-B6 tracked ten findings behind 15 failing unit tests. The
-original classification remains seven production bugs, one test bug and two
-contract decisions. C5 separates query truncation from full-buffer handling;
-B6 records a compatibility extension, not a previously guaranteed behavior.
-Category totals count entries, not bugs.
-
-| Original classification | Findings | Originally failing unit tests |
-| --- | --- | --- |
-| Confirmed production bugs | B1-B3, B5, C4, C5 query overflow, C6 | 11 |
-| Confirmed test bug | B4 | 1 |
-| Contract decisions | C5 full buffer, B6 | 3 |
-
-The 2026-09-13 revalidation recorded 202 passing and 15 failing cases across
-the eight affected suites on Windows/MSVC and Linux/GCC. Rebuilding and
-running without exclusions on 2026-09-14 reproduced the same baseline.
-The corrected suites now pass all 222 cases on both platforms. Additional
-router and real-socket tests cover handler registration, authority getters,
-query overflow and fragmented head capacity on IOCP and epoll.
-
-Final local validation passed with strict warnings: MSVC, GCC and Clang in
-Debug and Release; Clang ASan with leak detection, UBSan and TSan; and
-CMake 3.20.6. Each configuration passed the complete unit/integration suites
-and both harness checks. Windows runs 816 unit cases, Linux runs 815, and
-both run 95 integration cases. Installed Debug/Release consumers and the
-`add_subdirectory` consumer also built and ran successfully.
-
-**Temporary CI bypass removed (2026-09-14).** All 15 regressions are active,
-including the corrected negative B4 case and the approved C5/B6 contracts.
-The temporary `DOBA_SKIP_BACKLOG_UNIT_TESTS` option, its exclusion list and
-its CI activation have been removed. The runner's general `--exclude`
-support and its harness checks remain available.
+36 outstanding entries across eight categories. Each entry retains only
+remaining work or an open decision, with source and test evidence checked
+against the current codebase. Verification pending means that the focused
+regressions or runtime measurements described by the entry remain to be run.
+Category totals count entries, not confirmed bugs.
 
 | Category | Identifiers | Total |
 | --- | --- | --- |
-| Operational hardening | C1-C7 | 7 |
-| Bugs | B1-B13 | 13 |
-| Product and convenience | P1-P8 | 8 |
-| Quality and validation | QA1-QA6 | 6 |
+| Operational hardening | C1-C3, C7 | 4 |
+| Bugs | B7-B13 | 7 |
+| Product and convenience | P2-P8 | 7 |
+| Quality and validation | QA1-QA3, QA5-QA6 | 5 |
 | Release engineering | RE1 | 1 |
 | C++ maintainability | DT1-DT3 | 3 |
 | Public documentation | DOC1-DOC2 | 2 |
 | Beyond the first release | F1-F7 | 7 |
-| **Total** | | **47** |
+| **Total** | | **36** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
 | [C1](#c1-single-inactivity-timeout) | Hardening | Pending | Beta target | 0.1.0-beta.1 |
 | [C2](#c2-effective-per-request-limits) | Hardening | Deferred | High | No assigned version |
 | [C3](#c3-global-active-connection-limit) | Hardening | Pending | Beta target | 0.1.0-beta.1 |
-| [C4](#c4-absolute-form-authority-precedence) | Hardening | Completed | Not set | No assigned version |
-| [C5](#c5-internal-decoder-capacity-overflow) | Hardening | Completed | Not set | No assigned version |
-| [C6](#c6-te-connection-option) | Hardening | Completed | Not set | No assigned version |
 | [C7](#c7-pending-response-and-work-budget) | Hardening | Verification pending | High | Assess before 0.1 |
-| [B1](#b1-entity-tag-backslash-rejection) | Bug | Completed | Not set | No assigned version |
-| [B2](#b2-via-escaped-comment-rejection) | Bug | Completed | Not set | No assigned version |
-| [B3](#b3-via-comment-comma-splitting) | Bug | Completed | Not set | No assigned version |
-| [B4](#b4-incorrect-ipv6-expectation-in-via-test) | Bug | Completed | Not set | No assigned version |
-| [B5](#b5-duplicate-automatic-date-after-header-removal) | Bug | Completed | Not set | No assigned version |
-| [B6](#b6-noexcept-handler-signature-rejection) | Compatibility | Completed | Not set | No assigned version |
 | [B7](#b7-empty-body-in-the-expect-continue-example) | Example bug | Verification pending | High | Verify before 0.1 |
 | [B8](#b8-response-framing-after-clear_body) | Bug | Verification pending | Medium | Verify before 0.1 |
 | [B9](#b9-response-driven-connection-close) | Bug | Verification pending | Medium | Verify before 0.1 |
@@ -161,7 +116,6 @@ support and its harness checks remain available.
 | [B11](#b11-body-suppression-for-head-error-responses) | Bug | Verification pending | Medium | Verify before 0.1 |
 | [B12](#b12-trailing-data-after-an-ip-literal-authority) | Bug | Verification pending | Medium | Verify before 0.1 |
 | [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark bug | Verification pending | Medium | Before adapter publication |
-| [P1](#p1-static-file-handler) | Product | Pending | Not set | No assigned version |
 | [P2](#p2-access-logging) | Product | Pending | Not set | No assigned version |
 | [P3](#p3-middleware-chain) | Product | Pending | Not set | No assigned version |
 | [P4](#p4-form-parsing) | Product | Pending | Not set | No assigned version |
@@ -169,13 +123,12 @@ support and its harness checks remain available.
 | [P6](#p6-output-trailers) | Product | Deferred | Not set | No assigned version |
 | [P7](#p7-automatic-resource-options) | Product | Deferred | Not set | No assigned version |
 | [P8](#p8-429-response-construction) | Product | Pending | Low | No assigned version |
-| [QA1](#qa1-exhaustive-compliance-suite) | QA | Partial | Not set | No assigned version |
+| [QA1](#qa1-exhaustive-compliance-suite) | QA | Pending | Not set | No assigned version |
 | [QA2](#qa2-fuzzing) | QA | Deferred | High | No assigned version |
 | [QA3](#qa3-performance-baseline) | QA | Pending | Medium | No assigned version |
-| [QA4](#qa4-harness-diagnostics-and-isolation) | QA | Completed | Medium | No assigned version |
 | [QA5](#qa5-stress-campaigns) | QA | Pending | Not set | No assigned version |
 | [QA6](#qa6-external-compliance-automation) | QA | Deferred | Not set | No assigned version |
-| [RE1](#re1-release-governance-and-traceability) | Release | Partial | Medium | 0.1.0-beta.1 |
+| [RE1](#re1-release-governance-and-traceability) | Release | Pending | Medium | 0.1.0-beta.1 |
 | [DT1](#dt1-platformh-dependencies-and-global-effects) | C++ | Pending | Medium | No assigned version |
 | [DT2](#dt2-indexed-getter-contract) | C++ | Pending | Low/Medium | No assigned version |
 | [DT3](#dt3-response-framing-and-capacity-contract) | C++ | Decision pending | Medium | No assigned version |
@@ -245,30 +198,35 @@ dynamic configuration, and automatic `408` responses.
   </picture>
 </h3>
 
-**Context.** `max_content_length`, `max_forwarding_hops`,
-`max_transfer_codings`, `max_uri_length`, and `max_header_section_size`
-use zero for unlimited. The default server exposes no configuration.
-The internal buffer bounds the head but does not provide a general resource
-policy. Bodies can spill to disk.
+**Remaining work.** Select defaults and expose a minimal pre-start API that
+passes request policies through the standard server to its decoder. Define
+and enforce the selected budget for chunked bodies, whose final size is not
+known from the headers.
 
-**Future scope.** Define safe defaults and a minimal API before `start()`.
-Reject excessive Content-Length before consuming the body. Separately check
-the policy for chunked bodies, whose size is not known in advance.
+**Evidence.** [policies.h](../include/protocol/http/v11/policies.h) defaults
+its five size/count limits to zero (unlimited), and the standard server has
+no policy configuration API. The
+[Content-Length interpreter](../include/protocol/http/v11/headers/content_length.h)
+already rejects a value above a supplied policy limit. Reuse the existing
+field checks; the missing work is configuration, effective defaults, and
+cumulative body accounting. The internal head buffer does not bound body
+storage, which can spill to disk.
 
-**Components.** `policies.h`, `limits.h`, `context.h`, `decoder.h`,
-header rules, server composition, and their tests.
+**Components.** Policies, limits, context, decoder, server composition, and
+their tests.
 
 **Acceptance and tests.**
 
-- Document what each value limits and how it applies in the standard server.
-- Test the exact limit, one unit above it, and zero semantics.
-- Check early rejection and the corresponding rejection reason.
+- Define what each limit counts, including encoded and decoded body bytes.
+- Verify zero, limit-1, limit, and limit+1 through configured server requests.
+- Check rejection before consuming an excessive Content-Length body and
+  the corresponding rejection reason; cover chunked bodies separately.
 - Verify that configuration cannot change unsafely during use.
 - Measure whether the change affects the hot path.
 
-**Dependencies and decisions.** Requires a dedicated API and defaults design.
-Explicitly deferred; the current plan does not change these policies or their
-consumers. Do not confuse this with C3.
+**Dependencies and decisions.** API shape, defaults, and body accounting
+remain undecided. This item is deferred and controls resources per request;
+C3 separately limits active connections.
 
 <a name="c3-global-active-connection-limit"></a>
 <h3>
@@ -305,207 +263,6 @@ resources per request.
 
 **Out of scope.** Per-worker quotas, dynamic changes, acceptance backpressure,
 new callbacks, and HTTP rejection responses.
-
-<a name="c4-absolute-form-authority-precedence"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-c4-absolute-form-authority-precedence-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c4-absolute-form-authority-precedence-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-c4-absolute-form-authority-precedence-dark.svg">
-    <img src="../resources/docs/backlog/h3-c4-absolute-form-authority-precedence.svg" alt="C4: Absolute-form authority precedence">
-  </picture>
-</h3>
-
-**Status.** Completed 2026-09-14.
-
-**Resolution.** Absolute-form no longer requires equality with Host. The target
-authority is effective; `get_host()` and its port/type getters retain the
-received Host, while `get_target_authority_host()` and its port/type getters
-expose the target authority. The raw header, Host validation and CONNECT
-behavior are preserved. Unit and real-socket tests verify differing hosts,
-ports, default-port cases and getter values on both platforms.
-
-**Historical finding and acceptance criteria.**
-
-**Type.** Confirmed bug (HTTP processing).
-
-**Context.** GET http://a/ with Host: b is rejected. The routing rule
-requires equality between Host and the request-target authority, including
-absolute-form. This rejection was reproduced against the current decoder.
-
-**Scope.** Correct absolute-form origin-server authority processing to use
-the request-target authority. Preserve Host syntax/multiplicity validation,
-the raw header value and public signatures. Keep CONNECT/authority-form
-behavior separate.
-
-**Components.** [routing.h](../include/protocol/http/v11/headers/rules/routing.h),
-[decoder.h](../include/protocol/http/v11/decoder.h), routing unit tests,
-decoder tests and HTTP socket integration tests.
-
-**Existing failing unit tests.**
-
-- [routing_tests.cpp](../tests/unit/protocol/http/v11/headers/rules/routing_tests.cpp):
-  `absolute form accepts differing Host ports`.
-- [routing_tests.cpp](../tests/unit/protocol/http/v11/headers/rules/routing_tests.cpp):
-  `absolute form authority overrides a different Host name`.
-- [decoder_tests.cpp](../tests/unit/protocol/http/v11/decoder_tests.cpp):
-  `absolute form uses its authority when Host differs`.
-
-**Acceptance and tests.**
-
-- Accept valid absolute-form requests whose Host differs from the target.
-- Check differing hosts/ports and default-port equivalence.
-- Verify effective authority and preservation of the received Host value.
-- Preserve rejection of missing, duplicate or syntactically invalid Host.
-- Run focused regressions and equivalent HTTP cases in IOCP and epoll.
-
-**Dependencies and decisions.** Define the existing get_host versus
-get_target_authority_host contract before implementation. A contract change
-must be explicit; adding these regressions does not itself correct routing.
-
-**Reference.** [RFC 9112 S3.2.2](https://www.rfc-editor.org/rfc/rfc9112.html#section-3.2.2).
-
-<a name="c5-internal-decoder-capacity-overflow"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-c5-internal-decoder-capacity-overflow-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c5-internal-decoder-capacity-overflow-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-c5-internal-decoder-capacity-overflow-dark.svg">
-    <img src="../resources/docs/backlog/h3-c5-internal-decoder-capacity-overflow.svg" alt="C5: Internal decoder capacity overflow">
-  </picture>
-</h3>
-
-**Status.** Completed 2026-09-14.
-
-**Resolution.** The decoder collects up to 129 query pairs and rejects an excess
-before mounting a request or initializing body storage. Empty pairs do not
-count. The bounded-output helper remains unchanged.
-
-The approved full-buffer contract rejects an incomplete head immediately
-at capacity. Both capacity failures return `kInvalidSource` with the existing
-generic reason, yielding 400 Bad Request. A complete 5120-byte head remains
-accepted; raw and chunked bodies can span buffers. Unit and socket tests cover
-127/128/129 pairs, empty separators, 5119/5120/5121-byte heads, fragmented
-delivery with the excess byte withheld, connection closure and no dispatch
-on rejection. The transport backends required no changes.
-
-**Historical finding and acceptance criteria.**
-
-**Type.** Confirmed query overflow bug; full-buffer contract pending.
-
-**Query overflow - confirmed bug.** A request with 129 query pairs succeeds
-with only 128 visible pairs, while limits.h documents rejection above 128.
-The decoder exposes a truncated query without reporting the overflow.
-
-**Cause and scope.** `split_query_parameters` explicitly documents dropping
-pairs beyond the output capacity and meets that helper contract.
-`mount_request_getter` does not detect the excess before mounting the request.
-Reject query overflow as documented in limits.h; do not classify the helper
-as independently defective. Preserve accepted queries and public signatures.
-
-**Components.** [decoder.h](../include/protocol/http/v11/decoder.h),
-[limits.h](../include/protocol/http/v11/limits.h) and
-[helpers.h](../include/protocol/http/common/helpers.h), with their unit tests.
-
-**Existing failing unit test.**
-
-- [decoder_tests.cpp](../tests/unit/protocol/http/v11/decoder_tests.cpp):
-  `rejects query parameter overflow without truncating`.
-
-**Acceptance and tests.** Check 127/128/129 query pairs, including empty pair
-separators. Verify that overflow returns a rejection without a partial request
-and that accepted boundary inputs retain every pair.
-
-**Full buffer - contract pending.** A complete 5121-byte head fills the
-5120-byte buffer. Deserialization reports `kMoreBytesNeeded`; a subsequent
-accumulation consumes zero and deserialization reports the same status.
-This reproduces decoder non-progress, not a permanent server hang.
-
-Both [Linux](../include/transport/server/tcpip_linux.h) and
-[Windows](../include/transport/server/tcpip_windows.h) detect zero consumption
-when more received bytes remain to be delivered and enter their error path.
-This protection was verified by code inspection, not a new socket test.
-If no further bytes arrive, inactivity handling remains the separate C1 issue.
-
-**Scope to define.** Decide whether the decoder must reject an incomplete
-head immediately at capacity or whether the existing transport detection
-satisfies the contract. No explicit immediate-rejection requirement was found
-in the reviewed decoder contract. Do not count the current test expectation
-as proof of a server stability or memory-safety defect.
-
-**Components.** [decoder.h](../include/protocol/http/v11/decoder.h),
-[limits.h](../include/protocol/http/v11/limits.h), both transport backends,
-decoder unit tests and HTTP socket integration tests.
-
-**Existing failing unit test.**
-
-- [decoder_tests.cpp](../tests/unit/protocol/http/v11/decoder_tests.cpp):
-  `a full incomplete head terminates instead of stalling`.
-
-**Proposed acceptance and tests.** After selecting the contract, check complete
-heads of 5119/5120/5121 bytes and fragmented delivery. Distinguish the decoder
-result from transport rejection. Verify that oversized requests are not
-dispatched and that both backends terminate safely when excess bytes arrive.
-
-**Dependencies and decisions.** Select the query overflow error/status and
-the full-buffer responsibility before implementing the respective changes.
-The full-buffer test currently assumes immediate `kInvalidSource`; its
-expectation must be justified against the selected contract. These are
-internal capacity policies, not RFC limits, and no automatic 431 policy is
-assumed. Keep them separate from the configurable resource-limit API in C2.
-
-<a name="c6-te-connection-option"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-c6-te-connection-option-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c6-te-connection-option-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-c6-te-connection-option-dark.svg">
-    <img src="../resources/docs/backlog/h3-c6-te-connection-option.svg" alt="C6: TE connection option">
-  </picture>
-</h3>
-
-**Status.** Completed 2026-09-14.
-
-**Resolution.** The specific `te` prohibition and its rule comment were removed.
-The existing TE dispatcher required no change. Tests accept `TE: trailers`
-with `Connection: TE` and reject `gzip;q=1.001` through value validation,
-covering field-name case and OWS variants.
-
-**Historical finding and acceptance criteria.**
-
-**Type.** Confirmed bug (HTTP processing).
-
-**Context.** TE: trailers together with Connection: TE is rejected because
-the directives rule forbids the te connection option. This rejection was
-reproduced against the current decoder. A TE sender must include that option.
-
-**Scope.** Remove the specific inappropriate te prohibition, update its
-rule documentation and preserve all unrelated directive validation.
-
-**Components.** [directives.h](../include/protocol/http/v11/headers/rules/directives.h),
-[decoder.h](../include/protocol/http/v11/decoder.h), their unit tests.
-
-**Existing failing unit tests.**
-
-- [directives_tests.cpp](../tests/unit/protocol/http/v11/headers/rules/directives_tests.cpp):
-  `accepts the TE connection option`.
-- [decoder_tests.cpp](../tests/unit/protocol/http/v11/decoder_tests.cpp):
-  `accepts TE with its required connection option`.
-
-**Acceptance and tests.**
-
-- Accept TE: trailers with Connection: TE.
-- Reject TE: gzip;q=1.001 in the same context.
-- Exercise canonical/lower/upper field names with and without OWS.
-- Prove that the invalid value reaches its field validator; rejection of
-  the request context must not mask a missing TE value check.
-- Preserve existing unrelated connection-directive tests.
-
-**Dependencies and decisions.** Correct the directive rule so that the
-positive and negative cases can exercise TE value validation independently.
-No public API or protocol-upgrade feature is required.
-
-**Reference.** [RFC 9110 S10.1.4](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.1.4).
 
 <a name="c7-pending-response-and-work-budget"></a>
 <h3>
@@ -554,321 +311,10 @@ Coordinate validation with QA1/QA5 without duplicating those campaigns.
   </picture>
 </h2>
 
-B1-B5 are completed fixes; B4 corrected a unit-test expectation. B6 is a
-completed compatibility extension under an explicitly approved contract.
-C4, C5 query overflow and C6 retain their hardening identifiers. C5 full-buffer
-handling is a separate approved contract. The historical findings below retain
-their original classification and acceptance criteria for traceability.
-
-B7-B13 are delivery-debt findings from source review, with runtime
-verification still pending. Their proposed tests are not reported as executed
-or failing. B10 includes an error-disclosure policy decision; B13 is limited
-to the benchmark adapter. Keep these distinct from the completed fixes above.
-
-<a name="b1-entity-tag-backslash-rejection"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b1-entity-tag-backslash-rejection-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b1-entity-tag-backslash-rejection-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b1-entity-tag-backslash-rejection-dark.svg">
-    <img src="../resources/docs/backlog/h3-b1-entity-tag-backslash-rejection.svg" alt="B1: Entity-tag backslash rejection">
-  </picture>
-</h3>
-
-**Status.** Completed 2026-09-14.
-
-**Resolution.** If-Match and If-None-Match now delimit opaque entity-tags locally
-and validate each member with `is_entity_tag`. Backslash remains literal.
-Both 256-byte matrices and the expanded list boundaries pass. The shared list
-helper, weak-tag syntax, wildcard and recipient OWS/empty-element contracts
-are unchanged.
-
-**Historical finding and acceptance criteria.**
-
-**Type.** Confirmed bug (conditional header syntax).
-
-**Context.** Both If-Match and If-None-Match reject a strong or weak entity-tag
-whose opaque value is the single byte 0x5c. The byte-matrix tests reproduce
-this with DQUOTE, 0x5c, DQUOTE, optionally prefixed by W/.
-
-**Cause.** The header checks use `for_each_list_element`, which treats the
-backslash as a quoted-string escape and skips the closing quote.
-
-**Scope.** Accept the literal byte as `etagc` without changing it. Preserve
-the syntax/semantic distinction for weak tags and existing list handling.
-
-**Components.** [helpers.h](../include/protocol/http/common/helpers.h),
-[if_match.h](../include/protocol/http/common/headers/if_match.h),
-[if_none_match.h](../include/protocol/http/common/headers/if_none_match.h).
-
-**Existing failing unit tests.**
-
-- [if_match_tests.cpp](../tests/unit/protocol/http/common/headers/if_match_tests.cpp):
-  `check applies the entity tag byte grammar`.
-- [if_none_match_tests.cpp](../tests/unit/protocol/http/common/headers/if_none_match_tests.cpp):
-  `check applies the entity tag byte grammar`.
-
-**Acceptance and tests.** Make both byte-matrix regressions pass; retain the
-valid/invalid octet boundaries, tag lists, and wildcard cases.
-
-**Dependencies and decisions.** B2 and B3 share the list helper but have
-different grammars. Preserve quoted-string handling for other consumers.
-
-**Reference.** [RFC 9110 S8.8.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.8.3).
-
-<a name="b2-via-escaped-comment-rejection"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b2-via-escaped-comment-rejection-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b2-via-escaped-comment-rejection-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b2-via-escaped-comment-rejection-dark.svg">
-    <img src="../resources/docs/backlog/h3-b2-via-escaped-comment-rejection.svg" alt="B2: Via escaped comment rejection">
-  </picture>
-</h3>
-
-**Status.** Completed 2026-09-14.
-
-**Resolution.** Via now delimits its list locally, consuming complete comments
-with the existing `consume_comment` helper. Escapes, nested comments and
-literal quotes retain their bytes. The expanded valid/invalid comment
-regressions pass; shared helpers are unchanged.
-
-**Historical finding and acceptance criteria.**
-
-**Type.** Confirmed bug (Via comment syntax).
-
-**Context.** `Via: 1.1 proxy (a\)b\(c)` is rejected by `via::check`.
-The comment contains escaped parentheses.
-
-**Cause.** `for_each_list_element` rejects a backslash outside a quoted
-string before Via can validate the comment.
-
-**Scope.** Accept valid quoted-pairs in comments and preserve the parsed
-comment bytes.
-
-**Components.** [via.h](../include/protocol/http/v11/headers/via.h),
-[helpers.h](../include/protocol/http/common/helpers.h).
-
-**Existing failing unit tests.**
-
-- [via_tests.cpp](../tests/unit/protocol/http/v11/headers/via_tests.cpp):
-  `check accepts protocol and comment boundaries`.
-
-**Acceptance and tests.** Make the escaped-parentheses case pass; preserve
-nested-comment acceptance and rejection of incomplete escapes, unterminated
-comments, and trailing junk.
-
-**Dependencies and decisions.** Coordinate with B3 at the shared list
-boundary; do not broaden unrelated header grammars.
-
-**References.** [RFC 9110 S5.6.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.5)
-and [S7.6.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-7.6.3).
-
-<a name="b3-via-comment-comma-splitting"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b3-via-comment-comma-splitting-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b3-via-comment-comma-splitting-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b3-via-comment-comma-splitting-dark.svg">
-    <img src="../resources/docs/backlog/h3-b3-via-comment-comma-splitting.svg" alt="B3: Via comment comma splitting">
-  </picture>
-</h3>
-
-**Status.** Completed 2026-09-14.
-
-**Resolution.** The Via scan consumes each comment before considering separators.
-Tests verify two members for the original input, nested commas, escaped
-parentheses, empty list elements and OWS. This shares the localized B2 fix
-and preserves the other list consumers.
-
-**Historical finding and acceptance criteria.**
-
-**Type.** Confirmed bug (Via list separation).
-
-**Context.** `Via: 1.1 proxy (a,b), 1.0 other` is rejected.
-
-**Cause.** The list helper tracks quoted strings but not comment nesting,
-so it interprets the comma inside the comment as a member separator.
-
-**Scope.** Parse two members, preserving `(a,b)` as the first comment and
-`other` as the second received-by value.
-
-**Components.** [via.h](../include/protocol/http/v11/headers/via.h),
-[helpers.h](../include/protocol/http/common/helpers.h).
-
-**Existing failing unit tests.**
-
-- [via_tests.cpp](../tests/unit/protocol/http/v11/headers/via_tests.cpp):
-  `check keeps commas inside comments in one member`.
-
-**Acceptance and tests.** Make the two-member regression pass. Keep commas
-inside nested comments and preserve separation outside comments, whitespace
-handling, and invalid-comment rejection.
-
-**Dependencies and decisions.** Coordinate with B2; retain B1's distinct
-entity-tag grammar and the behavior of other list consumers.
-
-**References.** [RFC 9110 S5.6.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.5)
-and [S7.6.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-7.6.3).
-
-<a name="b4-incorrect-ipv6-expectation-in-via-test"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b4-incorrect-ipv6-expectation-in-via-test-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b4-incorrect-ipv6-expectation-in-via-test-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b4-incorrect-ipv6-expectation-in-via-test-dark.svg">
-    <img src="../resources/docs/backlog/h3-b4-incorrect-ipv6-expectation-in-via-test.svg" alt="B4: Incorrect IPv6 expectation in Via test">
-  </picture>
-</h3>
-
-**Status.** Completed 2026-09-14.
-
-**Resolution.** The exact IPv6 input is now a negative regression named
-`check rejects an IPv6 received by host`. Its expectation and RFC comment
-were corrected. No production parser change was made for B4; valid
-pseudonyms and optional ports retain their coverage.
-
-**Historical finding and acceptance criteria.**
-
-**Type.** Confirmed bug (unit-test expectation and RFC comment).
-
-**Context.** The unit test expects `via::check("HTTP/1.1 [::1]:8080", parsed)`
-to succeed. It returns false. The test's comment incorrectly claims that
-RFC 9110 S7.6.3 allows `uri-host` in received-by.
-
-**Cause.** The expectation uses an obsolete grammar. RFC 9110 defines
-received-by using a token pseudonym and optional port; its appendix B.2
-records the removal of `uri-host`. Bracketed IPv6 does not match that grammar.
-
-**Scope.** Correct the expectation and RFC comment to verify rejection under
-the current contract. Rename the case to describe its negative expectation.
-Do not change the production parser to satisfy the erroneous positive test.
-
-**Components.** [via_tests.cpp](../tests/unit/protocol/http/v11/headers/via_tests.cpp).
-Compare against [via.h](../include/protocol/http/v11/headers/via.h).
-
-**Existing failing unit tests.**
-
-- [via_tests.cpp](../tests/unit/protocol/http/v11/headers/via_tests.cpp):
-  `check accepts an IPv6 received by host`.
-
-**Acceptance and tests.** Retain the exact bracketed IPv6 input as a negative
-case. Preserve valid pseudonyms with optional ports and the separate comment
-regressions tracked by B2/B3. Correcting this test must not hide those bugs.
-
-**References.** [RFC 9110 S7.6.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-7.6.3)
-and [appendix B.2](https://www.rfc-editor.org/rfc/rfc9110.html#appendix-B.2).
-
-<a name="b5-duplicate-automatic-date-after-header-removal"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b5-duplicate-automatic-date-after-header-removal-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b5-duplicate-automatic-date-after-header-removal-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b5-duplicate-automatic-date-after-header-removal-dark.svg">
-    <img src="../resources/docs/backlog/h3-b5-duplicate-automatic-date-after-header-removal.svg" alt="B5: Duplicate automatic Date after header removal">
-  </picture>
-</h3>
-
-**Status.** Completed 2026-09-14.
-
-**Resolution.** After removing Date, the marker is recalculated from the remaining
-headers, matching the existing Content-Length/Transfer-Encoding pattern.
-The original serialized-prefix regression and a new last-Date removal test
-pass, covering case-insensitive names, automatic generation and other headers.
-The add/remove/serialize API and ownership contract are unchanged.
-
-**Historical finding and acceptance criteria.**
-
-**Type.** Confirmed bug (response header mutation).
-
-**Context.** Add Date fields with values `first` and `remaining`, remove
-`date` once, then serialize. The remaining explicit field is still present,
-but serialization appends an additional automatic Date.
-
-**Cause.** `remove_header` clears `has_date_header_` without checking whether
-another Date field remains. `serialize` then adds the automatic field.
-
-**Scope.** Preserve the remaining explicit Date and prevent an extra automatic
-field. The marker values reproduce the generic header-mutation contract;
-this case does not request acceptance of duplicate Date fields on the wire.
-
-**Components.** [response.h](../include/protocol/http/v11/response.h).
-
-**Existing failing unit tests.**
-
-- [response_tests.cpp](../tests/unit/protocol/http/v11/response_tests.cpp):
-  `removing one Date preserves the remaining explicit Date`.
-
-**Acceptance and tests.** Make the exact serialized-prefix regression pass.
-Check that removing the last explicit Date still permits automatic Date
-generation, and preserve case-insensitive name handling and other headers.
-
-**Dependencies and decisions.** Keep the existing add/remove/serialize API
-and mutation semantics; changing header validation is a separate decision.
-
-<a name="b6-noexcept-handler-signature-rejection"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b6-noexcept-handler-signature-rejection-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b6-noexcept-handler-signature-rejection-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b6-noexcept-handler-signature-rejection-dark.svg">
-    <img src="../resources/docs/backlog/h3-b6-noexcept-handler-signature-rejection.svg" alt="B6: Noexcept handler signature rejection">
-  </picture>
-</h3>
-
-**Status.** Completed 2026-09-14.
-
-**Resolution.** The approved contract supports const and mutable `noexcept`
-call operators for the existing sync and async shapes. Four specializations
-reuse the current signature bases. Tests cover qualifiers, routing parameter
-counts and actual registration/execution. Compilation probes also verify
-rejection of incompatible request, cancellation and return types with and
-without `noexcept`. The router implementation required no changes.
-
-**Historical finding and acceptance criteria.**
-
-**Type.** Confirmed compatibility limitation; support contract pending.
-
-**Context.** A synchronous lambda taking `const request&` and returning
-`response` is rejected by `router_handler_lambda` when declared `noexcept`.
-The asynchronous equivalent taking `shared_ptr<const request>` and
-`stop_token`, returning `task<response>`, is likewise rejected by
-`router_async_handler_lambda`. The constraints on `router::add` prevent
-registration of these handlers.
-
-**Cause.** The member-function-pointer specializations cover const and
-non-const call operators, but omit their noexcept-qualified counterparts.
-
-**Contract evidence.** The [architecture](ARCHITECTURE.md) describes handler
-argument and return shapes without explicitly guaranteeing noexcept support.
-The tests demonstrate the limitation; their positive expectations do not
-independently establish a previously required compatibility guarantee.
-
-**Scope to define.** Decide whether those otherwise supported handler shapes
-must also work with noexcept. If support is required, recognize the selected
-qualifier combinations while preserving argument/return checks and additional
-parameter counts. Otherwise, document the restriction and justify the test
-expectations against that contract.
-
-**Components.** [router_handler_signature.h](../include/protocol/http/common/router_handler_signature.h),
-[router.h](../include/protocol/http/common/router.h), handler documentation
-and signature unit tests.
-
-**Existing failing unit tests.**
-
-- [router_handler_signature_tests.cpp](../tests/unit/protocol/http/common/router_handler_signature_tests.cpp):
-  `noexcept sync handlers retain signature compatibility`.
-- [router_handler_signature_tests.cpp](../tests/unit/protocol/http/common/router_handler_signature_tests.cpp):
-  `noexcept async handlers retain signature compatibility`.
-
-**Proposed acceptance and tests.** Record the supported qualifiers, then align
-implementation and focused tests with that decision. Preserve existing
-ordinary and mutable handlers, parameter counts, and rejection of unsupported
-request/return signatures.
-
-**Dependencies and decisions.** Keep this finding pending without counting it
-as a confirmed production bug until the support contract is established.
-It is not a protocol violation or a demonstrated memory-safety defect.
+B7-B13 retain evidence in the current source. Focused runtime regressions
+and the resulting fixes or contract decisions remain outstanding. Proposed
+tests below are not recorded as executed or failing. B10 includes an
+error-disclosure policy decision; B13 is limited to the benchmark adapter.
 
 <a name="b7-empty-body-in-the-expect-continue-example"></a>
 <h3>
@@ -880,22 +326,24 @@ It is not a protocol violation or a demonstrated memory-safety defect.
   </picture>
 </h3>
 
-**Status.** Verification pending; high impact within the shipped example.
+**Status.** Runtime regression pending; high impact within the shipped example.
 
-**Evidence and hypothesis.** The `/echo` handler in
+**Source evidence.** The `/echo` handler in
 [expect_continue/main.cpp](../examples/http/v11/expect_continue/main.cpp)
-calls `get_body_reader()->read()` without checking reader availability.
-A POST with no body framing or `Content-Length: 0` may have no reader.
-Dereferencing it would crash the example; this is not evidence that every
-application handler has the same defect.
+dereferences `get_body_reader()` without checking availability. The
+[decoder](../include/protocol/http/v11/decoder.h) dispatches requests without
+body storage when neither chunked framing nor a positive Content-Length is
+present; the [request](../include/protocol/http/v11/request.h) then has no
+body reader. The missing check remains local to this example.
 
-**Acceptance and tests.** Reproduce both empty-body requests, including the
-applicable Expect path; define empty echo or explicit rejection and verify
-no null dereference. Preserve non-empty and chunked echo behavior. Prefer
-a local reader check consistent with existing examples; no API change.
+**Acceptance and tests.** Reproduce POST requests without body framing and
+with `Content-Length: 0`, including the applicable Expect path. Define empty
+echo or explicit rejection and verify no null dereference. Preserve non-empty
+and chunked echo behavior. Use a local reader check consistent with existing
+examples; no API change is required.
 
-**Delivery.** Verify and correct before 0.1 if confirmed. Keep the regression
-focused on the example's handler and request-body contract.
+**Delivery.** Verify and correct before 0.1. Keep the regression focused on
+the example's handler and request-body contract.
 
 <a name="b8-response-framing-after-clear_body"></a>
 <h3>
@@ -907,25 +355,25 @@ focused on the example's handler and request-body contract.
   </picture>
 </h3>
 
-**Status.** Verification pending; medium severity.
+**Status.** Runtime regression pending; medium severity.
 
-**Evidence and hypothesis.** In
+**Source evidence.** In
 [response.h](../include/protocol/http/v11/response.h), `clear_body()` resets
 the deferred length and removes explicit framing. `apply_body_framing()`
-does not restore a length when that optional value is absent. A 200 response
-that sets a body and then clears it may therefore have neither body framing
-nor connection closure, leaving a persistent client waiting for completion.
+does not restore a length when that optional value is absent. An ordinary
+200 response that sets and clears its body therefore has no length or
+chunked framing supplied by these paths. Verify message completion on a
+persistent connection and correct the empty-body framing.
 
 **Acceptance and tests.** Serialize `ok_200()` followed by `set_body("x")`
 and `clear_body()`, then verify complete wire framing and a following response
 over a persistent socket. Test repeated clearing and preserve the distinct
-HEAD and body-forbidden status rules. Existing checks for header removal
-alone do not establish correct message completion.
+HEAD and body-forbidden status rules. Header-removal assertions alone do not
+establish message completion.
 
 **Components and delivery.** Response unit tests and HTTP response integration
 tests; verify before 0.1. Coordinate with DT3 without requiring a redesign
-of explicit framing. A confirmed ordinary-response framing defect is not
-an optional feature gap.
+of explicit framing. This case involves no manual framing override.
 
 <a name="b9-response-driven-connection-close"></a>
 <h3>
@@ -937,13 +385,14 @@ an optional feature gap.
   </picture>
 </h3>
 
-**Status.** Verification pending; medium severity.
+**Status.** Runtime regression pending; medium severity.
 
-**Evidence and hypothesis.** A response can advertise `Connection: close`,
-but transport closure is driven by request-side channel intent. Inspect
-[server.h](../include/protocol/http/v11/server.h),
-[serialization.h](../include/protocol/serialization.h), and both TCP backends
-to verify whether response intent reaches the connection lifecycle.
+**Source evidence.** [server.h](../include/protocol/http/v11/server.h)
+propagates request-driven closure to response headers, but there is no return
+path for a handler's `Connection: close` intent.
+[serialization_result](../include/protocol/serialization.h) carries bytes and
+an optional body reader; both TCP backends consult the decoder's
+`result.channel` when deciding closure after a response.
 
 **Acceptance and tests.** Send a persistent request whose handler returns
 `Connection: close`; assert that the full response drains before EOF.
@@ -952,8 +401,8 @@ the close boundary. Cover synchronous and deferred handlers on both platforms,
 and preserve ordinary keep-alive and request-driven closure.
 
 **Delivery and limits.** Verify before 0.1. Preserve the generic transport
-boundary; do not add HTTP header parsing to a transport or assume a public
-API extension is necessary before tracing the complete path.
+boundary; do not add HTTP header parsing to a transport. Select the smallest
+way to convey response closure without assuming a public API extension.
 
 <a name="b10-internal-exception-details-in-500-responses"></a>
 <h3>
@@ -998,13 +447,14 @@ depend on P3, a general error-hook API, or a new logging framework.
   </picture>
 </h3>
 
-**Status.** Verification pending; medium severity.
+**Status.** Runtime regression pending; medium severity.
 
-**Evidence and hypothesis.** Normal dispatch in
-[server.h](../include/protocol/http/v11/server.h) suppresses HEAD body bytes.
-Transport-generated error responses use a separate callback/serialization
-path that may not retain the request method. A handler failure may therefore
-produce a HEAD response with body bytes.
+**Source evidence.** Normal dispatch in
+[server.h](../include/protocol/http/v11/server.h) applies HEAD body suppression
+to successful handler results. Exceptions reach a separate error callback
+that receives a reason code and text, without the request method. That
+callback constructs a response body and bypasses `apply_response_rules()`.
+Verify the error wire output and preserve HEAD suppression through recovery.
 
 **Acceptance and tests.** Register a HEAD handler that throws; verify the
 wire contains no response body. Repeat with a deferred failure and a response
@@ -1026,13 +476,14 @@ separate assertions for disclosure and body suppression.
   </picture>
 </h3>
 
-**Status.** Verification pending; medium severity.
+**Status.** Focused regression pending; medium severity.
 
-**Evidence and hypothesis.** In
+**Source evidence.** In
 [helpers.h](../include/protocol/http/common/helpers.h),
-`split_authority_host_port()` returns the position after `]` for an IP-literal.
-The absolute-form caller checks a following port only when that position
-contains `:`; other trailing authority characters appear to escape rejection.
+`split_authority_host_port()` returns the position immediately after `]`
+for an IP-literal. The absolute-form caller validates the remaining authority
+only when that position contains `:`. A different suffix has no rejection
+branch, so its bytes can be ignored while parsing the host.
 
 **Reproduction candidate.**
 
@@ -1046,8 +497,8 @@ port, malformed suffixes and fragmented input. Enforce the existing authority
 grammar without adding unrelated semantic validation or rejecting permitted
 syntax in adjacent forms.
 
-**Delivery and scope.** Verify before 0.1. This concerns authority syntax,
-not C4's completed absolute-form versus Host precedence fix; do not reopen C4.
+**Delivery and scope.** Verify before 0.1. Correct authority syntax while
+preserving target-authority precedence over Host.
 
 <a name="b13-signed-overflow-in-the-httparena-adapter"></a>
 <h3>
@@ -1059,13 +510,13 @@ not C4's completed absolute-form versus Host precedence fix; do not reopen C4.
   </picture>
 </h3>
 
-**Status.** Verification pending; medium severity, benchmark-only scope.
+**Status.** Runtime regression pending; medium severity, benchmark-only scope.
 
-**Evidence and hypothesis.** In
+**Source evidence.** In
 [main.cpp](../benchmarks/httparena/http/v11/main.cpp), `read_query_sum()` adds
-two parsed `int64_t` values; the POST handler then adds the parsed body value.
-Successful parsing of each operand does not prove either sum is representable.
-Out-of-range signed addition has undefined behavior.
+two parsed `int64_t` values without a range check; the POST handler then adds
+the parsed body value without one. Successful parsing of each operand does
+not establish that either signed sum is representable.
 
 **Acceptance and tests.** Exercise maximum plus one and minimum minus one
 in both additions, with representable boundary sums and ordinary randomized
@@ -1074,8 +525,7 @@ it with UBSan where available. Keep checks local to the adapter and preserve
 the benchmark's expected arithmetic for valid inputs.
 
 **Delivery.** Resolve before publishing the affected adapter as verified.
-This is not by itself a blocker for the core library release or evidence
-of arithmetic overflow inside the HTTP implementation.
+This does not by itself block the core library release.
 
 <a name="product-and-convenience"></a>
 <h2>
@@ -1086,32 +536,6 @@ of arithmetic overflow inside the HTTP implementation.
     <img src="../resources/docs/backlog/h2-product-and-convenience.svg" alt="Product and convenience">
   </picture>
 </h2>
-
-<a name="p1-static-file-handler"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-p1-static-file-handler-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p1-static-file-handler-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p1-static-file-handler-dark.svg">
-    <img src="../resources/docs/backlog/h3-p1-static-file-handler.svg" alt="P1: Static file handler">
-  </picture>
-</h3>
-
-**Context.** Output body draining and percent-decoding already exist.
-The latter is a security dependency. Original estimate: M.
-
-**Scope to define.** A file handler using those primitives.
-`TransmitFile`/`sendfile` are options to evaluate through measurements,
-not a decided architectural requirement.
-
-**Components.** HTTP handler, path resolution, output body, and examples.
-
-**Proposed acceptance.** Define the allowed root, access errors, and file
-lifetime; verify encoded paths, traversal, missing files, binary bodies,
-and large output with bounded memory.
-
-**Dependencies.** Preserve the generic boundary if a platform-specific send
-path is introduced. This does not assume automatic range support.
 
 <a name="p2-access-logging"></a>
 <h3>
@@ -1202,24 +626,29 @@ Coordinate resource budgets with C2.
   </picture>
 </h3>
 
-**Context.** Doba preserves conditional fields; the handler has the resource
-validators. The application, when acting as an origin server, is responsible
-for evaluating preconditions. Range support is optional.
+**Remaining scope.** Define optional helpers that evaluate application-supplied
+entity-tag and modification-date validators and, if offered, select byte
+ranges and construct partial-content responses. The framework must not invent
+metadata for the selected representation.
 
-**Future scope.** Helpers for `304`, `412`, `206`, or `416`, if they
-are offered. The framework must not invent metadata for the selected
-representation.
+**Evidence.** [static_file_server.h](../include/protocol/http/v11/static_file_server.h)
+handles existence-based `If-Match: *` and `If-None-Match: *`, and rejects
+explicit If-Match tags because it supplies no entity tags. Entity-tag/date
+validators and ranges remain absent from that handler. Status factories and
+conditional-field parsing are available; they do not require reimplementation.
 
-**Components.** HTTP API, conditional headers, response, and examples.
+**Components.** Conditional evaluation helpers, HTTP API, static-file
+integration where applicable, and focused examples and tests.
 
-**Acceptance and tests.** Define the contract for application-provided
-validators, test precondition precedence, and preserve the ability to ignore
-Range and serve a normal GET.
+**Acceptance and tests.** Define the metadata contract, test precondition
+precedence for the added validators, and cover selected ranges and unsatisfied
+ranges if supported. Preserve the existing wildcard conditions and the
+ability to ignore Range and serve a normal GET.
 
 **References.** RFC 9110 S13.2, S13.2.2, and S14.
 
-**Out of scope.** This is neither a core compliance gate nor a release gate.
-Invalid conditional date handling is already implemented.
+**Delivery.** Deferred optional functionality; neither a core compliance gate
+nor a release gate.
 
 <a name="p6-output-trailers"></a>
 <h3>
@@ -1314,48 +743,39 @@ Retry-After, body framing and HEAD behavior. Preserve existing factories.
   </picture>
 </h3>
 
-**Status:** partial. The test expansion completed on 2026-09-07 added
-184 functional cases and reinforced 84 existing cases, with 556 unit and
-71 integration registrations passing the local compiler/sanitizer matrix.
-The resulting bugs and capacity contract decision are tracked in
-[C4](#c4-absolute-form-authority-precedence),
-[C5](#c5-internal-decoder-capacity-overflow) and [C6](#c6-te-connection-option).
-The count is not an exhaustive compliance claim.
+**Remaining work.** Establish a requirement-to-test map and extend coverage
+only where an HTTP rule, fragmentation point, or transport boundary remains
+unverified. Trace new cases to their applicable RFC requirements and verify
+equivalent results in IOCP and epoll.
 
-**Context.** The project's integration suite covers framing, fragmentation,
-pipelining, and closure over real sockets. It is not an exhaustive RFC matrix.
+**Concrete gaps.**
 
-**Risk.** A regression can depend on TCP segmentation, concatenated requests,
-limits, or ambiguous framing and escape existing cases.
-
-**Scope.** Systematically expand positive and negative cases for request
-smuggling, Content-Length/Transfer-Encoding, chunked encoding, trailers,
-and limits.
-
-**Components.** Decoder, framing rules, request/response,
-protocol-transport contract, and both backends.
-
-**Acceptance and tests.** Trace each group of cases to its RFC rule, cover
-relevant fragmentation points, and verify equivalent results in IOCP and
-epoll. Configured limit cases depend on the C2 decisions.
-
-**Remaining validation and infrastructure.**
-
-- Force a collision with an actual spill filename candidate; check existing
-  file preservation, retry, error classification and cleanup. Concurrent
-  owners with distinct filenames do not establish collision handling.
-- Prove that output remains pending while another client is served, and
-  test the absolute send_all deadline against a non-reading local peer.
-  Response serialization alone does not prove socket backpressure.
-- Reproduce and resolve the gap between releasing a reserved test port and
-  server bind; distinguish address-in-use from unrelated startup failures.
+- Force a collision with an actual spill filename candidate; verify existing
+  file preservation, retry, error classification, and cleanup. The
+  [storage tests](../tests/unit/common/byte_storage_tests.cpp) preserve an
+  unrelated `existing.tmp`, which does not force that collision.
+- Prove that output remains pending while another client is served. The
+  [transport test](../tests/integration/transport/server/tcpip_tests.cpp)
+  observes serialization before serving the second client, without proving
+  a send remains blocked. Also test the absolute `send_all` deadline against
+  a non-reading local peer.
+- Reproduce and resolve the gap between `find_available_port()` releasing its
+  socket and server bind in the
+  [client helper](../tests/integration/helpers/tcpip_client.h); distinguish
+  address-in-use from unrelated startup failures.
 - Exercise a genuinely pending connect with a deterministic local mechanism
-  on Windows and Linux; a refused connection does not cover that timeout.
-- After C2 defines configurable limits, test zero, limit-1, limit and limit+1,
-  early rejection and encoded/decoded chunked accounting.
+  on Windows and Linux. The
+  [client tests](../tests/integration/helpers/tcpip_client_tests.cpp) cover
+  refusal and receive deadlines, not that connect timeout.
+- After C2 defines configurable limits, test zero, limit-1, limit, and limit+1,
+  early rejection, and encoded/decoded chunked accounting through the server.
 
-**References.** RFC 9110 and RFC 9112. The suite provides evidence for the
-strict HTTP/1.1 claim; it does not replace contract review.
+**Components.** Decoder and framing tests, storage tests, protocol-transport
+integration, and test helpers. Coordinate pending-response measurements with
+C7/QA5 rather than duplicating those campaigns.
+
+**Acceptance.** Record the rule or contract and missing boundary exercised by
+each new case. A passing test count is not an exhaustive compliance claim.
 
 <a name="qa2-fuzzing"></a>
 <h3>
@@ -1365,20 +785,17 @@ strict HTTP/1.1 claim; it does not replace contract review.
   </picture>
 </h3>
 
-**Context.** ASan, UBSan, and TSan are already integrated. Written tests execute
-a finite set of paths.
-
-**Future scope.** Prepare a separate fuzzing plan for helpers, the decoder,
+**Remaining work.** Prepare a fuzzing plan for helpers, the decoder,
 framers/readers, request rebasing, serialization, byte storage, and relevant
-transport boundaries.
+transport boundaries. No fuzz targets or corpus are present in the project.
 
 **Proposed acceptance.** Define targets, an initial corpus, budgets, and
 failure reproduction. Preserve every confirmed failure as a deterministic
 regression and run targets with the appropriate sanitizer.
 
 **Dependencies and limits.** Select infrastructure before adding
-dependencies. CI fuzzing integration is deferred beyond the current hardening
-effort; do not reopen the completed sanitizer work.
+dependencies. Fuzzing integration remains deferred beyond the current
+hardening effort.
 
 <a name="qa3-performance-baseline"></a>
 <h3>
@@ -1390,54 +807,26 @@ effort; do not reopen the completed sanitizer work.
   </picture>
 </h3>
 
-**Context.** Adapters exist for HttpArena and Web Frameworks Benchmark.
-A persistent baseline and a gate for throughput, latency, allocations,
-memory, and scaling are missing. The upstream Web Frameworks runner has no
-pinned commit.
+**Remaining work.** Turn the published HttpArena measurements into a repeatable
+release baseline with regression tolerances. Pin the Web Frameworks runner,
+whose adapter currently references an inspected branch rather than a commit.
 
-**Impact.** The high-performance claim cannot be quantified, and decisions
-about shared_ptr, std::function, spill, or buffers cannot be compared with
-confidence.
+**Evidence.** The [published results](../resources/benchmarks/benchmark-results.txt)
+record runner and doba revisions, throughput, latency, CPU, and memory for
+baseline and pipelined profiles, with one repetition. These measurements do
+not establish run-to-run variability, allocation counts, or scaling limits.
 
-**Scope.** Pin revisions, scenarios, and conditions for minimal requests,
-large headers, inline/streaming bodies, pipelining, and concurrency.
+**Scope.** Record hardware, toolchain, revisions, scenarios, and conditions
+for minimal requests, large headers, inline/streaming bodies, pipelining,
+and concurrency. Repeat samples, cover the missing resource metrics, and
+select representative loads for release comparison.
 
-**Components.** Adapters, decoder, router, serialization, and transports.
+**Components.** Benchmark adapters and result collection for the decoder,
+router, serialization, and transports.
 
-**Acceptance and tests.** Record the toolchain, hardware, exact revisions,
-latency distributions, and repeated samples. Define tolerances based on
-measured noise and a reproducible comparison with the release.
-
-**Dependencies.** Separate measurement from optimization. Individual
-optimization measurements do not replace this release baseline.
-
-<a name="qa4-harness-diagnostics-and-isolation"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-qa4-harness-diagnostics-and-isolation-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-qa4-harness-diagnostics-and-isolation-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-qa4-harness-diagnostics-and-isolation-dark.svg">
-    <img src="../resources/docs/backlog/h3-qa4-harness-diagnostics-and-isolation.svg" alt="QA4: Harness diagnostics and isolation">
-  </picture>
-</h3>
-
-**Status:** completed for the stated harness criteria on 2026-09-07.
-
-**Implemented.** Both runners identify and flush the active case, report
-assertion expression/location and row context, catch standard and unknown
-exceptions per case, continue afterwards, and support listing and file/name
-filters. CTest bounds the suites and isolated probe verifiers. The existing
-fatal-return assertion behavior and dependency-free runner are preserved.
-
-**Evidence.** Ten named checks per runner plus an active-transport cleanup
-probe passed on MSVC/GCC/Clang, Debug/Release, ASan/UBSan/TSan and CMake
-3.20.6. An additional forced-suspension failure exposed and then verified
-removal of a fixture leak under ASan.
-
-**Limits.** Functional cases remain grouped into two executables. A native
-crash or termination still stops its aggregate process; active-case output
-and filters support focused diagnosis. This completion does not imply
-per-case process isolation or exhaustive concurrency validation.
+**Acceptance.** Define tolerances from measured noise and preserve enough
+inputs and results to reproduce a comparison with the release candidate.
+Keep measurement separate from optimization.
 
 <a name="qa5-stress-campaigns"></a>
 <h3>
@@ -1494,31 +883,27 @@ complements QA1.
   </picture>
 </h3>
 
-**Context.** The version comes from `include/version.h`. A license, README,
-and publishing workflow gated on the entire CI matrix exist.
-The existing gates are defined in the
-[CI workflow](../.github/workflows/ci.yml).
-
 **Outstanding work.** Create a changelog, security policy, and contribution
 guide. Define channels for vulnerabilities, compatibility, and contributions.
+Resolve how to publish `0.1.0-beta.1`: the
+[publishing workflow](../.github/workflows/ci.yml) currently derives only
+`vMAJOR.MINOR.PATCH` from `include/version.h`, without a prerelease suffix.
 
 **Components.** Public project documents, version, and release procedure;
 modify the workflow only if the selected mechanism requires it.
 
 **Acceptance and verification.**
 
-- Each document publishes procedures and channels that are actually available.
-- Every tag points to a revision with a passing CI matrix and synchronized
-  documentation.
-- The version and notes describe the published content.
-- Resolve how to publish `0.1.0-beta.1`: the current workflow derives only
-  `vMAJOR.MINOR.PATCH` and does not express prerelease suffixes. This workflow
-  observation requires a decision; it does not imply an agreed modification.
+- Publish procedures and channels that are actually available.
+- Point the release tag to the exact revision with a passing CI matrix and
+  synchronized documentation, including CMake consumer validation.
+- Make the version and release notes describe the published content.
+- Verify C1/C3 over real sockets and resolve the defect and C7 release
+  decisions listed in the release target before publication.
 
-**Dependencies.** CI and CMake consumer validations must continue to pass.
-C1/C3 must pass their real-socket tests for the beta target. The development
-guide does not replace a public contribution guide with channels and a
-procedure.
+**Dependencies.** The development guide does not replace a public
+contribution guide with channels and a procedure. The prerelease mechanism
+remains a decision, not an agreed workflow modification.
 
 <a name="c-maintainability"></a>
 <h2>
@@ -1540,42 +925,21 @@ procedure.
   </picture>
 </h3>
 
-**Context.** `platform.h` centralizes standard/system headers, `INLINE`,
-Windows macros, warning 4996 suppression, and linker pragmas.
-On other platforms, `tcpip.h` neither selects a backend nor explicitly
-diagnoses the lack of support.
+**Remaining work.** Review the remaining consumer-visible effects of
+[platform.h](../include/platform.h): Windows macros, warning 4996 suppression,
+linker pragmas, and transitive standard/system includes. Decide the diagnostic
+contract for unsupported platforms; the
+[TCP selector](../include/transport/server/tcpip.h) currently has no explicit
+unsupported-platform branch.
 
-**Risk.** Macros and warnings affect consumers; transitive includes hide
-dependencies and produce confusing errors.
+**Acceptance and verification.** Inventory and justify the remaining
+macros/pragmas and dependencies. Check other public headers independently
+before proposing a dependency fix. Verify that any localized change preserves
+consumer compiler options and installed-package usage on supported compilers.
 
-**Components.** `include/platform.h`, selectors and backends, and every
-header relying on its includes.
-
-**Acceptance and verification.** Inventory actual uses, justify each
-macro/pragma, and compile public headers independently. Define a diagnostic
-for unsupported platforms if that is the contract. Check that consumer
-options do not change inadvertently.
-
-**Limits.** Local changes based on evidence; no general include reorganization
-or expansion of supported platforms is proposed by default.
-
-**Localized delivery follow-up.** The 2026-09-15 isolated-header compilation
-check reported four failures with GCC 13.3:
-
-- `include/protocol/http/common/query_parameter.h`: pair/string/view
-  declarations lack their direct standard-library includes.
-- `include/protocol/http/common/request_getter.h`: optional and byte-storage
-  declarations depend on prior includes.
-- `include/protocol/http/v11/request.h`: fails through its dependency order.
-- `include/protocol/http/v11/status_lines.h`: size declarations depend on
-  a preceding include.
-
-Recheck each as the first include in a minimal C++20 translation unit using
-the supported public include path, then make only the necessary dependency
-fixes. Compile with strict warnings on supported compilers and preserve
-installed-package consumers. The earlier check is compile-time evidence,
-not a runtime test. This narrow follow-up does not make the wider platform
-cleanup a release gate or require a duplicate bug entry.
+**Limits.** Only evidence-backed local changes are in scope. No general
+include reorganization, expansion of supported platforms, or automatic
+release gate is implied.
 
 <a name="dt2-indexed-getter-contract"></a>
 <h3>
@@ -1616,33 +980,29 @@ Inconsistency alone does not authorize an API change.
 
 **Status.** Decision pending; this is not a confirmed misuse-independent bug.
 
-**Context.** In [response.h](../include/protocol/http/v11/response.h), explicit
-Content-Length or Transfer-Encoding can override deferred body framing.
-For example, `set_body("abc")` followed by `set_header("Content-Length", "1")`
-can advertise a length inconsistent with the body. An explicit chunked header
-also needs a clear contract about who supplies the chunk framing.
+**Open contract.** In [response.h](../include/protocol/http/v11/response.h),
+manual Content-Length or Transfer-Encoding can override deferred body framing.
+Decide whether mismatched lengths and manually declared chunked encoding are
+caller preconditions or require validation. Specify supported combinations,
+operation order, framing ownership, and failure behavior. B8 separately covers
+empty-body framing without a manual override.
 
-**Open decision.** Decide whether manual framing is a caller precondition
-or requires validation. State supported combinations, order of operations
-and failure behavior; preserve correctly framed existing usage. Do not infer
-that arbitrary manual header/body combinations were previously guaranteed.
-B8 independently covers ordinary empty-body framing without manual override.
+**Remaining coverage.** Add shorter/longer explicit-length cases and manual
+Transfer-Encoding cases according to the selected contract, checking complete
+wire output. Preserve the
+[existing tests](../tests/unit/protocol/http/v11/response_tests.cpp) for matching
+lengths, conflicting Content-Length/Transfer-Encoding, HEAD/bodyless responses,
+and exact capacity with a fixed Date and deferred Content-Length.
 
-**Capacity follow-up.** Document the fixed status/header serialization budget,
-space reserved for generated fields and the behavior when it is exceeded.
-Test exact-fit and over-capacity cases with automatic Date/framing fields;
-check that failure cannot publish a partial malformed response. Distinguish
-the header budget from body storage and progressive streaming support.
+**Capacity follow-up.** Document the fixed status/header budget and the space
+needed for generated fields. Add exact-fit and over-capacity cases combining
+automatic Date with deferred framing, and verify recovery cannot publish a
+partial malformed response. Coordinate method-aware error recovery with B11;
+keep header capacity distinct from body storage and progressive streaming.
 
-**Acceptance and tests.** Cover shorter/longer explicit lengths, matching
-lengths, explicit Transfer-Encoding, conflicting framing and HEAD/bodyless
-statuses according to the selected contract. Verify complete serialized
-output, not only individual header getters, and cross-check error recovery
-with B11. Publish concise response preconditions with the chosen behavior.
-
-**Delivery and limits.** No automatic release gate. Agree the contract before
-claiming these combinations are supported. No dynamic buffers, new ownership
-model, broad serializer refactor or public API change is prescribed.
+**Delivery and limits.** Publish the selected response preconditions. No
+automatic release gate, dynamic buffers, ownership redesign, broad serializer
+refactor, or public API change is prescribed.
 
 <a name="public-documentation"></a>
 <h2>
@@ -1664,15 +1024,15 @@ model, broad serializer refactor or public API change is prescribed.
   </picture>
 </h3>
 
-**Outstanding work.** Document direct transport use outside `v11::server`.
+**Outstanding work.** Add practical documentation and public examples for
+direct transport use outside `v11::server`: callback setup, start/stop order,
+allowed calling threads, restart, and startup errors.
 
-**Context to preserve.** `stop()` is called outside its workers, and callbacks
-do not change during start/stop. The contract distinguishes graceful closure
-from fatal abort.
-
-**Acceptance.** Verify and document call order, allowed threads, callbacks,
-restart, and startup errors with public examples. Link from architecture
-and validate each example against the corresponding tests.
+**Acceptance.** Document the worker-thread restriction on `stop()` and when
+callbacks may be changed. Distinguish per-connection graceful closure and
+fatal abort from the server-wide draining proposed in F7. Link the guide
+from architecture and validate examples against the
+[transport lifecycle tests](../tests/integration/transport/server/tcpip_tests.cpp).
 
 <a name="doc2-request-views-and-getters"></a>
 <h3>
@@ -1684,16 +1044,15 @@ and validate each example against the corresponding tests.
   </picture>
 </h3>
 
-**Outstanding work.** Document string_view/header_view ownership and lifetime,
-and indexed getter preconditions.
+**Outstanding work.** Extend the architecture's ownership overview with
+concrete examples of retaining request views safely, destruction-related
+invalidation, borrowed-reader lifetime, and indexed getter preconditions.
 
-**Context to preserve.** Getters do not return owning copies; request owns
-the head buffer and rebases views. A borrowed reader requires external
-storage to outlive its uses.
-
-**Acceptance.** Show valid uses, invalidation on destruction, and the
-precondition chosen in DT2. Cross-check lifetime tests and link the contract
-from the corresponding examples.
+**Acceptance.** Show valid uses and explain why views cannot outlive their
+owning request or external storage. Document the indexed-access contract
+selected in DT2, cross-check the
+[request tests](../tests/unit/protocol/http/v11/request_tests.cpp) and reader
+tests, and link the contract from the corresponding examples.
 
 <a name="beyond-the-first-release"></a>
 <h2>
@@ -1869,48 +1228,3 @@ completion and single cleanup on each platform.
 document abrupt-stop limitations and verify any external deployment-draining
 procedure before relying on it. Coordinate public lifecycle documentation
 with DOC1; do not count documentation alone as implementation.
-
-<a name="identifier-mapping"></a>
-<h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-identifier-mapping-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-identifier-mapping-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-identifier-mapping-dark.svg">
-    <img src="../resources/docs/backlog/h2-identifier-mapping.svg" alt="Identifier mapping">
-  </picture>
-</h2>
-
-The previous column refers to the backlog before renumbering.
-These identifiers are retained only to interpret older references;
-current links and dependencies use the new column.
-Completed entries retained for traceability keep their identifiers and are
-marked in the inventory.
-
-| Previous | New | Item |
-| --- | --- | --- |
-| C1 | [C1](#c1-single-inactivity-timeout) | Single inactivity timeout |
-| R2 | [C2](#c2-effective-per-request-limits) | Effective per-request limits |
-| C5 | [C3](#c3-global-active-connection-limit) | Global active connection limit |
-| P1 | [P1](#p1-static-file-handler) | Static file handler |
-| P2 | [P2](#p2-access-logging) | Access logging |
-| P3 | [P3](#p3-middleware-chain) | Middleware chain |
-| P4 | [P4](#p4-form-parsing) | Form parsing |
-| C2 | [P5](#p5-automatic-conditionals-and-ranges) | Automatic conditionals and ranges |
-| C3 | [P6](#p6-output-trailers) | Output trailers |
-| C4 | [P7](#p7-automatic-resource-options) | Automatic resource OPTIONS |
-| P5 | [QA1](#qa1-exhaustive-compliance-suite) | Exhaustive compliance suite |
-| QA3 | [QA2](#qa2-fuzzing) | Fuzzing |
-| QA4 | [QA3](#qa3-performance-baseline) | Performance baseline |
-| QA5 | [QA4](#qa4-harness-diagnostics-and-isolation) | Harness diagnostics and isolation |
-| No ID | [QA5](#qa5-stress-campaigns) | Stress campaigns |
-| No ID | [QA6](#qa6-external-compliance-automation) | External compliance automation |
-| RE4 | [RE1](#re1-release-governance-and-traceability) | Release governance and traceability |
-| DT4 | [DT1](#dt1-platformh-dependencies-and-global-effects) | platform.h dependencies and global effects |
-| DT5 | [DT2](#dt2-indexed-getter-contract) | Indexed getter contract |
-| No ID | [DOC1](#doc1-transport-lifecycle) | Transport lifecycle |
-| No ID | [DOC2](#doc2-request-views-and-getters) | Request views and getters |
-| No ID | [F1](#f1-tls) | TLS |
-| No ID | [F2](#f2-compression-and-gzip) | Compression and GZIP |
-| No ID | [F3](#f3-progressive-streaming-and-sse) | Progressive streaming and SSE |
-| No ID | [F4](#f4-ordered-upgrade-barrier) | Ordered upgrade barrier |
-| No ID | [F5](#f5-websockets) | WebSockets |
