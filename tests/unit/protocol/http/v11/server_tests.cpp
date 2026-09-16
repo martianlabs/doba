@@ -195,7 +195,9 @@ class fake_transport {
   using request_callback =
       std::function<std::variant<RSty, martianlabs::doba::common::task<RSty>>(
           const std::shared_ptr<RQty>&, const std::stop_token&)>;
-  using bad_request_callback = std::function<RSty(int, std::string_view)>;
+  using bad_request_callback =
+      std::function<RSty(int, std::string_view,
+                         const std::shared_ptr<RQty>&)>;
   // +=========================================================================+
   // | [>] set_on_request                                           ( public ) |
   // +=========================================================================+
@@ -531,7 +533,8 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   };
   for (const auto& test : rejection_cases) {
     response res =
-        test_transport::on_bad_request(static_cast<int>(test.reason), "reason");
+        test_transport::on_bad_request(
+            static_cast<int>(test.reason), "reason", {});
     res.set_header("Date", "fixed");
     const auto serialized = res.serialize();
     const std::string serialized_prefix(serialized->prefix.get(),
@@ -550,6 +553,35 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   // ---------------------------------------------------------------------------
   value.stop();
   DOBA_EXPECT(!test_transport::started);
+}
+// +===========================================================================+
+// | [>] error responses preserve the originating method         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("server suppresses error bodies only for known HEAD requests") {
+  test_server value;
+  value.start("1234");
+  for (std::string_view method : {"HEAD", "GET", ""}) {
+    std::shared_ptr<request> req;
+    if (!method.empty()) {
+      req = std::make_shared<request>();
+      req->method = method;
+    }
+    response res = test_transport::on_bad_request(
+        static_cast<int>(rejection_reason::kHandlerError), "private", req);
+    res.set_header("Date", "fixed");
+    const auto serialized = res.serialize();
+    DOBA_EXPECT(serialized != nullptr);
+    const std::string output(serialized->prefix.get(),
+                             serialized->prefix_size);
+    DOBA_EXPECT(output.starts_with("HTTP/1.1 500 Internal Server Error\r\n"));
+    DOBA_EXPECT(output.find("Content-Length: 21\r\n") != std::string::npos);
+    const auto boundary = output.find("\r\n\r\n");
+    DOBA_EXPECT(boundary != std::string::npos);
+    DOBA_EXPECT_EQUAL(output.substr(boundary + 4),
+                      method == "HEAD" ? "" : "Internal Server Error");
+    DOBA_EXPECT(!serialized->source.has_value());
+  }
+  value.stop();
 }
 // +===========================================================================+
 // | [>] failed starts release the date service                  ( test-case ) |

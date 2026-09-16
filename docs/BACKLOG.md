@@ -51,10 +51,9 @@ All other outstanding work is future work and does not block this beta.
 
 Implementation order:
 
-1. B11: suppress bodies in HEAD error responses.
-2. B9: honor response-driven `Connection: close` after complete delivery.
-3. C1, C2, C3 and C7: implement and verify all operational limits.
-4. RE1: complete minimum documentation, the full existing CI and CMake consumer
+1. B9: honor response-driven `Connection: close` after complete delivery.
+2. C1, C2, C3 and C7: implement and verify all operational limits.
+3. RE1: complete minimum documentation, the full existing CI and CMake consumer
    validations, and coherent versioning and publication.
 
 **Operational policies.** C1, C2, C3 and C7 are mandatory for this release.
@@ -67,7 +66,7 @@ inactivity and pending-work limits belong to their responsible modules.
 
 **Exit criteria.**
 
-- Reproduce B11 and B9 with focused regressions and fix them. Verify synchronous
+- Reproduce B9 with focused regressions and fix it. Verify synchronous
   and deferred paths on Windows and Linux. The source evidence below is not
   a claim that those runtime regressions have already been executed.
 - Implement C1, C2, C3 and C7 with focused boundary and real-socket tests on
@@ -103,9 +102,9 @@ when a newly reproduced defect affects the supported behavior.
   </picture>
 </h2>
 
-32 outstanding entries across eight categories. Each entry retains only
+31 outstanding entries across eight categories. Each entry retains only
 remaining work or an open decision, with source and test evidence checked
-against the current codebase. Seven entries have release scope; twenty-five
+against the current codebase. Six entries have release scope; twenty-five
 are future work. Verification pending means that the focused regressions or
 runtime measurements described by the entry remain to be run. Category totals
 count entries, not confirmed bugs; RE1 separates its minimum release work from
@@ -114,14 +113,14 @@ the future contribution guide.
 | Category | Identifiers | Release | Future work | Total |
 | --- | --- | --- | --- | --- |
 | Operational hardening | C1-C3, C7 | 4 | 0 | 4 |
-| Bugs | B9, B11, B13 | 2 | 1 | 3 |
+| Bugs | B9, B13 | 1 | 1 | 2 |
 | Product and convenience | P2-P8 | 0 | 7 | 7 |
 | Quality and validation | QA1-QA3, QA5-QA6 | 0 | 5 | 5 |
 | Release engineering | RE1 | 1 | 0 | 1 |
 | C++ maintainability | DT1-DT3 | 0 | 3 | 3 |
 | Public documentation | DOC1-DOC2 | 0 | 2 | 2 |
 | Beyond the first release | F1-F7 | 0 | 7 | 7 |
-| **Total** | | **7** | **25** | **32** |
+| **Total** | | **6** | **25** | **31** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
@@ -130,7 +129,6 @@ the future contribution guide.
 | [C3](#c3-global-active-connection-limit) | Hardening | Pending | Release gate | 0.1.0-beta1 |
 | [C7](#c7-pending-response-and-work-budget) | Hardening | Design and validation pending | Release gate | 0.1.0-beta1 |
 | [B9](#b9-response-driven-connection-close) | Bug | Verification pending | Release gate | 0.1.0-beta1 |
-| [B11](#b11-body-suppression-for-head-error-responses) | Bug | Verification pending | Release gate | 0.1.0-beta1 |
 | [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark bug | Verification pending | Medium | Future work |
 | [P2](#p2-access-logging) | Product | Pending | Not set | Future work |
 | [P3](#p3-middleware-chain) | Product | Pending | Not set | Future work |
@@ -341,10 +339,10 @@ to C7 and does not depend on completing the future QA1/QA5 campaigns.
   </picture>
 </h2>
 
-B11 and B9 are required for `0.1.0-beta1`, in that implementation order.
-B13 is future work limited to the benchmark adapter. All three retain source
-evidence; the focused runtime regressions below are not recorded as executed
-or failing. Reproduce and fix the release defects before publication.
+B9 is required for `0.1.0-beta1`. B13 is future work limited to the benchmark
+adapter. Both retain source evidence; the focused runtime regressions below
+are not recorded as executed or failing. Reproduce and fix B9 before
+publication.
 
 <a name="b9-response-driven-connection-close"></a>
 <h3>
@@ -371,39 +369,10 @@ Include a pipelined successor and verify that it is not processed beyond
 the close boundary. Cover synchronous and deferred handlers on both platforms,
 and preserve ordinary keep-alive and request-driven closure.
 
-**Delivery and limits.** Reproduce, fix and validate for `0.1.0-beta1` after
-B11. Preserve the generic transport boundary; do not add HTTP header parsing
+**Delivery and limits.** Reproduce, fix and validate for `0.1.0-beta1`.
+Preserve the generic transport boundary; do not add HTTP header parsing
 to a transport. Select the smallest way to convey response closure without
 assuming a public API extension.
-
-<a name="b11-body-suppression-for-head-error-responses"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b11-body-suppression-for-head-error-responses-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b11-body-suppression-for-head-error-responses-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b11-body-suppression-for-head-error-responses-dark.svg">
-    <img src="../resources/docs/backlog/h3-b11-body-suppression-for-head-error-responses.svg" alt="B11: Body suppression for HEAD error responses">
-  </picture>
-</h3>
-
-**Status.** Runtime regression pending; medium severity.
-
-**Source evidence.** Normal dispatch in
-[server.h](../include/protocol/http/v11/server.h) applies HEAD body suppression
-to successful handler results. Exceptions reach a separate error callback
-that receives a reason code and text, without the request method. That
-callback constructs a response body and bypasses `apply_response_rules()`.
-Verify the error wire output and preserve HEAD suppression through recovery.
-
-**Acceptance and tests.** Register a HEAD handler that throws; verify the
-wire contains no response body. Repeat with a deferred failure and a response
-serialization failure where recovery is supported. Test ordering and the
-next response or EOF on both backends. Preserve GET error bodies and valid
-HEAD metadata; limit method-aware behavior to requests whose method is known.
-
-**Components and delivery.** HTTP response rules, both TCP error paths and
-response integration tests. Reproduce, fix and validate for `0.1.0-beta1`
-before B9; preserve generic error responses while checking body suppression.
 
 <a name="b13-signed-overflow-in-the-httparena-adapter"></a>
 <h3>
@@ -640,7 +609,7 @@ Retry-After, body framing and HEAD behavior. Preserve existing factories.
 </h2>
 
 QA1-QA3 and QA5-QA6 are future work. The existing CI gates and focused
-tests for B11, B9 and C1/C2/C3/C7 remain mandatory for `0.1.0-beta1`;
+tests for B9 and C1/C2/C3/C7 remain mandatory for `0.1.0-beta1`;
 completing these broader QA programs is not required.
 
 <a name="qa1-exhaustive-compliance-suite"></a>
@@ -805,7 +774,7 @@ modify the workflow only if the selected mechanism requires it.
 
 **Acceptance and verification.**
 
-- Complete B11, B9 and C1/C2/C3/C7 with their focused regressions and equivalent
+- Complete B9 and C1/C2/C3/C7 with their focused regressions and equivalent
   real-socket validation on Windows and Linux where applicable.
 - Pass the full existing CI matrix and CMake consumer checks on the exact
   release revision. Include every required source, test and example in that
@@ -921,7 +890,7 @@ and exact capacity with a fixed Date and deferred Content-Length.
 **Capacity follow-up.** Document the fixed status/header budget and the space
 needed for generated fields. Add exact-fit and over-capacity cases combining
 automatic Date with deferred framing, and verify recovery cannot publish a
-partial malformed response. Coordinate method-aware error recovery with B11;
+partial malformed response. Preserve method-aware error recovery;
 keep header capacity distinct from body storage and progressive streaming.
 
 **Delivery and limits.** Future work. RE1 documents current response

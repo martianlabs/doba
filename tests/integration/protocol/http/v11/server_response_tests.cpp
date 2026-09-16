@@ -22,6 +22,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <atomic>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -47,6 +48,7 @@ using martianlabs::doba::protocol::http::v11::server;
 using martianlabs::doba::tests::integration::http_test_signal;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
+using martianlabs::doba::tests::integration::wait_for_http_count;
 }  // namespace
 
 // +===========================================================================+
@@ -373,6 +375,112 @@ DOBA_TEST("HTTP/1.1 hides deferred handler and serializer diagnostics") {
     DOBA_EXPECT(recovery.has_value());
     DOBA_EXPECT_EQUAL(recovery->status, "HTTP/1.1 200 OK");
     DOBA_EXPECT_EQUAL(recovery->body, "ok");
+    http_server.stop();
+  }
+}
+
+// +===========================================================================+
+// | [>] HEAD errors terminate after their headers               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("HTTP/1.1 suppresses synchronous HEAD error bodies") {
+  for (std::string_view scenario : {"throw", "unknown", "framing"}) {
+    martianlabs::doba::tests::integration::test_helper::set_context(scenario);
+    tcpip_client client;
+    const uint16_t port = client.find_available_port();
+    DOBA_EXPECT(port != 0);
+    std::atomic<std::size_t> get_calls = 0;
+    server<> http_server;
+    http_server.add_route("HEAD", "/fail", [scenario](const request&)
+        -> response {
+      if (scenario == "throw") throw std::runtime_error("HEAD handler error!");
+      if (scenario == "unknown") throw 1;
+      response result = response::ok_200();
+      result.set_header("Transfer-Encoding", "chunked");
+      result.set_header("Content-Length", "1");
+      return result;
+    });
+    http_server.add_route("GET", "/ok", [&get_calls](const request&) {
+      get_calls.fetch_add(1);
+      response result = response::ok_200();
+      result.set_body("ok");
+      return result;
+    });
+    const std::string port_text = std::to_string(port);
+    http_server.start(port_text.c_str());
+
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send_all(
+        "GET /ok HTTP/1.1\r\nHost: a\r\n\r\n"
+        "HEAD /fail HTTP/1.1\r\nHost: a\r\n\r\n"
+        "GET /ok HTTP/1.1\r\nHost: a\r\n\r\n"));
+    const auto before = receive_http_response(client);
+    DOBA_EXPECT(before.has_value());
+    DOBA_EXPECT_EQUAL(before->status, "HTTP/1.1 200 OK");
+    DOBA_EXPECT_EQUAL(before->body, "ok");
+    const auto head = receive_http_response(client, true);
+    DOBA_EXPECT(head.has_value());
+    DOBA_EXPECT_EQUAL(head->status, "HTTP/1.1 500 Internal Server Error");
+    DOBA_EXPECT_EQUAL(head->header("Content-Length").value(), "21");
+    const auto trailing = client.receive_until_close(1024);
+    DOBA_EXPECT(trailing.has_value());
+    DOBA_EXPECT_EQUAL(*trailing, "");
+    DOBA_EXPECT_EQUAL(get_calls.load(), 1);
+    http_server.stop();
+  }
+}
+
+// +===========================================================================+
+// | [>] deferred HEAD errors preserve the next response         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("HTTP/1.1 suppresses deferred HEAD error bodies in pipelines") {
+  for (std::string_view scenario : {"throw", "unknown", "framing"}) {
+    martianlabs::doba::tests::integration::test_helper::set_context(scenario);
+    tcpip_client client;
+    const uint16_t port = client.find_available_port();
+    DOBA_EXPECT(port != 0);
+    auto signal = std::make_shared<http_test_signal>();
+    std::atomic<std::size_t> get_calls = 0;
+    server<> http_server;
+    http_server.add_route(
+        "HEAD", "/fail",
+        [signal, scenario](std::shared_ptr<const request>,
+                            std::stop_token token) -> task<response> {
+      std::stop_callback cancellation(
+          token, [signal]() { signal->resume(); });
+      co_await *signal;
+      if (scenario == "throw") throw std::runtime_error("HEAD handler error!");
+      if (scenario == "unknown") throw 1;
+      response result = response::ok_200();
+      result.set_header("Transfer-Encoding", "chunked");
+      result.set_header("Content-Length", "1");
+      co_return result;
+    });
+    http_server.add_route("GET", "/ok", [&get_calls](const request&) {
+      get_calls.fetch_add(1);
+      response result = response::ok_200();
+      result.set_body("ok");
+      return result;
+    });
+    const std::string port_text = std::to_string(port);
+    http_server.start(port_text.c_str());
+
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send_all(
+        "HEAD /fail HTTP/1.1\r\nHost: a\r\n\r\n"
+        "GET /ok HTTP/1.1\r\nHost: a\r\n\r\n"));
+    DOBA_EXPECT(signal->wait());
+    DOBA_EXPECT(wait_for_http_count(get_calls, 1));
+    DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(50)));
+    signal->resume();
+    const auto head = receive_http_response(client, true);
+    DOBA_EXPECT(head.has_value());
+    DOBA_EXPECT_EQUAL(head->status, "HTTP/1.1 500 Internal Server Error");
+    DOBA_EXPECT_EQUAL(head->header("Content-Length").value(), "21");
+    const auto after = receive_http_response(client);
+    DOBA_EXPECT(after.has_value());
+    DOBA_EXPECT_EQUAL(after->status, "HTTP/1.1 200 OK");
+    DOBA_EXPECT_EQUAL(after->body, "ok");
+    DOBA_EXPECT(client.wait_for_close(std::chrono::seconds(3)));
     http_server.stop();
   }
 }

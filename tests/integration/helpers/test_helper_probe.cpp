@@ -108,7 +108,9 @@ DOBA_TEST("probe failure cleans up active transport") {
               protocol::http::v11::response::ok_200();
           return res;
         });
-    server.set_on_bad_request([](int, std::string_view) {
+    server.set_on_bad_request([](
+        int, std::string_view,
+        const std::shared_ptr<protocol::http::v11::request>&) {
       protocol::http::v11::response res =
           protocol::http::v11::response::ok_200();
       return res;
