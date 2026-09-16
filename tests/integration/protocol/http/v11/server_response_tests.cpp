@@ -134,6 +134,52 @@ DOBA_TEST("HTTP/1.1 preserves binary responses across the spill boundary") {
 }
 
 // +===========================================================================+
+// | [>] cleared responses delimit persistent connections        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("HTTP/1.1 delimits cleared bodies on persistent connections") {
+  tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  server<> http_server;
+  http_server.add_route("GET", "/clear", [](const request&) {
+    response result = response::ok_200();
+    result.set_body("x").clear_body().clear_body();
+    return result;
+  });
+  http_server.add_route("GET", "/next", [](const request&) {
+    response result = response::ok_200();
+    result.set_body("next");
+    return result;
+  });
+  const std::string port_text = std::to_string(port);
+  http_server.start(port_text.c_str());
+
+  for (bool pipelined : {false, true}) {
+    DOBA_EXPECT(client.connect(port));
+    std::string requests = "GET /clear HTTP/1.1\r\nHost: a\r\n\r\n";
+    if (pipelined) requests += "GET /next HTTP/1.1\r\nHost: a\r\n\r\n";
+    DOBA_EXPECT(client.send_all(requests));
+    const auto cleared = receive_http_response(client);
+    DOBA_EXPECT(cleared.has_value());
+    DOBA_EXPECT_EQUAL(cleared->status, "HTTP/1.1 200 OK");
+    DOBA_EXPECT_EQUAL(cleared->header("Content-Length").value(), "0");
+    DOBA_EXPECT(!cleared->header("Transfer-Encoding").has_value());
+    DOBA_EXPECT(cleared->body.empty());
+    DOBA_EXPECT(cleared->wire_body.empty());
+    if (!pipelined) {
+      DOBA_EXPECT(client.send_all("GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
+    }
+    const auto next = receive_http_response(client);
+    DOBA_EXPECT(next.has_value());
+    DOBA_EXPECT_EQUAL(next->status, "HTTP/1.1 200 OK");
+    DOBA_EXPECT_EQUAL(next->body, "next");
+    DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(100)));
+    client.close();
+  }
+  http_server.stop();
+}
+
+// +===========================================================================+
 // | [>] all bodyless final statuses delimit a pipeline          ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 suppresses 205 and 304 bodies before successors") {

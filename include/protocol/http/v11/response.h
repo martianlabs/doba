@@ -457,23 +457,34 @@ class response {
   // +=========================================================================+
   // | [>] clear_body                                               ( public ) |
   // +=========================================================================+
-  // | Discards body bytes and explicit and deferred framing.                  |
-  // | preserve_framing retains the advertised framing for HEAD responses.     |
+  // | Discards the body and restores empty-response framing.                  |
   // +-------------------------------------------------------------------------+
-  response& clear_body(bool preserve_framing = false) {
+  response& clear_body() {
+    suppress_body();
+    content_length_ = 0;
+    bool is_informational = status_code_ < SC_200_OK;
+    if (is_informational || status_code_ == SC_204_NO_CONTENT ||
+        status_code_ == SC_304_NOT_MODIFIED) {
+      content_length_.reset();
+    }
+    chunked_ = false;
+    while (has_content_length_header_) {
+      remove_header(header_names::kContentLength);
+    }
+    while (has_transfer_encoding_header_) {
+      remove_header(header_names::kTransferEncoding);
+    }
+    return *this;
+  }
+  // +=========================================================================+
+  // | [>] suppress_body                                            ( public ) |
+  // +=========================================================================+
+  // | Discards body bytes while retaining the advertised framing for HEAD.    |
+  // +-------------------------------------------------------------------------+
+  response& suppress_body() {
     bdy_len_ = 0;
     bdy_reader_.reset();
     bdy_writer_.reset();
-    if (!preserve_framing) {
-      content_length_.reset();
-      chunked_ = false;
-      while (has_content_length_header_) {
-        remove_header(header_names::kContentLength);
-      }
-      while (has_transfer_encoding_header_) {
-        remove_header(header_names::kTransferEncoding);
-      }
-    }
     return *this;
   }
   // +=========================================================================+

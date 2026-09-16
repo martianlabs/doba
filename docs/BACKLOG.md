@@ -64,7 +64,7 @@ C2, fuzzing, and external tool automation remain deferred. P5-P7 are neither
 compliance nor release gates. DT1 and DT2 do not automatically block the
 first release either. Other outstanding items have no assigned version.
 
-**Pending defect verification.** B8-B11 require focused regressions before
+**Pending defect verification.** B9-B11 require focused regressions before
 0.1 publication. Their source-level evidence does not establish that every
 reported runtime outcome has been reproduced. Confirmed memory-safety,
 information-disclosure, or wire-protocol defects require a fix or an explicit
@@ -85,7 +85,7 @@ not a release criterion.
   </picture>
 </h2>
 
-34 outstanding entries across eight categories. Each entry retains only
+33 outstanding entries across eight categories. Each entry retains only
 remaining work or an open decision, with source and test evidence checked
 against the current codebase. Verification pending means that the focused
 regressions or runtime measurements described by the entry remain to be run.
@@ -94,14 +94,14 @@ Category totals count entries, not confirmed bugs.
 | Category | Identifiers | Total |
 | --- | --- | --- |
 | Operational hardening | C1-C3, C7 | 4 |
-| Bugs | B8-B11, B13 | 5 |
+| Bugs | B9-B11, B13 | 4 |
 | Product and convenience | P2-P8 | 7 |
 | Quality and validation | QA1-QA3, QA5-QA6 | 5 |
 | Release engineering | RE1 | 1 |
 | C++ maintainability | DT1-DT3 | 3 |
 | Public documentation | DOC1-DOC2 | 2 |
 | Beyond the first release | F1-F7 | 7 |
-| **Total** | | **34** |
+| **Total** | | **33** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
@@ -109,7 +109,6 @@ Category totals count entries, not confirmed bugs.
 | [C2](#c2-effective-per-request-limits) | Hardening | Deferred | High | No assigned version |
 | [C3](#c3-global-active-connection-limit) | Hardening | Pending | Beta target | 0.1.0-beta.1 |
 | [C7](#c7-pending-response-and-work-budget) | Hardening | Verification pending | High | Assess before 0.1 |
-| [B8](#b8-response-framing-after-clear_body) | Bug | Verification pending | Medium | Verify before 0.1 |
 | [B9](#b9-response-driven-connection-close) | Bug | Verification pending | Medium | Verify before 0.1 |
 | [B10](#b10-internal-exception-details-in-500-responses) | Security policy | Verification pending | Medium | Verify before 0.1 |
 | [B11](#b11-body-suppression-for-head-error-responses) | Bug | Verification pending | Medium | Verify before 0.1 |
@@ -309,40 +308,10 @@ Coordinate validation with QA1/QA5 without duplicating those campaigns.
   </picture>
 </h2>
 
-B8-B11 and B13 retain evidence in the current source. Focused runtime
+B9-B11 and B13 retain evidence in the current source. Focused runtime
 regressions and the resulting fixes or contract decisions remain outstanding.
 Proposed tests below are not recorded as executed or failing. B10 includes an
 error-disclosure policy decision; B13 is limited to the benchmark adapter.
-
-<a name="b8-response-framing-after-clear_body"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b8-response-framing-after-clear_body-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b8-response-framing-after-clear_body-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b8-response-framing-after-clear_body-dark.svg">
-    <img src="../resources/docs/backlog/h3-b8-response-framing-after-clear_body.svg" alt="B8: Response framing after clear_body">
-  </picture>
-</h3>
-
-**Status.** Runtime regression pending; medium severity.
-
-**Source evidence.** In
-[response.h](../include/protocol/http/v11/response.h), `clear_body()` resets
-the deferred length and removes explicit framing. `apply_body_framing()`
-does not restore a length when that optional value is absent. An ordinary
-200 response that sets and clears its body therefore has no length or
-chunked framing supplied by these paths. Verify message completion on a
-persistent connection and correct the empty-body framing.
-
-**Acceptance and tests.** Serialize `ok_200()` followed by `set_body("x")`
-and `clear_body()`, then verify complete wire framing and a following response
-over a persistent socket. Test repeated clearing and preserve the distinct
-HEAD and body-forbidden status rules. Header-removal assertions alone do not
-establish message completion.
-
-**Components and delivery.** Response unit tests and HTTP response integration
-tests; verify before 0.1. Coordinate with DT3 without requiring a redesign
-of explicit framing. This case involves no manual framing override.
 
 <a name="b9-response-driven-connection-close"></a>
 <h3>
@@ -919,8 +888,7 @@ Inconsistency alone does not authorize an API change.
 manual Content-Length or Transfer-Encoding can override deferred body framing.
 Decide whether mismatched lengths and manually declared chunked encoding are
 caller preconditions or require validation. Specify supported combinations,
-operation order, framing ownership, and failure behavior. B8 separately covers
-empty-body framing without a manual override.
+operation order, framing ownership, and failure behavior.
 
 **Remaining coverage.** Add shorter/longer explicit-length cases and manual
 Transfer-Encoding cases according to the selected contract, checking complete

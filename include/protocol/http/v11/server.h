@@ -269,7 +269,7 @@ class server {
     }
     if (req.get_method() == method_names::kHead) {
       // RFC 9110 S9.3.2: preserve GET framing without sending its body.
-      res.clear_body(true);
+      res.suppress_body();
     }
   }
   // +=========================================================================+
