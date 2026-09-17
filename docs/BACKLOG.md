@@ -52,9 +52,15 @@ All other outstanding work is future work and does not block this beta.
 Implementation order:
 
 1. B9: honor response-driven `Connection: close` after complete delivery.
-2. C1, C2, C3 and C7: implement and verify all operational limits.
-3. RE1: complete minimum documentation, the full existing CI and CMake consumer
+2. F1 and F2: implement TLS and GZIP response compression.
+3. C1, C2, C3 and C7: implement and verify all operational limits.
+4. RE1: complete minimum documentation, the full existing CI and CMake consumer
    validations, and coherent versioning and publication.
+
+**Required capabilities.** F1 (TLS) and F2 (GZIP) are mandatory for the
+selected HttpArena participation scope. They take priority over C1/C2/C3/C7
+and RE1. Dependency choices and public APIs require separate implementation
+plans; this scope decision does not select them.
 
 **Operational policies.** C1, C2, C3 and C7 are mandatory for this release.
 Policies will be injected when the corresponding modules are created.
@@ -69,6 +75,10 @@ inactivity and pending-work limits belong to their responsible modules.
 - Reproduce B9 with focused regressions and fix it. Verify synchronous
   and deferred paths on Windows and Linux. The source evidence below is not
   a claim that those runtime regressions have already been executed.
+- Implement F1 and F2 with focused unit and real-socket tests on Windows
+  and Linux. Verify TLS handshake, encrypted HTTP delivery, closure and
+  errors; verify GZIP negotiation, response framing and decoded payloads
+  for empty, binary and large bodies.
 - Implement C1, C2, C3 and C7 with focused boundary and real-socket tests on
   IOCP and epoll. Include slow clients, resource release, ordering and
   cancellation where relevant. Assessing or documenting a limit is not a
@@ -80,7 +90,7 @@ inactivity and pending-work limits belong to their responsible modules.
   notes, a working vulnerability-reporting channel, and a version and tag
   that consistently identify `0.1.0-beta1`.
 
-**Future work.** B13, P2-P8, QA1-QA3, QA5-QA6, DT1-DT3, DOC1-DOC2 and F1-F7
+**Future work.** B13, P2-P8, QA1-QA3, QA5-QA6, DT1-DT3, DOC1-DOC2 and F3-F7
 remain outside this release. RE1 also retains the full contribution guide
 as future work. Minimum usage documentation is part of RE1; completing the
 broader documentation or API work in DT2/DT3/DOC1/DOC2 is not required.
@@ -104,7 +114,7 @@ when a newly reproduced defect affects the supported behavior.
 
 31 outstanding entries across eight categories. Each entry retains only
 remaining work or an open decision, with source and test evidence checked
-against the current codebase. Six entries have release scope; twenty-five
+against the current codebase. Eight entries have release scope; twenty-three
 are future work. Verification pending means that the focused regressions or
 runtime measurements described by the entry remain to be run. Category totals
 count entries, not confirmed bugs; RE1 separates its minimum release work from
@@ -114,13 +124,13 @@ the future contribution guide.
 | --- | --- | --- | --- | --- |
 | Operational hardening | C1-C3, C7 | 4 | 0 | 4 |
 | Bugs | B9, B13 | 1 | 1 | 2 |
-| Product and convenience | P2-P8 | 0 | 7 | 7 |
+| Product and convenience | F1-F2, P2-P8 | 2 | 7 | 9 |
 | Quality and validation | QA1-QA3, QA5-QA6 | 0 | 5 | 5 |
 | Release engineering | RE1 | 1 | 0 | 1 |
 | C++ maintainability | DT1-DT3 | 0 | 3 | 3 |
 | Public documentation | DOC1-DOC2 | 0 | 2 | 2 |
-| Beyond the first release | F1-F7 | 0 | 7 | 7 |
-| **Total** | | **6** | **25** | **31** |
+| Beyond the first release | F3-F7 | 0 | 5 | 5 |
+| **Total** | | **8** | **23** | **31** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
@@ -130,6 +140,8 @@ the future contribution guide.
 | [C7](#c7-pending-response-and-work-budget) | Hardening | Design and validation pending | Release gate | 0.1.0-beta1 |
 | [B9](#b9-response-driven-connection-close) | Bug | Verification pending | Release gate | 0.1.0-beta1 |
 | [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark bug | Verification pending | Medium | Future work |
+| [F1](#f1-tls) | Product | Design and implementation pending | Release gate | 0.1.0-beta1 |
+| [F2](#f2-compression-and-gzip) | Product | Design and implementation pending | Release gate | 0.1.0-beta1 |
 | [P2](#p2-access-logging) | Product | Pending | Not set | Future work |
 | [P3](#p3-middleware-chain) | Product | Pending | Not set | Future work |
 | [P4](#p4-form-parsing) | Product | Pending | Not set | Future work |
@@ -148,8 +160,6 @@ the future contribution guide.
 | [DT3](#dt3-response-framing-and-capacity-contract) | C++ | Decision pending | Medium | Future work |
 | [DOC1](#doc1-transport-lifecycle) | Documentation | Pending | Not set | Future work |
 | [DOC2](#doc2-request-views-and-getters) | Documentation | Pending | Not set | Future work |
-| [F1](#f1-tls) | Future | Deferred | Not set | Future work |
-| [F2](#f2-compression-and-gzip) | Future | Deferred | Not set | Future work |
 | [F3](#f3-progressive-streaming-and-sse) | Future | Deferred | Not set | Future work |
 | [F4](#f4-ordered-upgrade-barrier) | Future | Deferred | Not set | Future work |
 | [F5](#f5-websockets) | Future | Deferred | Not set | Future work |
@@ -411,7 +421,53 @@ the affected adapter as verified.
   </picture>
 </h2>
 
-P2-P8 are future work. None is a prerequisite for `0.1.0-beta1`.
+F1 and F2 are required for `0.1.0-beta1`, before operational hardening and
+release engineering. P2-P8 remain future work, outside this beta.
+
+<a name="f1-tls"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f1-tls-dark.svg">
+    <img src="../resources/docs/backlog/h3-f1-tls.svg" alt="F1: TLS">
+  </picture>
+</h3>
+
+**Release scope.** Integrate native TLS for `0.1.0-beta1` while preserving
+the protocol-transport boundary. Original estimate: A.
+
+**Decisions.** Select the TLS provider, dependency policy, configuration API
+and ownership model in a separate implementation plan before coding.
+
+**Acceptance and verification.** Focused unit and real-socket tests for
+handshake, encrypted HTTP delivery, closure and errors, with equivalent
+coverage on Windows and Linux.
+
+**Delivery.** Mandatory release gate, ahead of C1/C2/C3/C7 and RE1.
+
+<a name="f2-compression-and-gzip"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-f2-compression-and-gzip-narrow-dark.svg">
+    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f2-compression-and-gzip-narrow.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f2-compression-and-gzip-dark.svg">
+    <img src="../resources/docs/backlog/h3-f2-compression-and-gzip.svg" alt="F2: Compression and GZIP">
+  </picture>
+</h3>
+
+**Release scope.** Add GZIP response compression for `0.1.0-beta1`, with
+`Accept-Encoding`/`Content-Encoding` negotiation and `Vary` handling.
+Other compression formats are outside this release scope.
+
+**Decisions.** Select the compression library and API in a separate
+implementation plan. Resolve the dependency policy and its impact on the
+current zero-dependency claim before implementation.
+
+**Acceptance and verification.** Focused unit and real-socket tests for
+negotiation, uncompressed responses when identity is selected, consistent
+`Vary` handling, correct framing and decoded payloads for empty, binary and
+large bodies on Windows and Linux.
+
+**Delivery.** Mandatory release gate, ahead of C1/C2/C3/C7 and RE1.
 
 <a name="p2-access-logging"></a>
 <h3>
@@ -609,7 +665,7 @@ Retry-After, body framing and HEAD behavior. Preserve existing factories.
 </h2>
 
 QA1-QA3 and QA5-QA6 are future work. The existing CI gates and focused
-tests for B9 and C1/C2/C3/C7 remain mandatory for `0.1.0-beta1`;
+tests for B9, F1/F2 and C1/C2/C3/C7 remain mandatory for `0.1.0-beta1`;
 completing these broader QA programs is not required.
 
 <a name="qa1-exhaustive-compliance-suite"></a>
@@ -774,7 +830,7 @@ modify the workflow only if the selected mechanism requires it.
 
 **Acceptance and verification.**
 
-- Complete B9 and C1/C2/C3/C7 with their focused regressions and equivalent
+- Complete B9, F1/F2 and C1/C2/C3/C7 with their focused tests and equivalent
   real-socket validation on Windows and Linux where applicable.
 - Pass the full existing CI matrix and CMake consumer checks on the exact
   release revision. Include every required source, test and example in that
@@ -783,9 +839,9 @@ modify the workflow only if the selected mechanism requires it.
   storage lifetimes, manual response-framing responsibilities and header
   capacity, and allowed lifecycle/callback operations. This minimum does not
   require completing DT2/DT3/DOC1/DOC2 or changing their APIs.
-- Describe the controlled-deployment scope, effective operational policies,
-  known limitations and omitted capabilities. Publish only channels and
-  procedures that are actually available.
+- Describe the controlled-deployment scope, TLS and GZIP configuration,
+  effective operational policies, known limitations and omitted capabilities.
+  Publish only channels and procedures that are actually available.
 - Align version metadata, tag `v0.1.0-beta1`, release notes and documentation
   with the tested content. Publish the beta as a prerelease.
 
@@ -961,47 +1017,10 @@ tests, and link the contract from the corresponding examples.
   </picture>
 </h2>
 
-F1-F7 are future work, outside `0.1.0-beta1`. C1/C2/C3/C7 and their focused
-slow-client and resource-limit tests remain required for the beta. The broader
-QA3 performance baseline and QA5 stress campaigns remain future work.
-
-<a name="f1-tls"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f1-tls-dark.svg">
-    <img src="../resources/docs/backlog/h3-f1-tls.svg" alt="F1: TLS">
-  </picture>
-</h3>
-
-**Context.** The first release is intended to be deployed behind a TLS
-terminator, such as a reverse proxy. Original estimate: A.
-
-**Future scope.** Integrate TLS while preserving the protocol-transport
-boundary.
-
-**Decisions and verification.** Select the dependency and ownership model
-before implementation; specify handshake, closure, and errors with equivalent
-tests on supported platforms.
-
-<a name="f2-compression-and-gzip"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-f2-compression-and-gzip-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f2-compression-and-gzip-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f2-compression-and-gzip-dark.svg">
-    <img src="../resources/docs/backlog/h3-f2-compression-and-gzip.svg" alt="F2: Compression and GZIP">
-  </picture>
-</h3>
-
-**Context.** `Accept-Encoding`/`Content-Encoding` negotiation and `Vary`
-handling are optional capabilities.
-
-**Decisions.** An external compression library conflicts with the current
-zero-dependency claim. Resolve that policy and the set of formats before
-designing the API.
-
-**Proposed acceptance.** Consistent negotiation and `Vary` handling, correct
-framing, and tests for empty, binary, and large bodies.
+F3-F7 are future work, outside `0.1.0-beta1`. F1/F2 are release gates.
+C1/C2/C3/C7 and their focused slow-client and resource-limit tests remain
+required for the beta. The broader QA3 performance baseline and QA5 stress
+campaigns remain future work.
 
 <a name="f3-progressive-streaming-and-sse"></a>
 <h3>
