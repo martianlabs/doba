@@ -49,8 +49,11 @@ struct types {
   using on_request_delegate =
       std::function<std::variant<RSty, common::task<RSty>>(
           const std::shared_ptr<RQty>&, const std::stop_token&)>;
-  template <typename RSty>
-  using on_bad_request_delegate = std::function<RSty(int, std::string_view)>;
+  // The request is empty when no decoded request is available.
+  template <typename RQty, typename RSty>
+  using on_bad_request_delegate =
+      std::function<RSty(int, std::string_view,
+                         const std::shared_ptr<RQty>&)>;
   using on_client_connected_delegate = std::function<void()>;
   using on_client_disconnected_delegate = std::function<void()>;
 };

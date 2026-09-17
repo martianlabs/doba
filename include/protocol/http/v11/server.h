@@ -143,7 +143,8 @@ class server {
           return std::move(*res);
         });
     transport_.set_on_bad_request(
-        [](int code, std::string_view reason) {
+        [](int code, std::string_view reason,
+           const std::shared_ptr<RQty>& req) {
           std::optional<RSty> res;
           // The transport hands back the neutral reason recorded by the
           // decoder; only the HTTP layer knows how to translate it into a
@@ -167,7 +168,8 @@ class server {
                   .set_body(reason);
               break;
             case rejection_reason::kHandlerError:
-              res.emplace(RSty::internal_server_error_500()).set_body(reason);
+              res.emplace(RSty::internal_server_error_500())
+                  .set_body("Internal Server Error");
               break;
             case rejection_reason::kExpectationFailed:
               res.emplace(RSty::expectation_failed_417()).set_body(reason);
@@ -177,6 +179,9 @@ class server {
             default:
               res.emplace(RSty::bad_request_400()).set_body(reason);
               break;
+          }
+          if (req && req->get_method() == method_names::kHead) {
+            res->suppress_body();
           }
           return std::move(*res);
         });
@@ -269,7 +274,7 @@ class server {
     }
     if (req.get_method() == method_names::kHead) {
       // RFC 9110 S9.3.2: preserve GET framing without sending its body.
-      res.clear_body(true);
+      res.suppress_body();
     }
   }
   // +=========================================================================+

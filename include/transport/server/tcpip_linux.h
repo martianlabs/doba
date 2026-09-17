@@ -490,7 +490,7 @@ struct worker {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   worker(types::on_request_delegate<RQty, RSty> on_request,
-         types::on_bad_request_delegate<RSty> on_bad_request,
+         types::on_bad_request_delegate<RQty, RSty> on_bad_request,
          types::on_client_connected_delegate on_connection,
          types::on_client_disconnected_delegate on_disconnection)
       : on_request_{std::move(on_request)},
@@ -792,7 +792,7 @@ struct worker {
           }
           if (!start_deferred_response(
                   ctx->weak_from_this(), std::move(*response_task),
-                  response_id)) {
+                  response_id, result.request)) {
             abort_context(ctx);
             return;
           }
@@ -806,11 +806,11 @@ struct worker {
           if (result.channel == protocol::channel_intent::kClose) ctx->close();
         }
       } catch (const std::exception& ex) {
-        enqueue_error_response(ctx, 7, ex.what());
+        enqueue_error_response(ctx, 7, ex.what(), result.request);
         return;
       } catch (...) {
         enqueue_error_response(ctx, 7,
-                               "Request handler error!");
+                               "Request handler error!", result.request);
         return;
       }
       if (result.channel == protocol::channel_intent::kClose) return;
@@ -821,10 +821,12 @@ struct worker {
   // +=========================================================================+
   bool start_deferred_response(
       std::weak_ptr<context<RQty, RSty, DEty>> ctx,
-      common::task<RSty> response_task, std::size_t response_id) {
+      common::task<RSty> response_task, std::size_t response_id,
+      std::shared_ptr<RQty> request) {
     if (!dispatcher_) return false;
     detail::detached_operation operation = complete_deferred_response(
-        std::move(ctx), dispatcher_, std::move(response_task), response_id);
+        std::move(ctx), dispatcher_, std::move(response_task), response_id,
+        std::move(request));
     if (!dispatcher_->schedule(operation.get_coroutine())) return false;
     operation.release();
     return true;
@@ -835,7 +837,8 @@ struct worker {
   detail::detached_operation complete_deferred_response(
       std::weak_ptr<context<RQty, RSty, DEty>> weak_ctx,
       std::weak_ptr<detail::executor_dispatcher> dispatcher,
-      common::task<RSty> response_task, std::size_t response_id) {
+      common::task<RSty> response_task, std::size_t response_id,
+      std::shared_ptr<RQty> request) {
     std::optional<RSty> response;
     std::exception_ptr exception;
     try {
@@ -856,10 +859,10 @@ struct worker {
           std::rethrow_exception(exception);
         } catch (const std::exception& ex) {
           completed = complete_error_response(ctx.get(), response_id, 7,
-                                              ex.what());
+                                              ex.what(), request);
         } catch (...) {
           completed = complete_error_response(
-              ctx.get(), response_id, 7, "Request handler error!");
+              ctx.get(), response_id, 7, "Request handler error!", request);
         }
       } else {
         try {
@@ -868,10 +871,10 @@ struct worker {
                                              std::move(serialized));
         } catch (const std::exception& ex) {
           completed = complete_error_response(ctx.get(), response_id, 7,
-                                              ex.what());
+                                              ex.what(), request);
         } catch (...) {
           completed = complete_error_response(
-              ctx.get(), response_id, 7, "Request handler error!");
+              ctx.get(), response_id, 7, "Request handler error!", request);
         }
       }
       if (!completed) {
@@ -893,9 +896,10 @@ struct worker {
   // +=========================================================================+
   bool complete_error_response(context<RQty, RSty, DEty>* ctx,
                                std::size_t response_id, int reason_code,
-                               std::string_view reason) {
+                               std::string_view reason,
+                               const std::shared_ptr<RQty>& request) {
     try {
-      RSty response = on_bad_request_(reason_code, reason);
+      RSty response = on_bad_request_(reason_code, reason, request);
       auto serialized = response.serialize();
       if (!ctx->complete_response(response_id, std::move(serialized))) {
         return false;
@@ -910,9 +914,10 @@ struct worker {
   // | [>] enqueue_error_response                                  ( private ) |
   // +=========================================================================+
   void enqueue_error_response(context<RQty, RSty, DEty>* ctx,
-                              int reason_code, std::string_view reason) {
+                              int reason_code, std::string_view reason,
+                              const std::shared_ptr<RQty>& request = {}) {
     try {
-      RSty response = on_bad_request_(reason_code, reason);
+      RSty response = on_bad_request_(reason_code, reason, request);
       auto serialized = response.serialize();
       if (!serialized || !ctx->enqueue_error_response(std::move(serialized))) {
         ctx->fail_response();
@@ -1009,7 +1014,7 @@ struct worker {
       contexts_;
   context<RQty, RSty, DEty>* retired_contexts_{nullptr};
   types::on_request_delegate<RQty, RSty> on_request_;
-  types::on_bad_request_delegate<RSty> on_bad_request_;
+  types::on_bad_request_delegate<RQty, RSty> on_bad_request_;
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
 };
@@ -1196,7 +1201,7 @@ class tcpip {
   bool stopping_{false};
   std::thread::id stopping_thread_{};
   types::on_request_delegate<RQty, RSty> on_request_;
-  types::on_bad_request_delegate<RSty> on_bad_request_;
+  types::on_bad_request_delegate<RQty, RSty> on_bad_request_;
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
 };

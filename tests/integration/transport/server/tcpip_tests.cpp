@@ -468,7 +468,8 @@ DOBA_TEST("tcpip serves independent loopback connections") {
         response.value = request->value == 'S' ? "sync" : "unexpected";
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -520,7 +521,8 @@ DOBA_TEST("tcpip reuses a connection after each completed response") {
         response.value.assign(1, request->value);
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -561,7 +563,8 @@ DOBA_TEST("tcpip delivers batched synchronous responses in request order") {
         response.value.assign(1, request->value);
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -601,7 +604,8 @@ DOBA_TEST("tcpip waits for every fragment before dispatching a request") {
         response.value = request->payload;
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -647,7 +651,8 @@ DOBA_TEST("tcpip sends one interim response before final dispatch") {
         response.value = request->payload;
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -693,7 +698,8 @@ DOBA_TEST("tcpip dispatches every complete buffered request") {
         response.value = request->payload;
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -741,7 +747,8 @@ DOBA_TEST("tcpip preserves requests across receive buffer boundaries") {
         response.value = "ok";
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -784,7 +791,8 @@ DOBA_TEST("tcpip preserves binary request payloads") {
         response.value = request->payload;
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -828,7 +836,9 @@ DOBA_TEST("tcpip rejects a successful decode without a request") {
         requests.fetch_add(1);
         return res;
       });
-  server.set_on_bad_request([&rejection_code](int code, std::string_view) {
+  server.set_on_bad_request([&rejection_code](
+      int code, std::string_view,
+      const std::shared_ptr<transport_request>&) {
     transport_response response;
     rejection_code.store(code);
     response.value = "invalid";
@@ -873,7 +883,9 @@ DOBA_TEST("tcpip rejects invalid decoder accumulation counts") {
         return res;
       });
   server.set_on_bad_request(
-      [&rejections, &rejection_code](int code, std::string_view) {
+      [&rejections, &rejection_code](
+          int code, std::string_view,
+          const std::shared_ptr<transport_request>&) {
         transport_response response;
         rejections.fetch_add(1);
         rejection_code.store(code);
@@ -910,6 +922,7 @@ DOBA_TEST("tcpip sends a rejection response then closes the client channel") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> requests = 0;
   std::atomic<int> rejection_code = 0;
+  std::atomic<bool> empty_request = false;
   martianlabs::doba::transport::server::tcpip<
       transport_request, transport_response, transport_decoder>
       server;
@@ -922,7 +935,10 @@ DOBA_TEST("tcpip sends a rejection response then closes the client channel") {
         requests.fetch_add(1);
         return res;
       });
-  server.set_on_bad_request([&rejection_code](int code, std::string_view) {
+  server.set_on_bad_request([&rejection_code, &empty_request](
+      int code, std::string_view,
+      const std::shared_ptr<transport_request>& request) {
+    empty_request.store(!request);
     transport_response response;
     rejection_code.store(code);
     response.value = "invalid";
@@ -940,6 +956,7 @@ DOBA_TEST("tcpip sends a rejection response then closes the client channel") {
   DOBA_EXPECT_EQUAL(*response, "invalid");
   DOBA_EXPECT(client.wait_for_close(std::chrono::seconds(3)));
   DOBA_EXPECT_EQUAL(requests.load(), 0);
+  DOBA_EXPECT(empty_request.load());
   DOBA_EXPECT_EQUAL(rejection_code.load(), 42);
   server.stop();
 }
@@ -970,7 +987,8 @@ DOBA_TEST("tcpip preserves response order for pipelined deferred requests") {
                              index == 0 ? first_signal : second_signal,
                              serialized);
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -1038,7 +1056,8 @@ DOBA_TEST("tcpip cooperatively cancels deferred responses") {
         }
         return make_cancellable_response(signal, serialized, completed);
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -1100,7 +1119,8 @@ DOBA_TEST("tcpip orders mixed synchronous and deferred responses") {
         std::size_t index = deferred.fetch_add(1);
         return make_deferred_response((*signals)[index], std::move(result));
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -1160,7 +1180,8 @@ DOBA_TEST("tcpip keeps an interim behind an earlier deferred response") {
         response.value = request->payload;
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -1209,7 +1230,8 @@ DOBA_TEST("tcpip drains a synchronous close response before eof") {
         response.value = request->value == 'C' ? "close" : "unexpected";
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -1253,7 +1275,8 @@ DOBA_TEST("tcpip drains a deferred close response before eof") {
         response.value = request->value == 'C' ? "close" : "unexpected";
         return make_deferred_response(signal, std::move(response));
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -1294,7 +1317,8 @@ DOBA_TEST("tcpip removes an empty response without blocking its queue") {
         if (request->value == 'S') response.value = "sync";
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -1342,7 +1366,8 @@ DOBA_TEST("tcpip streams response sources across send boundaries") {
         response.behavior = serialization_behavior::kSource;
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -1391,7 +1416,8 @@ DOBA_TEST("tcpip sends prefixes larger than its bounded send buffer") {
         }
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -1443,7 +1469,8 @@ DOBA_TEST("tcpip completes a streamed response before its successor") {
         }
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -1495,7 +1522,8 @@ DOBA_TEST("tcpip serves another client while a large response is blocked") {
         }
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -1554,7 +1582,8 @@ DOBA_TEST("tcpip recovers after a client resets a large response") {
         }
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -1594,6 +1623,8 @@ DOBA_TEST("tcpip converts synchronous handler exceptions to errors") {
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> errors = 0;
+  std::atomic<std::size_t> matched_requests = 0;
+  std::atomic<std::size_t> diagnostics = 0;
   std::atomic<int> rejection_code = 0;
   martianlabs::doba::transport::server::tcpip<
       transport_request, transport_response, transport_decoder>
@@ -1612,9 +1643,18 @@ DOBA_TEST("tcpip converts synchronous handler exceptions to errors") {
         return response;
       });
   server.set_on_bad_request(
-      [&errors, &rejection_code](int code, std::string_view) {
+      [&errors, &diagnostics, &rejection_code, &matched_requests](
+          int code, std::string_view reason,
+          const std::shared_ptr<transport_request>& request) {
         transport_response response;
-        errors.fetch_add(1);
+        const auto index = errors.fetch_add(1);
+        if (request && request->value == (index == 0 ? 'A' : 'B')) {
+          matched_requests.fetch_add(1);
+        }
+        if (reason == (index == 0 ? "Handler error!"
+                                 : "Request handler error!")) {
+          diagnostics.fetch_add(1);
+        }
         rejection_code.store(code);
         response.value = "error";
         return response;
@@ -1635,6 +1675,8 @@ DOBA_TEST("tcpip converts synchronous handler exceptions to errors") {
     client.close();
   }
   DOBA_EXPECT_EQUAL(errors.load(), 2);
+  DOBA_EXPECT_EQUAL(diagnostics.load(), 2);
+  DOBA_EXPECT_EQUAL(matched_requests.load(), 2);
   DOBA_EXPECT_EQUAL(rejection_code.load(), 7);
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("S"));
@@ -1655,28 +1697,45 @@ DOBA_TEST("tcpip converts deferred handler exceptions to errors") {
   std::array<std::shared_ptr<deferred_signal>, 2> signals = {
       std::make_shared<deferred_signal>(),
       std::make_shared<deferred_signal>()};
+  std::array<std::weak_ptr<transport_request>, 2> requests;
+  std::atomic<std::size_t> matched_requests = 0;
   std::atomic<std::size_t> deferred = 0;
   std::atomic<std::size_t> errors = 0;
+  std::atomic<std::size_t> diagnostics = 0;
   std::atomic<std::size_t> disconnected = 0;
   deferred_cleanup cleanup({signals[0], signals[1]});
   martianlabs::doba::transport::server::tcpip<
       transport_request, transport_response, transport_decoder>
       server;
   server.set_on_request(
-      [&signals, &deferred](
-          const std::shared_ptr<transport_request>&,
+      [&signals, &deferred, &requests](
+          const std::shared_ptr<transport_request>& request,
           const std::stop_token&)
           -> std::variant<transport_response,
                           martianlabs::doba::common::task<transport_response>> {
         std::size_t index = deferred.fetch_add(1);
+        requests[index] = request;
         return make_failed_response(signals[index], index == 0);
       });
-  server.set_on_bad_request([&errors](int code, std::string_view) {
-    transport_response response;
-    if (code == 7) errors.fetch_add(1);
-    response.value = "error";
-    return response;
-  });
+  server.set_on_bad_request(
+      [&errors, &diagnostics, &requests, &matched_requests](
+          int code, std::string_view reason,
+          const std::shared_ptr<transport_request>& request) {
+        transport_response response;
+        if (code == 7) {
+          const auto index = errors.fetch_add(1);
+          if (request && request == requests[index].lock() &&
+              request->value == 'A') {
+            matched_requests.fetch_add(1);
+          }
+          if (reason == (index == 0 ? "Deferred handler error!"
+                                   : "Request handler error!")) {
+            diagnostics.fetch_add(1);
+          }
+        }
+        response.value = "error";
+        return response;
+      });
   server.set_on_connection([]() {});
   server.set_on_disconnection(
       [&disconnected]() { disconnected.fetch_add(1); });
@@ -1687,7 +1746,9 @@ DOBA_TEST("tcpip converts deferred handler exceptions to errors") {
     DOBA_EXPECT(client.connect(port));
     DOBA_EXPECT(client.send_all("A"));
     DOBA_EXPECT(signals[index]->wait());
+    const bool retained = !requests[index].expired();
     signals[index]->resume();
+    DOBA_EXPECT(retained);
     auto response = client.receive(5);
     DOBA_EXPECT(response.has_value());
     DOBA_EXPECT_EQUAL(*response, "error");
@@ -1696,7 +1757,10 @@ DOBA_TEST("tcpip converts deferred handler exceptions to errors") {
     client.close();
   }
   DOBA_EXPECT_EQUAL(errors.load(), 2);
+  DOBA_EXPECT_EQUAL(matched_requests.load(), 2);
+  DOBA_EXPECT_EQUAL(diagnostics.load(), 2);
   server.stop();
+  for (const auto& request : requests) DOBA_EXPECT(request.expired());
 }
 
 // +===========================================================================+
@@ -1723,7 +1787,8 @@ DOBA_TEST("tcpip orders a deferred error before accepted successors") {
         response.value = "sync";
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -1753,6 +1818,7 @@ DOBA_TEST("tcpip handles synchronous serialization failures") {
   uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> errors = 0;
+  std::atomic<std::size_t> matched_requests = 0;
   martianlabs::doba::transport::server::tcpip<
       transport_request, transport_response, transport_decoder>
       server;
@@ -1773,9 +1839,16 @@ DOBA_TEST("tcpip handles synchronous serialization failures") {
         }
         return response;
       });
-  server.set_on_bad_request([&errors](int code, std::string_view) {
+  server.set_on_bad_request([&errors, &matched_requests](
+      int code, std::string_view,
+      const std::shared_ptr<transport_request>& request) {
     transport_response response;
-    if (code == 7) errors.fetch_add(1);
+    if (code == 7) {
+      const auto index = errors.fetch_add(1);
+      if (request && request->value == (index == 0 ? 'T' : 'U')) {
+        matched_requests.fetch_add(1);
+      }
+    }
     response.value = "error";
     return response;
   });
@@ -1800,6 +1873,7 @@ DOBA_TEST("tcpip handles synchronous serialization failures") {
   DOBA_EXPECT(empty.has_value());
   DOBA_EXPECT(empty->empty());
   DOBA_EXPECT_EQUAL(errors.load(), 2);
+  DOBA_EXPECT_EQUAL(matched_requests.load(), 2);
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("S"));
   auto recovery = client.receive(4);
@@ -1820,6 +1894,8 @@ DOBA_TEST("tcpip handles deferred serialization failures") {
       std::make_shared<deferred_signal>(),
       std::make_shared<deferred_signal>(),
       std::make_shared<deferred_signal>()};
+  std::array<std::weak_ptr<transport_request>, 3> requests;
+  std::atomic<std::size_t> matched_requests = 0;
   std::atomic<std::size_t> deferred = 0;
   std::atomic<std::size_t> errors = 0;
   deferred_cleanup cleanup({signals[0], signals[1], signals[2]});
@@ -1827,12 +1903,13 @@ DOBA_TEST("tcpip handles deferred serialization failures") {
       transport_request, transport_response, transport_decoder>
       server;
   server.set_on_request(
-      [&signals, &deferred](
-          const std::shared_ptr<transport_request>&,
+      [&signals, &deferred, &requests](
+          const std::shared_ptr<transport_request>& request,
           const std::stop_token&)
           -> std::variant<transport_response,
                           martianlabs::doba::common::task<transport_response>> {
         std::size_t index = deferred.fetch_add(1);
+        requests[index] = request;
         transport_response response;
         if (index == 0) {
           response.behavior = serialization_behavior::kThrowStandard;
@@ -1843,9 +1920,17 @@ DOBA_TEST("tcpip handles deferred serialization failures") {
         }
         return make_deferred_response(signals[index], std::move(response));
       });
-  server.set_on_bad_request([&errors](int code, std::string_view) {
+  server.set_on_bad_request([&errors, &requests, &matched_requests](
+      int code, std::string_view,
+      const std::shared_ptr<transport_request>& request) {
     transport_response response;
-    if (code == 7) errors.fetch_add(1);
+    if (code == 7) {
+      const auto index = errors.fetch_add(1);
+      if (request && request == requests[index].lock() &&
+          request->value == 'A') {
+        matched_requests.fetch_add(1);
+      }
+    }
     response.value = "error";
     return response;
   });
@@ -1858,7 +1943,9 @@ DOBA_TEST("tcpip handles deferred serialization failures") {
     DOBA_EXPECT(client.connect(port));
     DOBA_EXPECT(client.send_all("A"));
     DOBA_EXPECT(signals[index]->wait());
+    const bool retained = !requests[index].expired();
     signals[index]->resume();
+    DOBA_EXPECT(retained);
     if (index < 2) {
       auto response = client.receive(5);
       DOBA_EXPECT(response.has_value());
@@ -1872,7 +1959,9 @@ DOBA_TEST("tcpip handles deferred serialization failures") {
     client.close();
   }
   DOBA_EXPECT_EQUAL(errors.load(), 2);
+  DOBA_EXPECT_EQUAL(matched_requests.load(), 2);
   server.stop();
+  for (const auto& request : requests) DOBA_EXPECT(request.expired());
 }
 
 // +===========================================================================+
@@ -1895,7 +1984,9 @@ DOBA_TEST("tcpip recovers when error response generation fails") {
         response.value = "next";
         return response;
       });
-  server.set_on_bad_request([&errors](int, std::string_view) {
+  server.set_on_bad_request([&errors](
+      int, std::string_view,
+      const std::shared_ptr<transport_request>&) {
     transport_response response;
     std::size_t error = errors.fetch_add(1);
     if (error == 0) throw std::runtime_error("Error callback failed!");
@@ -1954,7 +2045,8 @@ DOBA_TEST("tcpip drains a response after the client half closes") {
         response.value = "sync";
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -1997,7 +2089,9 @@ DOBA_TEST("tcpip closes silently after a partial request eof") {
         requests.fetch_add(1);
         return res;
       });
-  server.set_on_bad_request([&errors](int, std::string_view) {
+  server.set_on_bad_request([&errors](
+      int, std::string_view,
+      const std::shared_ptr<transport_request>&) {
     transport_response response;
     errors.fetch_add(1);
     response.value = "error";
@@ -2044,7 +2138,8 @@ DOBA_TEST("tcpip cancels a deferred response after input eof") {
         response.serialized = serialized;
         return make_deferred_response(signal, std::move(response));
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -2087,7 +2182,8 @@ DOBA_TEST("tcpip recovers after a reset during request reception") {
         response.value = request->payload;
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -2133,7 +2229,8 @@ DOBA_TEST("tcpip isolates interleaved requests from concurrent clients") {
         response.value = request->payload;
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -2210,7 +2307,8 @@ DOBA_TEST("tcpip stops idle blocked and deferred clients exactly once") {
           response.behavior = serialization_behavior::kSource;
           return response;
         });
-    server.set_on_bad_request([](int, std::string_view) {
+    server.set_on_bad_request([](int, std::string_view,
+                                 const std::shared_ptr<transport_request>&) {
       transport_response response;
       response.value = "error";
       return response;
@@ -2265,7 +2363,8 @@ DOBA_TEST("tcpip restarts the same server on the same port") {
         response.value = "sync";
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -2308,7 +2407,8 @@ DOBA_TEST("tcpip survives a failing connection callback") {
         response.value = "sync";
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -2355,7 +2455,8 @@ DOBA_TEST("tcpip survives failing disconnection callbacks") {
         response.value = "sync";
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -2399,7 +2500,8 @@ DOBA_TEST("tcpip rejects every invalid port form and remains reusable") {
         response.value = "sync";
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -2458,7 +2560,8 @@ DOBA_TEST("tcpip rejects every callback mutation while active") {
                           martianlabs::doba::common::task<transport_response>> {
         return transport_response{};
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     return transport_response{};
   });
   server.set_on_connection([]() {});
@@ -2480,7 +2583,8 @@ DOBA_TEST("tcpip rejects every callback mutation while active") {
     threw[0] = true;
   }
   try {
-    server.set_on_bad_request([](int, std::string_view) {
+    server.set_on_bad_request([](int, std::string_view,
+                                 const std::shared_ptr<transport_request>&) {
       return transport_response{};
     });
   } catch (const std::runtime_error&) {
@@ -2530,7 +2634,8 @@ DOBA_TEST("tcpip serializes concurrent and repeated stop calls") {
                           martianlabs::doba::common::task<transport_response>> {
         return transport_response{};
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     return transport_response{};
   });
   server.set_on_connection([&connected]() { connected.fetch_add(1); });
@@ -2586,7 +2691,8 @@ DOBA_TEST("tcpip rejects stop from a request callback without deadlock") {
         }
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -2626,7 +2732,8 @@ DOBA_TEST("tcpip survives accumulation and deserialization exceptions") {
         response.value = "sync";
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;
@@ -2678,7 +2785,8 @@ DOBA_TEST("tcpip drains a large synchronous request pipeline in order") {
         response.value = "sync";
         return response;
       });
-  server.set_on_bad_request([](int, std::string_view) {
+  server.set_on_bad_request([](int, std::string_view,
+                               const std::shared_ptr<transport_request>&) {
     transport_response response;
     response.value = "error";
     return response;

@@ -173,15 +173,21 @@ DOBA_TEST("transport delegates preserve callback arguments") {
   DOBA_EXPECT_EQUAL(std::get<0>(response), 43);
   int status = 0;
   std::string_view reason;
-  types::on_bad_request_delegate<int> on_bad_request =
-      [&](int code, std::string_view message) {
+  types::on_bad_request_delegate<int, int> on_bad_request =
+      [&](int code, std::string_view message,
+          const std::shared_ptr<int>& input) {
+        received = input;
         status = code;
         reason = message;
         return code;
       };
-  DOBA_EXPECT_EQUAL(on_bad_request(400, "invalid"), 400);
+  received.reset();
+  DOBA_EXPECT_EQUAL(on_bad_request(400, "invalid", request), 400);
+  DOBA_EXPECT(received == request);
   DOBA_EXPECT_EQUAL(status, 400);
   DOBA_EXPECT_EQUAL(reason, "invalid");
+  DOBA_EXPECT_EQUAL(on_bad_request(400, "invalid", {}), 400);
+  DOBA_EXPECT(!received);
   std::size_t connected = 0;
   std::size_t disconnected = 0;
   types::on_client_connected_delegate on_connection = [&] { connected++; };

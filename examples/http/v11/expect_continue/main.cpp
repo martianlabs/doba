@@ -22,10 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <array>
-#include <string>
-
 #include "common/signaler.h"
+#include "echo_handler.h"
 #include "protocol/http/v11/server.h"
 
 using namespace martianlabs::doba::common;
@@ -33,25 +31,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 
 int main() {
   server http_server;
-  http_server.add_route(
-      "POST", "/echo",
-      [](const request& req) {
-        response res = response::ok_200();
-        std::array<std::byte, 1024> buffer{};
-        std::string body;
-        for (;;) {
-          const auto state = req.get_body_reader()->read(buffer);
-          if (state.has_error) {
-            res = response::bad_request_400();
-            return res;
-          }
-          body.append(reinterpret_cast<const char*>(buffer.data()),
-                      state.produced);
-          if (state.complete) break;
-        }
-        res.set_body(body);
-        return res;
-      });
+  martianlabs::doba::examples::register_echo_route(http_server);
   http_server.start("8080");
   signaler::wait();
   return 0;

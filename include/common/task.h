@@ -134,21 +134,12 @@ class task {
       return coroutine_;
     }
     Tty await_resume() {
-      auto coroutine = std::exchange(coroutine_, nullptr);
-      if (coroutine.promise().exception_) {
-        auto exception = coroutine.promise().exception_;
-        coroutine.destroy();
-        std::rethrow_exception(exception);
+      awaiter owner(std::exchange(coroutine_, nullptr));
+      auto& promise = owner.coroutine_.promise();
+      if (promise.exception_) {
+        std::rethrow_exception(promise.exception_);
       }
-      try {
-        Tty value(std::move(*coroutine.promise().value_));
-        coroutine.destroy();
-        coroutine = nullptr;
-        return value;
-      } catch (...) {
-        if (coroutine) coroutine.destroy();
-        throw;
-      }
+      return std::move(*promise.value_);
     }
 
    private:

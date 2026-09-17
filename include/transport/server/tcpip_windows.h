@@ -1110,9 +1110,10 @@ class tcpip {
   // | [>] enqueue_error_response                                  ( private ) |
   // +=========================================================================+
   void enqueue_error_response(std::shared_ptr<context<RQty, RSty, DEty>> ctx,
-                               int reason_code, std::string_view reason) {
+                               int reason_code, std::string_view reason,
+                               const std::shared_ptr<RQty>& request = {}) {
     try {
-      RSty response = on_bad_request_(reason_code, reason);
+      RSty response = on_bad_request_(reason_code, reason, request);
       auto serialized = response.serialize();
       if (!serialized ||
           !ctx->enqueue_error_response(std::move(serialized))) {
@@ -1189,7 +1190,8 @@ class tcpip {
                   return;
                 }
                 if (!start_deferred_response(
-                        ctx, std::move(*response_task), response_id)) {
+                        ctx, std::move(*response_task), response_id,
+                        result.request)) {
                   ctx->abort();
                   return;
                 }
@@ -1208,10 +1210,11 @@ class tcpip {
               // the reason code below mirrors
               // protocol::http::v11::rejection_reason::kHandlerError (7),
               // kept as a raw value here so the transport stays http-agnostic.
-              enqueue_error_response(ctx, 7, ex.what());
+              enqueue_error_response(ctx, 7, ex.what(), result.request);
               return;
             } catch (...) {
-              enqueue_error_response(ctx, 7, "Request handler error!");
+              enqueue_error_response(ctx, 7, "Request handler error!",
+                                     result.request);
               return;
             }
           }
@@ -1229,10 +1232,12 @@ class tcpip {
   // +=========================================================================+
   bool start_deferred_response(
       std::weak_ptr<context<RQty, RSty, DEty>> ctx,
-      common::task<RSty> response_task, std::size_t response_id) {
+      common::task<RSty> response_task, std::size_t response_id,
+      std::shared_ptr<RQty> request) {
     if (!dispatcher_) return false;
     detail::detached_operation operation = complete_deferred_response(
-        std::move(ctx), dispatcher_, std::move(response_task), response_id);
+        std::move(ctx), dispatcher_, std::move(response_task), response_id,
+        std::move(request));
     if (!dispatcher_->schedule(operation.get_coroutine())) return false;
     operation.release();
     return true;
@@ -1243,7 +1248,8 @@ class tcpip {
   detail::detached_operation complete_deferred_response(
       std::weak_ptr<context<RQty, RSty, DEty>> weak_ctx,
       std::weak_ptr<detail::executor_dispatcher> dispatcher,
-      common::task<RSty> response_task, std::size_t response_id) {
+      common::task<RSty> response_task, std::size_t response_id,
+      std::shared_ptr<RQty> request) {
     std::optional<RSty> response;
     std::exception_ptr exception;
     try {
@@ -1264,10 +1270,10 @@ class tcpip {
           std::rethrow_exception(exception);
         } catch (const std::exception& ex) {
           completed = complete_error_response(ctx, response_id, 7,
-                                              ex.what());
+                                              ex.what(), request);
         } catch (...) {
           completed = complete_error_response(
-              ctx, response_id, 7, "Request handler error!");
+              ctx, response_id, 7, "Request handler error!", request);
         }
       } else {
         try {
@@ -1280,10 +1286,10 @@ class tcpip {
           }
         } catch (const std::exception& ex) {
           completed = complete_error_response(ctx, response_id, 7,
-                                              ex.what());
+                                              ex.what(), request);
         } catch (...) {
           completed = complete_error_response(
-              ctx, response_id, 7, "Request handler error!");
+              ctx, response_id, 7, "Request handler error!", request);
         }
       }
       if (!completed) {
@@ -1300,9 +1306,10 @@ class tcpip {
   // +=========================================================================+
   bool complete_error_response(
       const std::shared_ptr<context<RQty, RSty, DEty>>& ctx,
-      std::size_t response_id, int reason_code, std::string_view reason) {
+      std::size_t response_id, int reason_code, std::string_view reason,
+      const std::shared_ptr<RQty>& request) {
     try {
-      RSty response = on_bad_request_(reason_code, reason);
+      RSty response = on_bad_request_(reason_code, reason, request);
       auto serialized = response.serialize();
       if (!ctx->complete_response(response_id, std::move(serialized))) {
         return false;
@@ -1435,7 +1442,7 @@ class tcpip {
                      std::shared_ptr<context<RQty, RSty, DEty>>>
       contexts_;
   types::on_request_delegate<RQty, RSty> on_request_;
-  types::on_bad_request_delegate<RSty> on_bad_request_;
+  types::on_bad_request_delegate<RQty, RSty> on_bad_request_;
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
 };

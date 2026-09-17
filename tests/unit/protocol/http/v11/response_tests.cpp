@@ -389,6 +389,125 @@ DOBA_TEST("replacing and clearing bodies removes stale framing") {
   DOBA_EXPECT(!value.has_header("Transfer-Encoding"));
 }
 // +===========================================================================+
+// | [>] cleared bodies retain zero length across storage modes  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("cleared bodies retain zero length across storage modes") {
+  const std::string bytes = "hidden";
+  for (int mode : {1, 2, 3, 4, 5, 0}) {
+    for (bool repeated : {false, true}) {
+      response value = response::ok_200();
+      value.set_header("Date", "fixed");
+      if (mode == 1) {
+        value.set_body(bytes);
+      } else if (mode == 2) {
+        value.set_body(std::string(limits::kMaxResponseBodySizeInMemory + 1,
+                                   'x'));
+      } else if (mode == 3 || mode == 4) {
+        auto writer = mode == 3 ? body_writer::raw() : body_writer::chunked();
+        DOBA_EXPECT(writer.write(bytes));
+        value.set_body(std::move(writer));
+      } else if (mode == 5) {
+        value.set_body(reader::borrowed(std::as_bytes(std::span(bytes))),
+                        bytes.size());
+      }
+      DOBA_EXPECT_EQUAL(&value.clear_body(), &value);
+      if (repeated) value.clear_body();
+      DOBA_EXPECT(!value.has_header("Content-Length"));
+      DOBA_EXPECT(!value.has_header("Transfer-Encoding"));
+      auto serialized = value.serialize();
+      DOBA_EXPECT(!serialized->source.has_value());
+      DOBA_EXPECT_EQUAL(
+          std::string_view(serialized->prefix.get(), serialized->prefix_size),
+          "HTTP/1.1 200 OK\r\nDate: fixed\r\nContent-Length: 0\r\n\r\n");
+    }
+  }
+}
+// +===========================================================================+
+// | [>] clearing bodies removes explicit framing                ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("clearing bodies removes explicit framing") {
+  response value = response::ok_200();
+  value.set_header("Date", "fixed").set_body("hidden");
+  value.add_header("Content-Length", "6")
+      .add_header("content-length", "6")
+      .add_header("Transfer-Encoding", "chunked")
+      .add_header("transfer-encoding", "chunked");
+  value.clear_body();
+  DOBA_EXPECT_EQUAL(value.get_headers_length(), 1);
+  auto serialized = value.serialize();
+  DOBA_EXPECT(!serialized->source.has_value());
+  DOBA_EXPECT_EQUAL(
+      std::string_view(serialized->prefix.get(), serialized->prefix_size),
+      "HTTP/1.1 200 OK\r\nDate: fixed\r\nContent-Length: 0\r\n\r\n");
+}
+// +===========================================================================+
+// | [>] clearing bodies preserves status specific framing       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("clearing bodies preserves status specific framing") {
+  using setter = response (*)();
+  constexpr setter cases[] = {
+      &response::continue_100,
+      &response::switching_protocols_101,
+      &response::no_content_204,
+      &response::reset_content_205,
+      &response::not_modified_304,
+  };
+  for (const auto set : cases) {
+    response value = set();
+    value.set_header("Date", "fixed").set_body("hidden");
+    value.clear_body().clear_body();
+    auto serialized = value.serialize();
+    const std::string_view prefix(serialized->prefix.get(),
+                                  serialized->prefix_size);
+    DOBA_EXPECT(!serialized->source.has_value());
+    DOBA_EXPECT(prefix.ends_with("\r\n\r\n"));
+    DOBA_EXPECT(prefix.find("Transfer-Encoding:") == std::string_view::npos);
+    DOBA_EXPECT_EQUAL(prefix.find("Content-Length: 0\r\n") !=
+                          std::string_view::npos,
+                      set == &response::reset_content_205);
+    if (set != &response::reset_content_205) {
+      DOBA_EXPECT(prefix.find("Content-Length:") == std::string_view::npos);
+    }
+  }
+  auto writer = body_writer::chunked();
+  DOBA_EXPECT(writer.write("hidden"));
+  response cached = response::not_modified_304();
+  cached.set_body("old").set_body(std::move(writer));
+  auto serialized = cached.serialize();
+  const std::string_view prefix(serialized->prefix.get(),
+                                serialized->prefix_size);
+  DOBA_EXPECT(!serialized->source.has_value());
+  DOBA_EXPECT(prefix.ends_with("\r\n\r\n"));
+  DOBA_EXPECT(prefix.find("Content-Length:") == std::string_view::npos);
+  DOBA_EXPECT(prefix.find("Transfer-Encoding:") == std::string_view::npos);
+}
+// +===========================================================================+
+// | [>] suppression preserves metadata and permits replacement  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("suppression preserves metadata and permits replacement") {
+  for (bool explicit_length : {false, true}) {
+    for (int operation : {0, 1, 2}) {
+      response value = response::ok_200();
+      value.set_header("Date", "fixed").set_body("hidden");
+      if (explicit_length) value.set_header("Content-Length", "6");
+      DOBA_EXPECT_EQUAL(&value.suppress_body(), &value);
+      value.suppress_body();
+      if (operation == 1) value.clear_body();
+      if (operation == 2) value.set_body("next");
+      auto serialized = value.serialize();
+      DOBA_EXPECT(!serialized->source.has_value());
+      const std::string_view expected = operation == 0
+          ? "HTTP/1.1 200 OK\r\nDate: fixed\r\nContent-Length: 6\r\n\r\n"
+          : operation == 1
+          ? "HTTP/1.1 200 OK\r\nDate: fixed\r\nContent-Length: 0\r\n\r\n"
+          : "HTTP/1.1 200 OK\r\nDate: fixed\r\nContent-Length: 4\r\n\r\nnext";
+      DOBA_EXPECT_EQUAL(
+          std::string_view(serialized->prefix.get(), serialized->prefix_size),
+          expected);
+    }
+  }
+}
+// +===========================================================================+
 // | [>] every status method emits its registered status line    ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("every status method emits its registered status line") {
@@ -639,7 +758,7 @@ DOBA_TEST("explicit framing overrides deferred framing") {
   DOBA_EXPECT(prefix.find("content-length: 3\r\n") != std::string_view::npos);
   DOBA_EXPECT(prefix.find("Content-Length:") == std::string_view::npos);
   response head = response::ok_200();
-  head.set_header("Transfer-Encoding", "chunked").clear_body(true);
+  head.set_header("Transfer-Encoding", "chunked").suppress_body();
   auto head_serialized = head.serialize();
   const std::string_view head_prefix(head_serialized->prefix.get(),
                                      head_serialized->prefix_size);
@@ -678,7 +797,7 @@ DOBA_TEST("HEAD preserves deferred framing through moves") {
     auto writer = chunked ? body_writer::chunked() : body_writer::raw();
     DOBA_EXPECT(writer.write("resource"));
     response value = response::ok_200();
-    value.set_body(std::move(writer)).clear_body(true);
+    value.set_body(std::move(writer)).suppress_body();
     response moved(std::move(value));
     value = response::created_201();
     value = std::move(moved);
@@ -893,7 +1012,7 @@ DOBA_TEST("reader bodies are replaced or suppressed without leaking bytes") {
         : result == 3 ? response::not_modified_304()
                       : response::continue_100();
     res.set_body(reader::borrowed(std::as_bytes(std::span(bytes))), 6);
-    if (result == 0) res.clear_body(true);
+    if (result == 0) res.suppress_body();
     auto wire = res.serialize();
     DOBA_EXPECT(!wire->source);
     const std::string prefix(wire->prefix.get(), wire->prefix_size);
