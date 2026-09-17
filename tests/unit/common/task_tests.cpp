@@ -124,8 +124,8 @@ task<int> delayed_value(manual_event& event, int& started) {
   co_return 42;
 }
 
-task<std::unique_ptr<int>> movable_value() {
-  co_return std::make_unique<int>(7);
+task<std::unique_ptr<int>> movable_value(std::shared_ptr<int> value) {
+  co_return std::make_unique<int>(*value);
 }
 
 task<int> failed_value() {
@@ -181,8 +181,9 @@ class throwing_value {
   int throw_on_;
 };
 
-task<throwing_value> throwing_result(int& alive, int& moves, int throw_on) {
-  co_return throwing_value(alive, moves, throw_on);
+task<throwing_value> throwing_result(int& alive, int& moves,
+                                     std::shared_ptr<int> throw_on) {
+  co_return throwing_value(alive, moves, *throw_on);
 }
 
 task<int> suspended_owner(manual_event& event, std::shared_ptr<int> owner) {
@@ -223,10 +224,26 @@ DOBA_TEST("task starts lazily and resumes its continuation") {
 // +===========================================================================+
 DOBA_TEST("task returns move-only values") {
   std::optional<std::unique_ptr<int>> result;
-  auto probe = collect(movable_value(), result);
+  auto probe = collect(movable_value(std::make_shared<int>(7)), result);
   DOBA_EXPECT(probe.done());
   DOBA_EXPECT(result.has_value());
   DOBA_EXPECT_EQUAL(**result, 7);
+}
+// +===========================================================================+
+// | [>] task releases its frame before await resume returns     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("task releases its frame before await resume returns") {
+  auto owner = std::make_shared<int>(7);
+  std::weak_ptr<int> lifetime = owner;
+  auto value = movable_value(std::move(owner));
+  auto awaiter = std::move(value).operator co_await();
+  auto coroutine = awaiter.await_suspend(std::noop_coroutine());
+  coroutine.resume();
+  DOBA_EXPECT(!lifetime.expired());
+  auto result = awaiter.await_resume();
+  DOBA_EXPECT(lifetime.expired());
+  DOBA_EXPECT(result != nullptr);
+  DOBA_EXPECT_EQUAL(*result, 7);
 }
 // +===========================================================================+
 // | [>] task propagates unhandled exceptions                   ( test-case )  |
@@ -313,11 +330,14 @@ DOBA_TEST("nested tasks resume each continuation once") {
 // | [>] task releases its result when a move throws             ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("task releases its result when a move throws") {
-  for (const int throw_on : {1, 2}) {
+  for (const int throw_on : {1, 2, 3}) {
     int alive = 0;
     int moves = 0;
     std::optional<throwing_value> result;
-    auto probe = collect(throwing_result(alive, moves, throw_on), result);
+    auto owner = std::make_shared<int>(throw_on);
+    std::weak_ptr<int> lifetime = owner;
+    auto probe = collect(throwing_result(alive, moves, std::move(owner)),
+                         result);
     DOBA_EXPECT(probe.done());
     bool threw = false;
     try {
@@ -329,6 +349,7 @@ DOBA_TEST("task releases its result when a move throws") {
     DOBA_EXPECT(!result.has_value());
     DOBA_EXPECT_EQUAL(moves, throw_on);
     DOBA_EXPECT_EQUAL(alive, 0);
+    DOBA_EXPECT(lifetime.expired());
   }
 }
 // +===========================================================================+
