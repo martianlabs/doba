@@ -38,8 +38,6 @@ DOBA_TEST("constants expose documented operational limits") {
   DOBA_EXPECT_EQUAL(limits::kDefaultMaxContentLength, 10 * 1024 * 1024);
   DOBA_EXPECT_EQUAL(limits::kDefaultMaxForwardingHops, 20);
   DOBA_EXPECT_EQUAL(limits::kDefaultMaxTransferCodings, 4);
-  DOBA_EXPECT_EQUAL(limits::kMaxRequestHeadSize, 5120);
-  DOBA_EXPECT_EQUAL(limits::kDecodingBufferSize, limits::kMaxRequestHeadSize);
   DOBA_EXPECT_EQUAL(limits::kMaxResponseSizeInMemory, 4096);
   DOBA_EXPECT_EQUAL(limits::kMaxResponseBodySizeInMemory, 2048);
   DOBA_EXPECT_EQUAL(limits::kMaxChunkedExtensionSize, 1024);

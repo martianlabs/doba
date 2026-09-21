@@ -45,10 +45,9 @@ DOBA_TEST("expect continue example accepts requests without body framing") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   register_echo_route(http_server);
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
   DOBA_EXPECT(client.connect(port));
 
   for (const bool expect : {false, true}) {
@@ -79,10 +78,9 @@ DOBA_TEST("expect continue example accepts zero content length") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   register_echo_route(http_server);
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
   DOBA_EXPECT(client.connect(port));
 
   for (const bool expect : {false, true}) {
@@ -114,10 +112,9 @@ DOBA_TEST("expect continue example accepts empty chunked bodies") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   register_echo_route(http_server);
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
       "POST /echo HTTP/1.1\r\nHost: a\r\n"
@@ -143,10 +140,9 @@ DOBA_TEST("expect continue example preserves raw and chunked binary bodies") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   register_echo_route(http_server);
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
   DOBA_EXPECT(client.connect(port));
   std::string body(1025, '\0');
   for (std::size_t i = 0; i < body.size(); i++) {
@@ -179,10 +175,9 @@ DOBA_TEST("expect continue example sends interim before reading the body") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   register_echo_route(http_server);
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
   DOBA_EXPECT(client.connect(port));
 
   for (const bool chunked : {false, true}) {

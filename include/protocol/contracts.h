@@ -22,38 +22,46 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_transport_server_tcpip_h
-#define martianlabs_doba_transport_server_tcpip_h
+#ifndef martianlabs_doba_protocol_contracts_h
+#define martianlabs_doba_protocol_contracts_h
 
+#include <concepts>
+#include <cstddef>
 #include <functional>
+#include <utility>
 
-#include "platform.h"
-#include "transport/server/contracts.h"
-#include "transport/server/policies.h"
+#include "common/output.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::protocol::contracts {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] types                                                      ( struct ) |
+// | [>] engine                                                      (concept) |
 // +---------------------------------------------------------------------------+
-// | Platform-independent transport delegate types.                            |
+// | Protocol engine contract.                                                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-struct types {
-  using on_client_connected_delegate = std::function<void()>;
-  using on_client_disconnected_delegate = std::function<void()>;
+template <typename ENty>
+concept engine = requires(ENty& engine, const char* buf, std::size_t sze,
+                          std::size_t capacity, common::send_delegate output,
+                          std::function<void()> close) {
+  typename ENty::policies_type;
+  { engine.set_on_send(std::move(output)) } -> std::same_as<void>;
+  { engine.set_on_close(std::move(close)) } -> std::same_as<void>;
+  { engine.on_send_completed(true) } -> std::same_as<void>;
+  { engine.on_bytes_received(buf, sze, capacity) } -> std::same_as<std::size_t>;
 };
-}  // namespace martianlabs::doba::transport::server
-
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] PLATFORM-DEPENDENT-INCLUDEs                               ( section ) |
+// | [>] engine_factory                                              (concept) |
+// +---------------------------------------------------------------------------+
+// | Protocol engine factory contract.                                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-#ifdef _WIN32
-#include "transport/server/tcpip_windows.h"
-#elif __linux__
-#include "transport/server/tcpip_linux.h"
-#endif
+template <typename FNty, typename ENty>
+concept engine_factory = engine<ENty> && std::move_constructible<FNty> &&
+                         requires(const FNty& create_engine) {
+                           { create_engine() } -> std::same_as<ENty>;
+                         };
+}  // namespace martianlabs::doba::protocol::contracts
 
 #endif

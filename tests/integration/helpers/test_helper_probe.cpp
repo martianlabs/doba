@@ -96,29 +96,19 @@ DOBA_TEST("probe failure cleans up active transport") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   const auto exercise = [&]() {
-    transport::server::tcpip<
-        protocol::http::v11::request, protocol::http::v11::response,
-        protocol::http::v11::decoder> server;
-    server.set_on_request(
-        [](const std::shared_ptr<protocol::http::v11::request>&,
-           const std::stop_token&)
-            -> std::variant<protocol::http::v11::response,
-                            common::task<protocol::http::v11::response>> {
-          protocol::http::v11::response res =
-              protocol::http::v11::response::ok_200();
-          return res;
-        });
-    server.set_on_bad_request([](
-        int, std::string_view,
-        const std::shared_ptr<protocol::http::v11::request>&) {
-      protocol::http::v11::response res =
-          protocol::http::v11::response::ok_200();
-      return res;
-    });
+    protocol::http::router<protocol::http::v11::request,
+                            protocol::http::v11::response> routes;
+    auto factory = [&routes]() {
+      return protocol::http::v11::engine<protocol::http::v11::request,
+                                          protocol::http::v11::response>(
+          {}, routes);
+    };
+    using engine_type = decltype(factory());
+    transport::server::tcpip<engine_type, decltype(factory)> server(
+        {.ip = "127.0.0.1", .port = std::to_string(port)}, factory);
     server.set_on_connection([&]() { connected.fetch_add(1); });
     server.set_on_disconnection([&]() { disconnected.fetch_add(1); });
-    const std::string port_text = std::to_string(port);
-    server.start(port_text.c_str());
+    server.start();
     DOBA_EXPECT(client.connect(port));
     const auto deadline = std::chrono::steady_clock::now() +
                           std::chrono::seconds(2);

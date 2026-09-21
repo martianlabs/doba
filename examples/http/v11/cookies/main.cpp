@@ -33,7 +33,7 @@ using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
 int main() {
-  server http_server;
+  server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
       "GET", "/cookies",
       [](const request& req) {
@@ -56,7 +56,7 @@ int main() {
             .set_body(body);
         return res;
       });
-  http_server.start("8080");
+  http_server.start();
   signaler::wait();
   return 0;
 }

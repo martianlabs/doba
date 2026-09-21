@@ -47,14 +47,17 @@ a selected value are marked "Not set"; complexity estimates are separate.
 
 The frozen target is `0.1.0-beta1`, a beta for adoption and evaluation in
 controlled deployments. This section is the authoritative release scope.
-All other outstanding work is future work and does not block this beta.
+B14-B19 are immediate migration work with maximum priority, ahead of the
+release work below. Their release assignment is not selected here. Other
+outstanding work remains future work and does not block this beta.
 
 Implementation order:
 
-1. B9: honor response-driven `Connection: close` after complete delivery.
-2. F1 and F2: implement TLS and GZIP response compression.
-3. C1, C2, C3 and C7: implement and verify all operational limits.
-4. RE1: complete minimum documentation, the full existing CI and CMake consumer
+1. B14-B19: resolve the critical test failures recorded on 2026-09-21.
+2. B9: honor response-driven `Connection: close` after complete delivery.
+3. F1 and F2: implement TLS and GZIP response compression.
+4. C1, C2, C3 and C7: implement and verify all operational limits.
+5. RE1: complete minimum documentation, the full existing CI and CMake consumer
    validations, and coherent versioning and publication.
 
 **Required capabilities.** F1 (TLS) and F2 (GZIP) are mandatory for the
@@ -99,8 +102,9 @@ exhaustive coverage, fuzzing, benchmarks, soak campaigns or external-tool
 automation described by the future QA entries.
 
 **Scope control.** Until publication, work is limited to the listed release
-items, their tests, and the minimum release closure. Optional functionality,
-refactoring and broader quality programs remain future work. Any addition
+items, their tests, the minimum release closure, and B14-B19 migration fixes.
+Optional functionality, refactoring and broader quality programs remain
+future work. Any addition
 requires an explicit release-scope decision, supported by concrete evidence
 when a newly reproduced defect affects the supported behavior.
 
@@ -112,28 +116,34 @@ when a newly reproduced defect affects the supported behavior.
   </picture>
 </h2>
 
-31 outstanding entries across eight categories. Each entry retains only
-remaining work or an open decision, with source and test evidence checked
-against the current codebase. Eight entries have release scope; twenty-three
-are future work. Verification pending means that the focused regressions or
-runtime measurements described by the entry remain to be run. Category totals
-count entries, not confirmed bugs; RE1 separates its minimum release work from
-the future contribution guide.
+37 outstanding entries across eight categories: six immediate migration
+bugs, eight entries with release scope, and twenty-three future entries.
+B14-B19 record 31 failing tests reproduced on Windows and WSL on 2026-09-21.
+Verification pending means that the focused regressions or runtime
+measurements described by an entry remain to be run. Category totals count
+entries, not individual failing tests; RE1 separates its minimum release
+work from the future contribution guide.
 
-| Category | Identifiers | Release | Future work | Total |
-| --- | --- | --- | --- | --- |
-| Operational hardening | C1-C3, C7 | 4 | 0 | 4 |
-| Bugs | B9, B13 | 1 | 1 | 2 |
-| Product and convenience | F1-F2, P2-P8 | 2 | 7 | 9 |
-| Quality and validation | QA1-QA3, QA5-QA6 | 0 | 5 | 5 |
-| Release engineering | RE1 | 1 | 0 | 1 |
-| C++ maintainability | DT1-DT3 | 0 | 3 | 3 |
-| Public documentation | DOC1-DOC2 | 0 | 2 | 2 |
-| Beyond the first release | F3-F7 | 0 | 5 | 5 |
-| **Total** | | **8** | **23** | **31** |
+| Category | Identifiers | Migration | Release | Future work | Total |
+| --- | --- | --- | --- | --- | --- |
+| Operational hardening | C1-C3, C7 | 0 | 4 | 0 | 4 |
+| Bugs | B9, B13-B19 | 6 | 1 | 1 | 8 |
+| Product and convenience | F1-F2, P2-P8 | 0 | 2 | 7 | 9 |
+| Quality and validation | QA1-QA3, QA5-QA6 | 0 | 0 | 5 | 5 |
+| Release engineering | RE1 | 0 | 1 | 0 | 1 |
+| C++ maintainability | DT1-DT3 | 0 | 0 | 3 | 3 |
+| Public documentation | DOC1-DOC2 | 0 | 0 | 2 | 2 |
+| Beyond the first release | F3-F7 | 0 | 0 | 5 | 5 |
+| **Total** | | **6** | **8** | **23** | **37** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
+| [B14](#b14-asynchronous-handler-execution) | Critical bug | Reproduced | P0 (maximum) | Current migration |
+| [B15](#b15-missing-100-continue) | Critical bug | Reproduced | P0 (maximum) | Current migration |
+| [B16](#b16-missing-http-rejection-responses) | Critical bug | Reproduced | P0 (maximum) | Current migration |
+| [B17](#b17-http-error-response-content) | Critical bug | Reproduced | P0 (maximum) | Current migration |
+| [B18](#b18-empty-delivery-contract) | Critical bug | Reproduced; contract decision pending | P0 (maximum) | Current migration |
+| [B19](#b19-send-limit-failure-notification) | Critical bug | Reproduced; contract decision pending | P0 (maximum) | Current migration |
 | [C1](#c1-single-inactivity-timeout) | Hardening | Pending | Release gate | 0.1.0-beta1 |
 | [C2](#c2-effective-per-request-limits) | Hardening | Pending | Release gate | 0.1.0-beta1 |
 | [C3](#c3-global-active-connection-limit) | Hardening | Pending | Release gate | 0.1.0-beta1 |
@@ -349,10 +359,228 @@ to C7 and does not depend on completing the future QA1/QA5 campaigns.
   </picture>
 </h2>
 
-B9 is required for `0.1.0-beta1`. B13 is future work limited to the benchmark
-adapter. Both retain source evidence; the focused runtime regressions below
-are not recorded as executed or failing. Reproduce and fix B9 before
-publication.
+B14-B19 take precedence over all other work. Each is classified as Critical
+with P0 (maximum) priority. They track the 2026-09-21 migration run: Windows
+unit 843/848 and integration 86/112 passed; WSL unit 841/846 and integration
+86/112 passed. The same five unit and twenty-six integration cases failed on
+both platforms. Builds used Debug and strict warnings, without ASan/UBSan.
+These are recorded results, not a new test execution during this backlog edit.
+
+The six entries assign every failing test once. Cross-references capture
+shared dependencies; a failure before later assertions does not prove those
+later behaviors are broken. B18 and B19 retain explicit contract decisions.
+The tests remain active and their assertions unchanged.
+
+B9 retains its existing release scope and verification-pending record; B13
+remains future benchmark work. Their historical descriptions are not
+revalidated by this migration-failure inventory.
+
+<a name="b14-asynchronous-handler-execution"></a>
+<h3>B14: Asynchronous handler execution and lifecycle</h3>
+
+**Status.** Reproduced. **Severity.** Critical.
+**Priority.** P0 (maximum). **Target.** Current migration.
+
+**Observed behavior and cause.** The HTTP
+[engine](../include/protocol/http/v11/engine.h) returns 501 for asynchronous
+routes and parametrized handlers without invoking them. Tests expecting
+handler entry, suspension or a completed response fail at that point.
+
+**Expected behavior.** Execute asynchronous routes and controllers, including
+immediate completion, suspension/resumption and exceptions. Preserve request
+order across synchronous and deferred responses, retain request storage while
+needed, and propagate cancellation on shutdown, client reset and input EOF.
+
+**Acceptance and tests.** Pass all cases below on Windows and WSL, including
+deferred close draining and ordered deferred errors. Response ordering belongs
+to the engine; byte delivery and draining remain transport responsibilities.
+
+**Dependencies and limits.** Interim ordering also needs
+[B15](#b15-missing-100-continue); deferred error representation and HEAD checks
+also need [B17](#b17-http-error-response-content). Deferred close coverage
+overlaps [B9](#b9-response-driven-connection-close). The current failures do
+not independently demonstrate reordered output, invalid request views or
+failed cancellation after actual suspension: handler execution blocks those
+checks. These obligations must be exercised after async execution is restored.
+No coroutine scheduler or deferred-send design is selected by this entry.
+
+| Suite | Failing test | Source |
+| --- | --- | --- |
+| unit | server completes suspended async responses | [tests/unit/protocol/http/v11/server_tests.cpp](../tests/unit/protocol/http/v11/server_tests.cpp) |
+| unit | server propagates async handler exceptions | [tests/unit/protocol/http/v11/server_tests.cpp](../tests/unit/protocol/http/v11/server_tests.cpp) |
+| unit | server invokes parametrized async handlers | [tests/unit/protocol/http/v11/server_tests.cpp](../tests/unit/protocol/http/v11/server_tests.cpp) |
+| unit | async handler observes cancellation after suspension | [tests/unit/protocol/http/v11/server_tests.cpp](../tests/unit/protocol/http/v11/server_tests.cpp) |
+| integration | HTTP controllers preserve asynchronous response ordering | [tests/integration/protocol/http/v11/server_controller_tests.cpp](../tests/integration/protocol/http/v11/server_controller_tests.cpp) |
+| integration | HTTP suspended controllers receive shutdown cancellation | [tests/integration/protocol/http/v11/server_controller_tests.cpp](../tests/integration/protocol/http/v11/server_controller_tests.cpp) |
+| integration | HTTP/1.1 hides deferred handler and serializer diagnostics | [tests/integration/protocol/http/v11/server_response_tests.cpp](../tests/integration/protocol/http/v11/server_response_tests.cpp) |
+| integration | HTTP/1.1 suppresses deferred HEAD error bodies in pipelines | [tests/integration/protocol/http/v11/server_response_tests.cpp](../tests/integration/protocol/http/v11/server_response_tests.cpp) |
+| integration | HTTP/1.1 invokes an asynchronous parametrized route over TCP | [tests/integration/protocol/http/v11/server_routing_tests.cpp](../tests/integration/protocol/http/v11/server_routing_tests.cpp) |
+| integration | HTTP/1.1 keeps synchronous responses behind a suspended handler | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) |
+| integration | HTTP/1.1 orders asynchronous responses by request order | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) |
+| integration | HTTP/1.1 retains suspended request views across later heads | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) |
+| integration | HTTP/1.1 cancels a suspended request after client reset | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) |
+| integration | HTTP/1.1 cancels a suspended request after input eof | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) |
+| integration | HTTP/1.1 drains a deferred close response before eof | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) |
+| integration | HTTP/1.1 keeps interim output behind an earlier deferred response | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) |
+| integration | HTTP/1.1 orders a deferred error before accepted successors | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) |
+
+<a name="b15-missing-100-continue"></a>
+<h3>B15: Missing 100 Continue before request bodies</h3>
+
+**Status.** Reproduced. **Severity.** Critical.
+**Priority.** P0 (maximum). **Target.** Current migration.
+
+**Observed behavior.** The client receives no interim 100 response before
+sending the request body. All three cases below fail while waiting for it.
+The example only reaches its final 200 after curl stops waiting and sends the
+body anyway.
+
+**Expected behavior and cause.** Restore the protocol-side interim response
+path, which is absent from the current engine/decoder integration. A pending
+body must not require the client to time out before it can proceed.
+
+**Acceptance and tests.** Emit one interim response at the appropriate point
+for an accepted expectation, consume fragmented bodies, and produce the final
+response. Preserve interim/final ordering in a pipeline. Run the three cases
+below and the deferred-interim ordering case tracked under
+[B14](#b14-asynchronous-handler-execution) on both platforms.
+
+**Dependencies and decisions.** Select the smallest decoder-to-engine
+notification needed during the implementation plan; transports remain
+unaware of HTTP interim responses.
+
+| Suite | Failing test | Source |
+| --- | --- | --- |
+| integration | expect continue example sends interim before reading the body | [tests/integration/examples/http/v11/expect_continue_tests.cpp](../tests/integration/examples/http/v11/expect_continue_tests.cpp) |
+| integration | HTTP/1.1 echoes a body after 100 Continue | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) |
+| integration | HTTP/1.1 sends one interim while a fragmented body is pending | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) |
+
+<a name="b16-missing-http-rejection-responses"></a>
+<h3>B16: Missing HTTP responses for rejected requests</h3>
+
+**Status.** Reproduced. **Severity.** Critical.
+**Priority.** P0 (maximum). **Target.** Current migration.
+
+**Observed behavior and cause.** On an invalid deserialization result, the
+[engine](../include/protocol/http/v11/engine.h) closes the connection without
+serializing the expected HTTP rejection. Tests fail because the response is
+missing, including malformed HEAD, rejected head/query boundaries, chunk
+extensions, trailers and invalid headers.
+
+**Expected behavior.** Generate the appropriate rejection response, preserve
+HEAD body suppression only when the request method is known, then close after
+delivery. Do not dispatch a pipelined successor beyond the rejection boundary.
+
+**Acceptance and tests.** Pass all seven cases below on both platforms,
+preserving their status, framing, boundary and successor-dispatch assertions.
+Keep input limits and syntactic rejection active.
+
+**Limits.** These failures do not show that oversized or hostile input was
+accepted, or that successors were dispatched: the missing response prevents
+the later assertions from being reached. Error response generation belongs
+to the protocol; transport draining remains generic.
+
+| Suite | Failing test | Source |
+| --- | --- | --- |
+| unit | server suppresses error bodies only for known HEAD requests | [tests/unit/protocol/http/v11/server_tests.cpp](../tests/unit/protocol/http/v11/server_tests.cpp) |
+| integration | HTTP/1.1 terminates complete heads around decoder capacity | [tests/integration/protocol/http/v11/server_limits_tests.cpp](../tests/integration/protocol/http/v11/server_limits_tests.cpp) |
+| integration | HTTP/1.1 preserves every query parameter at supported boundaries | [tests/integration/protocol/http/v11/server_limits_tests.cpp](../tests/integration/protocol/http/v11/server_limits_tests.cpp) |
+| integration | HTTP/1.1 enforces chunk extension and trailer wire limits | [tests/integration/protocol/http/v11/server_limits_tests.cpp](../tests/integration/protocol/http/v11/server_limits_tests.cpp) |
+| integration | HTTP/1.1 rejects hostile requests without dispatching successors | [tests/integration/protocol/http/v11/server_security_tests.cpp](../tests/integration/protocol/http/v11/server_security_tests.cpp) |
+| integration | HTTP/1.1 rejects invalid header syntax and its successor | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) |
+| integration | HTTP/1.1 rejects invalid dispatched header values and its successor | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) |
+
+<a name="b17-http-error-response-content"></a>
+<h3>B17: HTTP error response content and HEAD framing</h3>
+
+**Status.** Reproduced. **Severity.** Critical.
+**Priority.** P0 (maximum). **Target.** Current migration.
+
+**Observed behavior and cause.** A synchronous handler exception becomes an
+empty 500 response in the [engine](../include/protocol/http/v11/engine.h).
+The first case expects the public body "Internal Server Error"; the HEAD
+case expects Content-Length 21 with no body bytes. Those assertions fail.
+Source inspection also shows that response serialization exceptions reach
+the outer close path instead of generating the tested error response.
+
+**Expected behavior.** Convert handler and serializer failures into the
+established public error representation without exposing internal diagnostics.
+Preserve its framing when suppressing a HEAD body, close as required by the
+existing tests, and continue serving new clients.
+
+**Acceptance and tests.** Pass the two cases below on Windows and WSL,
+including every handler/serializer scenario and subsequent-client recovery.
+Also complete the deferred error and deferred HEAD cases tracked under
+[B14](#b14-asynchronous-handler-execution) once handlers can execute.
+
+**Limits.** The complete recovery and diagnostic-isolation assertions are
+not proven by these runs: execution stops at the earlier content mismatch.
+The exact error body is an existing test expectation, not a claim that HTTP
+mandates this text.
+
+| Suite | Failing test | Source |
+| --- | --- | --- |
+| integration | HTTP/1.1 converts response failures and recovers on new clients | [tests/integration/protocol/http/v11/server_response_tests.cpp](../tests/integration/protocol/http/v11/server_response_tests.cpp) |
+| integration | HTTP/1.1 suppresses synchronous HEAD error bodies | [tests/integration/protocol/http/v11/server_response_tests.cpp](../tests/integration/protocol/http/v11/server_response_tests.cpp) |
+
+<a name="b18-empty-delivery-contract"></a>
+<h3>B18: Empty delivery closes the send queue</h3>
+
+**Status.** Reproduced; contract decision pending. **Severity.** Critical.
+**Priority.** P0 (maximum). **Target.** Current migration.
+
+**Observed behavior.** A zero-length delivery without a body source closes
+the connection in both transports. The following "ok" delivery is not
+received; the test expects it and two successful completion notifications.
+
+**Cause and open decision.** The transports currently reject an empty
+delivery as invalid, while the retained test expects a completed no-op.
+This is a reproduced contract discrepancy; the intended contract must be
+resolved explicitly before choosing a production or test change.
+
+**Acceptance and tests.** Agree on empty-delivery admission and completion
+semantics, then validate the empty delivery followed by a nonempty delivery
+on both platforms. Preserve queue progress and exactly-once completion for
+accepted deliveries. Keep this failing test active until that decision and
+its approved implementation; do not silently weaken its expectations.
+
+**Components.** [Linux transport](../include/transport/server/tcpip_linux.h),
+[Windows transport](../include/transport/server/tcpip_windows.h) and the
+[output contract](../include/common/output.h).
+
+| Suite | Failing test | Source |
+| --- | --- | --- |
+| integration | tcpip removes an empty delivery without blocking its queue | [tests/integration/transport/server/tcpip_tests.cpp](../tests/integration/transport/server/tcpip_tests.cpp) |
+
+<a name="b19-send-limit-failure-notification"></a>
+<h3>B19: Missing completion notification for a rejected send</h3>
+
+**Status.** Reproduced; contract decision pending. **Severity.** Critical.
+**Priority.** P0 (maximum). **Target.** Current migration.
+
+**Observed behavior.** With send_buffer_size set to 16, submitting 17 bytes
+correctly closes the connection. The test then expects one failed completion;
+the observed count is zero.
+
+**Cause and contract boundary.** The oversized block is rejected before it
+enters the transport queue, so closure does not report
+on_send_completed(false) for that block. Reconcile this path with the
+[output contract](../include/common/output.h) and explicitly settle whether
+completion covers rejected submissions as well as admitted deliveries.
+
+**Acceptance and tests.** Preserve closure when the send budget is exceeded.
+Resolve the completion obligation without duplicate callbacks, and pass the
+case below on Windows and WSL under the agreed contract. Keep its current
+failure visible until the contract and implementation are approved.
+
+**Components.** [Linux transport](../include/transport/server/tcpip_linux.h)
+and [Windows transport](../include/transport/server/tcpip_windows.h). The
+failure is notification accounting; these runs do not demonstrate a send
+limit bypass.
+
+| Suite | Failing test | Source |
+| --- | --- | --- |
+| integration | tcpip closes when a delivery exceeds the send limit | [tests/integration/transport/server/tcpip_tests.cpp](../tests/integration/transport/server/tcpip_tests.cpp) |
 
 <a name="b9-response-driven-connection-close"></a>
 <h3>

@@ -143,7 +143,7 @@ class background_executor {
 
 int main() {
   background_executor executor;
-  server http_server;
+  server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
       method_names::kGet, "/work",
       [&executor](std::shared_ptr<const request> req,
@@ -157,7 +157,7 @@ int main() {
             .set_body(body);
         co_return res;
       });
-  http_server.start("8080");
+  http_server.start();
   signaler::wait();
   http_server.stop();
   return 0;

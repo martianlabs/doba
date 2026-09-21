@@ -58,7 +58,7 @@ DOBA_TEST("HTTP/1.1 transmits and terminates every outgoing chunk") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/chunks", [](const request&) {
     auto writer = body_writer::chunked();
     if (!writer.write("a") || !writer.write("bc") ||
@@ -74,8 +74,7 @@ DOBA_TEST("HTTP/1.1 transmits and terminates every outgoing chunk") {
     result.set_body("next");
     return result;
   });
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
 
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
@@ -104,7 +103,7 @@ DOBA_TEST("HTTP/1.1 preserves binary responses across the spill boundary") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/body/:size",
                         [](const request&, std::size_t size) {
     std::string body(size, '\0');
@@ -115,8 +114,7 @@ DOBA_TEST("HTTP/1.1 preserves binary responses across the spill boundary") {
     result.set_body(body);
     return result;
   });
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
 
   for (const std::size_t size : {limits::kMaxResponseBodySizeInMemory - 1,
                                  limits::kMaxResponseBodySizeInMemory,
@@ -146,7 +144,7 @@ DOBA_TEST("HTTP/1.1 delimits cleared bodies on persistent connections") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/clear", [](const request&) {
     response result = response::ok_200();
     result.set_body("x").clear_body().clear_body();
@@ -157,8 +155,7 @@ DOBA_TEST("HTTP/1.1 delimits cleared bodies on persistent connections") {
     result.set_body("next");
     return result;
   });
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
 
   for (bool pipelined : {false, true}) {
     DOBA_EXPECT(client.connect(port));
@@ -192,7 +189,7 @@ DOBA_TEST("HTTP/1.1 suppresses 205 and 304 bodies before successors") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/reset", [](const request&) {
     response result = response::reset_content_205();
     result.set_body("hidden");
@@ -208,8 +205,7 @@ DOBA_TEST("HTTP/1.1 suppresses 205 and 304 bodies before successors") {
     result.set_body("next");
     return result;
   });
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
 
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
@@ -244,7 +240,7 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/throw", [](const request&) -> response {
     throw std::runtime_error("doba-private-sync-token");
   });
@@ -262,8 +258,7 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
     result.set_body("ok");
     return result;
   });
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
 
   // +=========================================================================+
 // | [>] failure_case                                               ( struct ) |
@@ -320,7 +315,7 @@ DOBA_TEST("HTTP/1.1 hides deferred handler and serializer diagnostics") {
     const uint16_t port = client.find_available_port();
     DOBA_EXPECT(port != 0);
     auto signal = std::make_shared<http_test_signal>();
-    server<> http_server;
+    server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
     http_server.add_route(
         "GET", "/fail",
         [signal, scenario](std::shared_ptr<const request>,
@@ -342,8 +337,7 @@ DOBA_TEST("HTTP/1.1 hides deferred handler and serializer diagnostics") {
       result.set_body("ok");
       return result;
     });
-    const std::string port_text = std::to_string(port);
-    http_server.start(port_text.c_str());
+    http_server.start();
 
     DOBA_EXPECT(client.connect(port));
     const bool sent = client.send_all("GET /fail HTTP/1.1\r\nHost: a\r\n\r\n");
@@ -389,7 +383,7 @@ DOBA_TEST("HTTP/1.1 suppresses synchronous HEAD error bodies") {
     const uint16_t port = client.find_available_port();
     DOBA_EXPECT(port != 0);
     std::atomic<std::size_t> get_calls = 0;
-    server<> http_server;
+    server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
     http_server.add_route("HEAD", "/fail", [scenario](const request&)
         -> response {
       if (scenario == "throw") throw std::runtime_error("HEAD handler error!");
@@ -405,8 +399,7 @@ DOBA_TEST("HTTP/1.1 suppresses synchronous HEAD error bodies") {
       result.set_body("ok");
       return result;
     });
-    const std::string port_text = std::to_string(port);
-    http_server.start(port_text.c_str());
+    http_server.start();
 
     DOBA_EXPECT(client.connect(port));
     DOBA_EXPECT(client.send_all(
@@ -440,7 +433,7 @@ DOBA_TEST("HTTP/1.1 suppresses deferred HEAD error bodies in pipelines") {
     DOBA_EXPECT(port != 0);
     auto signal = std::make_shared<http_test_signal>();
     std::atomic<std::size_t> get_calls = 0;
-    server<> http_server;
+    server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
     http_server.add_route(
         "HEAD", "/fail",
         [signal, scenario](std::shared_ptr<const request>,
@@ -461,8 +454,7 @@ DOBA_TEST("HTTP/1.1 suppresses deferred HEAD error bodies in pipelines") {
       result.set_body("ok");
       return result;
     });
-    const std::string port_text = std::to_string(port);
-    http_server.start(port_text.c_str());
+    http_server.start();
 
     DOBA_EXPECT(client.connect(port));
     DOBA_EXPECT(client.send_all(
@@ -540,7 +532,7 @@ DOBA_TEST("HTTP closes incomplete file responses before subsequent bytes") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> value;
+  server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_route("GET", "/file", [&](const request&) {
     filesystem_file file;
     std::error_code error;
@@ -558,7 +550,7 @@ DOBA_TEST("HTTP closes incomplete file responses before subsequent bytes") {
     result.set_body("must-not-be-transmitted");
     return result;
   });
-  value.start(std::to_string(port).c_str());
+  value.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
       "GET /file HTTP/1.1\r\nHost: a\r\n\r\n"

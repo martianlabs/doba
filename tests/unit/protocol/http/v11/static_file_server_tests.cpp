@@ -92,8 +92,8 @@ response file_request(file_router& routes, std::string_view method,
   std::string wire = std::string(method) + " " + std::string(path) +
       " HTTP/1.1\r\nHost: example.com\r\n" + std::string(headers) + "\r\n";
   decoder<request, response> decoder;
-  decoder.accumulate(wire.data(), wire.size());
-  auto decoded = decoder.deserialize();
+  std::size_t consumed = 0;
+  auto decoded = decoder.deserialize(wire.data(), wire.size(), 8192, consumed);
   if (!decoded.request) throw std::runtime_error("Invalid test request");
   const auto match = routes.match(method, decoded.request->get_absolute_path());
   if (!match.handler) return response::not_found_404();

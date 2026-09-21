@@ -72,21 +72,6 @@ struct limits {
   // Maximum number of transfer-codings accepted in a single Transfer-Encoding
   // header before the request is rejected.
   static constexpr std::size_t kDefaultMaxTransferCodings = 4;
-  // Maximum size, in octets, of a request's head (request-line plus header
-  // section) once mounted onto request::buffer_ (request.h). Derived from
-  // the request-target and header-section limits above, since the head is
-  // exactly their concatenation (plus the small, fixed-size method/version
-  // tokens, negligible against these budgets).
-  static constexpr std::size_t kMaxRequestHeadSize =
-      kDefaultMaxUriLength + kDefaultMaxHeaderSectionSize;
-  // Size, in octets, of the decoder's internal accumulation buffer. Bounds
-  // how many bytes of a not-yet-fully-received request (request-line,
-  // headers and, when applicable, body framing) the decoder holds in memory
-  // at once (decoder.h). Must be able to hold a full request head (see
-  // kMaxRequestHeadSize above), since the decoder buffers it whole before
-  // mounting the request object. An incomplete head at this capacity is
-  // rejected immediately with 400 Bad Request; bodies can span buffers.
-  static constexpr std::size_t kDecodingBufferSize = kMaxRequestHeadSize;
   // Size, in octets, of response's internal in-memory buffer, holding the
   // status line, headers and (when small enough) the body (response.h).
   static constexpr std::size_t kMaxResponseSizeInMemory = 4096;

@@ -13,7 +13,9 @@
       "cacheVariables": {
         "CMAKE_C_COMPILER": "cl",
         "CMAKE_CXX_COMPILER": "cl",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "DOBA_BUILD_EXAMPLES": "ON",
+        "DOBA_BUILD_TESTS": "ON"
       }
     },
     {

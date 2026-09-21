@@ -1,5 +1,8 @@
 # Asynchronous routes
 
+Migration status: The current engine returns `501 Not Implemented` without invoking the handler.
+Coroutine execution and deferred sends are still pending migration.
+
 This example demonstrates one coroutine route. The `background_executor` is
 application scaffolding: it resumes the route on its own worker thread after
 the handler suspends. Doba supplies the request lifetime and cancellation token

@@ -28,8 +28,6 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
-#include <cstring>
-#include <memory>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -122,6 +120,7 @@
 #include "protocol/http/v11/headers/rules/routing.h"
 #include "protocol/http/v11/limits.h"
 #include "protocol/http/v11/parsed_types.h"
+#include "protocol/http/v11/policies.h"
 #include "protocol/http/v11/rejection_reason.h"
 #include "protocol/http/v11/verdict.h"
 
@@ -148,9 +147,9 @@ class decoder {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  decoder()
-      : buffer_(std::make_unique_for_overwrite<char[]>(
-            limits::kDecodingBufferSize)) {}
+  explicit decoder(policies configuration = {}) {
+    context_.policies = configuration;
+  }
   decoder(const decoder&) = delete;
   decoder(decoder&&) noexcept = delete;
   ~decoder() = default;
@@ -160,33 +159,28 @@ class decoder {
   decoder& operator=(const decoder&) = delete;
   decoder& operator=(decoder&&) noexcept = delete;
   // +=========================================================================+
-  // | [>] accumulate                                               ( public ) |
-  // +=========================================================================+
-  std::size_t accumulate(char* const buffer, std::size_t size) {
-    if (!buffer || !size) return 0;
-    std::size_t space_left = limits::kDecodingBufferSize - off_;
-    std::size_t bytes_to_copy = std::min(space_left, size);
-    std::memcpy(buffer_.get() + off_, buffer, bytes_to_copy);
-    off_ += bytes_to_copy;
-    return bytes_to_copy;
-  }
-  // +=========================================================================+
   // | [>] deserialize                                              ( public ) |
   // +=========================================================================+
-  deserialization_result<RQty> deserialize() {
+  deserialization_result<RQty> deserialize(
+      const char* buffer, const std::size_t size, const std::size_t capacity,
+      std::size_t& consumed) {
+    std::string_view source(buffer, size);
     deserialization_result<RQty> result =
-        body_framer_ ? parse_body() : parse_core();
+        body_framer_ ? parse_body(source) : parse_core(source);
+    consumed = size - source.size();
     if (result.code == deserialization_status::kMoreBytesNeeded &&
-        !body_framer_ && off_ == limits::kDecodingBufferSize) {
+        !body_framer_ && size == capacity) {
       result.code = deserialization_status::kInvalidSource;
     }
-    // Any rejection reason recorded along the way (by a header interpreter,
-    // a transversal rule, or the HTTP-version check) is surfaced here, at the
-    // single point where every parsing path converges, so callers only ever
-    // have to look at the top-level result.
-    if (result.code == deserialization_status::kInvalidSource) {
-      result.reason = static_cast<int>(context_.rejection_reason);
-    }
+    // Borrowed views must not survive reuse of the transport's buffer.
+    method_ = {};
+    target_ = target::kUnknown;
+    absolute_path_ = {};
+    query_ = {};
+    headers_ = {};
+    const policies configuration = context_.policies;
+    context_ = {};
+    context_.policies = configuration;
     return result;
   }
 
@@ -194,9 +188,8 @@ class decoder {
   // +=========================================================================+
   // | [>] parse_core                                               ( public ) |
   // +=========================================================================+
-  deserialization_result<RQty> parse_core() {
-    reset_decoding_attributes();
-    std::string_view sv(buffer_.get(), off_);
+  deserialization_result<RQty> parse_core(std::string_view& source) {
+    std::string_view sv = source;
     std::size_t i = 0;
     // +-----------------------------------------------------------------------+
     // | request-line = method SP request-target SP HTTP-version               |
@@ -204,11 +197,11 @@ class decoder {
     // +-----------------------------------------------------------------------+
     // | [method] part!                                                        |
     // +-----------------------------------------------------------------------+
-    if (!off_) return deserialization_status::kMoreBytesNeeded;
+    if (sv.empty()) return deserialization_status::kMoreBytesNeeded;
     method_ = helpers::consume_token(sv);
     if (method_.empty()) return deserialization_status::kInvalidSource;
     i += method_.size();
-    if (i >= off_) return deserialization_status::kMoreBytesNeeded;
+    if (i >= sv.size()) return deserialization_status::kMoreBytesNeeded;
     if (sv[i++] != ' ') return deserialization_status::kInvalidSource;
     // +-----------------------------------------------------------------------+
     // | [request-target] part!                                                |
@@ -218,7 +211,7 @@ class decoder {
     // |                / authority-form                                       |
     // |                / asterisk-form                                        |
     // +-----------------------------------------------------------------------+
-    if (i >= off_) return deserialization_status::kMoreBytesNeeded;
+    if (i >= sv.size()) return deserialization_status::kMoreBytesNeeded;
     deserialization_status status;
     std::size_t bytes_used = 0;
     if (method_ == method_names::kConnect) {
@@ -277,7 +270,7 @@ class decoder {
       return deserialization_status::kInvalidSource;
     }
     // Validate that every "%HH" triplet in the path decodes to a non-NUL
-    // byte. The decoder never mutates its own source buffer ('buffer_'); the
+    // byte. The decoder never mutates the transport's source buffer; the
     // actual decoding into the resulting path happens later, once ownership
     // has moved to a buffer the 'request' instance controls (see
     // 'request::request').
@@ -287,7 +280,7 @@ class decoder {
       return deserialization_status::kInvalidSource;
     }
     i += bytes_used;
-    if (i >= off_) return deserialization_status::kMoreBytesNeeded;
+    if (i >= sv.size()) return deserialization_status::kMoreBytesNeeded;
     if (sv[i++] != ' ') return deserialization_status::kInvalidSource;
     // +-----------------------------------------------------------------------+
     // | [HTTP-version] part!                                                  |
@@ -297,7 +290,7 @@ class decoder {
     // +----------------+------------------------------------------------------+
     constexpr std::string_view kHttpVersion = "HTTP/0.0";
     constexpr std::size_t kHttpVersionLength = kHttpVersion.size();
-    const std::size_t available = std::min(kHttpVersionLength, off_ - i);
+    const std::size_t available = std::min(kHttpVersionLength, sv.size() - i);
     for (std::size_t version_index = 0; version_index < available;
          version_index++) {
       const char expected = kHttpVersion[version_index];
@@ -321,9 +314,9 @@ class decoder {
       return deserialization_status::kInvalidSource;
     }
     i += 8;
-    if (i >= off_) return deserialization_status::kMoreBytesNeeded;
+    if (i >= sv.size()) return deserialization_status::kMoreBytesNeeded;
     if (sv[i] != '\r') return deserialization_status::kInvalidSource;
-    if (i + 1 >= off_) return deserialization_status::kMoreBytesNeeded;
+    if (i + 1 >= sv.size()) return deserialization_status::kMoreBytesNeeded;
     if (sv[i + 1] != '\n') {
       return deserialization_status::kInvalidSource;
     }
@@ -348,7 +341,7 @@ class decoder {
     bool field_name_decoded = false;
     std::size_t fn_start = i;
     const std::size_t headers_start = i;
-    while (i < off_) {
+    while (i < sv.size()) {
       if (context_.policies.max_header_section_size &&
           (i - headers_start) > context_.policies.max_header_section_size) {
         context_.rejection_reason = rejection_reason::kHeaderFieldsTooLarge;
@@ -357,7 +350,7 @@ class decoder {
       if (!field_name_decoded) {
         if (sv[i] == '\r') {
           if (i != fn_start) return deserialization_status::kInvalidSource;
-          if (i + 1 >= off_) return deserialization_status::kMoreBytesNeeded;
+          if (i + 1 >= sv.size()) return deserialization_status::kMoreBytesNeeded;
           if (sv[i + 1] != '\n') return deserialization_status::kInvalidSource;
           i += 2;
           // Every modelled header was already parsed once and interpreted in
@@ -374,9 +367,10 @@ class decoder {
             return deserialization_status::kInvalidSource;
           }
           // Mount the request object and keep the result!
-          if (!mount_request_getter(i)) {
+          if (!mount_request_getter(sv.substr(0, i))) {
             return deserialization_status::kInvalidSource;
           }
+          source.remove_prefix(i);
           // Check for the presence of a body and build the body writer for this
           // request. We only support chunked and raw framing, and only if the
           // request has a body.
@@ -394,28 +388,8 @@ class decoder {
               body_framer_ = body::framer_raw(context_.content_length);
             }
           }
-          // In case of no body writer, we are done and can return the request.
-          // Otherwise, we need to continue parsing the body, so we remove the
-          // already consumed bytes from the input and call parse() again to
-          // continue parsing the body.
           if (!body_framer_) return dispatch(std::nullopt);
-          // In case of a body writer, we need to continue parsing the body, so
-          // we remove the already consumed bytes from the input and call
-          // parse() again to continue parsing the body.
-          deserialization_result<RQty> result = deserialize();
-          // RFC 9110 S10.1.1: the client is waiting for an interim response
-          // before sending the body, so it is handed to the transport here.
-          // This branch runs once per request, right as the body starts.
-          // It is deliberately skipped when the call above already completed
-          // the message: an optimistic client may send Expect together with
-          // the whole body, and once that body is in there is nothing left to
-          // wait for, so the interim is omitted (the spec allows it) instead
-          // of being emitted behind the data it was meant to precede.
-          if (context_.connection.expects_continue &&
-              result.code == deserialization_status::kMoreBytesNeeded) {
-            result.interim = k100_continue_interim_;
-          }
-          return result;
+          return parse_body(source);
         }
         if (sv[i] == '\n') return deserialization_status::kInvalidSource;
         // [field-name] decoding..
@@ -430,11 +404,11 @@ class decoder {
         continue;
       }
       // [field-value] decoding..
-      if (i >= off_) return deserialization_status::kMoreBytesNeeded;
+      if (i >= sv.size()) return deserialization_status::kMoreBytesNeeded;
       if (sv[i++] != ':') return deserialization_status::kInvalidSource;
       std::string_view field_name = sv.substr(fn_start, i - 1 - fn_start);
       std::size_t fv_start = i;
-      while (i < off_) {
+      while (i < sv.size()) {
         if (sv[i] == '\r') break;
         if (!helpers::is_vchar(sv[i]) && !helpers::is_obs_text(sv[i]) &&
             !helpers::is_ows(sv[i])) {
@@ -444,7 +418,7 @@ class decoder {
         }
         i++;
       }
-      if (i + 1 >= off_) return deserialization_status::kMoreBytesNeeded;
+      if (i + 1 >= sv.size()) return deserialization_status::kMoreBytesNeeded;
       if (sv[i + 0] != '\r' || sv[i + 1] != '\n') {
         return deserialization_status::kInvalidSource;
       }
@@ -470,27 +444,25 @@ class decoder {
   // +=========================================================================+
   // | [>] parse_body                                               ( public ) |
   // +=========================================================================+
-  deserialization_result<RQty> parse_body() {
+  deserialization_result<RQty> parse_body(std::string_view& source) {
     body::framer_state state = std::visit(
-        [this](auto& arg) -> body::framer_state {
+        [this, source](auto& arg) -> body::framer_state {
           std::span<const std::byte> byte_span{
-              reinterpret_cast<const std::byte*>(buffer_.get()), off_};
+              reinterpret_cast<const std::byte*>(source.data()), source.size()};
           return arg.write(byte_span, *body_buffer_);
         },
         *body_framer_);
-    if (state.has_error || state.consumed > off_) {
+    if (state.has_error || state.consumed > source.size()) {
       return deserialization_status::kInvalidSource;
     }
-    std::memmove(buffer_.get(), buffer_.get() + state.consumed,
-                 off_ - state.consumed);
-    off_ -= state.consumed;
+    source.remove_prefix(state.consumed);
     if (!state.complete) return deserialization_status::kMoreBytesNeeded;
     return dispatch(body_buffer_->release());
   }
   // +=========================================================================+
   // | [>] mount_request                                            ( public ) |
   // +=========================================================================+
-  bool mount_request_getter(std::size_t bytes_used) {
+  bool mount_request_getter(std::string_view buffer_view) {
     // Only if the query part is not empty, we will split it into key-value
     // pairs and set it in the request.
     std::vector<query_parameter_view> query_parameters;
@@ -523,17 +495,12 @@ class decoder {
       target_authority_type = context_.target_authority.type;
     }
     // Now that the request is fully validated, we can build the request object
-    std::string_view buffer_view(buffer_.get(), bytes_used);
     request_getter_ = RQty::from(
         buffer_view, method_, absolute_path_, target_, headers_,
         query_parameters, host_host, host_port, host_type,
         target_authority_host, target_authority_port, target_authority_type,
         context_.connection.chunked, context_.content_length,
         context_.connection.close_requested);
-    // Let's adjust the buffer to remove the bytes that were used!
-    std::memmove(buffer_.get(), buffer_.get() + bytes_used,
-                 off_ - bytes_used);
-    off_ -= bytes_used;
     return true;
   }
   // +=========================================================================+
@@ -543,24 +510,10 @@ class decoder {
       std::optional<common::byte_storage> byte_storage) {
     // Let's return the request object!
     deserialization_result<RQty> result = deserialization_result<RQty>(
-        request_getter_(std::move(byte_storage)),
-        context_.connection.close_requested ? channel_intent::kClose
-                                            : channel_intent::kKeep);
-    reset_decoding_attributes();
-    return result;
-  }
-  // +=========================================================================+
-  // | [>] reset_decoding_attributes                               ( private ) |
-  // +=========================================================================+
-  void reset_decoding_attributes() {
-    method_ = {};
-    target_ = target::kUnknown;
-    absolute_path_ = {};
-    query_ = {};
-    headers_ = {};
-    context_ = {};
+        request_getter_(std::move(byte_storage)));
     body_framer_ = std::nullopt;
     body_buffer_ = std::nullopt;
+    return result;
   }
   // +=========================================================================+
   // |                      HTTP/1.1 SERVER HEADER CHECKLIST                   |
@@ -997,14 +950,8 @@ class decoder {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  // A complete interim response: the status-line already carries its CRLF, so
-  // only the empty line that closes the (absent) header section is added here.
-  static constexpr char k100_continue_interim_[] =
-      "HTTP/1.1 100 Continue\r\n\r\n";
-  std::unique_ptr<char[]> buffer_;
   std::optional<common::writer> body_buffer_ = std::nullopt;
   std::optional<body_framer_t> body_framer_ = std::nullopt;
-  std::size_t off_ = 0;
   context context_;
   std::string_view query_;
   std::string_view method_;

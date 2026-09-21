@@ -97,10 +97,10 @@ DOBA_TEST("HTTP controllers preserve asynchronous response ordering") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> value;
+  server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_controller<socket_controller>("/a", signal, cancelled);
   value.add_controller<socket_controller>("/b", signal, cancelled);
-  value.start(std::to_string(port).c_str());
+  value.start();
   DOBA_EXPECT(client.connect(port));
   const bool sent = client.send_all(
       "GET /a/async/42 HTTP/1.1\r\nHost: a\r\n\r\n"
@@ -130,9 +130,9 @@ DOBA_TEST("HTTP suspended controllers receive shutdown cancellation") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> value;
+  server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_controller<socket_controller>("/a", signal, cancelled);
-  value.start(std::to_string(port).c_str());
+  value.start();
   DOBA_EXPECT(client.connect(port));
   const bool sent = client.send_all(
       "GET /a/async/1 HTTP/1.1\r\nHost: a\r\n\r\n");
@@ -154,9 +154,9 @@ DOBA_TEST("HTTP controller state supports concurrent requests and failures") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> value;
+  server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_controller<socket_controller>("/a", signal, cancelled);
-  value.start(std::to_string(port).c_str());
+  value.start();
   std::atomic<unsigned int> total{0};
   {
     std::vector<std::jthread> clients;

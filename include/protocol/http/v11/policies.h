@@ -63,10 +63,9 @@ struct policies {
   bool allow_chunked = true;
   // Whether the server allows protocol upgrades offered via Upgrade.
   //
-  // NOTE: no protocol upgrade is ever completed. Doba never emits a 101 and
-  // never yields channel_intent::kUpgrade, so this flag only decides whether
-  // an offer is rejected or ignored: true accepts the request and serves it
-  // over HTTP/1.1, discarding the offer (RFC 9110 S7.8 explicitly allows a
+  // NOTE: no protocol upgrade is ever completed. This flag only decides
+  // whether an offer is rejected or ignored: true accepts the request and
+  // serves it over HTTP/1.1, discarding the offer (RFC 9110 S7.8 allows a
   // server to ignore Upgrade); false rejects the request outright. Honouring
   // an upgrade is deferred to a future release.
   bool allow_upgrade = true;

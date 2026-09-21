@@ -1,5 +1,9 @@
 # Controllers
 
+Migration status: synchronous controller routes run normally. The current engine
+returns `501 Not Implemented` for the async route; its intended response and
+cancellation behavior below remain pending migration.
+
 This example registers two instances of `counter_controller`, each with a
 constructor-supplied prefix. `register_routes(registrar&)` binds member functions
 using `registrar.add(method, path, &controller::member)`.

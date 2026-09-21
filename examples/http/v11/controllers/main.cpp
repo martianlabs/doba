@@ -105,10 +105,10 @@ class counter_controller {
 };
 
 int main() {
-  server http_server;
+  server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_controller<counter_controller>("/first")
       .add_controller<counter_controller>("/second");
-  http_server.start("8080");
+  http_server.start();
   signaler::wait();
   http_server.stop();
   return 0;

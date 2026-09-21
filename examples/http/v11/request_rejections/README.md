@@ -1,5 +1,9 @@
 # Request rejections
 
+Migration status: The current engine closes rejected requests without generating the HTTP error
+response. The statuses below describe the intended behavior, still pending
+migration.
+
 This server has no application routes. It demonstrates that decoder failures
 become HTTP responses rather than being silently dropped.
 

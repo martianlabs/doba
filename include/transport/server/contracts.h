@@ -22,38 +22,38 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_transport_server_tcpip_h
-#define martianlabs_doba_transport_server_tcpip_h
+#ifndef martianlabs_doba_transport_server_contracts_h
+#define martianlabs_doba_transport_server_contracts_h
 
+#include <concepts>
 #include <functional>
+#include <utility>
 
-#include "platform.h"
-#include "transport/server/contracts.h"
-#include "transport/server/policies.h"
+#include "protocol/contracts.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::contracts {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] types                                                      ( struct ) |
+// | [>] transport                                                   (concept) |
 // +---------------------------------------------------------------------------+
-// | Platform-independent transport delegate types.                            |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct types {
-  using on_client_connected_delegate = std::function<void()>;
-  using on_client_disconnected_delegate = std::function<void()>;
-};
-}  // namespace martianlabs::doba::transport::server
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] PLATFORM-DEPENDENT-INCLUDEs                               ( section ) |
+// | Server transport contract.                                                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-#ifdef _WIN32
-#include "transport/server/tcpip_windows.h"
-#elif __linux__
-#include "transport/server/tcpip_linux.h"
-#endif
+template <typename TRty, typename ENty, typename FNty>
+concept transport =
+    protocol::contracts::engine_factory<FNty, ENty> &&
+    std::constructible_from<TRty, typename TRty::policies_type, FNty> &&
+    requires(TRty& transport, std::function<void()> callback) {
+      typename TRty::policies_type;
+      {
+        transport.set_on_connection(std::move(callback))
+      } -> std::same_as<void>;
+      {
+        transport.set_on_disconnection(std::move(callback))
+      } -> std::same_as<void>;
+      { transport.start() } -> std::same_as<void>;
+      { transport.stop() } -> std::same_as<void>;
+    };
+}  // namespace martianlabs::doba::transport::server::contracts
 
 #endif
