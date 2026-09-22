@@ -69,6 +69,14 @@ static constexpr uint64_t kListenerEventId =
 template <protocol::contracts::engine ENty>
 struct context {
   // +=========================================================================+
+  // | [>] TYPEs                                                    ( public ) |
+  // +=========================================================================+
+  struct wake_event {
+    context* owner{nullptr};
+    std::shared_ptr<wake_event> next;
+    bool queued{false};
+  };
+  // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   template <protocol::contracts::engine_factory<ENty> FAty>
@@ -114,6 +122,7 @@ struct context {
                      receive_size_);
       }
       if (receive_size_ == receive_capacity_) abort();
+      if (closing_) stop();
       if (send_reserved_ && send_offset_ == send_size_ && !send_pending()) abort();
     }
     return received;
@@ -121,9 +130,10 @@ struct context {
   // +=========================================================================+
   // | [>] connected                                                ( public ) |
   // +=========================================================================+
-  void connected(int epoll_fd) {
+  void connected(int epoll_fd, std::function<void()> wake) {
     epoll_fd_ = epoll_fd;
     connected_ = true;
+    engine_.set_on_wake(std::move(wake));
     engine_.set_on_close([this]() { close(); });
     engine_.set_on_send(
         [this](std::unique_ptr<char[]> buffer, std::size_t size,
@@ -131,6 +141,33 @@ struct context {
           send(std::move(buffer), size, std::move(source));
         });
     if (send_reserved_ && send_offset_ == send_size_ && !send_pending()) abort();
+  }
+  // +=========================================================================+
+  // | [>] wake                                                     ( public ) |
+  // +=========================================================================+
+  void wake() {
+    if (closing_) {
+      stop();
+      return;
+    }
+    engine_.on_wake();
+    if (closing_) stop();
+    if (send_reserved_ && send_offset_ == send_size_ && !send_pending()) {
+      abort();
+    }
+  }
+  // +=========================================================================+
+  // | [>] stop                                                     ( public ) |
+  // +=========================================================================+
+  void stop() {
+    closing_ = true;
+    if (engine_stopped_) return;
+    engine_stopped_ = true;
+    try {
+      engine_.on_stop();
+    } catch (...) {
+      aborted_ = true;
+    }
   }
   // +=========================================================================+
   // | [>] close                                                    ( public ) |
@@ -185,6 +222,7 @@ struct context {
   // | [>] send_pending                                             ( public ) |
   // +=========================================================================+
   bool send_pending(bool notify = true) {
+    if (notify && closing_) stop();
     while (send_reserved_ && !aborted_) {
       while (send_offset_ < send_size_) {
         std::size_t size = std::min<std::size_t>(
@@ -273,6 +311,7 @@ struct context {
   // | [>] notify_disconnection                                     ( public ) |
   // +=========================================================================+
   void notify_disconnection() {
+    stop();
     bool pending = send_reserved_ != 0;
     bool succeeded = send_offset_ == send_size_ && !send_source_;
     send_buffer_.reset();
@@ -304,6 +343,7 @@ struct context {
   // | ATTRIBUTEs                                                   ( public ) |
   // +=========================================================================+
   context* retirement_next{nullptr};
+  std::shared_ptr<wake_event> notification;
 
  private:
   // +=========================================================================+
@@ -327,6 +367,7 @@ struct context {
   bool closing_{false};
   bool aborted_{false};
   bool connected_{false};
+  bool engine_stopped_{false};
   bool disconnected_{false};
   std::unique_ptr<char[]> receive_buffer_;
   const std::size_t receive_capacity_;
@@ -342,6 +383,18 @@ struct context {
 template <protocol::contracts::engine ENty,
           protocol::contracts::engine_factory<ENty> FAty>
 struct worker {
+ private:
+  // +=========================================================================+
+  // | [>] TYPEs                                                   ( private ) |
+  // +=========================================================================+
+  struct wake_queue {
+    std::mutex mutex;
+    int descriptor{-1};
+    std::shared_ptr<typename context<ENty>::wake_event> first;
+    std::shared_ptr<typename context<ENty>::wake_event> last;
+  };
+
+ public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
@@ -373,6 +426,7 @@ struct worker {
       close_resources();
       throw std::runtime_error("Stop event could not be created!");
     }
+    notifications_->descriptor = wake_fd_;
     listener_fd_ = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
                             IPPROTO_TCP);
     if (listener_fd_ == -1) {
@@ -499,6 +553,29 @@ struct worker {
     do {
       received = ::read(wake_fd_, &wake, sizeof(wake));
     } while (received == -1 && errno == EINTR);
+    std::shared_ptr<typename context<ENty>::wake_event> events;
+    {
+      std::lock_guard<std::mutex> lock(notifications_->mutex);
+      events = std::move(notifications_->first);
+      notifications_->last.reset();
+    }
+    while (events) {
+      auto event = std::move(events);
+      context<ENty>* ctx = nullptr;
+      {
+        std::lock_guard<std::mutex> lock(notifications_->mutex);
+        events = std::move(event->next);
+        event->queued = false;
+        ctx = event->owner;
+      }
+      if (!ctx || stopping_.load()) continue;
+      try {
+        ctx->wake();
+        if (!ctx->can_receive() && !ctx->send_pending()) close_context(ctx);
+      } catch (...) {
+        close_context(ctx);
+      }
+    }
     if (!stopping_.load()) return;
     if (listener_fd_ != -1) {
       ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, listener_fd_, nullptr);
@@ -508,7 +585,7 @@ struct worker {
     for (const auto& item : contexts_) {
       auto ctx = item.first;
       if (ctx->is_closed()) continue;
-      ctx->close();
+      ctx->stop();
       try {
         if (!ctx->send_pending()) close_context(ctx);
       } catch (...) {
@@ -569,7 +646,28 @@ struct worker {
     }
     try {
       on_connection_();
-      ctx_ptr->connected(epoll_fd_);
+      ctx_ptr->notification =
+          std::make_shared<typename context<ENty>::wake_event>();
+      ctx_ptr->notification->owner = ctx_ptr;
+      ctx_ptr->connected(epoll_fd_,
+          [queue = std::weak_ptr<wake_queue>(notifications_),
+           event = ctx_ptr->notification]() noexcept {
+            auto pending = queue.lock();
+            if (!pending) return;
+            std::lock_guard<std::mutex> lock(pending->mutex);
+            if (pending->descriptor == -1 || !event->owner || event->queued) {
+              return;
+            }
+            event->queued = true;
+            if (pending->last) pending->last->next = event;
+            else pending->first = event;
+            pending->last = event;
+            uint64_t wake = 1;
+            ssize_t written = 0;
+            do {
+              written = ::write(pending->descriptor, &wake, sizeof(wake));
+            } while (written == -1 && errno == EINTR);
+          });
       if (!ctx_ptr->can_receive() && !ctx_ptr->send_pending()) {
         close_context(ctx_ptr);
       }
@@ -586,7 +684,7 @@ struct worker {
       close_context(ctx);
       return;
     }
-    if (stopping_.load()) ctx->close();
+    if (stopping_.load()) ctx->stop();
     if (ctx->can_receive() && (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP))) {
       if (!handle_receive(ctx)) {
         close_context(ctx);
@@ -605,14 +703,14 @@ struct worker {
       ssize_t received = ctx->receive();
       if (received > 0) continue;
       if (received == 0) {
-        ctx->close();
+        ctx->stop();
         return true;
       }
       if (errno == EINTR) continue;
       if (errno == EAGAIN || errno == EWOULDBLOCK) return true;
       return false;
     }
-    if (stopping_.load()) ctx->close();
+    if (stopping_.load()) ctx->stop();
     return true;
   }
   // +=========================================================================+
@@ -621,6 +719,10 @@ struct worker {
   void close_context(context<ENty>* ctx) {
     int socket = ctx->retire_socket();
     if (socket == -1) return;
+    if (ctx->notification) {
+      std::lock_guard<std::mutex> lock(notifications_->mutex);
+      ctx->notification->owner = nullptr;
+    }
     ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket, nullptr);
     ::close(socket);
     ctx->retirement_next = retired_contexts_;
@@ -653,7 +755,16 @@ struct worker {
   // +=========================================================================+
   void close_resources() {
     if (listener_fd_ != -1) ::close(listener_fd_);
-    if (wake_fd_ != -1) ::close(wake_fd_);
+    {
+      std::lock_guard<std::mutex> lock(notifications_->mutex);
+      notifications_->descriptor = -1;
+      if (wake_fd_ != -1) ::close(wake_fd_);
+      while (notifications_->first) {
+        auto event = std::move(notifications_->first);
+        notifications_->first = std::move(event->next);
+      }
+      notifications_->last.reset();
+    }
     if (epoll_fd_ != -1) ::close(epoll_fd_);
     listener_fd_ = -1;
     wake_fd_ = -1;
@@ -666,6 +777,7 @@ struct worker {
   const FAty& create_engine_;
   int epoll_fd_{-1};
   int wake_fd_{-1};
+  std::shared_ptr<wake_queue> notifications_{std::make_shared<wake_queue>()};
   int listener_fd_{-1};
   std::atomic<bool> stopping_{false};
   std::jthread thread_;

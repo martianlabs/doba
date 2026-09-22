@@ -60,7 +60,7 @@ static constexpr DWORD kAcceptAddressBytes =
 // | [>] io_type                                                ( enum-class ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-enum class io_type : uint8_t { kAccept, kSend, kReceive };
+enum class io_type : uint8_t { kAccept, kSend, kReceive, kWake };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] FORWARDs                                                   ( public ) |
@@ -123,6 +123,19 @@ struct overlapped_send : overlapped_base {
   overlapped_send(std::shared_ptr<context<ENty>> context)
       : overlapped_base(io_type::kSend), ctx{context} {}
   std::shared_ptr<context<ENty>> ctx;
+};
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] overlapped_wake                                            ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Internal implementation detail.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <protocol::contracts::engine ENty>
+struct overlapped_wake : overlapped_base {
+  explicit overlapped_wake(context<ENty>* value)
+      : overlapped_base(io_type::kWake), ctx{value} {}
+  context<ENty>* ctx;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -270,18 +283,18 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // +=========================================================================+
   bool receive_completed(std::size_t size) {
     std::lock_guard<std::mutex> engine_lock(engine_mutex_);
+    bool active = false;
     {
       std::lock_guard<std::mutex> sending_lock(sending_mutex_);
       receiving_ = false;
-      if (socket_ == INVALID_SOCKET) {
-        retire_();
-        return false;
-      }
       if (stopping_.load()) closing_ = true;
-      if (closing_) {
-        cleanup_resources_();
-        return false;
-      }
+      if (socket_ == INVALID_SOCKET) retire_();
+      else if (closing_) cleanup_resources_();
+      else active = true;
+    }
+    if (!active) {
+      cancel_sends_();
+      return false;
     }
     if (size) {
       ovr_size_ += size;
@@ -306,6 +319,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
       }
       if (ovr_size_ == ovr_capacity_) {
         abort();
+        cancel_sends_();
         return false;
       }
     }
@@ -315,13 +329,14 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // | [>] receive_failed                                           ( public ) |
   // +=========================================================================+
   void receive_failed() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-    receiving_ = false;
-    if (closing_) {
-      cleanup_resources_();
-      return;
+    std::lock_guard<std::mutex> engine_lock(engine_mutex_);
+    {
+      std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+      receiving_ = false;
+      if (closing_) cleanup_resources_();
+      else abort_();
     }
-    abort_();
+    cancel_sends_();
   }
   // +=========================================================================+
   // | [>] send_failed                                              ( public ) |
@@ -345,7 +360,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // +=========================================================================+
   // | [>] connected                                                ( public ) |
   // +=========================================================================+
-  void connected() {
+  void connected(HANDLE completion_port) {
     std::lock_guard<std::mutex> engine_lock(engine_mutex_);
     {
       std::lock_guard<std::mutex> sending_lock(sending_mutex_);
@@ -353,6 +368,22 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
       notify_disconnection_();
     }
     try {
+      engine_.set_on_wake(
+          [weak = this->weak_from_this(), completion_port]() noexcept {
+            auto ctx = weak.lock();
+            if (!ctx) return;
+            std::lock_guard<std::mutex> lock(ctx->sending_mutex_);
+            if (ctx->closing_ || ctx->socket_ == INVALID_SOCKET ||
+                ctx->wake_pending_) return;
+            ctx->wake_pending_ = true;
+            ctx->wake_owner_ = ctx;
+            if (!PostQueuedCompletionStatus(completion_port, 0, 0,
+                                            &ctx->wake_event_)) {
+              ctx->wake_pending_ = false;
+              ctx->wake_owner_.reset();
+              ctx->abort_();
+            }
+          });
       engine_.set_on_close([this]() { close(); });
       engine_.set_on_send(
           [this](std::unique_ptr<char[]> buffer, std::size_t size,
@@ -363,6 +394,27 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
       abort();
       cancel_sends_();
       throw;
+    }
+    cancel_sends_();
+  }
+  // +=========================================================================+
+  // | [>] wake                                                     ( public ) |
+  // +=========================================================================+
+  void wake() {
+    std::lock_guard<std::mutex> engine_lock(engine_mutex_);
+    bool active = false;
+    {
+      std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+      wake_pending_ = false;
+      wake_owner_.reset();
+      if (stopping_.load()) closing_ = true;
+      active = !closing_ && socket_ != INVALID_SOCKET;
+      if (closing_) cleanup_resources_();
+    }
+    try {
+      if (active) engine_.on_wake();
+    } catch (...) {
+      abort();
     }
     cancel_sends_();
   }
@@ -380,6 +432,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   void stop() {
     std::lock_guard<std::mutex> engine_lock(engine_mutex_);
     close();
+    cancel_sends_();
   }
 
  private:
@@ -389,15 +442,26 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   void cancel_sends_() {
     // Called with engine_mutex_ held, after leaving the engine callback.
     std::size_t count = 0;
+    bool closing = false;
     {
       std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-      if (sending_ || socket_ != INVALID_SOCKET) return;
-      count = send_queue_.size() + (send_reserved_ ? 1 : 0);
-      send_buffer_.reset();
-      send_source_.reset();
-      send_reserved_ = 0;
-      send_queue_.clear();
-      send_bytes_ = 0;
+      closing = closing_;
+      if (!sending_ && socket_ == INVALID_SOCKET) {
+        count = send_queue_.size() + (send_reserved_ ? 1 : 0);
+        send_buffer_.reset();
+        send_source_.reset();
+        send_reserved_ = 0;
+        send_queue_.clear();
+        send_bytes_ = 0;
+      }
+    }
+    if (closing && !engine_stopped_) {
+      engine_stopped_ = true;
+      try {
+        engine_.on_stop();
+      } catch (...) {
+        abort();
+      }
     }
     for (std::size_t i = 0; i < count; i++) {
       try {
@@ -526,7 +590,8 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // | [>] retire_                                                 ( private ) |
   // +=========================================================================+
   void retire_() {
-    if (retired_ || socket_ != INVALID_SOCKET || receiving_ || sending_) return;
+    if (retired_ || socket_ != INVALID_SOCKET || receiving_ || sending_ ||
+        wake_pending_) return;
     retired_ = true;
     if (on_retirement_) on_retirement_(this);
   }
@@ -553,6 +618,10 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   mutable std::mutex sending_mutex_;
   bool closing_{false};
   bool connected_{false};
+  bool engine_stopped_{false};
+  bool wake_pending_{false};
+  overlapped_wake<ENty> wake_event_{this};
+  std::shared_ptr<context> wake_owner_;
   bool disconnected_{false};
   bool receiving_{false};
   bool sending_{false};
@@ -847,6 +916,13 @@ class tcpip {
           if (st == TRUE && ovb == nullptr) {
             stopping = true;
           } else if (st == TRUE) {
+            if (ovb->get_type() == io_type::kWake) {
+              // The queued event retains its context until this worker owns it.
+              auto ctx = reinterpret_cast<overlapped_wake<ENty>*>(ovb)
+                             ->ctx->shared_from_this();
+              ctx->wake();
+              continue;
+            }
             if (ovb->get_type() == io_type::kAccept) {
               auto ova = (overlapped_accept*)ovb;
               handle_accept(ova);
@@ -981,18 +1057,19 @@ class tcpip {
     // Let's call user's callback to notify for new connection!
     try {
       on_connection_();
-      ctx->connected();
+      ctx->connected(io_h_);
     } catch (const std::exception&) {
-      ctx->close();
+      ctx->stop();
       finish_accept();
       return;
     } catch (...) {
-      ctx->close();
+      ctx->stop();
       finish_accept();
       return;
     }
     // Let's arm next receive operation!
     if (!ctx->arm_next_receive_operation()) {
+      ctx->stop();
       finish_accept();
       return;
     }
@@ -1006,12 +1083,13 @@ class tcpip {
     try {
       if (!ctx->receive_completed(bytes_received)) return;
       if (!bytes_received) {
-        ctx->close();
+        ctx->stop();
         return;
       }
-      ctx->arm_next_receive_operation();
+      if (!ctx->arm_next_receive_operation()) ctx->stop();
     } catch (...) {
       ctx->abort();
+      ctx->stop();
     }
   }
   // +=========================================================================+
@@ -1022,6 +1100,7 @@ class tcpip {
       ovs->ctx->send_completed(bytes_sent);
     } catch (...) {
       ovs->ctx->abort();
+      ovs->ctx->stop();
     }
   }
   // +=========================================================================+
@@ -1041,6 +1120,8 @@ class tcpip {
       case io_type::kSend:
         reinterpret_cast<overlapped_send<ENty>*>(ovb)->ctx->send_failed();
         break;
+      case io_type::kWake:
+        break;
     }
   }
   // +=========================================================================+
@@ -1056,6 +1137,8 @@ class tcpip {
         break;
       case io_type::kSend:
         delete reinterpret_cast<overlapped_send<ENty>*>(ovb);
+        break;
+      case io_type::kWake:
         break;
     }
   }

@@ -80,7 +80,9 @@ struct fake_transport {
         if (source) source->read_all(observed.bytes);
       });
       value.set_on_close([]() {});
+      value.set_on_wake([]() {});
       value.on_bytes_received(request.data(), request.size(), 4096);
+      value.on_stop();
     }
   }
   void stop() { observed.stops++; }
@@ -141,6 +143,19 @@ struct private_policies_transport : fake_transport<ENty, FNty> {
 struct bad_engine : engine_type {
   explicit bad_engine(http::policies);
 };
+
+struct bad_wake_engine : engine_type {
+  void on_wake() = delete;
+};
+struct bad_wake_delegate_engine : engine_type {
+  void set_on_wake(std::function<void()>) = delete;
+};
+struct bad_stop_engine : engine_type {
+  void on_stop() = delete;
+};
+static_assert(!protocol::contracts::engine<bad_wake_engine>);
+static_assert(!protocol::contracts::engine<bad_wake_delegate_engine>);
+static_assert(!protocol::contracts::engine<bad_stop_engine>);
 
 template <typename ENty, template <typename, typename> class TRty>
 concept accepts_server = requires {

@@ -54,6 +54,8 @@ struct byte_state {
   std::atomic<int> disconnected{0};
   std::atomic<int> completed{0};
   std::atomic<int> failed{0};
+  std::atomic<int> stopped{0};
+  std::function<void(byte_engine&)> wake;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -66,6 +68,9 @@ struct byte_engine {
     send = std::move(value);
   }
   void set_on_close(std::function<void()> value) { close = std::move(value); }
+  void set_on_wake(std::function<void()> value) { wake = std::move(value); }
+  void on_wake() { if (state->wake) state->wake(*this); }
+  void on_stop() { state->stopped++; }
   void on_send_completed(bool success) {
     if (success) state->completed++;
     else state->failed++;
@@ -85,6 +90,7 @@ struct byte_engine {
   std::shared_ptr<byte_state> state;
   martianlabs::doba::common::send_delegate send;
   std::function<void()> close;
+  std::function<void()> wake{};
 };
 bool wait_count(const std::atomic<int>& count, int expected) {
   const auto deadline = std::chrono::steady_clock::now() + 3s;
@@ -765,4 +771,64 @@ DOBA_TEST("tcpip isolates interleaved fragments from concurrent clients") {
     clients[i].close();
   }
   server.stop();
+}
+
+// +===========================================================================+
+// | [>] tcpip serializes wakes and invalidates them on stop      ( test-case )|
+// +===========================================================================+
+DOBA_TEST("tcpip serializes wakes and invalidates them on stop") {
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  auto state = std::make_shared<byte_state>();
+  std::function<void()> wake{};
+  std::atomic<int> received{0};
+  std::atomic<int> callbacks{0};
+  std::atomic<int> overlap{0};
+  std::atomic<bool> receiving{false};
+  state->receive = [&](byte_engine& engine, const char*, std::size_t size,
+                       std::size_t) {
+    receiving = true;
+    wake = engine.wake;
+    engine.wake();
+    receiving = false;
+    received++;
+    return size;
+  };
+  state->wake = [&](byte_engine& engine) {
+    if (receiving.load()) overlap++;
+    callbacks++;
+    engine.echo("x", 1);
+  };
+  auto factory = [state]() {
+    byte_engine engine;
+    engine.state = state;
+    return engine;
+  };
+  {
+    tr::tcpip<byte_engine, decltype(factory)> transport(
+        {.worker_count = 2, .ip = "127.0.0.1", .port = std::to_string(port)},
+        factory);
+    transport.set_on_connection([state]() { state->connected++; });
+    transport.set_on_disconnection([state]() { state->disconnected++; });
+    transport.start();
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send_all("wake"));
+    DOBA_EXPECT(wait_count(received, 1));
+    DOBA_EXPECT(wait_count(callbacks, 1));
+    std::jthread completing([&]() { wake(); });
+    completing.join();
+    DOBA_EXPECT(wait_count(callbacks, 2));
+    std::jthread waking([&]() {
+      for (int i = 0; i < 256; i++) wake();
+    });
+    transport.stop();
+    waking.join();
+    DOBA_EXPECT_EQUAL(state->stopped.load(), 1);
+    DOBA_EXPECT_EQUAL(overlap.load(), 0);
+  }
+  const auto count = callbacks.load();
+  wake();
+  DOBA_EXPECT_EQUAL(callbacks.load(), count);
+  client.close();
 }

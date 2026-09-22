@@ -22,12 +22,15 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <atomic>
+#include <coroutine>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <stop_token>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 #include "protocol/http/v11/engine.h"
@@ -67,6 +70,10 @@ struct connection {
       if (source) source->read_all(wire);
     });
     value.set_on_close([this]() { closes++; });
+    value.set_on_wake([wakes = wakes]() { wakes->fetch_add(1); });
+  }
+  void poll() {
+    if (wakes->exchange(0)) value.on_wake();
   }
   void complete() {
     while (completed < blocks.size()) {
@@ -82,6 +89,25 @@ struct connection {
   std::vector<std::size_t> blocks;
   std::size_t completed{0};
   int closes{0};
+  std::shared_ptr<std::atomic<int>> wakes{
+      std::make_shared<std::atomic<int>>(0)};
+};
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] suspension                                                ( struct )  |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct suspension {
+  bool await_ready() const noexcept { return false; }
+  void await_suspend(std::coroutine_handle<> value) noexcept {
+    pending.store(value);
+  }
+  void await_resume() const noexcept {}
+  void resume() {
+    auto value = pending.exchange(nullptr);
+    if (value) value.resume();
+  }
+  std::atomic<std::coroutine_handle<>> pending{nullptr};
 };
 }  // namespace
 
@@ -157,7 +183,7 @@ DOBA_TEST("engine returns routing and handler errors") {
              });
   const std::vector<std::pair<std::string, std::string>> cases{
       {"GET /missing", "404"}, {"POST /", "405"}, {"GET /fail", "500"},
-      {"GET /async", "501"}, {"CONNECT localhost:443", "501"},
+      {"GET /async", "200"}, {"CONNECT localhost:443", "501"},
       {"OPTIONS *", "200"}};
   for (const auto& [line, status] : cases) {
     connection current(routes);
@@ -168,7 +194,7 @@ DOBA_TEST("engine returns routing and handler errors") {
       DOBA_EXPECT(current.wire.find("Allow: GET\r\n") != std::string::npos);
     }
   }
-  DOBA_EXPECT(!async_called);
+  DOBA_EXPECT(async_called);
 }
 // +===========================================================================+
 // | [>] engine preserves pipelined response order               ( test-case ) |
@@ -338,4 +364,279 @@ DOBA_TEST("engine transfers unread sources") {
   pending->read_all(received);
   DOBA_EXPECT_EQUAL(received, body);
   DOBA_EXPECT(!pending->failed());
+}
+
+// +===========================================================================+
+// | [>] engine completes immediate tasks without a wake         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("engine completes immediate tasks without a wake") {
+  router<request, response> routes;
+  routes.add("GET", "/", [](std::shared_ptr<const request>,
+                            std::stop_token) -> task<response> {
+    co_return make_response("ready");
+  });
+  connection current(routes);
+  const std::string bytes = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  current.receive(bytes + bytes);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 2);
+  DOBA_EXPECT_EQUAL(current.wakes->load(), 0);
+  DOBA_EXPECT_EQUAL(current.completed, 0);
+}
+// +===========================================================================+
+// | [>] engine releases mixed responses without send completion( test-case )  |
+// +===========================================================================+
+DOBA_TEST("engine releases mixed responses without send completion") {
+  router<request, response> routes;
+  suspension first;
+  routes.add("GET", "/first", [&](std::shared_ptr<const request>,
+                                 std::stop_token) -> task<response> {
+    co_await first;
+    co_return make_response("first");
+  });
+  routes.add("GET", "/second", [](const request&) {
+    return make_response("second");
+  });
+  routes.add("GET", "/third", [](std::shared_ptr<const request>,
+                                std::stop_token) -> task<response> {
+    co_return make_response("third");
+  });
+  connection current(routes);
+  current.receive("GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                  "GET /second HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                  "GET /third HTTP/1.1\r\nHost: localhost\r\n\r\n");
+  DOBA_EXPECT(current.blocks.empty());
+  std::jthread completing([&]() { first.resume(); });
+  completing.join();
+  DOBA_EXPECT(current.blocks.empty());
+  current.poll();
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 3);
+  DOBA_EXPECT_EQUAL(current.completed, 0);
+  DOBA_EXPECT(current.wire.find("\r\n\r\nfirst") <
+              current.wire.find("\r\n\r\nsecond"));
+  DOBA_EXPECT(current.wire.ends_with("\r\n\r\nthird"));
+  current.receive("GET /second HTTP/1.1\r\nHost: localhost\r\n\r\n");
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 4);
+  DOBA_EXPECT_EQUAL(current.wakes->load(), 0);
+}
+// +===========================================================================+
+// | [>] engine retains reverse completions until their turn     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("engine retains reverse completions until their turn") {
+  router<request, response> routes;
+  suspension first;
+  suspension second;
+  routes.add("GET", "/first", [&](std::shared_ptr<const request>,
+                                 std::stop_token) -> task<response> {
+    co_await first;
+    co_return make_response("first");
+  });
+  routes.add("GET", "/second", [&](std::shared_ptr<const request>,
+                                  std::stop_token) -> task<response> {
+    co_await second;
+    co_return make_response("second");
+  });
+  connection current(routes);
+  current.receive("GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                  "GET /second HTTP/1.1\r\nHost: localhost\r\n\r\n");
+  std::jthread completing_second([&]() { second.resume(); });
+  completing_second.join();
+  current.poll();
+  DOBA_EXPECT(current.blocks.empty());
+  std::jthread completing_first([&]() { first.resume(); });
+  completing_first.join();
+  current.poll();
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 2);
+  DOBA_EXPECT(current.wire.find("\r\n\r\nfirst") <
+              current.wire.find("\r\n\r\nsecond"));
+}
+// +===========================================================================+
+// | [>] engine handles completion during initial suspension     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("engine handles completion during initial suspension") {
+  for (int i = 0; i < 100; i++) {
+    router<request, response> routes;
+    suspension signal;
+    routes.add("GET", "/", [&](std::shared_ptr<const request>,
+                              std::stop_token) -> task<response> {
+      co_await signal;
+      co_return make_response("ready");
+    });
+    connection current(routes);
+    std::jthread completing([&](std::stop_token stop) {
+      while (!signal.pending.load()) {
+        if (stop.stop_requested()) {
+          signal.resume();
+          return;
+        }
+        std::this_thread::yield();
+      }
+      signal.resume();
+    });
+    current.receive("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n");
+    completing.request_stop();
+    completing.join();
+    current.poll();
+    DOBA_EXPECT_EQUAL(current.blocks.size(), 1);
+    DOBA_EXPECT(current.wire.ends_with("\r\n\r\nready"));
+    DOBA_EXPECT_EQUAL(current.closes, 0);
+  }
+}
+// +===========================================================================+
+// | [>] engine permits late completion after destruction        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("engine permits late completion after destruction") {
+  router<request, response> routes;
+  suspension signal;
+  std::stop_token cancellation;
+  std::weak_ptr<const request> retained;
+  routes.add("GET", "/", [&](std::shared_ptr<const request> input,
+                            std::stop_token stop) -> task<response> {
+    cancellation = stop;
+    retained = input;
+    co_await signal;
+    co_return make_response(input->get_absolute_path());
+  });
+  {
+    connection current(routes);
+    current.receive("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n");
+    DOBA_EXPECT(!retained.expired());
+  }
+  DOBA_EXPECT(cancellation.stop_requested());
+  std::jthread completing([&]() { signal.resume(); });
+  completing.join();
+  DOBA_EXPECT(retained.expired());
+}
+// +===========================================================================+
+// | [>] engine orders a suspended close and ignores successors  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("engine orders a suspended close and ignores successors") {
+  router<request, response> routes;
+  suspension first;
+  suspension last;
+  int later = 0;
+  routes.add("GET", "/first", [&](std::shared_ptr<const request>,
+                                 std::stop_token) -> task<response> {
+    co_await first;
+    co_return make_response("first");
+  });
+  routes.add("GET", "/last", [&](std::shared_ptr<const request>,
+                                std::stop_token) -> task<response> {
+    co_await last;
+    co_return make_response("last");
+  });
+  routes.add("GET", "/later", [&](const request&) {
+    later++;
+    return make_response("later");
+  });
+  connection current(routes);
+  const std::string accepted =
+      "GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n"
+      "GET /last HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
+  DOBA_EXPECT_EQUAL(current.receive(accepted +
+      "GET /later HTTP/1.1\r\nHost: localhost\r\n\r\n"), accepted.size());
+  last.resume();
+  current.poll();
+  DOBA_EXPECT(current.blocks.empty());
+  DOBA_EXPECT_EQUAL(current.closes, 0);
+  first.resume();
+  current.poll();
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 2);
+  DOBA_EXPECT_EQUAL(current.closes, 1);
+  DOBA_EXPECT_EQUAL(later, 0);
+  DOBA_EXPECT_EQUAL(current.completed, 0);
+}
+// +===========================================================================+
+// | [>] engine serializes unsafe handlers within a pipeline     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("engine serializes unsafe handlers within a pipeline") {
+  router<request, response> routes;
+  suspension first;
+  suspension write;
+  std::string executed;
+  routes.add("GET", "/first", [&](std::shared_ptr<const request>,
+                                 std::stop_token) -> task<response> {
+    co_await first;
+    executed += 'A';
+    co_return make_response("first");
+  });
+  routes.add("POST", "/write", [&](std::shared_ptr<const request>,
+                                  std::stop_token) -> task<response> {
+    executed += 'B';
+    co_await write;
+    executed += 'C';
+    co_return make_response("write");
+  });
+  routes.add("GET", "/last", [&](const request&) {
+    executed += 'D';
+    return make_response("last");
+  });
+  connection current(routes);
+  current.receive("GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                  "POST /write HTTP/1.1\r\nHost: localhost\r\n"
+                  "Content-Length: 0\r\n\r\n"
+                  "GET /last HTTP/1.1\r\nHost: localhost\r\n\r\n");
+  DOBA_EXPECT(executed.empty());
+  first.resume();
+  current.poll();
+  DOBA_EXPECT_EQUAL(executed, "AB");
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 1);
+  write.resume();
+  current.poll();
+  DOBA_EXPECT_EQUAL(executed, "ABCD");
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 3);
+}
+// +===========================================================================+
+// | [>] engine preserves the turn of a deferred exception       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("engine preserves the turn of a deferred exception") {
+  router<request, response> routes;
+  suspension signal;
+  routes.add("GET", "/fail", [&](std::shared_ptr<const request>,
+                                std::stop_token) -> task<response> {
+    co_await signal;
+    throw std::runtime_error("private diagnostic");
+    co_return make_response("unreachable");
+  });
+  routes.add("GET", "/ok", [](const request&) { return make_response("ok"); });
+  connection current(routes);
+  current.receive("GET /fail HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                  "GET /ok HTTP/1.1\r\nHost: localhost\r\n\r\n");
+  DOBA_EXPECT(current.blocks.empty());
+  signal.resume();
+  current.poll();
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 2);
+  DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 500 "));
+  DOBA_EXPECT(current.wire.ends_with("\r\n\r\nok"));
+  DOBA_EXPECT(current.wire.find("private diagnostic") == std::string::npos);
+}
+
+// +===========================================================================+
+// | [>] engine races cancellation with external completion      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("engine races cancellation with external completion") {
+  for (int i = 0; i < 100; i++) {
+    router<request, response> routes;
+    suspension signal;
+    std::weak_ptr<const request> retained;
+    std::stop_token cancellation;
+    routes.add("GET", "/", [&](std::shared_ptr<const request> input,
+                              std::stop_token stop) -> task<response> {
+      retained = input;
+      cancellation = stop;
+      std::stop_callback cancel(stop, [&]() { signal.resume(); });
+      co_await signal;
+      co_return make_response("finished");
+    });
+    {
+      connection current(routes);
+      current.receive("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n");
+      std::jthread completing([&]() { signal.resume(); });
+      current.value.on_stop();
+      completing.join();
+      current.poll();
+      DOBA_EXPECT(cancellation.stop_requested());
+      DOBA_EXPECT(current.blocks.empty());
+    }
+    DOBA_EXPECT(retained.expired());
+  }
 }

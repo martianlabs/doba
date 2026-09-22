@@ -76,6 +76,9 @@ struct drain_engine {
   ~drain_engine() { state_->destroyed++; }
   void set_on_send(send_delegate output) { output_ = std::move(output); }
   void set_on_close(std::function<void()>) {}
+  void set_on_wake(std::function<void()>) {}
+  void on_wake() {}
+  void on_stop() {}
   void on_send_completed(bool) {}
   std::size_t on_bytes_received(const char* bytes, std::size_t size,
                                 std::size_t) {
@@ -196,6 +199,9 @@ struct reader_engine {
       : state_(std::move(state)) {}
   void set_on_send(send_delegate output) { output_ = std::move(output); }
   void set_on_close(std::function<void()> close) { close_ = std::move(close); }
+  void set_on_wake(std::function<void()>) {}
+  void on_wake() {}
+  void on_stop() {}
   void on_send_completed(bool succeeded) {
     if (in_callback_) state_->reentered++;
     if (succeeded) state_->succeeded++;

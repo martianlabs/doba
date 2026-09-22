@@ -40,13 +40,22 @@ namespace martianlabs::doba::protocol::contracts {
 // | Protocol engine contract.                                                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+// The installed wake delegate is nonthrowing, thread-safe, and remains safe
+// after stop. It schedules on_wake(), never calling the engine inline.
+// Wakes may coalesce. All callbacks are serialized per connection.
+// on_stop() runs once as the connection stops; no input or wakes follow it.
+// Admitted sends may still complete while the transport drains.
 template <typename ENty>
 concept engine = requires(ENty& engine, const char* buf, std::size_t sze,
                           std::size_t capacity, common::send_delegate output,
-                          std::function<void()> close) {
+                          std::function<void()> close,
+                          std::function<void()> wake) {
   typename ENty::policies_type;
   { engine.set_on_send(std::move(output)) } -> std::same_as<void>;
   { engine.set_on_close(std::move(close)) } -> std::same_as<void>;
+  { engine.set_on_wake(std::move(wake)) } -> std::same_as<void>;
+  { engine.on_wake() } -> std::same_as<void>;
+  { engine.on_stop() } -> std::same_as<void>;
   { engine.on_send_completed(true) } -> std::same_as<void>;
   { engine.on_bytes_received(buf, sze, capacity) } -> std::same_as<std::size_t>;
 };

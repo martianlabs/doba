@@ -22,6 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <atomic>
+#include <coroutine>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -64,12 +66,21 @@ struct memory_transport {
       if (source) source->read_all(bytes);
     });
     connection->set_on_close([this]() { closed = true; });
+    wake = std::make_shared<std::atomic<bool>>(false);
+    connection->set_on_wake([wake = wake]() { wake->store(true); });
     closed = false;
   }
-  void stop() { connection.reset(); }
+  void stop() {
+    if (connection) connection->on_stop();
+    connection.reset();
+  }
+  void poll() {
+    if (connection && !closed && wake->exchange(false)) connection->on_wake();
+  }
   std::string receive(std::string_view wire) {
     bytes.clear();
     connection->on_bytes_received(wire.data(), wire.size(), 8192);
+    poll();
     return bytes;
   }
   bool fail;
@@ -77,6 +88,7 @@ struct memory_transport {
   std::unique_ptr<ENty> connection;
   std::string bytes;
   bool closed{false};
+  std::shared_ptr<std::atomic<bool>> wake;
   static inline memory_transport* instance = nullptr;
 };
 using test_server = http::server<http::request, http::response, routes_type,
@@ -195,6 +207,7 @@ DOBA_TEST("server completes suspended async responses") {
   DOBA_EXPECT(bytes.empty());
   DOBA_EXPECT(pending != nullptr);
   pending.resume();
+  test_transport::instance->poll();
   DOBA_EXPECT(test_transport::instance->bytes.ends_with("\r\n\r\nasync"));
 }
 // +===========================================================================+
@@ -246,12 +259,19 @@ DOBA_TEST("sync handler failure preserves subsequent dispatch") {
 DOBA_TEST("async handler observes cancellation after suspension") {
   std::stop_token token;
   bool invoked = false;
+  std::coroutine_handle<> pending;
+  struct awaiter {
+    std::coroutine_handle<>& pending;
+    bool await_ready() const { return false; }
+    void await_suspend(std::coroutine_handle<> value) { pending = value; }
+    void await_resume() const {}
+  };
   test_server value;
   value.add_route("GET", "/", [&](std::shared_ptr<const http::request>,
                                     std::stop_token stop) -> task<http::response> {
     invoked = true;
     token = stop;
-    co_await std::suspend_always{};
+    co_await awaiter{pending};
     co_return http::response::ok_200();
   });
   value.start();
@@ -259,6 +279,7 @@ DOBA_TEST("async handler observes cancellation after suspension") {
   DOBA_EXPECT(invoked);
   value.stop();
   DOBA_EXPECT(token.stop_requested());
+  pending.resume();
 }
 // +===========================================================================+
 // | [>] server retains controllers and rejects live registration( test-case ) |
