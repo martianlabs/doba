@@ -208,12 +208,14 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
       return;
     }
     send_bytes_ -= send_reserved_;
+    send_active_ = false;
     send_reserved_ = 0;
     send_buffer_.reset();
     if (socket_ != INVALID_SOCKET && !send_queue_.empty()) {
       send_buffer_ = std::move(std::get<0>(send_queue_.front()));
       send_source_ = std::move(std::get<2>(send_queue_.front()));
       send_size_ = std::get<1>(send_queue_.front());
+      send_active_ = true;
       send_reserved_ = send_source_
           ? std::max(send_size_, std::min<std::size_t>(8192, send_capacity_))
           : send_size_;
@@ -242,16 +244,18 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     if (closing_ || socket_ == INVALID_SOCKET) return;
     const std::size_t reserved = source
         ? std::max(size, std::min<std::size_t>(8192, send_capacity_)) : size;
-    if ((size && !buffer) || (!size && !source) ||
+    if ((size && !buffer) ||
         reserved > send_capacity_ - send_bytes_) {
+      send_rejected_ = true;
       abort_();
       return;
     }
-    if (send_reserved_) {
+    if (send_active_) {
       send_queue_.emplace_back(std::move(buffer), size, std::move(source));
     } else {
       send_buffer_ = std::move(buffer);
       send_source_ = std::move(source);
+      send_active_ = true;
       send_reserved_ = reserved;
       send_streaming_ = false;
       send_size_ = size;
@@ -451,9 +455,12 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
       std::lock_guard<std::mutex> sending_lock(sending_mutex_);
       closing = closing_;
       if (!sending_ && socket_ == INVALID_SOCKET) {
-        count = send_queue_.size() + (send_reserved_ ? 1 : 0);
+        count = send_queue_.size() + (send_active_ ? 1 : 0) +
+                (send_rejected_ ? 1 : 0);
+        send_rejected_ = false;
         send_buffer_.reset();
         send_source_.reset();
+        send_active_ = false;
         send_reserved_ = 0;
         send_queue_.clear();
         send_bytes_ = 0;
@@ -625,6 +632,8 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   std::size_t send_reserved_{0};
   std::size_t send_size_{0};
   std::size_t send_offset_{0};
+  bool send_active_{false};
+  bool send_rejected_{false};
   bool send_streaming_{false};
   mutable std::mutex sending_mutex_;
   bool closing_{false};

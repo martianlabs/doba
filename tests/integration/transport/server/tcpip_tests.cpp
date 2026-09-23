@@ -28,6 +28,7 @@
 #include <cstring>
 #include <functional>
 #include <memory>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -56,6 +57,7 @@ struct byte_state {
   std::atomic<int> failed{0};
   std::atomic<int> stopped{0};
   std::function<void(byte_engine&)> wake;
+  std::function<void(bool)> completion;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -72,6 +74,7 @@ struct byte_engine {
   void on_wake() { if (state->wake) state->wake(*this); }
   void on_stop() { state->stopped++; }
   void on_send_completed(bool success) {
+    if (state->completion) state->completion(success);
     if (success) state->completed++;
     else state->failed++;
   }
@@ -785,20 +788,30 @@ DOBA_TEST("tcpip serializes wakes and invalidates them on stop") {
   std::atomic<int> received{0};
   std::atomic<int> callbacks{0};
   std::atomic<int> overlap{0};
-  std::atomic<bool> receiving{false};
+  std::atomic<int> after_stop{0};
+  std::atomic<int> active{0};
   state->receive = [&](byte_engine& engine, const char*, std::size_t size,
                        std::size_t) {
-    receiving = true;
+    if (state->stopped.load()) after_stop++;
+    if (active.fetch_add(1)) overlap++;
     wake = engine.wake;
     engine.wake();
-    receiving = false;
+    if (state->stopped.load()) after_stop++;
+    active--;
     received++;
     return size;
   };
   state->wake = [&](byte_engine& engine) {
-    if (receiving.load()) overlap++;
+    if (state->stopped.load()) after_stop++;
+    if (active.fetch_add(1)) overlap++;
     callbacks++;
     engine.echo("x", 1);
+    if (state->stopped.load()) after_stop++;
+    active--;
+  };
+  state->completion = [&](bool) {
+    if (active.fetch_add(1)) overlap++;
+    active--;
   };
   auto factory = [state]() {
     byte_engine engine;
@@ -826,9 +839,261 @@ DOBA_TEST("tcpip serializes wakes and invalidates them on stop") {
     waking.join();
     DOBA_EXPECT_EQUAL(state->stopped.load(), 1);
     DOBA_EXPECT_EQUAL(overlap.load(), 0);
+    DOBA_EXPECT_EQUAL(after_stop.load(), 0);
+    DOBA_EXPECT_EQUAL(state->completed.load() + state->failed.load(),
+                      callbacks.load());
   }
   const auto count = callbacks.load();
   wake();
   DOBA_EXPECT_EQUAL(callbacks.load(), count);
   client.close();
+}
+
+// +===========================================================================+
+// | [>] isolated empty deliveries                               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tcpip completes isolated empty deliveries") {
+  for (const bool null_buffer : {false, true}) {
+    tcpip_client client;
+    const auto port = client.find_available_port();
+    DOBA_EXPECT(port != 0);
+    auto state = std::make_shared<byte_state>();
+    auto factory = [state]() { return byte_engine{state, {}, {}}; };
+    tr::policies configuration;
+    configuration.ip = "127.0.0.1";
+    configuration.port = std::to_string(port);
+    configuration.worker_count = 2;
+    configuration.send_buffer_size = 2;
+    tr::tcpip<byte_engine, decltype(factory)> server(configuration, factory);
+    server.set_on_connection([]() {});
+    server.set_on_disconnection([]() {});
+    std::atomic<bool> in_callback{false};
+    std::atomic<int> reentered{0};
+    state->completion = [&](bool) {
+      if (in_callback.load()) reentered++;
+    };
+    state->receive = [&](byte_engine& engine, const char* bytes,
+                         std::size_t size, std::size_t) {
+      in_callback = true;
+      if (bytes[0] == 'e') {
+        for (int i = 0; i < 3; i++) {
+          if (null_buffer) engine.send(nullptr, 0, std::nullopt);
+          else engine.echo(bytes, 0);
+        }
+      } else {
+        engine.echo("a", 1);
+        engine.send(nullptr, 0, std::nullopt);
+        engine.echo("b", 1);
+        engine.send(nullptr, 0, std::nullopt);
+        engine.close();
+      }
+      in_callback = false;
+      return size;
+    };
+    server.start();
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send_all("e"));
+    DOBA_EXPECT(wait_count(state->completed, 3));
+    DOBA_EXPECT(client.send_all("x"));
+    const auto bytes = client.receive_until_close(2, 3s);
+    DOBA_EXPECT(bytes.has_value());
+    if (bytes) DOBA_EXPECT_EQUAL(*bytes, "ab");
+    client.close();
+    server.stop();
+    DOBA_EXPECT_EQUAL(state->completed.load(), 7);
+    DOBA_EXPECT_EQUAL(state->failed.load(), 0);
+    DOBA_EXPECT_EQUAL(reentered.load(), 0);
+  }
+}
+// +===========================================================================+
+// | [>] empty delivery cancellation order                       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tcpip preserves empty delivery cancellation order") {
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  auto state = std::make_shared<byte_state>();
+  auto factory = [state]() { return byte_engine{state, {}, {}}; };
+  tr::policies configuration;
+  configuration.ip = "127.0.0.1";
+  configuration.port = std::to_string(port);
+  configuration.worker_count = 2;
+  tr::tcpip<byte_engine, decltype(factory)> server(configuration, factory);
+  server.set_on_connection([]() {});
+  server.set_on_disconnection([]() {});
+  std::atomic<bool> in_callback{false};
+  std::atomic<int> reentered{0};
+  std::string completed;
+  state->completion = [&](bool success) {
+    if (in_callback.load()) reentered++;
+    completed += success ? '1' : '0';
+  };
+  state->receive = [&](byte_engine& engine, const char* bytes,
+                       std::size_t size, std::size_t) {
+    in_callback = true;
+    engine.echo(bytes, size);
+    engine.send(nullptr, 0, std::nullopt);
+    namespace common = martianlabs::doba::common;
+    common::reader source(common::filesystem_file{});
+    std::byte byte;
+    source.read(std::span<std::byte>(&byte, 1));
+    engine.send(nullptr, 0, std::move(source));
+    engine.send(nullptr, 0, std::nullopt);
+    in_callback = false;
+    return size;
+  };
+  server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("x"));
+  const auto bytes = client.receive_until_close(1, 3s);
+  // A failed source can reset the socket after locally completed writes.
+  DOBA_EXPECT(bytes.has_value() || client.error() == "socket");
+  if (bytes) DOBA_EXPECT_EQUAL(*bytes, "x");
+  client.close();
+  server.stop();
+  DOBA_EXPECT_EQUAL(completed, "1100");
+  DOBA_EXPECT_EQUAL(state->completed.load(), 2);
+  DOBA_EXPECT_EQUAL(state->failed.load(), 2);
+  DOBA_EXPECT_EQUAL(reentered.load(), 0);
+}
+
+// +===========================================================================+
+// | [>] rejected send notification                              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tcpip reports a rejected send after its engine callback") {
+  for (const int mode : {0, 1, 2}) {
+    tcpip_client client;
+    const auto port = client.find_available_port();
+    DOBA_EXPECT(port != 0);
+    auto state = std::make_shared<byte_state>();
+    auto factory = [state]() { return byte_engine{state, {}, {}}; };
+    tr::policies configuration;
+    configuration.ip = "127.0.0.1";
+    configuration.port = std::to_string(port);
+    configuration.worker_count = 2;
+    configuration.send_buffer_size = 16;
+    tr::tcpip<byte_engine, decltype(factory)> server(configuration, factory);
+    server.set_on_connection([]() {});
+    server.set_on_disconnection([]() {});
+    std::atomic<bool> in_callback{false};
+    std::atomic<int> reentered{0};
+    state->completion = [&](bool) {
+      if (in_callback.load()) reentered++;
+    };
+    state->receive = [&](byte_engine& engine, const char*, std::size_t size,
+                         std::size_t) {
+      in_callback = true;
+      if (mode == 1) engine.send(nullptr, 1, std::nullopt);
+      else engine.echo("01234567890123456", 17);
+      engine.echo("ignored", 7);
+      engine.send(nullptr, 0, std::nullopt);
+      in_callback = false;
+      if (mode == 2) throw std::runtime_error("After rejection");
+      return size;
+    };
+    server.start();
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send_all("x"));
+    DOBA_EXPECT(client.wait_for_close(3s));
+    client.close();
+    server.stop();
+    server.stop();
+    DOBA_EXPECT_EQUAL(state->completed.load(), 0);
+    DOBA_EXPECT_EQUAL(state->failed.load(), 1);
+    DOBA_EXPECT_EQUAL(reentered.load(), 0);
+  }
+}
+// +===========================================================================+
+// | [>] rejection follows queued cancellations                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tcpip reports rejection after queued deliveries") {
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  auto state = std::make_shared<byte_state>();
+  auto factory = [state]() { return byte_engine{state, {}, {}}; };
+  tr::policies configuration;
+  configuration.ip = "127.0.0.1";
+  configuration.port = std::to_string(port);
+  configuration.worker_count = 2;
+  configuration.send_buffer_size = 16;
+  tr::tcpip<byte_engine, decltype(factory)> server(configuration, factory);
+  server.set_on_connection([]() {});
+  server.set_on_disconnection([]() {});
+  std::atomic<bool> in_callback{false};
+  std::atomic<int> reentered{0};
+  std::string completed;
+  state->completion = [&](bool success) {
+    if (in_callback.load()) reentered++;
+    completed += success ? '1' : '0';
+  };
+  state->receive = [&](byte_engine& engine, const char* bytes,
+                       std::size_t size, std::size_t) {
+    in_callback = true;
+    engine.echo(bytes, size);
+    engine.send(nullptr, 0, std::nullopt);
+    engine.echo("01234567890123456", 17);
+    engine.echo("ignored", 7);
+    in_callback = false;
+    return size;
+  };
+  server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("x"));
+  const auto bytes = client.receive_until_close(1, 3s);
+  DOBA_EXPECT(bytes.has_value() || client.error() == "socket");
+  client.close();
+  server.stop();
+  // The active write may complete locally before the rejection aborts it.
+  DOBA_EXPECT(completed == "100" || completed == "000");
+  DOBA_EXPECT_EQUAL(state->completed.load() + state->failed.load(), 3);
+  DOBA_EXPECT_EQUAL(reentered.load(), 0);
+}
+
+// +===========================================================================+
+// | [>] tcpip recovers receive space after partial consumption  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tcpip recovers receive space after partial consumption") {
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  auto state = std::make_shared<byte_state>();
+  std::atomic<int> full{0};
+  std::atomic<int> invalid{0};
+  state->receive = [&](byte_engine& engine, const char* bytes, std::size_t size,
+                       std::size_t capacity) -> std::size_t {
+    if (!size || size > capacity || capacity != 16) invalid++;
+    if (!full.load()) {
+      if (size < capacity) return 0;
+      full++;
+      engine.echo(bytes, 8);
+      return 8;
+    }
+    if (size < 16) return 0;
+    engine.echo(bytes, size);
+    return size;
+  };
+  auto factory = [state]() { return byte_engine{state, {}, {}}; };
+  tr::tcpip<byte_engine, decltype(factory)> transport(
+      {.recv_buffer_size = 16, .worker_count = 2, .ip = "127.0.0.1",
+        .port = std::to_string(port)}, factory);
+  transport.set_on_connection([state]() { state->connected++; });
+  transport.set_on_disconnection([state]() { state->disconnected++; });
+  transport.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("abcdefghijklmnop"));
+  const auto first = client.receive(8);
+  DOBA_EXPECT(first.has_value());
+  if (first) DOBA_EXPECT_EQUAL(*first, "abcdefgh");
+  DOBA_EXPECT(client.send_all("qrstuvwx"));
+  const auto second = client.receive(16);
+  DOBA_EXPECT(second.has_value());
+  if (second) DOBA_EXPECT_EQUAL(*second, "ijklmnopqrstuvwx");
+  client.close();
+  transport.stop();
+  DOBA_EXPECT_EQUAL(full.load(), 1);
+  DOBA_EXPECT_EQUAL(invalid.load(), 0);
+  DOBA_EXPECT_EQUAL(state->completed.load(), 2);
+  DOBA_EXPECT_EQUAL(state->failed.load(), 0);
+  DOBA_EXPECT_EQUAL(state->stopped.load(), 1);
 }

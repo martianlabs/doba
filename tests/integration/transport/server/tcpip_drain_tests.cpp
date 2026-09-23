@@ -59,6 +59,7 @@ struct drain_state {
   std::atomic<int> entered{0};
   std::atomic<int> queued{0};
   std::atomic<int> destroyed{0};
+  std::atomic<int> stopped{0};
   std::atomic<bool> release{true};
 };
 
@@ -78,7 +79,7 @@ struct drain_engine {
   void set_on_close(std::function<void()>) {}
   void set_on_wake(std::function<void()>) {}
   void on_wake() {}
-  void on_stop() {}
+  void on_stop() { state_->stopped++; }
   void on_send_completed(bool) {}
   std::size_t on_bytes_received(const char* bytes, std::size_t size,
                                 std::size_t) {
@@ -166,6 +167,7 @@ void check_drain(bool destroy, bool active_callback) {
   DOBA_EXPECT(closed);
   DOBA_EXPECT_EQUAL(state->entered.load(), count);
   DOBA_EXPECT_EQUAL(state->destroyed.load(), count);
+  DOBA_EXPECT_EQUAL(state->stopped.load(), count);
   if (transport) {
     transport->start();
     transport->stop();
@@ -183,7 +185,9 @@ struct reader_state {
   std::atomic<int> reentered{0};
   bool close{false};
   bool single{false};
+  bool empty_deliveries{false};
   int source_error{0};
+  std::size_t rejected_size{0};
   std::size_t size{8 * 1024 * 1024};
   std::string later = std::string(1025, 'c');
 };
@@ -231,6 +235,7 @@ struct reader_engine {
     auto prefix = std::make_unique_for_overwrite<char[]>(prefix_size);
     std::memset(prefix.get(), 'A', prefix_size);
     output_(std::move(prefix), prefix_size, std::move(source));
+    if (state_->empty_deliveries) output_(nullptr, 0, std::nullopt);
     if (!state_->single) {
       auto next = std::make_unique<char[]>(1);
       next[0] = 'B';
@@ -247,6 +252,12 @@ struct reader_engine {
       // The queued source must not have been read during this callback.
       std::fill(state_->later.begin(), state_->later.end(), 'd');
     }
+    if (state_->empty_deliveries) output_(nullptr, 0, std::nullopt);
+    if (state_->rejected_size) {
+      auto rejected = std::make_unique<char[]>(state_->rejected_size);
+      output_(std::move(rejected), state_->rejected_size, std::nullopt);
+      output_(nullptr, 0, std::nullopt);
+    }
     if (state_->close) close_();
     in_callback_ = false;
     state_->queued++;
@@ -258,9 +269,10 @@ struct reader_engine {
   bool in_callback_{false};
 };
 
-void check_reader_drain(bool destroy, bool close) {
+void check_reader_drain(bool destroy, bool close, bool empty = false) {
   auto state = std::make_shared<reader_state>();
   state->close = close;
+  state->empty_deliveries = empty;
   auto factory = [state]() -> reader_engine { return reader_engine{state}; };
   tcpip_client client;
   const auto port = client.find_available_port();
@@ -298,7 +310,7 @@ void check_reader_drain(bool destroy, bool close) {
   DOBA_EXPECT(bytes.has_value());
   if (bytes) DOBA_EXPECT_EQUAL(*bytes, expected);
   DOBA_EXPECT(closed);
-  DOBA_EXPECT_EQUAL(state->succeeded.load(), 5);
+  DOBA_EXPECT_EQUAL(state->succeeded.load(), empty ? 7 : 5);
   DOBA_EXPECT_EQUAL(state->failed.load(), 0);
   DOBA_EXPECT_EQUAL(state->reentered.load(), 0);
 }
@@ -387,6 +399,7 @@ DOBA_TEST("stop rejects new engine input") {
   DOBA_EXPECT(draining);
   DOBA_EXPECT(sent);
   DOBA_EXPECT_EQUAL(entered, 1);
+  DOBA_EXPECT_EQUAL(state->stopped.load(), 1);
 }
 // +===========================================================================+
 // | [>] stop drains ordered byte sources                        ( test-case ) |
@@ -547,7 +560,8 @@ DOBA_TEST("source buffers respect the send limit") {
   DOBA_EXPECT(!bytes || bytes->size() < state->size + 1);
   DOBA_EXPECT(error != "timeout");
   DOBA_EXPECT_EQUAL(state->succeeded.load(), 0);
-  DOBA_EXPECT_EQUAL(state->failed.load(), 1);
+  // Report both the active source cancellation and the rejected delivery.
+  DOBA_EXPECT_EQUAL(state->failed.load(), 2);
 }
 // +===========================================================================+
 // | [>] HTTP sources precede the next pipelined response        ( test-case ) |
@@ -857,4 +871,52 @@ DOBA_TEST("close discards input after draining output") {
     DOBA_EXPECT_EQUAL(state->failed.load(), 0);
     DOBA_EXPECT_EQUAL(state->reentered.load(), 0);
   }
+}
+
+// +===========================================================================+
+// | [>] stop drains empty deliveries with sources               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("stop drains empty deliveries with sources") {
+  check_reader_drain(false, false, true);
+}
+// +===========================================================================+
+// | [>] close drains empty deliveries with sources              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("close drains empty deliveries with sources") {
+  check_reader_drain(false, true, true);
+}
+
+// +===========================================================================+
+// | [>] rejection with a pending body source                    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("rejection cancels a pending source and reports the rejected block") {
+  auto state = std::make_shared<reader_state>();
+  state->single = true;
+  state->empty_deliveries = true;
+  state->rejected_size = 1;
+  auto factory = [state]() -> reader_engine { return reader_engine{state}; };
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  tr::policies configuration;
+  configuration.ip = "127.0.0.1";
+  configuration.port = std::to_string(port);
+  configuration.worker_count = 2;
+  configuration.send_buffer_size = 8192;
+  tr::tcpip<reader_engine, decltype(factory)> transport(configuration,
+                                                       std::move(factory));
+  transport.set_on_connection([]() {});
+  transport.set_on_disconnection([]() {});
+  transport.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("x"));
+  DOBA_EXPECT(wait_count(state->queued, 1));
+  const auto bytes = client.receive_until_close(state->size, 5s);
+  DOBA_EXPECT(bytes.has_value() || client.error() == "socket");
+  client.close();
+  transport.stop();
+  transport.stop();
+  DOBA_EXPECT_EQUAL(state->succeeded.load(), 0);
+  DOBA_EXPECT_EQUAL(state->failed.load(), 4);
+  DOBA_EXPECT_EQUAL(state->reentered.load(), 0);
 }

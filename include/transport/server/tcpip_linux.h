@@ -123,7 +123,9 @@ struct context {
       }
       if (receive_size_ == receive_capacity_) abort();
       if (closing_) stop();
-      if (send_reserved_ && send_offset_ == send_size_ && !send_pending()) abort();
+      if (send_active_ && send_offset_ == send_size_ && !send_pending()) {
+        abort();
+      }
     }
     return received;
   }
@@ -140,7 +142,7 @@ struct context {
                std::optional<common::reader> source) {
           send(std::move(buffer), size, std::move(source));
         });
-    if (send_reserved_ && send_offset_ == send_size_ && !send_pending()) abort();
+    if (send_active_ && send_offset_ == send_size_ && !send_pending()) abort();
   }
   // +=========================================================================+
   // | [>] wake                                                     ( public ) |
@@ -152,7 +154,7 @@ struct context {
     }
     engine_.on_wake();
     if (closing_) stop();
-    if (send_reserved_ && send_offset_ == send_size_ && !send_pending()) {
+    if (send_active_ && send_offset_ == send_size_ && !send_pending()) {
       abort();
     }
   }
@@ -201,16 +203,18 @@ struct context {
     if (closing_ || socket_ == -1) return;
     const std::size_t reserved = source
         ? std::max(size, std::min<std::size_t>(8192, send_capacity_)) : size;
-    if ((size && !buffer) || (!size && !source) ||
+    if ((size && !buffer) ||
         reserved > send_capacity_ - send_bytes_) {
+      send_rejected_ = true;
       abort();
       return;
     }
-    if (send_reserved_) {
+    if (send_active_) {
       send_queue_.emplace_back(std::move(buffer), size, std::move(source));
     } else {
       send_buffer_ = std::move(buffer);
       send_source_ = std::move(source);
+      send_active_ = true;
       send_reserved_ = reserved;
       send_streaming_ = false;
       send_size_ = size;
@@ -224,7 +228,7 @@ struct context {
   // +=========================================================================+
   bool send_pending(bool notify = true) {
     if (notify && closing_) stop();
-    while (send_reserved_ && !aborted_) {
+    while (send_active_ && !aborted_) {
       while (send_offset_ < send_size_) {
         std::size_t size = std::min<std::size_t>(
             send_size_ - send_offset_, std::numeric_limits<ssize_t>::max());
@@ -271,12 +275,14 @@ struct context {
       }
       if (!notify) break;
       send_bytes_ -= send_reserved_;
+      send_active_ = false;
       send_reserved_ = 0;
       send_buffer_.reset();
       if (!send_queue_.empty()) {
         send_buffer_ = std::move(std::get<0>(send_queue_.front()));
         send_source_ = std::move(std::get<2>(send_queue_.front()));
         send_size_ = std::get<1>(send_queue_.front());
+        send_active_ = true;
         send_reserved_ = send_source_
             ? std::max(send_size_, std::min<std::size_t>(8192, send_capacity_))
             : send_size_;
@@ -328,12 +334,14 @@ struct context {
   // +=========================================================================+
   void notify_disconnection() {
     stop();
-    bool pending = send_reserved_ != 0;
+    bool pending = send_active_;
     bool succeeded = send_offset_ == send_size_ && !send_source_;
     send_buffer_.reset();
     send_source_.reset();
+    send_active_ = false;
     send_reserved_ = 0;
-    std::size_t cancelled = send_queue_.size();
+    std::size_t cancelled = send_queue_.size() + (send_rejected_ ? 1 : 0);
+    send_rejected_ = false;
     send_queue_.clear();
     send_bytes_ = 0;
     if (pending) {
@@ -378,6 +386,8 @@ struct context {
   std::size_t send_reserved_{0};
   std::size_t send_size_{0};
   std::size_t send_offset_{0};
+  bool send_active_{false};
+  bool send_rejected_{false};
   bool send_streaming_{false};
   bool send_waiting_{false};
   bool closing_{false};

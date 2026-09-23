@@ -35,7 +35,10 @@
 namespace martianlabs::doba::common {
 // A buffer and optional source are moved together into the connection's FIFO.
 // The source follows the buffer; later deliveries cannot overtake it.
-// Each delivery produces one on_send_completed(bool) call on an I/O worker.
+// Empty deliveries reserve no bytes and complete in FIFO order.
+// Each submission before closing produces one on_send_completed(bool) call.
+// Rejections follow earlier completions; all calls run on an I/O worker.
+// Submissions after closing starts are ignored.
 // True means fully written locally; false means failure or cancellation.
 // Sources reserve up to 8192 bytes of send capacity for a reusable read buffer,
 // or their prefix size if larger. Source-owned storage is outside this limit.

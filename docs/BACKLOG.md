@@ -47,15 +47,14 @@ a selected value are marked "Not set"; complexity estimates are separate.
 
 The frozen target is `0.1.0-beta1`, a beta for adoption and evaluation in
 controlled deployments. This section is the authoritative release scope.
-Unresolved B14-B19 entries are immediate migration work with maximum
-priority, ahead of the release work below. Their release assignment is not
-selected here. Other outstanding work remains future work and does not block
-this beta.
+B14-B19 migration bugs are resolved; their records remain below as evidence.
+Other outstanding work outside the release scope remains future work and
+does not block this beta.
 
 Implementation order:
 
-1. B14-B19: resolve the remaining migration test failures.
-2. B9: honor response-driven `Connection: close` after complete delivery.
+1. B14-B19: completed; all migration regression tests pass.
+2. B9: completed; response-driven closure verified on both platforms.
 3. F1 and F2: implement TLS and GZIP response compression.
 4. C1, C2, C3 and C7: implement and verify all operational limits.
 5. RE1: complete minimum documentation, the full existing CI and CMake consumer
@@ -76,9 +75,9 @@ inactivity and pending-work limits belong to their responsible modules.
 
 **Exit criteria.**
 
-- Reproduce B9 with focused regressions and fix it. Verify synchronous
-  and deferred paths on Windows and Linux. The source evidence below is not
-  a claim that those runtime regressions have already been executed.
+- B9 verified: synchronous, immediate and deferred response-driven closure
+  passes on Windows and Linux, including complete bodies before EOF and the
+  pipelined close boundary. No production change was needed.
 - Implement F1 and F2 with focused unit and real-socket tests on Windows
   and Linux. Verify TLS handshake, encrypted HTTP delivery, closure and
   errors; verify GZIP negotiation, response framing and decoded payloads
@@ -117,11 +116,11 @@ when a newly reproduced defect affects the supported behavior.
   </picture>
 </h2>
 
-33 outstanding entries across eight categories: two immediate migration
-bugs, eight entries with release scope, and twenty-three future entries.
+30 outstanding entries across eight categories: seven entries with release
+scope and twenty-three future entries. No critical migration bug remains.
 B14-B19 originally recorded 31 failing tests on 2026-09-21. After the
-2026-09-23 B16 fix, two remain on Windows and WSL (B18 and B19).
-Resolved B14-B17 are retained below as evidence and excluded from
+2026-09-23 B19 fix, all tests pass on Windows and WSL.
+Resolved B9 and B14-B19 are retained below as evidence and excluded from
 the outstanding totals.
 Verification pending means that the focused regressions or runtime
 measurements described by an entry remain to be run. Category totals count
@@ -131,14 +130,14 @@ work from the future contribution guide.
 | Category | Identifiers | Migration | Release | Future work | Total |
 | --- | --- | --- | --- | --- | --- |
 | Operational hardening | C1-C3, C7 | 0 | 4 | 0 | 4 |
-| Bugs | B9, B13, B18-B19 | 2 | 1 | 1 | 4 |
+| Bugs | B13 | 0 | 0 | 1 | 1 |
 | Product and convenience | F1-F2, P2-P8 | 0 | 2 | 7 | 9 |
 | Quality and validation | QA1-QA3, QA5-QA6 | 0 | 0 | 5 | 5 |
 | Release engineering | RE1 | 0 | 1 | 0 | 1 |
 | C++ maintainability | DT1-DT3 | 0 | 0 | 3 | 3 |
 | Public documentation | DOC1-DOC2 | 0 | 0 | 2 | 2 |
 | Beyond the first release | F3-F7 | 0 | 0 | 5 | 5 |
-| **Total** | | **2** | **8** | **23** | **33** |
+| **Total** | | **0** | **7** | **23** | **30** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
@@ -146,13 +145,13 @@ work from the future contribution guide.
 | [B15](#b15-missing-100-continue) | Critical bug | Resolved; verified 2026-09-22 | P0 (maximum) | Current migration |
 | [B16](#b16-missing-http-rejection-responses) | Critical bug | Resolved; verified 2026-09-23 | P0 (maximum) | Current migration |
 | [B17](#b17-http-error-response-content) | Critical bug | Resolved; verified 2026-09-22 | P0 (maximum) | Current migration |
-| [B18](#b18-empty-delivery-contract) | Critical bug | Reproduced; contract decision pending | P0 (maximum) | Current migration |
-| [B19](#b19-send-limit-failure-notification) | Critical bug | Reproduced; contract decision pending | P0 (maximum) | Current migration |
+| [B18](#b18-empty-delivery-contract) | Critical bug | Resolved; verified 2026-09-23 | P0 (maximum) | Current migration |
+| [B19](#b19-send-limit-failure-notification) | Critical bug | Resolved; verified 2026-09-23 | P0 (maximum) | Current migration |
 | [C1](#c1-single-inactivity-timeout) | Hardening | Pending | Release gate | 0.1.0-beta1 |
 | [C2](#c2-effective-per-request-limits) | Hardening | Pending | Release gate | 0.1.0-beta1 |
 | [C3](#c3-global-active-connection-limit) | Hardening | Pending | Release gate | 0.1.0-beta1 |
 | [C7](#c7-pending-response-and-work-budget) | Hardening | Design and validation pending | Release gate | 0.1.0-beta1 |
-| [B9](#b9-response-driven-connection-close) | Bug | Verification pending | Release gate | 0.1.0-beta1 |
+| [B9](#b9-response-driven-connection-close) | Bug | Resolved; verified 2026-09-23 | Release gate | 0.1.0-beta1 |
 | [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark bug | Verification pending | Medium | Future work |
 | [F1](#f1-tls) | Product | Design and implementation pending | Release gate | 0.1.0-beta1 |
 | [F2](#f2-compression-and-gzip) | Product | Design and implementation pending | Release gate | 0.1.0-beta1 |
@@ -363,8 +362,8 @@ to C7 and does not depend on completing the future QA1/QA5 campaigns.
   </picture>
 </h2>
 
-Unresolved B14-B19 entries take precedence over all other work, with
-Critical severity and P0 (maximum) priority. In the original 2026-09-21 run,
+B14-B19 were Critical severity and P0 (maximum) migration work; all are now
+resolved. In the original 2026-09-21 run,
 Windows unit 843/848 and integration 86/112 passed; WSL unit 841/846 and integration
 86/112 passed. The same five unit and twenty-six integration cases failed on
 both platforms. Builds used Debug and strict warnings, without ASan/UBSan.
@@ -372,18 +371,19 @@ These are recorded results, not a new test execution during this backlog edit.
 
 The six entries assign every failing test once. Cross-references capture
 shared dependencies; a failure before later assertions does not prove those
-later behaviors are broken. B18 and B19 retain explicit contract decisions.
+later behaviors are broken. B18 and B19 now have agreed, verified contracts.
 All original migration-failure tests remain active with their assertions
 unchanged. The separate unit test that reused a connection after a handler
 error was aligned with B17: it now verifies closure and a new connection.
-The latest 2026-09-23 full suites pass Windows unit 880/880, WSL unit
-878/878 and integration 113/115 on both platforms. B16 resolves all seven
-of its original cases; only B18 and B19 remain failing. Test-helper suites
-also pass (16 unit and 11 integration checks on each platform).
+The latest 2026-09-23 full suites pass Windows unit 886/886, WSL unit
+884/884 and integration 125/125 on both platforms. No migration failure
+remains. B19 added three regressions and aligned source-limit notifications
+with cancellation plus rejection. B9 verification adds six unit and three
+integration cases, plus stronger lifecycle checks. Test-helper suites also
+pass (16 unit and 11 integration checks on each platform).
 
-B9 retains its existing release scope and verification-pending record; B13
-remains future benchmark work. Their historical descriptions are not
-revalidated by this migration-failure inventory.
+B9 is separately verified and resolved below. B13 remains future benchmark
+work and is not revalidated by this migration-failure inventory.
 
 <a name="b14-asynchronous-handler-execution"></a>
 <h3>B14: Asynchronous handler execution and lifecycle</h3>
@@ -411,8 +411,9 @@ transport responsibilities.
 **Dependencies and limits.** The interim-ordering dependency on
 [B15](#b15-missing-100-continue) and the deferred error/HEAD dependencies on
 [B17](#b17-http-error-response-content) are now verified. Deferred close
-coverage overlaps [B9](#b9-response-driven-connection-close), without closing
-that separate entry. Cancellation remains cooperative; a suspended awaitable
+coverage initially exercised request-driven closure;
+[B9](#b9-response-driven-connection-close) now verifies response-driven closure.
+Cancellation remains cooperative; a suspended awaitable
 must eventually complete or respond to cancellation to release its frame.
 
 | Suite | Test | Source | Windows / WSL |
@@ -535,8 +536,7 @@ establish zero overhead or isolate the cause of the observed difference.
 **Limits.** Normal graceful closure retains connection resources until peer
 EOF; stop releases them after draining output. No timeout was introduced.
 Aborted connections and transport stop do not promise graceful delivery
-when the peer continues sending. B18 and B19 remain separate unresolved
-contract issues.
+when the peer continues sending. B18 and B19 are resolved below.
 
 | Suite | Test | Source | Windows / WSL |
 | --- | --- | --- | --- |
@@ -594,61 +594,104 @@ with a second HTTP response. The B14 dependency on B15 is now verified.
 <a name="b18-empty-delivery-contract"></a>
 <h3>B18: Empty delivery closes the send queue</h3>
 
-**Status.** Reproduced; contract decision pending. **Severity.** Critical.
+**Status.** Resolved; verified 2026-09-23. **Severity.** Critical.
 **Priority.** P0 (maximum). **Target.** Current migration.
 
-**Observed behavior.** A zero-length delivery without a body source closes
-the connection in both transports. The following "ok" delivery is not
-received; the test expects it and two successful completion notifications.
+**Confirmed cause.** Both transports rejected zero bytes without a source.
+They also used nonzero reserved bytes to identify an active delivery, so
+removing the rejection alone could overwrite or lose an empty delivery.
 
-**Cause and open decision.** The transports currently reject an empty
-delivery as invalid, while the retained test expects a completed no-op.
-This is a reproduced contract discrepancy; the intended contract must be
-resolved explicitly before choosing a production or test change.
+**Agreed contract and implementation.** A zero-length buffer without a
+source is accepted with either a null or nonnull buffer. It reserves no
+send bytes and completes once in FIFO order, without reentering the engine
+callback. Cancellation before its turn produces one failed completion.
+An internal send_active_ boolean separates delivery existence from byte
+accounting in both transports. Existing queues, completion mechanisms and
+source handling remain in use; no new queue, class, lock or thread was added.
 
-**Acceptance and tests.** Agree on empty-delivery admission and completion
-semantics, then validate the empty delivery followed by a nonempty delivery
-on both platforms. Preserve queue progress and exactly-once completion for
-accepted deliveries. Keep this failing test active until that decision and
-its approved implementation; do not silently weaken its expectations.
+**Acceptance and tests.** The original failure and four new tests pass on
+Windows and WSL: isolated/consecutive empty deliveries, mixed output at the
+byte limit, ordered cancellation after source failure, and stop/close draining
+empty deliveries between body sources. Checks include null buffers, exact
+completion counts and absence of callback reentry. The new isolated-delivery
+test failed before the fix. The cancellation test permits a TCP reset after
+a source failure, consistent with the existing local-write completion
+contract; its callback order must still be success, success, failure, failure.
+At B18 verification, full suites passed Windows unit 880/880, WSL unit
+878/878 and integration 118/119 on both platforms; only B19 remained.
+Clang ASan/UBSan with
+leak detection passes 24 focused integration cases on Linux.
+
+**Performance.** Three rotated WSL rounds use 8 workers, 4096 connections,
+pipeline 1, separate CPU affinity, 5-second warmup and 15-second samples.
+Both Doba builds use the same adapter/compiler flags and real 133-byte
+responses with runtime Date. Median RPS: pre-B18 504,170, current
+515,100, Actix 396,210. Current vs pre-B18: +2.17%;
+vs Actix: +30.01%. Every measured response is 2xx. These WSL measurements
+do not establish zero overhead or isolate the cause of observed differences.
+
+**Limits.** The send budget counts bytes, not queue nodes. Empty deliveries
+consume no byte budget; no new queue-entry limit was introduced. B19's
+rejected-submission notification is resolved below.
 
 **Components.** [Linux transport](../include/transport/server/tcpip_linux.h),
 [Windows transport](../include/transport/server/tcpip_windows.h) and the
 [output contract](../include/common/output.h).
 
-| Suite | Failing test | Source |
-| --- | --- | --- |
-| integration | tcpip removes an empty delivery without blocking its queue | [tests/integration/transport/server/tcpip_tests.cpp](../tests/integration/transport/server/tcpip_tests.cpp) |
+| Suite | Test | Source | Windows / WSL |
+| --- | --- | --- | --- |
+| integration | tcpip removes an empty delivery without blocking its queue | [tests/integration/transport/server/tcpip_tests.cpp](../tests/integration/transport/server/tcpip_tests.cpp) | Passed |
 
 <a name="b19-send-limit-failure-notification"></a>
 <h3>B19: Missing completion notification for a rejected send</h3>
 
-**Status.** Reproduced; contract decision pending. **Severity.** Critical.
+**Status.** Resolved; verified 2026-09-23. **Severity.** Critical.
 **Priority.** P0 (maximum). **Target.** Current migration.
 
-**Observed behavior.** With send_buffer_size set to 16, submitting 17 bytes
-correctly closes the connection. The test then expects one failed completion;
-the observed count is zero.
+**Confirmed cause.** An invalid or oversized submission was rejected before
+queue admission. Closure only counted accepted deliveries, so the rejected
+block never produced on_send_completed(false).
 
-**Cause and contract boundary.** The oversized block is rejected before it
-enters the transport queue, so closure does not report
-on_send_completed(false) for that block. Reconcile this path with the
-[output contract](../include/common/output.h) and explicitly settle whether
-completion covers rejected submissions as well as admitted deliveries.
+**Agreed contract and implementation.** Each submission while the connection
+is active completes once, including rejection. The first rejection starts
+closure; later submissions are ignored. Both transports record a pending
+rejection in send_rejected_, free rejected storage on return from send, and
+append its failed completion to the existing cancellation accounting. The
+flag is cleared before notification. Completion stays on the serialized I/O
+worker path, after the engine callback and earlier deliveries. Windows waits
+for active native I/O before retiring its buffers and notifying cancellation.
+No new queue, class, thread, lock or allocation was introduced by the fix.
 
-**Acceptance and tests.** Preserve closure when the send budget is exceeded.
-Resolve the completion obligation without duplicate callbacks, and pass the
-case below on Windows and WSL under the agreed contract. Keep its current
-failure visible until the contract and implementation are approved.
+**Acceptance and tests.** The original B19 regression passes on Windows and
+WSL unchanged. Three new tests cover isolated overflow, invalid buffers,
+post-rejection submissions, an engine exception, queued deliveries, and an
+in-flight body reader. They verify exact counts and no callback reentry.
+The isolated-rejection test failed before the fix. The existing source-limit
+test now expects two failures: cancellation of its active source and rejection
+of the next block, as required by the approved contract. No test was disabled.
+All suites pass: Windows unit 880/880, WSL unit 878/878, integration 122/122,
+and helper suites 16/16 plus 11/11 on both platforms. Clang ASan/UBSan with
+leak detection passes all 48 transport integration cases on Linux.
 
-**Components.** [Linux transport](../include/transport/server/tcpip_linux.h)
-and [Windows transport](../include/transport/server/tcpip_windows.h). The
-failure is notification accounting; these runs do not demonstrate a send
-limit bypass.
+**Performance.** Three rotated WSL rounds use 8 workers, 4096 connections,
+pipeline 1, separate CPU affinity, 5-second warmup and 15-second samples.
+Identical Doba adapters/compiler flags use real 133-byte responses with
+runtime Date. Median RPS: pre-B19 520,500, current 500,680,
+Actix 423,990. Current vs pre-B19: -3.81%; vs Actix: +18.09%.
+Every measured response is 2xx. These WSL measurements do not isolate the
+cause of observed differences or establish zero overhead.
 
-| Suite | Failing test | Source |
-| --- | --- | --- |
-| integration | tcpip closes when a delivery exceeds the send limit | [tests/integration/transport/server/tcpip_tests.cpp](../tests/integration/transport/server/tcpip_tests.cpp) |
+**Limits.** Completion reports local writing, failure or cancellation, not
+peer receipt. Calls after closure starts remain ignored. Send-limit closure
+and all unrelated transport behavior remain unchanged.
+
+**Components.** [Linux transport](../include/transport/server/tcpip_linux.h),
+[Windows transport](../include/transport/server/tcpip_windows.h) and the
+[output contract](../include/common/output.h).
+
+| Suite | Test | Source | Windows / WSL |
+| --- | --- | --- | --- |
+| integration | tcpip closes when a delivery exceeds the send limit | [tests/integration/transport/server/tcpip_tests.cpp](../tests/integration/transport/server/tcpip_tests.cpp) | Passed |
 
 <a name="b9-response-driven-connection-close"></a>
 <h3>
@@ -660,25 +703,50 @@ limit bypass.
   </picture>
 </h3>
 
-**Status.** Runtime regression pending; medium severity.
+**Status.** Resolved; verified 2026-09-23. **Severity.** Medium.
+**Target.** 0.1.0-beta1.
 
-**Source evidence.** [server.h](../include/protocol/http/v11/server.h)
-propagates request-driven closure to response headers, but there is no return
-path for a handler's `Connection: close` intent.
-[serialization_result](../include/protocol/serialization.h) carries bytes and
-an optional body reader; both TCP backends consult the decoder's
-`result.channel` when deciding closure after a response.
+**Confirmed behavior.** The old diagnosis described the architecture before
+engines. The current engine already recognizes response Connection options,
+including repeated fields, token lists and case differences. It submits the
+response prefix and optional source, then requests closure. Both transports
+drain admitted output before shutting down writing. Production code, public
+contracts and build configuration were left unchanged.
 
-**Acceptance and tests.** Send a persistent request whose handler returns
-`Connection: close`; assert that the full response drains before EOF.
-Include a pipelined successor and verify that it is not processed beyond
-the close boundary. Cover synchronous and deferred handlers on both platforms,
-and preserve ordinary keep-alive and request-driven closure.
+**Acceptance.** RFC 9112 S9.6 requires completion of the closing response
+before closure and no further request processing after that boundary.
+New TCP tests cover synchronous, immediately completed coroutine and deferred
+handlers with inline, streamed and chunked bodies. They verify complete
+payloads, final chunk framing and EOF without successor bytes. A mixed
+pipeline completes the closing handler before its predecessor, preserves
+response order, discards an already prepared successor and leaves a queued
+unsafe handler uncalled. The original deferred-close TCP test used a request
+header and did not establish response-driven closure.
 
-**Delivery and limits.** Reproduce, fix and validate for `0.1.0-beta1`.
-Preserve the generic transport boundary; do not add HTTP header parsing
-to a transport. Select the smallest way to convey response closure without
-assuming a public API extension.
+**Refactor coverage review.** Six unit and three integration cases were
+added; existing assertions were strengthened without removing coverage.
+
+| Contract | Evidence |
+| --- | --- |
+| Response-driven close | [engine_tests.cpp](../tests/unit/protocol/http/v11/engine_tests.cpp) checks immediate and queued delivery, later completion, cancellation, exact close tokens and request-close precedence. [server_response_tests.cpp](../tests/integration/protocol/http/v11/server_response_tests.cpp) verifies real TCP delivery before EOF. |
+| Server, factories and policies | [server_engine_tests.cpp](../tests/unit/protocol/http/v11/server_engine_tests.cpp) adds six negative concept checks, independent decoder state, copied factory policy and effective per-engine policy forwarding. Existing tests cover shared routing and alternative transport policies. |
+| Receive consumption | [tcpip_tests.cpp](../tests/integration/transport/server/tcpip_tests.cpp) verifies partial consumption of a full buffer, exact residual bytes, capacity and subsequent successful receives. Existing decoder and HTTP limit tests cover split input, full incomplete cores and oversized bodies streamed across receives. |
+| Callback lifecycle | [tcpip_tests.cpp](../tests/integration/transport/server/tcpip_tests.cpp) now checks overlap across receive, wake and completion, no receive/wake after stop and exact completion counts. [tcpip_drain_tests.cpp](../tests/integration/transport/server/tcpip_drain_tests.cpp) adds one-stop-per-connection assertions to existing drain and admission tests. |
+| Output ownership and draining | Existing engine tests verify transfer of unread sources; transport tests verify source/prefix FIFO, backpressure, empty deliveries, budget rejection, source failure, cancellation and drain on close, stop and destruction. |
+
+**Validation.** Windows unit 886/886, WSL unit 884/884 and integration 125/125
+on both platforms. Helper suites pass 16/16 and 11/11 on both. Builds include
+examples. Clang ASan/UBSan with leak detection passes 44 affected unit and
+60 integration cases on Linux. No test was disabled or skipped.
+
+**Limits.** Safe handlers may already have run before a deferred response
+reveals closure; their execution cannot be undone. Their later output is
+not sent. Queued handlers are not dispatched after closure. Cancellation
+remains cooperative. The decoder retains its last request through its
+factory until replaced or destroyed; the new lifetime test checks release
+after engine destruction, not immediately after stop. These tests do not
+prove every possible concurrent interleaving. Windows sanitizers and a new
+performance benchmark were not run; production sources are unchanged.
 
 <a name="b13-signed-overflow-in-the-httparena-adapter"></a>
 <h3>
@@ -1126,8 +1194,9 @@ modify the workflow only if the selected mechanism requires it.
 
 **Acceptance and verification.**
 
-- Complete B9, F1/F2 and C1/C2/C3/C7 with their focused tests and equivalent
-  real-socket validation on Windows and Linux where applicable.
+- Retain the verified B9 regressions and complete F1/F2 and C1/C2/C3/C7
+  with focused tests and equivalent real-socket validation on Windows and
+  Linux where applicable.
 - Pass the full existing CI matrix and CMake consumer checks on the exact
   release revision. Include every required source, test and example in that
   revision; local untracked files are not part of a published release.

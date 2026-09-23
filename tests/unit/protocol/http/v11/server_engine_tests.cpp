@@ -156,6 +156,27 @@ struct bad_stop_engine : engine_type {
 static_assert(!protocol::contracts::engine<bad_wake_engine>);
 static_assert(!protocol::contracts::engine<bad_wake_delegate_engine>);
 static_assert(!protocol::contracts::engine<bad_stop_engine>);
+struct bad_receive_engine : engine_type {
+  void on_bytes_received(const char*, std::size_t, std::size_t);
+};
+struct bad_send_engine : engine_type {
+  void set_on_send(std::function<void(const char*, std::size_t)>);
+};
+struct bad_completion_engine : engine_type {
+  int on_send_completed(bool);
+};
+static_assert(!protocol::contracts::engine<bad_receive_engine>);
+static_assert(!protocol::contracts::engine<bad_send_engine>);
+static_assert(!protocol::contracts::engine<bad_completion_engine>);
+static_assert(!protocol::contracts::engine_factory<
+              decltype([]() { return 0; }), engine_type>);
+static_assert(!protocol::contracts::engine_factory<
+              decltype([](int) -> engine_type { throw 0; }), engine_type>);
+static_assert(!protocol::contracts::engine_factory<
+              decltype([value = 0]() mutable -> engine_type {
+                value++;
+                throw value;
+              }), engine_type>);
 
 template <typename ENty, template <typename, typename> class TRty>
 concept accepts_server = requires {
@@ -272,6 +293,83 @@ DOBA_TEST("server recovers from startup failure") {
   observed.fail_start = false;
   value.start();
   DOBA_EXPECT(observed.bytes.ends_with("\r\n\r\nready"));
+  value.stop();
+  DOBA_EXPECT_EQUAL(observed.stops, 1);
+}
+
+// +===========================================================================+
+// | [>] engine factories preserve policies and independence     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("engine factories preserve policies and independence") {
+  routes_type routes;
+  int calls = 0;
+  routes.add("GET", "/first", [&](const http::request&) {
+    calls++;
+    auto result = http::response::ok_200();
+    result.set_body("first");
+    return result;
+  });
+  http::policies configuration;
+  configuration.max_uri_length = 6;
+  auto factory = http::make_engine_factory<engine_type>(configuration, routes);
+  configuration.max_uri_length = 100;
+  auto first = factory();
+  auto second = factory();
+  engine_type* engines[] = {&first, &second};
+  std::string bytes[2];
+  int closed[2] = {};
+  for (int i = 0; i < 2; i++) {
+    engines[i]->set_on_send([&, i](std::unique_ptr<char[]> prefix,
+                                  std::size_t size,
+                                  std::optional<reader> source) {
+      bytes[i].append(prefix.get(), size);
+      if (source) source->read_all(bytes[i]);
+    });
+    engines[i]->set_on_close([&, i]() { closed[i]++; });
+    engines[i]->set_on_wake([]() {});
+  }
+  const std::string partial = "GET /first HTTP/1.1\r\nHost: local";
+  DOBA_EXPECT_EQUAL(first.on_bytes_received(
+      partial.data(), partial.size(), 4096), 0);
+  const std::string complete = partial + "host\r\n\r\n";
+  DOBA_EXPECT_EQUAL(second.on_bytes_received(
+      complete.data(), complete.size(), 4096), complete.size());
+  DOBA_EXPECT(bytes[0].empty());
+  DOBA_EXPECT(bytes[1].ends_with("\r\n\r\nfirst"));
+  DOBA_EXPECT_EQUAL(calls, 1);
+  DOBA_EXPECT_EQUAL(first.on_bytes_received(
+      complete.data(), complete.size(), 4096), complete.size());
+  DOBA_EXPECT_EQUAL(calls, 2);
+  const std::string rejected =
+      "GET /longer HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  for (int i = 0; i < 2; i++) {
+    bytes[i].clear();
+    engines[i]->on_bytes_received(rejected.data(), rejected.size(), 4096);
+    DOBA_EXPECT(bytes[i].starts_with("HTTP/1.1 414 "));
+    DOBA_EXPECT_EQUAL(closed[i], 1);
+    engines[i]->on_stop();
+  }
+  DOBA_EXPECT_EQUAL(calls, 2);
+}
+
+// +===========================================================================+
+// | [>] server forwards engine policies to every connection     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("server forwards engine policies to every connection") {
+  observed = {};
+  int calls = 0;
+  server_type value(std::make_unique<int>(7), {.max_header_section_size = 1});
+  value.add_route("GET", "/", [&](const http::request&) {
+    calls++;
+    return http::response::ok_200();
+  });
+  value.start();
+  DOBA_EXPECT_EQUAL(observed.configuration, 7);
+  DOBA_EXPECT_EQUAL(calls, 0);
+  const auto first = observed.bytes.find("HTTP/1.1 431 ");
+  DOBA_EXPECT_EQUAL(first, 0);
+  const auto second = observed.bytes.find("HTTP/1.1 431 ", 1);
+  DOBA_EXPECT(second != std::string::npos);
   value.stop();
   DOBA_EXPECT_EQUAL(observed.stops, 1);
 }
