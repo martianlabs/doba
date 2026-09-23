@@ -2471,3 +2471,183 @@ DOBA_TEST("absolute form preserves valid IP literals at every split") {
     }
   }
 }
+
+// +===========================================================================+
+// | [>] decoder returns one interim with an incomplete body     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder returns one interim with an incomplete body") {
+  for (const bool chunked : {false, true}) {
+    const std::string head =
+        "POST / HTTP/1.1\r\nHost: localhost\r\nExpect: 100-continue\r\n" +
+        std::string(chunked ? "Transfer-Encoding: chunked\r\n\r\n"
+                            : "Content-Length: 2\r\n\r\n");
+    decoder_input value;
+    accumulate(value, head);
+    auto result = value.decode();
+    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kMoreBytesNeeded);
+    DOBA_EXPECT(!result.request);
+    DOBA_EXPECT(result.response.has_value());
+    auto wire = result.response->serialize();
+    const std::string_view bytes(wire->prefix.get(), wire->prefix_size);
+    DOBA_EXPECT(bytes.starts_with("HTTP/1.1 100 Continue\r\n"));
+    DOBA_EXPECT(bytes.ends_with("\r\n\r\n"));
+    DOBA_EXPECT(!wire->source);
+    DOBA_EXPECT(bytes.find("Content-Length:") == std::string_view::npos);
+    DOBA_EXPECT(bytes.find("Transfer-Encoding:") == std::string_view::npos);
+    accumulate(value, chunked ? "2\r\nx" : "x");
+    result = value.decode();
+    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kMoreBytesNeeded);
+    DOBA_EXPECT(!result.response);
+    accumulate(value, chunked ? "y\r\n0\r\n\r\n" : "y");
+    result = value.decode();
+    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+    DOBA_EXPECT(result.request != nullptr);
+    DOBA_EXPECT(!result.response);
+    accumulate(value, head);
+    result = value.decode();
+    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kMoreBytesNeeded);
+    DOBA_EXPECT(result.response.has_value());
+  }
+}
+
+// +===========================================================================+
+// | [>] decoder limits interim to accepted incomplete bodies    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder limits interim to accepted incomplete bodies") {
+  const std::string prefix = "POST / HTTP/1.1\r\nHost: localhost\r\n";
+  const std::string expect = "Expect: 100-continue\r\n";
+  const std::vector<std::pair<std::string, deserialization_status>> cases{
+      {expect + "Content-Length: 1\r\n",
+       deserialization_status::kMoreBytesNeeded},
+      {"Content-Length: 1\r\n\r\n", deserialization_status::kMoreBytesNeeded},
+      {expect + "\r\n", deserialization_status::kSucceeded},
+      {expect + "Content-Length: 0\r\n\r\n",
+       deserialization_status::kSucceeded},
+      {expect + "Content-Length: 1\r\n\r\nx",
+       deserialization_status::kSucceeded},
+      {expect + "Transfer-Encoding: chunked\r\n\r\n0\r\n\r\n",
+       deserialization_status::kSucceeded},
+      {expect + "Transfer-Encoding: chunked\r\n\r\n1\r\nx\r\n0\r\n\r\n",
+       deserialization_status::kSucceeded},
+      {expect + "Transfer-Encoding: chunked\r\n\r\nZ\r\n",
+       deserialization_status::kInvalidSource},
+      {expect + "Content-Length: invalid\r\n\r\n",
+       deserialization_status::kInvalidSource},
+      {"Expect: unsupported\r\nContent-Length: 1\r\n\r\n",
+       deserialization_status::kInvalidSource},
+      {expect + "Content-Length: 1\r\nHost: other\r\n\r\n",
+       deserialization_status::kInvalidSource}};
+  for (const auto& [fields, status] : cases) {
+    decoder_input value;
+    accumulate(value, prefix + fields);
+    auto result = value.decode();
+    DOBA_EXPECT_EQUAL(result.code, status);
+    if (status == deserialization_status::kInvalidSource) {
+      DOBA_EXPECT(result.response.has_value());
+      auto wire = result.response->serialize();
+      const std::string_view bytes(wire->prefix.get(), wire->prefix_size);
+      DOBA_EXPECT(!bytes.starts_with("HTTP/1.1 100 "));
+    } else {
+      DOBA_EXPECT(!result.response);
+    }
+  }
+}
+
+// +===========================================================================+
+// | [>] decoder returns responses for rejection reasons         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder returns responses for rejection reasons") {
+  martianlabs::doba::protocol::http::v11::policies configuration;
+  configuration.max_content_length = 1;
+  configuration.max_uri_length = 8;
+  configuration.max_header_section_size = 128;
+  configuration.allow_chunked = false;
+  const std::vector<std::pair<std::string, std::string_view>> cases{
+      {"GET / HTTP/1.1\r\nHost: a\r\nContent-Length: invalid\r\n\r\n", "400"},
+      {"POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 2\r\n\r\n", "413"},
+      {"GET /123456789 HTTP/1.1\r\nHost: a\r\n\r\n", "414"},
+      {"POST / HTTP/1.1\r\nHost: a\r\nExpect: unknown\r\n\r\n", "417"},
+      {"GET / HTTP/1.1\r\nHost: a\r\nX: " + std::string(140, 'x') +
+           "\r\n\r\n", "431"},
+      {"POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n",
+       "501"},
+      {"GET / HTTP/1.2\r\nHost: a\r\n\r\n", "505"}};
+  for (const auto& [input, status] : cases) {
+    decoder_type value(configuration);
+    std::size_t consumed = 0;
+    auto result = value.deserialize(input.data(), input.size(), 4096, consumed);
+    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+    DOBA_EXPECT(!result.request);
+    DOBA_EXPECT(result.response.has_value());
+    auto output = result.response->serialize();
+    const std::string_view bytes(output->prefix.get(), output->prefix_size);
+    DOBA_EXPECT(bytes.starts_with("HTTP/1.1 " + std::string(status) + " "));
+    DOBA_EXPECT(bytes.ends_with("\r\n\r\nInvalid request content!"));
+    DOBA_EXPECT(bytes.find("Content-Length: 24\r\n") != std::string_view::npos);
+  }
+}
+
+// +===========================================================================+
+// | [>] decoder suppresses errors only for a known HEAD         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder suppresses errors only for a known HEAD") {
+  for (const std::string_view method : {"HEAD ", "HEADX ", "HEAD\t", "HEAD@"}) {
+    decoder_input value;
+    accumulate(value, std::string(method) +
+        "/ HTTP/1.1\r\nHost: a\r\nContent-Length: invalid\r\n\r\n");
+    auto result = value.decode();
+    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+    DOBA_EXPECT(result.response.has_value());
+    auto output = result.response->serialize();
+    const std::string_view bytes(output->prefix.get(), output->prefix_size);
+    DOBA_EXPECT(bytes.find("Content-Length: 24\r\n") != std::string_view::npos);
+    DOBA_EXPECT(bytes.ends_with(method == "HEAD " ? "\r\n\r\n"
+        : "\r\n\r\nInvalid request content!"));
+  }
+  decoder_input partial;
+  accumulate(partial, "HEAD");
+  auto result = partial.decode();
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kMoreBytesNeeded);
+  DOBA_EXPECT(!result.response);
+  accumulate(partial, " / HTTP/1.1\r\nHost: a\r\nBad Name: x\r\n\r\n");
+  result = partial.decode();
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+  auto output = result.response->serialize();
+  DOBA_EXPECT(std::string_view(output->prefix.get(), output->prefix_size)
+                  .ends_with("\r\n\r\n"));
+}
+
+// +===========================================================================+
+// | [>] decoder retains HEAD while decoding body fragments      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder retains HEAD while decoding body fragments") {
+  decoder_input value;
+  accumulate(value, "HEAD / HTTP/1.1\r\nHost: a\r\n"
+                    "Expect: 100-continue\r\n"
+                    "Transfer-Encoding: chunked\r\n\r\n");
+  auto result = value.decode();
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kMoreBytesNeeded);
+  DOBA_EXPECT(result.response.has_value());
+  accumulate(value, "1\r\nx");
+  result = value.decode();
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kMoreBytesNeeded);
+  DOBA_EXPECT(!result.response);
+  accumulate(value, "Z");
+  result = value.decode();
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+  DOBA_EXPECT(result.response.has_value());
+  auto output = result.response->serialize();
+  const std::string_view bytes(output->prefix.get(), output->prefix_size);
+  DOBA_EXPECT(bytes.starts_with("HTTP/1.1 400 "));
+  DOBA_EXPECT(bytes.find("Content-Length: 24\r\n") != std::string_view::npos);
+  DOBA_EXPECT(bytes.ends_with("\r\n\r\n"));
+  decoder_input next;
+  accumulate(next, "HEAD / HTTP/1.1\r\nHost: a\r\n\r\n");
+  DOBA_EXPECT_EQUAL(next.decode().code, deserialization_status::kSucceeded);
+  accumulate(next, "GET / HTTP/1.1\r\nBad Name: x\r\n\r\n");
+  result = next.decode();
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+  output = result.response->serialize();
+  DOBA_EXPECT(std::string_view(output->prefix.get(), output->prefix_size)
+                  .ends_with("\r\n\r\nInvalid request content!"));
+}

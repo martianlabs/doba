@@ -161,16 +161,44 @@ class decoder {
   // +=========================================================================+
   // | [>] deserialize                                              ( public ) |
   // +=========================================================================+
-  deserialization_result<RQty> deserialize(
+  deserialization_result<RQty, RSty> deserialize(
       const char* buffer, const std::size_t size, const std::size_t capacity,
       std::size_t& consumed) {
     std::string_view source(buffer, size);
-    deserialization_result<RQty> result =
+    deserialization_result<RQty, RSty> result =
         body_framer_ ? parse_body(source) : parse_core(source);
     consumed = size - source.size();
     if (result.code == deserialization_status::kMoreBytesNeeded &&
         !body_framer_ && size == capacity) {
       result.code = deserialization_status::kInvalidSource;
+    }
+    if (result.code == deserialization_status::kInvalidSource) {
+      switch (context_.rejection_reason) {
+        case rejection_reason::kPayloadTooLarge:
+          result.response.emplace(RSty::content_too_large_413());
+          break;
+        case rejection_reason::kUriTooLong:
+          result.response.emplace(RSty::uri_too_long_414());
+          break;
+        case rejection_reason::kExpectationFailed:
+          result.response.emplace(RSty::expectation_failed_417());
+          break;
+        case rejection_reason::kHeaderFieldsTooLarge:
+          result.response.emplace(RSty::request_header_fields_too_large_431());
+          break;
+        case rejection_reason::kUnsupportedFeature:
+          result.response.emplace(RSty::not_implemented_501());
+          break;
+        case rejection_reason::kVersionNotSupported:
+          result.response.emplace(RSty::http_version_not_supported_505());
+          break;
+        default:
+          result.response.emplace(RSty::bad_request_400());
+          break;
+      }
+      result.response->set_body("Invalid request content!");
+      // RFC 9110 S9.3.2: HEAD errors retain framing but omit content.
+      if (head_request_) result.response->suppress_body();
     }
     // Borrowed views must not survive reuse of the transport's buffer.
     method_ = {};
@@ -188,7 +216,8 @@ class decoder {
   // +=========================================================================+
   // | [>] parse_core                                               ( public ) |
   // +=========================================================================+
-  deserialization_result<RQty> parse_core(std::string_view& source) {
+  deserialization_result<RQty, RSty> parse_core(std::string_view& source) {
+    head_request_ = false;
     std::string_view sv = source;
     std::size_t i = 0;
     // +-----------------------------------------------------------------------+
@@ -203,6 +232,7 @@ class decoder {
     i += method_.size();
     if (i >= sv.size()) return deserialization_status::kMoreBytesNeeded;
     if (sv[i++] != ' ') return deserialization_status::kInvalidSource;
+    head_request_ = method_ == method_names::kHead;
     // +-----------------------------------------------------------------------+
     // | [request-target] part!                                                |
     // +-----------------------------------------------------------------------+
@@ -389,7 +419,12 @@ class decoder {
             }
           }
           if (!body_framer_) return dispatch(std::nullopt);
-          return parse_body(source);
+          auto result = parse_body(source);
+          if (result.code == deserialization_status::kMoreBytesNeeded &&
+              context_.connection.expects_continue) {
+            result.response.emplace(RSty::continue_100());
+          }
+          return result;
         }
         if (sv[i] == '\n') return deserialization_status::kInvalidSource;
         // [field-name] decoding..
@@ -444,7 +479,7 @@ class decoder {
   // +=========================================================================+
   // | [>] parse_body                                               ( public ) |
   // +=========================================================================+
-  deserialization_result<RQty> parse_body(std::string_view& source) {
+  deserialization_result<RQty, RSty> parse_body(std::string_view& source) {
     body::framer_state state = std::visit(
         [this, source](auto& arg) -> body::framer_state {
           std::span<const std::byte> byte_span{
@@ -506,10 +541,10 @@ class decoder {
   // +=========================================================================+
   // | [>] dispatch                                                ( private ) |
   // +=========================================================================+
-  deserialization_result<RQty> dispatch(
+  deserialization_result<RQty, RSty> dispatch(
       std::optional<common::byte_storage> byte_storage) {
     // Let's return the request object!
-    deserialization_result<RQty> result = deserialization_result<RQty>(
+    deserialization_result<RQty, RSty> result(
         request_getter_(std::move(byte_storage)));
     body_framer_ = std::nullopt;
     body_buffer_ = std::nullopt;
@@ -959,6 +994,7 @@ class decoder {
   target target_ = target::kUnknown;
   std::vector<header_view> headers_;
   request_getter<RQty> request_getter_;
+  bool head_request_{false};
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

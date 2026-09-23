@@ -265,6 +265,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // +=========================================================================+
   bool arm_next_receive_operation() {
     std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    processing_receive_ = false;
     if (stopping_.load()) closing_ = true;
     if (closing_) {
       cleanup_resources_();
@@ -287,10 +288,14 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     {
       std::lock_guard<std::mutex> sending_lock(sending_mutex_);
       receiving_ = false;
+      if (!size) receive_closed_ = true;
       if (stopping_.load()) closing_ = true;
       if (socket_ == INVALID_SOCKET) retire_();
       else if (closing_) cleanup_resources_();
-      else active = true;
+      else {
+        active = true;
+        processing_receive_ = size != 0;
+      }
     }
     if (!active) {
       cancel_sends_();
@@ -333,8 +338,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     {
       std::lock_guard<std::mutex> sending_lock(sending_mutex_);
       receiving_ = false;
-      if (closing_) cleanup_resources_();
-      else abort_();
+      abort_();
     }
     cancel_sends_();
   }
@@ -536,22 +540,29 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // | [>] cleanup_resources_                                      ( private ) |
   // +=========================================================================+
   void cleanup_resources_() {
-    if (!closing_) return;
-    if (sending_) return;
-    if (receiving_) {
-      if (!socket_shutdown_) {
-        if (::shutdown(socket_, SD_SEND) == SOCKET_ERROR ||
-            (!CancelIoEx((HANDLE)socket_, nullptr) &&
-             GetLastError() != ERROR_NOT_FOUND)) {
-          abort_();
-          return;
-        }
-        socket_shutdown_ = true;
-      }
+    if (!closing_ || sending_) return;
+    if (socket_ == INVALID_SOCKET) {
+      retire_();
       return;
     }
-    close_socket_();
-    retire_();
+    if (!socket_shutdown_) {
+      if (::shutdown(socket_, SD_SEND) == SOCKET_ERROR) {
+        abort_();
+        return;
+      }
+      socket_shutdown_ = true;
+    }
+    if (stopping_.load() || receive_closed_) {
+      close_socket_();
+      retire_();
+      return;
+    }
+    // The engine must release the buffer before another receive can use it.
+    if (!receiving_ && !processing_receive_) {
+      // Discard input until peer EOF to avoid resetting the final response.
+      ovr_size_ = 0;
+      if (!receive_()) abort_();
+    }
   }
   // +=========================================================================+
   // | [>] abort_                                                  ( private ) |
@@ -624,6 +635,8 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   std::shared_ptr<context> wake_owner_;
   bool disconnected_{false};
   bool receiving_{false};
+  bool receive_closed_{false};
+  bool processing_receive_{false};
   bool sending_{false};
   bool socket_shutdown_{false};
   bool retired_{false};

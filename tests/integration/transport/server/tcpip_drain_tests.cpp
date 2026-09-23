@@ -808,3 +808,53 @@ DOBA_TEST("endpoint policies persist across restarts") {
     DOBA_EXPECT_EQUAL(state->destroyed.load(), iteration + 1);
   }
 }
+
+// +===========================================================================+
+// | [>] close discards input after draining output              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("close discards input after draining output") {
+  for (const bool stop : {false, true}) {
+    auto state = std::make_shared<reader_state>();
+    state->close = true;
+    state->single = true;
+    state->size = 24001;
+    auto factory = [state]() -> reader_engine { return reader_engine{state}; };
+    tcpip_client client;
+    const auto port = client.find_available_port();
+    DOBA_EXPECT(port != 0);
+    tr::policies configuration;
+    configuration.ip = "127.0.0.1";
+    configuration.port = std::to_string(port);
+    configuration.worker_count = 2;
+    configuration.recv_buffer_size = 1;
+    configuration.send_buffer_size = 32768;
+    tr::tcpip<reader_engine, decltype(factory)> transport(configuration,
+                                                         std::move(factory));
+    std::atomic<int> disconnected{0};
+    transport.set_on_connection([]() {});
+    transport.set_on_disconnection([&]() { disconnected++; });
+    transport.start();
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send_all("xy"));
+    const auto bytes = client.receive(state->size, 5s);
+    DOBA_EXPECT(bytes.has_value());
+    if (bytes) DOBA_EXPECT_EQUAL(*bytes, std::string(state->size, 'a'));
+    DOBA_EXPECT(client.wait_for_close(5s));
+    DOBA_EXPECT_EQUAL(disconnected.load(), 0);
+    // The peer can still send after observing the server's write shutdown.
+    DOBA_EXPECT(client.send_all("later input"));
+    if (stop) {
+      transport.stop();
+      DOBA_EXPECT_EQUAL(disconnected.load(), 1);
+      client.close();
+    } else {
+      client.close();
+      DOBA_EXPECT(wait_count(disconnected, 1));
+      transport.stop();
+    }
+    DOBA_EXPECT_EQUAL(state->queued.load(), 1);
+    DOBA_EXPECT_EQUAL(state->succeeded.load(), 1);
+    DOBA_EXPECT_EQUAL(state->failed.load(), 0);
+    DOBA_EXPECT_EQUAL(state->reentered.load(), 0);
+  }
+}

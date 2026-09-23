@@ -25,6 +25,8 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <memory>
+#include <stop_token>
 #include <string>
 #include <string_view>
 
@@ -225,4 +227,56 @@ DOBA_TEST("HTTP/1.1 enforces chunk extension and trailer wire limits") {
     }
   }
   http_server.stop();
+}
+
+// +===========================================================================+
+// | [>] capacity rejection follows deferred output              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("HTTP/1.1 orders a capacity rejection after deferred output") {
+  using martianlabs::doba::common::task;
+  using martianlabs::doba::tests::integration::http_test_signal;
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  auto signal = std::make_shared<http_test_signal>();
+  const std::string first_body(24001, 'x');
+  server<> http_server({.recv_buffer_size = receive_capacity,
+                        .ip = "127.0.0.1", .port = std::to_string(port)});
+  std::atomic<int> calls{0};
+  http_server.add_route("GET", "/first",
+      [signal, &first_body](std::shared_ptr<const request>,
+                            std::stop_token token) -> task<response> {
+        std::stop_callback cancellation(
+            token, [signal]() { signal->resume(); });
+        co_await *signal;
+        auto result = response::ok_200();
+        result.set_body(first_body);
+        co_return result;
+      });
+  http_server.add_route("GET", "/sentinel", [&](const request&) {
+    calls.fetch_add(1);
+    return response::ok_200();
+  });
+  http_server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all(
+      "GET /first HTTP/1.1\r\nHost: a\r\n\r\n"));
+  DOBA_EXPECT(signal->wait());
+  std::string invalid = "HEAD / HTTP/1.1\r\nHost: a\r\nX-Pad: ";
+  invalid.append(receive_capacity - invalid.size(), 'x');
+  DOBA_EXPECT(client.send_all(invalid));
+  DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(50)));
+  DOBA_EXPECT(client.send_all(
+      "\r\n\r\nGET /sentinel HTTP/1.1\r\nHost: a\r\n\r\n"));
+  signal->resume();
+  const auto first = receive_http_response(client);
+  DOBA_EXPECT(first.has_value());
+  DOBA_EXPECT_EQUAL(first->status, "HTTP/1.1 200 OK");
+  DOBA_EXPECT_EQUAL(first->body, first_body);
+  const auto rejected = receive_http_response(client, true);
+  DOBA_EXPECT(rejected.has_value());
+  DOBA_EXPECT_EQUAL(rejected->status, "HTTP/1.1 400 Bad Request");
+  DOBA_EXPECT_EQUAL(rejected->body, "");
+  DOBA_EXPECT(client.wait_for_close(std::chrono::seconds(3)));
+  DOBA_EXPECT_EQUAL(calls.load(), 0);
 }

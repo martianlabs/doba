@@ -26,6 +26,7 @@
 #define martianlabs_doba_protocol_deserialization_h
 
 #include <memory>
+#include <optional>
 
 namespace martianlabs::doba::protocol {
 // /////////////////////////////////////////////////////////////////////////////
@@ -48,9 +49,10 @@ enum class deserialization_status {
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
 // |   RQty - request being used.                                              |
+// |   RSty - response being used.                                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <typename RQty>
+template <typename RQty, typename RSty>
 struct deserialization_result {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
@@ -71,6 +73,7 @@ struct deserialization_result {
   // +=========================================================================+
   deserialization_status code = deserialization_status::kInvalidSource;
   std::shared_ptr<RQty> request = nullptr;
+  std::optional<RSty> response;
 };
 }  // namespace martianlabs::doba::protocol
 

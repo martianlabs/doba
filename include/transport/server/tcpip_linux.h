@@ -159,7 +159,8 @@ struct context {
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
-  void stop() {
+  void stop(bool stopping = false) {
+    stopping_ = stopping_ || stopping;
     closing_ = true;
     if (engine_stopped_) return;
     engine_stopped_ = true;
@@ -285,7 +286,7 @@ struct context {
       }
       engine_.on_send_completed(true);
     }
-    if (aborted_ || closing_) return false;
+    if (aborted_) return false;
     if (send_waiting_) {
       epoll_event event{};
       event.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
@@ -294,6 +295,21 @@ struct context {
         return false;
       }
       send_waiting_ = false;
+    }
+    if (closing_) {
+      if (!socket_shutdown_) {
+        if (::shutdown(socket_, SHUT_WR) == -1) return false;
+        socket_shutdown_ = true;
+      }
+      if (stopping_) return false;
+      // Discard input until peer EOF to avoid resetting the final response.
+      for (;;) {
+        ssize_t received = ::recv(socket_, receive_buffer_.get(),
+                                  receive_capacity_, MSG_DONTWAIT);
+        if (received > 0) continue;
+        if (received == -1 && errno == EINTR) continue;
+        return received == -1 && (errno == EAGAIN || errno == EWOULDBLOCK);
+      }
     }
     return true;
   }
@@ -365,6 +381,8 @@ struct context {
   bool send_streaming_{false};
   bool send_waiting_{false};
   bool closing_{false};
+  bool stopping_{false};
+  bool socket_shutdown_{false};
   bool aborted_{false};
   bool connected_{false};
   bool engine_stopped_{false};
@@ -585,7 +603,7 @@ struct worker {
     for (const auto& item : contexts_) {
       auto ctx = item.first;
       if (ctx->is_closed()) continue;
-      ctx->stop();
+      ctx->stop(true);
       try {
         if (!ctx->send_pending()) close_context(ctx);
       } catch (...) {
@@ -684,7 +702,7 @@ struct worker {
       close_context(ctx);
       return;
     }
-    if (stopping_.load()) ctx->stop();
+    if (stopping_.load()) ctx->stop(true);
     if (ctx->can_receive() && (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP))) {
       if (!handle_receive(ctx)) {
         close_context(ctx);
@@ -710,7 +728,7 @@ struct worker {
       if (errno == EAGAIN || errno == EWOULDBLOCK) return true;
       return false;
     }
-    if (stopping_.load()) ctx->stop();
+    if (stopping_.load()) ctx->stop(true);
     return true;
   }
   // +=========================================================================+

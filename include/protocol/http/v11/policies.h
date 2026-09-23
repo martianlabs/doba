@@ -69,6 +69,9 @@ struct policies {
   // server to ignore Upgrade); false rejects the request outright. Honouring
   // an upgrade is deferred to a future release.
   bool allow_upgrade = true;
+  // Pending requests per connection, including responses awaiting their turn.
+  // No preallocation; 0 means unlimited. This does not limit retained bytes.
+  std::size_t max_pending_requests = 4096;
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

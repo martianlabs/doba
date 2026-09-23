@@ -239,9 +239,9 @@ DOBA_TEST("server invokes parametrized async handlers") {
   DOBA_EXPECT(send_request("GET", "/item/42").ends_with("\r\n\r\n42"));
 }
 // +===========================================================================+
-// | [>] sync handler failure preserves subsequent dispatch      ( test-case ) |
+// | [>] server accepts new connections after handler failure ( test-case )    |
 // +===========================================================================+
-DOBA_TEST("sync handler failure preserves subsequent dispatch") {
+DOBA_TEST("server accepts new connections after handler failure") {
   test_server value;
   value.add_route("GET", "/fail", [](const http::request&) -> http::response {
     throw std::runtime_error("handler failed");
@@ -251,6 +251,10 @@ DOBA_TEST("sync handler failure preserves subsequent dispatch") {
   });
   value.start();
   DOBA_EXPECT(send_request("GET", "/fail").starts_with("HTTP/1.1 500 "));
+  DOBA_EXPECT(test_transport::instance->closed);
+  DOBA_EXPECT(send_request().empty());
+  test_transport::instance->stop();
+  test_transport::instance->start();
   DOBA_EXPECT(send_request().starts_with("HTTP/1.1 200 "));
 }
 // +===========================================================================+

@@ -90,7 +90,8 @@ class engine {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   engine(policies_type configuration, const ROty& routes)
-      : decoder_{configuration}, router_{routes} {}
+      : decoder_{configuration}, router_{routes},
+        max_pending_requests_{configuration.max_pending_requests} {}
   ~engine() { on_stop(); }
   // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |
@@ -125,13 +126,20 @@ class engine {
         }
         if (state != response_state::kReady) return;
         if (entry->error) {
-          entry->response.emplace(RSty::internal_server_error_500());
+          input_stopped_ = true;
+          entry->response.emplace(make_error_response());
         }
-        send_response(*entry->request, *entry->response);
+        if (entry->request) {
+          send_response(*entry->request, *entry->response);
+        } else {
+          // A ready entry without a request is a terminal decoder rejection.
+          send_decoded_response(*entry->response, true);
+        }
         pending_.pop_front();
         if (stopped_) return;
       }
       serial_ = false;
+      send_interim();
     } catch (...) {
       stopped_ = true;
       on_close_();
@@ -143,6 +151,7 @@ class engine {
   void on_stop() noexcept {
     stopped_ = true;
     pending_.clear();
+    interim_.reset();
     if (cancellation_) cancellation_->request_stop();
   }
   // +=========================================================================+
@@ -158,12 +167,20 @@ class engine {
     std::size_t processed = 0;
     while (processed < size) {
       std::size_t consumed = 0;
-      deserialization_result<RQty> result = decoder_.deserialize(
+      deserialization_result<RQty, RSty> result = decoder_.deserialize(
           buffer + processed, size - processed, capacity, consumed);
       processed += consumed;
       switch (result.code) {
         case deserialization_status::kSucceeded: {
+          // RFC 9110 S10.1.1: a complete body no longer needs a 100 response.
+          interim_.reset();
           try {
+            if (!pending_.empty() && max_pending_requests_ &&
+                pending_.size() >= max_pending_requests_) {
+              on_stop();
+              on_close_();
+              return processed;
+            }
             const auto& request = result.request;
             const auto method = request->get_method();
             // RFC 9112 S9.3.2: only safe requests execute concurrently.
@@ -195,10 +212,34 @@ class engine {
           break;
         }
         case deserialization_status::kInvalidSource:
-          stopped_ = true;
-          on_close_();
-          return processed;
+          input_stopped_ = true;
+          interim_.reset();
+          try {
+            if (pending_.empty()) {
+              send_decoded_response(*result.response, true);
+            } else {
+              auto entry = std::make_shared<pending_response>(nullptr);
+              entry->response.emplace(std::move(*result.response));
+              entry->state.store(response_state::kReady,
+                                  std::memory_order_relaxed);
+              pending_.push_back(std::move(entry));
+            }
+          } catch (...) {
+            stopped_ = true;
+            on_close_();
+          }
+          // Release rejected input so capacity checks cannot abort the drain.
+          return size;
         case deserialization_status::kMoreBytesNeeded:
+          try {
+            if (result.response) {
+              interim_.emplace(std::move(*result.response));
+              if (pending_.empty()) send_interim();
+            }
+          } catch (...) {
+            stopped_ = true;
+            on_close_();
+          }
           return processed;
       }
     }
@@ -278,7 +319,8 @@ class engine {
       }
     } catch (...) {
       if (delivering) throw;
-      deliver(RSty::internal_server_error_500());
+      input_stopped_ = true;
+      deliver(make_error_response());
     }
   }
   // +=========================================================================+
@@ -325,31 +367,72 @@ class engine {
     return std::nullopt;
   }
   // +=========================================================================+
+  // | [>] make_error_response                                     ( private ) |
+  // +=========================================================================+
+  static RSty make_error_response() {
+    auto response = RSty::internal_server_error_500();
+    response.set_body("Internal Server Error");
+    return response;
+  }
+  // +=========================================================================+
+  // | [>] send_interim                                            ( private ) |
+  // +=========================================================================+
+  void send_interim() {
+    if (!interim_ || input_stopped_) return;
+    send_decoded_response(*interim_, false);
+    interim_.reset();
+  }
+  // +=========================================================================+
+  // | [>] send_decoded_response                                   ( private ) |
+  // +=========================================================================+
+  void send_decoded_response(RSty& response, bool close) {
+    if (close) response.set_header(header_names::kConnection, "close");
+    auto serialized = response.serialize();
+    on_send_(std::move(serialized->prefix), serialized->prefix_size,
+             std::move(serialized->source));
+    if (close && !stopped_) {
+      stopped_ = true;
+      on_close_();
+    }
+  }
+  // +=========================================================================+
   // | [>] send_response                                           ( private ) |
   // +=========================================================================+
   void send_response(const RQty& request, RSty& response) {
-    bool close = request.wants_connection_close();
-    if (close) {
-      response.set_header(header_names::kConnection, "close");
-    } else if (response.has_header(header_names::kConnection)) {
-      const std::size_t count = response.get_headers_length();
-      for (std::size_t i = 0; i < count && !close; i++) {
-        const auto header = response.get_header(i);
-        if (!helpers::iequals(header.first, header_names::kConnection)) {
-          continue;
+    // The current response remains at the FIFO front during delivery.
+    bool close = request.wants_connection_close() ||
+                 (input_stopped_ && pending_.size() <= 1);
+    decltype(response.serialize()) serialized;
+    try {
+      if (close) {
+        response.set_header(header_names::kConnection, "close");
+      } else if (response.has_header(header_names::kConnection)) {
+        const std::size_t count = response.get_headers_length();
+        for (std::size_t i = 0; i < count && !close; i++) {
+          const auto header = response.get_header(i);
+          if (!helpers::iequals(header.first, header_names::kConnection)) {
+            continue;
+          }
+          helpers::for_each_list_element(
+              header.second, [&close](std::string_view value) {
+                helpers::ows_ltrim(value);
+                helpers::ows_rtrim(value);
+                if (helpers::iequals(value, "close")) close = true;
+                return true;
+              });
         }
-        helpers::for_each_list_element(
-            header.second, [&close](std::string_view value) {
-              helpers::ows_ltrim(value);
-              helpers::ows_rtrim(value);
-              if (helpers::iequals(value, "close")) close = true;
-              return true;
-            });
       }
+      // RFC 9110 S9.3.2: HEAD preserves framing but never sends body bytes.
+      if (request.get_method() == method_names::kHead) response.suppress_body();
+      serialized = response.serialize();
+    } catch (...) {
+      input_stopped_ = true;
+      close = close || pending_.size() <= 1;
+      auto error = make_error_response();
+      if (close) error.set_header(header_names::kConnection, "close");
+      if (request.get_method() == method_names::kHead) error.suppress_body();
+      serialized = error.serialize();
     }
-    // RFC 9110 S9.3.2: HEAD preserves framing but never sends body bytes.
-    if (request.get_method() == method_names::kHead) response.suppress_body();
-    auto serialized = response.serialize();
     on_send_(std::move(serialized->prefix), serialized->prefix_size,
              std::move(serialized->source));
     if (close && !stopped_) {
@@ -362,11 +445,13 @@ class engine {
   // +=========================================================================+
   decoder<RQty, RSty> decoder_;
   const ROty& router_;
+  const std::size_t max_pending_requests_;
   common::send_delegate on_send_;
   std::function<void()> on_close_;
   std::function<void()> on_wake_;
   std::list<std::shared_ptr<pending_response>> pending_;
   std::optional<std::stop_source> cancellation_;
+  std::optional<RSty> interim_;
   bool serial_{false};
   bool input_stopped_{false};
   bool stopped_{false};
