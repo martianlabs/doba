@@ -12,7 +12,6 @@ one server at a time, and stop it with Ctrl+C.
 | Request bodies | `request_body_text`, `request_body_binary`, `expect_continue` |
 | Response construction | `response_statuses`, `response_headers`, `response_body_values`, `response_body_writers`, `large_response_bodies` |
 | Server behavior | `head_requests`, `automatic_not_found`, `method_not_allowed`, `options_asterisk`, `connection_close`, `automatic_date`, `request_rejections` |
-| Asynchrony | `asynchronous_routes` |
 | Controllers | `controllers` |
 | Static files | `static_file_server` |
 
@@ -25,7 +24,4 @@ server<> http_server({.ip = "0.0.0.0", .port = "8080"});
 http_server.start();
 ```
 
-Engine policies are optional and follow the transport policies. The current
-engine migration still lacks asynchronous handler execution, interim
-`100 Continue` responses, and HTTP responses for decoder rejections. The
-corresponding examples build and run, but their intended results remain pending.
+Engine policies are optional and follow the transport policies.

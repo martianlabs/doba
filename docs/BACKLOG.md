@@ -47,13 +47,14 @@ a selected value are marked "Not set"; complexity estimates are separate.
 
 The frozen target is `0.1.0-beta1`, a beta for adoption and evaluation in
 controlled deployments. This section is the authoritative release scope.
-B14-B19 migration bugs are resolved; their records remain below as evidence.
+B15-B18 migration bugs are resolved. B14 and B19 were withdrawn with coroutine
+execution and completion notifications; their records remain below.
 Other outstanding work outside the release scope remains future work and
 does not block this beta.
 
 Implementation order:
 
-1. B14-B19: completed; all migration regression tests pass.
+1. B15-B18: completed; synchronous migration regressions remain active.
 2. B9: completed; response-driven closure verified on both platforms.
 3. F1 and F2: implement TLS and GZIP response compression.
 4. C1, C2, C3 and C7: implement and verify all operational limits.
@@ -75,7 +76,7 @@ inactivity and pending-work limits belong to their responsible modules.
 
 **Exit criteria.**
 
-- B9 verified: synchronous, immediate and deferred response-driven closure
+- B9 verified: synchronous response-driven closure
   passes on Windows and Linux, including complete bodies before EOF and the
   pipelined close boundary. No production change was needed.
 - Implement F1 and F2 with focused unit and real-socket tests on Windows
@@ -120,7 +121,7 @@ when a newly reproduced defect affects the supported behavior.
 scope and twenty-three future entries. No critical migration bug remains.
 B14-B19 originally recorded 31 failing tests on 2026-09-21. After the
 2026-09-23 B19 fix, all tests pass on Windows and WSL.
-Resolved B9 and B14-B19 are retained below as evidence and excluded from
+Resolved B9 and B15-B18, plus withdrawn B14/B19, are retained below and excluded from
 the outstanding totals.
 Verification pending means that the focused regressions or runtime
 measurements described by an entry remain to be run. Category totals count
@@ -141,12 +142,12 @@ work from the future contribution guide.
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
-| [B14](#b14-asynchronous-handler-execution) | Critical bug | Resolved; verified 2026-09-22 | P0 (maximum) | Current migration |
+| [B14](#b14-asynchronous-handler-execution) | Withdrawn feature | Removed by design | Not applicable | Outside current scope |
 | [B15](#b15-missing-100-continue) | Critical bug | Resolved; verified 2026-09-22 | P0 (maximum) | Current migration |
 | [B16](#b16-missing-http-rejection-responses) | Critical bug | Resolved; verified 2026-09-23 | P0 (maximum) | Current migration |
 | [B17](#b17-http-error-response-content) | Critical bug | Resolved; verified 2026-09-22 | P0 (maximum) | Current migration |
 | [B18](#b18-empty-delivery-contract) | Critical bug | Resolved; verified 2026-09-23 | P0 (maximum) | Current migration |
-| [B19](#b19-send-limit-failure-notification) | Critical bug | Resolved; verified 2026-09-23 | P0 (maximum) | Current migration |
+| [B19](#b19-send-limit-failure-notification) | Withdrawn contract | Notifications removed | Not applicable | Outside current scope |
 | [C1](#c1-single-inactivity-timeout) | Hardening | Pending | Release gate | 0.1.0-beta1 |
 | [C2](#c2-effective-per-request-limits) | Hardening | Pending | Release gate | 0.1.0-beta1 |
 | [C3](#c3-global-active-connection-limit) | Hardening | Pending | Release gate | 0.1.0-beta1 |
@@ -324,24 +325,21 @@ new callbacks, and HTTP rejection responses.
 
 **Status and evidence.** Implementation and validation are required for
 `0.1.0-beta1`. Source inspection found no per-connection budget at response
-insertion or deferred slot reservation.
+insertion.
 A socket send buffer limit does not bound queued response bodies or work.
 Resource exhaustion has not been reproduced in a stress campaign.
 
-**Risk.** A pipelining client that does not consume responses, or an early
-deferred handler that delays ordered output, may accumulate responses and
-retained request state while more requests are accepted.
+**Risk.** A pipelining client that does not consume responses, may accumulate source storage while more requests are accepted.
 
-**Components.** `responses_`, deferred reservations and receive scheduling in
+**Components.** send queues, body sources and receive scheduling in
 [tcpip_linux.h](../include/transport/server/tcpip_linux.h) and
 [tcpip_windows.h](../include/transport/server/tcpip_windows.h).
 
 **Scope.** Implement limits on retained work and queued response bytes
 through policies injected at module creation. Define accounting, defaults,
 and admission/resume or rejection behavior in the C1/C2/C3/C7 policy design
-stage. Preserve ordering, cancellation and ownership across synchronous and
-deferred handlers without prescribing a new queue abstraction or an
-HTTP-specific transport.
+stage. Preserve ordered byte delivery and ownership without prescribing a
+new queue abstraction or an HTTP-specific transport.
 
 **Acceptance and tests.** Use a non-reading peer and a delayed first handler
 with pipelined successors on both platforms. Check the configured work and
@@ -362,79 +360,25 @@ to C7 and does not depend on completing the future QA1/QA5 campaigns.
   </picture>
 </h2>
 
-B14-B19 were Critical severity and P0 (maximum) migration work; all are now
-resolved. In the original 2026-09-21 run,
-Windows unit 843/848 and integration 86/112 passed; WSL unit 841/846 and integration
-86/112 passed. The same five unit and twenty-six integration cases failed on
-both platforms. Builds used Debug and strict warnings, without ASan/UBSan.
-These are recorded results, not a new test execution during this backlog edit.
+B14-B19 were Critical severity and P0 migration work. The previous full-suite
+results describe the implementation before removal of coroutine execution.
+B14 and the B19 completion-notification contract have since been withdrawn;
+the remaining synchronous behavior and its tests are retained. Tests exclusive
+to the removed execution model are no longer part of the suite.
 
-The six entries assign every failing test once. Cross-references capture
-shared dependencies; a failure before later assertions does not prove those
-later behaviors are broken. B18 and B19 now have agreed, verified contracts.
-All original migration-failure tests remain active with their assertions
-unchanged. The separate unit test that reused a connection after a handler
-error was aligned with B17: it now verifies closure and a new connection.
-The latest 2026-09-23 full suites pass Windows unit 886/886, WSL unit
-884/884 and integration 125/125 on both platforms. No migration failure
-remains. B19 added three regressions and aligned source-limit notifications
-with cancellation plus rejection. B9 verification adds six unit and three
-integration cases, plus stronger lifecycle checks. Test-helper suites also
-pass (16 unit and 11 integration checks on each platform).
-
-B9 is separately verified and resolved below. B13 remains future benchmark
-work and is not revalidated by this migration-failure inventory.
+**Synchronous-only verification (2026-09-23).** Examples and tests build on
+Windows and WSL. Windows passes 835 unit and 107 integration tests; WSL passes
+833 unit and 107 integration tests. Both platforms also pass the 16 unit and
+11 integration helper checks. Clang ASan/UBSan with leak detection passes
+66 affected unit and 79 integration tests on Linux. No benchmark was run.
 
 <a name="b14-asynchronous-handler-execution"></a>
 <h3>B14: Asynchronous handler execution and lifecycle</h3>
 
-**Status.** Resolved; verified 2026-09-22. **Severity.** Critical.
-**Priority.** P0 (maximum). **Target.** Current migration.
-
-**Original cause.** The HTTP
-[engine](../include/protocol/http/v11/engine.h) returned 501 for asynchronous
-routes and parametrized handlers without invoking them. That path has been
-replaced with immediate/deferred execution and a per-connection response FIFO.
-
-**Implemented behavior.** Asynchronous routes and controllers execute with
-immediate completion or suspension/resumption. The engine preserves request
-order, retains suspended request storage, and propagates cooperative
-cancellation on shutdown, client reset and input EOF. Its pending-request
-limit is configured through engine policies, independently of transport bytes.
-
-**Acceptance and tests.** On 2026-09-22, all 17 cases below passed on
-Windows and WSL, including deferred close draining, ordered errors, HEAD
-error framing and interim responses behind suspended handlers.
-Response ordering belongs to the engine; byte delivery and draining remain
-transport responsibilities.
-
-**Dependencies and limits.** The interim-ordering dependency on
-[B15](#b15-missing-100-continue) and the deferred error/HEAD dependencies on
-[B17](#b17-http-error-response-content) are now verified. Deferred close
-coverage initially exercised request-driven closure;
-[B9](#b9-response-driven-connection-close) now verifies response-driven closure.
-Cancellation remains cooperative; a suspended awaitable
-must eventually complete or respond to cancellation to release its frame.
-
-| Suite | Test | Source | Windows / WSL |
-| --- | --- | --- | --- |
-| unit | server completes suspended async responses | [tests/unit/protocol/http/v11/server_tests.cpp](../tests/unit/protocol/http/v11/server_tests.cpp) | Passed |
-| unit | server propagates async handler exceptions | [tests/unit/protocol/http/v11/server_tests.cpp](../tests/unit/protocol/http/v11/server_tests.cpp) | Passed |
-| unit | server invokes parametrized async handlers | [tests/unit/protocol/http/v11/server_tests.cpp](../tests/unit/protocol/http/v11/server_tests.cpp) | Passed |
-| unit | async handler observes cancellation after suspension | [tests/unit/protocol/http/v11/server_tests.cpp](../tests/unit/protocol/http/v11/server_tests.cpp) | Passed |
-| integration | HTTP controllers preserve asynchronous response ordering | [tests/integration/protocol/http/v11/server_controller_tests.cpp](../tests/integration/protocol/http/v11/server_controller_tests.cpp) | Passed |
-| integration | HTTP suspended controllers receive shutdown cancellation | [tests/integration/protocol/http/v11/server_controller_tests.cpp](../tests/integration/protocol/http/v11/server_controller_tests.cpp) | Passed |
-| integration | HTTP/1.1 hides deferred handler and serializer diagnostics | [tests/integration/protocol/http/v11/server_response_tests.cpp](../tests/integration/protocol/http/v11/server_response_tests.cpp) | Passed |
-| integration | HTTP/1.1 suppresses deferred HEAD error bodies in pipelines | [tests/integration/protocol/http/v11/server_response_tests.cpp](../tests/integration/protocol/http/v11/server_response_tests.cpp) | Passed |
-| integration | HTTP/1.1 invokes an asynchronous parametrized route over TCP | [tests/integration/protocol/http/v11/server_routing_tests.cpp](../tests/integration/protocol/http/v11/server_routing_tests.cpp) | Passed |
-| integration | HTTP/1.1 keeps synchronous responses behind a suspended handler | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) | Passed |
-| integration | HTTP/1.1 orders asynchronous responses by request order | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) | Passed |
-| integration | HTTP/1.1 retains suspended request views across later heads | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) | Passed |
-| integration | HTTP/1.1 cancels a suspended request after client reset | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) | Passed |
-| integration | HTTP/1.1 cancels a suspended request after input eof | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) | Passed |
-| integration | HTTP/1.1 drains a deferred close response before eof | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) | Passed |
-| integration | HTTP/1.1 keeps interim output behind an earlier deferred response | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) | Passed |
-| integration | HTTP/1.1 orders a deferred error before accepted successors | [tests/integration/protocol/http/v11/server_tests.cpp](../tests/integration/protocol/http/v11/server_tests.cpp) | Passed |
+**Status.** Withdrawn by design on 2026-09-23. Doba now supports synchronous
+handlers only. Coroutine tasks, suspension, resumption, cancellation, pending
+request limits and engine wake/completion callbacks have been removed together
+with their tests and example. B14 is no longer a release requirement.
 
 <a name="b15-missing-100-continue"></a>
 <h3>B15: Missing 100 Continue before request bodies</h3>
@@ -446,28 +390,16 @@ must eventually complete or respond to cancellation to release its frame.
 cleared its parsing context without reporting the accepted expectation to
 the engine. Clients waiting for an interim response could not send the body.
 
-**Implemented behavior.** `deserialization_result<RQty, RSty>` now carries
-an optional response. After validating the complete head, the HTTP decoder
-returns `kMoreBytesNeeded` with `RSty::continue_100()` once if body decoding
-is incomplete. The engine emits it after all earlier responses have been
-handed to the transport. It retains at most one interim response, without a
-second FIFO or synchronization. Completion of the body discards an unsent
-interim; errors, closing and shutdown prevent later emission.
+**Implemented behavior.** `deserialization_result<RQty, RSty>` carries an
+optional response. After validating the complete head, the decoder returns
+`kMoreBytesNeeded` with `RSty::continue_100()` once if body decoding is
+incomplete. The synchronous engine transfers that response immediately;
+earlier request responses have already been handed to the transport.
 
 RFC 9110 S10.1.1 permits omitting 100 when content has already arrived or
-framing indicates no content. RFC 9112 S9.2 requires interim/final output to
-remain associated with requests in arrival order. The existing serializer
-omits body bytes, Content-Length and Transfer-Encoding for 100 responses.
-Transports and generic engine/transport concepts are unchanged.
-
-**Acceptance and tests.** All three cases below and B14's deferred-interim
-ordering regression pass on Windows and WSL. Added unit coverage verifies
-optional-response ownership, raw/chunked fragmented bodies, one provisional
-per request, invalid/incomplete heads, completed/empty bodies, deferred
-ordering, stop/error/close and delivery failure. The missing-interim engine
-regressions failed before the fix. All 32 engine, 160 decoder and three result
-unit tests pass on both platforms, as do all 17 B14 acceptance cases. Full
-builds include examples; full suites retain nine unrelated known failures.
+framing indicates no content. The serializer omits body bytes, Content-Length
+and Transfer-Encoding for 100 responses. Current coverage retains fragmented
+raw/chunked input, invalid heads, completed/empty bodies and delivery failure.
 
 **Performance verification.** The same WSL mixed-request benchmark used
 8 workers, 4096 connections, pipeline 1 and 133-byte responses with runtime
@@ -503,9 +435,8 @@ syscall trace reproduced the 400 response followed by ECONNRESET.
 **Implemented behavior.** The decoder supplies 400/413/414/417/431/501/505
 responses through the existing optional deserialization response. Known
 HEAD requests retain Content-Length but omit content, including failures
-in a fragmented body (RFC 9110 S9.3.2 and S8.6). The engine preserves FIFO
-order behind admitted requests, discards a superseded interim response,
-and stops dispatch at the rejection boundary. Interim and rejection
+in a fragmented body (RFC 9110 S9.3.2 and S8.6). The engine submits responses in request order and stops dispatch at the
+rejection boundary. Interim and rejection
 responses share serialization; handler and router responses retain their
 existing path. No new response wrapper or queue was added.
 
@@ -517,7 +448,7 @@ without waiting for peer EOF.
 
 **Acceptance and tests.** All seven original cases below pass on Windows
 and WSL with their original assertions. New tests cover rejection status
-mapping, HEAD recognition and body fragments, ordering behind deferred and
+mapping, HEAD recognition and body fragments, ordering behind earlier
 unsafe handlers, superseded interim responses, failed delivery, and TCP
 input disposal after output draining. The new transport test failed before
 the transport fix and passes after it. Full-suite results are recorded above.
@@ -536,7 +467,7 @@ establish zero overhead or isolate the cause of the observed difference.
 **Limits.** Normal graceful closure retains connection resources until peer
 EOF; stop releases them after draining output. No timeout was introduced.
 Aborted connections and transport stop do not promise graceful delivery
-when the peer continues sending. B18 and B19 are resolved below.
+when the peer continues sending. The current B18/B19 contracts are recorded below.
 
 | Suite | Test | Source | Windows / WSL |
 | --- | --- | --- | --- |
@@ -558,33 +489,22 @@ when the peer continues sending. B18 and B19 are resolved below.
 exceptions and closed without an HTTP error when response serialization
 failed. Neither path satisfied the established public error representation.
 
-**Resolution.** Synchronous and deferred failures now produce a fresh 500
+**Resolution.** Handler and serialization failures now produce a fresh 500
 with the body "Internal Server Error". HEAD retains Content-Length 21 without
 body bytes (RFC 9110 S9.3.2). A serialization failure before transport delivery
 gets one replacement attempt; transport delivery failures are never retried
 as another response. Failure to construct or serialize the replacement closes
 the connection.
 
-The engine stops accepting requests when it handles the error, preserves the
-turns already admitted, and announces closure only on the last response.
-The transport retains responsibility for draining bytes. No transport or
-public API changes were needed.
-
-**Verification.** Both cases below and the two deferred error/HEAD cases in
-[B14](#b14-asynchronous-handler-execution) pass on Windows and WSL, including
-all standard-exception, unknown-exception and invalid-framing scenarios,
-closure and new-client recovery. Four new engine unit tests cover immediate
-sync/async errors, deferred errors with unfinished successors, the admission
-boundary, HEAD framing, and no duplicate delivery after transport failure.
-The four regressions failed before the fix and pass afterwards. Full builds
-including examples and full CTest runs completed on both platforms; the
-13 failures remaining at B17 completion were pre-existing and outside B17.
-B15 subsequently resolved four of them.
+The engine stops dispatch at the failing request and announces closure after
+submitting its error response. The transport drains submitted bytes. Retained
+tests cover handler exceptions, invalid framing, HEAD, transport failure and
+recovery on a new connection.
 
 **Limits.** The exact error text and closing policy are project contracts,
 not HTTP requirements for every 500. Recovery applies before bytes are handed
 to the transport; a later body-reader or socket failure cannot be replaced
-with a second HTTP response. The B14 dependency on B15 is now verified.
+with a second HTTP response.
 
 | Suite | Test | Source | Windows / WSL |
 | --- | --- | --- | --- |
@@ -601,26 +521,11 @@ with a second HTTP response. The B14 dependency on B15 is now verified.
 They also used nonzero reserved bytes to identify an active delivery, so
 removing the rejection alone could overwrite or lose an empty delivery.
 
-**Agreed contract and implementation.** A zero-length buffer without a
-source is accepted with either a null or nonnull buffer. It reserves no
-send bytes and completes once in FIFO order, without reentering the engine
-callback. Cancellation before its turn produces one failed completion.
-An internal send_active_ boolean separates delivery existence from byte
-accounting in both transports. Existing queues, completion mechanisms and
-source handling remain in use; no new queue, class, lock or thread was added.
-
-**Acceptance and tests.** The original failure and four new tests pass on
-Windows and WSL: isolated/consecutive empty deliveries, mixed output at the
-byte limit, ordered cancellation after source failure, and stop/close draining
-empty deliveries between body sources. Checks include null buffers, exact
-completion counts and absence of callback reentry. The new isolated-delivery
-test failed before the fix. The cancellation test permits a TCP reset after
-a source failure, consistent with the existing local-write completion
-contract; its callback order must still be success, success, failure, failure.
-At B18 verification, full suites passed Windows unit 880/880, WSL unit
-878/878 and integration 118/119 on both platforms; only B19 remained.
-Clang ASan/UBSan with
-leak detection passes 24 focused integration cases on Linux.
+**Current contract.** Zero-length output accepts null and nonnull buffers,
+reserves no send bytes and never blocks following output. `send_active_`
+distinguishes an active empty delivery from an empty queue. Tests retain
+isolated/consecutive empties, null buffers, byte limits and drain behavior
+between body sources. Engine completion notifications have been removed.
 
 **Performance.** Three rotated WSL rounds use 8 workers, 4096 connections,
 pipeline 1, separate CPU affinity, 5-second warmup and 15-second samples.
@@ -631,8 +536,7 @@ vs Actix: +30.01%. Every measured response is 2xx. These WSL measurements
 do not establish zero overhead or isolate the cause of observed differences.
 
 **Limits.** The send budget counts bytes, not queue nodes. Empty deliveries
-consume no byte budget; no new queue-entry limit was introduced. B19's
-rejected-submission notification is resolved below.
+consume no byte budget; no new queue-entry limit was introduced.
 
 **Components.** [Linux transport](../include/transport/server/tcpip_linux.h),
 [Windows transport](../include/transport/server/tcpip_windows.h) and the
@@ -645,53 +549,11 @@ rejected-submission notification is resolved below.
 <a name="b19-send-limit-failure-notification"></a>
 <h3>B19: Missing completion notification for a rejected send</h3>
 
-**Status.** Resolved; verified 2026-09-23. **Severity.** Critical.
-**Priority.** P0 (maximum). **Target.** Current migration.
-
-**Confirmed cause.** An invalid or oversized submission was rejected before
-queue admission. Closure only counted accepted deliveries, so the rejected
-block never produced on_send_completed(false).
-
-**Agreed contract and implementation.** Each submission while the connection
-is active completes once, including rejection. The first rejection starts
-closure; later submissions are ignored. Both transports record a pending
-rejection in send_rejected_, free rejected storage on return from send, and
-append its failed completion to the existing cancellation accounting. The
-flag is cleared before notification. Completion stays on the serialized I/O
-worker path, after the engine callback and earlier deliveries. Windows waits
-for active native I/O before retiring its buffers and notifying cancellation.
-No new queue, class, thread, lock or allocation was introduced by the fix.
-
-**Acceptance and tests.** The original B19 regression passes on Windows and
-WSL unchanged. Three new tests cover isolated overflow, invalid buffers,
-post-rejection submissions, an engine exception, queued deliveries, and an
-in-flight body reader. They verify exact counts and no callback reentry.
-The isolated-rejection test failed before the fix. The existing source-limit
-test now expects two failures: cancellation of its active source and rejection
-of the next block, as required by the approved contract. No test was disabled.
-All suites pass: Windows unit 880/880, WSL unit 878/878, integration 122/122,
-and helper suites 16/16 plus 11/11 on both platforms. Clang ASan/UBSan with
-leak detection passes all 48 transport integration cases on Linux.
-
-**Performance.** Three rotated WSL rounds use 8 workers, 4096 connections,
-pipeline 1, separate CPU affinity, 5-second warmup and 15-second samples.
-Identical Doba adapters/compiler flags use real 133-byte responses with
-runtime Date. Median RPS: pre-B19 520,500, current 500,680,
-Actix 423,990. Current vs pre-B19: -3.81%; vs Actix: +18.09%.
-Every measured response is 2xx. These WSL measurements do not isolate the
-cause of observed differences or establish zero overhead.
-
-**Limits.** Completion reports local writing, failure or cancellation, not
-peer receipt. Calls after closure starts remain ignored. Send-limit closure
-and all unrelated transport behavior remain unchanged.
-
-**Components.** [Linux transport](../include/transport/server/tcpip_linux.h),
-[Windows transport](../include/transport/server/tcpip_windows.h) and the
-[output contract](../include/common/output.h).
-
-| Suite | Test | Source | Windows / WSL |
-| --- | --- | --- | --- |
-| integration | tcpip closes when a delivery exceeds the send limit | [tests/integration/transport/server/tcpip_tests.cpp](../tests/integration/transport/server/tcpip_tests.cpp) | Passed |
+**Status.** Notification contract withdrawn on 2026-09-23. The synchronous
+engine does not receive delivery completions. The transports still close on
+invalid or oversized output, ignore later submissions and preserve buffers
+until pending native I/O retires. Wire-level rejection and source-failure
+tests remain in the transport suites.
 
 <a name="b9-response-driven-connection-close"></a>
 <h3>
@@ -715,38 +577,15 @@ contracts and build configuration were left unchanged.
 
 **Acceptance.** RFC 9112 S9.6 requires completion of the closing response
 before closure and no further request processing after that boundary.
-New TCP tests cover synchronous, immediately completed coroutine and deferred
-handlers with inline, streamed and chunked bodies. They verify complete
-payloads, final chunk framing and EOF without successor bytes. A mixed
-pipeline completes the closing handler before its predecessor, preserves
-response order, discards an already prepared successor and leaves a queued
-unsafe handler uncalled. The original deferred-close TCP test used a request
-header and did not establish response-driven closure.
+Synchronous tests cover inline, reader and chunked bodies, complete payloads,
+final chunk framing and EOF without successor bytes.
 
-**Refactor coverage review.** Six unit and three integration cases were
-added; existing assertions were strengthened without removing coverage.
-
-| Contract | Evidence |
-| --- | --- |
-| Response-driven close | [engine_tests.cpp](../tests/unit/protocol/http/v11/engine_tests.cpp) checks immediate and queued delivery, later completion, cancellation, exact close tokens and request-close precedence. [server_response_tests.cpp](../tests/integration/protocol/http/v11/server_response_tests.cpp) verifies real TCP delivery before EOF. |
-| Server, factories and policies | [server_engine_tests.cpp](../tests/unit/protocol/http/v11/server_engine_tests.cpp) adds six negative concept checks, independent decoder state, copied factory policy and effective per-engine policy forwarding. Existing tests cover shared routing and alternative transport policies. |
-| Receive consumption | [tcpip_tests.cpp](../tests/integration/transport/server/tcpip_tests.cpp) verifies partial consumption of a full buffer, exact residual bytes, capacity and subsequent successful receives. Existing decoder and HTTP limit tests cover split input, full incomplete cores and oversized bodies streamed across receives. |
-| Callback lifecycle | [tcpip_tests.cpp](../tests/integration/transport/server/tcpip_tests.cpp) now checks overlap across receive, wake and completion, no receive/wake after stop and exact completion counts. [tcpip_drain_tests.cpp](../tests/integration/transport/server/tcpip_drain_tests.cpp) adds one-stop-per-connection assertions to existing drain and admission tests. |
-| Output ownership and draining | Existing engine tests verify transfer of unread sources; transport tests verify source/prefix FIFO, backpressure, empty deliveries, budget rejection, source failure, cancellation and drain on close, stop and destruction. |
-
-**Validation.** Windows unit 886/886, WSL unit 884/884 and integration 125/125
-on both platforms. Helper suites pass 16/16 and 11/11 on both. Builds include
-examples. Clang ASan/UBSan with leak detection passes 44 affected unit and
-60 integration cases on Linux. No test was disabled or skipped.
-
-**Limits.** Safe handlers may already have run before a deferred response
-reveals closure; their execution cannot be undone. Their later output is
-not sent. Queued handlers are not dispatched after closure. Cancellation
-remains cooperative. The decoder retains its last request through its
-factory until replaced or destroyed; the new lifetime test checks release
-after engine destruction, not immediately after stop. These tests do not
-prove every possible concurrent interleaving. Windows sanitizers and a new
-performance benchmark were not run; production sources are unchanged.
+**Current coverage.** Engine tests retain exact close-token matching,
+request-close precedence and stopping dispatch. Server/factory tests retain
+policy forwarding and independent decoder state. Transport tests retain
+partial receive consumption, source/prefix FIFO, send limits, source failure,
+concurrent stop and draining on close, stop and destruction. Cases involving
+withdrawn coroutine execution or engine completion callbacks were removed.
 
 <a name="b13-signed-overflow-in-the-httparena-adapter"></a>
 <h3>
@@ -877,7 +716,7 @@ by default or expose HTTP semantics inside the transport.
 in handlers. The design must respect the framework's lightweight approach.
 
 **Scope to define.** First resolve concrete composition use cases and their
-interaction with synchronous and deferred handlers.
+interaction with synchronous handlers.
 
 **Components.** Route registration API, handler contracts, and tests.
 
@@ -1496,13 +1335,13 @@ for completing all accepted work during deployment shutdown. Graceful closure
 of an individual connection is not the same guarantee as server-wide draining.
 
 **Future scope.** Specify when acceptance and new request admission stop,
-what happens to active and deferred handlers, and how a drain deadline ends
+what happens to active handlers, and how a drain deadline ends
 remaining work. Preserve existing `stop()` semantics unless an explicit
 compatibility decision authorizes a change.
 
 **Components and acceptance.** Server lifecycle, both TCP backends and
 lifecycle integration tests. Cover active sends, idle keep-alive, pipelining,
-pending deferred work, deadline expiry and repeated stop; verify bounded
+pending output, deadline expiry and repeated stop; verify bounded
 completion and single cleanup on each platform.
 
 **Delivery.** Future work, outside `0.1.0-beta1`. Until implemented,

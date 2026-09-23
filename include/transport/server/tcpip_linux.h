@@ -39,10 +39,10 @@
 #include <list>
 #include <memory>
 #include <mutex>
-#include <new>
 #include <optional>
 #include <span>
 #include <stdexcept>
+#include <string>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -56,7 +56,7 @@ namespace martianlabs::doba::transport::server {
 // | [>] CONSTANTs                                                  ( public ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-static constexpr uint64_t kWakeEventId = 0;
+static constexpr uint64_t kStopEventId = 0;
 static constexpr uint64_t kListenerEventId =
     std::numeric_limits<uint64_t>::max();
 // /////////////////////////////////////////////////////////////////////////////
@@ -67,15 +67,7 @@ static constexpr uint64_t kListenerEventId =
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
-struct context {
-  // +=========================================================================+
-  // | [>] TYPEs                                                    ( public ) |
-  // +=========================================================================+
-  struct wake_event {
-    context* owner{nullptr};
-    std::shared_ptr<wake_event> next;
-    bool queued{false};
-  };
+struct context : public std::enable_shared_from_this<context<ENty>> {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
@@ -101,19 +93,31 @@ struct context {
   // | [>] receive                                                  ( public ) |
   // +=========================================================================+
   ssize_t receive() {
-    if (receive_size_ == receive_capacity_) {
-      abort();
-      return 0;
-    }
-    ssize_t received = ::recv(socket_, receive_buffer_.get() + receive_size_,
-                              receive_capacity_ - receive_size_, MSG_DONTWAIT);
-    if (received > 0) {
+    ssize_t received;
+    {
+      std::lock_guard<std::mutex> lock(sending_mutex_);
+      if (closing_ || receive_size_ == receive_capacity_) return 0;
+      received = ::recv(socket_, receive_buffer_.get() + receive_size_,
+                         receive_capacity_ - receive_size_, MSG_DONTWAIT);
+      if (received <= 0) return received;
       receive_size_ += static_cast<std::size_t>(received);
-      std::size_t processed =
-          engine_.on_bytes_received(receive_buffer_.get(), receive_size_,
-                                    receive_capacity_);
+      processing_receive_ = true;
+    }
+    std::size_t processed;
+    try {
+      processed = engine_.on_bytes_received(
+          receive_buffer_.get(), receive_size_, receive_capacity_);
+    } catch (...) {
+      std::lock_guard<std::mutex> lock(sending_mutex_);
+      processing_receive_ = false;
+      abort_();
+      throw;
+    }
+    {
+      std::lock_guard<std::mutex> lock(sending_mutex_);
+      processing_receive_ = false;
       if (processed > receive_size_) {
-        abort();
+        abort_();
         return received;
       }
       receive_size_ -= processed;
@@ -121,187 +125,116 @@ struct context {
         std::memmove(receive_buffer_.get(), receive_buffer_.get() + processed,
                      receive_size_);
       }
-      if (receive_size_ == receive_capacity_) abort();
-      if (closing_) stop();
-      if (send_active_ && send_offset_ == send_size_ && !send_pending()) {
-        abort();
-      }
+      if (receive_size_ == receive_capacity_) abort_();
     }
+    if (!send_pending()) abort();
     return received;
   }
   // +=========================================================================+
   // | [>] connected                                                ( public ) |
   // +=========================================================================+
-  void connected(int epoll_fd, std::function<void()> wake) {
-    epoll_fd_ = epoll_fd;
-    connected_ = true;
-    engine_.set_on_wake(std::move(wake));
-    engine_.set_on_close([this]() { close(); });
-    engine_.set_on_send(
-        [this](std::unique_ptr<char[]> buffer, std::size_t size,
-               std::optional<common::reader> source) {
-          send(std::move(buffer), size, std::move(source));
-        });
-    if (send_active_ && send_offset_ == send_size_ && !send_pending()) abort();
-  }
-  // +=========================================================================+
-  // | [>] wake                                                     ( public ) |
-  // +=========================================================================+
-  void wake() {
-    if (closing_) {
-      stop();
-      return;
+  void connected(int epoll_fd) {
+    {
+      std::lock_guard<std::mutex> lock(sending_mutex_);
+      epoll_fd_ = epoll_fd;
+      connected_ = true;
     }
-    engine_.on_wake();
-    if (closing_) stop();
-    if (send_active_ && send_offset_ == send_size_ && !send_pending()) {
-      abort();
-    }
+    engine_.set_on_close([weak = this->weak_from_this()]() {
+      if (auto ctx = weak.lock()) ctx->close();
+    });
+    engine_.set_on_send([weak = this->weak_from_this()](
+        std::unique_ptr<char[]> buffer, std::size_t size,
+        std::optional<common::reader> source) {
+      if (auto ctx = weak.lock()) {
+        ctx->send(std::move(buffer), size, std::move(source));
+      }
+    });
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
   void stop(bool stopping = false) {
+    std::lock_guard<std::mutex> lock(sending_mutex_);
     stopping_ = stopping_ || stopping;
     closing_ = true;
-    if (engine_stopped_) return;
-    engine_stopped_ = true;
-    try {
-      engine_.on_stop();
-    } catch (...) {
-      aborted_ = true;
-    }
   }
   // +=========================================================================+
   // | [>] close                                                    ( public ) |
   // +=========================================================================+
   void close() {
+    std::lock_guard<std::mutex> lock(sending_mutex_);
+    if (closing_ || socket_ == -1) return;
     closing_ = true;
+    if (!processing_receive_ && !watch_write_(true)) abort_();
   }
   // +=========================================================================+
   // | [>] abort                                                    ( public ) |
   // +=========================================================================+
   void abort() {
-    closing_ = true;
-    aborted_ = true;
+    std::lock_guard<std::mutex> lock(sending_mutex_);
+    abort_();
   }
   // +=========================================================================+
   // | [>] can_receive                                              ( public ) |
   // +=========================================================================+
   bool can_receive() const {
+    std::lock_guard<std::mutex> lock(sending_mutex_);
     return socket_ != -1 && !closing_;
   }
   // +=========================================================================+
   // | [>] is_closed                                                ( public ) |
   // +=========================================================================+
-  bool is_closed() const { return socket_ == -1; }
+  bool is_closed() const {
+    std::lock_guard<std::mutex> lock(sending_mutex_);
+    return socket_ == -1;
+  }
   // +=========================================================================+
   // | [>] send                                                     ( public ) |
   // +=========================================================================+
   void send(std::unique_ptr<char[]> buffer, std::size_t size,
-             std::optional<common::reader> source) {
+            std::optional<common::reader> source) {
+    std::lock_guard<std::mutex> lock(sending_mutex_);
     if (closing_ || socket_ == -1) return;
     const std::size_t reserved = source
         ? std::max(size, std::min<std::size_t>(8192, send_capacity_)) : size;
     if ((size && !buffer) ||
-        reserved > send_capacity_ - send_bytes_) {
-      send_rejected_ = true;
-      abort();
+        reserved > send_capacity_ - queued_bytes_ - send_buffer_.size()) {
+      abort_();
       return;
     }
-    if (send_active_) {
-      send_queue_.emplace_back(std::move(buffer), size, std::move(source));
-    } else {
-      send_buffer_ = std::move(buffer);
-      send_source_ = std::move(source);
-      send_active_ = true;
-      send_reserved_ = reserved;
-      send_streaming_ = false;
-      send_size_ = size;
-      send_offset_ = 0;
-    }
-    send_bytes_ += reserved;
-    if (!send_pending(false)) abort();
+    if (!size && !source) return;
+    send_queue_.emplace_back(std::move(buffer), size, std::move(source),
+                             reserved);
+    queued_bytes_ += reserved;
+    if (!processing_receive_ && !watch_write_(true)) abort_();
   }
   // +=========================================================================+
   // | [>] send_pending                                             ( public ) |
   // +=========================================================================+
-  bool send_pending(bool notify = true) {
-    if (notify && closing_) stop();
-    while (send_active_ && !aborted_) {
-      while (send_offset_ < send_size_) {
-        std::size_t size = std::min<std::size_t>(
-            send_size_ - send_offset_, std::numeric_limits<ssize_t>::max());
-        ssize_t sent = ::send(socket_, send_buffer_.get() + send_offset_, size,
-                              MSG_NOSIGNAL);
-        if (sent > 0) {
-          send_offset_ += static_cast<std::size_t>(sent);
-          continue;
-        }
-        if (sent == -1 && errno == EINTR) continue;
-        if (sent == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-          if (!send_waiting_) {
-            epoll_event event{};
-            event.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET;
-            event.data.ptr = this;
-            if (::epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, socket_, &event) == -1) {
-              return false;
-            }
-            send_waiting_ = true;
-          }
-          return true;
-        }
+  bool send_pending() {
+    std::lock_guard<std::mutex> lock(sending_mutex_);
+    if (socket_ == -1 || aborted_) return false;
+    for (;;) {
+      if (send_offset_ == send_buffer_.size()) {
+        if (!fill_send_buffer_()) return false;
+        if (send_buffer_.empty()) break;
+      }
+      const std::size_t size = std::min<std::size_t>(
+          send_buffer_.size() - send_offset_,
+          std::numeric_limits<ssize_t>::max());
+      const ssize_t sent = ::send(socket_, send_buffer_.data() + send_offset_,
+                                  size, MSG_NOSIGNAL);
+      if (sent > 0) {
+        send_offset_ += static_cast<std::size_t>(sent);
+      } else if (sent == -1 && errno == EINTR) {
+        continue;
+      } else if (sent == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        return watch_write_(true);
+      } else {
         return false;
       }
-      if (send_source_) {
-        if (send_source_->failed()) return false;
-        if (!send_source_->eof()) {
-          const std::size_t capacity = std::min<std::size_t>(8192, send_capacity_);
-          if (!send_streaming_) {
-            send_buffer_.reset();
-            send_buffer_.reset(new (std::nothrow) char[capacity]);
-            if (!send_buffer_) return false;
-            send_streaming_ = true;
-          }
-          send_size_ = send_source_->read(std::span<std::byte>(
-              reinterpret_cast<std::byte*>(send_buffer_.get()), capacity));
-          send_offset_ = 0;
-          if (send_source_->failed() || (!send_size_ && !send_source_->eof())) {
-            return false;
-          }
-          if (send_size_) continue;
-        }
-        send_source_.reset();
-      }
-      if (!notify) break;
-      send_bytes_ -= send_reserved_;
-      send_active_ = false;
-      send_reserved_ = 0;
-      send_buffer_.reset();
-      if (!send_queue_.empty()) {
-        send_buffer_ = std::move(std::get<0>(send_queue_.front()));
-        send_source_ = std::move(std::get<2>(send_queue_.front()));
-        send_size_ = std::get<1>(send_queue_.front());
-        send_active_ = true;
-        send_reserved_ = send_source_
-            ? std::max(send_size_, std::min<std::size_t>(8192, send_capacity_))
-            : send_size_;
-        send_streaming_ = false;
-        send_offset_ = 0;
-        send_queue_.pop_front();
-      }
-      engine_.on_send_completed(true);
     }
-    if (aborted_) return false;
-    if (send_waiting_) {
-      epoll_event event{};
-      event.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
-      event.data.ptr = this;
-      if (::epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, socket_, &event) == -1) {
-        return false;
-      }
-      send_waiting_ = false;
-    }
+    if (!watch_write_(false)) return false;
     if (closing_) {
       if (!socket_shutdown_) {
         if (::shutdown(socket_, SHUT_WR) == -1) return false;
@@ -310,8 +243,8 @@ struct context {
       if (stopping_) return false;
       // Discard input until peer EOF to avoid resetting the final response.
       for (;;) {
-        ssize_t received = ::recv(socket_, receive_buffer_.get(),
-                                  receive_capacity_, MSG_DONTWAIT);
+        const ssize_t received = ::recv(socket_, receive_buffer_.get(),
+                                        receive_capacity_, MSG_DONTWAIT);
         if (received > 0) continue;
         if (received == -1 && errno == EINTR) continue;
         return received == -1 && (errno == EAGAIN || errno == EWOULDBLOCK);
@@ -320,43 +253,23 @@ struct context {
     return true;
   }
   // +=========================================================================+
-  // | [>] retire_socket                                           ( public )  |
+  // | [>] retire_socket                                            ( public ) |
   // +=========================================================================+
   int retire_socket() {
+    std::lock_guard<std::mutex> lock(sending_mutex_);
     if (socket_ == -1) return -1;
-    int socket = socket_;
+    const int socket = socket_;
     socket_ = -1;
     closing_ = true;
+    send_queue_.clear();
+    send_buffer_.clear();
     return socket;
   }
   // +=========================================================================+
   // | [>] notify_disconnection                                     ( public ) |
   // +=========================================================================+
   void notify_disconnection() {
-    stop();
-    bool pending = send_active_;
-    bool succeeded = send_offset_ == send_size_ && !send_source_;
-    send_buffer_.reset();
-    send_source_.reset();
-    send_active_ = false;
-    send_reserved_ = 0;
-    std::size_t cancelled = send_queue_.size() + (send_rejected_ ? 1 : 0);
-    send_rejected_ = false;
-    send_queue_.clear();
-    send_bytes_ = 0;
-    if (pending) {
-      try {
-        engine_.on_send_completed(succeeded);
-      } catch (...) {
-      }
-    }
-    for (std::size_t i = 0; i < cancelled; i++) {
-      try {
-        engine_.on_send_completed(false);
-      } catch (...) {
-      }
-    }
-    if (!connected_ || disconnected_ || socket_ != -1) return;
+    if (!connected_ || disconnected_) return;
     disconnected_ = true;
     try {
       on_disconnection_();
@@ -364,38 +277,92 @@ struct context {
     }
   }
   // +=========================================================================+
-  // | ATTRIBUTEs                                                   ( public ) |
+  // | [>] ATTRIBUTEs                                               ( public ) |
   // +=========================================================================+
   context* retirement_next{nullptr};
-  std::shared_ptr<wake_event> notification;
 
  private:
   // +=========================================================================+
-  // | ATTRIBUTEs                                                  ( private ) |
+  // | [>] fill_send_buffer_                                       ( private ) |
+  // +=========================================================================+
+  bool fill_send_buffer_() {
+    send_buffer_.clear();
+    send_offset_ = 0;
+    while (!send_queue_.empty()) {
+      auto& [buffer, size, source, reserved] = send_queue_.front();
+      queued_bytes_ -= reserved;
+      reserved = 0;
+      if (size) {
+        send_buffer_.append(buffer.get(), size);
+        buffer.reset();
+        size = 0;
+      }
+      if (source) {
+        if (source->failed()) return !send_buffer_.empty();
+        while (!source->eof()) {
+          const std::size_t available = std::min<std::size_t>(
+              8192, send_capacity_ - queued_bytes_ - send_buffer_.size());
+          if (!available) return true;
+          const std::size_t offset = send_buffer_.size();
+          send_buffer_.resize(offset + available);
+          const std::size_t read = source->read(std::span<std::byte>(
+              reinterpret_cast<std::byte*>(send_buffer_.data() + offset),
+              available));
+          send_buffer_.resize(offset + read);
+          if (source->failed() || (!read && !source->eof())) {
+            return !send_buffer_.empty();
+          }
+        }
+      }
+      send_queue_.pop_front();
+    }
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] watch_write_                                            ( private ) |
+  // +=========================================================================+
+  bool watch_write_(bool enabled) {
+    if (send_waiting_ == enabled) return true;
+    epoll_event event{};
+    event.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+    if (enabled) event.events |= EPOLLOUT;
+    event.data.ptr = this;
+    if (::epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, socket_, &event) == -1) {
+      return false;
+    }
+    send_waiting_ = enabled;
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] abort_                                                  ( private ) |
+  // +=========================================================================+
+  void abort_() {
+    closing_ = true;
+    aborted_ = true;
+    // Wake the owner even when output is blocked or no data is arriving.
+    if (socket_ != -1) ::shutdown(socket_, SHUT_RDWR);
+  }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   types::on_client_disconnected_delegate on_disconnection_;
   int socket_{-1};
   ENty engine_;
   int epoll_fd_{-1};
-  std::unique_ptr<char[]> send_buffer_;
-  std::optional<common::reader> send_source_;
+  mutable std::mutex sending_mutex_;
   std::list<std::tuple<std::unique_ptr<char[]>, std::size_t,
-                       std::optional<common::reader>>> send_queue_;
+                       std::optional<common::reader>, std::size_t>> send_queue_;
+  std::string send_buffer_;
   const std::size_t send_capacity_;
-  std::size_t send_bytes_{0};
-  std::size_t send_reserved_{0};
-  std::size_t send_size_{0};
+  std::size_t queued_bytes_{0};
   std::size_t send_offset_{0};
-  bool send_active_{false};
-  bool send_rejected_{false};
-  bool send_streaming_{false};
   bool send_waiting_{false};
+  bool processing_receive_{false};
   bool closing_{false};
   bool stopping_{false};
   bool socket_shutdown_{false};
   bool aborted_{false};
   bool connected_{false};
-  bool engine_stopped_{false};
   bool disconnected_{false};
   std::unique_ptr<char[]> receive_buffer_;
   const std::size_t receive_capacity_;
@@ -411,17 +378,6 @@ struct context {
 template <protocol::contracts::engine ENty,
           protocol::contracts::engine_factory<ENty> FAty>
 struct worker {
- private:
-  // +=========================================================================+
-  // | [>] TYPEs                                                   ( private ) |
-  // +=========================================================================+
-  struct wake_queue {
-    std::mutex mutex;
-    int descriptor{-1};
-    std::shared_ptr<typename context<ENty>::wake_event> first;
-    std::shared_ptr<typename context<ENty>::wake_event> last;
-  };
-
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
@@ -449,12 +405,11 @@ struct worker {
     if (epoll_fd_ == -1) {
       throw std::runtime_error("Epoll instance could not be created!");
     }
-    wake_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-    if (wake_fd_ == -1) {
+    stop_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    if (stop_fd_ == -1) {
       close_resources();
       throw std::runtime_error("Stop event could not be created!");
     }
-    notifications_->descriptor = wake_fd_;
     listener_fd_ = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
                             IPPROTO_TCP);
     if (listener_fd_ == -1) {
@@ -481,13 +436,13 @@ struct worker {
       close_resources();
       throw std::runtime_error("Listener socket could not be started!");
     }
-    epoll_event wake_event{};
-    wake_event.events = EPOLLIN;
-    wake_event.data.u64 = kWakeEventId;
+    epoll_event stop_event{};
+    stop_event.events = EPOLLIN;
+    stop_event.data.u64 = kStopEventId;
     epoll_event listener_event{};
     listener_event.events = EPOLLIN | EPOLLET;
     listener_event.data.u64 = kListenerEventId;
-    if (::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, wake_fd_, &wake_event) == -1 ||
+    if (::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, stop_fd_, &stop_event) == -1 ||
         ::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, listener_fd_, &listener_event) ==
             -1) {
       close_resources();
@@ -507,9 +462,7 @@ struct worker {
   // +=========================================================================+
   // | [>] is_current_thread                                        ( public ) |
   // +=========================================================================+
-  bool is_current_thread() const {
-    return current_worker_ == this;
-  }
+  bool is_current_thread() const { return current_worker_ == this; }
   static bool is_current_thread(const FAty& create_engine) {
     return current_worker_ &&
            &current_worker_->create_engine_ == &create_engine;
@@ -532,10 +485,10 @@ struct worker {
   // +=========================================================================+
   void request_stop() {
     if (stopping_.exchange(true)) return;
-    uint64_t wake = 1;
+    uint64_t stop = 1;
     ssize_t written = 0;
     do {
-      written = ::write(wake_fd_, &wake, sizeof(wake));
+      written = ::write(stop_fd_, &stop, sizeof(stop));
     } while (written == -1 && errno == EINTR);
   }
 
@@ -552,8 +505,8 @@ struct worker {
         break;
       }
       for (std::size_t i = 0; i < static_cast<std::size_t>(ready); i++) {
-        if (events[i].data.u64 == kWakeEventId) {
-          handle_wake();
+        if (events[i].data.u64 == kStopEventId) {
+          handle_stop();
         } else if (events[i].data.u64 == kListenerEventId) {
           if (!stopping_.load()) handle_listener();
         } else {
@@ -573,37 +526,14 @@ struct worker {
     close_contexts();
   }
   // +=========================================================================+
-  // | [>] handle_wake                                             ( private ) |
+  // | [>] handle_stop                                             ( private ) |
   // +=========================================================================+
-  void handle_wake() {
-    uint64_t wake = 0;
+  void handle_stop() {
+    uint64_t stop = 0;
     ssize_t received = 0;
     do {
-      received = ::read(wake_fd_, &wake, sizeof(wake));
+      received = ::read(stop_fd_, &stop, sizeof(stop));
     } while (received == -1 && errno == EINTR);
-    std::shared_ptr<typename context<ENty>::wake_event> events;
-    {
-      std::lock_guard<std::mutex> lock(notifications_->mutex);
-      events = std::move(notifications_->first);
-      notifications_->last.reset();
-    }
-    while (events) {
-      auto event = std::move(events);
-      context<ENty>* ctx = nullptr;
-      {
-        std::lock_guard<std::mutex> lock(notifications_->mutex);
-        events = std::move(event->next);
-        event->queued = false;
-        ctx = event->owner;
-      }
-      if (!ctx || stopping_.load()) continue;
-      try {
-        ctx->wake();
-        if (!ctx->can_receive() && !ctx->send_pending()) close_context(ctx);
-      } catch (...) {
-        close_context(ctx);
-      }
-    }
     if (!stopping_.load()) return;
     if (listener_fd_ != -1) {
       ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, listener_fd_, nullptr);
@@ -658,9 +588,9 @@ struct worker {
   // | [>] register_context                                        ( private ) |
   // +=========================================================================+
   void register_context(int socket) {
-    auto ctx = std::make_unique<context<ENty>>(
-        socket, configuration_.recv_buffer_size, configuration_.send_buffer_size,
-        create_engine_, on_disconnection_);
+    auto ctx = std::make_shared<context<ENty>>(
+        socket, configuration_.recv_buffer_size,
+        configuration_.send_buffer_size, create_engine_, on_disconnection_);
     auto ctx_ptr = ctx.get();
     if (!contexts_.emplace(ctx_ptr, std::move(ctx)).second) {
       throw std::runtime_error("Context could not be registered!");
@@ -674,31 +604,7 @@ struct worker {
     }
     try {
       on_connection_();
-      ctx_ptr->notification =
-          std::make_shared<typename context<ENty>::wake_event>();
-      ctx_ptr->notification->owner = ctx_ptr;
-      ctx_ptr->connected(epoll_fd_,
-          [queue = std::weak_ptr<wake_queue>(notifications_),
-           event = ctx_ptr->notification]() noexcept {
-            auto pending = queue.lock();
-            if (!pending) return;
-            std::lock_guard<std::mutex> lock(pending->mutex);
-            if (pending->descriptor == -1 || !event->owner || event->queued) {
-              return;
-            }
-            event->queued = true;
-            if (pending->last) pending->last->next = event;
-            else pending->first = event;
-            pending->last = event;
-            uint64_t wake = 1;
-            ssize_t written = 0;
-            do {
-              written = ::write(pending->descriptor, &wake, sizeof(wake));
-            } while (written == -1 && errno == EINTR);
-          });
-      if (!ctx_ptr->can_receive() && !ctx_ptr->send_pending()) {
-        close_context(ctx_ptr);
-      }
+      ctx_ptr->connected(epoll_fd_);
     } catch (...) {
       close_context(ctx_ptr);
       return;
@@ -747,10 +653,6 @@ struct worker {
   void close_context(context<ENty>* ctx) {
     int socket = ctx->retire_socket();
     if (socket == -1) return;
-    if (ctx->notification) {
-      std::lock_guard<std::mutex> lock(notifications_->mutex);
-      ctx->notification->owner = nullptr;
-    }
     ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket, nullptr);
     ::close(socket);
     ctx->retirement_next = retired_contexts_;
@@ -783,19 +685,10 @@ struct worker {
   // +=========================================================================+
   void close_resources() {
     if (listener_fd_ != -1) ::close(listener_fd_);
-    {
-      std::lock_guard<std::mutex> lock(notifications_->mutex);
-      notifications_->descriptor = -1;
-      if (wake_fd_ != -1) ::close(wake_fd_);
-      while (notifications_->first) {
-        auto event = std::move(notifications_->first);
-        notifications_->first = std::move(event->next);
-      }
-      notifications_->last.reset();
-    }
+    if (stop_fd_ != -1) ::close(stop_fd_);
     if (epoll_fd_ != -1) ::close(epoll_fd_);
     listener_fd_ = -1;
-    wake_fd_ = -1;
+    stop_fd_ = -1;
     epoll_fd_ = -1;
   }
   // +=========================================================================+
@@ -804,13 +697,12 @@ struct worker {
   const policies configuration_;
   const FAty& create_engine_;
   int epoll_fd_{-1};
-  int wake_fd_{-1};
-  std::shared_ptr<wake_queue> notifications_{std::make_shared<wake_queue>()};
+  int stop_fd_{-1};
   int listener_fd_{-1};
   std::atomic<bool> stopping_{false};
   std::jthread thread_;
   inline static thread_local const worker* current_worker_{nullptr};
-  std::unordered_map<context<ENty>*, std::unique_ptr<context<ENty>>> contexts_;
+  std::unordered_map<context<ENty>*, std::shared_ptr<context<ENty>>> contexts_;
   context<ENty>* retired_contexts_{nullptr};
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
@@ -922,8 +814,7 @@ class tcpip {
   // +=========================================================================+
   void stop_(bool starting_failure) {
     if (worker<ENty, FAty>::is_current_thread(create_engine_)) {
-      throw std::runtime_error(
-          "Transport cannot be stopped from a worker!");
+      throw std::runtime_error("Transport cannot be stopped from a worker!");
     }
     std::vector<std::unique_ptr<worker<ENty, FAty>>> workers;
     {

@@ -89,9 +89,8 @@ Measured locally with the official HttpArena suite: **512 connections**,
   a fixed buffer for small responses help avoid unnecessary copies.
   Not "zero-copy everything". Just deliberate data movement.
 
-- **Not every handler needs a coroutine.** Sync handlers run directly.
-  When work needs to wait, coroutine handlers support cancellation and keep
-  responses in order.
+- **Handlers run directly.** Synchronous execution preserves request order
+  without a separate response scheduler.
 
 <a name="hello-world-lets-not-overcomplicate-it"></a>
 <h2>
@@ -127,8 +126,7 @@ int main() {
 
 Once running: `curl http://localhost:8080/hello`
 
-[Build & integrate](docs/DEVELOPMENT.md) /
-[See a coroutine handler](examples/http/v11/asynchronous_routes/main.cpp)
+[Build & integrate](docs/DEVELOPMENT.md)
 
 <details>
 <summary>Build, install, and use with CMake</summary>

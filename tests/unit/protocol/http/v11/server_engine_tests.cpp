@@ -80,9 +80,7 @@ struct fake_transport {
         if (source) source->read_all(observed.bytes);
       });
       value.set_on_close([]() {});
-      value.set_on_wake([]() {});
       value.on_bytes_received(request.data(), request.size(), 4096);
-      value.on_stop();
     }
   }
   void stop() { observed.stops++; }
@@ -144,30 +142,14 @@ struct bad_engine : engine_type {
   explicit bad_engine(http::policies);
 };
 
-struct bad_wake_engine : engine_type {
-  void on_wake() = delete;
-};
-struct bad_wake_delegate_engine : engine_type {
-  void set_on_wake(std::function<void()>) = delete;
-};
-struct bad_stop_engine : engine_type {
-  void on_stop() = delete;
-};
-static_assert(!protocol::contracts::engine<bad_wake_engine>);
-static_assert(!protocol::contracts::engine<bad_wake_delegate_engine>);
-static_assert(!protocol::contracts::engine<bad_stop_engine>);
 struct bad_receive_engine : engine_type {
   void on_bytes_received(const char*, std::size_t, std::size_t);
 };
 struct bad_send_engine : engine_type {
   void set_on_send(std::function<void(const char*, std::size_t)>);
 };
-struct bad_completion_engine : engine_type {
-  int on_send_completed(bool);
-};
 static_assert(!protocol::contracts::engine<bad_receive_engine>);
 static_assert(!protocol::contracts::engine<bad_send_engine>);
-static_assert(!protocol::contracts::engine<bad_completion_engine>);
 static_assert(!protocol::contracts::engine_factory<
               decltype([]() { return 0; }), engine_type>);
 static_assert(!protocol::contracts::engine_factory<
@@ -326,7 +308,6 @@ DOBA_TEST("engine factories preserve policies and independence") {
       if (source) source->read_all(bytes[i]);
     });
     engines[i]->set_on_close([&, i]() { closed[i]++; });
-    engines[i]->set_on_wake([]() {});
   }
   const std::string partial = "GET /first HTTP/1.1\r\nHost: local";
   DOBA_EXPECT_EQUAL(first.on_bytes_received(
@@ -347,7 +328,6 @@ DOBA_TEST("engine factories preserve policies and independence") {
     engines[i]->on_bytes_received(rejected.data(), rejected.size(), 4096);
     DOBA_EXPECT(bytes[i].starts_with("HTTP/1.1 414 "));
     DOBA_EXPECT_EQUAL(closed[i], 1);
-    engines[i]->on_stop();
   }
   DOBA_EXPECT_EQUAL(calls, 2);
 }

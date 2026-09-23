@@ -97,7 +97,7 @@ response file_request(file_router& routes, std::string_view method,
   if (!decoded.request) throw std::runtime_error("Invalid test request");
   const auto match = routes.match(method, decoded.request->get_absolute_path());
   if (!match.handler) return response::not_found_404();
-  return match.handler->callback(*decoded.request);
+  return (*match.handler)(*decoded.request);
 }
 std::string file_body(response& value) {
   auto serialized = value.serialize();

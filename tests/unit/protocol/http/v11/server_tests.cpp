@@ -22,13 +22,10 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <atomic>
-#include <coroutine>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <stop_token>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -38,7 +35,6 @@
 
 namespace {
 namespace http = martianlabs::doba::protocol::http::v11;
-using martianlabs::doba::common::task;
 using routes_type = martianlabs::doba::protocol::http::router<
     http::request, http::response>;
 using engine_type = http::engine<http::request, http::response>;
@@ -66,21 +62,14 @@ struct memory_transport {
       if (source) source->read_all(bytes);
     });
     connection->set_on_close([this]() { closed = true; });
-    wake = std::make_shared<std::atomic<bool>>(false);
-    connection->set_on_wake([wake = wake]() { wake->store(true); });
     closed = false;
   }
   void stop() {
-    if (connection) connection->on_stop();
     connection.reset();
-  }
-  void poll() {
-    if (connection && !closed && wake->exchange(false)) connection->on_wake();
   }
   std::string receive(std::string_view wire) {
     bytes.clear();
     connection->on_bytes_received(wire.data(), wire.size(), 8192);
-    poll();
     return bytes;
   }
   bool fail;
@@ -88,7 +77,6 @@ struct memory_transport {
   std::unique_ptr<ENty> connection;
   std::string bytes;
   bool closed{false};
-  std::shared_ptr<std::atomic<bool>> wake;
   static inline memory_transport* instance = nullptr;
 };
 using test_server = http::server<http::request, http::response, routes_type,
@@ -181,64 +169,6 @@ DOBA_TEST("failed starts release the date server") {
   DOBA_EXPECT(bytes.find("Date: ") != std::string::npos);
 }
 // +===========================================================================+
-// | [>] server completes suspended async responses              ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("server completes suspended async responses") {
-  bool invoked = false;
-  std::coroutine_handle<> pending;
-  test_server value;
-  struct awaiter {
-    std::coroutine_handle<>& pending;
-    bool await_ready() const { return false; }
-    void await_suspend(std::coroutine_handle<> value) { pending = value; }
-    void await_resume() const {}
-  };
-  value.add_route("GET", "/", [&](std::shared_ptr<const http::request>,
-                                    std::stop_token) -> task<http::response> {
-    invoked = true;
-    co_await awaiter{pending};
-    auto result = http::response::ok_200();
-    result.set_body("async");
-    co_return result;
-  });
-  value.start();
-  const auto bytes = send_request();
-  DOBA_EXPECT(invoked);
-  DOBA_EXPECT(bytes.empty());
-  DOBA_EXPECT(pending != nullptr);
-  pending.resume();
-  test_transport::instance->poll();
-  DOBA_EXPECT(test_transport::instance->bytes.ends_with("\r\n\r\nasync"));
-}
-// +===========================================================================+
-// | [>] server propagates async handler exceptions              ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("server propagates async handler exceptions") {
-  test_server value;
-  value.add_route("GET", "/", [](std::shared_ptr<const http::request>,
-                                  std::stop_token) -> task<http::response> {
-    throw std::runtime_error("handler failed");
-    co_return http::response::ok_200();
-  });
-  value.start();
-  DOBA_EXPECT(send_request().starts_with("HTTP/1.1 500 "));
-}
-// +===========================================================================+
-// | [>] server invokes parametrized async handlers              ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("server invokes parametrized async handlers") {
-  test_server value;
-  value.add_route("GET", "/item/:id",
-      [](std::shared_ptr<const http::request>, std::stop_token,
-          std::string_view id) -> task<http::response> {
-        auto result = http::response::ok_200();
-        result.set_body(id);
-        co_return result;
-      });
-  value.start();
-  DOBA_EXPECT(send_request("GET", "/item/42").ends_with("\r\n\r\n42"));
-}
-// +===========================================================================+
 // | [>] server accepts new connections after handler failure ( test-case )    |
 // +===========================================================================+
 DOBA_TEST("server accepts new connections after handler failure") {
@@ -256,34 +186,6 @@ DOBA_TEST("server accepts new connections after handler failure") {
   test_transport::instance->stop();
   test_transport::instance->start();
   DOBA_EXPECT(send_request().starts_with("HTTP/1.1 200 "));
-}
-// +===========================================================================+
-// | [>] async handler observes cancellation after suspension    ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("async handler observes cancellation after suspension") {
-  std::stop_token token;
-  bool invoked = false;
-  std::coroutine_handle<> pending;
-  struct awaiter {
-    std::coroutine_handle<>& pending;
-    bool await_ready() const { return false; }
-    void await_suspend(std::coroutine_handle<> value) { pending = value; }
-    void await_resume() const {}
-  };
-  test_server value;
-  value.add_route("GET", "/", [&](std::shared_ptr<const http::request>,
-                                    std::stop_token stop) -> task<http::response> {
-    invoked = true;
-    token = stop;
-    co_await awaiter{pending};
-    co_return http::response::ok_200();
-  });
-  value.start();
-  send_request();
-  DOBA_EXPECT(invoked);
-  value.stop();
-  DOBA_EXPECT(token.stop_requested());
-  pending.resume();
 }
 // +===========================================================================+
 // | [>] server retains controllers and rejects live registration( test-case ) |

@@ -40,6 +40,7 @@
 #include <new>
 #include <optional>
 #include <span>
+#include <string>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -60,7 +61,7 @@ static constexpr DWORD kAcceptAddressBytes =
 // | [>] io_type                                                ( enum-class ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-enum class io_type : uint8_t { kAccept, kSend, kReceive, kWake };
+enum class io_type : uint8_t { kAccept, kSend, kReceive, kOutput };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] FORWARDs                                                   ( public ) |
@@ -120,22 +121,10 @@ struct overlapped_receive : overlapped_base {
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
 struct overlapped_send : overlapped_base {
-  overlapped_send(std::shared_ptr<context<ENty>> context)
-      : overlapped_base(io_type::kSend), ctx{context} {}
+  overlapped_send(std::shared_ptr<context<ENty>> context,
+                  io_type type = io_type::kSend)
+      : overlapped_base(type), ctx{context} {}
   std::shared_ptr<context<ENty>> ctx;
-};
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] overlapped_wake                                            ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-template <protocol::contracts::engine ENty>
-struct overlapped_wake : overlapped_base {
-  explicit overlapped_wake(context<ENty>* value)
-      : overlapped_base(io_type::kWake), ctx{value} {}
-  context<ENty>* ctx;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -178,159 +167,115 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // | [>] send_completed                                           ( public ) |
   // +=========================================================================+
   void send_completed(std::size_t size) {
-    std::lock_guard<std::mutex> engine_lock(engine_mutex_);
-    std::unique_lock<std::mutex> sending_lock(sending_mutex_);
-    sending_ = false;
+    std::lock_guard<std::mutex> lock(sending_mutex_);
+    send_state_ = send_status::kIdle;
     if (socket_ == INVALID_SOCKET) {
-      sending_lock.unlock();
-      cancel_sends_();
+      retire_();
+      return;
+    }
+    if (!size || size > send_buffer_.size() - send_offset_) {
+      abort_();
       return;
     }
     send_offset_ += size;
-    if (send_offset_ != send_size_) {
-      if (size && socket_ != INVALID_SOCKET && send_()) return;
-      abort_();
-      sending_lock.unlock();
-      cancel_sends_();
-      return;
-    }
-    if (!read_source_()) {
-      abort_();
-      sending_lock.unlock();
-      cancel_sends_();
-      return;
-    }
-    if (send_offset_ != send_size_) {
-      if (socket_ != INVALID_SOCKET && send_()) return;
-      abort_();
-      sending_lock.unlock();
-      cancel_sends_();
-      return;
-    }
-    send_bytes_ -= send_reserved_;
-    send_active_ = false;
-    send_reserved_ = 0;
-    send_buffer_.reset();
-    if (socket_ != INVALID_SOCKET && !send_queue_.empty()) {
-      send_buffer_ = std::move(std::get<0>(send_queue_.front()));
-      send_source_ = std::move(std::get<2>(send_queue_.front()));
-      send_size_ = std::get<1>(send_queue_.front());
-      send_active_ = true;
-      send_reserved_ = send_source_
-          ? std::max(send_size_, std::min<std::size_t>(8192, send_capacity_))
-          : send_size_;
-      send_streaming_ = false;
-      send_offset_ = 0;
-      send_queue_.pop_front();
-      if (!read_source_() || !send_()) abort_();
-    }
-    cleanup_resources_();
-    sending_lock.unlock();
-    try {
-      engine_.on_send_completed(true);
-    } catch (...) {
-      abort();
-      cancel_sends_();
-      throw;
-    }
-    cancel_sends_();
+    send_pending_();
+  }
+  // +=========================================================================+
+  // | [>] output_ready                                             ( public ) |
+  // +=========================================================================+
+  void output_ready() {
+    std::lock_guard<std::mutex> lock(sending_mutex_);
+    send_state_ = send_status::kIdle;
+    send_pending_();
   }
   // +=========================================================================+
   // | [>] send                                                     ( public ) |
   // +=========================================================================+
   void send(std::unique_ptr<char[]> buffer, std::size_t size,
-             std::optional<common::reader> source) {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+            std::optional<common::reader> source) {
+    std::lock_guard<std::mutex> lock(sending_mutex_);
     if (closing_ || socket_ == INVALID_SOCKET) return;
     const std::size_t reserved = source
         ? std::max(size, std::min<std::size_t>(8192, send_capacity_)) : size;
     if ((size && !buffer) ||
-        reserved > send_capacity_ - send_bytes_) {
-      send_rejected_ = true;
-      abort_();
+        reserved > send_capacity_ - queued_bytes_ - send_buffer_.size()) {
+      closing_ = true;
+      aborted_ = true;
+      ::shutdown(socket_, SD_BOTH);
+      request_output_();
       return;
     }
-    if (send_active_) {
-      send_queue_.emplace_back(std::move(buffer), size, std::move(source));
-    } else {
-      send_buffer_ = std::move(buffer);
-      send_source_ = std::move(source);
-      send_active_ = true;
-      send_reserved_ = reserved;
-      send_streaming_ = false;
-      send_size_ = size;
-      send_offset_ = 0;
-    }
-    send_bytes_ += reserved;
-    if (!sending_ && (!read_source_() || !send_())) abort_();
+    if (!size && !source) return;
+    send_queue_.emplace_back(std::move(buffer), size, std::move(source),
+                             reserved);
+    queued_bytes_ += reserved;
+    request_output_();
   }
   // +=========================================================================+
   // | [>] arm_next_receive_operation                               ( public ) |
   // +=========================================================================+
   bool arm_next_receive_operation() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    std::lock_guard<std::mutex> lock(sending_mutex_);
     processing_receive_ = false;
     if (stopping_.load()) closing_ = true;
-    if (closing_) {
+    send_pending_();
+    if (closing_ || socket_ == INVALID_SOCKET) {
       cleanup_resources_();
       return false;
     }
-    if (ovr_size_ == ovr_capacity_) {
+    if (ovr_size_ == ovr_capacity_ || !receive_()) {
       abort_();
       return false;
     }
-    if (receive_()) return true;
-    abort_();
-    return false;
+    return true;
   }
   // +=========================================================================+
   // | [>] receive_completed                                        ( public ) |
   // +=========================================================================+
   bool receive_completed(std::size_t size) {
-    std::lock_guard<std::mutex> engine_lock(engine_mutex_);
-    bool active = false;
+    std::lock_guard<std::mutex> receive_lock(receive_mutex_);
     {
-      std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+      std::lock_guard<std::mutex> lock(sending_mutex_);
       receiving_ = false;
       if (!size) receive_closed_ = true;
       if (stopping_.load()) closing_ = true;
-      if (socket_ == INVALID_SOCKET) retire_();
-      else if (closing_) cleanup_resources_();
-      else {
-        active = true;
-        processing_receive_ = size != 0;
+      if (aborted_) abort_();
+      if (socket_ == INVALID_SOCKET) {
+        retire_();
+        return false;
       }
+      if (closing_) {
+        cleanup_resources_();
+        return false;
+      }
+      processing_receive_ = size != 0;
     }
-    if (!active) {
-      cancel_sends_();
+    if (!size) return true;
+    ovr_size_ += size;
+    std::size_t processed;
+    try {
+      processed = engine_.on_bytes_received(ovr_buf_.get(), ovr_size_,
+                                            ovr_capacity_);
+    } catch (...) {
+      std::lock_guard<std::mutex> lock(sending_mutex_);
+      processing_receive_ = false;
+      abort_();
+      throw;
+    }
+    std::lock_guard<std::mutex> lock(sending_mutex_);
+    if (processed > ovr_size_) {
+      processing_receive_ = false;
+      abort_();
       return false;
     }
-    if (size) {
-      ovr_size_ += size;
-      std::size_t processed = 0;
-      try {
-        processed = engine_.on_bytes_received(ovr_buf_.get(), ovr_size_,
-                                              ovr_capacity_);
-      } catch (...) {
-        abort();
-        cancel_sends_();
-        throw;
-      }
-      if (processed > ovr_size_) {
-        abort();
-        cancel_sends_();
-        return false;
-      }
-      cancel_sends_();
-      ovr_size_ -= processed;
-      if (processed && ovr_size_) {
-        std::memmove(ovr_buf_.get(), ovr_buf_.get() + processed, ovr_size_);
-      }
-      if (ovr_size_ == ovr_capacity_) {
-        abort();
-        cancel_sends_();
-        return false;
-      }
+    ovr_size_ -= processed;
+    if (processed && ovr_size_) {
+      std::memmove(ovr_buf_.get(), ovr_buf_.get() + processed, ovr_size_);
+    }
+    if (ovr_size_ == ovr_capacity_) {
+      processing_receive_ = false;
+      abort_();
+      return false;
     }
     return true;
   }
@@ -338,149 +283,90 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // | [>] receive_failed                                           ( public ) |
   // +=========================================================================+
   void receive_failed() {
-    std::lock_guard<std::mutex> engine_lock(engine_mutex_);
-    {
-      std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-      receiving_ = false;
-      abort_();
-    }
-    cancel_sends_();
+    std::lock_guard<std::mutex> lock(sending_mutex_);
+    receiving_ = false;
+    abort_();
   }
   // +=========================================================================+
   // | [>] send_failed                                              ( public ) |
   // +=========================================================================+
   void send_failed() {
-    std::lock_guard<std::mutex> engine_lock(engine_mutex_);
-    {
-      std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-      sending_ = false;
-      abort_();
-    }
-    cancel_sends_();
+    std::lock_guard<std::mutex> lock(sending_mutex_);
+    send_state_ = send_status::kIdle;
+    abort_();
   }
   // +=========================================================================+
   // | [>] abort                                                    ( public ) |
   // +=========================================================================+
   void abort() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    std::lock_guard<std::mutex> lock(sending_mutex_);
     abort_();
   }
   // +=========================================================================+
   // | [>] connected                                                ( public ) |
   // +=========================================================================+
   void connected(HANDLE completion_port) {
-    std::lock_guard<std::mutex> engine_lock(engine_mutex_);
     {
-      std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+      std::lock_guard<std::mutex> lock(sending_mutex_);
+      io_h_ = completion_port;
       connected_ = true;
-      notify_disconnection_();
     }
-    try {
-      engine_.set_on_wake(
-          [weak = this->weak_from_this(), completion_port]() noexcept {
-            auto ctx = weak.lock();
-            if (!ctx) return;
-            std::lock_guard<std::mutex> lock(ctx->sending_mutex_);
-            if (ctx->closing_ || ctx->socket_ == INVALID_SOCKET ||
-                ctx->wake_pending_) return;
-            ctx->wake_pending_ = true;
-            ctx->wake_owner_ = ctx;
-            if (!PostQueuedCompletionStatus(completion_port, 0, 0,
-                                            &ctx->wake_event_)) {
-              ctx->wake_pending_ = false;
-              ctx->wake_owner_.reset();
-              ctx->abort_();
-            }
-          });
-      engine_.set_on_close([this]() { close(); });
-      engine_.set_on_send(
-          [this](std::unique_ptr<char[]> buffer, std::size_t size,
-                 std::optional<common::reader> source) {
-            send(std::move(buffer), size, std::move(source));
-          });
-    } catch (...) {
-      abort();
-      cancel_sends_();
-      throw;
-    }
-    cancel_sends_();
-  }
-  // +=========================================================================+
-  // | [>] wake                                                     ( public ) |
-  // +=========================================================================+
-  void wake() {
-    std::lock_guard<std::mutex> engine_lock(engine_mutex_);
-    bool active = false;
-    {
-      std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-      wake_pending_ = false;
-      wake_owner_.reset();
-      if (stopping_.load()) closing_ = true;
-      active = !closing_ && socket_ != INVALID_SOCKET;
-      if (closing_) cleanup_resources_();
-    }
-    try {
-      if (active) engine_.on_wake();
-    } catch (...) {
-      abort();
-    }
-    cancel_sends_();
+    notify_disconnection();
+    engine_.set_on_close([weak = this->weak_from_this()]() {
+      if (auto ctx = weak.lock()) ctx->close();
+    });
+    engine_.set_on_send([weak = this->weak_from_this()](
+        std::unique_ptr<char[]> buffer, std::size_t size,
+        std::optional<common::reader> source) {
+      if (auto ctx = weak.lock()) {
+        ctx->send(std::move(buffer), size, std::move(source));
+      }
+    });
   }
   // +=========================================================================+
   // | [>] close                                                    ( public ) |
   // +=========================================================================+
   void close() {
-    std::lock_guard<std::mutex> sending_lock(sending_mutex_);
+    std::lock_guard<std::mutex> lock(sending_mutex_);
+    if (closing_ || socket_ == INVALID_SOCKET) return;
     closing_ = true;
-    cleanup_resources_();
+    request_output_();
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +=========================================================================+
   void stop() {
-    std::lock_guard<std::mutex> engine_lock(engine_mutex_);
-    close();
-    cancel_sends_();
+    // Wait for the active handler before closing the connection.
+    {
+      std::lock_guard<std::mutex> receive_lock(receive_mutex_);
+      std::lock_guard<std::mutex> lock(sending_mutex_);
+      closing_ = true;
+      processing_receive_ = false;
+      send_pending_();
+      cleanup_resources_();
+    }
+    notify_disconnection();
+  }
+  // +=========================================================================+
+  // | [>] notify_disconnection                                     ( public ) |
+  // +=========================================================================+
+  void notify_disconnection() {
+    {
+      std::lock_guard<std::mutex> lock(sending_mutex_);
+      if (!connected_ || disconnected_ || socket_ != INVALID_SOCKET) return;
+      disconnected_ = true;
+    }
+    try {
+      // Let's call user's callback to notify for disconnection!
+      on_disconnection_();
+    } catch (const std::exception&) {
+      // [to-do] -> add support for this!
+    } catch (...) {
+      // [to-do] -> add support for this!
+    }
   }
 
  private:
-  // +=========================================================================+
-  // | [>] cancel_sends_                                           ( private ) |
-  // +=========================================================================+
-  void cancel_sends_() {
-    // Called with engine_mutex_ held, after leaving the engine callback.
-    std::size_t count = 0;
-    bool closing = false;
-    {
-      std::lock_guard<std::mutex> sending_lock(sending_mutex_);
-      closing = closing_;
-      if (!sending_ && socket_ == INVALID_SOCKET) {
-        count = send_queue_.size() + (send_active_ ? 1 : 0) +
-                (send_rejected_ ? 1 : 0);
-        send_rejected_ = false;
-        send_buffer_.reset();
-        send_source_.reset();
-        send_active_ = false;
-        send_reserved_ = 0;
-        send_queue_.clear();
-        send_bytes_ = 0;
-      }
-    }
-    if (closing && !engine_stopped_) {
-      engine_stopped_ = true;
-      try {
-        engine_.on_stop();
-      } catch (...) {
-        abort();
-      }
-    }
-    for (std::size_t i = 0; i < count; i++) {
-      try {
-        engine_.on_send_completed(false);
-      } catch (...) {
-      }
-    }
-  }
   // +=========================================================================+
   // | [>] receive_                                                ( private ) |
   // +=========================================================================+
@@ -500,58 +386,109 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     return true;
   }
   // +=========================================================================+
-  // | [>] read_source_                                            ( private ) |
+  // | [>] fill_send_buffer_                                       ( private ) |
   // +=========================================================================+
-  bool read_source_() {
-    if (!send_source_ || send_offset_ != send_size_) return true;
-    if (send_source_->failed()) return false;
-    if (!send_source_->eof()) {
-      const std::size_t capacity = std::min<std::size_t>(8192, send_capacity_);
-      if (!send_streaming_) {
-        send_buffer_.reset();
-        send_buffer_.reset(new (std::nothrow) char[capacity]);
-        if (!send_buffer_) return false;
-        send_streaming_ = true;
+  bool fill_send_buffer_() {
+    send_buffer_.clear();
+    send_offset_ = 0;
+    while (!send_queue_.empty()) {
+      auto& [buffer, size, source, reserved] = send_queue_.front();
+      queued_bytes_ -= reserved;
+      reserved = 0;
+      if (size) {
+        send_buffer_.append(buffer.get(), size);
+        buffer.reset();
+        size = 0;
       }
-      send_size_ = send_source_->read(std::span<std::byte>(
-          reinterpret_cast<std::byte*>(send_buffer_.get()), capacity));
-      send_offset_ = 0;
-      if (send_source_->failed() || (!send_size_ && !send_source_->eof())) {
-        return false;
+      if (source) {
+        if (source->failed()) return !send_buffer_.empty();
+        while (!source->eof()) {
+          const std::size_t available = std::min<std::size_t>(
+              8192, send_capacity_ - queued_bytes_ - send_buffer_.size());
+          if (!available) return true;
+          const std::size_t offset = send_buffer_.size();
+          send_buffer_.resize(offset + available);
+          const std::size_t read = source->read(std::span<std::byte>(
+              reinterpret_cast<std::byte*>(send_buffer_.data() + offset),
+              available));
+          send_buffer_.resize(offset + read);
+          if (source->failed() || (!read && !source->eof())) {
+            return !send_buffer_.empty();
+          }
+        }
       }
+      send_queue_.pop_front();
     }
-    if (send_source_->eof()) send_source_.reset();
     return true;
   }
   // +=========================================================================+
-  // | [>] send_                                                   ( private ) |
+  // | [>] request_output_                                         ( private ) |
   // +=========================================================================+
-  bool send_() {
-    DWORD f = 0;
-    overlapped_send<ENty>* ovs =
-        new (std::nothrow) overlapped_send<ENty>(this->shared_from_this());
-    if (!ovs) return false;
-    ULONG size = static_cast<ULONG>(std::min<std::size_t>(
-        send_size_ - send_offset_, std::numeric_limits<ULONG>::max()));
-    WSABUF buffer_view{size, send_buffer_
-                                ? send_buffer_.get() + send_offset_ : nullptr};
-    int res = WSASend(socket_, &buffer_view, 1, nullptr, f, ovs, 0);
-    if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-      delete ovs;
-      return false;
+  void request_output_() {
+    if (processing_receive_ || send_state_ != send_status::kIdle) return;
+    auto output = new (std::nothrow) overlapped_send<ENty>(
+        this->shared_from_this(), io_type::kOutput);
+    if (output && PostQueuedCompletionStatus(io_h_, 0, 0, output)) {
+      send_state_ = send_status::kQueued;
+    } else {
+      delete output;
+      closing_ = true;
+      aborted_ = true;
+      ::shutdown(socket_, SD_BOTH);
     }
-    sending_ = true;
-    return true;
+  }
+  // +=========================================================================+
+  // | [>] send_pending_                                           ( private ) |
+  // +=========================================================================+
+  void send_pending_() {
+    if (aborted_) {
+      abort_();
+      return;
+    }
+    if (send_state_ != send_status::kIdle) return;
+    if (socket_ == INVALID_SOCKET) {
+      retire_();
+      return;
+    }
+    if (send_offset_ == send_buffer_.size()) {
+      if (processing_receive_) return;
+      if (!fill_send_buffer_()) {
+        abort_();
+        return;
+      }
+    }
+    if (send_buffer_.empty()) {
+      cleanup_resources_();
+      return;
+    }
+    auto ovs = new (std::nothrow) overlapped_send<ENty>(
+        this->shared_from_this());
+    if (!ovs) {
+      abort_();
+      return;
+    }
+    const ULONG size = static_cast<ULONG>(std::min<std::size_t>(
+        send_buffer_.size() - send_offset_, std::numeric_limits<ULONG>::max()));
+    WSABUF buffer{size, send_buffer_.data() + send_offset_};
+    const int result = WSASend(socket_, &buffer, 1, nullptr, 0, ovs, nullptr);
+    if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      delete ovs;
+      abort_();
+      return;
+    }
+    send_state_ = send_status::kPending;
   }
   // +=========================================================================+
   // | [>] cleanup_resources_                                      ( private ) |
   // +=========================================================================+
   void cleanup_resources_() {
-    if (!closing_ || sending_) return;
     if (socket_ == INVALID_SOCKET) {
       retire_();
       return;
     }
+    if (!closing_ || processing_receive_ ||
+        send_state_ != send_status::kIdle || !send_queue_.empty() ||
+        send_offset_ != send_buffer_.size()) return;
     if (!socket_shutdown_) {
       if (::shutdown(socket_, SD_SEND) == SOCKET_ERROR) {
         abort_();
@@ -564,8 +501,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
       retire_();
       return;
     }
-    // The engine must release the buffer before another receive can use it.
-    if (!receiving_ && !processing_receive_) {
+    if (!receiving_) {
       // Discard input until peer EOF to avoid resetting the final response.
       ovr_size_ = 0;
       if (!receive_()) abort_();
@@ -576,6 +512,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // +=========================================================================+
   void abort_() {
     closing_ = true;
+    aborted_ = true;
     close_socket_();
     retire_();
   }
@@ -587,69 +524,44 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
       closesocket(socket_);
       socket_ = INVALID_SOCKET;
     }
-    notify_disconnection_();
-  }
-  // +=========================================================================+
-  // | [>] notify_disconnection_                                   ( private ) |
-  // +=========================================================================+
-  void notify_disconnection_() {
-    if (!connected_ || disconnected_ || socket_ != INVALID_SOCKET) return;
-    disconnected_ = true;
-    try {
-      // Let's call user's callback to notify for disconnection!
-      on_disconnection_();
-    } catch (const std::exception&) {
-      // [to-do] -> add support for this!
-    } catch (...) {
-      // [to-do] -> add support for this!
-    }
   }
   // +=========================================================================+
   // | [>] retire_                                                 ( private ) |
   // +=========================================================================+
   void retire_() {
-    if (retired_ || socket_ != INVALID_SOCKET || receiving_ || sending_ ||
-        wake_pending_) return;
+    if (retired_ || socket_ != INVALID_SOCKET || receiving_ ||
+        processing_receive_ || send_state_ != send_status::kIdle) return;
     retired_ = true;
     if (on_retirement_) on_retirement_(this);
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  // [common] section!
+  enum class send_status { kIdle, kQueued, kPending };
   types::on_client_disconnected_delegate on_disconnection_;
   std::function<void(context*)> on_retirement_;
   SOCKET socket_{INVALID_SOCKET};
+  HANDLE io_h_{nullptr};
   ENty engine_;
   const std::atomic<bool>& stopping_;
-  std::mutex engine_mutex_;
-  std::unique_ptr<char[]> send_buffer_;
-  std::optional<common::reader> send_source_;
+  std::mutex receive_mutex_;
+  std::mutex sending_mutex_;
   std::list<std::tuple<std::unique_ptr<char[]>, std::size_t,
-                       std::optional<common::reader>>> send_queue_;
+                       std::optional<common::reader>, std::size_t>> send_queue_;
+  std::string send_buffer_;
   const std::size_t send_capacity_;
-  std::size_t send_bytes_{0};
-  std::size_t send_reserved_{0};
-  std::size_t send_size_{0};
+  std::size_t queued_bytes_{0};
   std::size_t send_offset_{0};
-  bool send_active_{false};
-  bool send_rejected_{false};
-  bool send_streaming_{false};
-  mutable std::mutex sending_mutex_;
+  send_status send_state_{send_status::kIdle};
   bool closing_{false};
+  bool aborted_{false};
   bool connected_{false};
-  bool engine_stopped_{false};
-  bool wake_pending_{false};
-  overlapped_wake<ENty> wake_event_{this};
-  std::shared_ptr<context> wake_owner_;
   bool disconnected_{false};
   bool receiving_{false};
   bool receive_closed_{false};
   bool processing_receive_{false};
-  bool sending_{false};
   bool socket_shutdown_{false};
   bool retired_{false};
-  // [overlapped-receive] section!
   std::unique_ptr<char[]> ovr_buf_;
   const std::size_t ovr_capacity_;
   std::size_t ovr_size_{0};
@@ -938,20 +850,14 @@ class tcpip {
           if (st == TRUE && ovb == nullptr) {
             stopping = true;
           } else if (st == TRUE) {
-            if (ovb->get_type() == io_type::kWake) {
-              // The queued event retains its context until this worker owns it.
-              auto ctx = reinterpret_cast<overlapped_wake<ENty>*>(ovb)
-                             ->ctx->shared_from_this();
-              ctx->wake();
-              continue;
-            }
             if (ovb->get_type() == io_type::kAccept) {
               auto ova = (overlapped_accept*)ovb;
               handle_accept(ova);
             } else if (ovb->get_type() == io_type::kReceive) {
               auto ovr = (overlapped_receive<ENty>*)ovb;
               handle_receive(ovr->ctx, bytes);
-            } else if (ovb->get_type() == io_type::kSend) {
+            } else if (ovb->get_type() == io_type::kSend ||
+                       ovb->get_type() == io_type::kOutput) {
               auto ovs = (overlapped_send<ENty>*)ovb;
               handle_send(ovs, bytes);
             }
@@ -1119,7 +1025,8 @@ class tcpip {
   // +=========================================================================+
   void handle_send(overlapped_send<ENty>* ovs, DWORD bytes_sent) {
     try {
-      ovs->ctx->send_completed(bytes_sent);
+      if (ovs->get_type() == io_type::kOutput) ovs->ctx->output_ready();
+      else ovs->ctx->send_completed(bytes_sent);
     } catch (...) {
       ovs->ctx->abort();
       ovs->ctx->stop();
@@ -1140,9 +1047,8 @@ class tcpip {
         reinterpret_cast<overlapped_receive<ENty>*>(ovb)->ctx->receive_failed();
         break;
       case io_type::kSend:
+      case io_type::kOutput:
         reinterpret_cast<overlapped_send<ENty>*>(ovb)->ctx->send_failed();
-        break;
-      case io_type::kWake:
         break;
     }
   }
@@ -1155,12 +1061,15 @@ class tcpip {
         delete reinterpret_cast<overlapped_accept*>(ovb);
         break;
       case io_type::kReceive:
+        reinterpret_cast<overlapped_receive<ENty>*>(ovb)->ctx
+            ->notify_disconnection();
         delete reinterpret_cast<overlapped_receive<ENty>*>(ovb);
         break;
       case io_type::kSend:
+      case io_type::kOutput:
+        reinterpret_cast<overlapped_send<ENty>*>(ovb)->ctx
+            ->notify_disconnection();
         delete reinterpret_cast<overlapped_send<ENty>*>(ovb);
-        break;
-      case io_type::kWake:
         break;
     }
   }

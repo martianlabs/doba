@@ -45,7 +45,8 @@ struct policies {
   std::size_t worker_count = 0;
   // Requested pending connection queue size (0 uses the system default).
   int listen_backlog = 0;
-  // Retained send bytes per connection, including the entire active block.
+  // Queued send reservations plus the entire active batch, per connection.
+  // Also bounds each accumulated batch; source-owned storage is excluded.
   // Must be positive; exceeding it closes the connection. No preallocation.
   std::size_t send_buffer_size = 1024 * 1024;
   // IPv4 bind address and port (1-65535); both must be set.

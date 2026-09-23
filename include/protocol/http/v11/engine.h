@@ -25,20 +25,12 @@
 #ifndef martianlabs_doba_protocol_http_v11_engine_h
 #define martianlabs_doba_protocol_http_v11_engine_h
 
-#include <atomic>
-#include <coroutine>
 #include <cstddef>
-#include <exception>
 #include <functional>
-#include <list>
-#include <memory>
-#include <optional>
-#include <stop_token>
 #include <string_view>
 #include <utility>
 
 #include "common/output.h"
-#include "common/task.h"
 #include "protocol/deserialization.h"
 #include "protocol/http/common/header_names.h"
 #include "protocol/http/common/helpers.h"
@@ -57,30 +49,6 @@ namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename ROty = router<RQty, RSty>>
 class engine {
- private:
-  // +=========================================================================+
-  // | [>] TYPEs                                                   ( private ) |
-  // +=========================================================================+
-  enum class response_state { kQueued, kStarting, kWaiting, kReady };
-  struct pending_response {
-    explicit pending_response(std::shared_ptr<RQty> input)
-        : request{std::move(input)} {}
-    std::shared_ptr<RQty> request;
-    std::optional<RSty> response;
-    std::exception_ptr error;
-    std::function<void()> wake;
-    std::atomic<response_state> state{response_state::kStarting};
-  };
-  struct completion {
-    struct promise_type {
-      completion get_return_object() noexcept { return {}; }
-      std::suspend_never initial_suspend() const noexcept { return {}; }
-      std::suspend_never final_suspend() const noexcept { return {}; }
-      void return_void() noexcept {}
-      void unhandled_exception() noexcept { std::terminate(); }
-    };
-  };
-
  public:
   // +=========================================================================+
   // | [>] TYPEs                                                    ( public ) |
@@ -90,9 +58,7 @@ class engine {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   engine(policies_type configuration, const ROty& routes)
-      : decoder_{configuration}, router_{routes},
-        max_pending_requests_{configuration.max_pending_requests} {}
-  ~engine() { on_stop(); }
+      : decoder_{configuration}, router_{routes} {}
   // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |
   // +=========================================================================+
@@ -106,141 +72,39 @@ class engine {
     on_close_ = std::move(close);
   }
   // +=========================================================================+
-  // | [>] set_on_wake                                              ( public ) |
-  // +=========================================================================+
-  void set_on_wake(std::function<void()> wake) {
-    on_wake_ = std::move(wake);
-  }
-  // +=========================================================================+
-  // | [>] on_wake                                                  ( public ) |
-  // +=========================================================================+
-  void on_wake() {
-    if (stopped_) return;
-    try {
-      while (!pending_.empty()) {
-        auto entry = pending_.front();
-        auto state = entry->state.load(std::memory_order_acquire);
-        if (state == response_state::kQueued) {
-          process_request(entry->request, true);
-          state = entry->state.load(std::memory_order_acquire);
-        }
-        if (state != response_state::kReady) return;
-        if (entry->error) {
-          input_stopped_ = true;
-          entry->response.emplace(make_error_response());
-        }
-        if (entry->request) {
-          send_response(*entry->request, *entry->response);
-        } else {
-          // A ready entry without a request is a terminal decoder rejection.
-          send_decoded_response(*entry->response, true);
-        }
-        pending_.pop_front();
-        if (stopped_) return;
-      }
-      serial_ = false;
-      send_interim();
-    } catch (...) {
-      stopped_ = true;
-      on_close_();
-    }
-  }
-  // +=========================================================================+
-  // | [>] on_stop                                                  ( public ) |
-  // +=========================================================================+
-  void on_stop() noexcept {
-    stopped_ = true;
-    pending_.clear();
-    interim_.reset();
-    if (cancellation_) cancellation_->request_stop();
-  }
-  // +=========================================================================+
-  // | [>] on_send_completed                                        ( public ) |
-  // +=========================================================================+
-  void on_send_completed(bool) {}
-  // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +=========================================================================+
   std::size_t on_bytes_received(const char* buffer, const std::size_t size,
                                 const std::size_t capacity) {
-    if (stopped_ || input_stopped_) return size;
+    if (closed_) return size;
     std::size_t processed = 0;
     while (processed < size) {
       std::size_t consumed = 0;
-      deserialization_result<RQty, RSty> result = decoder_.deserialize(
+      auto result = decoder_.deserialize(
           buffer + processed, size - processed, capacity, consumed);
       processed += consumed;
-      switch (result.code) {
-        case deserialization_status::kSucceeded: {
-          // RFC 9110 S10.1.1: a complete body no longer needs a 100 response.
-          interim_.reset();
-          try {
-            if (!pending_.empty() && max_pending_requests_ &&
-                pending_.size() >= max_pending_requests_) {
-              on_stop();
-              on_close_();
-              return processed;
-            }
-            const auto& request = result.request;
-            const auto method = request->get_method();
-            // RFC 9112 S9.3.2: only safe requests execute concurrently.
-            if (serial_ ||
-                (!pending_.empty() && method != method_names::kGet &&
-                 method != method_names::kHead &&
-                 method != method_names::kOptions &&
-                 method != method_names::kTrace)) {
-              auto entry = std::make_shared<pending_response>(request);
-              entry->state.store(response_state::kQueued,
-                                  std::memory_order_relaxed);
-              pending_.push_back(std::move(entry));
-              serial_ = true;
-            } else {
-              process_request(request);
-              if (!pending_.empty() && method != method_names::kGet &&
-                  method != method_names::kHead &&
-                  method != method_names::kOptions &&
-                  method != method_names::kTrace) serial_ = true;
-            }
-            if (!pending_.empty() && request->wants_connection_close()) {
-              input_stopped_ = true;
-            }
-          } catch (...) {
-            stopped_ = true;
-            on_close_();
+      try {
+        switch (result.code) {
+          case deserialization_status::kSucceeded: {
+            const auto& request = *result.request;
+            bool close = request.wants_connection_close();
+            auto response = execute_request(request, close);
+            send_response(request, response, close);
+            if (closed_) return processed;
+            break;
           }
-          if (stopped_ || input_stopped_) return processed;
-          break;
+          case deserialization_status::kInvalidSource:
+            send_decoded_response(*result.response, true);
+            // Release rejected input so capacity checks cannot abort the drain.
+            return size;
+          case deserialization_status::kMoreBytesNeeded:
+            if (result.response) send_decoded_response(*result.response, false);
+            return processed;
         }
-        case deserialization_status::kInvalidSource:
-          input_stopped_ = true;
-          interim_.reset();
-          try {
-            if (pending_.empty()) {
-              send_decoded_response(*result.response, true);
-            } else {
-              auto entry = std::make_shared<pending_response>(nullptr);
-              entry->response.emplace(std::move(*result.response));
-              entry->state.store(response_state::kReady,
-                                  std::memory_order_relaxed);
-              pending_.push_back(std::move(entry));
-            }
-          } catch (...) {
-            stopped_ = true;
-            on_close_();
-          }
-          // Release rejected input so capacity checks cannot abort the drain.
-          return size;
-        case deserialization_status::kMoreBytesNeeded:
-          try {
-            if (result.response) {
-              interim_.emplace(std::move(*result.response));
-              if (pending_.empty()) send_interim();
-            }
-          } catch (...) {
-            stopped_ = true;
-            on_close_();
-          }
-          return processed;
+      } catch (...) {
+        request_close();
+        return result.code == deserialization_status::kInvalidSource
+                   ? size : processed;
       }
     }
     return processed;
@@ -248,123 +112,46 @@ class engine {
 
  private:
   // +=========================================================================+
-  // | [>] process_request                                         ( private ) |
+  // | [>] execute_request                                         ( private ) |
   // +=========================================================================+
-  void process_request(const std::shared_ptr<RQty>& input,
-                       bool queued = false) {
-    const RQty& request = *input;
-    bool delivering = false;
-    auto deliver = [&](RSty response) {
-      delivering = true;
-      if (!queued && pending_.empty()) {
-        send_response(request, response);
-      } else {
-        auto entry = queued ? pending_.front()
-                            : std::make_shared<pending_response>(input);
-        entry->response.emplace(std::move(response));
-        entry->state.store(response_state::kReady, std::memory_order_release);
-        if (!queued) pending_.push_back(std::move(entry));
-      }
-    };
+  RSty execute_request(const RQty& request, bool& close) {
     try {
       switch (request.get_target()) {
         case target::kOriginForm:
         case target::kAbsoluteForm: {
           const std::string_view path = request.get_absolute_path();
           const auto match = router_.match(request.get_method(), path);
-          if (match.handler) {
-            if (match.handler->is_async()) {
-              if (!cancellation_) cancellation_.emplace();
-              auto response = start_response(
-                  input, match.handler->async_callback(
-                      input, cancellation_->get_token()), queued);
-              if (response) deliver(std::move(*response));
-            } else {
-              deliver(match.handler->callback(request));
-            }
-            return;
-          }
+          if (match.handler) return (*match.handler)(request);
           if (match.parametrized_handler) {
-            if (match.parametrized_handler->is_async()) {
-              if (!cancellation_) cancellation_.emplace();
-              auto response = start_response(input,
-                  match.parametrized_handler->invoke_async(
-                      input, cancellation_->get_token(), path), queued);
-              if (response) deliver(std::move(*response));
-            } else {
-              deliver(match.parametrized_handler->invoke(request, path));
-            }
-            return;
+            return match.parametrized_handler->invoke(request, path);
           }
           const auto allowed = router_.allowed_methods(path);
           if (allowed.empty()) {
-            deliver(RSty::not_found_404());
-            return;
+            return RSty::not_found_404();
           }
           // RFC 9110 S15.5.6: a 405 response must advertise allowed methods.
           RSty response = RSty::method_not_allowed_405();
           response.set_header(header_names::kAllow, allowed);
-          deliver(std::move(response));
-          return;
+          return response;
         }
         case target::kAuthorityForm:
-          deliver(RSty::not_implemented_501());
-          return;
+          return RSty::not_implemented_501();
         case target::kAsteriskForm:
-          deliver(RSty::ok_200());
-          return;
+          return RSty::ok_200();
         default:
-          deliver(RSty::bad_request_400());
-          return;
+          return RSty::bad_request_400();
       }
     } catch (...) {
-      if (delivering) throw;
-      input_stopped_ = true;
-      deliver(make_error_response());
+      close = true;
+      return make_error_response();
     }
   }
   // +=========================================================================+
-  // | [>] collect_response                                        ( private ) |
+  // | [>] request_close                                           ( private ) |
   // +=========================================================================+
-  static completion collect_response(
-      common::task<RSty> task, std::shared_ptr<pending_response> entry) {
-    try {
-      entry->response.emplace(co_await std::move(task));
-    } catch (...) {
-      entry->error = std::current_exception();
-    }
-    if (entry->state.exchange(response_state::kReady,
-                              std::memory_order_acq_rel) ==
-        response_state::kWaiting) {
-      entry->wake();
-    }
-  }
-  // +=========================================================================+
-  // | [>] start_response                                          ( private ) |
-  // +=========================================================================+
-  std::optional<RSty> start_response(
-      const std::shared_ptr<RQty>& request, common::task<RSty> task,
-      bool queued) {
-    auto entry = queued ? pending_.front()
-                        : std::make_shared<pending_response>(request);
-    entry->wake = on_wake_;
-    entry->state.store(response_state::kStarting, std::memory_order_relaxed);
-    collect_response(std::move(task), entry);
-    if (entry->state.load(std::memory_order_acquire) ==
-        response_state::kReady) {
-      if (entry->error) std::rethrow_exception(entry->error);
-      return std::move(entry->response);
-    }
-    if (!queued) pending_.push_back(entry);
-    // Publish the FIFO position before arming an external wake.
-    auto expected = response_state::kStarting;
-    if (!entry->state.compare_exchange_strong(
-            expected, response_state::kWaiting, std::memory_order_acq_rel)) {
-      if (!queued) pending_.pop_back();
-      if (entry->error) std::rethrow_exception(entry->error);
-      return std::move(entry->response);
-    }
-    return std::nullopt;
+  void request_close() {
+    closed_ = true;
+    on_close_();
   }
   // +=========================================================================+
   // | [>] make_error_response                                     ( private ) |
@@ -375,14 +162,6 @@ class engine {
     return response;
   }
   // +=========================================================================+
-  // | [>] send_interim                                            ( private ) |
-  // +=========================================================================+
-  void send_interim() {
-    if (!interim_ || input_stopped_) return;
-    send_decoded_response(*interim_, false);
-    interim_.reset();
-  }
-  // +=========================================================================+
   // | [>] send_decoded_response                                   ( private ) |
   // +=========================================================================+
   void send_decoded_response(RSty& response, bool close) {
@@ -390,18 +169,12 @@ class engine {
     auto serialized = response.serialize();
     on_send_(std::move(serialized->prefix), serialized->prefix_size,
              std::move(serialized->source));
-    if (close && !stopped_) {
-      stopped_ = true;
-      on_close_();
-    }
+    if (close) request_close();
   }
   // +=========================================================================+
   // | [>] send_response                                           ( private ) |
   // +=========================================================================+
-  void send_response(const RQty& request, RSty& response) {
-    // The current response remains at the FIFO front during delivery.
-    bool close = request.wants_connection_close() ||
-                 (input_stopped_ && pending_.size() <= 1);
+  void send_response(const RQty& request, RSty& response, bool close) {
     decltype(response.serialize()) serialized;
     try {
       if (close) {
@@ -426,35 +199,24 @@ class engine {
       if (request.get_method() == method_names::kHead) response.suppress_body();
       serialized = response.serialize();
     } catch (...) {
-      input_stopped_ = true;
-      close = close || pending_.size() <= 1;
+      close = true;
       auto error = make_error_response();
-      if (close) error.set_header(header_names::kConnection, "close");
+      error.set_header(header_names::kConnection, "close");
       if (request.get_method() == method_names::kHead) error.suppress_body();
       serialized = error.serialize();
     }
     on_send_(std::move(serialized->prefix), serialized->prefix_size,
              std::move(serialized->source));
-    if (close && !stopped_) {
-      stopped_ = true;
-      on_close_();
-    }
+    if (close) request_close();
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   decoder<RQty, RSty> decoder_;
   const ROty& router_;
-  const std::size_t max_pending_requests_;
   common::send_delegate on_send_;
   std::function<void()> on_close_;
-  std::function<void()> on_wake_;
-  std::list<std::shared_ptr<pending_response>> pending_;
-  std::optional<std::stop_source> cancellation_;
-  std::optional<RSty> interim_;
-  bool serial_{false};
-  bool input_stopped_{false};
-  bool stopped_{false};
+  bool closed_{false};
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

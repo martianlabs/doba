@@ -110,7 +110,7 @@ class server {
   // | [>] add_route                                                ( public ) |
   // +=========================================================================+
   template <typename Hty>
-    requires(router_handler_lambda<Hty> || router_async_handler_lambda<Hty>)
+    requires router_handler_lambda<Hty>
   server& add_route(std::string_view method, std::string_view route,
                     Hty handler) {
     std::lock_guard<std::mutex> lock(locked_mutex_);
