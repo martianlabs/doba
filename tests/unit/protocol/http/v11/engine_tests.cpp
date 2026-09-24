@@ -22,11 +22,14 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 #include "protocol/http/v11/engine.h"
@@ -39,6 +42,7 @@ using martianlabs::doba::common::reader;
 using martianlabs::doba::protocol::http::router;
 using martianlabs::doba::protocol::http::v11::body::body_writer;
 using martianlabs::doba::protocol::http::v11::engine;
+using martianlabs::doba::protocol::http::v11::detail::sequencer;
 using martianlabs::doba::protocol::http::v11::policies;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
@@ -153,6 +157,24 @@ DOBA_TEST("engine returns routing and handler errors") {
   }
 }
 // +===========================================================================+
+// | [>] engine rejects a handler 100 without a final response  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("engine rejects a handler 100 without a final response") {
+  router<request, response> routes;
+  routes.add("GET", "/", [](const request&) {
+    return response::continue_100();
+  });
+  connection current(routes);
+  const std::string one = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  DOBA_EXPECT_EQUAL(current.receive(one + one), one.size());
+  DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 500 "));
+  DOBA_EXPECT(current.wire.ends_with("\r\n\r\nInternal Server Error"));
+  DOBA_EXPECT(current.wire.find("Connection: close\r\n") !=
+              std::string::npos);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 1U);
+  DOBA_EXPECT_EQUAL(current.closes, 1);
+}
+// +===========================================================================+
 // | [>] engine preserves pipelined response order               ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("engine preserves pipelined response order") {
@@ -171,6 +193,162 @@ DOBA_TEST("engine preserves pipelined response order") {
   DOBA_EXPECT(current.wire.find("\r\n\r\n2HTTP/1.1") != std::string::npos);
   DOBA_EXPECT(current.wire.ends_with("\r\n\r\n3"));
   DOBA_EXPECT_EQUAL(current.closes, 0);
+}
+// +===========================================================================+
+// | [>] response order waits for earlier completions            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("response order waits for earlier completions") {
+  sequencer order;
+  std::vector<std::string> deliveries;
+  order.set_on_send([&](std::unique_ptr<char[]> bytes, std::size_t size,
+                        std::optional<reader>) {
+    deliveries.emplace_back(bytes.get(), size);
+  });
+  order.set_on_close([]() {});
+  const auto first = order.reserve();
+  const auto second = order.reserve();
+  order.complete(second, make_response("second").serialize(), false);
+  DOBA_EXPECT(deliveries.empty());
+  order.complete(first, make_response("first").serialize(), false);
+  DOBA_EXPECT_EQUAL(deliveries.size(), 2U);
+  DOBA_EXPECT(deliveries[0].ends_with("\r\n\r\nfirst"));
+  DOBA_EXPECT(deliveries[1].ends_with("\r\n\r\nsecond"));
+}
+// +===========================================================================+
+// | [>] response order serializes concurrent completions        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("response order serializes concurrent completions") {
+  sequencer order;
+  std::mutex mutex;
+  std::condition_variable ready;
+  bool entered = false;
+  bool release = false;
+  std::vector<std::string> deliveries;
+  order.set_on_send([&](std::unique_ptr<char[]> bytes, std::size_t size,
+                        std::optional<reader>) {
+    deliveries.emplace_back(bytes.get(), size);
+    if (deliveries.size() == 1) {
+      std::unique_lock<std::mutex> lock(mutex);
+      entered = true;
+      ready.notify_one();
+      ready.wait(lock, [&]() { return release; });
+    }
+  });
+  order.set_on_close([]() {});
+  const auto first = order.reserve();
+  const auto second = order.reserve();
+  std::thread first_worker([&]() {
+    order.complete(first, make_response("first").serialize(), false);
+  });
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    ready.wait(lock, [&]() { return entered; });
+  }
+  std::thread second_worker([&]() {
+    order.complete(second, make_response("second").serialize(), false);
+  });
+  second_worker.join();
+  DOBA_EXPECT_EQUAL(deliveries.size(), 1U);
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    release = true;
+  }
+  ready.notify_one();
+  first_worker.join();
+  DOBA_EXPECT_EQUAL(deliveries.size(), 2U);
+  DOBA_EXPECT(deliveries[0].ends_with("\r\n\r\nfirst"));
+  DOBA_EXPECT(deliveries[1].ends_with("\r\n\r\nsecond"));
+}
+// +===========================================================================+
+// | [>] response order queues completions during interim        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("response order queues completions during interim") {
+  sequencer order;
+  std::mutex mutex;
+  std::condition_variable ready;
+  bool entered = false;
+  bool release = false;
+  std::vector<std::string> deliveries;
+  order.set_on_send([&](std::unique_ptr<char[]> bytes, std::size_t size,
+                        std::optional<reader>) {
+    deliveries.emplace_back(bytes.get(), size);
+    if (deliveries.size() == 1) {
+      std::unique_lock<std::mutex> lock(mutex);
+      entered = true;
+      ready.notify_one();
+      ready.wait(lock, [&]() { return release; });
+    }
+  });
+  order.set_on_close([]() {});
+  const auto first = order.reserve();
+  const auto second = order.reserve();
+  std::thread first_worker([&]() {
+    order.interim(first, response::continue_100().serialize());
+  });
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    ready.wait(lock, [&]() { return entered; });
+  }
+  std::thread later_worker([&]() {
+    order.complete(second, make_response("second").serialize(), false);
+    order.complete(first, make_response("first").serialize(), false);
+  });
+  later_worker.join();
+  DOBA_EXPECT_EQUAL(deliveries.size(), 1U);
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    release = true;
+  }
+  ready.notify_one();
+  first_worker.join();
+  DOBA_EXPECT_EQUAL(deliveries.size(), 3U);
+  DOBA_EXPECT(deliveries[0].starts_with("HTTP/1.1 100 Continue"));
+  DOBA_EXPECT(deliveries[1].ends_with("\r\n\r\nfirst"));
+  DOBA_EXPECT(deliveries[2].ends_with("\r\n\r\nsecond"));
+}
+// +===========================================================================+
+// | [>] response order keeps interim and terminal positions     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("response order keeps interim and terminal positions") {
+  sequencer order;
+  std::vector<std::string> deliveries;
+  int closes = 0;
+  order.set_on_send([&](std::unique_ptr<char[]> bytes, std::size_t size,
+                        std::optional<reader>) {
+    deliveries.emplace_back(bytes.get(), size);
+  });
+  order.set_on_close([&]() { closes++; });
+  const auto first = order.reserve();
+  const auto second = order.reserve();
+  order.complete(second, make_response("later").serialize(), false);
+  order.interim(first, response::continue_100().serialize());
+  DOBA_EXPECT_EQUAL(deliveries.size(), 1U);
+  DOBA_EXPECT(deliveries[0].starts_with("HTTP/1.1 100 Continue"));
+  order.complete(first, make_response("last").serialize(), true);
+  DOBA_EXPECT_EQUAL(deliveries.size(), 2U);
+  DOBA_EXPECT(deliveries[1].ends_with("\r\n\r\nlast"));
+  DOBA_EXPECT_EQUAL(closes, 1);
+  DOBA_EXPECT(order.closed());
+}
+// +===========================================================================+
+// | [>] response order closes on delivery failure               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("response order closes after delivery failure") {
+  sequencer order;
+  int deliveries = 0;
+  int closes = 0;
+  order.set_on_send([&](std::unique_ptr<char[]>, std::size_t,
+                        std::optional<reader>) {
+    deliveries++;
+    throw std::runtime_error("transport failure");
+  });
+  order.set_on_close([&]() { closes++; });
+  const auto first = order.reserve();
+  const auto second = order.reserve();
+  order.complete(first, make_response("first").serialize(), false);
+  order.complete(second, make_response("second").serialize(), false);
+  DOBA_EXPECT_EQUAL(deliveries, 1);
+  DOBA_EXPECT_EQUAL(closes, 1);
 }
 // +===========================================================================+
 // | [>] engine sends large and chunked response bodies          ( test-case ) |

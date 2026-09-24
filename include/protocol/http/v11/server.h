@@ -63,10 +63,9 @@ class server {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  explicit server(
-      typename TRty<ENty, engine_factory<ENty, ROty>>::policies_type
-          transport_configuration = {},
-      typename ENty::policies_type engine_configuration = {})
+  explicit server(typename TRty<ENty, engine_factory<ENty, ROty>>::policies_type
+                      transport_configuration = {},
+                  typename ENty::policies_type engine_configuration = {})
       : transport_{std::move(transport_configuration),
                    make_engine_factory<ENty>(std::move(engine_configuration),
                                              router_)} {
@@ -138,10 +137,10 @@ class server {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  TRty<ENty, engine_factory<ENty, ROty>> transport_;
   ROty router_;
-  std::mutex locked_mutex_;
   bool locked_{false};
+  std::mutex locked_mutex_;
+  TRty<ENty, engine_factory<ENty, ROty>> transport_;
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

@@ -69,6 +69,7 @@ class response {
         has_date_header_(in.has_date_header_),
         has_content_length_header_(in.has_content_length_header_),
         has_transfer_encoding_header_(in.has_transfer_encoding_header_),
+        connection_close_count_(in.connection_close_count_),
         content_length_(in.content_length_),
         chunked_(in.chunked_),
         bdy_writer_(std::move(in.bdy_writer_)),
@@ -78,6 +79,7 @@ class response {
     in.bdy_len_ = 0;
     in.status_code_ = SC_200_OK;
     in.has_date_header_ = false;
+    in.connection_close_count_ = 0;
     in.bdy_writer_.reset();
     in.bdy_reader_.reset();
   }
@@ -97,6 +99,7 @@ class response {
     has_date_header_ = in.has_date_header_;
     has_content_length_header_ = in.has_content_length_header_;
     has_transfer_encoding_header_ = in.has_transfer_encoding_header_;
+    connection_close_count_ = in.connection_close_count_;
     content_length_ = in.content_length_;
     chunked_ = in.chunked_;
     bdy_writer_ = std::move(in.bdy_writer_);
@@ -106,6 +109,7 @@ class response {
     in.bdy_len_ = 0;
     in.status_code_ = SC_200_OK;
     in.has_date_header_ = false;
+    in.connection_close_count_ = 0;
     in.bdy_writer_.reset();
     in.bdy_reader_.reset();
     return *this;
@@ -228,6 +232,9 @@ class response {
     if (iequals(k, header_names::kTransferEncoding)) {
       has_transfer_encoding_header_ = true;
     }
+    if (iequals(k, header_names::kConnection) && has_close_option(v)) {
+      connection_close_count_++;
+    }
     return *this;
   }
   // +=========================================================================+
@@ -271,12 +278,19 @@ class response {
         throw std::out_of_range("not enough space to set header!");
       }
     }
+    if (iequals(k, header_names::kConnection) &&
+        has_close_option(std::string_view(&memory_[val_off], val_len))) {
+      connection_close_count_--;
+    }
     // Relocate the tail to make room for (or reclaim space from) the new value,
     // then write the new value in place. memmove tolerates overlap.
     std::memmove(&memory_[val_off + new_v_size], &memory_[tail_off], tail_len);
     std::memcpy(&memory_[val_off], v.data(), new_v_size);
     hdr_len_ = hdr_len_ - val_len + new_v_size;
     if (iequals(k, header_names::kDate)) has_date_header_ = true;
+    if (iequals(k, header_names::kConnection) && has_close_option(v)) {
+      connection_close_count_++;
+    }
     return *this;
   }
   // +=========================================================================+
@@ -299,6 +313,14 @@ class response {
     std::size_t line_off, val_off, val_len, line_len;
     return find_header(k, line_off, val_off, val_len, line_len);
   }
+  // +=========================================================================+
+  // | [>] wants_connection_close                                  ( public ) |
+  // +=========================================================================+
+  bool wants_connection_close() const { return connection_close_count_ != 0; }
+  // +=========================================================================+
+  // | [>] is_continue_100                                        ( public ) |
+  // +=========================================================================+
+  bool is_continue_100() const { return status_code_ == SC_100_CONTINUE; }
   // +=========================================================================+
   // | [>] get_header                                               ( public ) |
   // +=========================================================================+
@@ -379,6 +401,10 @@ class response {
   response& remove_header(std::string_view k) {
     std::size_t line_off, val_off, val_len, line_len;
     if (!find_header(k, line_off, val_off, val_len, line_len)) return *this;
+    if (iequals(k, header_names::kConnection) &&
+        has_close_option(std::string_view(&memory_[val_off], val_len))) {
+      connection_close_count_--;
+    }
     std::size_t tail_off = line_off + line_len;
     std::size_t tail_len = (sln_len_ + hdr_len_) - tail_off;
     std::memmove(&memory_[line_off], &memory_[tail_off], tail_len);
@@ -771,6 +797,19 @@ class response {
     return true;
   }
   // +=========================================================================+
+  // | [>] has_close_option                                       ( private ) |
+  // +=========================================================================+
+  static bool has_close_option(std::string_view value) {
+    bool close = false;
+    helpers::for_each_list_element(value, [&close](std::string_view option) {
+      helpers::ows_ltrim(option);
+      helpers::ows_rtrim(option);
+      if (helpers::iequals(option, "close")) close = true;
+      return true;
+    });
+    return close;
+  }
+  // +=========================================================================+
   // | [>] find_header                                             ( private ) |
   // +=========================================================================+
   // | Scans the serialized header block [sln_len_, sln_len_ + hdr_len_) for   |
@@ -837,6 +876,7 @@ class response {
   bool has_date_header_{false};
   bool has_content_length_header_{false};
   bool has_transfer_encoding_header_{false};
+  std::size_t connection_close_count_{0};
   std::optional<std::size_t> content_length_{0};
   bool chunked_{false};
   std::optional<body::body_writer> bdy_writer_;

@@ -78,7 +78,7 @@ bool read_body_integer(const request& req, std::int64_t& value) {
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  server http_server;
+  server http_server({.ip = "0.0.0.0", .port = "8080"});
   // Parse every baseline value; HttpArena randomizes them to detect shortcuts.
   http_server.add_route(
       "GET", "/baseline11",
@@ -144,7 +144,7 @@ int main(int argc, char* argv[]) {
             .set_body(std::to_string(bytes));
         return res;
       });
-  http_server.start("8080");
+  http_server.start();
   // Docker owns process shutdown; wait after the server starts.
   std::promise<void> shutdown;
   shutdown.get_future().wait();

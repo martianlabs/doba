@@ -26,20 +26,167 @@
 #define martianlabs_doba_protocol_http_v11_engine_h
 
 #include <cstddef>
+#include <deque>
 #include <functional>
+#include <memory>
+#include <mutex>
+#include <optional>
 #include <string_view>
 #include <utility>
 
 #include "common/output.h"
+#include "protocol/serialization.h"
 #include "protocol/deserialization.h"
 #include "protocol/http/common/header_names.h"
-#include "protocol/http/common/helpers.h"
 #include "protocol/http/common/method_names.h"
 #include "protocol/http/common/router.h"
 #include "protocol/http/v11/decoder.h"
 #include "protocol/http/v11/policies.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
+namespace detail {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] sequencer                                                   ( class ) |
+// +---------------------------------------------------------------------------+
+// | Delivers serialized responses in request order.                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+class sequencer {
+ public:
+  // +=========================================================================+
+  // | [>] TYPEs                                                    ( public ) |
+  // +=========================================================================+
+  using ticket = std::size_t;
+  // +=========================================================================+
+  // | [>] set_on_send                                              ( public ) |
+  // +=========================================================================+
+  void set_on_send(common::send_delegate output) {
+    on_send_ = std::move(output);
+  }
+  // +=========================================================================+
+  // | [>] set_on_close                                             ( public ) |
+  // +=========================================================================+
+  void set_on_close(std::function<void()> close) {
+    on_close_ = std::move(close);
+  }
+  // +=========================================================================+
+  // | [>] reserve                                                  ( public ) |
+  // +=========================================================================+
+  ticket reserve() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    const ticket id = next_id_++;
+    if (!closed_) pending_.emplace_back();
+    return id;
+  }
+  // +=========================================================================+
+  // | [>] interim                                                  ( public ) |
+  // +=========================================================================+
+  void interim(ticket id,
+               std::unique_ptr<protocol::serialization_result> response) {
+    submit(id, std::move(response), false, true);
+  }
+  // +=========================================================================+
+  // | [>] complete                                                 ( public ) |
+  // +=========================================================================+
+  void complete(ticket id,
+                std::unique_ptr<protocol::serialization_result> response,
+                bool close) {
+    submit(id, std::move(response), close, false);
+  }
+  // +=========================================================================+
+  // | [>] closed                                                   ( public ) |
+  // +=========================================================================+
+  bool closed() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return closed_;
+  }
+  // +=========================================================================+
+  // | [>] query_for_close                                          ( public ) |
+  // +=========================================================================+
+  void query_for_close() {
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (closed_) return;
+      closed_ = true;
+      pending_.clear();
+    }
+    on_close_();
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] TYPEs                                                   ( private ) |
+  // +=========================================================================+
+  struct pending_response {
+    std::unique_ptr<protocol::serialization_result> interim;
+    std::unique_ptr<protocol::serialization_result> final;
+    bool close{false};
+  };
+  // +=========================================================================+
+  // | [>] submit                                                  ( private ) |
+  // +=========================================================================+
+  void submit(ticket id,
+              std::unique_ptr<protocol::serialization_result> response,
+              bool close, bool interim) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (closed_ || id < first_id_ || id - first_id_ >= pending_.size()) {
+      return;
+    }
+    pending_response& current = pending_[id - first_id_];
+    if (interim) {
+      current.interim = std::move(response);
+    } else {
+      current.final = std::move(response);
+      current.close = close;
+    }
+    if (draining_) return;
+    draining_ = true;
+    while (!closed_) {
+      if (pending_.empty()) break;
+      pending_response& first = pending_.front();
+      std::unique_ptr<protocol::serialization_result> next;
+      bool close_after_send = false;
+      if (first.interim) {
+        next = std::move(first.interim);
+      } else if (first.final) {
+        next = std::move(first.final);
+        close_after_send = first.close;
+        pending_.pop_front();
+        first_id_++;
+      } else {
+        break;
+      }
+      lock.unlock();
+      try {
+        on_send_(std::move(next->prefix), next->prefix_size,
+                 std::move(next->source));
+      } catch (...) {
+        query_for_close();
+        return;
+      }
+      if (close_after_send) {
+        query_for_close();
+        return;
+      }
+      lock.lock();
+    }
+    draining_ = false;
+  }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +=========================================================================+
+  mutable std::mutex mutex_;              // Mutex to protect access.
+  std::deque<pending_response> pending_;  // Queue of pending responses.
+  ticket first_id_{0};                    // ID of the first pending response.
+  ticket next_id_{0};                     // Next ticket ID to be assigned.
+  bool draining_{false};  // Flag indicating if draining is in progress.
+  bool closed_{false};    // Flag indicating if the sequencer is closed.
+  common::send_delegate on_send_;   //  Delegate for sending responses.
+  std::function<void()> on_close_;  // Delegate for handling close events.
+};
+}  // namespace detail
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] engine                                                      ( class ) |
@@ -57,54 +204,65 @@ class engine {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  engine(policies_type configuration, const ROty& routes)
-      : decoder_{configuration}, router_{routes} {}
+  engine(policies_type configuration, const ROty& router)
+      : router_{router}, decoder_{configuration} {}
   // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |
   // +=========================================================================+
   void set_on_send(common::send_delegate output) {
-    on_send_ = std::move(output);
+    sequencer_.set_on_send(std::move(output));
   }
   // +=========================================================================+
   // | [>] set_on_close                                             ( public ) |
   // +=========================================================================+
   void set_on_close(std::function<void()> close) {
-    on_close_ = std::move(close);
+    sequencer_.set_on_close(std::move(close));
   }
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +=========================================================================+
   std::size_t on_bytes_received(const char* buffer, const std::size_t size,
                                 const std::size_t capacity) {
-    if (closed_) return size;
+    if (sequencer_.closed()) return size;
     std::size_t processed = 0;
     while (processed < size) {
       std::size_t consumed = 0;
-      auto result = decoder_.deserialize(
+      deserialization_result result = decoder_.deserialize(
           buffer + processed, size - processed, capacity, consumed);
       processed += consumed;
       try {
         switch (result.code) {
           case deserialization_status::kSucceeded: {
-            const auto& request = *result.request;
+            if (!current_ticket_) current_ticket_ = sequencer_.reserve();
+            const std::size_t id = *current_ticket_;
+            current_ticket_.reset();
+            const RQty& request = *result.request;
             bool close = request.wants_connection_close();
-            auto response = execute_request(request, close);
-            send_response(request, response, close);
-            if (closed_) return processed;
+            RSty response = execute_request(request, close);
+            enqueue_response(id, request, response, close);
+            if (sequencer_.closed()) return processed;
             break;
           }
           case deserialization_status::kInvalidSource:
-            send_decoded_response(*result.response, true);
-            // Release rejected input so capacity checks cannot abort the drain.
+            if (result.response) {
+              if (!current_ticket_) current_ticket_ = sequencer_.reserve();
+              const std::size_t id = *current_ticket_;
+              current_ticket_.reset();
+              enqueue_response(id, *result.response, true, false);
+            }
             return size;
           case deserialization_status::kMoreBytesNeeded:
-            if (result.response) send_decoded_response(*result.response, false);
+            if (result.response) {
+              if (!current_ticket_) current_ticket_ = sequencer_.reserve();
+              enqueue_response(*current_ticket_, *result.response, false, true);
+            }
             return processed;
         }
       } catch (...) {
-        request_close();
+        query_for_close();
         return result.code == deserialization_status::kInvalidSource
-                   ? size : processed;
+                   ? size
+                   : processed;
       }
     }
     return processed;
@@ -120,15 +278,14 @@ class engine {
         case target::kOriginForm:
         case target::kAbsoluteForm: {
           const std::string_view path = request.get_absolute_path();
-          const auto match = router_.match(request.get_method(), path);
+          const ROty::route_match match =
+              router_.match(request.get_method(), path);
           if (match.handler) return (*match.handler)(request);
           if (match.parametrized_handler) {
             return match.parametrized_handler->invoke(request, path);
           }
-          const auto allowed = router_.allowed_methods(path);
-          if (allowed.empty()) {
-            return RSty::not_found_404();
-          }
+          const std::string allowed = router_.allowed_methods(path);
+          if (allowed.empty()) return RSty::not_found_404();
           // RFC 9110 S15.5.6: a 405 response must advertise allowed methods.
           RSty response = RSty::method_not_allowed_405();
           response.set_header(header_names::kAllow, allowed);
@@ -143,80 +300,72 @@ class engine {
       }
     } catch (...) {
       close = true;
-      return make_error_response();
+      return build_error_response();
     }
   }
   // +=========================================================================+
-  // | [>] request_close                                           ( private ) |
+  // | [>] query_for_close                                         ( private ) |
   // +=========================================================================+
-  void request_close() {
-    closed_ = true;
-    on_close_();
-  }
+  void query_for_close() { sequencer_.query_for_close(); }
   // +=========================================================================+
-  // | [>] make_error_response                                     ( private ) |
+  // | [>] build_error_response                                    ( private ) |
   // +=========================================================================+
-  static RSty make_error_response() {
-    auto response = RSty::internal_server_error_500();
+  static RSty build_error_response() {
+    RSty response = RSty::internal_server_error_500();
     response.set_body("Internal Server Error");
     return response;
   }
   // +=========================================================================+
-  // | [>] send_decoded_response                                   ( private ) |
+  // | [>] enqueue_response                                        ( private ) |
   // +=========================================================================+
-  void send_decoded_response(RSty& response, bool close) {
+  void enqueue_response(detail::sequencer::ticket id, RSty& response,
+                        bool close, bool interim) {
     if (close) response.set_header(header_names::kConnection, "close");
-    auto serialized = response.serialize();
-    on_send_(std::move(serialized->prefix), serialized->prefix_size,
-             std::move(serialized->source));
-    if (close) request_close();
+    std::unique_ptr<protocol::serialization_result> serialized =
+        response.serialize();
+    if (interim) {
+      sequencer_.interim(id, std::move(serialized));
+    } else {
+      sequencer_.complete(id, std::move(serialized), close);
+    }
   }
   // +=========================================================================+
-  // | [>] send_response                                           ( private ) |
+  // | [>] enqueue_response                                        ( private ) |
   // +=========================================================================+
-  void send_response(const RQty& request, RSty& response, bool close) {
-    decltype(response.serialize()) serialized;
+  void enqueue_response(detail::sequencer::ticket id, const RQty& request,
+                        RSty& response, bool close) {
+    std::unique_ptr<protocol::serialization_result> serialized;
     try {
+      if (response.is_continue_100()) {
+        // A handler should never return a 100 Continue response. If it does, we
+        // treat it as an error.
+        close = true;
+        response = build_error_response();
+      }
       if (close) {
         response.set_header(header_names::kConnection, "close");
-      } else if (response.has_header(header_names::kConnection)) {
-        const std::size_t count = response.get_headers_length();
-        for (std::size_t i = 0; i < count && !close; i++) {
-          const auto header = response.get_header(i);
-          if (!helpers::iequals(header.first, header_names::kConnection)) {
-            continue;
-          }
-          helpers::for_each_list_element(
-              header.second, [&close](std::string_view value) {
-                helpers::ows_ltrim(value);
-                helpers::ows_rtrim(value);
-                if (helpers::iequals(value, "close")) close = true;
-                return true;
-              });
-        }
+      } else if (response.wants_connection_close()) {
+        close = true;
       }
       // RFC 9110 S9.3.2: HEAD preserves framing but never sends body bytes.
       if (request.get_method() == method_names::kHead) response.suppress_body();
       serialized = response.serialize();
     } catch (...) {
       close = true;
-      auto error = make_error_response();
+      RSty error = build_error_response();
       error.set_header(header_names::kConnection, "close");
       if (request.get_method() == method_names::kHead) error.suppress_body();
       serialized = error.serialize();
     }
-    on_send_(std::move(serialized->prefix), serialized->prefix_size,
-             std::move(serialized->source));
-    if (close) request_close();
+    sequencer_.complete(id, std::move(serialized), close);
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  decoder<RQty, RSty> decoder_;
-  const ROty& router_;
-  common::send_delegate on_send_;
-  std::function<void()> on_close_;
-  bool closed_{false};
+  const ROty& router_;  // Reference to the router for handling requests.
+  decoder<RQty, RSty> decoder_;  // Decoder for processing incoming requests.
+  detail::sequencer sequencer_;  // Manages the order of responses.
+  std::optional<detail::sequencer::ticket> current_ticket_;  // ticketing.
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

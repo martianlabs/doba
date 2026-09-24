@@ -67,6 +67,33 @@ void echo_request(const request& req, response& res) {
 
 
 // +===========================================================================+
+// | [>] starts on a wildcard address                            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("HTTP/1.1 server starts on a wildcard address") {
+  tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  server<> http_server({.ip = "0.0.0.0", .port = std::to_string(port)});
+  http_server.add_route(
+      "GET", "/baseline11",
+      [](const request&) {
+        response res = response::ok_200();
+        res.set_body("ready");
+        return res;
+      });
+  http_server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all(
+      "GET /baseline11 HTTP/1.1\r\nHost: example.com\r\n"
+      "Connection: close\r\n\r\n"));
+  const auto received = receive_http_response(client);
+  DOBA_EXPECT(received.has_value());
+  DOBA_EXPECT_EQUAL(received->status, "HTTP/1.1 200 OK");
+  DOBA_EXPECT_EQUAL(received->body, "ready");
+  DOBA_EXPECT(client.wait_for_close(std::chrono::seconds(3)));
+}
+
+// +===========================================================================+
 // | [>] echoes a body after 100 Continue                        ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 echoes a body after 100 Continue") {

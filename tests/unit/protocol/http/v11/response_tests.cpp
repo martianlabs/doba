@@ -57,6 +57,14 @@ DOBA_TEST("response is movable but not copyable") {
   DOBA_EXPECT(true);
 }
 // +===========================================================================+
+// | [>] response identifies 100 Continue                       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("response identifies 100 Continue") {
+  DOBA_EXPECT(response::continue_100().is_continue_100());
+  DOBA_EXPECT(!response::switching_protocols_101().is_continue_100());
+  DOBA_EXPECT(!response::ok_200().is_continue_100());
+}
+// +===========================================================================+
 // | [>] moving preserves response state and owned body writers  ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("moving preserves response state and owned body writers") {
@@ -174,6 +182,32 @@ DOBA_TEST("headers support append replace lookup removal and indexes") {
   DOBA_EXPECT_EQUAL(value.get_header("x-test").second, "b");
   value.remove_header("missing");
   DOBA_EXPECT_EQUAL(value.get_headers_length(), 3);
+}
+// +===========================================================================+
+// | [>] connection close state follows header mutations         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("connection close state follows header mutations") {
+  response value = response::ok_200();
+  DOBA_EXPECT(!value.wants_connection_close());
+  value.add_header("Connection", "keep-alive, x-close");
+  DOBA_EXPECT(!value.wants_connection_close());
+  value.add_header("connection", "upgrade, ClOsE ");
+  DOBA_EXPECT(value.wants_connection_close());
+  value.set_header("Connection", "close-later");
+  DOBA_EXPECT(value.wants_connection_close());
+  value.remove_header("CONNECTION");
+  DOBA_EXPECT(value.wants_connection_close());
+  value.set_header("Connection", "keep-alive");
+  DOBA_EXPECT(!value.wants_connection_close());
+  value.set_header("Connection", "close");
+  DOBA_EXPECT(value.wants_connection_close());
+  response moved(std::move(value));
+  DOBA_EXPECT(moved.wants_connection_close());
+  response assigned = response::ok_200();
+  assigned = std::move(moved);
+  DOBA_EXPECT(assigned.wants_connection_close());
+  assigned.remove_header("Connection");
+  DOBA_EXPECT(!assigned.wants_connection_close());
 }
 // +===========================================================================+
 // | [>] missing and out of range header lookups throw           ( test-case ) |
