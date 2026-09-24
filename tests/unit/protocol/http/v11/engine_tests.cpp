@@ -88,6 +88,9 @@ DOBA_TEST("engine resolves synchronous route forms") {
   routes.add("GET", "/static", [](const request&) {
     return make_response("one");
   });
+  routes.add("POST", "/static", [](const request&) {
+    return make_response("post");
+  });
   routes.add("GET", "/item/:id", [](const request&, int id) {
     return make_response(std::to_string(id));
   });
@@ -106,6 +109,11 @@ DOBA_TEST("engine resolves synchronous route forms") {
     DOBA_EXPECT(current.wire.ends_with("\r\n\r\n" + body));
     DOBA_EXPECT_EQUAL(current.closes, 0);
   }
+  connection current(routes);
+  const std::string bytes =
+      "POST /static HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  DOBA_EXPECT_EQUAL(current.receive(bytes), bytes.size());
+  DOBA_EXPECT(current.wire.ends_with("\r\n\r\npost"));
 }
 // +===========================================================================+
 // | [>] engine routes only complete requests                    ( test-case ) |

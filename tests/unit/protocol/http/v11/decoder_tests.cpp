@@ -43,13 +43,13 @@
 namespace {
 using martianlabs::doba::protocol::deserialization_status;
 using martianlabs::doba::protocol::http::target;
-using martianlabs::doba::protocol::http::v11::limits;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using decoder_type =
     martianlabs::doba::protocol::http::v11::decoder<request, response>;
 
 constexpr std::size_t receive_capacity = 5120;
+constexpr std::size_t max_query_parameters = 128;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] decoder_input                                              ( struct ) |
@@ -2261,7 +2261,7 @@ DOBA_TEST("rejects query parameter overflow without truncating") {
   for (bool empty_pairs : {false, true}) {
     for (bool body : {false, true}) {
       std::string source = empty_pairs ? "GET /?&&" : "GET /?";
-      for (std::size_t index = 0; index <= limits::kMaxQueryParameters;
+      for (std::size_t index = 0; index <= max_query_parameters;
            ++index) {
         if (index != 0) source += empty_pairs ? "&&" : "&";
         source += "p" + std::to_string(index) + "=v";

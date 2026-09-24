@@ -278,7 +278,7 @@ class engine {
         case target::kOriginForm:
         case target::kAbsoluteForm: {
           const std::string_view path = request.get_absolute_path();
-          const ROty::route_match match =
+          const typename ROty::route_match match =
               router_.match(request.get_method(), path);
           if (match.handler) return (*match.handler)(request);
           if (match.parametrized_handler) {

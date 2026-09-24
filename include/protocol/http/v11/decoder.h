@@ -118,7 +118,6 @@
 #include "protocol/http/v11/headers/rules/framing.h"
 #include "protocol/http/v11/headers/rules/policy.h"
 #include "protocol/http/v11/headers/rules/routing.h"
-#include "protocol/http/v11/limits.h"
 #include "protocol/http/v11/parsed_types.h"
 #include "protocol/http/v11/policies.h"
 #include "protocol/http/v11/rejection_reason.h"
@@ -847,8 +846,7 @@ class decoder {
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
   // +=========================================================================+
-  static constexpr std::size_t kMaxQueryParameters =
-      limits::kMaxQueryParameters;
+  static constexpr std::size_t kMaxQueryParameters = 128;
   static const inline common::hash_map<std::string_view, header_dispatch>
       header_dispatchers_ = {
           {"Host",  // check & interpret!

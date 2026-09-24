@@ -31,7 +31,6 @@
 #include <string_view>
 
 #include "protocol/http/v11/body/writer.h"
-#include "protocol/http/v11/limits.h"
 #include "protocol/http/v11/server.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
@@ -39,10 +38,10 @@
 
 namespace {
 using martianlabs::doba::protocol::http::v11::body::body_writer;
-using martianlabs::doba::protocol::http::v11::limits;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::protocol::http::v11::server;
+constexpr std::size_t max_response_body_size_in_memory = 2048;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 using martianlabs::doba::tests::integration::wait_for_http_count;
@@ -113,9 +112,9 @@ DOBA_TEST("HTTP/1.1 preserves binary responses across the spill boundary") {
   });
   http_server.start();
 
-  for (const std::size_t size : {limits::kMaxResponseBodySizeInMemory - 1,
-                                 limits::kMaxResponseBodySizeInMemory,
-                                 limits::kMaxResponseBodySizeInMemory + 1}) {
+  for (const std::size_t size : {max_response_body_size_in_memory - 1,
+                                 max_response_body_size_in_memory,
+                                 max_response_body_size_in_memory + 1}) {
     std::string expected(size, '\0');
     for (std::size_t index = 0; index < expected.size(); index++) {
       expected[index] = static_cast<char>((index * 71 + index / 17) % 256);

@@ -29,7 +29,6 @@
 #include <string>
 #include <string_view>
 
-#include "protocol/http/v11/limits.h"
 #include "protocol/http/v11/server.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
@@ -37,7 +36,9 @@
 
 namespace {
 constexpr std::size_t receive_capacity = 5120;
-using martianlabs::doba::protocol::http::v11::limits;
+constexpr std::size_t max_query_parameters = 128;
+constexpr std::size_t max_chunked_extension_size = 1024;
+constexpr std::size_t max_chunked_trailer_size = 4096;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::protocol::http::v11::server;
@@ -142,9 +143,9 @@ DOBA_TEST("HTTP/1.1 preserves every query parameter at supported boundaries") {
   });
   http_server.start();
 
-  for (const std::size_t count : {limits::kMaxQueryParameters - 1,
-                                  limits::kMaxQueryParameters,
-                                  limits::kMaxQueryParameters + 1}) {
+  for (const std::size_t count : {max_query_parameters - 1,
+                                  max_query_parameters,
+                                  max_query_parameters + 1}) {
     for (bool empty_pairs : {false, true}) {
       std::string wire = empty_pairs ? "GET /query?&&" : "GET /query?";
       for (std::size_t index = 0; index < count; index++) {
@@ -161,19 +162,19 @@ DOBA_TEST("HTTP/1.1 preserves every query parameter at supported boundaries") {
       DOBA_EXPECT(result.has_value());
       if (result.has_value()) {
         DOBA_EXPECT_EQUAL(result->status,
-                          count <= limits::kMaxQueryParameters
+                          count <= max_query_parameters
                               ? "HTTP/1.1 200 OK"
                               : "HTTP/1.1 400 Bad Request");
-        if (count <= limits::kMaxQueryParameters) {
+        if (count <= max_query_parameters) {
           DOBA_EXPECT_EQUAL(result->body, std::to_string(count));
         }
       }
-      if (count > limits::kMaxQueryParameters) {
+      if (count > max_query_parameters) {
         DOBA_EXPECT(client.wait_for_close(std::chrono::seconds(3)));
       }
       DOBA_EXPECT_EQUAL(calls.load(),
                         before +
-                            (count <= limits::kMaxQueryParameters ? 1 : 0));
+                            (count <= max_query_parameters ? 1 : 0));
       client.close();
     }
   }
@@ -195,8 +196,8 @@ DOBA_TEST("HTTP/1.1 enforces chunk extension and trailer wire limits") {
   http_server.start();
 
   for (const bool extension : {true, false}) {
-    const std::size_t limit = extension ? limits::kMaxChunkedExtensionSize
-                                        : limits::kMaxChunkedTrailerSize;
+    const std::size_t limit = extension ? max_chunked_extension_size
+                                        : max_chunked_trailer_size;
     for (const std::size_t size : {limit - 1, limit, limit + 1}) {
       martianlabs::doba::tests::integration::test_helper::set_context(
           std::string(extension ? "extension " : "trailer ") +
