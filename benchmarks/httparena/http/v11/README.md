@@ -7,10 +7,12 @@ The checked upstream revision is:
 
 ```text
 https://github.com/MDA2AV/HttpArena.git
-7bba01a0483fa5ec8ee7e684fe322b98da256150
+484dea628f4fe29de88dc16530b125cc1d169a41
 ```
 
-Build and start the adapter locally:
+Install RapidJSON and zlib development headers, then build and start locally.
+The JSON route reads `/data/dataset.json` by default; set `DATASET_PATH` for
+a local copy of the official dataset.
 
 ```text
 cmake -S benchmarks/httparena/http/v11 -B build/httparena/http/v11
@@ -19,8 +21,9 @@ build/httparena/http/v11/doba_httparena_http_v11
 ```
 
 The adapter implements `GET /baseline11`, `POST /baseline11`,
-`GET /pipeline`, and `POST /upload`. Its `meta.json` enables the `baseline`,
-`pipelined`, `limited-conn`, and `upload` profiles.
+`GET /json/:count`, and `GET /pipeline`. Its `meta.json` enables the HTTP/1.1
+profiles `baseline`, `limited-conn`, `json-comp`, `latency-1m`, `latency-10k`,
+and `pipelined`. TLS and `async` remain outside this iteration.
 
 Build and start the submission container:
 
@@ -30,9 +33,10 @@ docker build --tag doba-httparena-http-v11 \
 docker run --rm --publish 8080:8080 doba-httparena-http-v11
 ```
 
-The Dockerfile accepts `DOBA_REF` as a build argument and defaults to `main`.
-The local `main.cpp` and the headers selected by `DOBA_REF` must use the same
-handler and response-factory API.
+The Dockerfile accepts `DOBA_REF` as a build argument and defaults to the
+published `feature/pipelined` commit used by this adapter. The local
+`main.cpp` and the headers selected by `DOBA_REF` must use the same handler
+and response-factory API.
 Use a published tag or commit when a reproducible benchmark image is required:
 
 ```text
@@ -45,7 +49,7 @@ In another working directory, clone the pinned HttpArena revision:
 
 ```text
 git clone https://github.com/MDA2AV/HttpArena.git
-git -C HttpArena checkout 7bba01a0483fa5ec8ee7e684fe322b98da256150
+git -C HttpArena checkout 484dea628f4fe29de88dc16530b125cc1d169a41
 ```
 
 Copy this directory to `HttpArena/frameworks/doba`, then run the declared

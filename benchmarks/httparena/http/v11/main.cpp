@@ -22,15 +22,25 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <algorithm>
 #include <array>
 #include <charconv>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <fstream>
 #include <future>
+#include <iostream>
+#include <iterator>
 #include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
+
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#include <zlib.h>
 
 #include "protocol/http/v11/server.h"
 
@@ -78,6 +88,21 @@ bool read_body_integer(const request& req, std::int64_t& value) {
 }  // namespace
 
 int main(int argc, char* argv[]) {
+  const char* dataset_path = std::getenv("DATASET_PATH");
+  std::ifstream dataset_file(dataset_path ? dataset_path
+                                          : "/data/dataset.json");
+  if (!dataset_file) {
+    std::cerr << "unable to open dataset\n";
+    return 1;
+  }
+  const std::string dataset_text(std::istreambuf_iterator<char>{dataset_file},
+                                 std::istreambuf_iterator<char>{});
+  rapidjson::Document dataset;
+  dataset.Parse(dataset_text.c_str());
+  if (dataset.HasParseError() || !dataset.IsArray()) {
+    std::cerr << "invalid dataset\n";
+    return 1;
+  }
   server http_server({.ip = "0.0.0.0", .port = "8080"});
   // Parse every baseline value; HttpArena randomizes them to detect shortcuts.
   http_server.add_route(
@@ -110,38 +135,99 @@ int main(int argc, char* argv[]) {
             .set_body(std::to_string(value + body_value));
         return res;
       });
+  http_server.add_route(
+      "GET", "/json/:count",
+      [&dataset](const request& req, std::uint64_t requested_count) {
+        response res = response::ok_200();
+        std::int64_t multiplier = 1;
+        const auto m = req.get_query_parameter("m");
+        if (m && !parse_integer(m->second, multiplier)) {
+          res = response::bad_request_400();
+          res.set_body("invalid multiplier");
+          return res;
+        }
+        const auto count = std::min<std::uint64_t>(requested_count,
+                                                   dataset.Size());
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        writer.StartObject();
+        writer.Key("items");
+        writer.StartArray();
+        for (std::uint64_t i = 0; i < count; ++i) {
+          const auto& item = dataset[static_cast<rapidjson::SizeType>(i)];
+          writer.StartObject();
+          for (auto field = item.MemberBegin(); field != item.MemberEnd();
+               ++field) {
+            field->name.Accept(writer);
+            field->value.Accept(writer);
+          }
+          writer.Key("total");
+          writer.Int64(item["price"].GetInt64() *
+                       item["quantity"].GetInt64() * multiplier);
+          writer.EndObject();
+        }
+        writer.EndArray();
+        writer.Key("count");
+        writer.Uint64(count);
+        writer.EndObject();
+
+        std::string_view body(buffer.GetString(), buffer.GetSize());
+        res.add_header("Content-Type", "application/json");
+        bool gzip = false;
+        if (req.exist_header("Accept-Encoding")) {
+          martianlabs::doba::protocol::http::helpers::for_each_list_element(
+              req.get_header("Accept-Encoding").second,
+              [&gzip](std::string_view encoding) {
+                const auto separator = encoding.find(';');
+                if (martianlabs::doba::protocol::http::helpers::iequals(
+                        encoding.substr(0, separator), "gzip")) {
+                  gzip = true;
+                  if (separator != std::string_view::npos) {
+                    auto weight = encoding.substr(separator + 1);
+                    martianlabs::doba::protocol::http::helpers::ows_ltrim(
+                        weight);
+                    if (weight.starts_with("q=")) {
+                      const auto value = weight.substr(2);
+                      gzip = value.find_first_of("123456789") !=
+                             std::string_view::npos;
+                    }
+                  }
+                }
+                return true;
+              });
+        }
+        if (gzip) {
+          z_stream stream{};
+          if (deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
+                           MAX_WBITS + 16, MAX_MEM_LEVEL,
+                           Z_DEFAULT_STRATEGY) != Z_OK) {
+            return response::internal_server_error_500();
+          }
+          std::string compressed(deflateBound(&stream, body.size()), '\0');
+          stream.next_in = reinterpret_cast<Bytef*>(
+              const_cast<char*>(body.data()));
+          stream.avail_in = static_cast<uInt>(body.size());
+          stream.next_out = reinterpret_cast<Bytef*>(compressed.data());
+          stream.avail_out = static_cast<uInt>(compressed.size());
+          const int result = deflate(&stream, Z_FINISH);
+          deflateEnd(&stream);
+          if (result != Z_STREAM_END) {
+            return response::internal_server_error_500();
+          }
+          compressed.resize(stream.total_out);
+          res.add_header("Content-Encoding", "gzip");
+          res.set_body(compressed);
+        } else {
+          res.set_body(body);
+        }
+        return res;
+      });
   // Keep this handler minimal so the profile isolates pipelining overhead.
   http_server.add_route(
       "GET", "/pipeline",
       [](const request& req) {
         response res = response::ok_200();
         res.add_header("Content-Type", "text/plain").set_body("ok");
-        return res;
-      });
-  http_server.add_route(
-      "POST", "/upload",
-      [](const request& req) {
-        response res = response::ok_200();
-        if (!req.has_body_reader()) {
-          res = response::bad_request_400();
-          res.set_body("request body required");
-          return res;
-        }
-        // HttpArena requires counting bytes read, not Content-Length.
-        std::array<std::byte, 65536> buffer{};
-        std::size_t bytes = 0;
-        for (;;) {
-          const auto state = req.get_body_reader()->read(buffer);
-          if (state.has_error) {
-            res = response::bad_request_400();
-            res.set_body("unable to read request body");
-            return res;
-          }
-          bytes += state.produced;
-          if (state.complete) break;
-        }
-        res.add_header("Content-Type", "text/plain")
-            .set_body(std::to_string(bytes));
         return res;
       });
   http_server.start();
