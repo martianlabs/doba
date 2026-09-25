@@ -8,7 +8,7 @@ The upstream project inspected for this adapter is:
 
 ```text
 https://github.com/the-benchmarker/web-frameworks.git
-develop (inspected 2026-08-14)
+50cb0223f095878106e3115ed06261056870032b
 ```
 
 Build and start the adapter locally:
@@ -21,8 +21,9 @@ build/web-frameworks/http/v11/doba_web_frameworks_http_v11
 ```
 
 The adapter implements `GET /`, `GET /user/:id`, and `POST /user` on port
-3000, with the responses required by the upstream validation suite. The default
-upstream profile measures `GET /`, `GET /user/0`, and `POST /user`.
+3000. The user route returns the path parameter; the other routes return an
+empty body. The upstream route specification checks all three routes. The
+default benchmark measures only `GET /`.
 
 Build and start the standalone adapter container:
 
@@ -32,8 +33,9 @@ docker build --tag doba-web-frameworks-http-v11 \
 docker run --rm --publish 3000:3000 doba-web-frameworks-http-v11
 ```
 
-The Dockerfile accepts `DOBA_REF` as a build argument and defaults to `main`.
-Use a published tag or commit for a reproducible doba image:
+The Dockerfile accepts `DOBA_REF` as a build argument and defaults to the
+published `feature/pipelined` commit used by the upstream configuration.
+Use another published tag or commit to test a different doba revision:
 
 ```text
 docker build --tag doba-web-frameworks-http-v11 \
@@ -42,21 +44,30 @@ docker build --tag doba-web-frameworks-http-v11 \
 ```
 
 To use the upstream runner, copy `CMakeLists.txt`, `config.yaml`, and `main.cpp`
-to `cpp/doba` in a Web Frameworks checkout. Generate the upstream manifests
-and run only the doba adapter:
+to `cpp/doba` in a checkout of the pinned revision. Install Ruby, Bundler,
+Docker, `jq`, and `zrk` 2.4 or newer. Generate the upstream manifests for
+the three routes and concurrency levels:
 
 ```text
 bundle install
-bundle exec rake config
-./run.sh cpp/doba
+CONCURRENCIES=64,256,512 \
+ROUTES='GET:/,GET:/user/0,POST:/user' \
+SERVER_CPUS=0-3 LOAD_CPUS=4-15 bundle exec rake config
 ```
 
-Use the same runner for the existing C++ adapters when comparing results:
+Run the generated targets for each adapter under the same conditions:
 
 ```text
-./run.sh cpp/drogon
-./run.sh cpp/oatpp
+make -f cpp/doba/.Makefile build
+make -f cpp/doba/.Makefile test
+make -f cpp/doba/.Makefile warmup
+mkdir -p cpp/doba/.results/{64,256,512}
+make -f cpp/doba/.Makefile collect
+make -f cpp/doba/.Makefile unbuild
 ```
 
-The upstream checkout, generated manifests, and benchmark results are external
-artifacts and must not be committed to this repository.
+Apply the same targets to `cpp/drogon` and `cpp/oatpp`. The `collect` target
+uses `zrk --closed` for 15 seconds per route by default and records request
+rate, latency, and server CPU saturation. The upstream checkout, generated
+manifests, and benchmark results are external artifacts and must not be
+committed to this repository.

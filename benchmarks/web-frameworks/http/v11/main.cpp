@@ -30,7 +30,7 @@
 using namespace martianlabs::doba::protocol::http::v11;
 
 int main(int argc, char* argv[]) {
-  server http_server;
+  server http_server({.ip = "0.0.0.0", .port = "3000"});
   http_server.add_route(
       "GET", "/",
       [](const request& req) {
@@ -41,6 +41,7 @@ int main(int argc, char* argv[]) {
       "GET", "/user/:id",
       [](const request& req, std::string_view id) {
         response res = response::ok_200();
+        res.set_body(id);
         return res;
       });
   http_server.add_route(
@@ -49,7 +50,7 @@ int main(int argc, char* argv[]) {
         response res = response::ok_200();
         return res;
       });
-  http_server.start("3000");
+  http_server.start();
   std::promise<void> shutdown;
   shutdown.get_future().wait();
   return 0;

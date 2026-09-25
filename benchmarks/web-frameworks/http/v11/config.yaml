@@ -13,7 +13,12 @@ framework:
   binaries:
     - build/doba_web_frameworks_http_v11
   download:
-    - git clone --depth=1 https://github.com/martianlabs/doba.git doba
+    - git init doba
+    - >-
+      git -C doba fetch --depth=1
+      https://github.com/martianlabs/doba.git
+      7be948e437e9bf8c1dcbf88bcaae9e4c5112f093
+    - git -C doba checkout --detach FETCH_HEAD
   build:
     - mkdir build
     - cd build && cmake -DCMAKE_BUILD_TYPE=Release -DDOBA_INCLUDE_DIR=/usr/src/app/doba/include ..
