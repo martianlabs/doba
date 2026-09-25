@@ -31,10 +31,7 @@ namespace martianlabs::doba::protocol::http::v11 {
 // | [>] rejection_reason                                       ( enum-class ) |
 // +---------------------------------------------------------------------------+
 // | Why a verdict::kReject (or a syntactic kInvalidSource) happened, at the   |
-// | granularity the HTTP/1.1 layer needs to pick a status code. This is       |
-// | strictly an HTTP/1.1 concept: it is translated to a protocol-agnostic     |
-// | integer before crossing into protocol::deserialization_result, so the     |
-// | generic protocol/transport contract never learns HTTP vocabulary.         |
+// | granularity the HTTP/1.1 layer needs to pick a status code.               |
 // +---------------------------------------------------------------------------+
 // | kNone                 | no rejection (or reason not tracked yet).         |
 // +-----------------------+---------------------------------------------------+

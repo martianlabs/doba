@@ -31,14 +31,12 @@
 #include "common/reader.h"
 #include "common/writer.h"
 #include "protocol/http/v11/body/framer_chunked.h"
-#include "protocol/http/v11/limits.h"
 #include "test_helper.h"
 
 namespace {
 using martianlabs::doba::common::byte_storage_options;
 using martianlabs::doba::common::reader;
 using martianlabs::doba::common::writer;
-using martianlabs::doba::protocol::http::v11::limits;
 using martianlabs::doba::protocol::http::v11::body::framer_chunked;
 using martianlabs::doba::protocol::http::v11::body::framer_error;
 
@@ -206,8 +204,9 @@ DOBA_TEST("rejects chunk size overflow") {
 // +===========================================================================+
 DOBA_TEST("enforces extension and trailer size limits") {
   for (bool extension : {true, false}) {
-    const std::size_t limit = extension ? limits::kMaxChunkedExtensionSize
-                                        : limits::kMaxChunkedTrailerSize;
+    const std::size_t limit =
+        extension ? framer_chunked::kMaxChunkedExtensionSize
+                  : framer_chunked::kMaxChunkedTrailerSize;
     for (std::size_t length : {limit - 1, limit, limit + 1}) {
       const std::string wire = extension
           ? "1;" + std::string(length - 1, 'x') + "\r\na\r\n0\r\n\r\n"
@@ -335,7 +334,7 @@ DOBA_TEST("maximum chunk size is valid until the next hex digit") {
 // +===========================================================================+
 DOBA_TEST("extension budget resets for each chunk") {
   const std::string chunk =
-      "1;" + std::string(limits::kMaxChunkedExtensionSize - 1, 'x') +
+      "1;" + std::string(framer_chunked::kMaxChunkedExtensionSize - 1, 'x') +
       "\r\na\r\n";
   const std::string wire = chunk + chunk + std::string(64, '0') + "\r\n\r\n";
   framer_chunked value;
@@ -350,7 +349,7 @@ DOBA_TEST("extension budget resets for each chunk") {
 // | [>] trailer budget includes all fields and the final line   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("trailer budget includes all fields and the final line") {
-  const auto limit = limits::kMaxChunkedTrailerSize;
+  const auto limit = framer_chunked::kMaxChunkedTrailerSize;
   for (const std::size_t length : {limit - 1, limit, limit + 1}) {
     const std::string wire =
         "0\r\nA:\r\nB:" + std::string(length - 10, 'x') + "\r\n\r\n";

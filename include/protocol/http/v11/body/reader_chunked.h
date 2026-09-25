@@ -34,7 +34,6 @@
 #include "common/reader.h"
 #include "protocol/http/common/helpers.h"
 #include "protocol/http/v11/body/reader_state.h"
-#include "protocol/http/v11/limits.h"
 
 namespace martianlabs::doba::protocol::http::v11::body {
 // /////////////////////////////////////////////////////////////////////////////
@@ -91,6 +90,8 @@ class reader_chunked {
   // +=========================================================================+
   // | [>] CONSTANTs                                                ( public ) |
   // +=========================================================================+
+  static constexpr std::size_t kMaxChunkedExtensionSize = 1024;
+  static constexpr std::size_t kMaxChunkedTrailerSize = 4096;
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
   // +=========================================================================+
@@ -166,13 +167,13 @@ class reader_chunked {
       const char c = static_cast<char>(b);
       if (state_ >= state::extension_before_semicolon &&
           state_ <= state::extension_after_value &&
-          ++extension_size_ > limits::kMaxChunkedExtensionSize) {
+          ++extension_size_ > kMaxChunkedExtensionSize) {
         result.produced = out_pos;
         return fail(result, reader_error::chunk_extension_size_limit_exceeded);
       }
       if (state_ >= state::trailer_line_start &&
           state_ <= state::trailer_end_lf &&
-          ++trailer_size_ > limits::kMaxChunkedTrailerSize) {
+          ++trailer_size_ > kMaxChunkedTrailerSize) {
         result.produced = out_pos;
         return fail(result, reader_error::trailer_size_limit_exceeded);
       }

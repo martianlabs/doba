@@ -1,5 +1,8 @@
 # Expect continue
 
+Migration status: The current engine does not emit the interim `100 Continue` response.
+The request can only complete once the client sends the body.
+
 This example accepts a body only after the decoder has processed the request
 headers. `Expect: 100-continue` receives an interim response before `curl`
 sends the body; an unsupported expectation receives `417 Expectation Failed`.

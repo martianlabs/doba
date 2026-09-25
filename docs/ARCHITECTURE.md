@@ -86,8 +86,8 @@ avoid redundant materialization while keeping lifetimes explicit.
 
 RAII owns buffers and temporary storage. Readers and writers are move-only;
 borrowed views require their backing storage to remain alive. Shared
-ownership is used where a request or connection must survive deferred work
-or an outstanding I/O operation.
+ownership retains requests returned by the decoder, shared controllers and
+connections with outstanding I/O.
 
 For absolute-form HTTP/1.1 requests, the target authority is effective
 even when Host differs ([RFC 9112 S3.2.2](https://www.rfc-editor.org/rfc/rfc9112.html#section-3.2.2)).
@@ -115,25 +115,13 @@ and transport inactivity timeouts.
   </picture>
 </h2>
 
-Synchronous handlers run directly and return a move-only response by value:
-`response(const request&, ...)`. Deferred handlers retain
-`task<response>(shared_ptr<const request>, stop_token, ...)`, keeping the
-request alive and receiving a cancellation token.
+Handlers run directly and return a move-only response by value:
+`response(const request&, ...)`. Const and mutable call operators, with or
+without `noexcept`, retain the same request, return and parameter checks.
 
-Both shapes support const and mutable call operators, with or without
-`noexcept`. The qualifiers do not relax request, return, cancellation or
-routing-parameter checks. The async concept identifies a task-returning
-shape; registration validates its exact request, cancellation and result types.
-
-The server-to-transport callback returns `variant<Response, task<Response>>`.
-Error callbacks also return a response by value. The transport serializes
-each immediate or completed response before enqueuing its owned prefix and
-optional body reader.
-
-A deferred response reserves its position in the connection's response order.
-Completion can happen out of order; transmission follows the reserved order.
-This keeps pipelining correct without forcing every handler through the
-deferred execution path.
+The engine executes requests in arrival order, serializes each response and
+transfers its owned prefix and optional body reader to the transport. The
+transport preserves delivery order and owns pending socket output.
 
 Protocol processing also has explicit stages: syntax checks, semantic rules,
 body framing, and payload reading. Incoming chunked data is validated as it
@@ -151,13 +139,12 @@ arrives and decoded when the application reads the stored body.
 
 `server.add_controller<Type>(args...)` constructs one instance and invokes its
 `register_routes(registrar&)` once. The registrar binds member function pointers
-to the existing route handlers, preserving typed arguments, async handlers, and
+to the existing route handlers, preserving typed arguments and
 route precedence. It is only valid during that registration call.
 
-All routes of a registration share their controller. Deferred invocations keep
-it alive until completion; `stop()` preserves registered instances, and
-cancellation does not destroy suspended user work. Controllers must synchronize
-their own mutable state because multiple requests can enter them concurrently.
+All routes of a registration share their controller. `stop()` preserves
+registered instances. Controllers must synchronize their own mutable state
+because multiple connections can enter them concurrently.
 
 Registration is transactional: any exception removes the routes added by that
 call. An empty controller registration is rejected. Registration through the
@@ -181,7 +168,7 @@ Linux uses epoll workers with their own listeners and accepted connections.
 Socket and epoll operations for a connection remain on its owning worker.
 This keeps mutable connection state close to the work that consumes it.
 
-Both backends obey the same ordering, cancellation, and lifecycle contracts.
+Both backends obey the same ordering, output ownership, and lifecycle contracts.
 Graceful closure drains responses that are safe to send; fatal failure stops
 transmission when continuing would corrupt the stream.
 
@@ -210,7 +197,7 @@ Move construction and move assignment remain public and noexcept.
 To replace a status, assign a fresh response, such as
 `res = response::not_found_404()`. This discards the previous fields and body.
 Synchronous parametrized invocation throws when extraction or conversion
-fails, matching the asynchronous adapter; it never returns an uninitialized
+fails; it never returns an uninitialized
 response or invokes the handler on invalid parameters.
 
 Serialization consumes the response. The returned serialization_result owns

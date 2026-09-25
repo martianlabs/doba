@@ -26,7 +26,7 @@
 #define martianlabs_doba_protocol_deserialization_h
 
 #include <memory>
-#include <string_view>
+#include <optional>
 
 namespace martianlabs::doba::protocol {
 // /////////////////////////////////////////////////////////////////////////////
@@ -43,47 +43,24 @@ enum class deserialization_status {
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] channel_intent                                         ( enum-class ) |
-// +---------------------------------------------------------------------------+
-// | The closed, protocol-agnostic vocabulary a protocol uses to tell the      |
-// | transport what to do with the underlying channel after a message has been |
-// | processed. These are the only things any transport can physically do with |
-// | a channel, so they are universal: they belong to the channel, not to any  |
-// | particular protocol or transport.                                         |
-// +---------------------------------------------------------------------------+
-// | kKeep    - keep the channel open (the transport arms another receive).    |
-// | kClose   - close the channel once the pending response has been sent.     |
-// | kUpgrade - hand the channel off (the transport stops governing it as-is). |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-enum class channel_intent {
-  kKeep,     // keep the channel open (arm another receive).
-  kClose,    // close the channel once the response has been sent.
-  kUpgrade,  // hand the channel off (stop governing it as-is).
-};
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
 // | [>] deserialization_result                                     ( struct ) |
 // +---------------------------------------------------------------------------+
 // | This struct holds the overall result on protocol deserialization.         |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
 // |   RQty - request being used.                                              |
+// |   RSty - response being used.                                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <typename RQty>
+template <typename RQty, typename RSty>
 struct deserialization_result {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
   deserialization_result() : code(deserialization_status::kInvalidSource) {}
-  deserialization_result(deserialization_status code, int reason = 0)
-      : code(code), reason(reason) {}
-  deserialization_result(std::shared_ptr<RQty> request,
-                         channel_intent channel = channel_intent::kKeep)
-      : code(deserialization_status::kSucceeded),
-        request(request),
-        channel(channel) {}
+  deserialization_result(deserialization_status code) : code(code) {}
+  deserialization_result(std::shared_ptr<RQty> request)
+      : code(deserialization_status::kSucceeded), request(request) {}
   deserialization_result(const deserialization_result&) = default;
   deserialization_result(deserialization_result&&) = default;
   // +=========================================================================+
@@ -96,20 +73,7 @@ struct deserialization_result {
   // +=========================================================================+
   deserialization_status code = deserialization_status::kInvalidSource;
   std::shared_ptr<RQty> request = nullptr;
-  channel_intent channel = channel_intent::kKeep;
-  // A protocol-specific rejection reason, opaque to the transport. It is 0
-  // when there is no rejection (kSucceeded) or when the reason was not
-  // tracked; any other value is defined and interpreted solely by the
-  // protocol layer that produced it (e.g. http11::rejection_reason).
-  int reason = 0;
-  // Bytes the protocol needs sent on the channel before deserialization can
-  // continue, opaque to the transport. It is empty unless the protocol asked
-  // for an early handoff; the transport just writes them ahead of any later
-  // response, without interpreting their content. The referenced storage is
-  // owned by the protocol and outlives this result (e.g. a static constant).
-  // Only ever set together with kMoreBytesNeeded: these bytes exist to unblock
-  // a sender that is still owed data, so a completed message never carries one.
-  std::string_view interim;
+  std::optional<RSty> response;
 };
 }  // namespace martianlabs::doba::protocol
 

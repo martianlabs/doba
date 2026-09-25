@@ -47,7 +47,7 @@ configurations exercised.
 </h2>
 
 - Use RAII for owned resources. Every view must have a valid backing lifetime,
-  including across moves, buffer reuse, asynchronous work, and cancellation.
+  including across moves, buffer reuse, pending I/O, and connection closure.
 - Treat network input as sized bytes. Never assume null termination.
 - Review error paths alongside success paths: failed startup, partial I/O,
   disconnects, serialization failure, and shutdown must have defined cleanup.

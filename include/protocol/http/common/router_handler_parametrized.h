@@ -29,8 +29,6 @@
 #include <charconv>
 #include <concepts>
 #include <functional>
-#include <memory>
-#include <stop_token>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -38,7 +36,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "common/task.h"
 #include "protocol/http/common/helpers.h"
 
 namespace martianlabs::doba::protocol::http {
@@ -248,45 +245,6 @@ RSty invoke_route_handler(Hty& handler, const RQty& req,
       values);
 }
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] invoke_async_route_handler                               ( function ) |
-// +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// |   Hty - handler being used                                                |
-// |   RQty - request being used                                               |
-// |   RSty - response being used                                              |
-// |   Args - route parameters being used                                      |
-// +---------------------------------------------------------------------------+
-// | This function invokes an asynchronous route handler with the provided     |
-// | request, stop token, pattern, and path. It extracts the route parameters  |
-// | from the pattern and path, parses them into the appropriate types,        |
-// | and then invokes the handler with the request, stop token, and parsed     |
-// | parameters. If the route parameters cannot be extracted or parsed,        |
-// | it throws a runtime error.                                                |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-template <typename Hty, typename RQty, typename RSty, typename... Args>
-common::task<RSty> invoke_async_route_handler(std::shared_ptr<Hty> handler,
-                                              std::shared_ptr<const RQty> req,
-                                              std::stop_token stop_token,
-                                              std::string_view pattern,
-                                              std::string_view path) {
-  std::array<std::string_view, sizeof...(Args)> parameters;
-  if (!extract_route_parameters(pattern, path, parameters)) {
-    throw std::runtime_error("The route parameters could not be extracted");
-  }
-  std::tuple<std::decay_t<Args>...> values;
-  if (!parse_route_parameters_<Args...>(parameters, values,
-                                        std::index_sequence_for<Args...>{})) {
-    throw std::runtime_error("The route parameters could not be parsed");
-  }
-  co_return co_await std::apply(
-      [&handler, &req, &stop_token](auto&... value) {
-        return std::invoke(*handler, req, stop_token, value...);
-      },
-      values);
-}
 }  // namespace detail
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -315,14 +273,6 @@ class router_handler_parametrized {
       : pattern_{std::move(pattern)},
         matcher_{matcher},
         callback_{std::move(callback)} {}
-  router_handler_parametrized(std::string pattern, matcher_type matcher,
-                              std::function<common::task<RSty>(
-                                  std::shared_ptr<const RQty>, std::stop_token,
-                                  std::string_view, std::string_view)>
-                                  callback)
-      : pattern_{std::move(pattern)},
-        matcher_{matcher},
-        async_callback_{std::move(callback)} {}
   // +=========================================================================+
   // | [>] matches                                                  ( public ) |
   // +=========================================================================+
@@ -335,20 +285,6 @@ class router_handler_parametrized {
   RSty invoke(const RQty& req, std::string_view path) const {
     return callback_(req, pattern_, path);
   }
-  // +=========================================================================+
-  // | [>] invoke_async                                             ( public ) |
-  // +=========================================================================+
-  common::task<RSty> invoke_async(std::shared_ptr<const RQty> req,
-                                  std::stop_token stop_token,
-                                  std::string_view path) const {
-    return async_callback_(std::move(req), stop_token, pattern_, path);
-  }
-  // +=========================================================================+
-  // | [>] is_async                                                 ( public ) |
-  // +=========================================================================+
-  [[nodiscard]] bool is_async() const {
-    return static_cast<bool>(async_callback_);
-  }
 
  private:
   // +=========================================================================+
@@ -357,9 +293,6 @@ class router_handler_parametrized {
   std::string pattern_;
   matcher_type matcher_;
   callback_type callback_;
-  std::function<common::task<RSty>(std::shared_ptr<const RQty>, std::stop_token,
-                                   std::string_view, std::string_view)>
-      async_callback_;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -391,38 +324,6 @@ auto make_router_handler_parametrized(std::string_view pattern, Hty&& handler) {
       });
 }
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] make_router_handler_parametrized_async                     (function) |
-// +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// |   RQty - request being used                                               |
-// |   RSty - response being used                                              |
-// |   Args - route parameters being used                                      |
-// |   Hty - handler being used                                                |
-// +---------------------------------------------------------------------------+
-// | This function creates a router_handler_parametrized object for an         |
-// | asynchronous route handler. It takes a pattern and a handler as input,    |
-// | and returns a router_handler_parametrized object that can be used to      |
-// | match and invoke the handler with the appropriate request, stop token,    |
-// | and parsed route parameters.                                              |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-template <typename RQty, typename RSty, typename... Args, typename Hty>
-auto make_router_handler_parametrized_async(std::string_view pattern,
-                                            Hty&& handler) {
-  auto shared_handler =
-      std::make_shared<std::decay_t<Hty>>(std::forward<Hty>(handler));
-  return router_handler_parametrized<RQty, RSty>(
-      std::string(pattern), &detail::match_route_parameters<Args...>,
-      [handler = std::move(shared_handler)](
-          std::shared_ptr<const RQty> req, std::stop_token stop_token,
-          std::string_view route_pattern, std::string_view path) {
-        return detail::invoke_async_route_handler<std::decay_t<Hty>, RQty, RSty,
-                                                  Args...>(
-            handler, std::move(req), stop_token, route_pattern, path);
-      });
-}
 }  // namespace martianlabs::doba::protocol::http
 
 #endif

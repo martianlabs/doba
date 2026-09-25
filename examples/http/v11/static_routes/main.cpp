@@ -33,7 +33,7 @@ using namespace martianlabs::doba::protocol::http;
 using namespace martianlabs::doba::protocol::http::v11;
 
 int main() {
-  server http_server;
+  server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   // A path can expose an independent handler for each HTTP method.
   http_server.add_route(
       method_names::kGet, "/resources",
@@ -65,7 +65,7 @@ int main() {
         // no_content_204() leaves the response without a message body.
         return res;
       });
-  http_server.start("8080");
+  http_server.start();
   signaler::wait();
   return 0;
 }

@@ -104,7 +104,7 @@ DOBA_TEST("HTTP static files preserve binary framing HEAD and pipelining") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> value;
+  server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_controller<static_file_server>("/assets", first.path());
   value.add_controller<static_file_server>("/other", second.path());
   value.add_route("GET", "/assets/override", [](const request&) {
@@ -112,7 +112,7 @@ DOBA_TEST("HTTP static files preserve binary framing HEAD and pipelining") {
     result.set_body("application");
     return result;
   });
-  value.start(std::to_string(port).c_str());
+  value.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
       "HEAD /assets/file.bin HTTP/1.1\r\nHost: a\r\n\r\n"
@@ -147,9 +147,9 @@ DOBA_TEST("HTTP static files reject escapes and expose current file contents") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> value;
+  server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_controller<static_file_server>("/", directory.path());
-  value.start(std::to_string(port).c_str());
+  value.start();
   DOBA_EXPECT(client.connect(port));
   struct test_case {
     std::string_view method;
@@ -195,9 +195,9 @@ DOBA_TEST("HTTP static files handle concurrent and abandoned downloads") {
   tcpip_client port_probe;
   const auto port = port_probe.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> value;
+  server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_controller<static_file_server>("/", directory.path());
-  value.start(std::to_string(port).c_str());
+  value.start();
   {
     tcpip_client abandoned;
     DOBA_EXPECT(abandoned.connect(port));

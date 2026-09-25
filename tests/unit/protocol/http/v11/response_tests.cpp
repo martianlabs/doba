@@ -33,9 +33,10 @@
 
 namespace {
 using martianlabs::doba::common::reader;
-using martianlabs::doba::protocol::http::v11::limits;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::protocol::http::v11::body::body_writer;
+constexpr std::size_t max_response_size_in_memory = 4096;
+constexpr std::size_t max_response_body_size_in_memory = 2048;
 
 std::string read_source(reader& source) {
   std::string output;
@@ -55,6 +56,14 @@ DOBA_TEST("response is movable but not copyable") {
   static_assert(std::is_nothrow_move_constructible_v<response>);
   static_assert(std::is_nothrow_move_assignable_v<response>);
   DOBA_EXPECT(true);
+}
+// +===========================================================================+
+// | [>] response identifies 100 Continue                       ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("response identifies 100 Continue") {
+  DOBA_EXPECT(response::continue_100().is_continue_100());
+  DOBA_EXPECT(!response::switching_protocols_101().is_continue_100());
+  DOBA_EXPECT(!response::ok_200().is_continue_100());
 }
 // +===========================================================================+
 // | [>] moving preserves response state and owned body writers  ( test-case ) |
@@ -82,7 +91,7 @@ DOBA_TEST("moving preserves response state and owned body writers") {
 // | [>] moves preserve the full in-memory body                  ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("moves preserve the full in-memory body") {
-  std::string body(limits::kMaxResponseBodySizeInMemory, '\0');
+  std::string body(max_response_body_size_in_memory, '\0');
   for (std::size_t i = 0; i < body.size(); i++) {
     body[i] = static_cast<char>(i % 256);
   }
@@ -176,6 +185,32 @@ DOBA_TEST("headers support append replace lookup removal and indexes") {
   DOBA_EXPECT_EQUAL(value.get_headers_length(), 3);
 }
 // +===========================================================================+
+// | [>] connection close state follows header mutations         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("connection close state follows header mutations") {
+  response value = response::ok_200();
+  DOBA_EXPECT(!value.wants_connection_close());
+  value.add_header("Connection", "keep-alive, x-close");
+  DOBA_EXPECT(!value.wants_connection_close());
+  value.add_header("connection", "upgrade, ClOsE ");
+  DOBA_EXPECT(value.wants_connection_close());
+  value.set_header("Connection", "close-later");
+  DOBA_EXPECT(value.wants_connection_close());
+  value.remove_header("CONNECTION");
+  DOBA_EXPECT(value.wants_connection_close());
+  value.set_header("Connection", "keep-alive");
+  DOBA_EXPECT(!value.wants_connection_close());
+  value.set_header("Connection", "close");
+  DOBA_EXPECT(value.wants_connection_close());
+  response moved(std::move(value));
+  DOBA_EXPECT(moved.wants_connection_close());
+  response assigned = response::ok_200();
+  assigned = std::move(moved);
+  DOBA_EXPECT(assigned.wants_connection_close());
+  assigned.remove_header("Connection");
+  DOBA_EXPECT(!assigned.wants_connection_close());
+}
+// +===========================================================================+
 // | [>] missing and out of range header lookups throw           ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("missing and out of range header lookups throw") {
@@ -200,7 +235,7 @@ DOBA_TEST("missing and out of range header lookups throw") {
 // +===========================================================================+
 DOBA_TEST("oversized header additions and growth throw") {
   response value = response::ok_200();
-  const std::string huge(limits::kMaxResponseSizeInMemory, 'x');
+  const std::string huge(max_response_size_in_memory, 'x');
   bool add_threw = false;
   try {
     value.add_header("X", huge);
@@ -312,9 +347,9 @@ DOBA_TEST("small bodies serialize inline including binary bytes") {
 // | [>] large bodies serialize through an owned source          ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("large bodies serialize through an owned source") {
-  for (std::size_t size : {limits::kMaxResponseBodySizeInMemory - 1,
-                           limits::kMaxResponseBodySizeInMemory,
-                           limits::kMaxResponseBodySizeInMemory + 1}) {
+  for (std::size_t size : {max_response_body_size_in_memory - 1,
+                           max_response_body_size_in_memory,
+                           max_response_body_size_in_memory + 1}) {
     std::string payload(size, '\0');
     for (std::size_t i = 0; i < payload.size(); i++) {
       payload[i] = static_cast<char>((i * 31 + i / 127) % 256);
@@ -331,7 +366,7 @@ DOBA_TEST("large bodies serialize through an owned source") {
     const auto boundary = serialized_prefix.find("\r\n\r\n");
     DOBA_EXPECT(boundary != std::string::npos);
     DOBA_EXPECT_EQUAL(serialized->source.has_value(),
-                      size > limits::kMaxResponseBodySizeInMemory);
+                      size > max_response_body_size_in_memory);
     std::string actual = serialized_prefix.substr(boundary + 4);
     if (serialized->source.has_value()) {
       DOBA_EXPECT(actual.empty());
@@ -400,7 +435,7 @@ DOBA_TEST("cleared bodies retain zero length across storage modes") {
       if (mode == 1) {
         value.set_body(bytes);
       } else if (mode == 2) {
-        value.set_body(std::string(limits::kMaxResponseBodySizeInMemory + 1,
+        value.set_body(std::string(max_response_body_size_in_memory + 1,
                                    'x'));
       } else if (mode == 3 || mode == 4) {
         auto writer = mode == 3 ? body_writer::raw() : body_writer::chunked();
@@ -678,11 +713,11 @@ DOBA_TEST("serialized bytes outlive and detach from the response") {
 // | [>] inline body compaction handles overlapping regions      ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("inline body compaction handles overlapping regions") {
-  std::string body(limits::kMaxResponseBodySizeInMemory, '\0');
+  std::string body(max_response_body_size_in_memory, '\0');
   for (std::size_t i = 0; i < body.size(); i++) {
     body[i] = static_cast<char>(i % 256);
   }
-  const std::size_t body_begin = limits::kMaxResponseSizeInMemory - body.size();
+  const std::size_t body_begin = max_response_size_in_memory - body.size();
   const std::string head = "HTTP/1.1 200 OK\r\nDate: fixed\r\nX-Pad: ";
   const std::string framing =
       "Content-Length: " + std::to_string(body.size()) + "\r\n";
@@ -825,8 +860,8 @@ DOBA_TEST("deferred length respects the exact header boundary") {
       const std::string head = "HTTP/1.1 200 OK\r\nDate: fixed\r\nX-Pad: ";
       const std::string framing =
           "Content-Length: " + std::to_string(size) + "\r\n";
-      const std::size_t body_begin = limits::kMaxResponseSizeInMemory -
-                                     limits::kMaxResponseBodySizeInMemory;
+      const std::size_t body_begin = max_response_size_in_memory -
+                                     max_response_body_size_in_memory;
       const std::string padding(
           body_begin - head.size() - framing.size() - 4 + excess, 'x');
       value.set_body(body).set_header("Date", "fixed")
@@ -947,8 +982,8 @@ DOBA_TEST("header growth at capacity preserves neighbors and body") {
   const std::string head =
       "HTTP/1.1 200 OK\r\nDate: fixed\r\nContent-Length: 4\r\nX: ";
   const std::string tail = "\r\nY: sentinel\r\n\r\n";
-  const std::size_t body_begin = limits::kMaxResponseSizeInMemory -
-                                 limits::kMaxResponseBodySizeInMemory;
+  const std::size_t body_begin = max_response_size_in_memory -
+                                 max_response_body_size_in_memory;
   const std::string padding(body_begin - head.size() - tail.size(), 'x');
   value.set_body("body").set_header("Date", "fixed")
       .set_header("Content-Length", "4").add_header("X", "small")

@@ -39,7 +39,6 @@
 #include "platform.h"
 #include "common/hash_map.h"
 #include "protocol/http/v11/context.h"
-#include "protocol/http/v11/limits.h"
 #include "protocol/http/common/request_getter.h"
 #include "protocol/http/common/query_parameter.h"
 #include "protocol/http/common/method_names.h"

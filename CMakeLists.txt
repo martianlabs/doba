@@ -260,9 +260,6 @@ if(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/wildcard_routes
   )
   add_subdirectory(
-    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/asynchronous_routes
-  )
-  add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/controllers
   )
   add_subdirectory(

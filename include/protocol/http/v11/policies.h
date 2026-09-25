@@ -53,20 +53,17 @@ struct policies {
   // (0 means unlimited).
   std::size_t max_transfer_codings = 0;
   // Maximum accepted request-target length, in octets (0 means unlimited).
-  // See limits::kDefaultMaxUriLength for a suggested default.
   std::size_t max_uri_length = 0;
   // Maximum accepted size of the whole header section, in octets (0 means
-  // unlimited). See limits::kDefaultMaxHeaderSectionSize for a suggested
-  // default.
+  // unlimited).
   std::size_t max_header_section_size = 0;
   // Whether the server allows requests carrying a chunked Transfer-Encoding.
   bool allow_chunked = true;
   // Whether the server allows protocol upgrades offered via Upgrade.
   //
-  // NOTE: no protocol upgrade is ever completed. Doba never emits a 101 and
-  // never yields channel_intent::kUpgrade, so this flag only decides whether
-  // an offer is rejected or ignored: true accepts the request and serves it
-  // over HTTP/1.1, discarding the offer (RFC 9110 S7.8 explicitly allows a
+  // NOTE: no protocol upgrade is ever completed. This flag only decides
+  // whether an offer is rejected or ignored: true accepts the request and
+  // serves it over HTTP/1.1, discarding the offer (RFC 9110 S7.8 allows a
   // server to ignore Upgrade); false rejects the request outright. Honouring
   // an upgrade is deferred to a future release.
   bool allow_upgrade = true;

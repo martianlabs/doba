@@ -34,7 +34,6 @@
 #include "common/writer.h"
 #include "protocol/http/common/helpers.h"
 #include "protocol/http/v11/body/framer_state.h"
-#include "protocol/http/v11/limits.h"
 
 namespace martianlabs::doba::protocol::http::v11::body {
 // /////////////////////////////////////////////////////////////////////////////
@@ -87,6 +86,8 @@ class framer_chunked {
   // +=========================================================================+
   // | [>] CONSTANTs                                                ( public ) |
   // +=========================================================================+
+  static constexpr std::size_t kMaxChunkedExtensionSize = 1024;
+  static constexpr std::size_t kMaxChunkedTrailerSize = 4096;
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
   // +=========================================================================+
@@ -114,12 +115,12 @@ class framer_chunked {
       const char c = static_cast<char>(input[i]);
       if (state_ >= state::extension_before_semicolon &&
           state_ <= state::extension_after_value &&
-          ++extension_size_ > limits::kMaxChunkedExtensionSize) {
+          ++extension_size_ > kMaxChunkedExtensionSize) {
         return fail(result, framer_error::chunk_extension_size_limit_exceeded);
       }
       if (state_ >= state::trailer_line_start &&
           state_ <= state::trailer_end_lf &&
-          ++trailer_size_ > limits::kMaxChunkedTrailerSize) {
+          ++trailer_size_ > kMaxChunkedTrailerSize) {
         return fail(result, framer_error::trailer_size_limit_exceeded);
       }
       switch (state_) {

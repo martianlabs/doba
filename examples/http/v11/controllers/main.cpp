@@ -23,8 +23,6 @@
 // permissions and limitations under the License.
 
 #include <atomic>
-#include <memory>
-#include <stop_token>
 #include <string>
 #include <utility>
 
@@ -63,8 +61,6 @@ class counter_controller {
                &counter_controller::count);
     routes.add(method_names::kGet, prefix_ + "/echo/:id",
                &counter_controller::echo);
-    routes.add(method_names::kGet, prefix_ + "/async/:id",
-               &counter_controller::async_echo);
   }
 
  private:
@@ -87,16 +83,6 @@ class counter_controller {
     return result;
   }
   // +=========================================================================+
-  // | [>] async_echo                                              ( private ) |
-  // +=========================================================================+
-
-  task<response> async_echo(std::shared_ptr<const request>,
-                            std::stop_token token, int id) const {
-    auto result = response::ok_200();
-    if (!token.stop_requested()) result.set_body(id);
-    co_return result;
-  }
-  // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
 
@@ -105,10 +91,10 @@ class counter_controller {
 };
 
 int main() {
-  server http_server;
+  server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_controller<counter_controller>("/first")
       .add_controller<counter_controller>("/second");
-  http_server.start("8080");
+  http_server.start();
   signaler::wait();
   http_server.stop();
   return 0;

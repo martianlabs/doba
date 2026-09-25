@@ -38,10 +38,10 @@ int main(int argc, char* argv[]) {
     std::cerr << "Usage: static_file_server <root>\n";
     return 1;
   }
-  server http_server;
+  server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_controller<static_file_server>("/assets", argv[1])
       .add_controller<static_file_server>("/downloads", argv[1]);
-  http_server.start("8080");
+  http_server.start();
   signaler::wait();
   http_server.stop();
   return 0;

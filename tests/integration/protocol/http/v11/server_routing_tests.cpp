@@ -25,7 +25,6 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
-#include <stop_token>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -39,7 +38,6 @@ namespace {
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::protocol::http::v11::server;
-using martianlabs::doba::common::task;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 
@@ -57,7 +55,7 @@ DOBA_TEST("HTTP/1.1 applies static parametrized and wildcard precedence") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/items/*", [](const request&) {
     return text_response("wildcard");
   });
@@ -67,8 +65,7 @@ DOBA_TEST("HTTP/1.1 applies static parametrized and wildcard precedence") {
   http_server.add_route("GET", "/items/42", [](const request&) {
     return text_response("static");
   });
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
 
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
@@ -95,7 +92,7 @@ DOBA_TEST("HTTP/1.1 routes typed parameter boundaries without partial parses") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route(
       "GET", "/signed/:value",
       [&calls](const request&, std::int64_t value) {
@@ -113,8 +110,7 @@ DOBA_TEST("HTTP/1.1 routes typed parameter boundaries without partial parses") {
     calls.fetch_add(1);
     return text_response(value ? "true" : "false");
   });
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
 
   // +=========================================================================+
 // | [>] test_case                                                  ( struct ) |
@@ -165,7 +161,7 @@ DOBA_TEST("HTTP/1.1 exposes decoded path query headers and cookies to routes") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/a b", [](const request& req) {
     const auto query = req.get_query_parameter("key");
     const auto empty = req.get_query_parameter("empty");
@@ -177,8 +173,7 @@ DOBA_TEST("HTTP/1.1 exposes decoded path query headers and cookies to routes") {
                        cookie.has_value() && *cookie == "abc=123";
     return text_response(valid ? "valid" : "invalid");
   });
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
 
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
@@ -200,7 +195,7 @@ DOBA_TEST("HTTP/1.1 reports allowed methods across all matching route kinds") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/assets/logo", [](const request&) {
     return text_response("get");
   });
@@ -211,8 +206,7 @@ DOBA_TEST("HTTP/1.1 reports allowed methods across all matching route kinds") {
   http_server.add_route("DELETE", "/assets/*", [](const request&) {
     return text_response("delete");
   });
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
 
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
@@ -227,37 +221,6 @@ DOBA_TEST("HTTP/1.1 reports allowed methods across all matching route kinds") {
 }
 
 // +===========================================================================+
-// | [>] asynchronous typed route crosses the transport          ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("HTTP/1.1 invokes an asynchronous parametrized route over TCP") {
-  tcpip_client client;
-  const uint16_t port = client.find_available_port();
-  DOBA_EXPECT(port != 0);
-  server<> http_server;
-  http_server.add_route(
-      "GET", "/async/:id",
-      [](std::shared_ptr<const request>, std::stop_token,
-         std::uint64_t id) -> task<response> {
-        response result = response::ok_200();
-        result.set_body(id);
-        co_return result;
-      });
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
-
-  DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(client.send_all(
-      "GET /async/18446744073709551615 HTTP/1.1\r\nHost: a\r\n\r\n"));
-  const auto result = receive_http_response(client);
-  DOBA_EXPECT(result.has_value());
-  if (result.has_value()) {
-    DOBA_EXPECT_EQUAL(result->status, "HTTP/1.1 200 OK");
-    DOBA_EXPECT_EQUAL(result->body, "18446744073709551615");
-  }
-  http_server.stop();
-}
-
-// +===========================================================================+
 // | [>] running server rejects route mutation                   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST(
@@ -265,12 +228,11 @@ DOBA_TEST(
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server;
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/first", [](const request&) {
     return text_response("first");
   });
-  const std::string port_text = std::to_string(port);
-  http_server.start(port_text.c_str());
+  http_server.start();
 
   bool threw = false;
   try {
@@ -292,7 +254,7 @@ DOBA_TEST(
   http_server.add_route("GET", "/late", [](const request&) {
     return text_response("late");
   });
-  http_server.start(port_text.c_str());
+  http_server.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("GET /late HTTP/1.1\r\nHost: a\r\n\r\n"));
   const auto late = receive_http_response(client);

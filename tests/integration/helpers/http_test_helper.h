@@ -28,9 +28,6 @@
 #include <atomic>
 #include <charconv>
 #include <chrono>
-#include <condition_variable>
-#include <coroutine>
-#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -265,52 +262,6 @@ inline std::optional<http_test_response> receive_http_response(
   result.wire_body = *body;
   return result;
 }
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] http_test_signal                                            ( class ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-class http_test_signal {
- public:
-  // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
-  bool await_ready() const noexcept { return false; }
-  bool await_suspend(std::coroutine_handle<> continuation) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (released_) return false;
-    continuation_ = continuation;
-    condition_.notify_all();
-    return true;
-  }
-  void await_resume() const noexcept {}
-  bool wait() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    return condition_.wait_for(lock, std::chrono::seconds(3),
-                               [this]() { return continuation_ != nullptr; });
-  }
-  void resume() {
-    std::coroutine_handle<> continuation;
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      released_ = true;
-      continuation = std::exchange(continuation_, nullptr);
-    }
-    if (continuation) continuation.resume();
-  }
-
- private:
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
-  std::mutex mutex_;
-  std::condition_variable condition_;
-  std::coroutine_handle<> continuation_;
-  bool released_ = false;
-};
 
 // +===========================================================================+
 // | [>] wait_for_http_count                                        ( method ) |

@@ -22,17 +22,11 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <chrono>
-#include <coroutine>
-#include <exception>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <stop_token>
 #include <string>
-#include <string_view>
-#include <thread>
 #include <type_traits>
 #include <utility>
 
@@ -40,341 +34,85 @@
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::protocol::http::target;
-using martianlabs::doba::protocol::http::v11::decoder;
-using martianlabs::doba::protocol::http::v11::rejection_reason;
-using martianlabs::doba::protocol::http::v11::response;
-using martianlabs::doba::protocol::http::v11::server;
-using martianlabs::doba::protocol::http::router_async_handler_lambda;
-using martianlabs::doba::protocol::http::router_handler_lambda;
-using martianlabs::doba::common::date_server;
-using martianlabs::doba::common::task;
-
+namespace http = martianlabs::doba::protocol::http::v11;
+using routes_type = martianlabs::doba::protocol::http::router<
+    http::request, http::response>;
+using engine_type = http::engine<http::request, http::response>;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] request                                                    ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Request double used by the server tests.                                  |
+// | [>] memory_transport                                           ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-struct request {
-  // +=========================================================================+
-  // | [>] get_method                                               ( public ) |
-  // +=========================================================================+
-  std::string_view get_method() const { return method; }
-  // +=========================================================================+
-  // | [>] get_target                                               ( public ) |
-  // +=========================================================================+
-  target get_target() const { return target_form; }
-  // +=========================================================================+
-  // | [>] get_absolute_path                                        ( public ) |
-  // +=========================================================================+
-  std::string_view get_absolute_path() const { return path; }
-  // +=========================================================================+
-  // | [>] wants_connection_close                                   ( public ) |
-  // +=========================================================================+
-  bool wants_connection_close() const { return close; }
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
-  // +=========================================================================+
-  std::string_view method = "GET";
-  target target_form = target::kOriginForm;
-  std::string_view path = "/";
-  bool close = false;
+template <typename ENty, typename FNty>
+struct memory_transport {
+  using policies_type = bool;
+  memory_transport(bool fail, FNty factory)
+      : fail(fail), factory(std::move(factory)) { instance = this; }
+  ~memory_transport() { instance = nullptr; }
+  void set_on_connection(std::function<void()>) {}
+  void set_on_disconnection(std::function<void()>) {}
+  void start() {
+    if (fail) throw std::runtime_error("start failed");
+    connection.reset(new ENty(factory()));
+    connection->set_on_send([this](std::unique_ptr<char[]> buffer,
+                                   std::size_t size,
+                                   std::optional<martianlabs::doba::common::reader>
+                                       source) {
+      bytes.append(buffer.get(), size);
+      if (source) source->read_all(bytes);
+    });
+    connection->set_on_close([this]() { closed = true; });
+    closed = false;
+  }
+  void stop() {
+    connection.reset();
+  }
+  std::string receive(std::string_view wire) {
+    bytes.clear();
+    connection->on_bytes_received(wire.data(), wire.size(), 8192);
+    return bytes;
+  }
+  bool fail;
+  FNty factory;
+  std::unique_ptr<ENty> connection;
+  std::string bytes;
+  bool closed{false};
+  static inline memory_transport* instance = nullptr;
 };
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] fake_router                                                 ( class ) |
-// +---------------------------------------------------------------------------+
-// | Router double used by the server tests.                                   |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-template <typename RQty, typename RSty>
-class fake_router {
- public:
-  // +=========================================================================+
-  // | [>] TYPEs                                                    ( public ) |
-  // +=========================================================================+
-  struct handler_data {
-    std::function<RSty(const RQty&)> callback;
-    std::function<task<RSty>(std::shared_ptr<const RQty>,
-                             std::stop_token)> async_callback;
-    bool is_async() const {
-      return static_cast<bool>(async_callback);
-    }
-  };
-  struct parametrized_handler_data {
-    RSty invoke(const RQty&, std::string_view) const { return RSty::ok_200(); }
-    task<RSty> invoke_async(std::shared_ptr<const RQty> req,
-                            std::stop_token stop_token,
-                            std::string_view path) const {
-      return async_callback(std::move(req), stop_token, path);
-    }
-    bool is_async() const {
-      return static_cast<bool>(async_callback);
-    }
-    std::function<task<RSty>(std::shared_ptr<const RQty>,
-                             std::stop_token,
-                             std::string_view)> async_callback;
-  };
-  struct route_match {
-    const handler_data* handler{nullptr};
-    const parametrized_handler_data* parametrized_handler{nullptr};
-    explicit operator bool() const {
-      return handler != nullptr || parametrized_handler != nullptr;
-    }
-  };
-  // +=========================================================================+
-  // | [>] add                                                      ( public ) |
-  // +=========================================================================+
-  template <typename Hty>
-  void add(std::string_view method, std::string_view route, Hty handler) {
-    additions++;
-    last_method = method;
-    last_route = route;
-    if constexpr (router_handler_lambda<Hty>) {
-      matched_handler = {std::function<RSty(const RQty&)>(std::move(handler)),
-                         {}};
-    } else if constexpr (router_async_handler_lambda<Hty>) {
-      async_handler = {
-          {}, std::function<task<RSty>(std::shared_ptr<const RQty>,
-                                       std::stop_token)>(
-                  std::move(handler))};
-    }
-  }
-  // +=========================================================================+
-  // | [>] match                                                    ( public ) |
-  // +=========================================================================+
-  route_match match(std::string_view method, std::string_view path) {
-    matched_method = method;
-    matched_path = path;
-    if (!match_available) return {};
-    if (path == "/async") return {&async_handler, nullptr};
-    if (path.starts_with("/parametrized/")) {
-      return {nullptr, &parametrized_handler};
-    }
-    return {&matched_handler, nullptr};
-  }
-  // +=========================================================================+
-  // | [>] allowed_methods                                          ( public ) |
-  // +=========================================================================+
-  std::string allowed_methods(std::string_view) {
-    return allowed_methods_result;
-  }
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
-  // +=========================================================================+
-  static inline std::size_t additions = 0;
-  static inline std::string last_method;
-  static inline std::string last_route;
-  static inline handler_data matched_handler{};
-  static inline handler_data async_handler{};
-  static inline parametrized_handler_data parametrized_handler{};
-  static inline bool match_available = true;
-  static inline std::string allowed_methods_result;
-  static inline std::string matched_method;
-  static inline std::string matched_path;
-  static inline bool write_body = false;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] fake_transport                                              ( class ) |
-// +---------------------------------------------------------------------------+
-// | Transport double used by the server tests.                                |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-template <typename RQty, typename RSty,
-          template <typename, typename> typename DEty>
-class fake_transport {
- public:
-  // +=========================================================================+
-  // | [>] TYPEs                                                    ( public ) |
-  // +=========================================================================+
-  using request_callback =
-      std::function<std::variant<RSty, martianlabs::doba::common::task<RSty>>(
-          const std::shared_ptr<RQty>&, const std::stop_token&)>;
-  using bad_request_callback =
-      std::function<RSty(int, std::string_view,
-                         const std::shared_ptr<RQty>&)>;
-  // +=========================================================================+
-  // | [>] set_on_request                                           ( public ) |
-  // +=========================================================================+
-  void set_on_request(request_callback callback) {
-    on_request = std::move(callback);
-  }
-  // +=========================================================================+
-  // | [>] set_on_bad_request                                       ( public ) |
-  // +=========================================================================+
-  void set_on_bad_request(bad_request_callback callback) {
-    on_bad_request = std::move(callback);
-  }
-  // +=========================================================================+
-  // | [>] set_on_connection                                        ( public ) |
-  // +=========================================================================+
-  void set_on_connection(std::function<void()> callback) {
-    on_connection = std::move(callback);
-  }
-  // +=========================================================================+
-  // | [>] set_on_disconnection                                     ( public ) |
-  // +=========================================================================+
-  void set_on_disconnection(std::function<void()> callback) {
-    on_disconnection = std::move(callback);
-  }
-  // +=========================================================================+
-  // | [>] start                                                    ( public ) |
-  // +=========================================================================+
-  void start(const char port[]) {
-    if (throw_on_start) throw std::runtime_error("start failed");
-    started = true;
-    started_port = port;
-  }
-  // +=========================================================================+
-  // | [>] stop                                                     ( public ) |
-  // +=========================================================================+
-  void stop() { started = false; }
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
-  // +=========================================================================+
-  static inline request_callback on_request;
-  static inline bad_request_callback on_bad_request;
-  static inline std::function<void()> on_connection;
-  static inline std::function<void()> on_disconnection;
-  static inline bool throw_on_start = false;
-  static inline bool started = false;
-  static inline std::string started_port;
-};
-
-using test_server =
-    server<request, response, decoder, fake_transport, fake_router>;
-using test_router = fake_router<request, response>;
-using test_transport = fake_transport<request, response, decoder>;
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] task_probe                                                  ( class ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-class task_probe {
- public:
-  // +=========================================================================+
-  // | [>] TYPEs                                                    ( public ) |
-  // +=========================================================================+
-  struct promise_type {
-    task_probe get_return_object() noexcept {
-      return task_probe(
-          std::coroutine_handle<promise_type>::from_promise(*this));
-    }
-    std::suspend_never initial_suspend() const noexcept { return {}; }
-    std::suspend_always final_suspend() const noexcept { return {}; }
-    void return_void() const noexcept {}
-    void unhandled_exception() noexcept {
-      exception_ = std::current_exception();
-    }
-    std::exception_ptr exception_;
-  };
-  task_probe(const task_probe&) = delete;
-  task_probe(task_probe&& in) noexcept
-      : coroutine_(std::exchange(in.coroutine_, nullptr)) {}
-  ~task_probe() {
-    if (coroutine_) coroutine_.destroy();
-  }
-  [[nodiscard]] bool done() const noexcept { return coroutine_.done(); }
-  void rethrow_if_failed() const {
-    if (coroutine_.promise().exception_) {
-      std::rethrow_exception(coroutine_.promise().exception_);
-    }
-  }
-
- private:
-  // +=========================================================================+
-  // | [>] METHODs                                                 ( private ) |
-  // +=========================================================================+
-  explicit task_probe(std::coroutine_handle<promise_type> coroutine) noexcept
-      : coroutine_(coroutine) {}
-  std::coroutine_handle<promise_type> coroutine_;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] manual_event                                                ( class ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-class manual_event {
- public:
-  // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
-  bool await_ready() const noexcept { return false; }
-  void await_suspend(std::coroutine_handle<> continuation) noexcept {
-    continuation_ = continuation;
-  }
-  void await_resume() const noexcept {}
-  void resume() {
-    auto continuation = std::exchange(continuation_, nullptr);
-    continuation.resume();
-  }
-
- private:
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
-  std::coroutine_handle<> continuation_;
-};
-
-template <typename Tty>
-task_probe collect(task<Tty> value, std::optional<Tty>& result) {
-  result.emplace(co_await std::move(value));
+using test_server = http::server<http::request, http::response, routes_type,
+                                 engine_type, memory_transport>;
+using test_transport = memory_transport<
+    engine_type, http::engine_factory<engine_type, routes_type>>;
+std::string send_request(std::string_view method = "GET",
+                          std::string_view path = "/") {
+  return test_transport::instance->receive(
+      std::string(method) + " " + std::string(path) +
+      " HTTP/1.1\r\nHost: " +
+      std::string(method == "CONNECT" ? path : "example.com") + "\r\n\r\n");
 }
-
-task<response> delayed_response(manual_event& event) {
-  co_await event;
-  response res = response::ok_200();
-  res.set_body("async");
-  co_return res;
-}
-
-// +===========================================================================+
-// | [>] send_request                                             ( function ) |
-// +===========================================================================+
-std::string serialize_prefix(response& value) {
-  const auto serialized = value.serialize();
-  return {serialized->prefix.get(), serialized->prefix_size};
-}
-std::string send_request(const request& req) {
-  response res = response::ok_200();
-  auto shared_request = std::make_shared<request>(req);
-  std::stop_token stop_token;
-  auto response_task = test_transport::on_request(shared_request, stop_token);
-  if (response_task.index() == 1) {
-    std::optional<response> result;
-    auto probe =
-        collect(std::get<task<response>>(std::move(response_task)), result);
-    probe.rethrow_if_failed();
-    if (!probe.done() || !result) {
-      throw std::runtime_error("The asynchronous response did not complete");
-    }
-    res = std::move(*result);
-  } else {
-    res = std::get<response>(std::move(response_task));
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] controller                                                 ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct controller {
+  explicit controller(int& calls) : calls(calls) {}
+  template <typename ROty>
+  void register_routes(ROty& routes) { routes.add("GET", "/", &controller::get); }
+  http::response get(const http::request&) {
+    calls++;
+    return http::response::ok_200();
   }
-  res.set_header("Date", "fixed");
-  return serialize_prefix(res);
-}
+  int& calls;
+};
 }  // namespace
-
 // +===========================================================================+
 // | [>] server is neither copyable nor movable                  ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("server is neither copyable nor movable") {
   static_assert(!std::is_copy_constructible_v<test_server>);
-  static_assert(!std::is_copy_assignable_v<test_server>);
   static_assert(!std::is_move_constructible_v<test_server>);
+  static_assert(!std::is_copy_assignable_v<test_server>);
   static_assert(!std::is_move_assignable_v<test_server>);
   DOBA_EXPECT(true);
 }
@@ -382,480 +120,89 @@ DOBA_TEST("server is neither copyable nor movable") {
 // | [>] lifecycle routing and callbacks cover server behavior   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
-  // ---------------------------------------------------------------------------
-  // Route registration
-  // ---------------------------------------------------------------------------
-  test_router::additions = 0;
   test_server value;
-  auto handler = [](const request&) {
-    response res = response::ok_200();
-    if (test_router::write_body) res.set_body("body");
-    return res;
-  };
-  DOBA_EXPECT_EQUAL(&value.add_route("GET", "/", handler), &value);
-  DOBA_EXPECT_EQUAL(test_router::additions, 1);
-  DOBA_EXPECT_EQUAL(test_router::last_method, "GET");
-  DOBA_EXPECT_EQUAL(test_router::last_route, "/");
-  auto async_handler =
-      [](std::shared_ptr<const request>,
-         std::stop_token) -> task<response> {
-    response res = response::ok_200();
-    res.set_body("async");
-    co_return res;
-  };
-  DOBA_EXPECT_EQUAL(
-      &value.add_route("GET", "/async", async_handler), &value);
-  DOBA_EXPECT_EQUAL(test_router::additions, 2);
-  DOBA_EXPECT_EQUAL(test_router::last_method, "GET");
-  DOBA_EXPECT_EQUAL(test_router::last_route, "/async");
-  // ---------------------------------------------------------------------------
-  // Lifecycle
-  // ---------------------------------------------------------------------------
-  value.start("8080");
-  DOBA_EXPECT(test_transport::started);
-  DOBA_EXPECT_EQUAL(test_transport::started_port, "8080");
-  // ---------------------------------------------------------------------------
-  // Route locking
-  // ---------------------------------------------------------------------------
-  bool threw = false;
-  try {
-    value.add_route("POST", "/", handler);
-  } catch (const std::runtime_error&) {
-    threw = true;
-  }
-  DOBA_EXPECT(threw);
-  threw = false;
-  try {
-    value.add_route("POST", "/async", async_handler);
-  } catch (const std::runtime_error&) {
-    threw = true;
-  }
-  DOBA_EXPECT(threw);
-  DOBA_EXPECT_EQUAL(test_router::additions, 2);
-  // ---------------------------------------------------------------------------
-  // Router results
-  // ---------------------------------------------------------------------------
-  test_router::write_body = false;
-  struct route_case {
-    bool matched;
-    std::string_view allowed_methods;
-    std::string_view status;
-  };
-  constexpr route_case route_cases[] = {
-      {true, "", "HTTP/1.1 200 OK\r\n"},
-      {false, "", "HTTP/1.1 404 Not Found\r\n"},
-      {false, "GET", "HTTP/1.1 405 Method Not Allowed\r\n"},
-  };
-  for (const auto& test : route_cases) {
-    test_router::match_available = test.matched;
-    test_router::allowed_methods_result = test.allowed_methods;
-    const std::string output = send_request(request{});
-    DOBA_EXPECT(std::string_view(output).starts_with(test.status));
-    if (test.allowed_methods.empty()) {
-      DOBA_EXPECT(output.find("Allow:") == std::string::npos);
-    } else {
-      DOBA_EXPECT(output.find("Allow: GET\r\n") != std::string::npos);
-    }
-    DOBA_EXPECT_EQUAL(test_router::matched_method, "GET");
-    DOBA_EXPECT_EQUAL(test_router::matched_path, "/");
-  }
-  // ---------------------------------------------------------------------------
-  // Request target forms
-  // ---------------------------------------------------------------------------
-  struct target_case {
-    target target_form;
-    std::string_view status;
-  };
-  constexpr target_case target_cases[] = {
-      {target::kAuthorityForm, "HTTP/1.1 501 Not Implemented\r\n"},
-      {target::kAsteriskForm, "HTTP/1.1 200 OK\r\n"},
-      {target::kUnknown, "HTTP/1.1 400 Bad Request\r\n"},
-  };
-  for (const auto& test : target_cases) {
-    request req;
-    req.target_form = test.target_form;
-    const std::string output = send_request(req);
-    DOBA_EXPECT(std::string_view(output).starts_with(test.status));
-  }
-  // ---------------------------------------------------------------------------
-  // Connection close
-  // ---------------------------------------------------------------------------
-  test_router::match_available = true;
-  test_router::allowed_methods_result.clear();
-  request req;
-  req.close = true;
-  std::string output = send_request(req);
-  DOBA_EXPECT(output.find("Connection: close\r\n") != std::string::npos);
-  // ---------------------------------------------------------------------------
-  // HEAD response
-  // ---------------------------------------------------------------------------
-  test_router::write_body = true;
-  req = {};
-  req.method = "HEAD";
-  output = send_request(req);
-  DOBA_EXPECT(output.find("Content-Length: 4\r\n") != std::string::npos);
-  DOBA_EXPECT(!std::string_view(output).ends_with("body"));
-  test_router::write_body = false;
-  // ---------------------------------------------------------------------------
-  // Asynchronous response rules
-  // ---------------------------------------------------------------------------
-  req = {};
-  req.method = "HEAD";
-  req.path = "/async";
-  req.close = true;
-  output = send_request(req);
-  DOBA_EXPECT(output.find("Connection: close\r\n") != std::string::npos);
-  DOBA_EXPECT(output.find("Content-Length: 5\r\n") != std::string::npos);
-  DOBA_EXPECT(!std::string_view(output).ends_with("async"));
-  // ---------------------------------------------------------------------------
-  // Rejection reasons
-  // ---------------------------------------------------------------------------
-  struct rejection_case {
-    rejection_reason reason;
-    std::string_view status;
-  };
-  constexpr rejection_case rejection_cases[] = {
-      {rejection_reason::kNone, "HTTP/1.1 400 Bad Request\r\n"},
-      {rejection_reason::kSyntax, "HTTP/1.1 400 Bad Request\r\n"},
-      {rejection_reason::kPayloadTooLarge,
-       "HTTP/1.1 413 Content Too Large\r\n"},
-      {rejection_reason::kUnsupportedFeature,
-       "HTTP/1.1 501 Not Implemented\r\n"},
-      {rejection_reason::kVersionNotSupported,
-       "HTTP/1.1 505 HTTP Version Not Supported\r\n"},
-      {rejection_reason::kUriTooLong, "HTTP/1.1 414 URI Too Long\r\n"},
-      {rejection_reason::kHeaderFieldsTooLarge,
-       "HTTP/1.1 431 Request Header Fields Too Large\r\n"},
-      {rejection_reason::kHandlerError,
-       "HTTP/1.1 500 Internal Server Error\r\n"},
-      {rejection_reason::kExpectationFailed,
-       "HTTP/1.1 417 Expectation Failed\r\n"},
-  };
-  for (const auto& test : rejection_cases) {
-    response res =
-        test_transport::on_bad_request(
-            static_cast<int>(test.reason), "reason", {});
-    res.set_header("Date", "fixed");
-    const auto serialized = res.serialize();
-    const std::string serialized_prefix(serialized->prefix.get(),
-                                        serialized->prefix_size);
-    DOBA_EXPECT(serialized_prefix.starts_with(test.status));
-    const auto boundary = serialized_prefix.find("\r\n\r\n");
-    DOBA_EXPECT(boundary != std::string::npos);
-    const std::string_view expected =
-        test.reason == rejection_reason::kHandlerError
-            ? "Internal Server Error" : "reason";
-    DOBA_EXPECT_EQUAL(serialized_prefix.substr(boundary + 4), expected);
-    DOBA_EXPECT(!serialized->source.has_value());
-  }
-  // ---------------------------------------------------------------------------
-  // Stop
-  // ---------------------------------------------------------------------------
+  DOBA_EXPECT_EQUAL(&value.add_route("GET", "/", [](const http::request&) {
+    auto result = http::response::ok_200();
+    result.set_body("body");
+    return result;
+  }), &value);
+  value.start();
+  DOBA_EXPECT(send_request().ends_with("\r\n\r\nbody"));
+  DOBA_EXPECT(send_request("GET", "/absent").starts_with("HTTP/1.1 404 "));
+  const auto wrong_method = send_request("POST");
+  DOBA_EXPECT(wrong_method.starts_with("HTTP/1.1 405 "));
+  DOBA_EXPECT(wrong_method.find("Allow: GET\r\n") != std::string::npos);
+  DOBA_EXPECT(send_request("OPTIONS", "*").starts_with("HTTP/1.1 200 "));
+  DOBA_EXPECT(send_request("CONNECT", "example.com:443").starts_with(
+      "HTTP/1.1 501 "));
   value.stop();
-  DOBA_EXPECT(!test_transport::started);
+  value.start();
+  DOBA_EXPECT(send_request().ends_with("\r\n\r\nbody"));
 }
 // +===========================================================================+
-// | [>] error responses preserve the originating method         ( test-case ) |
+// | [>] server suppresses error bodies only for known HEAD requests( test-case ) |
 // +===========================================================================+
 DOBA_TEST("server suppresses error bodies only for known HEAD requests") {
   test_server value;
-  value.start("1234");
-  for (std::string_view method : {"HEAD", "GET", ""}) {
-    std::shared_ptr<request> req;
-    if (!method.empty()) {
-      req = std::make_shared<request>();
-      req->method = method;
-    }
-    response res = test_transport::on_bad_request(
-        static_cast<int>(rejection_reason::kHandlerError), "private", req);
-    res.set_header("Date", "fixed");
-    const auto serialized = res.serialize();
-    DOBA_EXPECT(serialized != nullptr);
-    const std::string output(serialized->prefix.get(),
-                             serialized->prefix_size);
-    DOBA_EXPECT(output.starts_with("HTTP/1.1 500 Internal Server Error\r\n"));
-    DOBA_EXPECT(output.find("Content-Length: 21\r\n") != std::string::npos);
-    const auto boundary = output.find("\r\n\r\n");
-    DOBA_EXPECT(boundary != std::string::npos);
-    DOBA_EXPECT_EQUAL(output.substr(boundary + 4),
-                      method == "HEAD" ? "" : "Internal Server Error");
-    DOBA_EXPECT(!serialized->source.has_value());
-  }
-  value.stop();
+  value.start();
+  const auto bytes = test_transport::instance->receive(
+      "HEAD / HTTP/1.1\r\nHost: example.com\r\nContent-Length: invalid\r\n\r\n");
+  DOBA_EXPECT(bytes.starts_with("HTTP/1.1 400 "));
+  DOBA_EXPECT(bytes.ends_with("\r\n\r\n"));
+  DOBA_EXPECT(test_transport::instance->closed);
 }
 // +===========================================================================+
-// | [>] failed starts release the date service                  ( test-case ) |
+// | [>] failed starts release the date server                   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("failed starts release the date server") {
-  auto& dates = date_server::get();
-  dates.start();
-  test_transport::throw_on_start = true;
-  test_server value;
-  bool threw = false;
-  try {
-    value.start("8080");
-  } catch (const std::runtime_error&) {
-    threw = true;
-  }
-  test_transport::throw_on_start = false;
-  dates.stop();
-  const std::string initial(dates.current());
-  std::this_thread::sleep_for(std::chrono::milliseconds(1200));
-  const bool stopped = dates.current() == initial;
-  dates.stop();
-  DOBA_EXPECT(threw);
-  DOBA_EXPECT(!test_transport::started);
-  DOBA_EXPECT(stopped);
-  value.start("8081");
-  DOBA_EXPECT(test_transport::started);
-  DOBA_EXPECT_EQUAL(test_transport::started_port, "8081");
-  value.stop();
-}
-// +===========================================================================+
-// | [>] server completes suspended async responses              ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("server completes suspended async responses") {
-  manual_event event;
-  std::stop_source stop_source;
-  bool stop_token_received = false;
-  test_router::match_available = true;
-  test_router::allowed_methods_result.clear();
-  test_server value;
-  value.add_route(
-      "GET", "/",
-      [](const request&) {
-        response res = response::ok_200();
-        return res;
-      });
-  value.add_route(
-      "GET", "/async",
-      [&event, &stop_source, &stop_token_received](
-          std::shared_ptr<const request>, std::stop_token stop_token) {
-        stop_token_received = stop_token == stop_source.get_token();
-        return delayed_response(event);
-      });
-  value.start("8080");
-
-  auto req = std::make_shared<request>();
-  response sync_response = response::ok_200();
-  auto sync_task = test_transport::on_request(req, stop_source.get_token());
-  DOBA_EXPECT(sync_task.index() == 0);
-  sync_response = std::get<response>(std::move(sync_task));
-  DOBA_EXPECT(
-      serialize_prefix(sync_response).starts_with("HTTP/1.1 200 OK\r\n"));
-
-  req->method = "HEAD";
-  req->path = "/async";
-  req->close = true;
-  std::weak_ptr<request> request_lifetime = req;
-  auto response_task = test_transport::on_request(req, stop_source.get_token());
-  DOBA_EXPECT(response_task.index() == 1);
-  DOBA_EXPECT(stop_token_received);
-  req.reset();
-  DOBA_EXPECT(!request_lifetime.expired());
-
-  std::optional<response> result;
-  auto probe =
-      collect(std::get<task<response>>(std::move(response_task)), result);
-  DOBA_EXPECT(!probe.done());
-  DOBA_EXPECT(!result.has_value());
-  event.resume();
-  probe.rethrow_if_failed();
-  DOBA_EXPECT(probe.done());
-  DOBA_EXPECT(result.has_value());
-  DOBA_EXPECT(result->has_header("Connection"));
-  DOBA_EXPECT_EQUAL(result->get_header("Connection").second, "close");
-  DOBA_EXPECT(!result->has_header("Content-Length"));
-  const std::string prefix = serialize_prefix(*result);
-  DOBA_EXPECT(prefix.find("Content-Length: 5\r\n") != std::string::npos);
-  DOBA_EXPECT(!prefix.ends_with("async"));
-  DOBA_EXPECT(request_lifetime.expired());
-
-  value.stop();
-  test_router::async_handler = {};
-}
-// +===========================================================================+
-// | [>] server propagates async handler exceptions              ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("server propagates async handler exceptions") {
-  test_router::match_available = true;
-  test_server value;
-  value.add_route(
-      "GET", "/async",
-      [](std::shared_ptr<const request> req,
-         std::stop_token) -> task<response> {
-        if (req) throw std::runtime_error("failure");
-        co_return response::ok_200();
-      });
-  value.start("8080");
-
-  auto req = std::make_shared<request>();
-  req->path = "/async";
-  std::stop_token stop_token;
-  auto response_task = test_transport::on_request(req, stop_token);
-  DOBA_EXPECT(response_task.index() == 1);
-  std::optional<response> result;
-  auto probe =
-      collect(std::get<task<response>>(std::move(response_task)), result);
-  DOBA_EXPECT(probe.done());
-  bool threw = false;
-  try {
-    probe.rethrow_if_failed();
-  } catch (const std::runtime_error& error) {
-    threw = std::string_view(error.what()) == "failure";
-  }
-  DOBA_EXPECT(threw);
-  DOBA_EXPECT(!result.has_value());
-
-  value.stop();
-  test_router::async_handler = {};
-}
-// +===========================================================================+
-// | [>] server invokes parametrized async handlers              ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("server invokes parametrized async handlers") {
-  test_router::match_available = true;
-  std::string invoked_path;
-  test_router::parametrized_handler.async_callback =
-      [&invoked_path](std::shared_ptr<const request>,
-                      std::stop_token,
-                      std::string_view path) -> task<response> {
-        invoked_path = path;
-        response res = response::ok_200();
-        res.set_body("parametrized");
-        co_return res;
-      };
-  test_server value;
-  value.start("8080");
-
-  auto req = std::make_shared<request>();
-  req->path = "/parametrized/42";
-  std::stop_token stop_token;
-  auto response_task = test_transport::on_request(req, stop_token);
-  DOBA_EXPECT(response_task.index() == 1);
-  std::optional<response> result;
-  auto probe =
-      collect(std::get<task<response>>(std::move(response_task)), result);
-  probe.rethrow_if_failed();
-  DOBA_EXPECT(probe.done());
-  DOBA_EXPECT(result.has_value());
-  DOBA_EXPECT_EQUAL(invoked_path, "/parametrized/42");
-  DOBA_EXPECT(serialize_prefix(*result).ends_with("parametrized"));
-
-  value.stop();
-  test_router::parametrized_handler.async_callback = {};
-}
-// +===========================================================================+
-// | [>] sync handler failure preserves subsequent dispatch      ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("sync handler failure preserves subsequent dispatch") {
-  test_router::match_available = true;
-  test_router::allowed_methods_result.clear();
-  bool fail = true;
-  test_server value;
-  value.add_route("GET", "/", [&](const request&) {
-    if (fail) throw std::runtime_error("sync failure");
-    return response::created_201();
+  test_server value(true);
+  bool failed = false;
+  try { value.start(); } catch (const std::runtime_error&) { failed = true; }
+  DOBA_EXPECT(failed);
+  value.add_route("GET", "/", [](const http::request&) {
+    return http::response::ok_200();
   });
-  value.start("8080");
-  bool threw = false;
-  try {
-    send_request(request{});
-  } catch (const std::runtime_error& error) {
-    threw = std::string_view(error.what()) == "sync failure";
-  }
-  DOBA_EXPECT(threw);
-  fail = false;
-  DOBA_EXPECT(send_request(request{}).starts_with("HTTP/1.1 201 Created\r\n"));
-  value.stop();
-  test_router::matched_handler = {};
+  test_transport::instance->fail = false;
+  value.start();
+  const auto bytes = send_request();
+  DOBA_EXPECT(bytes.starts_with("HTTP/1.1 200 "));
+  DOBA_EXPECT(bytes.find("Date: ") != std::string::npos);
 }
 // +===========================================================================+
-// | [>] async handler observes cancellation after suspension    ( test-case ) |
+// | [>] server accepts new connections after handler failure ( test-case )    |
 // +===========================================================================+
-DOBA_TEST("async handler observes cancellation after suspension") {
-  manual_event event;
-  std::stop_source stop_source;
-  bool cancelled = false;
-  test_router::match_available = true;
+DOBA_TEST("server accepts new connections after handler failure") {
   test_server value;
-  value.add_route(
-      "GET", "/async",
-      [&](std::shared_ptr<const request>, std::stop_token token)
-          -> task<response> {
-        co_await event;
-        cancelled = token.stop_requested();
-        co_return response::no_content_204();
-      });
-  value.start("8080");
-  auto req = std::make_shared<request>();
-  req->path = "/async";
-  req->close = true;
-  auto pending = test_transport::on_request(req, stop_source.get_token());
-  DOBA_EXPECT_EQUAL(pending.index(), 1);
-  std::optional<response> result;
-  auto probe = collect(std::get<task<response>>(std::move(pending)), result);
-  DOBA_EXPECT(!probe.done());
-  stop_source.request_stop();
-  event.resume();
-  probe.rethrow_if_failed();
-  DOBA_EXPECT(probe.done());
-  DOBA_EXPECT(cancelled);
-  DOBA_EXPECT(result.has_value());
-  DOBA_EXPECT_EQUAL(result->get_header("Connection").second, "close");
-  DOBA_EXPECT(
-      serialize_prefix(*result).starts_with("HTTP/1.1 204 No Content\r\n"));
-  value.stop();
-  test_router::async_handler = {};
+  value.add_route("GET", "/fail", [](const http::request&) -> http::response {
+    throw std::runtime_error("handler failed");
+  });
+  value.add_route("GET", "/", [](const http::request&) {
+    return http::response::ok_200();
+  });
+  value.start();
+  DOBA_EXPECT(send_request("GET", "/fail").starts_with("HTTP/1.1 500 "));
+  DOBA_EXPECT(test_transport::instance->closed);
+  DOBA_EXPECT(send_request().empty());
+  test_transport::instance->stop();
+  test_transport::instance->start();
+  DOBA_EXPECT(send_request().starts_with("HTTP/1.1 200 "));
 }
-
-namespace {
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] server_controller                                          ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Controller implementation.                                                |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct server_controller {
-  explicit server_controller(int& alive) : alive_(alive) { alive_++; }
-  ~server_controller() { alive_--; }
-  template <typename Rty>
-  void register_routes(Rty& routes) {
-    routes.add("GET", "/", &server_controller::get);
-  }
-  response get(const request&) {
-    auto res = response::ok_200();
-    res.set_body(++calls_);
-    return res;
-  }
-  int& alive_;
-  int calls_{0};
-};
-}  // namespace
-
 // +===========================================================================+
-// | [>] server controller lifecycle                             ( test-case ) |
+// | [>] server retains controllers and rejects live registration( test-case ) |
 // +===========================================================================+
 DOBA_TEST("server retains controllers and rejects live registration") {
-  int alive = 0;
-  {
-    server<request, response, decoder, fake_transport> value;
-    DOBA_EXPECT_EQUAL(&value.add_controller<server_controller>(alive), &value);
-    DOBA_EXPECT_EQUAL(alive, 1);
-    value.start("8080");
-    DOBA_EXPECT(send_request({}).ends_with("1"));
-    bool threw = false;
-    try { value.add_controller<server_controller>(alive); }
-    catch (const std::runtime_error&) { threw = true; }
-    DOBA_EXPECT(threw);
-    DOBA_EXPECT_EQUAL(alive, 1);
-    value.stop();
-    DOBA_EXPECT_EQUAL(alive, 1);
-    value.start("8081");
-    DOBA_EXPECT(send_request({}).ends_with("2"));
-    value.stop();
-  }
-  DOBA_EXPECT_EQUAL(alive, 0);
-  test_transport::on_request = {};
+  int calls = 0;
+  test_server value;
+  value.add_controller<controller>(calls);
+  value.start();
+  DOBA_EXPECT(send_request().starts_with("HTTP/1.1 200 "));
+  DOBA_EXPECT_EQUAL(calls, 1);
+  bool rejected = false;
+  try { value.add_controller<controller>(calls); }
+  catch (const std::runtime_error&) { rejected = true; }
+  DOBA_EXPECT(rejected);
+  value.stop();
+  value.start();
+  send_request();
+  DOBA_EXPECT_EQUAL(calls, 2);
 }
