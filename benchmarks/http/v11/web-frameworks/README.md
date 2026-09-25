@@ -14,10 +14,10 @@ https://github.com/the-benchmarker/web-frameworks.git
 Build and start the adapter locally:
 
 ```text
-cmake -S benchmarks/web-frameworks/http/v11 \
-  -B build/web-frameworks/http/v11
-cmake --build build/web-frameworks/http/v11 --config Release
-build/web-frameworks/http/v11/doba_web_frameworks_http_v11
+cmake -S benchmarks/http/v11/web-frameworks \
+  -B build/http/v11/web-frameworks
+cmake --build build/http/v11/web-frameworks --config Release
+build/http/v11/web-frameworks/doba_web_frameworks_http_v11
 ```
 
 The adapter implements `GET /`, `GET /user/:id`, and `POST /user` on port
@@ -29,7 +29,7 @@ Build and start the standalone adapter container:
 
 ```text
 docker build --tag doba-web-frameworks-http-v11 \
-  benchmarks/web-frameworks/http/v11
+  benchmarks/http/v11/web-frameworks
 docker run --rm --publish 3000:3000 doba-web-frameworks-http-v11
 ```
 
@@ -40,7 +40,7 @@ Use another published tag or commit to test a different doba revision:
 ```text
 docker build --tag doba-web-frameworks-http-v11 \
   --build-arg DOBA_REF=<published-tag-or-commit> \
-  benchmarks/web-frameworks/http/v11
+  benchmarks/http/v11/web-frameworks
 ```
 
 To use the upstream runner, copy `CMakeLists.txt`, `config.yaml`, and `main.cpp`

@@ -600,7 +600,7 @@ withdrawn coroutine execution or engine completion callbacks were removed.
 **Status.** Runtime regression pending; medium severity, benchmark-only scope.
 
 **Source evidence.** In
-[main.cpp](../benchmarks/httparena/http/v11/main.cpp), `read_query_sum()` adds
+[main.cpp](../benchmarks/http/v11/httparena/main.cpp), `read_query_sum()` adds
 two parsed `int64_t` values without a range check; the POST handler then adds
 the parsed body value without one. Successful parsing of each operand does
 not establish that either signed sum is representable.

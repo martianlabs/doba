@@ -15,9 +15,9 @@ The JSON route reads `/data/dataset.json` by default; set `DATASET_PATH` for
 a local copy of the official dataset.
 
 ```text
-cmake -S benchmarks/httparena/http/v11 -B build/httparena/http/v11
-cmake --build build/httparena/http/v11 --config Release
-build/httparena/http/v11/doba_httparena_http_v11
+cmake -S benchmarks/http/v11/httparena -B build/http/v11/httparena
+cmake --build build/http/v11/httparena --config Release
+build/http/v11/httparena/doba_httparena_http_v11
 ```
 
 The adapter implements `GET /baseline11`, `POST /baseline11`,
@@ -29,7 +29,7 @@ Build and start the submission container:
 
 ```text
 docker build --tag doba-httparena-http-v11 \
-  benchmarks/httparena/http/v11
+  benchmarks/http/v11/httparena
 docker run --rm --publish 8080:8080 doba-httparena-http-v11
 ```
 
@@ -42,7 +42,7 @@ Use a published tag or commit when a reproducible benchmark image is required:
 ```text
 docker build --tag doba-httparena-http-v11 \
   --build-arg DOBA_REF=<published-tag-or-commit> \
-  benchmarks/httparena/http/v11
+  benchmarks/http/v11/httparena
 ```
 
 In another working directory, clone the pinned HttpArena revision:
@@ -56,7 +56,7 @@ Copy this directory to `HttpArena/frameworks/doba`, then run the declared
 profile validations from the HttpArena checkout:
 
 ```text
-cp -R /path/to/doba/benchmarks/httparena/http/v11 HttpArena/frameworks/doba
+cp -R /path/to/doba/benchmarks/http/v11/httparena HttpArena/frameworks/doba
 cd HttpArena
 ./scripts/validate.sh doba
 ```
