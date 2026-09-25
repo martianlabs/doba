@@ -32,7 +32,7 @@
 using namespace martianlabs::doba::protocol::http::v11;
 
 int main() {
-  server http_server;
+  server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   // h1spec expects successful routes to echo the decoded request body.
   const auto echo_body = [](const request& req) {
     response res = response::ok_200();
@@ -53,9 +53,11 @@ int main() {
     res.add_header("Content-Type", "text/plain").set_body(body);
     return res;
   };
-  http_server.add_route("GET", "/", echo_body);
-  http_server.add_route("POST", "/", echo_body);
-  http_server.start("8080");
+  for (const auto method : {"GET", "HEAD", "POST", "PUT", "PATCH",
+                            "DELETE", "OPTIONS", "TRACE"}) {
+    http_server.add_route(method, "/", echo_body);
+  }
+  http_server.start();
   // The test harness owns process shutdown; wait after the server starts.
   std::promise<void> shutdown;
   shutdown.get_future().wait();

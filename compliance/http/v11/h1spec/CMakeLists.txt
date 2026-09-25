@@ -18,7 +18,7 @@ set(
 
 set(
   DOBA_INCLUDE_DIR
-  "${CMAKE_CURRENT_LIST_DIR}/../../include"
+  "${CMAKE_CURRENT_LIST_DIR}/../../../../include"
   CACHE PATH "Path to the doba include directory"
 )
 
