@@ -1,6 +1,6 @@
 FROM ubuntu:24.04 AS build
 
-ARG DOBA_REF=feature/tls
+ARG DOBA_REF=a5667f843736838b3d66169a91df07ca1fd554a0
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

@@ -39,9 +39,8 @@ docker run --rm --publish 8080:8080 --publish 8081:8081 \
 ```
 
 The Dockerfile accepts `DOBA_REF` as a build argument and defaults to the
-`feature/tls` branch. That branch must contain the TLS transport before the
-standalone image can be built. Pin a published tag or commit for a reproducible
-HttpArena entry:
+published TLS commit `a5667f843736838b3d66169a91df07ca1fd554a0`.
+Use another published tag or commit to test a different doba revision:
 
 ```text
 docker build --tag doba-httparena-http-v11 \
