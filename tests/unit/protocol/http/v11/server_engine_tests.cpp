@@ -167,7 +167,7 @@ concept accepts_server = requires {
 static_assert(protocol::contracts::engine<engine_type>);
 static_assert(!std::constructible_from<engine_type, http::policies>);
 static_assert(accepts_server<engine_type, fake_transport>);
-static_assert(accepts_server<engine_type, tr::tcpip>);
+static_assert(accepts_server<engine_type, tr::tcp>);
 static_assert(!accepts_server<engine_type, bad_transport>);
 static_assert(!accepts_server<engine_type, bad_start_transport>);
 static_assert(!accepts_server<engine_type, bad_policies_transport>);
@@ -180,7 +180,7 @@ using server_type = http::server<http::request, http::response, routes_type,
                                  engine_type, fake_transport>;
 using factory_type = http::engine_factory<engine_type, routes_type>;
 static_assert(std::same_as<
-              typename tr::tcpip<engine_type, factory_type>::policies_type,
+              typename tr::tcp<engine_type, factory_type>::policies_type,
               tr::policies>);
 static_assert(std::constructible_from<server_type, std::unique_ptr<int>>);
 static_assert(std::constructible_from<server_type, std::unique_ptr<int>,

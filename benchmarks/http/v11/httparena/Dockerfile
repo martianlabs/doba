@@ -1,6 +1,6 @@
 FROM ubuntu:24.04 AS build
 
-ARG DOBA_REF=a4f3d1618415bd27b40c08184bcedee7195b2b2d
+ARG DOBA_REF=feature/tls
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -8,6 +8,7 @@ RUN apt-get update \
        cmake \
        g++ \
        make \
+       libssl-dev \
        rapidjson-dev \
        zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -25,11 +26,11 @@ RUN cmake -S . -B /build \
 FROM ubuntu:24.04
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends zlib1g \
+    && apt-get install -y --no-install-recommends libssl3t64 zlib1g \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /build/doba_httparena_http_v11 /server
 
-EXPOSE 8080
+EXPOSE 8080 8081
 
 ENTRYPOINT ["/server"]

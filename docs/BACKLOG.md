@@ -212,8 +212,8 @@ writes. Receiving or sending bytes renews the deadline; the total duration
 of a connection or request does not exhaust it while progress continues.
 On expiry, the transport closes safely.
 
-**Components.** Transport configuration, `tcpip_windows.h`,
-`tcpip_linux.h`, and TCP/IP integration tests.
+**Components.** Transport configuration, `tcp_windows.h`,
+`tcp_linux.h`, and TCP/IP integration tests.
 
 **Acceptance and tests.**
 
@@ -332,8 +332,8 @@ Resource exhaustion has not been reproduced in a stress campaign.
 **Risk.** A pipelining client that does not consume responses, may accumulate source storage while more requests are accepted.
 
 **Components.** send queues, body sources and receive scheduling in
-[tcpip_linux.h](../include/transport/server/tcpip_linux.h) and
-[tcpip_windows.h](../include/transport/server/tcpip_windows.h).
+[tcp_linux.h](../include/transport/server/tcp_linux.h) and
+[tcp_windows.h](../include/transport/server/tcp_windows.h).
 
 **Scope.** Implement limits on retained work and queued response bytes
 through policies injected at module creation. Define accounting, defaults,
@@ -538,8 +538,8 @@ do not establish zero overhead or isolate the cause of observed differences.
 **Limits.** The send budget counts bytes, not queue nodes. Empty deliveries
 consume no byte budget; no new queue-entry limit was introduced.
 
-**Components.** [Linux transport](../include/transport/server/tcpip_linux.h),
-[Windows transport](../include/transport/server/tcpip_windows.h) and the
+**Components.** [Linux transport](../include/transport/server/tcp_linux.h),
+[Windows transport](../include/transport/server/tcp_windows.h) and the
 [output contract](../include/common/output.h).
 
 | Suite | Test | Source | Windows / WSL |
@@ -1083,7 +1083,7 @@ changes or a broader redesign before that release.
 [platform.h](../include/platform.h): Windows macros, warning 4996 suppression,
 linker pragmas, and transitive standard/system includes. Decide the diagnostic
 contract for unsupported platforms; the
-[TCP selector](../include/transport/server/tcpip.h) currently has no explicit
+[TCP selector](../include/transport/server/tcp.h) currently has no explicit
 unsupported-platform branch.
 
 **Acceptance and verification.** Inventory and justify the remaining

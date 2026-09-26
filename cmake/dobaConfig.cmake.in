@@ -6,6 +6,14 @@ include(
 find_dependency(
   Threads
 )
+if(
+  @DOBA_ENABLE_TLS@
+)
+  find_dependency(
+    OpenSSL
+    COMPONENTS SSL
+  )
+endif()
 include(
   "${CMAKE_CURRENT_LIST_DIR}/dobaTargets.cmake"
 )

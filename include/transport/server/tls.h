@@ -22,25 +22,17 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#if defined(_WIN32)
-#include "transport/server/tcp.h"
-#include "transport/server/tcp_windows.h"
-#include "test_helper.h"
-using namespace martianlabs::doba::transport::server;
+#ifndef martianlabs_doba_transport_server_tls_h
+#define martianlabs_doba_transport_server_tls_h
 
-// +===========================================================================+
-// | [>] overlapped accept initializes its native operation      ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("overlapped accept initializes its native operation") {
-  overlapped_accept value{INVALID_SOCKET};
-  DOBA_EXPECT_EQUAL(value.get_type(), io_type::kAccept);
-  DOBA_EXPECT_EQUAL(value.socket, INVALID_SOCKET);
-  DOBA_EXPECT_EQUAL(value.Internal, 0);
-  DOBA_EXPECT_EQUAL(value.InternalHigh, 0);
-  DOBA_EXPECT_EQUAL(value.Offset, 0);
-  DOBA_EXPECT_EQUAL(value.OffsetHigh, 0);
-  DOBA_EXPECT(value.hEvent == nullptr);
-  for (char byte : value.addresses) DOBA_EXPECT_EQUAL(byte, 0);
-}
+#include "platform.h"
+#include "transport/server/contracts.h"
+#include "transport/server/policies.h"
+
+#ifdef _WIN32
+#include "transport/server/tls_windows.h"
+#elif __linux__
+#include "transport/server/tls_linux.h"
+#endif
 
 #endif

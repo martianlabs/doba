@@ -31,7 +31,7 @@
 #include <utility>
 
 #include "common/date_server.h"
-#include "transport/server/tcpip.h"
+#include "transport/server/tcp.h"
 #include "protocol/http/common/router.h"
 #include "protocol/http/v11/contracts.h"
 #include "protocol/http/v11/engine.h"
@@ -56,7 +56,7 @@ namespace martianlabs::doba::protocol::http::v11 {
 template <typename RQty = request, typename RSty = response,
           typename ROty = router<RQty, RSty>,
           protocol::contracts::engine ENty = engine<RQty, RSty, ROty>,
-          template <typename, typename> class TRty = transport::server::tcpip>
+          template <typename, typename> class TRty = transport::server::tcp>
   requires contracts::server<ROty, ENty, TRty>
 class server {
  public:

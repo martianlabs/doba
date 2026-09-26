@@ -68,6 +68,11 @@ option(
   "Build doba tests"
   ${DOBA_IS_TOP_LEVEL}
 )
+option(
+  DOBA_ENABLE_TLS
+  "Enable TLS support"
+  OFF
+)
 
 include(
   CMakePackageConfigHelpers
@@ -80,6 +85,15 @@ find_package(
   Threads
   REQUIRED
 )
+if(
+  DOBA_ENABLE_TLS
+)
+  find_package(
+    OpenSSL
+    REQUIRED
+    COMPONENTS SSL
+  )
+endif()
 
 option(
   DOBA_ENABLE_STRICT_WARNINGS
@@ -157,6 +171,40 @@ target_include_directories(
   "$<BUILD_INTERFACE:${DOBA_INCLUDE_DIR}>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
+
+if(
+  DOBA_ENABLE_TLS
+)
+  add_library(
+    doba_tls
+    INTERFACE
+  )
+  add_library(
+    martianlabs::doba_tls
+    ALIAS
+    doba_tls
+  )
+  set_target_properties(
+    doba_tls
+    PROPERTIES
+    EXPORT_NAME doba_tls
+  )
+  target_link_libraries(
+    doba_tls
+    INTERFACE
+    doba_headers
+    OpenSSL::SSL
+  )
+  target_compile_definitions(
+    doba_tls
+    INTERFACE
+    DOBA_ENABLE_TLS
+  )
+  install(
+    TARGETS doba_tls
+    EXPORT dobaTargets
+  )
+endif()
 
 file(
   GLOB_RECURSE
@@ -336,6 +384,15 @@ if(
     add_subdirectory(
       ${CMAKE_CURRENT_LIST_DIR}/tests/unit
     )
+    if(
+      DOBA_ENABLE_TLS
+    )
+      target_link_libraries(
+        doba_unit_tests
+        PRIVATE
+        doba_tls
+      )
+    endif()
     add_subdirectory(
       ${CMAKE_CURRENT_LIST_DIR}/tests/integration
     )

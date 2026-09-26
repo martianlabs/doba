@@ -53,6 +53,15 @@ struct policies {
   std::string ip;
   std::string port;
 };
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] tls_policies                                               ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct tls_policies : policies {
+  std::string certificate_file;
+  std::string private_key_file;
+};
 }  // namespace martianlabs::doba::transport::server
 
 #endif

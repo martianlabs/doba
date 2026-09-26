@@ -27,6 +27,10 @@ find_package(
   REQUIRED
 )
 find_package(
+  OpenSSL
+  REQUIRED
+)
+find_package(
   ZLIB
   REQUIRED
 )
@@ -52,6 +56,8 @@ target_link_libraries(
   doba_httparena_http_v11
   PRIVATE
   Threads::Threads
+  OpenSSL::SSL
+  OpenSSL::Crypto
   ZLIB::ZLIB
 )
 

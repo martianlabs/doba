@@ -190,6 +190,28 @@ class tcpip_client {
     }
     return result;
   }
+  std::optional<std::string> receive_some(
+      std::size_t maximum,
+      std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
+    operation_ = "receive";
+    error_ = {};
+    native_error_ = 0;
+    if (!maximum || !wait_ready(
+            false, std::chrono::steady_clock::now() + timeout)) {
+      return std::nullopt;
+    }
+    std::string result((std::min)(maximum,
+                                  static_cast<std::size_t>(INT_MAX)), '\0');
+    const int count = ::recv(socket_, result.data(),
+                             static_cast<int>(result.size()), 0);
+    if (count <= 0) {
+      if (count == 0) error_ = "eof";
+      else fail_socket();
+      return std::nullopt;
+    }
+    result.resize(static_cast<std::size_t>(count));
+    return result;
+  }
   bool has_data(std::chrono::milliseconds timeout) const {
     fd_set read_set;
     FD_ZERO(&read_set);
