@@ -219,6 +219,28 @@ DOBA_TEST("tls session exchanges application data") {
 }
 
 // +===========================================================================+
+// | [>] tls session consumes output in place                    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tls session consumes output in place") {
+  tls_session server(make_tls_context(server_policies()), 32768);
+  test_client client;
+  DOBA_EXPECT(negotiate(server, client, 1024));
+  const auto result = server.write(std::span("response", 8));
+  DOBA_EXPECT_EQUAL(result.state, tls_session::status::ready);
+  const std::size_t pending = server.pending();
+  const auto first = server.output_bytes();
+  DOBA_EXPECT_EQUAL(first.size(), pending);
+  DOBA_EXPECT(first.size() > 1);
+  server.output_sent(1);
+  DOBA_EXPECT_EQUAL(server.pending(), pending - 1);
+  const auto rest = server.output_bytes();
+  DOBA_EXPECT_EQUAL(rest.data(), first.data() + 1);
+  DOBA_EXPECT_EQUAL(rest.size(), pending - 1);
+  server.output_sent(rest.size());
+  DOBA_EXPECT_EQUAL(server.pending(), 0);
+}
+
+// +===========================================================================+
 // | [>] tls session bounds encrypted input                      ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tls session bounds encrypted input") {
@@ -254,6 +276,22 @@ DOBA_TEST("tls session bounds encrypted output") {
   DOBA_EXPECT(blocked);
   DOBA_EXPECT(exchange(server, client, 1024));
   DOBA_EXPECT_EQUAL(server.write(bytes).state, tls_session::status::ready);
+}
+
+// +===========================================================================+
+// | [>] tls session bounds default encrypted output             ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tls session bounds default encrypted output") {
+  tls_session server(make_tls_context(server_policies()), 1024 * 1024);
+  test_client client;
+  DOBA_EXPECT(negotiate(server, client, 1024));
+  std::array<char, 8192> bytes{};
+  for (int step = 0; step < 4; ++step) {
+    const auto result = server.write(bytes);
+    DOBA_EXPECT(result.state != tls_session::status::failed);
+    DOBA_EXPECT(server.pending() <= 17 * 1024);
+    if (result.state == tls_session::status::need_output) break;
+  }
 }
 
 // +===========================================================================+

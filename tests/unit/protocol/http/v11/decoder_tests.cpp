@@ -43,6 +43,7 @@
 namespace {
 using martianlabs::doba::protocol::deserialization_status;
 using martianlabs::doba::protocol::http::target;
+using martianlabs::doba::protocol::http::v11::policies;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using decoder_type =
@@ -56,6 +57,8 @@ constexpr std::size_t max_query_parameters = 128;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct decoder_input {
+  explicit decoder_input(policies configuration = {})
+      : decoder{configuration} {}
   std::size_t append(std::string_view source) {
     const auto count = std::min(source.size(), receive_capacity - size);
     if (count) std::memcpy(buffer.data() + size, source.data(), count);
@@ -2086,6 +2089,42 @@ DOBA_TEST("decoder accepts every target form byte by byte") {
       }
     }
   }
+}
+
+// +===========================================================================+
+// | [>] raw body remains in memory when spill is disabled      ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder keeps raw body when spill is disabled") {
+  policies configuration;
+  configuration.request_body_spill_threshold = 0;
+  decoder_input value(configuration);
+  const std::string payload(70000, 'x');
+  const std::string source =
+      "POST / HTTP/1.1\r\nHost: example.com\r\nContent-Length: " +
+      std::to_string(payload.size()) + "\r\n\r\n" + payload;
+  std::shared_ptr<request> request_value;
+  for (std::size_t offset = 0; offset < source.size();) {
+    const std::size_t count =
+        std::min(std::size_t{4096}, source.size() - offset);
+    DOBA_EXPECT_EQUAL(accumulate(
+        value, std::string_view(source).substr(offset, count)), count);
+    offset += count;
+    const auto result = value.decode();
+    if (offset == source.size()) request_value = result.request;
+  }
+  DOBA_EXPECT(request_value != nullptr);
+  std::array<std::byte, 4096> output{};
+  std::string decoded;
+  bool complete = false;
+  for (std::size_t i = 0; !complete && i <= payload.size(); i++) {
+    const auto state = request_value->get_body_reader()->read(output);
+    DOBA_EXPECT(!state.has_error);
+    decoded.append(reinterpret_cast<const char*>(output.data()),
+                   state.produced);
+    complete = state.complete;
+  }
+  DOBA_EXPECT(complete);
+  DOBA_EXPECT_EQUAL(decoded, payload);
 }
 
 // +===========================================================================+

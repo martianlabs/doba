@@ -31,7 +31,6 @@
 #include <memory>
 #include <span>
 #include <stdexcept>
-#include <string>
 #include <utility>
 
 #include "protocol/contracts.h"
@@ -96,17 +95,8 @@ struct tls_connection {
   // | [>] prepare_output                                           ( public ) |
   // +=========================================================================+
   bool prepare_output(output_queue& output) {
-    if (network_offset_ != network_.size()) return true;
-    network_.clear();
-    network_offset_ = 0;
     for (;;) {
-      if (session_.pending()) {
-        network_.resize(17 * 1024);
-        const std::size_t size = session_.drain(std::span(network_.data(),
-                                                         network_.size()));
-        network_.resize(size);
-        return size != 0 && !session_.failed();
-      }
+      if (session_.pending()) return true;
       if (!session_.established()) return !session_.failed();
       if (close_requested_ && output.offset == output.buffer.size() &&
           !output.queued()) {
@@ -137,20 +127,19 @@ struct tls_connection {
   // | [>] output_bytes                                             ( public ) |
   // +=========================================================================+
   std::span<char> output_bytes(output_queue&) {
-    return {network_.data() + network_offset_,
-            network_.size() - network_offset_};
+    return session_.output_bytes();
   }
   // +=========================================================================+
   // | [>] output_sent                                              ( public ) |
   // +=========================================================================+
   void output_sent(output_queue&, std::size_t size) {
-    network_offset_ += size;
+    session_.output_sent(size);
   }
   // +=========================================================================+
   // | [>] output_pending                                           ( public ) |
   // +=========================================================================+
   bool output_pending(const output_queue& output) const {
-    return network_offset_ != network_.size() || session_.pending() ||
+    return session_.pending() ||
         output.queued() || output.offset != output.buffer.size() ||
         (close_requested_ && !shutdown_complete_);
   }
@@ -223,8 +212,6 @@ struct tls_connection {
   std::unique_ptr<char[]> plaintext_;
   const std::size_t plaintext_capacity_;
   std::size_t plaintext_size_{0};
-  std::string network_;
-  std::size_t network_offset_{0};
   bool close_requested_{false};
   bool shutdown_complete_{false};
   bool peer_closed_{false};

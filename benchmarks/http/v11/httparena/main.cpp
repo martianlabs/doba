@@ -105,7 +105,10 @@ int main(int argc, char* argv[]) {
     std::cerr << "invalid dataset\n";
     return 1;
   }
-  server http_server({.ip = "0.0.0.0", .port = "8080"});
+  policies http_configuration;
+  http_configuration.request_body_spill_threshold = 0;
+  server http_server({.ip = "0.0.0.0", .port = "8080"},
+                     http_configuration);
   // Parse every baseline value; HttpArena randomizes them to detect shortcuts.
   http_server.add_route(
       "GET", "/baseline11",
@@ -241,7 +244,7 @@ int main(int argc, char* argv[]) {
          martianlabs::doba::protocol::http::router<request, response>,
          engine<request, response>,
          martianlabs::doba::transport::server::tls>
-      tls_server(tls_configuration);
+      tls_server(tls_configuration, http_configuration);
   tls_server.add_route("GET", "/json/:count", json_handler);
   tls_server.add_controller<static_file_server>("/static", "/data/static");
   tls_server.add_route(

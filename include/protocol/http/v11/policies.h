@@ -67,6 +67,8 @@ struct policies {
   // server to ignore Upgrade); false rejects the request outright. Honouring
   // an upgrade is deferred to a future release.
   bool allow_upgrade = true;
+  // Request body spill threshold in octets (0 disables spilling).
+  std::size_t request_body_spill_threshold = 65535;
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

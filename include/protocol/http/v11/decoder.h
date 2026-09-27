@@ -408,7 +408,8 @@ class decoder {
               (context_.has_content_length && context_.content_length > 0);
           if (body_expected) {
             body_buffer_ = common::writer(common::byte_storage_options{
-                .spill_threshold = 65535,  // 64 KiB!
+                .spill_threshold =
+                    context_.policies.request_body_spill_threshold,
                 .spill_dir = {},
             });
             if (context_.connection.chunked) {

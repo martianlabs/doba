@@ -97,7 +97,9 @@ class tls_session {
     }
     BIO* internal = nullptr;
     BIO* network = nullptr;
-    if (BIO_new_bio_pair(&internal, send_capacity, &network,
+    const std::size_t bio_capacity =
+        (std::min)(send_capacity, std::size_t{17 * 1024});
+    if (BIO_new_bio_pair(&internal, bio_capacity, &network,
                          17 * 1024) != 1) {
       throw std::runtime_error("TLS buffers could not be created!");
     }
@@ -216,6 +218,24 @@ class tls_session {
       phase_ = phase::failed;
     }
     return drained;
+  }
+  // +=========================================================================+
+  // | [>] output_bytes                                             ( public ) |
+  // +=========================================================================+
+  std::span<char> output_bytes() {
+    std::lock_guard lock(mutex_);
+    char* bytes = nullptr;
+    const int size = BIO_nread0(network_.get(), &bytes);
+    return size > 0 ? std::span(bytes, static_cast<std::size_t>(size))
+                    : std::span<char>{};
+  }
+  // +=========================================================================+
+  // | [>] output_sent                                              ( public ) |
+  // +=========================================================================+
+  void output_sent(std::size_t size) {
+    std::lock_guard lock(mutex_);
+    char* bytes = nullptr;
+    BIO_nread(network_.get(), &bytes, static_cast<int>(size));
   }
   // +=========================================================================+
   // | [>] pending                                                  ( public ) |

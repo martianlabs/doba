@@ -41,6 +41,7 @@ DOBA_TEST("defaults are unlimited and allow supported features") {
   DOBA_EXPECT_EQUAL(value.max_header_section_size, 0);
   DOBA_EXPECT(value.allow_chunked);
   DOBA_EXPECT(value.allow_upgrade);
+  DOBA_EXPECT_EQUAL(value.request_body_spill_threshold, 65535);
 }
 // +===========================================================================+
 // | [>] fields retain configured boundaries and switches        ( test-case ) |
@@ -52,7 +53,8 @@ DOBA_TEST("fields retain configured boundaries and switches") {
                        .max_uri_length = 4,
                        .max_header_section_size = 5,
                        .allow_chunked = false,
-                       .allow_upgrade = false};
+                       .allow_upgrade = false,
+                       .request_body_spill_threshold = 0};
   DOBA_EXPECT_EQUAL(value.max_content_length, 1);
   DOBA_EXPECT_EQUAL(value.max_forwarding_hops, 2);
   DOBA_EXPECT_EQUAL(value.max_transfer_codings, 3);
@@ -60,4 +62,5 @@ DOBA_TEST("fields retain configured boundaries and switches") {
   DOBA_EXPECT_EQUAL(value.max_header_section_size, 5);
   DOBA_EXPECT(!value.allow_chunked);
   DOBA_EXPECT(!value.allow_upgrade);
+  DOBA_EXPECT_EQUAL(value.request_body_spill_threshold, 0);
 }
