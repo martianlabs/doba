@@ -17,7 +17,7 @@ mind their own business. HTTP/1.1 comes first; the architecture leaves room
 for more.
 
 **Native IOCP on Windows. Native epoll on Linux.**
-No external libraries to chase.
+The TCP transport needs no external libraries; optional TLS uses OpenSSL.
 
 [Try the examples](examples/README.md) /
 [Peek under the hood](docs/ARCHITECTURE.md)
@@ -147,6 +147,10 @@ find_package(doba CONFIG REQUIRED)
 target_link_libraries(application PRIVATE martianlabs::doba)
 ```
 
+For TLS, configure with `-DDOBA_ENABLE_TLS=ON` and link
+`martianlabs::doba_tls`. OpenSSL is required for this optional transport.
+See the [HTTPS example](examples/http/v11/https_hello_world/README.md).
+
 Set `CMAKE_PREFIX_PATH` to the installation prefix when it is not in a
 standard system location. The exported target provides the include directory,
 C++20 requirement, and system threading dependency.
@@ -170,8 +174,8 @@ We like fast code. We also like sleeping at night. HTTP/1.1 parsing and framing
 follow RFC rules; CI checks GCC, Clang, and MSVC builds, strict warnings, and
 ASan, UBSan, and TSan runs.
 
-**We're working toward 0.1.** TLS and compression aren't in the first release,
-and operational hardening is still in progress.
+**We're working toward 0.1.** TLS is available as an optional transport;
+compression and operational hardening are still in progress.
 Here's [what's left to do](docs/BACKLOG.md).
 
 ---

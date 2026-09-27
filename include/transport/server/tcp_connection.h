@@ -83,8 +83,8 @@ struct tcp_connection {
     return {output.buffer.data() + output.offset,
             output.buffer.size() - output.offset};
   }
-  void output_sent(output_queue& output, std::size_t size) {
-    output.offset += size;
+  void output_sent(output_queue& output, std::size_t sent) {
+    output.offset += sent;
   }
   bool output_pending(const output_queue& output) const {
     return output.queued() || output.offset != output.buffer.size();

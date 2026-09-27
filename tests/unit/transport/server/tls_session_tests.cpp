@@ -180,6 +180,11 @@ DOBA_TEST("tls context rejects a mismatched private key") {
 DOBA_TEST("tls session negotiates fragmented input") {
   tls_session server(make_tls_context(server_policies()), 32768);
   test_client client;
+  std::array<char, 1> bytes;
+  DOBA_EXPECT_EQUAL(server.read(bytes).state,
+                    tls_session::status::need_input);
+  DOBA_EXPECT_EQUAL(server.write(std::span("x", 1)).state,
+                    tls_session::status::need_input);
   DOBA_EXPECT_EQUAL(server.handshake(), tls_session::status::need_input);
   const int value = SSL_do_handshake(client.ssl.get());
   DOBA_EXPECT_EQUAL(SSL_get_error(client.ssl.get(), value),
@@ -190,6 +195,19 @@ DOBA_TEST("tls session negotiates fragmented input") {
   DOBA_EXPECT(negotiate(server, client, 7));
   DOBA_EXPECT(server.established());
   DOBA_EXPECT(!server.failed());
+}
+
+// +===========================================================================+
+// | [>] tls session rejects a zero send capacity                ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tls session rejects a zero send capacity") {
+  bool rejected = false;
+  try {
+    tls_session server(make_tls_context(server_policies()), 0);
+  } catch (const std::runtime_error&) {
+    rejected = true;
+  }
+  DOBA_EXPECT(rejected);
 }
 
 // +===========================================================================+
@@ -231,13 +249,25 @@ DOBA_TEST("tls session consumes output in place") {
   const auto first = server.output_bytes();
   DOBA_EXPECT_EQUAL(first.size(), pending);
   DOBA_EXPECT(first.size() > 1);
+  std::size_t written = 0;
+  DOBA_EXPECT(BIO_write_ex(client.network.get(), first.data(), 1,
+                           &written) == 1);
+  DOBA_EXPECT_EQUAL(written, 1);
   server.output_sent(1);
   DOBA_EXPECT_EQUAL(server.pending(), pending - 1);
   const auto rest = server.output_bytes();
   DOBA_EXPECT_EQUAL(rest.data(), first.data() + 1);
   DOBA_EXPECT_EQUAL(rest.size(), pending - 1);
+  DOBA_EXPECT(BIO_write_ex(client.network.get(), rest.data(), rest.size(),
+                           &written) == 1);
+  DOBA_EXPECT_EQUAL(written, rest.size());
   server.output_sent(rest.size());
   DOBA_EXPECT_EQUAL(server.pending(), 0);
+  std::array<char, 32> bytes;
+  std::size_t received = 0;
+  DOBA_EXPECT(SSL_read_ex(client.ssl.get(), bytes.data(), bytes.size(),
+                          &received) == 1);
+  DOBA_EXPECT_EQUAL(std::string(bytes.data(), received), "response");
 }
 
 // +===========================================================================+
@@ -254,6 +284,49 @@ DOBA_TEST("tls session bounds encrypted input") {
 }
 
 // +===========================================================================+
+// | [>] tls session resumes after its encrypted input fills     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tls session resumes after its encrypted input fills") {
+  tls_session server(make_tls_context(server_policies()), 32768);
+  test_client client;
+  DOBA_EXPECT(negotiate(server, client, 1024));
+  const std::string body(16 * 1024, 'x');
+  const std::string last(16 * 1024, 'y');
+  std::size_t written = 0;
+  DOBA_EXPECT(SSL_write_ex(client.ssl.get(), body.data(), body.size(),
+                           &written) == 1);
+  DOBA_EXPECT_EQUAL(written, body.size());
+  std::string encrypted(BIO_ctrl_pending(client.network.get()), '\0');
+  DOBA_EXPECT(BIO_read_ex(client.network.get(), encrypted.data(),
+                          encrypted.size(), &written) == 1);
+  DOBA_EXPECT_EQUAL(written, encrypted.size());
+  DOBA_EXPECT(SSL_write_ex(client.ssl.get(), last.data(), last.size(),
+                           &written) == 1);
+  DOBA_EXPECT_EQUAL(written, last.size());
+  std::string encrypted_next(BIO_ctrl_pending(client.network.get()), '\0');
+  DOBA_EXPECT(BIO_read_ex(client.network.get(), encrypted_next.data(),
+                          encrypted_next.size(), &written) == 1);
+  DOBA_EXPECT_EQUAL(written, encrypted_next.size());
+  encrypted += encrypted_next;
+  const std::size_t first = server.receive(encrypted);
+  DOBA_EXPECT(first > 0);
+  DOBA_EXPECT(first < encrypted.size());
+  DOBA_EXPECT_EQUAL(server.receive(std::span(encrypted).subspan(first)), 0);
+  std::string plaintext(body.size(), '\0');
+  const auto input = server.read(plaintext);
+  DOBA_EXPECT_EQUAL(input.state, tls_session::status::ready);
+  DOBA_EXPECT_EQUAL(input.size, body.size());
+  DOBA_EXPECT_EQUAL(plaintext, body);
+  DOBA_EXPECT_EQUAL(server.receive(std::span(encrypted).subspan(first)),
+                    encrypted.size() - first);
+  const auto next = server.read(plaintext);
+  DOBA_EXPECT_EQUAL(next.state, tls_session::status::ready);
+  DOBA_EXPECT_EQUAL(next.size, last.size());
+  DOBA_EXPECT_EQUAL(plaintext, last);
+  DOBA_EXPECT(!server.failed());
+}
+
+// +===========================================================================+
 // | [>] tls session bounds encrypted output                     ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("tls session bounds encrypted output") {
@@ -264,9 +337,11 @@ DOBA_TEST("tls session bounds encrypted output") {
   DOBA_EXPECT_EQUAL(server.read(bytes).state,
                     tls_session::status::need_input);
   bool blocked = false;
+  std::size_t sent = 0;
   for (int step = 0; step < 16; ++step) {
     const auto result = server.write(bytes);
     DOBA_EXPECT(result.state != tls_session::status::failed);
+    sent += result.size;
     DOBA_EXPECT(server.pending() <= 4096);
     if (result.state == tls_session::status::need_output) {
       blocked = true;
@@ -275,7 +350,31 @@ DOBA_TEST("tls session bounds encrypted output") {
   }
   DOBA_EXPECT(blocked);
   DOBA_EXPECT(exchange(server, client, 1024));
-  DOBA_EXPECT_EQUAL(server.write(bytes).state, tls_session::status::ready);
+  std::string received;
+  for (int step = 0; step < 16; ++step) {
+    std::size_t size = 0;
+    const int value = SSL_read_ex(client.ssl.get(), bytes.data(),
+                                  bytes.size(), &size);
+    if (value == 1) {
+      received.append(bytes.data(), size);
+      continue;
+    }
+    DOBA_EXPECT_EQUAL(SSL_get_error(client.ssl.get(), value),
+                      SSL_ERROR_WANT_READ);
+    break;
+  }
+  DOBA_EXPECT_EQUAL(received, std::string(sent, '\0'));
+  const auto retry = server.write(bytes);
+  DOBA_EXPECT_EQUAL(retry.state, tls_session::status::ready);
+  DOBA_EXPECT(retry.size > 0);
+  DOBA_EXPECT(retry.size <= bytes.size());
+  DOBA_EXPECT(exchange(server, client, 1024));
+  std::size_t size = 0;
+  DOBA_EXPECT(SSL_read_ex(client.ssl.get(), bytes.data(),
+                          bytes.size(), &size) == 1);
+  DOBA_EXPECT_EQUAL(size, retry.size);
+  DOBA_EXPECT_EQUAL(std::string(bytes.data(), size),
+                    std::string(retry.size, '\0'));
 }
 
 // +===========================================================================+
@@ -386,6 +485,11 @@ DOBA_TEST("tls session rejects invalid negotiation") {
   DOBA_EXPECT_EQUAL(server.handshake(), tls_session::status::failed);
   DOBA_EXPECT(server.failed());
   DOBA_EXPECT_EQUAL(server.handshake(), tls_session::status::failed);
+  std::array<char, 1> bytes;
+  DOBA_EXPECT_EQUAL(server.read(bytes).state,
+                    tls_session::status::failed);
+  DOBA_EXPECT_EQUAL(server.write(std::span("x", 1)).state,
+                    tls_session::status::failed);
 }
 
 #endif

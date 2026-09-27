@@ -1,9 +1,10 @@
 # HTTP/1.1 examples
 
 Build the project from the repository root as described in the
-[examples index](../../README.md). Every HTTP server listens on
-`0.0.0.0:8080` (accessible through `localhost:8080`); build the target named by its directory, run that executable,
-one server at a time, and stop it with Ctrl+C.
+[examples index](../../README.md). The TCP examples listen on
+`0.0.0.0:8080`; the TLS example listens on `0.0.0.0:8443`. Build the target
+named by its directory, run that executable, one server at a time, and stop it
+with Ctrl+C.
 
 | Area | Examples |
 | --- | --- |
@@ -14,6 +15,7 @@ one server at a time, and stop it with Ctrl+C.
 | Server behavior | `head_requests`, `automatic_not_found`, `method_not_allowed`, `options_asterisk`, `connection_close`, `automatic_date`, `request_rejections` |
 | Controllers | `controllers` |
 | Static files | `static_file_server` |
+| TLS | `https_hello_world` |
 
 Each example README contains a `curl` command and its observable result.
 
@@ -25,3 +27,5 @@ http_server.start();
 ```
 
 Engine policies are optional and follow the transport policies.
+The [TLS example](https_hello_world/README.md) uses `DOBA_ENABLE_TLS=ON` and
+requires an OpenSSL certificate and private key.

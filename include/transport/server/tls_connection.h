@@ -132,8 +132,8 @@ struct tls_connection {
   // +=========================================================================+
   // | [>] output_sent                                              ( public ) |
   // +=========================================================================+
-  void output_sent(output_queue&, std::size_t size) {
-    session_.output_sent(size);
+  void output_sent(output_queue&, std::size_t sent) {
+    session_.output_sent(sent);
   }
   // +=========================================================================+
   // | [>] output_pending                                           ( public ) |

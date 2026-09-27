@@ -25,7 +25,7 @@ The adapter listens on port 8080 for HTTP/1.1 and port 8081 for HTTP/1.1 over
 TLS. It implements `GET /baseline11`, `POST /baseline11`, `GET /json/:count`,
 `GET /pipeline`, `GET /static/*` and `POST /echo`. Its `meta.json` enables
 `baseline`, `limited-conn`, `json-comp`, `json-tls`, `latency-1m`,
-`latency-10k`, `pipelined`, `8gbit` and `static-tls`.
+`latency-10k`, `latency-500k-8cpu`, `pipelined`, `8gbit` and `static-tls`.
 
 Build and start the submission container:
 

@@ -22,31 +22,37 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <filesystem>
+#include <iostream>
 
+#include "common/signaler.h"
 #include "protocol/http/v11/server.h"
 #include "transport/server/tls.h"
 
 namespace http = martianlabs::doba::protocol::http;
-namespace v11 = http::v11;
 namespace transport = martianlabs::doba::transport::server;
-using router_type = http::router<v11::request, v11::response>;
-using engine_type = v11::engine<v11::request, v11::response, router_type>;
-using tls_server = v11::server<v11::request, v11::response, router_type,
-                               engine_type, transport::tls>;
+using namespace martianlabs::doba::common;
+using namespace martianlabs::doba::protocol::http::v11;
 
-int main() {
-  SSL_CTX* context = SSL_CTX_new(TLS_server_method());
-  if (!context) return 1;
-  SSL_CTX_free(context);
-  const auto fixtures = std::filesystem::path(__FILE__).parent_path() /
-      "../../../unit/transport/server/fixtures";
+int main(int argc, char* argv[]) {
+  if (argc != 3) {
+    std::cerr << "Usage: https_hello_world <certificate> <private-key>\n";
+    return 1;
+  }
   transport::tls_policies configuration;
-  configuration.certificate_file = (fixtures / "server.crt").string();
-  configuration.private_key_file = (fixtures / "server.key").string();
-  tls_server value(configuration);
-  value.add_route("GET", "/", [](const v11::request&) {
-    return v11::response::ok_200();
+  configuration.ip = "0.0.0.0";
+  configuration.port = "8443";
+  configuration.certificate_file = argv[1];
+  configuration.private_key_file = argv[2];
+  server<request, response, http::router<request, response>,
+         engine<request, response>, transport::tls> http_server(
+             configuration);
+  http_server.add_route("GET", "/hello", [](const request&) {
+    response res = response::ok_200();
+    res.set_body("hello from doba");
+    return res;
   });
+  http_server.start();
+  signaler::wait();
+  http_server.stop();
   return 0;
 }

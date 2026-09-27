@@ -298,6 +298,13 @@ if(
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/hello_world
   )
+  if(
+    DOBA_ENABLE_TLS
+  )
+    add_subdirectory(
+      ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/https_hello_world
+    )
+  endif()
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/static_routes
   )

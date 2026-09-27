@@ -32,23 +32,31 @@ jobs:
             compiler: g++
             build_type: Debug
             build_dir: out/build/gcc-debug
+            tls: "OFF"
           - name: GCC Release
             compiler: g++
             build_type: Release
             build_dir: out/build/gcc-release
+            tls: "ON"
           - name: Clang Debug
             compiler: clang++
             build_type: Debug
             build_dir: out/build/clang-debug
+            tls: "OFF"
           - name: Clang Release
             compiler: clang++
             build_type: Release
             build_dir: out/build/clang-release
+            tls: "OFF"
 
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+
+      - name: Install OpenSSL
+        if: matrix.tls == 'ON'
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
 
       - name: Configure
         run: >-
@@ -56,6 +64,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
           -DDOBA_ENABLE_STRICT_WARNINGS=ON
+          -DDOBA_ENABLE_TLS=${{ matrix.tls }}
 
       - name: Build
         run: cmake --build ${{ matrix.build_dir }}
@@ -76,10 +85,15 @@ jobs:
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_CXX_COMPILER=g++
           -DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/gcc-release
+          -DDOBA_PACKAGE_USE_TLS=ON
 
       - name: Build package consumer (Debug)
         if: matrix.name == 'GCC Release'
         run: cmake --build out/build/package-consumer-debug
+
+      - name: Run package TLS consumer (Debug)
+        if: matrix.name == 'GCC Release'
+        run: out/build/package-consumer-debug/doba_package_tls_consumer
 
       - name: Configure package consumer (Release)
         if: matrix.name == 'GCC Release'
@@ -88,10 +102,15 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_COMPILER=g++
           -DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/gcc-release
+          -DDOBA_PACKAGE_USE_TLS=ON
 
       - name: Build package consumer (Release)
         if: matrix.name == 'GCC Release'
         run: cmake --build out/build/package-consumer-release
+
+      - name: Run package TLS consumer (Release)
+        if: matrix.name == 'GCC Release'
+        run: out/build/package-consumer-release/doba_package_tls_consumer
 
       - name: Configure add_subdirectory consumer
         if: matrix.name == 'GCC Release'
@@ -101,10 +120,17 @@ jobs:
           -DCMAKE_CXX_COMPILER=g++
           -DDOBA_PACKAGE_USE_SOURCE=ON
           -DDOBA_SOURCE_DIR=${{ github.workspace }}
+          -DDOBA_ENABLE_TLS=ON
+          -DDOBA_PACKAGE_USE_TLS=ON
 
       - name: Build add_subdirectory consumer
         if: matrix.name == 'GCC Release'
         run: cmake --build out/build/add-subdirectory-consumer
+
+      - name: Run add_subdirectory TLS consumer
+        if: matrix.name == 'GCC Release'
+        run: >-
+          out/build/add-subdirectory-consumer/doba_package_tls_consumer
 
   windows:
     name: Windows (MSVC ${{ matrix.build_type }})
@@ -118,10 +144,12 @@ jobs:
             configure_preset: msvc-debug
             build_preset: build-debug
             build_dir: out/build/msvc-debug
+            tls: "OFF"
           - build_type: Release
             configure_preset: msvc-release
             build_preset: build-release
             build_dir: out/build/msvc-release
+            tls: "ON"
 
     steps:
       - uses: actions/checkout@v6
@@ -132,16 +160,72 @@ jobs:
         with:
           arch: x64
 
+      - name: Install OpenSSL
+        if: matrix.tls == 'ON'
+        run: vcpkg install openssl:x64-windows
+
       - name: Configure
+        if: matrix.tls == 'OFF'
         run: >-
           cmake --preset ${{ matrix.configure_preset }}
           -DDOBA_ENABLE_STRICT_WARNINGS=ON
+
+      - name: Configure TLS
+        if: matrix.tls == 'ON'
+        run: >-
+          cmake --preset ${{ matrix.configure_preset }}
+          -DDOBA_ENABLE_STRICT_WARNINGS=ON
+          -DDOBA_ENABLE_TLS=ON
+          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
 
       - name: Build
         run: cmake --build --preset ${{ matrix.build_preset }}
 
       - name: Test
         run: ctest --test-dir ${{ matrix.build_dir }} --output-on-failure
+
+      - name: Install TLS package
+        if: matrix.tls == 'ON'
+        run: >-
+          cmake --install ${{ matrix.build_dir }}
+          --prefix out/install/msvc-release
+
+      - name: Configure package TLS consumer
+        if: matrix.tls == 'ON'
+        run: >-
+          cmake -S tests/package -B out/build/package-consumer-tls -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DCMAKE_PREFIX_PATH="${{ github.workspace }}/out/install/msvc-release"
+          -DDOBA_PACKAGE_USE_TLS=ON
+
+      - name: Build package TLS consumer
+        if: matrix.tls == 'ON'
+        run: cmake --build out/build/package-consumer-tls
+
+      - name: Run package TLS consumer
+        if: matrix.tls == 'ON'
+        run: out/build/package-consumer-tls/doba_package_tls_consumer.exe
+
+      - name: Configure add_subdirectory TLS consumer
+        if: matrix.tls == 'ON'
+        run: >-
+          cmake -S tests/package -B out/build/add-subdirectory-tls -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DDOBA_PACKAGE_USE_SOURCE=ON
+          -DDOBA_SOURCE_DIR="${{ github.workspace }}"
+          -DDOBA_ENABLE_TLS=ON
+          -DDOBA_PACKAGE_USE_TLS=ON
+
+      - name: Build add_subdirectory TLS consumer
+        if: matrix.tls == 'ON'
+        run: cmake --build out/build/add-subdirectory-tls
+
+      - name: Run add_subdirectory TLS consumer
+        if: matrix.tls == 'ON'
+        run: >-
+          out/build/add-subdirectory-tls/doba_package_tls_consumer.exe
 
   sanitizer:
     name: Ubuntu (${{ matrix.name }})
