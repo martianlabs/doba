@@ -518,7 +518,7 @@ DOBA_TEST("HTTP/1.1 echoes raw bodies across the spill threshold") {
   });
   http_server.start();
   DOBA_EXPECT(client.connect(port));
-  for (std::size_t size : {131071, 131072, 131073}) {
+  for (std::size_t size : {16383, 16384, 16385}) {
     std::string payload(size, '\0');
     for (std::size_t i = 0; i < payload.size(); i++) {
       payload[i] = static_cast<char>((i * 47 + i / 127) % 256);
@@ -557,8 +557,8 @@ DOBA_TEST("HTTP/1.1 echoes chunked bodies across the spill threshold") {
   });
   http_server.start();
   DOBA_EXPECT(client.connect(port));
-  for (std::size_t size : {131071, 131072, 131073}) {
-    std::string payload(size - 14, '\0');
+  for (std::size_t size : {16383, 16384, 16385}) {
+    std::string payload(size - 13, '\0');
     for (std::size_t i = 0; i < payload.size(); i++) {
       payload[i] = static_cast<char>((i * 47 + i / 127) % 256);
     }

@@ -44,7 +44,7 @@ namespace martianlabs::doba::common {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct byte_storage_options {
-  static constexpr std::size_t kDefaultSpillThreshold = 128 * 1024;
+  static constexpr std::size_t kDefaultSpillThreshold = 16 * 1024;
   std::size_t spill_threshold = kDefaultSpillThreshold;
   std::string spill_dir;
 };

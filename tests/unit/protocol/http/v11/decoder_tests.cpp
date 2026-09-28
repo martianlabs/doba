@@ -2099,7 +2099,7 @@ DOBA_TEST("decoder accepts every target form byte by byte") {
 DOBA_TEST("decoder keeps raw body below spill threshold") {
   policies configuration;
   decoder_input value(configuration);
-  const std::string payload(70000, 'x');
+  const std::string payload(16000, 'x');
   const std::string source =
       "POST / HTTP/1.1\r\nHost: example.com\r\nContent-Length: " +
       std::to_string(payload.size()) + "\r\n\r\n" + payload;
@@ -2132,7 +2132,7 @@ DOBA_TEST("decoder keeps raw body below spill threshold") {
 // | [>] raw body spill boundaries                               ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("decoder preserves raw bodies across the spill threshold") {
-  for (std::size_t size : {131071, 131072, 131073}) {
+  for (std::size_t size : {16383, 16384, 16385}) {
     std::string payload(size, '\0');
     for (std::size_t i = 0; i < payload.size(); i++) {
       payload[i] = static_cast<char>((i * 43 + i / 251) % 256);
@@ -2181,8 +2181,8 @@ DOBA_TEST("decoder preserves raw bodies across the spill threshold") {
 // +===========================================================================+
 DOBA_TEST(
     "decoder preserves encoded chunked bodies across the spill threshold") {
-  for (std::size_t size : {131071, 131072, 131073}) {
-    std::string payload(size - 14, '\0');
+  for (std::size_t size : {16383, 16384, 16385}) {
+    std::string payload(size - 13, '\0');
     for (std::size_t i = 0; i < payload.size(); i++) {
       payload[i] = static_cast<char>((i * 43 + i / 251) % 256);
     }

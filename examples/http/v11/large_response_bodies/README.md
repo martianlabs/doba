@@ -2,7 +2,7 @@
 
 This example configures a raw body writer with a 1024-byte in-memory spill
 threshold, then writes an 8192-byte response.
-The 1024-byte threshold is specific to this example; the default is 128 KiB.
+The 1024-byte threshold is specific to this example; the default is 16 KiB.
 
 ## Route
 

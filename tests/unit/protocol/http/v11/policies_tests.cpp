@@ -38,9 +38,9 @@ DOBA_TEST("defaults are bounded and allow supported features") {
   DOBA_EXPECT_EQUAL(value.max_forwarding_hops, 32);
   DOBA_EXPECT_EQUAL(value.max_transfer_codings, 4);
   DOBA_EXPECT_EQUAL(policies::kMaxRequestHeadSizeInMemory, 8 * 1024);
-  DOBA_EXPECT_EQUAL(policies::kMaxRequestBodySizeInMemory, 128 * 1024);
+  DOBA_EXPECT_EQUAL(policies::kMaxRequestBodySizeInMemory, 16 * 1024);
   DOBA_EXPECT_EQUAL(policies::kMaxResponseHeadSizeInMemory, 8 * 1024);
-  DOBA_EXPECT_EQUAL(policies::kMaxResponseBodySizeInMemory, 128 * 1024);
+  DOBA_EXPECT_EQUAL(policies::kMaxResponseBodySizeInMemory, 16 * 1024);
   DOBA_EXPECT_EQUAL(policies::kMaxQueryParameters, 128);
   DOBA_EXPECT_EQUAL(policies::kMaxChunkedExtensionSize, 1024);
   DOBA_EXPECT_EQUAL(policies::kMaxChunkedTrailerSize, 4096);
