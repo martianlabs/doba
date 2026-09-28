@@ -41,7 +41,9 @@ using martianlabs::doba::protocol::http::v11::body::body_writer;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::protocol::http::v11::server;
-constexpr std::size_t max_response_body_size_in_memory = 2048;
+using martianlabs::doba::protocol::http::v11::policies;
+constexpr std::size_t max_response_body_size_in_memory =
+    policies::kMaxResponseBodySizeInMemory;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 using martianlabs::doba::tests::integration::wait_for_http_count;

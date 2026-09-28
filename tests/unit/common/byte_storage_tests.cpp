@@ -86,6 +86,30 @@ std::filesystem::path only_spill_file(const std::filesystem::path& directory) {
 }  // namespace
 
 // +===========================================================================+
+// | [>] default spill threshold and explicit disable            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("default spill threshold and explicit disable") {
+  spill_directory directory;
+  const std::string bytes(byte_storage_options::kDefaultSpillThreshold, 'x');
+  {
+    byte_storage storage(byte_storage_options{
+        .spill_dir = directory.path().string()});
+    DOBA_EXPECT(storage.write(bytes.data(), bytes.size()));
+    DOBA_EXPECT(only_spill_file(directory.path()).empty());
+    DOBA_EXPECT(storage.write("y", 1));
+    DOBA_EXPECT(!only_spill_file(directory.path()).empty());
+  }
+  DOBA_EXPECT(only_spill_file(directory.path()).empty());
+  {
+    byte_storage storage(byte_storage_options{
+        .spill_threshold = 0, .spill_dir = directory.path().string()});
+    DOBA_EXPECT(storage.write(bytes.data(), bytes.size()));
+    DOBA_EXPECT(storage.write("y", 1));
+    DOBA_EXPECT(only_spill_file(directory.path()).empty());
+  }
+}
+
+// +===========================================================================+
 // | [>] spilling preserves existing files                       ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("spilling preserves existing files") {

@@ -1761,6 +1761,8 @@ DOBA_TEST("decoder accepts valid Max-Forwards") {
                "OPTIONS * HTTP/1.1\r\n",
                "",
                "");
+  check_header("Max-Forwards", "33", true,
+               "OPTIONS * HTTP/1.1\r\n", "", "");
 }
 
 // +===========================================================================+
@@ -2092,11 +2094,10 @@ DOBA_TEST("decoder accepts every target form byte by byte") {
 }
 
 // +===========================================================================+
-// | [>] raw body remains in memory when spill is disabled      ( test-case ) |
+// | [>] raw body remains in memory below spill threshold       ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("decoder keeps raw body when spill is disabled") {
+DOBA_TEST("decoder keeps raw body below spill threshold") {
   policies configuration;
-  configuration.request_body_spill_threshold = 0;
   decoder_input value(configuration);
   const std::string payload(70000, 'x');
   const std::string source =
@@ -2131,7 +2132,7 @@ DOBA_TEST("decoder keeps raw body when spill is disabled") {
 // | [>] raw body spill boundaries                               ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("decoder preserves raw bodies across the spill threshold") {
-  for (std::size_t size : {65534, 65535, 65536}) {
+  for (std::size_t size : {131071, 131072, 131073}) {
     std::string payload(size, '\0');
     for (std::size_t i = 0; i < payload.size(); i++) {
       payload[i] = static_cast<char>((i * 43 + i / 251) % 256);
@@ -2180,8 +2181,8 @@ DOBA_TEST("decoder preserves raw bodies across the spill threshold") {
 // +===========================================================================+
 DOBA_TEST(
     "decoder preserves encoded chunked bodies across the spill threshold") {
-  for (std::size_t size : {65534, 65535, 65536}) {
-    std::string payload(size - 13, '\0');
+  for (std::size_t size : {131071, 131072, 131073}) {
+    std::string payload(size - 14, '\0');
     for (std::size_t i = 0; i < payload.size(); i++) {
       payload[i] = static_cast<char>((i * 43 + i / 251) % 256);
     }
@@ -2598,16 +2599,11 @@ DOBA_TEST("decoder limits interim to accepted incomplete bodies") {
 DOBA_TEST("decoder returns responses for rejection reasons") {
   martianlabs::doba::protocol::http::v11::policies configuration;
   configuration.max_content_length = 1;
-  configuration.max_uri_length = 8;
-  configuration.max_header_section_size = 128;
   configuration.allow_chunked = false;
   const std::vector<std::pair<std::string, std::string_view>> cases{
       {"GET / HTTP/1.1\r\nHost: a\r\nContent-Length: invalid\r\n\r\n", "400"},
       {"POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 2\r\n\r\n", "413"},
-      {"GET /123456789 HTTP/1.1\r\nHost: a\r\n\r\n", "414"},
       {"POST / HTTP/1.1\r\nHost: a\r\nExpect: unknown\r\n\r\n", "417"},
-      {"GET / HTTP/1.1\r\nHost: a\r\nX: " + std::string(140, 'x') +
-           "\r\n\r\n", "431"},
       {"POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n",
        "501"},
       {"GET / HTTP/1.2\r\nHost: a\r\n\r\n", "505"}};
@@ -2623,6 +2619,21 @@ DOBA_TEST("decoder returns responses for rejection reasons") {
     DOBA_EXPECT(bytes.starts_with("HTTP/1.1 " + std::string(status) + " "));
     DOBA_EXPECT(bytes.ends_with("\r\n\r\nInvalid request content!"));
     DOBA_EXPECT(bytes.find("Content-Length: 24\r\n") != std::string_view::npos);
+  }
+}
+
+// +===========================================================================+
+// | [>] target and header fit within receive capacity           ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder accepts target and headers within receive capacity") {
+  for (const std::string source : std::array<std::string, 2>{
+           "GET /123456789 HTTP/1.1\r\nHost: a\r\n\r\n",
+           "GET / HTTP/1.1\r\nHost: a\r\nX: " + std::string(140, 'x') +
+               "\r\n\r\n"}) {
+    decoder_input value;
+    DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
+    DOBA_EXPECT_EQUAL(value.decode().code,
+                      deserialization_status::kSucceeded);
   }
 }
 
@@ -2689,4 +2700,192 @@ DOBA_TEST("decoder retains HEAD while decoding body fragments") {
   output = result.response->serialize();
   DOBA_EXPECT(std::string_view(output->prefix.get(), output->prefix_size)
                   .ends_with("\r\n\r\nInvalid request content!"));
+}
+
+// +===========================================================================+
+// | [>] default Content-Length limit                           ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder enforces default Content-Length limit") {
+  for (const std::size_t size : {16 * 1024 * 1024,
+                                 16 * 1024 * 1024 + 1}) {
+    const std::string source =
+        "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: " +
+        std::to_string(size) + "\r\n\r\n";
+    decoder_input value;
+    DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
+    auto result = value.decode();
+    DOBA_EXPECT_EQUAL(
+        result.code, size == 16 * 1024 * 1024
+                         ? deserialization_status::kMoreBytesNeeded
+                         : deserialization_status::kInvalidSource);
+    if (size > 16 * 1024 * 1024) {
+      auto wire = result.response->serialize();
+      DOBA_EXPECT(std::string_view(wire->prefix.get(), wire->prefix_size)
+                      .starts_with("HTTP/1.1 413 "));
+    }
+  }
+}
+
+// +===========================================================================+
+// | [>] chunked payload limit across receives                   ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder limits chunked payload across receives") {
+  policies configuration;
+  configuration.max_content_length = 5;
+  const std::string head =
+      "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n";
+  for (const bool fragmented : {false, true}) {
+    decoder_input value(configuration);
+    if (fragmented) {
+      const std::string first = head + "3\r\nabc\r\n";
+      DOBA_EXPECT_EQUAL(accumulate(value, first), first.size());
+      DOBA_EXPECT_EQUAL(value.decode().code,
+                        deserialization_status::kMoreBytesNeeded);
+    }
+    const std::string rest = "3\r\ndef\r\n0\r\n\r\n";
+    const std::string input = fragmented ? rest : head + "3\r\nabc\r\n" + rest;
+    DOBA_EXPECT_EQUAL(accumulate(value, input), input.size());
+    auto result = value.decode();
+    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+    DOBA_EXPECT(result.response.has_value());
+    auto wire = result.response->serialize();
+    DOBA_EXPECT(std::string_view(wire->prefix.get(), wire->prefix_size)
+                    .starts_with("HTTP/1.1 413 "));
+  }
+  decoder_input allowed(configuration);
+  const std::string exact = head + "3\r\nabc\r\n2\r\nde\r\n0\r\n\r\n";
+  DOBA_EXPECT_EQUAL(accumulate(allowed, exact), exact.size());
+  DOBA_EXPECT_EQUAL(allowed.decode().code,
+                    deserialization_status::kSucceeded);
+}
+
+// +===========================================================================+
+// | [>] zero chunked payload limit accepts larger bodies        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder accepts chunked payload with zero length limit") {
+  policies configuration;
+  configuration.max_content_length = 0;
+  decoder_input value(configuration);
+  const std::string source =
+      "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n"
+      "3\r\nabc\r\n3\r\ndef\r\n0\r\n\r\n";
+  DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
+  auto result = value.decode();
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+  DOBA_EXPECT(result.request != nullptr);
+}
+
+// +===========================================================================+
+// | [>] default chunked payload limit across receives           ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder enforces default chunked payload limit") {
+  constexpr std::size_t limit = 16 * 1024 * 1024;
+  for (const std::size_t size : {limit, limit + 1}) {
+    const std::size_t first_chunk = limit / 2;
+    std::string source =
+        "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n"
+        "800000\r\n";
+    source.reserve(size + 128);
+    source.append(first_chunk, 'a');
+    source += "\r\n";
+    source += size == limit ? "800000\r\n" : "800001\r\n";
+    source.append(size - first_chunk, 'b');
+    source += "\r\n0\r\n\r\n";
+    decoder_input value;
+    bool finished = false;
+    for (std::size_t offset = 0; offset < source.size();) {
+      const std::size_t count =
+          std::min(std::size_t{4096}, source.size() - offset);
+      DOBA_EXPECT_EQUAL(accumulate(
+          value, std::string_view(source).substr(offset, count)), count);
+      offset += count;
+      auto result = value.decode();
+      if (result.code == deserialization_status::kSucceeded) {
+        DOBA_EXPECT_EQUAL(size, limit);
+        DOBA_EXPECT_EQUAL(offset, source.size());
+        DOBA_EXPECT(result.request != nullptr);
+        finished = true;
+        break;
+      }
+      if (result.code == deserialization_status::kInvalidSource) {
+        DOBA_EXPECT_EQUAL(size, limit + 1);
+        DOBA_EXPECT(result.response.has_value());
+        auto wire = result.response->serialize();
+        DOBA_EXPECT(std::string_view(wire->prefix.get(), wire->prefix_size)
+                        .starts_with("HTTP/1.1 413 "));
+        finished = true;
+        break;
+      }
+      DOBA_EXPECT_EQUAL(result.code,
+                        deserialization_status::kMoreBytesNeeded);
+    }
+    DOBA_EXPECT(finished);
+  }
+}
+
+// +===========================================================================+
+// | [>] transfer coding count spans field lines                 ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder counts transfer codings across field lines") {
+  const std::string head = "POST / HTTP/1.1\r\nHost: a\r\n";
+  for (const std::size_t count : {std::size_t{4}, std::size_t{5}}) {
+    std::string source = head;
+    for (std::size_t i = 1; i < count; i++) {
+      source += "Transfer-Encoding: gzip\r\n";
+    }
+    source += "Transfer-Encoding: chunked\r\n\r\n0\r\n\r\n";
+    decoder_input value;
+    DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
+    DOBA_EXPECT_EQUAL(value.decode().code,
+                      count == 4 ? deserialization_status::kSucceeded
+                                 : deserialization_status::kInvalidSource);
+  }
+}
+
+// +===========================================================================+
+// | [>] forwarding hop default boundary                        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder enforces default forwarding hop limit") {
+  for (const std::size_t count : {std::size_t{32}, std::size_t{33}}) {
+    std::string source = "GET / HTTP/1.1\r\nHost: a\r\nVia: ";
+    for (std::size_t i = 0; i < count; i++) {
+      if (i) source += ", ";
+      source += "1.1 proxy";
+    }
+    source += "\r\n\r\n";
+    decoder_input value;
+    DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
+    DOBA_EXPECT_EQUAL(value.decode().code,
+                      count == 32 ? deserialization_status::kSucceeded
+                                  : deserialization_status::kInvalidSource);
+  }
+}
+
+// +===========================================================================+
+// | [>] forwarding hops accumulate across header fields         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder counts forwarding hops across header fields") {
+  for (const std::size_t count : {std::size_t{32}, std::size_t{33}}) {
+    std::string source = "GET / HTTP/1.1\r\nHost: a\r\nVia: ";
+    for (std::size_t i = 0; i < 10; i++) {
+      if (i) source += ", ";
+      source += "1.1 proxy";
+    }
+    source += "\r\nForwarded: ";
+    for (std::size_t i = 0; i < 11; i++) {
+      if (i) source += ", ";
+      source += "for=192.0.2.43";
+    }
+    source += "\r\nX-Forwarded-For: ";
+    for (std::size_t i = 0; i < count - 21; i++) {
+      if (i) source += ", ";
+      source += "unknown";
+    }
+    source += "\r\n\r\n";
+    decoder_input value;
+    DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
+    DOBA_EXPECT_EQUAL(value.decode().code,
+                      count == 32 ? deserialization_status::kSucceeded
+                                  : deserialization_status::kInvalidSource);
+  }
 }

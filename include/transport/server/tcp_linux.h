@@ -564,7 +564,7 @@ struct worker {
   void register_context(int socket) {
     auto ctx = std::make_shared<context<ENty, CNty>>(
         socket, configuration_.recv_buffer_size,
-        configuration_.send_buffer_size, create_engine_, on_connection_,
+        configuration_.max_send_buffer_size, create_engine_, on_connection_,
         on_disconnection_,
         shared_state_);
     auto ctx_ptr = ctx.get();
@@ -716,7 +716,7 @@ class basic_transport {
             static_cast<std::size_t>(std::numeric_limits<ssize_t>::max())) {
       throw std::runtime_error("Invalid receive buffer size!");
     }
-    if (!configuration_.send_buffer_size) {
+    if (!configuration_.max_send_buffer_size) {
       throw std::runtime_error("Invalid send buffer size!");
     }
     if (configuration_.listen_backlog < 0) {

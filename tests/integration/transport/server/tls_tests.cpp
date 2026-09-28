@@ -466,7 +466,7 @@ DOBA_TEST("tls streams a body beyond the send buffer") {
     return engine;
   };
   auto configuration = server_policies(port);
-  configuration.send_buffer_size = 4096;
+  configuration.max_send_buffer_size = 4096;
   tr::tls<byte_engine, decltype(factory)> server(
       configuration, factory);
   server.set_on_connection([]() {});
@@ -725,7 +725,7 @@ DOBA_TEST("tls stop drains queued output") {
     return engine;
   };
   auto configuration = server_policies(port);
-  configuration.send_buffer_size = 65536;
+  configuration.max_send_buffer_size = 65536;
   tr::tls<byte_engine, decltype(factory)> server(
       configuration, factory);
   std::atomic<int> connected{0};

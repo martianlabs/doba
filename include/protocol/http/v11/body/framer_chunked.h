@@ -34,6 +34,7 @@
 #include "common/writer.h"
 #include "protocol/http/common/helpers.h"
 #include "protocol/http/v11/body/framer_state.h"
+#include "protocol/http/v11/policies.h"
 
 namespace martianlabs::doba::protocol::http::v11::body {
 // /////////////////////////////////////////////////////////////////////////////
@@ -86,12 +87,16 @@ class framer_chunked {
   // +=========================================================================+
   // | [>] CONSTANTs                                                ( public ) |
   // +=========================================================================+
-  static constexpr std::size_t kMaxChunkedExtensionSize = 1024;
-  static constexpr std::size_t kMaxChunkedTrailerSize = 4096;
+  static constexpr std::size_t kMaxChunkedExtensionSize =
+      policies::kMaxChunkedExtensionSize;
+  static constexpr std::size_t kMaxChunkedTrailerSize =
+      policies::kMaxChunkedTrailerSize;
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
   // +=========================================================================+
   framer_chunked() = default;
+  explicit framer_chunked(std::size_t payload_limit)
+      : payload_limit_(payload_limit) {}
   // +=========================================================================+
   // | [>] write                                                    ( public ) |
   // +-------------------------------------------------------------------------+
@@ -298,11 +303,17 @@ class framer_chunked {
         // ---------------------------------------------------------------------
         case state::data: {
           std::size_t to_take = std::min(chunk_remaining_, input.size() - i);
+          if (payload_limit_ != 0 &&
+              (payload_size_ > payload_limit_ ||
+               to_take > payload_limit_ - payload_size_)) {
+            return fail(result, framer_error::chunked_size_limit_exceeded);
+          }
           if (!dst.write(input.subspan(i, to_take))) {
             // An I/O error occurred while writing to the destination!
             return fail(result, framer_error::io_error);
           }
           result.consumed += to_take;
+          payload_size_ += to_take;
           i += to_take;
           chunk_remaining_ -= to_take;
           if (chunk_remaining_ == 0) {
@@ -431,6 +442,8 @@ class framer_chunked {
   state state_{state::chunk_size};
   framer_error error_{framer_error::none};
   std::size_t chunk_remaining_{0};
+  std::size_t payload_size_{0};
+  std::size_t payload_limit_{0};
   std::size_t extension_size_{0};
   std::size_t trailer_size_{0};
   bool chunk_size_started_{false};

@@ -106,7 +106,6 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   policies http_configuration;
-  http_configuration.request_body_spill_threshold = 0;
   server http_server({.ip = "0.0.0.0", .port = "8080"},
                      http_configuration);
   // Parse every baseline value; HttpArena randomizes them to detect shortcuts.

@@ -34,9 +34,13 @@
 namespace {
 using martianlabs::doba::common::reader;
 using martianlabs::doba::protocol::http::v11::response;
+using martianlabs::doba::protocol::http::v11::policies;
 using martianlabs::doba::protocol::http::v11::body::body_writer;
-constexpr std::size_t max_response_size_in_memory = 4096;
-constexpr std::size_t max_response_body_size_in_memory = 2048;
+constexpr std::size_t max_response_size_in_memory =
+    policies::kMaxResponseHeadSizeInMemory +
+    policies::kMaxResponseBodySizeInMemory;
+constexpr std::size_t max_response_body_size_in_memory =
+    policies::kMaxResponseBodySizeInMemory;
 
 std::string read_source(reader& source) {
   std::string output;

@@ -82,11 +82,8 @@ class max_forwards {
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
   // +=========================================================================+
-  static constexpr verdict interpret(const std::size_t& max_fwd,
-                                     v11::connection&, const policies& pol) {
-    if (pol.max_forwarding_hops != 0 && max_fwd > pol.max_forwarding_hops) {
-      return verdict::kReject;
-    }
+  static constexpr verdict interpret(const std::size_t&,
+                                     v11::connection&, const policies&) {
     return verdict::kAccept;
   }
 };

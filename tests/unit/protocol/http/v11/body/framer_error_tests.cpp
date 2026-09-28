@@ -49,6 +49,7 @@ DOBA_TEST("error values preserve the public contract") {
       framer_error::raw_size_limit_exceeded,
       framer_error::chunk_extension_size_limit_exceeded,
       framer_error::trailer_size_limit_exceeded,
+      framer_error::chunked_size_limit_exceeded,
   };
   for (std::size_t i = 0; i < std::size(values); i++) {
     DOBA_EXPECT_EQUAL(static_cast<std::size_t>(values[i]), i);

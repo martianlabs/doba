@@ -459,12 +459,13 @@ DOBA_TEST("engine rejects invalid and policy limited requests") {
   DOBA_EXPECT_EQUAL(invalid.blocks.size(), 1);
   DOBA_EXPECT(invalid.wire.starts_with("HTTP/1.1 400 Bad Request\r\n"));
   policies configuration;
-  configuration.max_uri_length = 1;
+  configuration.max_content_length = 1;
   connection limited(routes, configuration);
   limited.receive("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  limited.receive("GET /long HTTP/1.1\r\nHost: localhost\r\n\r\n");
+  limited.receive("POST / HTTP/1.1\r\nHost: localhost\r\n"
+                  "Content-Length: 2\r\n\r\n");
   DOBA_EXPECT_EQUAL(limited.closes, 1);
-  DOBA_EXPECT(limited.wire.find("HTTP/1.1 414 ") != std::string::npos);
+  DOBA_EXPECT(limited.wire.find("HTTP/1.1 413 ") != std::string::npos);
   DOBA_EXPECT_EQUAL(calls, 1);
 }
 // +===========================================================================+
@@ -472,7 +473,7 @@ DOBA_TEST("engine rejects invalid and policy limited requests") {
 // +===========================================================================+
 DOBA_TEST("engine transfers unread sources") {
   router<request, response> routes;
-  const std::string body(17000, 'r');
+  const std::string body(131073, 'r');
   routes.add("GET", "/", [&body](const request&) {
     return make_response(body);
   });

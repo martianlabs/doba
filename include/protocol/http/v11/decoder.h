@@ -293,11 +293,6 @@ class decoder {
       }
     }
     if (status != deserialization_status::kSucceeded) return status;
-    if (context_.policies.max_uri_length &&
-        bytes_used > context_.policies.max_uri_length) {
-      context_.rejection_reason = rejection_reason::kUriTooLong;
-      return deserialization_status::kInvalidSource;
-    }
     // Validate that every "%HH" triplet in the path decodes to a non-NUL
     // byte. The decoder never mutates the transport's source buffer; the
     // actual decoding into the resulting path happens later, once ownership
@@ -369,13 +364,7 @@ class decoder {
     // +-----------------+-----------------------------------------------------+
     bool field_name_decoded = false;
     std::size_t fn_start = i;
-    const std::size_t headers_start = i;
     while (i < sv.size()) {
-      if (context_.policies.max_header_section_size &&
-          (i - headers_start) > context_.policies.max_header_section_size) {
-        context_.rejection_reason = rejection_reason::kHeaderFieldsTooLarge;
-        return deserialization_status::kInvalidSource;
-      }
       if (!field_name_decoded) {
         if (sv[i] == '\r') {
           if (i != fn_start) return deserialization_status::kInvalidSource;
@@ -407,13 +396,10 @@ class decoder {
               context_.connection.chunked ||
               (context_.has_content_length && context_.content_length > 0);
           if (body_expected) {
-            body_buffer_ = common::writer(common::byte_storage_options{
-                .spill_threshold =
-                    context_.policies.request_body_spill_threshold,
-                .spill_dir = {},
-            });
+            body_buffer_ = common::writer();
             if (context_.connection.chunked) {
-              body_framer_ = body::framer_chunked();
+              body_framer_ =
+                  body::framer_chunked(context_.policies.max_content_length);
             } else {
               body_framer_ = body::framer_raw(context_.content_length);
             }
@@ -488,6 +474,9 @@ class decoder {
         },
         *body_framer_);
     if (state.has_error || state.consumed > source.size()) {
+      if (state.error == body::framer_error::chunked_size_limit_exceeded) {
+        context_.rejection_reason = rejection_reason::kPayloadTooLarge;
+      }
       return deserialization_status::kInvalidSource;
     }
     source.remove_prefix(state.consumed);
@@ -502,10 +491,10 @@ class decoder {
     // pairs and set it in the request.
     std::vector<query_parameter_view> query_parameters;
     if (!query_.empty()) {
-      std::array<std::string_view, kMaxQueryParameters + 1> keys;
-      std::array<std::string_view, kMaxQueryParameters + 1> values;
+      std::array<std::string_view, policies::kMaxQueryParameters + 1> keys;
+      std::array<std::string_view, policies::kMaxQueryParameters + 1> values;
       std::size_t qc = helpers::split_query_parameters(query_, keys, values);
-      if (qc > kMaxQueryParameters) return false;
+      if (qc > policies::kMaxQueryParameters) return false;
       query_parameters.reserve(qc);
       for (std::size_t q = 0; q < qc; q++) {
         query_parameters.emplace_back(keys[q], values[q]);
@@ -847,7 +836,6 @@ class decoder {
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
   // +=========================================================================+
-  static constexpr std::size_t kMaxQueryParameters = 128;
   static const inline common::hash_map<std::string_view, header_dispatch>
       header_dispatchers_ = {
           {"Host",  // check & interpret!

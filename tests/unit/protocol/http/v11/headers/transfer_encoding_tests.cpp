@@ -166,3 +166,34 @@ DOBA_TEST("interpret checks the parsed coding count before appending") {
     DOBA_EXPECT_EQUAL(state.transfer_codings.size(), limit == 1 ? 0 : 2);
   }
 }
+// +===========================================================================+
+// | [>] interpret limits codings across repeated fields         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("interpret limits codings across repeated fields") {
+  policies policy;
+  policy.max_transfer_codings = 4;
+  parsed_parameter_list first;
+  parsed_parameter_list exact;
+  parsed_parameter_list excess;
+  DOBA_EXPECT(transfer_encoding::check("gzip, deflate", first));
+  DOBA_EXPECT(transfer_encoding::check("compress, chunked", exact));
+  DOBA_EXPECT(transfer_encoding::check("compress, identity, chunked", excess));
+
+  connection accepted;
+  DOBA_EXPECT_EQUAL(transfer_encoding::interpret(first, accepted, policy),
+                    verdict::kAccept);
+  DOBA_EXPECT_EQUAL(transfer_encoding::interpret(exact, accepted, policy),
+                    verdict::kAccept);
+  DOBA_EXPECT_EQUAL(accepted.transfer_codings.size(), 4);
+  DOBA_EXPECT(accepted.chunked);
+
+  connection rejected;
+  DOBA_EXPECT_EQUAL(transfer_encoding::interpret(first, rejected, policy),
+                    verdict::kAccept);
+  DOBA_EXPECT_EQUAL(transfer_encoding::interpret(excess, rejected, policy),
+                    verdict::kReject);
+  DOBA_EXPECT_EQUAL(rejected.transfer_codings.size(), 2);
+  DOBA_EXPECT_EQUAL(rejected.transfer_codings[0], "gzip");
+  DOBA_EXPECT_EQUAL(rejected.transfer_codings[1], "deflate");
+  DOBA_EXPECT(!rejected.chunked);
+}

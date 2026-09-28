@@ -243,6 +243,53 @@ DOBA_TEST("enforces extension and trailer size limits") {
   }
 }
 // +===========================================================================+
+// | [>] limits cumulative chunk data across writes              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("limits cumulative chunk data across writes") {
+  const std::string first = "3\r\nabc\r\n";
+  const std::string exact = "2\r\nde\r\n0\r\n\r\n";
+  const std::string excess = "3\r\ndef\r\n0\r\n\r\n";
+  for (const bool fragmented : {false, true}) {
+    framer_chunked value(5);
+    writer destination;
+    const auto initial = value.write(bytes(first), destination);
+    DOBA_EXPECT(!initial.has_error);
+    DOBA_EXPECT_EQUAL(initial.consumed, first.size());
+    if (fragmented) {
+      const auto partial = value.write(bytes("3\r\nd"), destination);
+      DOBA_EXPECT(!partial.has_error);
+      DOBA_EXPECT_EQUAL(partial.consumed, 4);
+    }
+    const auto rejected = value.write(
+        bytes(fragmented ? std::string_view("ef\r\n0\r\n\r\n")
+                         : std::string_view(excess)),
+        destination);
+    DOBA_EXPECT(rejected.has_error);
+    DOBA_EXPECT_EQUAL(rejected.error,
+                      framer_error::chunked_size_limit_exceeded);
+    const auto repeated = value.write(bytes(exact), destination);
+    DOBA_EXPECT(repeated.has_error);
+    DOBA_EXPECT_EQUAL(repeated.error,
+                      framer_error::chunked_size_limit_exceeded);
+    DOBA_EXPECT_EQUAL(repeated.consumed, 0);
+  }
+  framer_chunked limited(5);
+  writer exact_destination;
+  const auto accepted =
+      limited.write(bytes(first + exact), exact_destination);
+  DOBA_EXPECT(!accepted.has_error);
+  DOBA_EXPECT(accepted.complete);
+  DOBA_EXPECT_EQUAL(release(exact_destination), first + exact);
+
+  framer_chunked unlimited(0);
+  writer unlimited_destination;
+  const auto unrestricted =
+      unlimited.write(bytes(first + excess), unlimited_destination);
+  DOBA_EXPECT(!unrestricted.has_error);
+  DOBA_EXPECT(unrestricted.complete);
+  DOBA_EXPECT_EQUAL(release(unlimited_destination), first + excess);
+}
+// +===========================================================================+
 // | [>] destination errors are reported and latched             ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("destination errors are reported and latched") {

@@ -81,7 +81,9 @@ class transfer_encoding {
       const parsed_parameter_list& parameters_list, v11::connection& conn,
       const policies& pol) {
     if (pol.max_transfer_codings != 0 &&
-        parameters_list.elements.size() > pol.max_transfer_codings) {
+        (conn.transfer_codings.size() > pol.max_transfer_codings ||
+         parameters_list.elements.size() >
+             pol.max_transfer_codings - conn.transfer_codings.size())) {
       return verdict::kReject;
     }
     for (const std::string_view element : parameters_list.elements) {

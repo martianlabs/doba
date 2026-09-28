@@ -73,9 +73,9 @@ DOBA_TEST("check rejects invalid decimal values") {
   DOBA_EXPECT(!max_forwards::check(std::string_view{"1\0", 2}, parsed));
 }
 // +===========================================================================+
-// | [>] interpret applies forwarding limit                      ( test-case ) |
+// | [>] interpret preserves remaining forwarding budget         ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("interpret applies forwarding limit") {
+DOBA_TEST("interpret preserves remaining forwarding budget") {
   martianlabs::doba::protocol::http::v11::connection state;
   policies policy;
   DOBA_EXPECT_EQUAL(max_forwards::interpret(100, state, policy),
@@ -84,7 +84,7 @@ DOBA_TEST("interpret applies forwarding limit") {
   DOBA_EXPECT_EQUAL(max_forwards::interpret(10, state, policy),
                     verdict::kAccept);
   DOBA_EXPECT_EQUAL(max_forwards::interpret(11, state, policy),
-                    verdict::kReject);
+                    verdict::kAccept);
 }
 // +===========================================================================+
 // | [>] check preserves output at the decimal overflow boundary ( test-case ) |

@@ -37,7 +37,7 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // | Actively produced by these classes:                                       |
 // |   io_error, invalid_chunk_size, chunk_size_overflow, invalid_chunk_crlf,  |
 // |   invalid_trailer, chunk_extension_size_limit_exceeded,                   |
-// |   trailer_size_limit_exceeded.                                            |
+// |   trailer_size_limit_exceeded, chunked_size_limit_exceeded.               |
 // |                                                                           |
 // | Reserved (declared for API parity / future use, never produced here):     |
 // |   chunked_incomplete  - a body that never reaches its terminating CRLF    |
@@ -60,7 +60,8 @@ enum class framer_error : std::uint8_t {
   chunked_incomplete,
   raw_size_limit_exceeded,
   chunk_extension_size_limit_exceeded,
-  trailer_size_limit_exceeded
+  trailer_size_limit_exceeded,
+  chunked_size_limit_exceeded
 };
 }  // namespace martianlabs::doba::protocol::http::v11::body
 

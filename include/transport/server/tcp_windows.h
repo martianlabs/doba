@@ -573,7 +573,7 @@ class basic_transport {
     if (configuration_.worker_count > std::numeric_limits<DWORD>::max()) {
       throw std::runtime_error("Invalid worker count!");
     }
-    if (!configuration_.send_buffer_size) {
+    if (!configuration_.max_send_buffer_size) {
       throw std::runtime_error("Invalid send buffer size!");
     }
     if (configuration_.listen_backlog < 0) {
@@ -940,7 +940,7 @@ class basic_transport {
     try {
       ctx = std::make_shared<context<ENty, CNty>>(
           ova->socket, configuration_.recv_buffer_size,
-          configuration_.send_buffer_size, create_engine_, stopping_,
+          configuration_.max_send_buffer_size, create_engine_, stopping_,
           on_connection_, on_disconnection_,
           [this](context<ENty, CNty>* context) { retire_context(context); },
           shared_state_);

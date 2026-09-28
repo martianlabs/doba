@@ -35,6 +35,7 @@
 #include "platform.h"
 #include "protocol/http/common/helpers.h"
 #include "protocol/http/v11/body/writer.h"
+#include "protocol/http/v11/policies.h"
 #include "protocol/http/common/header_names.h"
 #include "protocol/serialization.h"
 #include "protocol/http/common/status_codes.h"
@@ -428,7 +429,7 @@ class response {
   response& set_body(std::string_view sv) {
     std::size_t body_size = sv.size();
     reset_body();
-    if (body_size <= kMaxResponseBodySizeInMemory) {
+    if (body_size <= policies::kMaxResponseBodySizeInMemory) {
       std::memcpy(&memory_[bdy_beg_], sv.data(), body_size);
       bdy_len_ = body_size;
       content_length_ = body_size;
@@ -708,8 +709,6 @@ class response {
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
   // +=========================================================================+
-  static constexpr std::size_t kMaxResponseSizeInMemory = 4096;
-  static constexpr std::size_t kMaxResponseBodySizeInMemory = 2048;
   static constexpr std::string_view kDatePrefix = "Date: ";
   static constexpr std::size_t kDateLength = 29;
   static constexpr std::size_t kDateLineLength =
@@ -850,7 +849,8 @@ class response {
   // +=========================================================================+
   response(std::string_view status_line, int status_code)
       : memory_(std::make_unique_for_overwrite<char[]>(
-            kMaxResponseSizeInMemory)),
+            policies::kMaxResponseHeadSizeInMemory +
+            policies::kMaxResponseBodySizeInMemory)),
         sln_len_(status_line.size()),
         status_code_(status_code) {
     if (sln_len_ > bdy_beg_) {
@@ -870,8 +870,7 @@ class response {
   std::unique_ptr<char[]> memory_;
   std::size_t sln_len_{0};
   std::size_t hdr_len_{0};
-  std::size_t bdy_beg_{kMaxResponseSizeInMemory -
-                       kMaxResponseBodySizeInMemory};
+  std::size_t bdy_beg_{policies::kMaxResponseHeadSizeInMemory};
   std::size_t bdy_len_{0};
   int status_code_{SC_200_OK};
   bool has_date_header_{false};
