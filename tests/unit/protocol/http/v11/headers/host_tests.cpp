@@ -161,3 +161,30 @@ DOBA_TEST("check rejects authority delimiters") {
     DOBA_EXPECT(!host::check(source, parsed));
   }
 }
+// +===========================================================================+
+// | [>] check accepts only reg-name bytes inside a host         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts only reg-name bytes inside a host") {
+  constexpr std::string_view allowed =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+      "-._~!$&'()*+,;=";
+  for (unsigned int byte = 0; byte <= 255; ++byte) {
+    const char c = static_cast<char>(byte);
+    if (c == ':') continue;
+    std::string source = "a";
+    source += c;
+    source += "b";
+    martianlabs::doba::tests::unit::test_helper::set_context(
+        "byte " + std::to_string(byte));
+    parsed_host_port parsed;
+    DOBA_EXPECT_EQUAL(host::check(source, parsed),
+                      allowed.find(c) != std::string_view::npos);
+  }
+  for (const std::string_view source :
+       {"[fe80::1%eth0]", "[::1]\r\nX: y", "example.com:80\r\n",
+        "example.com:\xEF\xBC\x98\xEF\xBC\x90", "exa\xC3\xA9mple.com"}) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    parsed_host_port parsed;
+    DOBA_EXPECT(!host::check(source, parsed));
+  }
+}

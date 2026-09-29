@@ -22,10 +22,12 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <array>
 #include <cstddef>
 #include <cstring>
 #include <functional>
 #include <memory>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -152,11 +154,13 @@ DOBA_TEST("tcp connection sends queue bytes directly") {
   std::memcpy(prefix.get(), "abc", 3);
   DOBA_EXPECT(output.push(std::move(prefix), 3, nullptr));
   DOBA_EXPECT(input.prepare_output(output));
-  DOBA_EXPECT_EQUAL(std::string(input.output_bytes(output).data(),
-                                input.output_bytes(output).size()), "abc");
+  std::array<std::span<char>, 2> segments{};
+  DOBA_EXPECT_EQUAL(input.output_segments(output, segments), 1);
+  DOBA_EXPECT_EQUAL(std::string(segments[0].data(), segments[0].size()), "abc");
   DOBA_EXPECT(input.output_pending(output));
-  input.output_sent(output, 2);
-  DOBA_EXPECT_EQUAL(input.output_bytes(output).size(), 1);
-  input.output_sent(output, 1);
+  DOBA_EXPECT(input.output_sent(output, 2));
+  DOBA_EXPECT_EQUAL(input.output_segments(output, segments), 1);
+  DOBA_EXPECT_EQUAL(std::string(segments[0].data(), segments[0].size()), "c");
+  DOBA_EXPECT(input.output_sent(output, 1));
   DOBA_EXPECT(!input.output_pending(output));
 }

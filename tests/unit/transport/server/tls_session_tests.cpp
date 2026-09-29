@@ -31,6 +31,7 @@
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 #include "test_helper.h"
 #include "transport/server/tls_session.h"
@@ -490,6 +491,45 @@ DOBA_TEST("tls session rejects invalid negotiation") {
                     tls_session::status::failed);
   DOBA_EXPECT_EQUAL(server.write(std::span("x", 1)).state,
                     tls_session::status::failed);
+}
+// +===========================================================================+
+// | [>] tls session handles malformed handshake records         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tls session handles malformed handshake records") {
+  struct test_case {
+    std::string_view name;
+    std::string_view wire;
+    tls_session::status expected;
+  };
+  constexpr test_case cases[] = {
+      {"oversized record", {"\x16\x03\x01\xff\xff", 5},
+       tls_session::status::failed},
+      {"fatal alert", {"\x15\x03\x03\x00\x02\x02\x28", 7},
+       tls_session::status::failed},
+      {"application data before handshake", {"\x17\x03\x03\x00\x01x", 6},
+       tls_session::status::failed},
+      {"SSLv2 ClientHello",
+       {"\x80\x09\x01\x00\x02\x00\x00\x00\x00\x00\x00", 11},
+       tls_session::status::failed},
+      {"truncated handshake", {"\x16\x03\x03\x00\x04\x01\x00\x00\x10", 9},
+       tls_session::status::need_input},
+  };
+  for (const auto& test : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(test.name);
+    tls_session server(make_tls_context(server_policies()), 32768);
+    DOBA_EXPECT_EQUAL(server.receive(std::span(test.wire.data(),
+                                               test.wire.size())),
+                      test.wire.size());
+    DOBA_EXPECT_EQUAL(server.handshake(), test.expected);
+    DOBA_EXPECT_EQUAL(server.failed(),
+                      test.expected == tls_session::status::failed);
+    if (test.expected == tls_session::status::failed) {
+      std::array<char, 1> bytes;
+      DOBA_EXPECT_EQUAL(server.read(bytes).state, tls_session::status::failed);
+      DOBA_EXPECT_EQUAL(server.write(std::span("x", 1)).state,
+                        tls_session::status::failed);
+    }
+  }
 }
 
 #endif

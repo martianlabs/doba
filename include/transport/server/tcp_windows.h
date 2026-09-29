@@ -26,6 +26,7 @@
 #define martianlabs_doba_transport_server_tcp_windows_h
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <charconv>
 #include <condition_variable>
@@ -38,6 +39,7 @@
 #include <mutex>
 #include <new>
 #include <optional>
+#include <span>
 #include <unordered_map>
 #include <utility>
 
@@ -123,6 +125,8 @@ struct overlapped_send : overlapped_base {
                   io_type type = io_type::kSend)
       : overlapped_base(type), ctx{context} {}
   std::shared_ptr<context<ENty, CNty>> ctx;
+  std::array<WSABUF, output_queue::kMaxSendFragments> buffers{};
+  std::size_t submitted_size{0};
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -166,18 +170,18 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] send_completed                                           ( public ) |
   // +=========================================================================+
-  void send_completed(std::size_t size) {
+  void send_completed(std::size_t size, std::size_t submitted_size) {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     send_state_ = send_status::kIdle;
     if (socket_ == INVALID_SOCKET) {
       retire_();
       return;
     }
-    if (!size || size > input_.output_bytes(output_).size()) {
+    if (!size || size > submitted_size ||
+        !input_.output_sent(output_, size)) {
       abort_();
       return;
     }
-    input_.output_sent(output_, size);
     send_pending_();
   }
   // +=========================================================================+
@@ -435,8 +439,9 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       abort_();
       return;
     }
-    const auto bytes = input_.output_bytes(output_);
-    if (bytes.empty()) {
+    std::array<std::span<char>, output_queue::kMaxSendFragments> segments{};
+    const std::size_t count = input_.output_segments(output_, segments);
+    if (!count) {
       cleanup_resources_();
       return;
     }
@@ -446,10 +451,17 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       abort_();
       return;
     }
-    const ULONG size = static_cast<ULONG>(std::min<std::size_t>(
-        bytes.size(), std::numeric_limits<ULONG>::max()));
-    WSABUF buffer{size, bytes.data()};
-    const int result = WSASend(socket_, &buffer, 1, nullptr, 0, ovs, nullptr);
+    std::size_t available = std::numeric_limits<DWORD>::max();
+    DWORD parts = 0;
+    for (std::size_t i = 0; i < count && available; i++) {
+      const std::size_t size = std::min(segments[i].size(), available);
+      ovs->buffers[parts++] = {static_cast<ULONG>(size),
+                               segments[i].data()};
+      ovs->submitted_size += size;
+      available -= size;
+    }
+    const int result = WSASend(socket_, ovs->buffers.data(), parts, nullptr,
+                               0, ovs, nullptr);
     if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
       delete ovs;
       abort_();
@@ -1005,7 +1017,7 @@ class basic_transport {
   void handle_send(overlapped_send<ENty, CNty>* ovs, DWORD bytes_sent) {
     try {
       if (ovs->get_type() == io_type::kOutput) ovs->ctx->output_ready();
-      else ovs->ctx->send_completed(bytes_sent);
+      else ovs->ctx->send_completed(bytes_sent, ovs->submitted_size);
     } catch (...) {
       ovs->ctx->abort();
       ovs->ctx->stop();

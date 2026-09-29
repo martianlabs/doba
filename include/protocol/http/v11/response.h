@@ -123,6 +123,7 @@ class response {
   // | The transport drains the reader in bounded segments.                    |
   // +=========================================================================+
   [[nodiscard]] std::unique_ptr<protocol::serialization_result> serialize() {
+    if (!memory_) throw std::logic_error("response already serialized!");
     // RFC 9110 S8.6/S15.3.5/S15.3.6/S15.4.5: 1xx, 204, 205 and 304 responses
     // must never carry a message body, regardless of what a handler may have
     // set via set_body(). 1xx/204 must not advertise any body framing at all,

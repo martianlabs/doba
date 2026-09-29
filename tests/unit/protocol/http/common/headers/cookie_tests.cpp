@@ -123,3 +123,31 @@ DOBA_TEST("check rejects pair and separator boundaries") {
     DOBA_EXPECT(!cookie::check(source));
   }
 }
+// +===========================================================================+
+// | [>] check accepts only cookie-octet bytes in values         ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check accepts only cookie-octet bytes in values") {
+  // RFC 6265 S4.1.1: semicolon separates pairs; it is not a cookie-octet value.
+  for (unsigned int byte = 0; byte <= 255; ++byte) {
+    if (byte == ';') {
+      DOBA_EXPECT(cookie::check("a=x; y=z"));
+      DOBA_EXPECT(!cookie::check("a=x;y=z"));
+      DOBA_EXPECT(!cookie::check("a=\"x;y\""));
+      continue;
+    }
+    const bool octet = byte == 0x21 || (byte >= 0x23 && byte <= 0x2b) ||
+                       (byte >= 0x2d && byte <= 0x3a) ||
+                       (byte >= 0x3c && byte <= 0x5b) ||
+                       (byte >= 0x5d && byte <= 0x7e);
+    std::string plain = "a=x";
+    plain += static_cast<char>(byte);
+    plain += "y";
+    std::string quoted = "a=\"x";
+    quoted += static_cast<char>(byte);
+    quoted += "y\"";
+    martianlabs::doba::tests::unit::test_helper::set_context(
+        "byte " + std::to_string(byte));
+    DOBA_EXPECT_EQUAL(cookie::check(plain), octet);
+    DOBA_EXPECT_EQUAL(cookie::check(quoted), octet);
+  }
+}

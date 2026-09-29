@@ -45,6 +45,7 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct output_queue {
+  static constexpr std::size_t kMaxSendFragments = 64;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
@@ -59,9 +60,46 @@ struct output_queue {
     if ((size && !prefix) ||
         reserved > capacity_ - queued_bytes_ - buffer.size()) return false;
     if (!size && !source) return true;
-    queue_.emplace_back(std::move(prefix), size, std::move(source), reserved);
+    queue_.emplace_back(std::move(prefix), size, 0, std::move(source),
+                        reserved);
     queued_bytes_ += reserved;
     return true;
+  }
+  // +=========================================================================+
+  // | [>] prefix_segments                                         ( public ) |
+  // +=========================================================================+
+  std::size_t prefix_segments(std::span<std::span<char>> segments) {
+    std::size_t count = 0;
+    for (auto& entry : queue_) {
+      if (std::get<3>(entry) || count == segments.size()) break;
+      segments[count++] = std::span(
+          std::get<0>(entry).get() + std::get<2>(entry),
+          std::get<1>(entry) - std::get<2>(entry));
+    }
+    return count;
+  }
+  // +=========================================================================+
+  // | [>] consume_prefixes                                        ( public ) |
+  // +=========================================================================+
+  bool consume_prefixes(std::size_t sent) {
+    while (sent) {
+      if (queue_.empty() || std::get<3>(queue_.front())) return false;
+      auto& entry = queue_.front();
+      const std::size_t taken = std::min(
+          sent, std::get<1>(entry) - std::get<2>(entry));
+      std::get<2>(entry) += taken;
+      std::get<4>(entry) -= taken;
+      queued_bytes_ -= taken;
+      sent -= taken;
+      if (std::get<1>(entry) == std::get<2>(entry)) queue_.pop_front();
+    }
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] prefix_pending                                          ( public ) |
+  // +=========================================================================+
+  bool prefix_pending() const {
+    return !queue_.empty() && !std::get<3>(queue_.front());
   }
   // +=========================================================================+
   // | [>] fill                                                     ( public ) |
@@ -70,13 +108,14 @@ struct output_queue {
     buffer.clear();
     offset = 0;
     while (!queue_.empty()) {
-      auto& [prefix, size, source, reserved] = queue_.front();
+      auto& [prefix, size, prefix_offset, source, reserved] = queue_.front();
       queued_bytes_ -= reserved;
       reserved = 0;
-      if (size) {
-        buffer.append(prefix.get(), size);
+      if (size != prefix_offset) {
+        buffer.append(prefix.get() + prefix_offset, size - prefix_offset);
         prefix.reset();
         size = 0;
+        prefix_offset = 0;
       }
       if (source) {
         if (source->failed()) return !buffer.empty();
@@ -120,7 +159,7 @@ struct output_queue {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  std::list<std::tuple<std::unique_ptr<char[]>, std::size_t,
+  std::list<std::tuple<std::unique_ptr<char[]>, std::size_t, std::size_t,
                        std::unique_ptr<common::reader>, std::size_t>> queue_;
   const std::size_t capacity_;
   std::size_t queued_bytes_{0};

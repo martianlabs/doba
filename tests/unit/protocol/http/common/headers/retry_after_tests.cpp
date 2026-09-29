@@ -22,6 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <cstddef>
+#include <limits>
 #include <string>
 #include <string_view>
 
@@ -135,5 +137,18 @@ DOBA_TEST("check rejects date alternative boundaries") {
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
     DOBA_EXPECT(!retry_after::check(source));
+  }
+}
+// +===========================================================================+
+// | [>] check is syntactic beyond the size_t range              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check is syntactic beyond the size_t range") {
+  const std::string maximum =
+      std::to_string(std::numeric_limits<std::size_t>::max());
+  for (const auto& source :
+       {maximum, maximum + "0", std::string(4096, '9')}) {
+    DOBA_EXPECT(retry_after::check(source));
+    DOBA_EXPECT(!retry_after::check(source + " "));
+    DOBA_EXPECT(!retry_after::check("-" + source));
   }
 }

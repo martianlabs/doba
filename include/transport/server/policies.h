@@ -37,7 +37,7 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct policies {
-  static constexpr std::size_t kDefaultRecvBufferSize = 8 * 1024;
+  static constexpr std::size_t kDefaultRecvBufferSize = 4 * 1024;
   // Receive capacity per connection, in bytes (must be positive).
   // Engines retain incomplete cores here; bodies may span multiple receives.
   // A full buffer with no consumption closes the connection.

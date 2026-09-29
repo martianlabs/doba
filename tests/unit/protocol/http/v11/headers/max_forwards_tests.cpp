@@ -108,3 +108,24 @@ DOBA_TEST("check preserves output at the decimal overflow boundary") {
   DOBA_EXPECT(max_forwards::check(std::string(64, '0') + maximum, parsed));
   DOBA_EXPECT_EQUAL(parsed, std::numeric_limits<std::size_t>::max());
 }
+// +===========================================================================+
+// | [>] check rejects every overflow without touching output    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check rejects every overflow without touching output") {
+  const std::string maximum =
+      std::to_string(std::numeric_limits<std::size_t>::max());
+  const std::string cases[] = {
+      maximum + "0", "1" + maximum, std::string(maximum.size() + 1, '9'),
+      std::string(4096, '9'), "0" + maximum + "9"};
+  for (const auto& source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    std::size_t parsed = 7;
+    DOBA_EXPECT(!max_forwards::check(source, parsed));
+    DOBA_EXPECT_EQUAL(parsed, 7);
+  }
+  std::string below = maximum;
+  --below.back();
+  std::size_t parsed = 0;
+  DOBA_EXPECT(max_forwards::check(below, parsed));
+  DOBA_EXPECT_EQUAL(parsed, std::numeric_limits<std::size_t>::max() - 1);
+}

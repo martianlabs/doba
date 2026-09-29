@@ -22,6 +22,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <array>
 #include <cstddef>
 #include <cstring>
 #include <memory>
@@ -54,6 +55,52 @@ DOBA_TEST("output queue preserves delivery order") {
   DOBA_EXPECT(queue.fill());
   DOBA_EXPECT_EQUAL(queue.buffer, "abcd");
   DOBA_EXPECT_EQUAL(queue.offset, 0);
+  DOBA_EXPECT(!queue.queued());
+}
+// +===========================================================================+
+// | [>] output queue sends prefixes without copying             ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("output queue keeps prefix buffers through partial sends") {
+  output_queue queue(4);
+  auto first = prefix("ab");
+  char* const owned = first.get();
+  DOBA_EXPECT(queue.push(std::move(first), 2, nullptr));
+  DOBA_EXPECT(queue.push(prefix("cd"), 2, nullptr));
+  std::array<std::span<char>, 2> segments{};
+  DOBA_EXPECT_EQUAL(queue.prefix_segments(segments), 2);
+  DOBA_EXPECT(segments[0].data() == owned);
+  DOBA_EXPECT_EQUAL(std::string(segments[0].data(), segments[0].size()), "ab");
+  DOBA_EXPECT_EQUAL(std::string(segments[1].data(), segments[1].size()), "cd");
+  DOBA_EXPECT(queue.consume_prefixes(1));
+  DOBA_EXPECT_EQUAL(queue.prefix_segments(segments), 2);
+  DOBA_EXPECT(segments[0].data() == owned + 1);
+  DOBA_EXPECT_EQUAL(segments[0].size(), 1);
+  DOBA_EXPECT(!queue.push(prefix("ef"), 2, nullptr));
+  DOBA_EXPECT(queue.consume_prefixes(1));
+  DOBA_EXPECT(queue.push(prefix("ef"), 2, nullptr));
+  DOBA_EXPECT_EQUAL(queue.prefix_segments(segments), 2);
+  DOBA_EXPECT_EQUAL(std::string(segments[0].data(), segments[0].size()), "cd");
+  DOBA_EXPECT_EQUAL(std::string(segments[1].data(), segments[1].size()), "ef");
+  DOBA_EXPECT(queue.consume_prefixes(4));
+  DOBA_EXPECT(!queue.queued());
+}
+// +===========================================================================+
+// | [>] output queue stops direct send before source            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("output queue preserves source after direct prefixes") {
+  const std::string body = "body";
+  output_queue queue(16384);
+  DOBA_EXPECT(queue.push(prefix("one"), 3, nullptr));
+  DOBA_EXPECT(queue.push(prefix("head"), 4,
+                         std::make_unique<reader>(reader::borrowed(
+                             std::as_bytes(std::span(body))))));
+  std::array<std::span<char>, 2> segments{};
+  DOBA_EXPECT_EQUAL(queue.prefix_segments(segments), 1);
+  DOBA_EXPECT_EQUAL(std::string(segments[0].data(), segments[0].size()), "one");
+  DOBA_EXPECT(queue.consume_prefixes(3));
+  DOBA_EXPECT(!queue.prefix_pending());
+  DOBA_EXPECT(queue.fill());
+  DOBA_EXPECT_EQUAL(queue.buffer, "headbody");
   DOBA_EXPECT(!queue.queued());
 }
 
@@ -114,4 +161,25 @@ DOBA_TEST("output queue reports a failed source after prefix") {
   queue.offset = queue.buffer.size();
   DOBA_EXPECT(!queue.fill());
   DOBA_EXPECT(queue.buffer.empty());
+}
+
+// +===========================================================================+
+// | [>] output queue rejects hostile sizes and over-consumption ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("output queue rejects hostile sizes and over-consumption") {
+  output_queue queue(8);
+  DOBA_EXPECT(!queue.push(nullptr, 1, nullptr));
+  DOBA_EXPECT(!queue.push(prefix("x"), SIZE_MAX, nullptr));
+  DOBA_EXPECT(!queue.push(prefix("x"), 9, nullptr));
+  DOBA_EXPECT(!queue.queued());
+  DOBA_EXPECT(queue.push(prefix("abc"), 3, nullptr));
+  DOBA_EXPECT(!queue.push(prefix("x"), SIZE_MAX - 2, nullptr));
+  DOBA_EXPECT(!queue.consume_prefixes(4));
+  DOBA_EXPECT(!queue.queued());
+  DOBA_EXPECT(!queue.consume_prefixes(1));
+  DOBA_EXPECT(queue.push(prefix("abcdefgh"), 8, nullptr));
+  output_queue empty(0);
+  DOBA_EXPECT(!empty.push(prefix("x"), 1, nullptr));
+  DOBA_EXPECT(empty.push(nullptr, 0, nullptr));
+  DOBA_EXPECT(!empty.queued());
 }

@@ -164,7 +164,7 @@ DOBA_TEST("engine returns routing and handler errors") {
   }
 }
 // +===========================================================================+
-// | [>] engine rejects a handler 100 without a final response  ( test-case ) |
+// | [>] engine rejects a handler 100 without a final response   ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("engine rejects a handler 100 without a final response") {
   router<request, response> routes;
@@ -684,6 +684,108 @@ DOBA_TEST("engine emits a terminal rejection without dispatch") {
     DOBA_EXPECT_EQUAL(current.blocks.size(), 1);
     DOBA_EXPECT_EQUAL(calls, 0);
   }
+}
+// +===========================================================================+
+// | [>] engine never dispatches a smuggled request              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("engine never dispatches a smuggled request") {
+  constexpr std::string_view smuggled =
+      "GET /admin HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  const std::string vectors[] = {
+      "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 4\r\n"
+      "Transfer-Encoding: chunked\r\n\r\n0\r\n\r\n" + std::string(smuggled),
+      "POST / HTTP/1.1\r\nHost: localhost\r\nTransfer-Encoding: chunked\r\n"
+      "Content-Length: 4\r\n\r\n0\r\n\r\n" + std::string(smuggled),
+      "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\n"
+      "Content-Length: 40\r\n\r\n" + std::string(smuggled),
+      "POST / HTTP/1.1\r\nHost: localhost\r\n"
+      "Transfer-Encoding: chunked, identity\r\n\r\n" + std::string(smuggled),
+      "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length : 0\r\n\r\n" +
+          std::string(smuggled),
+  };
+  for (const auto& bytes : vectors) {
+    martianlabs::doba::tests::unit::test_helper::set_context(bytes);
+    router<request, response> routes;
+    int posts = 0;
+    int admin = 0;
+    routes.add("POST", "/", [&](const request&) {
+      posts++;
+      return make_response("post");
+    });
+    routes.add("GET", "/admin", [&](const request&) {
+      admin++;
+      return make_response("admin");
+    });
+    connection current(routes);
+    current.receive(bytes);
+    DOBA_EXPECT_EQUAL(posts, 0);
+    DOBA_EXPECT_EQUAL(admin, 0);
+    DOBA_EXPECT_EQUAL(current.blocks.size(), 1);
+    DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 400 "));
+    DOBA_EXPECT(current.wire.find("Connection: close\r\n") !=
+                std::string::npos);
+    DOBA_EXPECT(current.wire.find("admin") == std::string::npos);
+    DOBA_EXPECT_EQUAL(current.closes, 1);
+    current.receive(smuggled);
+    DOBA_EXPECT_EQUAL(admin, 0);
+    DOBA_EXPECT_EQUAL(current.blocks.size(), 1);
+  }
+}
+// +===========================================================================+
+// | [>] engine ignores trailer fields for later requests        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("engine ignores trailer fields for later requests") {
+  router<request, response> routes;
+  int posts = 0;
+  int admin = 0;
+  std::string host;
+  std::size_t headers = 0;
+  routes.add("POST", "/", [&](const request& req) {
+    posts++;
+    host = req.get_header("Host").second;
+    headers = req.get_headers_length();
+    return make_response("post");
+  });
+  routes.add("GET", "/admin", [&](const request&) {
+    admin++;
+    return make_response("admin");
+  });
+  connection current(routes);
+  const std::string bytes =
+      "POST / HTTP/1.1\r\nHost: localhost\r\nTransfer-Encoding: chunked\r\n"
+      "\r\n0\r\nContent-Length: 40\r\n\r\n"
+      "GET /admin HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  DOBA_EXPECT_EQUAL(current.receive(bytes), bytes.size());
+  DOBA_EXPECT_EQUAL(posts, 1);
+  DOBA_EXPECT_EQUAL(admin, 1);
+  DOBA_EXPECT_EQUAL(host, "localhost");
+  DOBA_EXPECT_EQUAL(headers, 2);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 2);
+  DOBA_EXPECT_EQUAL(current.closes, 0);
+}
+// +===========================================================================+
+// | [>] engine answers a valid request before a rejected one    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("engine answers a valid request before a rejected one") {
+  router<request, response> routes;
+  int calls = 0;
+  routes.add("GET", "/", [&](const request&) {
+    calls++;
+    return make_response("first");
+  });
+  connection current(routes);
+  const std::string bytes =
+      "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"
+      "GET / HTTP/1.1\r\nHost: localhost\r\nHost: other\r\n\r\n"
+      "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  current.receive(bytes);
+  DOBA_EXPECT_EQUAL(calls, 1);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 2);
+  DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 200 OK\r\n"));
+  const auto second = current.wire.find("HTTP/1.1 400 ");
+  DOBA_EXPECT(second != std::string::npos);
+  DOBA_EXPECT(current.wire.find("first") < second);
+  DOBA_EXPECT_EQUAL(current.closes, 1);
 }
 
 // +===========================================================================+

@@ -62,7 +62,7 @@ DOBA_TEST("response is movable but not copyable") {
   DOBA_EXPECT(true);
 }
 // +===========================================================================+
-// | [>] response identifies 100 Continue                       ( test-case ) |
+// | [>] response identifies 100 Continue                        ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("response identifies 100 Continue") {
   DOBA_EXPECT(response::continue_100().is_continue_100());
@@ -737,6 +737,22 @@ DOBA_TEST("serialized bytes outlive and detach from the response") {
   DOBA_EXPECT_EQUAL(prefix,
                     "HTTP/1.1 201 Created\r\nDate: fixed\r\n"
                     "Content-Length: 8\r\n\r\noriginal");
+}
+// +===========================================================================+
+// | [>] serializing a consumed response fails safely            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("serializing a consumed response fails safely") {
+  auto value = response::ok_200();
+  value.set_header("Date", "fixed").set_body("body");
+  auto serialized = value.serialize();
+  DOBA_EXPECT(serialized != nullptr);
+  bool threw = false;
+  try {
+    (void)value.serialize();
+  } catch (const std::logic_error&) {
+    threw = true;
+  }
+  DOBA_EXPECT(threw);
 }
 // +===========================================================================+
 // | [>] inline body survives repeated header growth             ( test-case ) |
