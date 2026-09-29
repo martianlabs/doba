@@ -41,14 +41,30 @@ using martianlabs::doba::common::reader;
 using martianlabs::doba::transport::server::tcp_connection;
 using martianlabs::doba::transport::server::output_queue;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] test_engine                                               ( struct )  |
+// +---------------------------------------------------------------------------+
+// | Engine probe used by TCP connection tests.                                |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct test_engine {
+  // +=========================================================================+
+  // | [>] TYPEs                                                    ( public ) |
+  // +=========================================================================+
   using policies_type = int;
+  // +=========================================================================+
+  // | [>] METHODs                                                  ( public ) |
+  // +=========================================================================+
   void set_on_send(send_delegate value) { send = std::move(value); }
   void set_on_close(std::function<void()> value) { close = std::move(value); }
   std::size_t on_bytes_received(const char* bytes, std::size_t size,
                                 std::size_t capacity) {
     return receive(bytes, size, capacity);
   }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +=========================================================================+
   std::function<std::size_t(const char*, std::size_t, std::size_t)> receive;
   send_delegate send;
   std::function<void()> close;

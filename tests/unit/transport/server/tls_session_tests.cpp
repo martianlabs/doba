@@ -55,7 +55,17 @@ bool rejects(const tls_policies& configuration) {
   return false;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] test_client                                               ( struct )  |
+// +---------------------------------------------------------------------------+
+// | TLS client used by TLS session tests.                                     |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct test_client {
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
   test_client()
       : context{SSL_CTX_new(TLS_client_method()), SSL_CTX_free},
         ssl{context ? SSL_new(context.get()) : nullptr, SSL_free},
@@ -71,6 +81,9 @@ struct test_client {
     SSL_set_connect_state(ssl.get());
   }
 
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +=========================================================================+
   std::unique_ptr<SSL_CTX, decltype(&SSL_CTX_free)> context;
   std::unique_ptr<SSL, decltype(&SSL_free)> ssl;
   std::unique_ptr<BIO, decltype(&BIO_free)> network;

@@ -73,7 +73,7 @@ struct context;
 // +---------------------------------------------------------------------------+
 // | [>] overlapped_base                                            ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
+// | Base state for Windows overlapped I/O.                                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct overlapped_base : OVERLAPPED {
@@ -90,7 +90,7 @@ struct overlapped_base : OVERLAPPED {
 // +---------------------------------------------------------------------------+
 // | [>] overlapped_accept                                          ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
+// | Windows overlapped accept operation.                                      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct overlapped_accept : overlapped_base {
@@ -103,7 +103,7 @@ struct overlapped_accept : overlapped_base {
 // +---------------------------------------------------------------------------+
 // | [>] overlapped_receive                                         ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
+// | Windows overlapped receive operation.                                     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty, typename CNty>
@@ -116,7 +116,7 @@ struct overlapped_receive : overlapped_base {
 // +---------------------------------------------------------------------------+
 // | [>] overlapped_send                                            ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
+// | Windows overlapped send operation.                                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty, typename CNty>
@@ -130,12 +130,9 @@ struct overlapped_send : overlapped_base {
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] context [windowsTM]                                         ( class ) |
+// | [>] context [windowsTM]                                        ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// |  ENty - engine type being used.                                           |
-// ----------------------------------------------------------------------------+
-// // | This specification holds for the WindowsTM server transport context.   |
+// | Windows server transport connection state.                                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty, typename CNty>
@@ -371,7 +368,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     }
   }
   // +=========================================================================+
-  // | [>] notify_connection                                       ( public ) |
+  // | [>] notify_connection                                       ( public )  |
   // +=========================================================================+
   void notify_connection() {
     {
@@ -382,7 +379,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     on_connection_();
   }
   // +=========================================================================+
-  // | [>] eof                                                     ( public ) |
+  // | [>] eof                                                     ( public )  |
   // +=========================================================================+
   bool eof() const { return input_.eof(); }
 

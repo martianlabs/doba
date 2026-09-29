@@ -41,7 +41,7 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // | [>] output_queue                                               ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
+// | Queues pending transport output segments.                                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct output_queue {
@@ -66,7 +66,7 @@ struct output_queue {
     return true;
   }
   // +=========================================================================+
-  // | [>] prefix_segments                                         ( public ) |
+  // | [>] prefix_segments                                         ( public )  |
   // +=========================================================================+
   std::size_t prefix_segments(std::span<std::span<char>> segments) {
     std::size_t count = 0;
@@ -79,7 +79,7 @@ struct output_queue {
     return count;
   }
   // +=========================================================================+
-  // | [>] consume_prefixes                                        ( public ) |
+  // | [>] consume_prefixes                                        ( public )  |
   // +=========================================================================+
   bool consume_prefixes(std::size_t sent) {
     while (sent) {
@@ -96,7 +96,7 @@ struct output_queue {
     return true;
   }
   // +=========================================================================+
-  // | [>] prefix_pending                                          ( public ) |
+  // | [>] prefix_pending                                          ( public )  |
   // +=========================================================================+
   bool prefix_pending() const {
     return !queue_.empty() && !std::get<3>(queue_.front());
