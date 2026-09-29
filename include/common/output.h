@@ -28,7 +28,6 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
-#include <optional>
 
 #include "common/reader.h"
 
@@ -49,7 +48,7 @@ namespace martianlabs::doba::common {
 // The transport never calls back into the engine while sending.
 using send_delegate =
     std::function<void(std::unique_ptr<char[]>, std::size_t,
-                       std::optional<reader>)>;
+                       std::unique_ptr<reader>)>;
 }  // namespace martianlabs::doba::common
 
 #endif

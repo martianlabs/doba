@@ -60,6 +60,7 @@ struct byte_engine {
   bool split{false};
   bool close_after{false};
   bool fail_source{false};
+  std::atomic<bool>* failed_source_received{nullptr};
   std::string body;
   std::function<std::size_t(byte_engine&, const char*, std::size_t,
                             std::size_t)> receive;
@@ -79,34 +80,38 @@ struct byte_engine {
       return size;
     }
     if (fail_source) {
+      if (failed_source_received) failed_source_received->store(true);
       martianlabs::doba::common::reader source(
           martianlabs::doba::common::filesystem_file{});
       std::byte byte{};
       source.read(std::span(&byte, 1));
       auto prefix = std::make_unique<char[]>(3);
       std::memcpy(prefix.get(), "pre", 3);
-      send(std::move(prefix), 3, std::move(source));
+      send(std::move(prefix), 3,
+           std::make_unique<martianlabs::doba::common::reader>(
+               std::move(source)));
       return size;
     }
     if (!body.empty()) {
       auto prefix = std::make_unique<char[]>(1);
       prefix[0] = 'x';
       send(std::move(prefix), 1,
-           martianlabs::doba::common::reader::borrowed(
-               std::as_bytes(std::span(body))));
+           std::make_unique<martianlabs::doba::common::reader>(
+               martianlabs::doba::common::reader::borrowed(
+                   std::as_bytes(std::span(body)))));
       return size;
     }
     if (split) {
       for (std::size_t i = 0; i < size; ++i) {
         auto output = std::make_unique<char[]>(1);
         output[0] = bytes[i];
-        send(std::move(output), 1, std::nullopt);
+        send(std::move(output), 1, nullptr);
       }
       return size;
     }
     auto output = std::make_unique<char[]>(size);
     std::memcpy(output.get(), bytes, size);
-    send(std::move(output), size, std::nullopt);
+    send(std::move(output), size, nullptr);
     if (close_after) close();
     return size;
   }
@@ -280,7 +285,7 @@ DOBA_TEST("tls retains unconsumed plaintext") {
       if (size < 4) return std::size_t{0};
       auto output = std::make_unique<char[]>(4);
       std::memcpy(output.get(), bytes, 4);
-      value.send(std::move(output), 4, std::nullopt);
+      value.send(std::move(output), 4, nullptr);
       return std::size_t{4};
     };
     return engine;
@@ -519,7 +524,7 @@ DOBA_TEST("tls accepts concurrent response producers") {
       for (int item = 0; item < 100; ++item) {
         auto bytes = std::make_unique<char[]>(1);
         bytes[0] = static_cast<char>('a' + i);
-        output(std::move(bytes), 1, std::nullopt);
+        output(std::move(bytes), 1, nullptr);
       }
     });
   }
@@ -543,9 +548,11 @@ DOBA_TEST("tls closes after a failed response source") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
-  auto factory = []() {
+  std::atomic<bool> received{false};
+  auto factory = [&received]() {
     byte_engine engine;
     engine.fail_source = true;
+    engine.failed_source_received = &received;
     return engine;
   };
   tr::tls<byte_engine, decltype(factory)> server(
@@ -555,8 +562,10 @@ DOBA_TEST("tls closes after a failed response source") {
   server.start();
   DOBA_EXPECT(client.socket.connect(port));
   DOBA_EXPECT(client.negotiate());
-  DOBA_EXPECT(client.send("x"));
+  // The expected abort may race with the client's final TLS exchange.
+  client.send("x");
   const auto response = client.receive(4);
+  DOBA_EXPECT(received.load());
   DOBA_EXPECT(!response.has_value());
   DOBA_EXPECT(client.socket.error() != "timeout");
   client.socket.close();
@@ -743,7 +752,7 @@ DOBA_TEST("tls stop drains queued output") {
   DOBA_EXPECT(ready.load());
   auto bytes = std::make_unique<char[]>(50000);
   std::memset(bytes.get(), 'x', 50000);
-  output(std::move(bytes), 50000, std::nullopt);
+  output(std::move(bytes), 50000, nullptr);
   std::jthread stopping([&]() { server.stop(); });
   const auto response = client.receive(50000);
   DOBA_EXPECT(response.has_value());

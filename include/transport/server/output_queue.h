@@ -29,7 +29,6 @@
 #include <cstddef>
 #include <list>
 #include <memory>
-#include <optional>
 #include <span>
 #include <string>
 #include <tuple>
@@ -54,7 +53,7 @@ struct output_queue {
   // | [>] push                                                     ( public ) |
   // +=========================================================================+
   bool push(std::unique_ptr<char[]>&& prefix, std::size_t size,
-            std::optional<common::reader>&& source) {
+            std::unique_ptr<common::reader>&& source) {
     const std::size_t reserved = source
         ? std::max(size, std::min<std::size_t>(8192, capacity_)) : size;
     if ((size && !prefix) ||
@@ -122,7 +121,7 @@ struct output_queue {
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   std::list<std::tuple<std::unique_ptr<char[]>, std::size_t,
-                       std::optional<common::reader>, std::size_t>> queue_;
+                       std::unique_ptr<common::reader>, std::size_t>> queue_;
   const std::size_t capacity_;
   std::size_t queued_bytes_{0};
 };

@@ -26,7 +26,6 @@
 #include <cstring>
 #include <functional>
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -126,13 +125,13 @@ DOBA_TEST("tcp connection keeps engine callbacks") {
   bool closed = false;
   input.engine.set_on_send([&sent](std::unique_ptr<char[]> buffer,
                                    std::size_t size,
-                                   std::optional<reader>) {
+                                   std::unique_ptr<reader>) {
     sent = size == 1 && buffer[0] == 'x';
   });
   input.engine.set_on_close([&closed]() { closed = true; });
   auto buffer = std::make_unique<char[]>(1);
   buffer[0] = 'x';
-  input.engine.send(std::move(buffer), 1, std::nullopt);
+  input.engine.send(std::move(buffer), 1, nullptr);
   input.engine.close();
   DOBA_EXPECT(sent);
   DOBA_EXPECT(closed);
@@ -151,7 +150,7 @@ DOBA_TEST("tcp connection sends queue bytes directly") {
   output_queue output(8);
   auto prefix = std::make_unique<char[]>(3);
   std::memcpy(prefix.get(), "abc", 3);
-  DOBA_EXPECT(output.push(std::move(prefix), 3, std::nullopt));
+  DOBA_EXPECT(output.push(std::move(prefix), 3, nullptr));
   DOBA_EXPECT(input.prepare_output(output));
   DOBA_EXPECT_EQUAL(std::string(input.output_bytes(output).data(),
                                 input.output_bytes(output).size()), "abc");

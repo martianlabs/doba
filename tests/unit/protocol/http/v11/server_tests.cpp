@@ -24,7 +24,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -35,6 +34,7 @@
 
 namespace {
 namespace http = martianlabs::doba::protocol::http::v11;
+using martianlabs::doba::common::reader;
 using routes_type = martianlabs::doba::protocol::http::router<
     http::request, http::response>;
 using engine_type = http::engine<http::request, http::response>;
@@ -56,8 +56,7 @@ struct memory_transport {
     connection.reset(new ENty(factory()));
     connection->set_on_send([this](std::unique_ptr<char[]> buffer,
                                    std::size_t size,
-                                   std::optional<martianlabs::doba::common::reader>
-                                       source) {
+                                   std::unique_ptr<reader> source) {
       bytes.append(buffer.get(), size);
       if (source) source->read_all(bytes);
     });

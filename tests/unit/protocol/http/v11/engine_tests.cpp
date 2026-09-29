@@ -25,7 +25,6 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -63,7 +62,7 @@ struct connection {
                       policies configuration = {})
       : value(configuration, routes) {
     value.set_on_send([this](std::unique_ptr<char[]> bytes, std::size_t size,
-                             std::optional<reader> source) {
+                             std::unique_ptr<reader> source) {
       blocks.push_back(size);
       wire.append(bytes.get(), size);
       if (source) source->read_all(wire);
@@ -209,7 +208,7 @@ DOBA_TEST("response order waits for earlier completions") {
   sequencer order;
   std::vector<std::string> deliveries;
   order.set_on_send([&](std::unique_ptr<char[]> bytes, std::size_t size,
-                        std::optional<reader>) {
+                        std::unique_ptr<reader>) {
     deliveries.emplace_back(bytes.get(), size);
   });
   order.set_on_close([]() {});
@@ -233,7 +232,7 @@ DOBA_TEST("response order serializes concurrent completions") {
   bool release = false;
   std::vector<std::string> deliveries;
   order.set_on_send([&](std::unique_ptr<char[]> bytes, std::size_t size,
-                        std::optional<reader>) {
+                        std::unique_ptr<reader>) {
     deliveries.emplace_back(bytes.get(), size);
     if (deliveries.size() == 1) {
       std::unique_lock<std::mutex> lock(mutex);
@@ -278,7 +277,7 @@ DOBA_TEST("response order queues completions during interim") {
   bool release = false;
   std::vector<std::string> deliveries;
   order.set_on_send([&](std::unique_ptr<char[]> bytes, std::size_t size,
-                        std::optional<reader>) {
+                        std::unique_ptr<reader>) {
     deliveries.emplace_back(bytes.get(), size);
     if (deliveries.size() == 1) {
       std::unique_lock<std::mutex> lock(mutex);
@@ -322,7 +321,7 @@ DOBA_TEST("response order keeps interim and terminal positions") {
   std::vector<std::string> deliveries;
   int closes = 0;
   order.set_on_send([&](std::unique_ptr<char[]> bytes, std::size_t size,
-                        std::optional<reader>) {
+                        std::unique_ptr<reader>) {
     deliveries.emplace_back(bytes.get(), size);
   });
   order.set_on_close([&]() { closes++; });
@@ -346,7 +345,7 @@ DOBA_TEST("response order closes after delivery failure") {
   int deliveries = 0;
   int closes = 0;
   order.set_on_send([&](std::unique_ptr<char[]>, std::size_t,
-                        std::optional<reader>) {
+                        std::unique_ptr<reader>) {
     deliveries++;
     throw std::runtime_error("transport failure");
   });
@@ -478,14 +477,14 @@ DOBA_TEST("engine transfers unread sources") {
     return make_response(body);
   });
   std::string prefix;
-  std::optional<reader> pending;
+  std::unique_ptr<reader> pending;
   int deliveries = 0;
   int closes = 0;
   {
     engine<request, response> value({}, routes);
     value.set_on_send(
         [&](std::unique_ptr<char[]> bytes, std::size_t size,
-            std::optional<reader> source) {
+            std::unique_ptr<reader> source) {
           deliveries++;
           prefix.assign(bytes.get(), size);
           pending = std::move(source);
@@ -498,7 +497,7 @@ DOBA_TEST("engine transfers unread sources") {
     DOBA_EXPECT_EQUAL(deliveries, 1);
     DOBA_EXPECT_EQUAL(closes, 1);
     DOBA_EXPECT(prefix.ends_with("\r\n\r\n"));
-    DOBA_EXPECT(pending.has_value());
+    DOBA_EXPECT(pending != nullptr);
     DOBA_EXPECT(!pending->eof());
   }
   std::string received;
@@ -575,7 +574,7 @@ DOBA_TEST("engine never retries a failed transport delivery") {
     connection current(routes);
     int deliveries = 0;
     current.value.set_on_send([&](std::unique_ptr<char[]>, std::size_t,
-                                  std::optional<reader>) {
+                                  std::unique_ptr<reader>) {
       deliveries++;
       throw std::runtime_error("transport failure");
     });
@@ -644,7 +643,7 @@ DOBA_TEST("engine closes when interim delivery fails") {
   connection current(routes);
   int deliveries = 0;
   current.value.set_on_send([&](std::unique_ptr<char[]>, std::size_t,
-                                std::optional<reader>) {
+                                std::unique_ptr<reader>) {
     deliveries++;
     throw std::runtime_error("transport failure");
   });
@@ -695,7 +694,7 @@ DOBA_TEST("engine does not retry failed rejection delivery") {
   connection current(routes);
   int deliveries = 0;
   current.value.set_on_send([&](std::unique_ptr<char[]>, std::size_t,
-                                std::optional<reader>) {
+                                std::unique_ptr<reader>) {
     deliveries++;
     throw std::runtime_error("transport failure");
   });

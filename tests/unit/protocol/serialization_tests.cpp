@@ -32,6 +32,7 @@
 
 namespace {
 using martianlabs::doba::common::byte_storage;
+using martianlabs::doba::common::reader;
 using martianlabs::doba::protocol::serialization_result;
 }  // namespace
 
@@ -42,7 +43,7 @@ DOBA_TEST("serialization defaults contain no owned output") {
   serialization_result value;
   DOBA_EXPECT(!value.prefix);
   DOBA_EXPECT_EQUAL(value.prefix_size, 0);
-  DOBA_EXPECT(!value.source.has_value());
+  DOBA_EXPECT(!value.source);
 }
 // +===========================================================================+
 // | [>] serialization moves retain prefix and reader cursor     ( test-case ) |
@@ -55,7 +56,7 @@ DOBA_TEST("serialization moves retain prefix and reader cursor") {
   value.prefix = std::make_unique<char[]>(4);
   std::memcpy(value.prefix.get(), "HEAD", 4);
   value.prefix_size = 4;
-  value.source.emplace(std::move(storage));
+  value.source = std::make_unique<reader>(std::move(storage));
   std::byte byte{};
   DOBA_EXPECT(value.source->fetch(byte));
   auto* prefix = value.prefix.get();

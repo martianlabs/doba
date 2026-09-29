@@ -192,7 +192,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // | [>] send                                                     ( public ) |
   // +=========================================================================+
   void send(std::unique_ptr<char[]> buffer, std::size_t size,
-            std::optional<common::reader> source) {
+            std::unique_ptr<common::reader> source) {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     if (closing_ || socket_ == INVALID_SOCKET) return;
     if (!size && !source) return;
@@ -313,7 +313,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     });
     input_.engine.set_on_send([weak = this->weak_from_this()](
         std::unique_ptr<char[]> buffer, std::size_t size,
-        std::optional<common::reader> source) {
+        std::unique_ptr<common::reader> source) {
       if (auto ctx = weak.lock()) {
         ctx->send(std::move(buffer), size, std::move(source));
       }

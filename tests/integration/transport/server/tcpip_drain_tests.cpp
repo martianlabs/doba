@@ -30,7 +30,6 @@
 #include <functional>
 #include <future>
 #include <memory>
-#include <optional>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -89,7 +88,7 @@ struct drain_engine {
     for (int i = 0; i < 8; i++) {
       auto block = std::make_unique_for_overwrite<char[]>(1024 * 1024);
       std::memset(block.get(), bytes[0], 1024 * 1024);
-      output_(std::move(block), 1024 * 1024, std::nullopt);
+      output_(std::move(block), 1024 * 1024, nullptr);
     }
     state_->queued++;
     return size;
@@ -217,27 +216,30 @@ struct reader_engine {
     }
     auto prefix = std::make_unique_for_overwrite<char[]>(prefix_size);
     std::memset(prefix.get(), 'A', prefix_size);
-    output_(std::move(prefix), prefix_size, std::move(source));
-    if (state_->empty_deliveries) output_(nullptr, 0, std::nullopt);
+    output_(std::move(prefix), prefix_size,
+            std::make_unique<common::reader>(std::move(source)));
+    if (state_->empty_deliveries) output_(nullptr, 0, nullptr);
     if (!state_->single) {
       auto next = std::make_unique<char[]>(1);
       next[0] = 'B';
-      output_(std::move(next), 1, std::nullopt);
+      output_(std::move(next), 1, nullptr);
       auto last = std::make_unique<char[]>(1);
       last[0] = 'C';
-      output_(std::move(last), 1, common::reader::borrowed(
-          std::as_bytes(std::span(state_->later.data(), state_->later.size()))));
-      output_(nullptr, 0, common::reader{});
+      output_(std::move(last), 1,
+              std::make_unique<common::reader>(common::reader::borrowed(
+                  std::as_bytes(std::span(state_->later.data(),
+                                          state_->later.size())))));
+      output_(nullptr, 0, std::make_unique<common::reader>());
       auto tail = std::make_unique<char[]>(2);
       tail[0] = 'D';
       tail[1] = 'E';
-      output_(std::move(tail), 2, std::nullopt);
+      output_(std::move(tail), 2, nullptr);
     }
-    if (state_->empty_deliveries) output_(nullptr, 0, std::nullopt);
+    if (state_->empty_deliveries) output_(nullptr, 0, nullptr);
     if (state_->rejected_size) {
       auto rejected = std::make_unique<char[]>(state_->rejected_size);
-      output_(std::move(rejected), state_->rejected_size, std::nullopt);
-      output_(nullptr, 0, std::nullopt);
+      output_(std::move(rejected), state_->rejected_size, nullptr);
+      output_(nullptr, 0, nullptr);
     }
     if (state_->close) close_();
     state_->queued++;
