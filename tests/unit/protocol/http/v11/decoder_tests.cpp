@@ -2626,7 +2626,7 @@ DOBA_TEST("decoder returns responses for rejection reasons") {
 // | [>] target and header fit within receive capacity           ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("decoder accepts target and headers within receive capacity") {
-  for (const std::string source : std::array<std::string, 2>{
+  for (const std::string& source : std::array<std::string, 2>{
            "GET /123456789 HTTP/1.1\r\nHost: a\r\n\r\n",
            "GET / HTTP/1.1\r\nHost: a\r\nX: " + std::string(140, 'x') +
                "\r\n\r\n"}) {
