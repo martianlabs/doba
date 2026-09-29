@@ -12,6 +12,11 @@ option(
   "Consume doba with add_subdirectory"
   OFF
 )
+option(
+  DOBA_PACKAGE_USE_TLS
+  "Consume the doba TLS target"
+  OFF
+)
 if(
   DOBA_PACKAGE_USE_SOURCE
 )
@@ -57,3 +62,16 @@ target_link_libraries(
   PRIVATE
   martianlabs::doba
 )
+if(
+  DOBA_PACKAGE_USE_TLS
+)
+  add_executable(
+    doba_package_tls_consumer
+    "${CMAKE_CURRENT_LIST_DIR}/transport/server/tls_tests.cpp"
+  )
+  target_link_libraries(
+    doba_package_tls_consumer
+    PRIVATE
+    martianlabs::doba_tls
+  )
+endif()

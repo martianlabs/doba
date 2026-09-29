@@ -50,5 +50,5 @@ DOBA_TEST("default context has no request derived signals") {
   DOBA_EXPECT_EQUAL(value.forwarding_hops, 0);
   DOBA_EXPECT_EQUAL(value.rejection_reason, rejection_reason::kNone);
   DOBA_EXPECT(value.connection.persistent);
-  DOBA_EXPECT_EQUAL(value.policies.max_content_length, 0);
+  DOBA_EXPECT_EQUAL(value.policies.max_content_length, 16 * 1024 * 1024);
 }

@@ -42,7 +42,7 @@
 #include "protocol/http/v11/server.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
-#include "transport/server/tcpip.h"
+#include "transport/server/tcp.h"
 
 namespace {
 namespace tr = martianlabs::doba::transport::server;
@@ -118,8 +118,8 @@ void check_drain(bool destroy, bool active_callback) {
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
-  configuration.send_buffer_size = 32 * 1024 * 1024;
-  auto transport = std::make_unique<tr::tcpip<drain_engine, decltype(factory)>>(
+  configuration.max_send_buffer_size = 32 * 1024 * 1024;
+  auto transport = std::make_unique<tr::tcp<drain_engine, decltype(factory)>>(
       configuration, std::move(factory));
   transport->set_on_connection([]() {});
   transport->set_on_disconnection([]() {});
@@ -260,8 +260,8 @@ void check_reader_drain(bool destroy, bool close, bool empty = false) {
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
-  configuration.send_buffer_size = 32 * 1024;
-  auto transport = std::make_unique<tr::tcpip<reader_engine, decltype(factory)>>(
+  configuration.max_send_buffer_size = 32 * 1024;
+  auto transport = std::make_unique<tr::tcp<reader_engine, decltype(factory)>>(
       configuration, std::move(factory));
   transport->set_on_connection([]() {});
   transport->set_on_disconnection([]() {});
@@ -323,8 +323,8 @@ DOBA_TEST("stop handles failed and overflowing sends") {
     configuration.ip = "127.0.0.1";
     configuration.port = std::to_string(port);
     configuration.worker_count = 2;
-    configuration.send_buffer_size = overflow ? 1024 : 32 * 1024 * 1024;
-    tr::tcpip<drain_engine, decltype(factory)> transport(configuration,
+    configuration.max_send_buffer_size = overflow ? 1024 : 32 * 1024 * 1024;
+    tr::tcp<drain_engine, decltype(factory)> transport(configuration,
                                                        std::move(factory));
     transport.set_on_connection([]() {});
     transport.set_on_disconnection([]() {});
@@ -356,8 +356,8 @@ DOBA_TEST("stop rejects new engine input") {
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
-  configuration.send_buffer_size = 32 * 1024 * 1024;
-  tr::tcpip<drain_engine, decltype(factory)> transport(configuration,
+  configuration.max_send_buffer_size = 32 * 1024 * 1024;
+  tr::tcp<drain_engine, decltype(factory)> transport(configuration,
                                                      std::move(factory));
   transport.set_on_connection([]() {});
   transport.set_on_disconnection([]() {});
@@ -413,8 +413,8 @@ DOBA_TEST("sources work with a small send buffer") {
       configuration.ip = "127.0.0.1";
       configuration.port = std::to_string(port);
       configuration.worker_count = 2;
-      configuration.send_buffer_size = capacity;
-      tr::tcpip<reader_engine, decltype(factory)> transport(configuration,
+      configuration.max_send_buffer_size = capacity;
+      tr::tcp<reader_engine, decltype(factory)> transport(configuration,
                                                           std::move(factory));
       transport.set_on_connection([]() {});
       transport.set_on_disconnection([]() {});
@@ -446,8 +446,8 @@ DOBA_TEST("source failure cancels later deliveries") {
     configuration.ip = "127.0.0.1";
     configuration.port = std::to_string(port);
     configuration.worker_count = 2;
-    configuration.send_buffer_size = 16 * 1024 * 1024;
-    tr::tcpip<reader_engine, decltype(factory)> transport(configuration,
+    configuration.max_send_buffer_size = 16 * 1024 * 1024;
+    tr::tcp<reader_engine, decltype(factory)> transport(configuration,
                                                         std::move(factory));
     transport.set_on_connection([]() {});
     transport.set_on_disconnection([]() {});
@@ -484,7 +484,7 @@ DOBA_TEST("sources without progress close the connection") {
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
-  tr::tcpip<reader_engine, decltype(factory)> transport(configuration,
+  tr::tcp<reader_engine, decltype(factory)> transport(configuration,
                                                       std::move(factory));
   transport.set_on_connection([]() {});
   transport.set_on_disconnection([]() {});
@@ -511,8 +511,8 @@ DOBA_TEST("source buffers respect the send limit") {
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
-  configuration.send_buffer_size = 8192;
-  tr::tcpip<reader_engine, decltype(factory)> transport(configuration,
+  configuration.max_send_buffer_size = 8192;
+  tr::tcp<reader_engine, decltype(factory)> transport(configuration,
                                                       std::move(factory));
   transport.set_on_connection([]() {});
   transport.set_on_disconnection([]() {});
@@ -540,7 +540,7 @@ DOBA_TEST("HTTP sources precede the next pipelined response") {
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
-  configuration.send_buffer_size = 32768;
+  configuration.max_send_buffer_size = 32768;
   http::server<> server(configuration);
   const std::string body(2 * 1024 * 1024, 'h');
   server.add_route("GET", "/large", [&body](const http::request&) {
@@ -590,8 +590,8 @@ DOBA_TEST("concurrent stops drain before returning") {
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 8;
-  configuration.send_buffer_size = 32 * 1024 * 1024;
-  tr::tcpip<drain_engine, decltype(factory)> transport(configuration,
+  configuration.max_send_buffer_size = 32 * 1024 * 1024;
+  tr::tcp<drain_engine, decltype(factory)> transport(configuration,
                                                      std::move(factory));
   transport.set_on_connection([]() {});
   transport.set_on_disconnection([]() {});
@@ -645,14 +645,14 @@ DOBA_TEST("stop from a worker is rejected") {
   configuration.worker_count = 2;
   std::promise<bool> rejected;
   auto result = rejected.get_future();
-  tr::tcpip<drain_engine, decltype(factory)> other(configuration, factory);
+  tr::tcp<drain_engine, decltype(factory)> other(configuration, factory);
   other.set_on_connection([]() {});
   other.set_on_disconnection([]() {});
   other.start();
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   configuration.port = std::to_string(port);
-  tr::tcpip<drain_engine, decltype(factory)> transport(configuration, factory);
+  tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
   transport.set_on_connection([&]() {
     other.stop();
     bool threw = false;
@@ -691,7 +691,7 @@ DOBA_TEST("disconnection can reenter an external stop") {
   std::atomic<int> disconnected{0};
   std::atomic<bool> correct{false};
   const auto caller = std::this_thread::get_id();
-  tr::tcpip<drain_engine, decltype(factory)> transport(configuration,
+  tr::tcp<drain_engine, decltype(factory)> transport(configuration,
                                                      std::move(factory));
   transport.set_on_connection([&]() { connected.set_value(); });
   transport.set_on_disconnection([&]() {
@@ -741,7 +741,7 @@ DOBA_TEST("invalid endpoint policies prevent startup") {
     configuration.ip = ip;
     configuration.port = port;
     configuration.worker_count = 1;
-    tr::tcpip<drain_engine, decltype(factory)> transport(configuration, factory);
+    tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
     transport.set_on_connection([]() {});
     transport.set_on_disconnection([]() {});
     for (int attempt = 0; attempt < 2; attempt++) {
@@ -772,7 +772,7 @@ DOBA_TEST("endpoint policies persist across restarts") {
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
   std::atomic<int> connected{0};
-  tr::tcpip<drain_engine, decltype(factory)> transport(configuration, factory);
+  tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
   transport.set_on_connection([&]() { connected++; });
   transport.set_on_disconnection([]() {});
   configuration.ip = "invalid";
@@ -806,8 +806,8 @@ DOBA_TEST("close discards input after draining output") {
     configuration.port = std::to_string(port);
     configuration.worker_count = 2;
     configuration.recv_buffer_size = 1;
-    configuration.send_buffer_size = 32768;
-    tr::tcpip<reader_engine, decltype(factory)> transport(configuration,
+    configuration.max_send_buffer_size = 32768;
+    tr::tcp<reader_engine, decltype(factory)> transport(configuration,
                                                          std::move(factory));
     std::atomic<int> disconnected{0};
     transport.set_on_connection([]() {});
@@ -864,8 +864,8 @@ DOBA_TEST("rejection discards a pending source and later output") {
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
-  configuration.send_buffer_size = 8192;
-  tr::tcpip<reader_engine, decltype(factory)> transport(configuration,
+  configuration.max_send_buffer_size = 8192;
+  tr::tcp<reader_engine, decltype(factory)> transport(configuration,
                                                        std::move(factory));
   transport.set_on_connection([]() {});
   transport.set_on_disconnection([]() {});

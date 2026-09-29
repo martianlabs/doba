@@ -23,8 +23,8 @@
 // permissions and limitations under the License.
 
 #if defined(_WIN32)
-#include "transport/server/tcpip.h"
-#include "transport/server/tcpip_windows.h"
+#include "transport/server/tcp.h"
+#include "transport/server/tcp_windows.h"
 #include "test_helper.h"
 using namespace martianlabs::doba::transport::server;
 

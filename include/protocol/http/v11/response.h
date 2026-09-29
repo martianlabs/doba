@@ -26,15 +26,18 @@
 #define martianlabs_doba_protocol_http_v11_response_h
 
 #include <charconv>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 #include "common/date_server.h"
 #include "platform.h"
 #include "protocol/http/common/helpers.h"
 #include "protocol/http/v11/body/writer.h"
+#include "protocol/http/v11/policies.h"
 #include "protocol/http/common/header_names.h"
 #include "protocol/serialization.h"
 #include "protocol/http/common/status_codes.h"
@@ -60,10 +63,9 @@ class response {
   response(const response&) = delete;
   response(response&& in) noexcept
       : memory_(std::move(in.memory_)),
+        body_(std::move(in.body_)),
         sln_len_(in.sln_len_),
         hdr_len_(in.hdr_len_),
-        bdy_beg_(in.bdy_beg_),
-        bdy_len_(in.bdy_len_),
         status_code_(in.status_code_),
         has_date_header_(in.has_date_header_),
         has_content_length_header_(in.has_content_length_header_),
@@ -75,7 +77,6 @@ class response {
         bdy_reader_(std::move(in.bdy_reader_)) {
     in.sln_len_ = 0;
     in.hdr_len_ = 0;
-    in.bdy_len_ = 0;
     in.status_code_ = SC_200_OK;
     in.has_date_header_ = false;
     in.connection_close_count_ = 0;
@@ -90,10 +91,9 @@ class response {
   response& operator=(response&& in) noexcept {
     if (this == &in) return *this;
     memory_ = std::move(in.memory_);
+    body_ = std::move(in.body_);
     sln_len_ = in.sln_len_;
     hdr_len_ = in.hdr_len_;
-    bdy_beg_ = in.bdy_beg_;
-    bdy_len_ = in.bdy_len_;
     status_code_ = in.status_code_;
     has_date_header_ = in.has_date_header_;
     has_content_length_header_ = in.has_content_length_header_;
@@ -105,7 +105,6 @@ class response {
     bdy_reader_ = std::move(in.bdy_reader_);
     in.sln_len_ = 0;
     in.hdr_len_ = 0;
-    in.bdy_len_ = 0;
     in.status_code_ = SC_200_OK;
     in.has_date_header_ = false;
     in.connection_close_count_ = 0;
@@ -153,19 +152,23 @@ class response {
       add_date_header();
     }
     std::size_t sln_plus_hdr_len = sln_len_ + hdr_len_;
-    // Write the header-terminating CRLF (plus an extra CRLF when there are no
-    // headers). The core section must always stay within [0, bdy_beg_).
     std::size_t crlf_bytes = hdr_len_ ? 2 : 4;
-    if (sln_plus_hdr_len + crlf_bytes > bdy_beg_) {
+    if (sln_plus_hdr_len + crlf_bytes >
+        policies::kMaxResponseHeadSizeInMemory) {
       throw std::out_of_range("not enough space to serialize response!");
     }
-    memory_[sln_plus_hdr_len++] = '\r';
-    memory_[sln_plus_hdr_len++] = '\n';
-    if (!hdr_len_) {
-      memory_[sln_plus_hdr_len++] = '\r';
-      memory_[sln_plus_hdr_len++] = '\n';
-    }
     auto result = std::make_unique<protocol::serialization_result>();
+    result->prefix_size = sln_plus_hdr_len + crlf_bytes +
+                          (must_omit_body ? 0 : body_.size());
+    result->prefix =
+        std::make_unique_for_overwrite<char[]>(result->prefix_size);
+    std::memcpy(result->prefix.get(), memory_.data(), sln_plus_hdr_len);
+    std::memcpy(result->prefix.get() + sln_plus_hdr_len,
+                hdr_len_ ? "\r\n" : "\r\n\r\n", crlf_bytes);
+    if (!must_omit_body && !body_.empty()) {
+      std::memcpy(result->prefix.get() + sln_plus_hdr_len + crlf_bytes,
+                  body_.data(), body_.size());
+    }
     if (bdy_writer_.has_value()) {
       if (!must_omit_body) {
         // Finalizes the framing and transfers the accumulated bytes to the
@@ -179,13 +182,6 @@ class response {
       if (!must_omit_body) result->source = std::move(bdy_reader_);
       bdy_reader_.reset();
     }
-    if (!must_omit_body && bdy_len_ > 0) {
-      // The final body position can overlap its reserved region.
-      std::memmove(&memory_[sln_plus_hdr_len], &memory_[bdy_beg_], bdy_len_);
-      sln_plus_hdr_len += bdy_len_;
-    }
-    result->prefix = std::move(memory_);
-    result->prefix_size = sln_plus_hdr_len;
     return result;
   }
   // +=========================================================================+
@@ -203,27 +199,24 @@ class response {
     }
     std::size_t k_size = k.size();
     std::size_t v_size = v.size();
-    std::size_t space_left = bdy_beg_ - sln_len_ - hdr_len_;
+    std::size_t space_left = policies::kMaxResponseHeadSizeInMemory -
+                             sln_len_ - hdr_len_;
     // Bytes written by this call: key + ':' + ' ' + value + '\r' + '\n' = k + v
-    // + 4. Reserve, in addition, the 2 bytes of the header-terminating CRLF
-    // that serialize() appends, so we never overrun into the body region.
+    // + 4. Reserve the 2 bytes of the header-terminating CRLF.
     if (k_size + v_size + 4 + 2 > space_left) {
-      // Not enough space to add this header without overrunning the body
-      // region!
       throw std::out_of_range("not enough space to add header!");
     }
-    std::memcpy(&memory_[sln_len_ + hdr_len_], k.data(), k.size());
-    hdr_len_ += k.size();
-    memory_[sln_len_ + hdr_len_] = ':';
-    hdr_len_++;
-    memory_[sln_len_ + hdr_len_] = ' ';
-    hdr_len_++;
-    std::memcpy(&memory_[sln_len_ + hdr_len_], v.data(), v.size());
-    hdr_len_ += v.size();
-    memory_[sln_len_ + hdr_len_] = '\r';
-    hdr_len_++;
-    memory_[sln_len_ + hdr_len_] = '\n';
-    hdr_len_++;
+    std::size_t pos = memory_.size();
+    memory_.resize(pos + k_size + v_size + 4);
+    std::memcpy(&memory_[pos], k.data(), k_size);
+    pos += k_size;
+    memory_[pos++] = ':';
+    memory_[pos++] = ' ';
+    if (v_size) std::memcpy(&memory_[pos], v.data(), v_size);
+    pos += v_size;
+    memory_[pos++] = '\r';
+    memory_[pos] = '\n';
+    hdr_len_ += k_size + v_size + 4;
     if (iequals(k, header_names::kDate)) has_date_header_ = true;
     if (iequals(k, header_names::kContentLength)) {
       has_content_length_header_ = true;
@@ -263,28 +256,19 @@ class response {
       return add_header(k, v);
     }
     std::size_t new_v_size = v.size();
-    // Bytes after this header's value inside the header block (subsequent
-    // headers) that must be relocated when the value length changes.
-    std::size_t tail_off = val_off + val_len;
-    std::size_t tail_len = (sln_len_ + hdr_len_) - tail_off;
     if (new_v_size > val_len) {
-      // Growing: ensure the extra bytes still fit before the body region,
-      // keeping room for the header-terminating CRLF that serialize() adds.
       std::size_t grow = new_v_size - val_len;
-      std::size_t space_left = bdy_beg_ - sln_len_ - hdr_len_;
+      std::size_t space_left = policies::kMaxResponseHeadSizeInMemory -
+                               sln_len_ - hdr_len_;
       if (grow + 2 > space_left) {
-        // Not enough space to grow this header without overrunning the body!
         throw std::out_of_range("not enough space to set header!");
       }
     }
-    if (iequals(k, header_names::kConnection) &&
-        has_close_option(std::string_view(&memory_[val_off], val_len))) {
-      connection_close_count_--;
-    }
-    // Relocate the tail to make room for (or reclaim space from) the new value,
-    // then write the new value in place. memmove tolerates overlap.
-    std::memmove(&memory_[val_off + new_v_size], &memory_[tail_off], tail_len);
-    std::memcpy(&memory_[val_off], v.data(), new_v_size);
+    bool had_close_option =
+        iequals(k, header_names::kConnection) &&
+        has_close_option(std::string_view(&memory_[val_off], val_len));
+    memory_.replace(val_off, val_len, v);
+    if (had_close_option) connection_close_count_--;
     hdr_len_ = hdr_len_ - val_len + new_v_size;
     if (iequals(k, header_names::kDate)) has_date_header_ = true;
     if (iequals(k, header_names::kConnection) && has_close_option(v)) {
@@ -404,9 +388,7 @@ class response {
         has_close_option(std::string_view(&memory_[val_off], val_len))) {
       connection_close_count_--;
     }
-    std::size_t tail_off = line_off + line_len;
-    std::size_t tail_len = (sln_len_ + hdr_len_) - tail_off;
-    std::memmove(&memory_[line_off], &memory_[tail_off], tail_len);
+    memory_.erase(line_off, line_len);
     hdr_len_ -= line_len;
     if (iequals(k, header_names::kDate)) has_date_header_ = has_header(k);
     if (iequals(k, header_names::kContentLength)) {
@@ -421,20 +403,19 @@ class response {
   // | [>] set_body                                                 ( public ) |
   // +=========================================================================+
   // | Stores the supplied payload as the response body. Small payloads land   |
-  // | in the in-memory body region (fast path); anything that does not fit is |
+  // | in the inline body string (fast path); anything that does not fit is    |
   // | transparently spilled into an internally created raw body::body_writer, |
   // | which serialize() hands over to the transport as a streaming source.    |
   // +-------------------------------------------------------------------------+
   response& set_body(std::string_view sv) {
     std::size_t body_size = sv.size();
     reset_body();
-    if (body_size <= kMaxResponseBodySizeInMemory) {
-      std::memcpy(&memory_[bdy_beg_], sv.data(), body_size);
-      bdy_len_ = body_size;
+    if (body_size <= policies::kMaxResponseBodySizeInMemory) {
+      body_.assign(sv);
       content_length_ = body_size;
       return *this;
     }
-    // Payload does not fit in the in-memory body region: spill it into a raw
+    // Payload exceeds the inline body limit: spill it into a raw
     // (Content-Length framed) writer that may itself offload to disk.
     auto writer = body::body_writer::raw();
     if (!writer.write(sv)) {
@@ -507,7 +488,7 @@ class response {
   // | Discards body bytes while retaining the advertised framing for HEAD.    |
   // +-------------------------------------------------------------------------+
   response& suppress_body() {
-    bdy_len_ = 0;
+    body_.clear();
     bdy_reader_.reset();
     bdy_writer_.reset();
     return *this;
@@ -708,8 +689,6 @@ class response {
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
   // +=========================================================================+
-  static constexpr std::size_t kMaxResponseSizeInMemory = 4096;
-  static constexpr std::size_t kMaxResponseBodySizeInMemory = 2048;
   static constexpr std::string_view kDatePrefix = "Date: ";
   static constexpr std::size_t kDateLength = 29;
   static constexpr std::size_t kDateLineLength =
@@ -718,16 +697,19 @@ class response {
   // | [>] add_date_header                                         ( private ) |
   // +=========================================================================+
   void add_date_header() {
-    std::size_t space_left = bdy_beg_ - sln_len_ - hdr_len_;
+    std::size_t space_left = policies::kMaxResponseHeadSizeInMemory -
+                             sln_len_ - hdr_len_;
     if (kDateLineLength + 2 > space_left) {
       throw std::out_of_range("not enough space to add header!");
     }
-    char* out = &memory_[sln_len_ + hdr_len_];
-    std::memcpy(out, kDatePrefix.data(), kDatePrefix.size());
     const auto current = common::date_server::get().current();
-    std::memcpy(out + kDatePrefix.size(), current.data(), kDateLength);
-    out[kDateLineLength - 2] = '\r';
-    out[kDateLineLength - 1] = '\n';
+    std::size_t pos = memory_.size();
+    memory_.resize(pos + kDateLineLength);
+    std::memcpy(&memory_[pos], kDatePrefix.data(), kDatePrefix.size());
+    std::memcpy(&memory_[pos + kDatePrefix.size()], current.data(),
+                kDateLength);
+    memory_[pos + kDateLineLength - 2] = '\r';
+    memory_[pos + kDateLineLength - 1] = '\n';
     hdr_len_ += kDateLineLength;
     has_date_header_ = true;
   }
@@ -753,31 +735,33 @@ class response {
       throw std::invalid_argument("conflicting response framing headers!");
     }
     if (has_content_length_header_ || has_transfer_encoding_header_) return;
-    std::size_t space_left = bdy_beg_ - sln_len_ - hdr_len_;
-    char* out = &memory_[sln_len_ + hdr_len_];
+    std::size_t space_left = policies::kMaxResponseHeadSizeInMemory -
+                             sln_len_ - hdr_len_;
     if (chunked_) {
       constexpr std::string_view line = "Transfer-Encoding: chunked\r\n";
       if (line.size() + 2 > space_left) {
         throw std::out_of_range("not enough space to serialize response!");
       }
-      std::memcpy(out, line.data(), line.size());
+      memory_.append(line);
       hdr_len_ += line.size();
       has_transfer_encoding_header_ = true;
     } else if (content_length_) {
       constexpr std::string_view prefix = "Content-Length: ";
-      if (prefix.size() + 1 + 4 > space_left) {
+      char digits[std::numeric_limits<std::size_t>::digits10 + 1];
+      const auto converted = std::to_chars(digits, digits + sizeof(digits),
+                                           *content_length_);
+      std::size_t digit_count = converted.ptr - digits;
+      if (converted.ec != std::errc() ||
+          prefix.size() + digit_count + 4 > space_left) {
         throw std::out_of_range("not enough space to serialize response!");
       }
-      const auto converted = std::to_chars(
-          out + prefix.size(), memory_.get() + bdy_beg_ - 4,
-          *content_length_);
-      if (converted.ec != std::errc()) {
-        throw std::out_of_range("not enough space to serialize response!");
-      }
-      std::memcpy(out, prefix.data(), prefix.size());
-      converted.ptr[0] = '\r';
-      converted.ptr[1] = '\n';
-      hdr_len_ += static_cast<std::size_t>(converted.ptr - out) + 2;
+      std::size_t pos = memory_.size();
+      memory_.resize(pos + prefix.size() + digit_count + 2);
+      std::memcpy(&memory_[pos], prefix.data(), prefix.size());
+      std::memcpy(&memory_[pos + prefix.size()], digits, digit_count);
+      memory_[pos + prefix.size() + digit_count] = '\r';
+      memory_[pos + prefix.size() + digit_count + 1] = '\n';
+      hdr_len_ += prefix.size() + digit_count + 2;
       has_content_length_header_ = true;
     }
   }
@@ -849,14 +833,12 @@ class response {
   // | [>] CONSTRUCTOR                                             ( private ) |
   // +=========================================================================+
   response(std::string_view status_line, int status_code)
-      : memory_(std::make_unique_for_overwrite<char[]>(
-            kMaxResponseSizeInMemory)),
+      : memory_(status_line),
         sln_len_(status_line.size()),
         status_code_(status_code) {
-    if (sln_len_ > bdy_beg_) {
+    if (sln_len_ > policies::kMaxResponseHeadSizeInMemory) {
       throw std::out_of_range("not enough space to set status line!");
     }
-    std::memcpy(memory_.get(), status_line.data(), sln_len_);
     // RFC 9110 S8.6: 1xx/204 forbid Content-Length; 304 needs a known size.
     bool is_informational = status_code < SC_200_OK;
     if (is_informational || status_code == SC_204_NO_CONTENT ||
@@ -867,12 +849,10 @@ class response {
   // +=========================================================================+
   // | [>] ATTRIBUTES                                              ( private ) |
   // +=========================================================================+
-  std::unique_ptr<char[]> memory_;
+  std::string memory_;
+  std::string body_;
   std::size_t sln_len_{0};
   std::size_t hdr_len_{0};
-  std::size_t bdy_beg_{kMaxResponseSizeInMemory -
-                       kMaxResponseBodySizeInMemory};
-  std::size_t bdy_len_{0};
   int status_code_{SC_200_OK};
   bool has_date_header_{false};
   bool has_content_length_header_{false};

@@ -27,6 +27,9 @@
 
 #include <cstddef>
 
+#include "common/byte_storage.h"
+#include "transport/server/policies.h"
+
 namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -39,24 +42,29 @@ namespace martianlabs::doba::protocol::http::v11 {
 // | Content-Length above max_content_length, or more forwarding hops than     |
 // | max_forwarding_hops).                                                     |
 // |                                                                           |
-// | The defaults are permissive placeholders; a server tightens them at       |
-// | configuration time. A limit of 0 means "unlimited" unless noted.          |
+// | A limit of 0 means "unlimited" unless noted.                              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct policies {
-  // Maximum accepted Content-Length, in octets (0 means unlimited).
-  std::size_t max_content_length = 0;
+  static constexpr std::size_t kMaxQueryParameters = 128;
+  static constexpr std::size_t kMaxChunkedExtensionSize = 1024;
+  static constexpr std::size_t kMaxChunkedTrailerSize = 4096;
+  static constexpr std::size_t kMaxRequestHeadSizeInMemory =
+      transport::server::policies::kDefaultRecvBufferSize;
+  static constexpr std::size_t kMaxRequestBodySizeInMemory =
+      common::byte_storage_options::kDefaultSpillThreshold;
+  static constexpr std::size_t kMaxResponseHeadSizeInMemory =
+      transport::server::policies::kDefaultRecvBufferSize;
+  static constexpr std::size_t kMaxResponseBodySizeInMemory =
+      common::byte_storage_options::kDefaultSpillThreshold;
+  // Maximum accepted body size, in octets (0 means unlimited).
+  std::size_t max_content_length = 16 * 1024 * 1024;
   // Maximum number of forwarding hops accepted across Via / Forwarded /
   // X-Forwarded-For (0 means unlimited).
-  std::size_t max_forwarding_hops = 0;
+  std::size_t max_forwarding_hops = 32;
   // Maximum number of transfer-codings accepted in Transfer-Encoding
   // (0 means unlimited).
-  std::size_t max_transfer_codings = 0;
-  // Maximum accepted request-target length, in octets (0 means unlimited).
-  std::size_t max_uri_length = 0;
-  // Maximum accepted size of the whole header section, in octets (0 means
-  // unlimited).
-  std::size_t max_header_section_size = 0;
+  std::size_t max_transfer_codings = 4;
   // Whether the server allows requests carrying a chunked Transfer-Encoding.
   bool allow_chunked = true;
   // Whether the server allows protocol upgrades offered via Upgrade.

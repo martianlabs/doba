@@ -38,6 +38,7 @@ using martianlabs::doba::protocol::http::v11::headers::rules::policy;
 // +===========================================================================+
 DOBA_TEST("zero limit accepts every forwarding hop count") {
   context ctx;
+  ctx.policies.max_forwarding_hops = 0;
   ctx.forwarding_hops = std::numeric_limits<std::size_t>::max();
   DOBA_EXPECT_EQUAL(policy::apply(ctx), verdict::kAccept);
 }

@@ -104,7 +104,7 @@ DOBA_TEST("probe failure cleans up active transport") {
           {}, routes);
     };
     using engine_type = decltype(factory());
-    transport::server::tcpip<engine_type, decltype(factory)> server(
+    transport::server::tcp<engine_type, decltype(factory)> server(
         {.ip = "127.0.0.1", .port = std::to_string(port)}, factory);
     server.set_on_connection([&]() { connected.fetch_add(1); });
     server.set_on_disconnection([&]() { disconnected.fetch_add(1); });

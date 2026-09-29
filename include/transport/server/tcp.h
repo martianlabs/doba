@@ -22,8 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_transport_server_tcpip_h
-#define martianlabs_doba_transport_server_tcpip_h
+#ifndef martianlabs_doba_transport_server_tcp_h
+#define martianlabs_doba_transport_server_tcp_h
 
 #include <functional>
 
@@ -51,9 +51,9 @@ struct types {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 #ifdef _WIN32
-#include "transport/server/tcpip_windows.h"
+#include "transport/server/tcp_windows.h"
 #elif __linux__
-#include "transport/server/tcpip_linux.h"
+#include "transport/server/tcp_linux.h"
 #endif
 
 #endif

@@ -24,6 +24,15 @@ target_link_libraries(
   PRIVATE
   doba_headers
 )
+if(
+  DOBA_ENABLE_TLS
+)
+  target_link_libraries(
+    doba_integration_tests
+    PRIVATE
+    doba_tls
+  )
+endif()
 add_test(
   NAME doba_integration_tests
   COMMAND doba_integration_tests

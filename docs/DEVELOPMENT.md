@@ -81,6 +81,7 @@ ctest --test-dir out/build/msvc-release --output-on-failure
 | --- | --- | --- |
 | `DOBA_BUILD_EXAMPLES` | ON as the main project; OFF as a subproject | Builds examples. |
 | `DOBA_BUILD_TESTS` | ON as the main project; OFF as a subproject | Enables the project's test suites. |
+| `DOBA_ENABLE_TLS` | OFF | Enables the OpenSSL TLS transport and example. |
 | `DOBA_ENABLE_STRICT_WARNINGS` | OFF | Enables strict warnings in the doba build tree. |
 
 The [CI gates](QUALITY.md#enforce-the-ci-gates) define the compiler and
@@ -100,6 +101,12 @@ sanitizer validations. Exact commands are maintained in the
 Installation and consumers are documented in the [README](../README.md).
 Locate the package with `find_package(doba CONFIG REQUIRED)` and link
 against `martianlabs::doba`.
+
+For TLS, configure doba with `-DDOBA_ENABLE_TLS=ON` and link
+`martianlabs::doba_tls`. OpenSSL development headers and libraries must be
+available when configuring doba and when consuming an installed TLS package.
+The [HTTPS example](../examples/http/v11/https_hello_world/README.md) shows a
+server using this transport.
 
 The target exports includes, C++20, and Threads. Internal warning and
 sanitizer flags are not part of its installed interface. When using

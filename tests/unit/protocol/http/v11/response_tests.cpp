@@ -34,9 +34,13 @@
 namespace {
 using martianlabs::doba::common::reader;
 using martianlabs::doba::protocol::http::v11::response;
+using martianlabs::doba::protocol::http::v11::policies;
 using martianlabs::doba::protocol::http::v11::body::body_writer;
-constexpr std::size_t max_response_size_in_memory = 4096;
-constexpr std::size_t max_response_body_size_in_memory = 2048;
+constexpr std::size_t max_response_size_in_memory =
+    policies::kMaxResponseHeadSizeInMemory +
+    policies::kMaxResponseBodySizeInMemory;
+constexpr std::size_t max_response_body_size_in_memory =
+    policies::kMaxResponseBodySizeInMemory;
 
 std::string read_source(reader& source) {
   std::string output;
@@ -710,19 +714,39 @@ DOBA_TEST("serialized bytes outlive and detach from the response") {
                     "Content-Length: 8\r\n\r\noriginal");
 }
 // +===========================================================================+
-// | [>] inline body compaction handles overlapping regions      ( test-case ) |
+// | [>] inline body survives repeated header growth             ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("inline body compaction handles overlapping regions") {
+DOBA_TEST("inline body survives repeated header growth") {
+  const std::string body(1024, 'b');
+  response value = response::ok_200();
+  value.set_body(body).set_header("Date", "fixed");
+  for (std::size_t i = 0; i < 12; i++) {
+    value.add_header("X-Test", std::string(i * 17, 'x'));
+  }
+  value.set_header("X-Test", std::string(200, 'y'));
+  value.remove_header("X-Test");
+  auto serialized = value.serialize();
+  const std::string_view prefix(serialized->prefix.get(),
+                                serialized->prefix_size);
+  DOBA_EXPECT(prefix.find("Content-Length: 1024\r\n") !=
+              std::string_view::npos);
+  DOBA_EXPECT(prefix.ends_with(body));
+  DOBA_EXPECT(!serialized->source.has_value());
+}
+// +===========================================================================+
+// | [>] full inline body survives near-limit headers            ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("full inline body survives near-limit headers") {
   std::string body(max_response_body_size_in_memory, '\0');
   for (std::size_t i = 0; i < body.size(); i++) {
     body[i] = static_cast<char>(i % 256);
   }
-  const std::size_t body_begin = max_response_size_in_memory - body.size();
+  const std::size_t head_limit = policies::kMaxResponseHeadSizeInMemory;
   const std::string head = "HTTP/1.1 200 OK\r\nDate: fixed\r\nX-Pad: ";
   const std::string framing =
       "Content-Length: " + std::to_string(body.size()) + "\r\n";
   const std::string padding(
-      body_begin - 32 - head.size() - framing.size() - 4, 'x');
+      head_limit - 32 - head.size() - framing.size() - 4, 'x');
   response value = response::ok_200();
   value.set_body(body).set_header("Date", "fixed").add_header("X-Pad", padding);
   const auto serialized = value.serialize();

@@ -37,10 +37,11 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct policies {
+  static constexpr std::size_t kDefaultRecvBufferSize = 8 * 1024;
   // Receive capacity per connection, in bytes (must be positive).
   // Engines retain incomplete cores here; bodies may span multiple receives.
   // A full buffer with no consumption closes the connection.
-  std::size_t recv_buffer_size = 8192;
+  std::size_t recv_buffer_size = kDefaultRecvBufferSize;
   // Number of workers (0 selects automatically).
   std::size_t worker_count = 0;
   // Requested pending connection queue size (0 uses the system default).
@@ -48,10 +49,19 @@ struct policies {
   // Queued send reservations plus the entire active batch, per connection.
   // Also bounds each accumulated batch; source-owned storage is excluded.
   // Must be positive; exceeding it closes the connection. No preallocation.
-  std::size_t send_buffer_size = 1024 * 1024;
+  std::size_t max_send_buffer_size = 1024 * 1024;
   // IPv4 bind address and port (1-65535); both must be set.
   std::string ip;
   std::string port;
+};
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] tls_policies                                               ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct tls_policies : policies {
+  std::string certificate_file;
+  std::string private_key_file;
 };
 }  // namespace martianlabs::doba::transport::server
 

@@ -43,6 +43,8 @@
 #include <zlib.h>
 
 #include "protocol/http/v11/server.h"
+#include "protocol/http/v11/static_file_server.h"
+#include "transport/server/tls.h"
 
 using namespace martianlabs::doba::protocol::http::v11;
 
@@ -103,7 +105,9 @@ int main(int argc, char* argv[]) {
     std::cerr << "invalid dataset\n";
     return 1;
   }
-  server http_server({.ip = "0.0.0.0", .port = "8080"});
+  policies http_configuration;
+  server http_server({.ip = "0.0.0.0", .port = "8080"},
+                     http_configuration);
   // Parse every baseline value; HttpArena randomizes them to detect shortcuts.
   http_server.add_route(
       "GET", "/baseline11",
@@ -135,8 +139,7 @@ int main(int argc, char* argv[]) {
             .set_body(std::to_string(value + body_value));
         return res;
       });
-  http_server.add_route(
-      "GET", "/json/:count",
+  auto json_handler =
       [&dataset](const request& req, std::uint64_t requested_count) {
         response res = response::ok_200();
         std::int64_t multiplier = 1;
@@ -221,7 +224,8 @@ int main(int argc, char* argv[]) {
           res.set_body(body);
         }
         return res;
-      });
+      };
+  http_server.add_route("GET", "/json/:count", json_handler);
   // Keep this handler minimal so the profile isolates pipelining overhead.
   http_server.add_route(
       "GET", "/pipeline",
@@ -230,7 +234,41 @@ int main(int argc, char* argv[]) {
         res.add_header("Content-Type", "text/plain").set_body("ok");
         return res;
       });
+  martianlabs::doba::transport::server::tls_policies tls_configuration;
+  tls_configuration.ip = "0.0.0.0";
+  tls_configuration.port = "8081";
+  tls_configuration.certificate_file = "/certs/server.crt";
+  tls_configuration.private_key_file = "/certs/server.key";
+  server<request, response,
+         martianlabs::doba::protocol::http::router<request, response>,
+         engine<request, response>,
+         martianlabs::doba::transport::server::tls>
+      tls_server(tls_configuration, http_configuration);
+  tls_server.add_route("GET", "/json/:count", json_handler);
+  tls_server.add_controller<static_file_server>("/static", "/data/static");
+  tls_server.add_route(
+      "POST", "/echo",
+      [](const request& req) {
+        response res = response::ok_200();
+        std::string body;
+        if (req.has_body_reader()) {
+          std::array<std::byte, 8192> buffer{};
+          for (;;) {
+            const auto state = req.get_body_reader()->read(buffer);
+            if (state.has_error) {
+              return response::bad_request_400();
+            }
+            body.append(reinterpret_cast<const char*>(buffer.data()),
+                        state.produced);
+            if (state.complete) break;
+          }
+        }
+        res.add_header("Content-Type", "application/octet-stream")
+            .set_body(body);
+        return res;
+      });
   http_server.start();
+  tls_server.start();
   // Docker owns process shutdown; wait after the server starts.
   std::promise<void> shutdown;
   shutdown.get_future().wait();

@@ -34,6 +34,7 @@
 #include "common/reader.h"
 #include "protocol/http/common/helpers.h"
 #include "protocol/http/v11/body/reader_state.h"
+#include "protocol/http/v11/policies.h"
 
 namespace martianlabs::doba::protocol::http::v11::body {
 // /////////////////////////////////////////////////////////////////////////////
@@ -90,8 +91,10 @@ class reader_chunked {
   // +=========================================================================+
   // | [>] CONSTANTs                                                ( public ) |
   // +=========================================================================+
-  static constexpr std::size_t kMaxChunkedExtensionSize = 1024;
-  static constexpr std::size_t kMaxChunkedTrailerSize = 4096;
+  static constexpr std::size_t kMaxChunkedExtensionSize =
+      policies::kMaxChunkedExtensionSize;
+  static constexpr std::size_t kMaxChunkedTrailerSize =
+      policies::kMaxChunkedTrailerSize;
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
   // +=========================================================================+
