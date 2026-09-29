@@ -54,10 +54,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install OpenSSL
-        if: matrix.tls == 'ON'
-        run: sudo apt-get update && sudo apt-get install -y libssl-dev
-
       - name: Configure
         run: >-
           cmake -S . -B ${{ matrix.build_dir }} -G Ninja
@@ -160,8 +156,22 @@ jobs:
         with:
           arch: x64
 
+      - name: Read vcpkg revision
+        if: matrix.tls == 'ON'
+        id: vcpkg-revision
+        run: echo "revision=$(git -C C:/vcpkg rev-parse HEAD)" >> $env:GITHUB_OUTPUT
+
+      - name: Restore vcpkg binary cache
+        if: matrix.tls == 'ON'
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.vcpkg-cache
+          key: vcpkg-openssl-x64-windows-${{ steps.vcpkg-revision.outputs.revision }}
+
       - name: Install OpenSSL
         if: matrix.tls == 'ON'
+        env:
+          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.vcpkg-cache,readwrite
         run: vcpkg install openssl:x64-windows
 
       - name: Configure
