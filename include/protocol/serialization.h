@@ -27,7 +27,6 @@
 
 #include <cstddef>
 #include <memory>
-#include <optional>
 
 #include "common/reader.h"
 
@@ -47,7 +46,7 @@ struct serialization_result {
   // +=========================================================================+
   std::unique_ptr<char[]> prefix;
   std::size_t prefix_size{0};
-  std::optional<common::reader> source;
+  std::unique_ptr<common::reader> source;
 };
 }  // namespace martianlabs::doba::protocol
 

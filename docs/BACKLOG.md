@@ -268,6 +268,51 @@ their tests.
 - Verify that configuration cannot change unsafely during use.
 - Measure whether the change affects the hot path.
 
+**Request head limits (found 2026-09-29).** The decoder bounds the head only
+by the receive capacity. There is no header field count limit and no
+per-field size limit, and an oversized head or request-target is rejected
+with 400: `kHeaderFieldsTooLarge` (431) and `kUriTooLong` (414) are mapped
+in [decoder.h](../include/protocol/http/v11/decoder.h) but never assigned.
+
+- Risk: a client can send thousands of small fields within one receive
+  buffer, multiplying per-field parsing and storage work, and clients and
+  proxies cannot tell an oversized head from malformed syntax.
+- Impact: CPU and memory amplification per request; incorrect status codes
+  for well-formed but oversized requests (RFC 6585 S5, RFC 9110 S15.5.15).
+- Components: decoder head parsing, policies, rejection reasons, tests.
+- Verification: header count and single-field size at limit-1, limit and
+  limit+1 must return 431; a request-target over capacity must return 414.
+  The current behaviour is pinned by `request head size is bounded by receive
+  capacity` and `header field count is bounded only by head size` in
+  [decoder_tests.cpp](../tests/unit/protocol/http/v11/decoder_tests.cpp);
+  update both when the limits land.
+
+**TLS session tests not exercised (found 2026-09-29).** The default
+`msvc-debug` configuration builds with `DOBA_ENABLE_TLS=OFF`, so
+[tls_session_tests.cpp](../tests/unit/transport/server/tls_session_tests.cpp)
+is compiled out and the full unit run executes no TLS test.
+
+- Risk: regressions in record parsing, handshake failure handling or
+  post-failure state go undetected; hostile ClientHello bytes are untested.
+- Impact: a TLS deployment may accept, hang on or mishandle malformed
+  records without any unit signal.
+- Components: `tls_session`, TLS context/policies, CMake presets and CI.
+- Verification: build and run the suite with `DOBA_ENABLE_TLS=ON`; add a
+  malformed-record test covering an impossible record length, a fatal alert
+  and application data before the handshake, an SSLv2 ClientHello and a
+  truncated handshake. Each must end in `status::failed`, keep `failed()`
+  true and make `read`/`write` fail.
+
+**Date field ranges (found 2026-09-29).** `date::check` validates syntax
+only and accepts out-of-range days, hours, minutes and seconds.
+
+- Risk: impossible dates reach conditional-request and cache logic.
+- Impact: inconsistent `If-Modified-Since` or `Last-Modified` handling.
+- Components: `protocol/http/common/headers/date.h` and its consumers.
+- Verification: decide whether to reject semantically; the current
+  behaviour is pinned by `check is syntactic for out of range date fields`
+  in [date_tests.cpp](../tests/unit/protocol/http/common/headers/date_tests.cpp).
+
 **Dependencies and decisions.** Injection API shape, defaults, and body
 accounting will be defined in the C1/C2/C3/C7 policy design stage. C2 controls
 resources per request; C3 separately limits active connections.

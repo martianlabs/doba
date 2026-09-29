@@ -53,8 +53,7 @@ struct policies {
       transport::server::policies::kDefaultRecvBufferSize;
   static constexpr std::size_t kMaxRequestBodySizeInMemory =
       common::byte_storage_options::kDefaultSpillThreshold;
-  static constexpr std::size_t kMaxResponseHeadSizeInMemory =
-      transport::server::policies::kDefaultRecvBufferSize;
+  static constexpr std::size_t kMaxResponseHeadSizeInMemory = 4 * 1024;
   static constexpr std::size_t kMaxResponseBodySizeInMemory =
       common::byte_storage_options::kDefaultSpillThreshold;
   // Maximum accepted body size, in octets (0 means unlimited).

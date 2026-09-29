@@ -39,7 +39,9 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <span>
 #include <stdexcept>
+#include <sys/uio.h>
 #include <unordered_map>
 #include <utility>
 
@@ -143,7 +145,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     });
     input_.engine.set_on_send([weak = this->weak_from_this()](
         std::unique_ptr<char[]> buffer, std::size_t size,
-        std::optional<common::reader> source) {
+        std::unique_ptr<common::reader> source) {
       if (auto ctx = weak.lock()) {
         ctx->send(std::move(buffer), size, std::move(source));
       }
@@ -211,7 +213,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // | [>] send                                                     ( public ) |
   // +=========================================================================+
   void send(std::unique_ptr<char[]> buffer, std::size_t size,
-            std::optional<common::reader> source) {
+            std::unique_ptr<common::reader> source) {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     if (closing_ || socket_ == -1) return;
     if (!size && !source) return;
@@ -229,14 +231,25 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     if (socket_ == -1 || aborted_) return false;
     for (;;) {
       if (!input_.prepare_output(output_)) return false;
-      const auto bytes = input_.output_bytes(output_);
-      if (bytes.empty()) break;
-      const std::size_t size = std::min<std::size_t>(
-          bytes.size(), std::numeric_limits<ssize_t>::max());
-      const ssize_t sent = ::send(
-          socket_, bytes.data(), size, MSG_NOSIGNAL);
+      std::array<std::span<char>, output_queue::kMaxSendFragments> segments{};
+      const std::size_t count = input_.output_segments(output_, segments);
+      if (!count) break;
+      std::array<iovec, output_queue::kMaxSendFragments> buffers{};
+      std::size_t available = std::numeric_limits<ssize_t>::max();
+      std::size_t parts = 0;
+      for (std::size_t i = 0; i < count && available; i++) {
+        const std::size_t size = std::min(segments[i].size(), available);
+        buffers[parts++] = {segments[i].data(), size};
+        available -= size;
+      }
+      msghdr message{};
+      message.msg_iov = buffers.data();
+      message.msg_iovlen = parts;
+      const ssize_t sent = ::sendmsg(socket_, &message, MSG_NOSIGNAL);
       if (sent > 0) {
-        input_.output_sent(output_, static_cast<std::size_t>(sent));
+        if (!input_.output_sent(output_, static_cast<std::size_t>(sent))) {
+          return false;
+        }
       } else if (sent == -1 && errno == EINTR) {
         continue;
       } else if (sent == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {

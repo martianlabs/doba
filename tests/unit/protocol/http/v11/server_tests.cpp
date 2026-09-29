@@ -24,7 +24,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -35,6 +34,7 @@
 
 namespace {
 namespace http = martianlabs::doba::protocol::http::v11;
+using martianlabs::doba::common::reader;
 using routes_type = martianlabs::doba::protocol::http::router<
     http::request, http::response>;
 using engine_type = http::engine<http::request, http::response>;
@@ -56,8 +56,7 @@ struct memory_transport {
     connection.reset(new ENty(factory()));
     connection->set_on_send([this](std::unique_ptr<char[]> buffer,
                                    std::size_t size,
-                                   std::optional<martianlabs::doba::common::reader>
-                                       source) {
+                                   std::unique_ptr<reader> source) {
       bytes.append(buffer.get(), size);
       if (source) source->read_all(bytes);
     });
@@ -98,7 +97,9 @@ std::string send_request(std::string_view method = "GET",
 struct controller {
   explicit controller(int& calls) : calls(calls) {}
   template <typename ROty>
-  void register_routes(ROty& routes) { routes.add("GET", "/", &controller::get); }
+  void register_routes(ROty& routes) {
+    routes.add("GET", "/", &controller::get);
+  }
   http::response get(const http::request&) {
     calls++;
     return http::response::ok_200();
@@ -140,13 +141,14 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   DOBA_EXPECT(send_request().ends_with("\r\n\r\nbody"));
 }
 // +===========================================================================+
-// | [>] server suppresses error bodies only for known HEAD requests( test-case ) |
+// | [>] server suppresses error bodies for known HEAD           ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("server suppresses error bodies only for known HEAD requests") {
   test_server value;
   value.start();
   const auto bytes = test_transport::instance->receive(
-      "HEAD / HTTP/1.1\r\nHost: example.com\r\nContent-Length: invalid\r\n\r\n");
+      "HEAD / HTTP/1.1\r\nHost: example.com\r\n"
+      "Content-Length: invalid\r\n\r\n");
   DOBA_EXPECT(bytes.starts_with("HTTP/1.1 400 "));
   DOBA_EXPECT(bytes.ends_with("\r\n\r\n"));
   DOBA_EXPECT(test_transport::instance->closed);

@@ -135,6 +135,34 @@ DOBA_TEST("wildcard routes match their prefix") {
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/Assets/a")));
 }
 // +===========================================================================+
+// | [>] protected routes resist lookalike paths and methods     ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("protected routes resist lookalike paths and methods") {
+  router<request, response> value;
+  auto handler = [](const request&) { return response{}; };
+  value.add("GET", "/admin", handler);
+  value.add("GET", "/private/*", handler);
+  value.add("GET", "/user/:id", [](const request&, int) {
+    return response{};
+  });
+  const std::string nul_admin("/admin\0x", 7);
+  const std::string_view paths[] = {
+      "/admin/", "/admin/x", "/adminx", "/Admin", "/ADMIN", "admin",
+      "//admin", "/admin ", " /admin", "/admin%00", nul_admin,
+      "/privatex", "/private", "/Private/a", "/privat/a", "private/a",
+      "/user/1/x", "/user/", "/user"};
+  for (const auto path : paths) {
+    martianlabs::doba::tests::unit::test_helper::set_context(path);
+    DOBA_EXPECT(!static_cast<bool>(value.match("GET", path)));
+  }
+  for (const std::string_view method : {"get", "Get", "GET ", "", "HEAD"}) {
+    martianlabs::doba::tests::unit::test_helper::set_context(method);
+    DOBA_EXPECT(!static_cast<bool>(value.match(method, "/admin")));
+  }
+  DOBA_EXPECT(static_cast<bool>(value.match("GET", "/admin")));
+  DOBA_EXPECT(static_cast<bool>(value.match("GET", "/private/a")));
+}
+// +===========================================================================+
 // | [>] static routes take precedence over parametrized routes  ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("static routes take precedence over parametrized routes") {

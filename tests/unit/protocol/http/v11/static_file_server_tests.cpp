@@ -189,6 +189,66 @@ DOBA_TEST("static file server uses the already decoded request path") {
 }
 
 // +===========================================================================+
+// | [>] static files root escape vectors                        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("static file server never escapes its root") {
+  file_directory outer;
+  outer.write("secret", "top-secret");
+  fs::create_directory(outer.path() / "root");
+  fs::create_directory(outer.path() / "root" / "sub");
+  outer.write("root/sub/file", "inside");
+  file_router routes;
+  routes.add_controller<static_file_server>("/files/",
+                                            outer.path() / "root");
+  std::vector<std::string> vectors{
+      "/files/../secret", "/files/sub/../../secret",
+      "/files/sub/%2e%2e/%2e%2e/secret", "/files/%2E%2E/secret",
+      "/files/sub%2f..%2f..%2fsecret", "/files/.%2fsub/file",
+      "/files/sub/./file", "/files/sub//file", "/files/..%5csecret",
+      "/files/sub%5c..%5c..%5csecret", "/files/%01secret",
+      "/files/sub%7ffile", "/files/C%3a%5csecret", "/files/file%3a%3a$DATA"};
+  const auto absolute = (outer.path() / "secret").generic_string();
+  std::string encoded;
+  for (const char c : absolute) {
+    if (c == ':') encoded += "%3a";
+    else encoded += c;
+  }
+  vectors.push_back("/files/" + encoded);
+#ifdef _WIN32
+  for (std::string_view name :
+       {"CON", "con.txt", "NUL", "aux", "COM1", "lpt9.log", "CONIN$",
+        "secret.", "secret%20", "sec*ret", "sec%3fret", "sec%22ret"}) {
+    vectors.push_back("/files/" + std::string(name));
+  }
+#endif
+  for (const auto& path : vectors) {
+    martianlabs::doba::tests::unit::test_helper::set_context(path);
+    const std::string wire = "GET " + path +
+                             " HTTP/1.1\r\nHost: example.com\r\n\r\n";
+    decoder<request, response> value;
+    std::size_t consumed = 0;
+    auto decoded = value.deserialize(wire.data(), wire.size(), 8192,
+                                     consumed);
+    if (!decoded.request) {
+      DOBA_EXPECT_EQUAL(
+          decoded.code,
+          martianlabs::doba::protocol::deserialization_status::kInvalidSource);
+      continue;
+    }
+    auto result = file_request(routes, "GET", path);
+    auto serialized = result.serialize();
+    const std::string_view status(serialized->prefix.get(),
+                                  serialized->prefix_size);
+    DOBA_EXPECT(status.starts_with("HTTP/1.1 403") ||
+                status.starts_with("HTTP/1.1 404"));
+    DOBA_EXPECT(!serialized->source);
+    DOBA_EXPECT(status.find("top-secret") == std::string_view::npos);
+  }
+  auto control = file_request(routes, "GET", "/files/sub/file");
+  DOBA_EXPECT_EQUAL(file_body(control), "inside");
+}
+
+// +===========================================================================+
 // | [>] static files direct access                              ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("static file server opens a fresh source without preloading") {

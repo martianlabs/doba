@@ -42,7 +42,7 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // | [>] tls_connection                                             ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
+// | Adapts a TLS session to an HTTP engine.                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -124,16 +124,22 @@ struct tls_connection {
     }
   }
   // +=========================================================================+
-  // | [>] output_bytes                                             ( public ) |
+  // | [>] output_segments                                          ( public ) |
   // +=========================================================================+
-  std::span<char> output_bytes(output_queue&) {
-    return session_.output_bytes();
+  std::size_t output_segments(output_queue&,
+                              std::span<std::span<char>> segments) {
+    if (segments.empty()) return 0;
+    const auto bytes = session_.output_bytes();
+    if (bytes.empty()) return 0;
+    segments[0] = bytes;
+    return 1;
   }
   // +=========================================================================+
   // | [>] output_sent                                              ( public ) |
   // +=========================================================================+
-  void output_sent(output_queue&, std::size_t sent) {
+  bool output_sent(output_queue&, std::size_t sent) {
     session_.output_sent(sent);
+    return true;
   }
   // +=========================================================================+
   // | [>] output_pending                                           ( public ) |
@@ -144,19 +150,19 @@ struct tls_connection {
         (close_requested_ && !shutdown_complete_);
   }
   // +=========================================================================+
-  // | [>] established                                             ( public ) |
+  // | [>] established                                             ( public )  |
   // +=========================================================================+
   bool established() const { return session_.established(); }
   // +=========================================================================+
-  // | [>] peer_closed                                             ( public ) |
+  // | [>] peer_closed                                             ( public )  |
   // +=========================================================================+
   bool peer_closed() const { return peer_closed_; }
   // +=========================================================================+
-  // | [>] eof                                                     ( public ) |
+  // | [>] eof                                                     ( public )  |
   // +=========================================================================+
   bool eof() const { return peer_closed_; }
   // +=========================================================================+
-  // | [>] close_output                                            ( public ) |
+  // | [>] close_output                                            ( public )  |
   // +=========================================================================+
   bool close_output() {
     if (!session_.established()) return false;

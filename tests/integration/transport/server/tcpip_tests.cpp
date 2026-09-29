@@ -68,7 +68,7 @@ struct byte_engine {
   void echo(const char* bytes, std::size_t size) {
     auto buffer = std::make_unique<char[]>(size);
     if (size) std::memcpy(buffer.get(), bytes, size);
-    send(std::move(buffer), size, std::nullopt);
+    send(std::move(buffer), size, nullptr);
   }
   std::size_t on_bytes_received(const char* bytes, std::size_t size,
                                 std::size_t capacity) {
@@ -780,14 +780,14 @@ DOBA_TEST("tcpip completes isolated empty deliveries") {
                          std::size_t size, std::size_t) {
       if (bytes[0] == 'e') {
         for (int i = 0; i < 3; i++) {
-          if (null_buffer) engine.send(nullptr, 0, std::nullopt);
+          if (null_buffer) engine.send(nullptr, 0, nullptr);
           else engine.echo(bytes, 0);
         }
       } else {
         engine.echo("a", 1);
-        engine.send(nullptr, 0, std::nullopt);
+        engine.send(nullptr, 0, nullptr);
         engine.echo("b", 1);
-        engine.send(nullptr, 0, std::nullopt);
+        engine.send(nullptr, 0, nullptr);
         engine.close();
       }
       received++;
@@ -825,10 +825,10 @@ DOBA_TEST("tcpip rejects invalid deliveries and ignores later output") {
     server.set_on_disconnection([]() {});
     state->receive = [&](byte_engine& engine, const char*, std::size_t size,
                          std::size_t) {
-      if (mode == 1) engine.send(nullptr, 1, std::nullopt);
+      if (mode == 1) engine.send(nullptr, 1, nullptr);
       else engine.echo("01234567890123456", 17);
       engine.echo("ignored", 7);
-      engine.send(nullptr, 0, std::nullopt);
+      engine.send(nullptr, 0, nullptr);
       if (mode == 2) throw std::runtime_error("After rejection");
       return size;
     };
@@ -976,7 +976,7 @@ DOBA_TEST("tcpip accepts concurrent producers without new input") {
             auto bytes = std::make_unique<char[]>(16);
             std::memset(bytes.get(), static_cast<int>('a' + i), 16);
             bytes[1] = static_cast<char>(sequence);
-            output(std::move(bytes), 16, std::nullopt);
+            output(std::move(bytes), 16, nullptr);
           }
         });
       }
@@ -999,7 +999,7 @@ DOBA_TEST("tcpip accepts concurrent producers without new input") {
     client.close();
     server.stop();
   }
-  output(std::make_unique<char[]>(16), 16, std::nullopt);
+  output(std::make_unique<char[]>(16), 16, nullptr);
 }
 // +===========================================================================+
 // | [>] tcpip limits the sum of queued deliveries               ( test-case ) |
@@ -1061,7 +1061,7 @@ DOBA_TEST("tcpip closes safely while producers enqueue") {
         configuration, factory);
     server->set_on_connection([]() {});
     server->set_on_disconnection([state, &output]() {
-      output(std::make_unique<char[]>(32), 32, std::nullopt);
+      output(std::make_unique<char[]>(32), 32, nullptr);
       state->disconnected++;
     });
     server->start();
@@ -1073,7 +1073,7 @@ DOBA_TEST("tcpip closes safely while producers enqueue") {
       producer = std::jthread([&]() {
         while (!release.load()) std::this_thread::yield();
         for (int i = 0; i < 1024; i++) {
-          output(std::make_unique<char[]>(32), 32, std::nullopt);
+          output(std::make_unique<char[]>(32), 32, nullptr);
         }
       });
     }
@@ -1084,6 +1084,6 @@ DOBA_TEST("tcpip closes safely while producers enqueue") {
     client.close();
     if (server) server->stop();
     DOBA_EXPECT_EQUAL(state->disconnected.load(), 1);
-    output(std::make_unique<char[]>(32), 32, std::nullopt);
+    output(std::make_unique<char[]>(32), 32, nullptr);
   }
 }

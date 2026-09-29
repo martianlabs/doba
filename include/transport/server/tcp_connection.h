@@ -38,7 +38,7 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // | [>] tcp_connection                                             ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
+// | Adapts a TCP byte stream to an HTTP engine.                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -77,14 +77,25 @@ struct tcp_connection {
     return true;
   }
   bool prepare_output(output_queue& output) {
-    return output.offset != output.buffer.size() || output.fill();
+    return output.offset != output.buffer.size() ||
+           output.prefix_pending() || output.fill();
   }
-  std::span<char> output_bytes(output_queue& output) {
-    return {output.buffer.data() + output.offset,
-            output.buffer.size() - output.offset};
+  std::size_t output_segments(output_queue& output,
+                              std::span<std::span<char>> segments) {
+    if (segments.empty()) return 0;
+    if (output.offset != output.buffer.size()) {
+      segments[0] = std::span(output.buffer).subspan(output.offset);
+      return 1;
+    }
+    return output.prefix_segments(segments);
   }
-  void output_sent(output_queue& output, std::size_t sent) {
-    output.offset += sent;
+  bool output_sent(output_queue& output, std::size_t sent) {
+    if (output.offset != output.buffer.size()) {
+      if (sent > output.buffer.size() - output.offset) return false;
+      output.offset += sent;
+      return true;
+    }
+    return output.consume_prefixes(sent);
   }
   bool output_pending(const output_queue& output) const {
     return output.queued() || output.offset != output.buffer.size();
