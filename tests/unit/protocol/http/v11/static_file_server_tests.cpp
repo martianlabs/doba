@@ -107,7 +107,7 @@ std::string file_body(response& value) {
 }
 std::string file_status(response& value) {
   auto serialized = value.serialize();
-  return {serialized->prefix.get(), serialized->prefix_size};
+  return serialized->head + serialized->body;
 }
 }  // namespace
 
@@ -237,8 +237,7 @@ DOBA_TEST("static file server never escapes its root") {
     }
     auto result = file_request(routes, "GET", path);
     auto serialized = result.serialize();
-    const std::string_view status(serialized->prefix.get(),
-                                  serialized->prefix_size);
+    const std::string status(serialized->head + serialized->body);
     DOBA_EXPECT(status.starts_with("HTTP/1.1 403") ||
                 status.starts_with("HTTP/1.1 404"));
     DOBA_EXPECT(!serialized->source);
@@ -287,7 +286,7 @@ DOBA_TEST("static file server evaluates representation conditions") {
   for (const auto& test : cases) {
     auto result = file_request(routes, "GET", "/file", test.fields);
     auto serialized = result.serialize();
-    const std::string prefix(serialized->prefix.get(), serialized->prefix_size);
+    const std::string prefix((serialized->head + serialized->body));
     DOBA_EXPECT(prefix.starts_with(test.status));
     if (test.status == "HTTP/1.1 304") {
       DOBA_EXPECT(!serialized->source);

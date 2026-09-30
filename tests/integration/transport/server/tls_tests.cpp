@@ -85,17 +85,13 @@ struct byte_engine {
           martianlabs::doba::common::filesystem_file{});
       std::byte byte{};
       source.read(std::span(&byte, 1));
-      auto prefix = std::make_unique<char[]>(3);
-      std::memcpy(prefix.get(), "pre", 3);
-      send(std::move(prefix), 3,
+      send("pre", {},
            std::make_unique<martianlabs::doba::common::reader>(
                std::move(source)));
       return size;
     }
     if (!body.empty()) {
-      auto prefix = std::make_unique<char[]>(1);
-      prefix[0] = 'x';
-      send(std::move(prefix), 1,
+      send("x", {},
            std::make_unique<martianlabs::doba::common::reader>(
                martianlabs::doba::common::reader::borrowed(
                    std::as_bytes(std::span(body)))));
@@ -103,15 +99,11 @@ struct byte_engine {
     }
     if (split) {
       for (std::size_t i = 0; i < size; ++i) {
-        auto output = std::make_unique<char[]>(1);
-        output[0] = bytes[i];
-        send(std::move(output), 1, nullptr);
+        send(std::string(1, bytes[i]), {}, nullptr);
       }
       return size;
     }
-    auto output = std::make_unique<char[]>(size);
-    std::memcpy(output.get(), bytes, size);
-    send(std::move(output), size, nullptr);
+    send(std::string(bytes, size), {}, nullptr);
     if (close_after) close();
     return size;
   }
@@ -283,9 +275,7 @@ DOBA_TEST("tls retains unconsumed plaintext") {
     engine.receive = [](byte_engine& value, const char* bytes,
                         std::size_t size, std::size_t) {
       if (size < 4) return std::size_t{0};
-      auto output = std::make_unique<char[]>(4);
-      std::memcpy(output.get(), bytes, 4);
-      value.send(std::move(output), 4, nullptr);
+      value.send(std::string(bytes, 4), {}, nullptr);
       return std::size_t{4};
     };
     return engine;
@@ -522,9 +512,7 @@ DOBA_TEST("tls accepts concurrent response producers") {
   for (std::size_t i = 0; i < producers.size(); ++i) {
     producers[i] = std::jthread([output, i]() {
       for (int item = 0; item < 100; ++item) {
-        auto bytes = std::make_unique<char[]>(1);
-        bytes[0] = static_cast<char>('a' + i);
-        output(std::move(bytes), 1, nullptr);
+        output(std::string(1, static_cast<char>('a' + i)), {}, nullptr);
       }
     });
   }
@@ -750,9 +738,7 @@ DOBA_TEST("tls stop drains queued output") {
     std::this_thread::yield();
   }
   DOBA_EXPECT(ready.load());
-  auto bytes = std::make_unique<char[]>(50000);
-  std::memset(bytes.get(), 'x', 50000);
-  output(std::move(bytes), 50000, nullptr);
+  output(std::string(50000, 'x'), {}, nullptr);
   std::jthread stopping([&]() { server.stop(); });
   const auto response = client.receive(50000);
   DOBA_EXPECT(response.has_value());

@@ -80,14 +80,20 @@ struct tcp_connection {
     return output.offset != output.buffer.size() ||
            output.prefix_pending() || output.fill();
   }
-  std::size_t output_segments(output_queue& output,
-                              std::span<std::span<char>> segments) {
-    if (segments.empty()) return 0;
+  std::span<char> output_bytes(output_queue& output) {
     if (output.offset != output.buffer.size()) {
-      segments[0] = std::span(output.buffer).subspan(output.offset);
+      return std::span(output.buffer).subspan(output.offset);
+    }
+    return output.prefix_bytes();
+  }
+  std::size_t output_buffers(output_queue& output,
+                             std::span<std::span<char>> buffers) {
+    if (buffers.empty()) return 0;
+    if (output.offset != output.buffer.size()) {
+      buffers[0] = std::span(output.buffer).subspan(output.offset);
       return 1;
     }
-    return output.prefix_segments(segments);
+    return output.prefix_buffers(buffers);
   }
   bool output_sent(output_queue& output, std::size_t sent) {
     if (output.offset != output.buffer.size()) {

@@ -34,7 +34,7 @@ int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   // Routes are selected by both the HTTP method and the absolute path.
   http_server.add_route(
-      "GET", "/pipeline",
+      "GET", "/hello",
       [](const request&) {
         response res = response::ok_200();
         // Response mutators return response&, so they can be chained.

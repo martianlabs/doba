@@ -35,6 +35,8 @@ Big throughput numbers are fun. Waiting for a response isn't. Let's look at both
 Measured locally with the official HttpArena suite: **512 connections**,
 **lite mode**, **one run per server and profile**.
 [Full results](resources/benchmarks/benchmark-results.txt). `ntex/pipelined` was skipped.
+These results predate the removal of HTTP/1.1 pipelining in doba; the
+`pipelined` chart is historical and does not describe the current engine.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/benchmark-throughput-baseline-dark.svg">

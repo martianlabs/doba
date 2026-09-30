@@ -86,9 +86,7 @@ struct drain_engine {
       std::this_thread::yield();
     }
     for (int i = 0; i < 8; i++) {
-      auto block = std::make_unique_for_overwrite<char[]>(1024 * 1024);
-      std::memset(block.get(), bytes[0], 1024 * 1024);
-      output_(std::move(block), 1024 * 1024, nullptr);
+      output_(std::string(1024 * 1024, bytes[0]), {}, nullptr);
     }
     state_->queued++;
     return size;
@@ -214,32 +212,23 @@ struct reader_engine {
       }
       source = common::reader(std::move(storage));
     }
-    auto prefix = std::make_unique_for_overwrite<char[]>(prefix_size);
-    std::memset(prefix.get(), 'A', prefix_size);
-    output_(std::move(prefix), prefix_size,
+    std::string prefix(prefix_size, 'A');
+    output_(std::move(prefix), {},
             std::make_unique<common::reader>(std::move(source)));
-    if (state_->empty_deliveries) output_(nullptr, 0, nullptr);
+    if (state_->empty_deliveries) output_({}, {}, nullptr);
     if (!state_->single) {
-      auto next = std::make_unique<char[]>(1);
-      next[0] = 'B';
-      output_(std::move(next), 1, nullptr);
-      auto last = std::make_unique<char[]>(1);
-      last[0] = 'C';
-      output_(std::move(last), 1,
+      output_("B", {}, nullptr);
+      output_("C", {},
               std::make_unique<common::reader>(common::reader::borrowed(
                   std::as_bytes(std::span(state_->later.data(),
                                           state_->later.size())))));
-      output_(nullptr, 0, std::make_unique<common::reader>());
-      auto tail = std::make_unique<char[]>(2);
-      tail[0] = 'D';
-      tail[1] = 'E';
-      output_(std::move(tail), 2, nullptr);
+      output_({}, {}, std::make_unique<common::reader>());
+      output_("DE", {}, nullptr);
     }
-    if (state_->empty_deliveries) output_(nullptr, 0, nullptr);
+    if (state_->empty_deliveries) output_({}, {}, nullptr);
     if (state_->rejected_size) {
-      auto rejected = std::make_unique<char[]>(state_->rejected_size);
-      output_(std::move(rejected), state_->rejected_size, nullptr);
-      output_(nullptr, 0, nullptr);
+      output_(std::string(state_->rejected_size, '\0'), {}, nullptr);
+      output_({}, {}, nullptr);
     }
     if (state_->close) close_();
     state_->queued++;
@@ -529,55 +518,6 @@ DOBA_TEST("source buffers respect the send limit") {
   DOBA_EXPECT(!bytes || bytes->size() < state->size + 1);
   DOBA_EXPECT(error != "timeout");
   // Report both the active source cancellation and the rejected delivery.
-}
-// +===========================================================================+
-// | [>] HTTP sources precede the next pipelined response        ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("HTTP sources precede the next pipelined response") {
-  namespace http = martianlabs::doba::protocol::http::v11;
-  tcpip_client client;
-  const auto port = client.find_available_port();
-  DOBA_EXPECT(port != 0);
-  tr::policies configuration;
-  configuration.ip = "127.0.0.1";
-  configuration.port = std::to_string(port);
-  configuration.worker_count = 2;
-  configuration.max_send_buffer_size = 32768;
-  http::server<> server(configuration);
-  const std::string body(2 * 1024 * 1024, 'h');
-  server.add_route("GET", "/large", [&body](const http::request&) {
-    auto result = http::response::ok_200();
-    result.set_header("Date", "fixed").set_body(body);
-    return result;
-  });
-  server.add_route("GET", "/chunked", [](const http::request&) {
-    auto writer = http::body::body_writer::chunked();
-    if (!writer.write("abc")) throw std::runtime_error("body write failed");
-    auto result = http::response::ok_200();
-    result.set_header("Date", "fixed").set_body(std::move(writer));
-    return result;
-  });
-  std::atomic<int> unexpected{0};
-  server.add_route("GET", "/later", [&unexpected](const http::request&) {
-    unexpected++;
-    return http::response::ok_200();
-  });
-  server.start();
-  DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(client.send_all(
-      "GET /large HTTP/1.1\r\nHost: localhost\r\n\r\n"
-      "GET /chunked HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"
-      "GET /later HTTP/1.1\r\nHost: localhost\r\n\r\n"));
-  const auto bytes = client.receive_until_close(body.size() + 4096, 10s);
-  client.close();
-  server.stop();
-  DOBA_EXPECT(bytes.has_value());
-  DOBA_EXPECT(bytes->starts_with("HTTP/1.1 200 OK\r\n"));
-  const auto begin = bytes->find("\r\n\r\n") + 4;
-  DOBA_EXPECT_EQUAL(bytes->substr(begin, body.size()), body);
-  DOBA_EXPECT(bytes->substr(begin + body.size()).starts_with("HTTP/1.1 200 OK"));
-  DOBA_EXPECT(bytes->ends_with("\r\n\r\n3\r\nabc\r\n0\r\n\r\n"));
-  DOBA_EXPECT_EQUAL(unexpected.load(), 0);
 }
 // +===========================================================================+
 // | [>] concurrent stops drain before returning                 ( test-case ) |

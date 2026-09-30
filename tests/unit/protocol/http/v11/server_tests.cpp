@@ -54,10 +54,10 @@ struct memory_transport {
   void start() {
     if (fail) throw std::runtime_error("start failed");
     connection.reset(new ENty(factory()));
-    connection->set_on_send([this](std::unique_ptr<char[]> buffer,
-                                   std::size_t size,
+    connection->set_on_send([this](std::string head, std::string body,
                                    std::unique_ptr<reader> source) {
-      bytes.append(buffer.get(), size);
+      bytes.append(head);
+      bytes.append(body);
       if (source) source->read_all(bytes);
     });
     connection->set_on_close([this]() { closed = true; });

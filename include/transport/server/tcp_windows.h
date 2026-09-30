@@ -40,6 +40,7 @@
 #include <new>
 #include <optional>
 #include <span>
+#include <string>
 #include <unordered_map>
 #include <utility>
 
@@ -125,7 +126,8 @@ struct overlapped_send : overlapped_base {
                   io_type type = io_type::kSend)
       : overlapped_base(type), ctx{context} {}
   std::shared_ptr<context<ENty, CNty>> ctx;
-  std::array<WSABUF, output_queue::kMaxSendFragments> buffers{};
+  std::array<WSABUF, 16> buffers{};
+  DWORD buffer_count{0};
   std::size_t submitted_size{0};
 };
 // /////////////////////////////////////////////////////////////////////////////
@@ -192,12 +194,12 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] send                                                     ( public ) |
   // +=========================================================================+
-  void send(std::unique_ptr<char[]> buffer, std::size_t size,
+  void send(std::string head, std::string body,
             std::unique_ptr<common::reader> source) {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     if (closing_ || socket_ == INVALID_SOCKET) return;
-    if (!size && !source) return;
-    if (!output_.push(std::move(buffer), size, std::move(source))) {
+    if (head.empty() && body.empty() && !source) return;
+    if (!output_.push(std::move(head), std::move(body), std::move(source))) {
       closing_ = true;
       aborted_ = true;
       ::shutdown(socket_, SD_BOTH);
@@ -313,10 +315,10 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       if (auto ctx = weak.lock()) ctx->close();
     });
     input_.engine.set_on_send([weak = this->weak_from_this()](
-        std::unique_ptr<char[]> buffer, std::size_t size,
+        std::string head, std::string body,
         std::unique_ptr<common::reader> source) {
       if (auto ctx = weak.lock()) {
-        ctx->send(std::move(buffer), size, std::move(source));
+        ctx->send(std::move(head), std::move(body), std::move(source));
       }
     });
   }
@@ -436,8 +438,8 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       abort_();
       return;
     }
-    std::array<std::span<char>, output_queue::kMaxSendFragments> segments{};
-    const std::size_t count = input_.output_segments(output_, segments);
+    std::array<std::span<char>, 16> bytes{};
+    const std::size_t count = input_.output_buffers(output_, bytes);
     if (!count) {
       cleanup_resources_();
       return;
@@ -448,17 +450,17 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       abort_();
       return;
     }
-    std::size_t available = std::numeric_limits<DWORD>::max();
-    DWORD parts = 0;
-    for (std::size_t i = 0; i < count && available; i++) {
-      const std::size_t size = std::min(segments[i].size(), available);
-      ovs->buffers[parts++] = {static_cast<ULONG>(size),
-                               segments[i].data()};
+    for (std::size_t i = 0; i < count; i++) {
+      const std::size_t size = std::min<std::size_t>(
+          bytes[i].size(),
+          std::numeric_limits<DWORD>::max() - ovs->submitted_size);
+      if (!size) break;
+      ovs->buffers[i] = {static_cast<ULONG>(size), bytes[i].data()};
+      ovs->buffer_count++;
       ovs->submitted_size += size;
-      available -= size;
     }
-    const int result = WSASend(socket_, ovs->buffers.data(), parts, nullptr,
-                               0, ovs, nullptr);
+    const int result = WSASend(socket_, ovs->buffers.data(),
+                               ovs->buffer_count, nullptr, 0, ovs, nullptr);
     if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
       delete ovs;
       abort_();

@@ -256,9 +256,9 @@ DOBA_TEST("HTTP/1.1 reuses a connection for sequential requests") {
 }
 
 // +===========================================================================+
-// | [>] orders three synchronous pipelined responses            ( test-case ) |
+// | [>] serves three sequential requests                       ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("HTTP/1.1 orders three synchronous pipelined responses") {
+DOBA_TEST("HTTP/1.1 serves three sequential requests") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -287,17 +287,19 @@ DOBA_TEST("HTTP/1.1 orders three synchronous pipelined responses") {
   http_server.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
-      "GET /one HTTP/1.1\r\nHost: example.com\r\n\r\n"
-      "GET /two HTTP/1.1\r\nHost: example.com\r\n\r\n"
-      "GET /three HTTP/1.1\r\nHost: example.com\r\n\r\n"));
+      "GET /one HTTP/1.1\r\nHost: example.com\r\n\r\n"));
   const auto first = receive_http_response(client);
   DOBA_EXPECT(first.has_value());
   DOBA_EXPECT_EQUAL(first->status, "HTTP/1.1 200 OK");
   DOBA_EXPECT_EQUAL(first->body, "one");
+  DOBA_EXPECT(client.send_all(
+      "GET /two HTTP/1.1\r\nHost: example.com\r\n\r\n"));
   const auto second = receive_http_response(client);
   DOBA_EXPECT(second.has_value());
   DOBA_EXPECT_EQUAL(second->status, "HTTP/1.1 200 OK");
   DOBA_EXPECT_EQUAL(second->body, "two");
+  DOBA_EXPECT(client.send_all(
+      "GET /three HTTP/1.1\r\nHost: example.com\r\n\r\n"));
   const auto third = receive_http_response(client);
   DOBA_EXPECT(third.has_value());
   DOBA_EXPECT_EQUAL(third->status, "HTTP/1.1 200 OK");
@@ -306,9 +308,9 @@ DOBA_TEST("HTTP/1.1 orders three synchronous pipelined responses") {
 }
 
 // +===========================================================================+
-// | [>] preserves pipeline framing after a raw body             ( test-case ) |
+// | [>] preserves framing after a raw body                      ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("HTTP/1.1 preserves pipeline framing after a raw body") {
+DOBA_TEST("HTTP/1.1 preserves framing after a raw body") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -332,12 +334,13 @@ DOBA_TEST("HTTP/1.1 preserves pipeline framing after a raw body") {
   DOBA_EXPECT(client.send_all(
       "POST /echo HTTP/1.1\r\nHost: example.com\r\n"
       "Content-Length: 7\r\n\r\n"
-      "payload"
-      "GET /next HTTP/1.1\r\nHost: example.com\r\n\r\n"));
+       "payload"));
   const auto echoed = receive_http_response(client);
   DOBA_EXPECT(echoed.has_value());
   DOBA_EXPECT_EQUAL(echoed->status, "HTTP/1.1 200 OK");
   DOBA_EXPECT_EQUAL(echoed->body, "payload");
+  DOBA_EXPECT(client.send_all(
+      "GET /next HTTP/1.1\r\nHost: example.com\r\n\r\n"));
   const auto next = receive_http_response(client);
   DOBA_EXPECT(next.has_value());
   DOBA_EXPECT_EQUAL(next->status, "HTTP/1.1 200 OK");
@@ -347,9 +350,9 @@ DOBA_TEST("HTTP/1.1 preserves pipeline framing after a raw body") {
 }
 
 // +===========================================================================+
-// | [>] preserves pipeline framing after a chunked body         ( test-case ) |
+// | [>] preserves framing after a chunked body                  ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("HTTP/1.1 preserves pipeline framing after a chunked body") {
+DOBA_TEST("HTTP/1.1 preserves framing after a chunked body") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -373,12 +376,13 @@ DOBA_TEST("HTTP/1.1 preserves pipeline framing after a chunked body") {
   DOBA_EXPECT(client.send_all(
       "POST /echo HTTP/1.1\r\nHost: example.com\r\n"
       "Transfer-Encoding: chunked\r\n\r\n"
-      "3\r\nabc\r\n0\r\nX: y\r\n\r\n"
-      "GET /next HTTP/1.1\r\nHost: example.com\r\n\r\n"));
+       "3\r\nabc\r\n0\r\nX: y\r\n\r\n"));
   const auto echoed = receive_http_response(client);
   DOBA_EXPECT(echoed.has_value());
   DOBA_EXPECT_EQUAL(echoed->status, "HTTP/1.1 200 OK");
   DOBA_EXPECT_EQUAL(echoed->body, "abc");
+  DOBA_EXPECT(client.send_all(
+      "GET /next HTTP/1.1\r\nHost: example.com\r\n\r\n"));
   const auto next = receive_http_response(client);
   DOBA_EXPECT(next.has_value());
   DOBA_EXPECT_EQUAL(next->status, "HTTP/1.1 200 OK");
@@ -612,13 +616,14 @@ DOBA_TEST("HTTP/1.1 emits no HEAD body before the following GET") {
   http_server.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
-      "HEAD /resource HTTP/1.1\r\nHost: example.com\r\n\r\n"
-      "GET /resource HTTP/1.1\r\nHost: example.com\r\n\r\n"));
+      "HEAD /resource HTTP/1.1\r\nHost: example.com\r\n\r\n"));
   const auto head = receive_http_response(client, true);
   DOBA_EXPECT(head.has_value());
   DOBA_EXPECT_EQUAL(head->status, "HTTP/1.1 200 OK");
   DOBA_EXPECT_EQUAL(head->body, "");
   DOBA_EXPECT_EQUAL(head->header("Content-Length").value(), "8");
+  DOBA_EXPECT(client.send_all(
+      "GET /resource HTTP/1.1\r\nHost: example.com\r\n\r\n"));
   const auto get = receive_http_response(client);
   DOBA_EXPECT(get.has_value());
   DOBA_EXPECT_EQUAL(get->status, "HTTP/1.1 200 OK");
@@ -657,8 +662,7 @@ DOBA_TEST("HTTP/1.1 preserves streamed HEAD framing before another reply") {
     http_server.start();
     DOBA_EXPECT(client.connect(port));
     DOBA_EXPECT(client.send_all(
-        "HEAD /resource HTTP/1.1\r\nHost: example.com\r\n\r\n"
-        "GET /resource HTTP/1.1\r\nHost: example.com\r\n\r\n"));
+        "HEAD /resource HTTP/1.1\r\nHost: example.com\r\n\r\n"));
     std::string head;
     const auto deadline = std::chrono::steady_clock::now() +
                           std::chrono::seconds(3);
@@ -681,6 +685,8 @@ DOBA_TEST("HTTP/1.1 preserves streamed HEAD framing before another reply") {
       DOBA_EXPECT(head.find("Content-Length: 8\r\n") != std::string::npos);
       DOBA_EXPECT(head.find("Transfer-Encoding:") == std::string::npos);
     }
+    DOBA_EXPECT(client.send_all(
+        "GET /resource HTTP/1.1\r\nHost: example.com\r\n\r\n"));
     const auto get = receive_http_response(client);
     DOBA_EXPECT(get.has_value());
     DOBA_EXPECT_EQUAL(get->body, "resource");
@@ -713,13 +719,14 @@ DOBA_TEST("HTTP/1.1 delimits a 204 before a following response") {
   http_server.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
-      "GET /empty HTTP/1.1\r\nHost: example.com\r\n\r\n"
-      "GET /resource HTTP/1.1\r\nHost: example.com\r\n\r\n"));
+      "GET /empty HTTP/1.1\r\nHost: example.com\r\n\r\n"));
   const auto empty = receive_http_response(client);
   DOBA_EXPECT(empty.has_value());
   DOBA_EXPECT_EQUAL(empty->status, "HTTP/1.1 204 No Content");
   DOBA_EXPECT_EQUAL(empty->body, "");
   DOBA_EXPECT(!empty->header("Content-Length").has_value());
+  DOBA_EXPECT(client.send_all(
+      "GET /resource HTTP/1.1\r\nHost: example.com\r\n\r\n"));
   const auto get = receive_http_response(client);
   DOBA_EXPECT(get.has_value());
   DOBA_EXPECT_EQUAL(get->status, "HTTP/1.1 200 OK");
@@ -1007,12 +1014,13 @@ DOBA_TEST("HTTP/1.1 completes a large response before a short successor") {
   http_server.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
-      "GET /large HTTP/1.1\r\nHost: example.com\r\n\r\n"
-      "GET /next HTTP/1.1\r\nHost: example.com\r\n\r\n"));
+      "GET /large HTTP/1.1\r\nHost: example.com\r\n\r\n"));
   const auto large = receive_http_response(client);
   DOBA_EXPECT(large.has_value());
   DOBA_EXPECT_EQUAL(large->status, "HTTP/1.1 200 OK");
   DOBA_EXPECT_EQUAL(large->body, payload);
+  DOBA_EXPECT(client.send_all(
+      "GET /next HTTP/1.1\r\nHost: example.com\r\n\r\n"));
   const auto next = receive_http_response(client);
   DOBA_EXPECT(next.has_value());
   DOBA_EXPECT_EQUAL(next->status, "HTTP/1.1 200 OK");

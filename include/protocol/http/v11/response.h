@@ -63,8 +63,8 @@ class response {
   // +=========================================================================+
   response(const response&) = delete;
   response(response&& in) noexcept
-      : memory_(std::move(in.memory_)),
-        body_size_(in.body_size_),
+      : head_(std::move(in.head_)),
+        body_(std::move(in.body_)),
         sln_len_(in.sln_len_),
         hdr_len_(in.hdr_len_),
         status_code_(in.status_code_),
@@ -78,7 +78,7 @@ class response {
         bdy_reader_(std::move(in.bdy_reader_)) {
     in.sln_len_ = 0;
     in.hdr_len_ = 0;
-    in.body_size_ = 0;
+    in.head_.clear();
     in.status_code_ = SC_200_OK;
     in.has_date_header_ = false;
     in.connection_close_count_ = 0;
@@ -92,8 +92,8 @@ class response {
   response& operator=(const response&) = delete;
   response& operator=(response&& in) noexcept {
     if (this == &in) return *this;
-    memory_ = std::move(in.memory_);
-    body_size_ = in.body_size_;
+    head_ = std::move(in.head_);
+    body_ = std::move(in.body_);
     sln_len_ = in.sln_len_;
     hdr_len_ = in.hdr_len_;
     status_code_ = in.status_code_;
@@ -107,7 +107,7 @@ class response {
     bdy_reader_ = std::move(in.bdy_reader_);
     in.sln_len_ = 0;
     in.hdr_len_ = 0;
-    in.body_size_ = 0;
+    in.head_.clear();
     in.status_code_ = SC_200_OK;
     in.has_date_header_ = false;
     in.connection_close_count_ = 0;
@@ -118,12 +118,12 @@ class response {
   // +=========================================================================+
   // | [>] serialize                                                ( public ) |
   // +=========================================================================+
-  // | Transfers owned bytes and an optional body reader to the transport.     |
+  // | Transfers head, body and an optional reader to transport.               |
   // | Consumes this response; destroy or reassign it before further use.      |
   // | The transport drains the reader in bounded segments.                    |
   // +=========================================================================+
   [[nodiscard]] std::unique_ptr<protocol::serialization_result> serialize() {
-    if (!memory_) throw std::logic_error("response already serialized!");
+    if (head_.empty()) throw std::logic_error("response already serialized!");
     // RFC 9110 S8.6/S15.3.5/S15.3.6/S15.4.5: 1xx, 204, 205 and 304 responses
     // must never carry a message body, regardless of what a handler may have
     // set via set_body(). 1xx/204 must not advertise any body framing at all,
@@ -151,7 +151,7 @@ class response {
         content_length_ = 0;
       }
     }
-    if (must_omit_body) body_size_ = 0;
+    if (must_omit_body) body_.clear();
     apply_body_framing();
     if (!has_date_header_) {
       add_date_header();
@@ -162,20 +162,7 @@ class response {
         policies::kMaxResponseHeadSizeInMemory) {
       throw std::out_of_range("not enough space to serialize response!");
     }
-    const std::size_t head_size = sln_plus_hdr_len + crlf_bytes;
-    if (body_size_ && body_size_ >
-                          policies::kMaxResponseHeadSizeInMemory - head_size) {
-      auto writer = body::body_writer::raw();
-      if (!writer.write(std::string_view(
-              memory_.get() + policies::kMaxResponseHeadSizeInMemory -
-                  body_size_, body_size_))) {
-        throw std::runtime_error("unable to write body!");
-      }
-      bdy_writer_.emplace(std::move(writer));
-      body_size_ = 0;
-    }
     auto result = std::make_unique<protocol::serialization_result>();
-    result->prefix_size = head_size + body_size_;
     if (bdy_writer_.has_value()) {
       if (!must_omit_body) {
         // Finalizes the framing and transfers the accumulated bytes to the
@@ -193,14 +180,10 @@ class response {
       }
       bdy_reader_.reset();
     }
-    std::memcpy(memory_.get() + sln_plus_hdr_len,
-                hdr_len_ ? "\r\n" : "\r\n\r\n", crlf_bytes);
-    if (body_size_) {
-      std::memmove(memory_.get() + head_size,
-                   memory_.get() + policies::kMaxResponseHeadSizeInMemory -
-                       body_size_, body_size_);
-    }
-    result->prefix = std::move(memory_);
+    head_.append(hdr_len_ ? "\r\n" : "\r\n\r\n", crlf_bytes);
+    result->head = std::move(head_);
+    result->body = std::move(body_);
+    head_.clear();
     return result;
   }
   // +=========================================================================+
@@ -225,25 +208,10 @@ class response {
     if (k_size + v_size + 4 + 2 > space_left) {
       throw std::out_of_range("not enough space to add header!");
     }
-    if (body_size_ && k_size + v_size + 6 > space_left - body_size_) {
-      auto writer = body::body_writer::raw();
-      if (!writer.write(std::string_view(
-              memory_.get() + policies::kMaxResponseHeadSizeInMemory -
-                  body_size_, body_size_))) {
-        throw std::runtime_error("unable to write body!");
-      }
-      bdy_writer_.emplace(std::move(writer));
-      body_size_ = 0;
-    }
-    std::size_t pos = sln_len_ + hdr_len_;
-    std::memcpy(memory_.get() + pos, k.data(), k_size);
-    pos += k_size;
-    memory_[pos++] = ':';
-    memory_[pos++] = ' ';
-    if (v_size) std::memcpy(memory_.get() + pos, v.data(), v_size);
-    pos += v_size;
-    memory_[pos++] = '\r';
-    memory_[pos] = '\n';
+    head_.append(k);
+    head_.append(": ");
+    head_.append(v);
+    head_.append("\r\n");
     hdr_len_ += k_size + v_size + 4;
     if (iequals(k, header_names::kDate)) has_date_header_ = true;
     if (iequals(k, header_names::kContentLength)) {
@@ -291,24 +259,11 @@ class response {
       if (grow + 2 > space_left) {
         throw std::out_of_range("not enough space to set header!");
       }
-      if (body_size_ && grow + 2 > space_left - body_size_) {
-        auto writer = body::body_writer::raw();
-        if (!writer.write(std::string_view(
-                memory_.get() + policies::kMaxResponseHeadSizeInMemory -
-                    body_size_, body_size_))) {
-          throw std::runtime_error("unable to write body!");
-        }
-        bdy_writer_.emplace(std::move(writer));
-        body_size_ = 0;
-      }
     }
     bool had_close_option =
         iequals(k, header_names::kConnection) &&
-        has_close_option(std::string_view(&memory_[val_off], val_len));
-    const std::size_t tail = sln_len_ + hdr_len_ - val_off - val_len;
-    std::memmove(memory_.get() + val_off + new_v_size,
-                 memory_.get() + val_off + val_len, tail);
-    if (new_v_size) std::memcpy(memory_.get() + val_off, v.data(), new_v_size);
+        has_close_option(std::string_view(&head_[val_off], val_len));
+    head_.replace(val_off, val_len, v);
     if (had_close_option) connection_close_count_--;
     hdr_len_ = hdr_len_ - val_len + new_v_size;
     if (iequals(k, header_names::kDate)) has_date_header_ = true;
@@ -351,14 +306,14 @@ class response {
   // | Returns the (key, value) pair for the first header whose name           |
   // | case-insensitively matches 'k'. Throws std::runtime_error if the header |
   // | is not present. The returned strings are owned copies: they do NOT      |
-  // | alias memory_ and stay valid across later mutations of this response.   |
+  // | alias head_ and stay valid across later mutations of this response.     |
   // +-------------------------------------------------------------------------+
   std::pair<std::string, std::string> get_header(std::string_view k) const {
     std::size_t line_off, val_off, val_len, line_len;
     if (!find_header(k, line_off, val_off, val_len, line_len)) {
       throw std::runtime_error("header not found!");
     }
-    return {std::string(k), std::string(&memory_[val_off], val_len)};
+    return {std::string(k), std::string(&head_[val_off], val_len)};
   }
   // +=========================================================================+
   // | [>] get_header                                               ( public ) |
@@ -374,16 +329,16 @@ class response {
     while (pos < end) {
       std::size_t name_beg = pos;
       std::size_t colon = pos;
-      while (colon < end && memory_[colon] != ':') colon++;
+      while (colon < end && head_[colon] != ':') colon++;
       if (colon >= end) break;
       std::size_t val_beg = colon + 2;
       std::size_t cr = val_beg;
-      while (cr < end && memory_[cr] != '\r') cr++;
+      while (cr < end && head_[cr] != '\r') cr++;
       if (cr >= end) break;
       if (current == index) {
         // Copy into caller-owned std::strings (see rationale above).
-        return {std::string(&memory_[name_beg], colon - name_beg),
-                std::string(&memory_[val_beg], cr - val_beg)};
+        return {std::string(&head_[name_beg], colon - name_beg),
+                std::string(&head_[val_beg], cr - val_beg)};
       }
       current++;
       // Advance past CRLF (\r\n) to the next header line.
@@ -403,10 +358,10 @@ class response {
     std::size_t count = 0;
     while (pos < end) {
       std::size_t colon = pos;
-      while (colon < end && memory_[colon] != ':') colon++;
+      while (colon < end && head_[colon] != ':') colon++;
       if (colon >= end) break;
       std::size_t cr = colon + 1;
-      while (cr < end && memory_[cr] != '\r') cr++;
+      while (cr < end && head_[cr] != '\r') cr++;
       if (cr >= end) break;
       count++;
       // Advance past CRLF (\r\n) to the next header line.
@@ -426,11 +381,10 @@ class response {
     std::size_t line_off, val_off, val_len, line_len;
     if (!find_header(k, line_off, val_off, val_len, line_len)) return *this;
     if (iequals(k, header_names::kConnection) &&
-        has_close_option(std::string_view(&memory_[val_off], val_len))) {
+        has_close_option(std::string_view(&head_[val_off], val_len))) {
       connection_close_count_--;
     }
-    std::memmove(memory_.get() + line_off, memory_.get() + line_off + line_len,
-                 sln_len_ + hdr_len_ - line_off - line_len);
+    head_.erase(line_off, line_len);
     hdr_len_ -= line_len;
     if (iequals(k, header_names::kDate)) has_date_header_ = has_header(k);
     if (iequals(k, header_names::kContentLength)) {
@@ -444,20 +398,13 @@ class response {
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
   // +=========================================================================+
-  // | Stores small payloads in the prefix; larger ones use a raw body writer. |
+  // | Stores small payloads in body_; larger ones use a raw writer.           |
   // +-------------------------------------------------------------------------+
   response& set_body(std::string_view sv) {
     std::size_t body_size = sv.size();
     reset_body();
-    if (sln_len_ + hdr_len_ + 2 <=
-            policies::kMaxResponseHeadSizeInMemory &&
-        body_size <= policies::kMaxResponseHeadSizeInMemory -
-                         sln_len_ - hdr_len_ - 2) {
-      body_size_ = body_size;
-      if (body_size) {
-        std::memcpy(memory_.get() + policies::kMaxResponseHeadSizeInMemory -
-                        body_size, sv.data(), body_size);
-      }
+    if (body_size <= policies::kMaxResponseBodySizeInMemory) {
+      body_.assign(sv);
       content_length_ = body_size;
       return *this;
     }
@@ -533,7 +480,7 @@ class response {
   // | Discards body bytes while retaining the advertised framing for HEAD.    |
   // +-------------------------------------------------------------------------+
   response& suppress_body() {
-    body_size_ = 0;
+    body_.clear();
     bdy_reader_.reset();
     bdy_writer_.reset();
     return *this;
@@ -748,22 +695,9 @@ class response {
       throw std::out_of_range("not enough space to add header!");
     }
     const auto current = common::date_server::get().current();
-    if (body_size_ && kDateLineLength + 2 > space_left - body_size_) {
-      auto writer = body::body_writer::raw();
-      if (!writer.write(std::string_view(
-              memory_.get() + policies::kMaxResponseHeadSizeInMemory -
-                  body_size_, body_size_))) {
-        throw std::runtime_error("unable to write body!");
-      }
-      bdy_writer_.emplace(std::move(writer));
-      body_size_ = 0;
-    }
-    std::size_t pos = sln_len_ + hdr_len_;
-    std::memcpy(memory_.get() + pos, kDatePrefix.data(), kDatePrefix.size());
-    std::memcpy(memory_.get() + pos + kDatePrefix.size(), current.data(),
-                kDateLength);
-    memory_[pos + kDateLineLength - 2] = '\r';
-    memory_[pos + kDateLineLength - 1] = '\n';
+    head_.append(kDatePrefix);
+    head_.append(current.data(), kDateLength);
+    head_.append("\r\n");
     hdr_len_ += kDateLineLength;
     has_date_header_ = true;
   }
@@ -796,18 +730,7 @@ class response {
       if (line.size() + 2 > space_left) {
         throw std::out_of_range("not enough space to serialize response!");
       }
-      if (body_size_ && line.size() + 2 > space_left - body_size_) {
-        auto writer = body::body_writer::raw();
-        if (!writer.write(std::string_view(
-                memory_.get() + policies::kMaxResponseHeadSizeInMemory -
-                    body_size_, body_size_))) {
-          throw std::runtime_error("unable to write body!");
-        }
-        bdy_writer_.emplace(std::move(writer));
-        body_size_ = 0;
-      }
-      std::memcpy(memory_.get() + sln_len_ + hdr_len_, line.data(),
-                  line.size());
+      head_.append(line);
       hdr_len_ += line.size();
       has_transfer_encoding_header_ = true;
     } else if (content_length_) {
@@ -820,22 +743,9 @@ class response {
           prefix.size() + digit_count + 4 > space_left) {
         throw std::out_of_range("not enough space to serialize response!");
       }
-      if (body_size_ && prefix.size() + digit_count + 4 >
-                            space_left - body_size_) {
-        auto writer = body::body_writer::raw();
-        if (!writer.write(std::string_view(
-                memory_.get() + policies::kMaxResponseHeadSizeInMemory -
-                    body_size_, body_size_))) {
-          throw std::runtime_error("unable to write body!");
-        }
-        bdy_writer_.emplace(std::move(writer));
-        body_size_ = 0;
-      }
-      std::size_t pos = sln_len_ + hdr_len_;
-      std::memcpy(memory_.get() + pos, prefix.data(), prefix.size());
-      std::memcpy(memory_.get() + pos + prefix.size(), digits, digit_count);
-      memory_[pos + prefix.size() + digit_count] = '\r';
-      memory_[pos + prefix.size() + digit_count + 1] = '\n';
+      head_.append(prefix);
+      head_.append(digits, digit_count);
+      head_.append("\r\n");
       hdr_len_ += prefix.size() + digit_count + 2;
       has_content_length_header_ = true;
     }
@@ -885,13 +795,13 @@ class response {
     while (pos < end) {
       std::size_t name_beg = pos;
       std::size_t colon = pos;
-      while (colon < end && memory_[colon] != ':') colon++;
+      while (colon < end && head_[colon] != ':') colon++;
       if (colon >= end) break;
       std::size_t val_beg = colon + 2;
       std::size_t cr = val_beg;
-      while (cr < end && memory_[cr] != '\r') cr++;
+      while (cr < end && head_[cr] != '\r') cr++;
       if (cr >= end) break;
-      std::string_view name(&memory_[name_beg], colon - name_beg);
+      std::string_view name(&head_[name_beg], colon - name_beg);
       if (iequals(name, k)) {
         line_off = name_beg;
         val_off = val_beg;
@@ -908,14 +818,11 @@ class response {
   // | [>] CONSTRUCTOR                                             ( private ) |
   // +=========================================================================+
   response(std::string_view status_line, int status_code)
-      : memory_(std::make_unique_for_overwrite<char[]>(
-            policies::kMaxResponseHeadSizeInMemory)),
-        sln_len_(status_line.size()),
+      : head_(status_line), sln_len_(status_line.size()),
         status_code_(status_code) {
     if (sln_len_ > policies::kMaxResponseHeadSizeInMemory) {
       throw std::out_of_range("not enough space to set status line!");
     }
-    std::memcpy(memory_.get(), status_line.data(), sln_len_);
     // RFC 9110 S8.6: 1xx/204 forbid Content-Length; 304 needs a known size.
     bool is_informational = status_code < SC_200_OK;
     if (is_informational || status_code == SC_204_NO_CONTENT ||
@@ -926,8 +833,8 @@ class response {
   // +=========================================================================+
   // | [>] ATTRIBUTES                                              ( private ) |
   // +=========================================================================+
-  std::unique_ptr<char[]> memory_;
-  std::size_t body_size_{0};
+  std::string head_;
+  std::string body_;
   std::size_t sln_len_{0};
   std::size_t hdr_len_{0};
   int status_code_{SC_200_OK};

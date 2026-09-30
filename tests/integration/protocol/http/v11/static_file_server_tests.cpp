@@ -94,7 +94,7 @@ using martianlabs::doba::tests::integration::receive_http_response;
 // +===========================================================================+
 // | [>] HTTP static file framing                                ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("HTTP static files preserve binary framing HEAD and pipelining") {
+DOBA_TEST("HTTP static files preserve binary framing and HEAD") {
   file_directory first;
   file_directory second;
   std::string body(131073, '\0');
@@ -115,21 +115,24 @@ DOBA_TEST("HTTP static files preserve binary framing HEAD and pipelining") {
   value.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
-      "HEAD /assets/file.bin HTTP/1.1\r\nHost: a\r\n\r\n"
-      "GET /assets/file.bin HTTP/1.1\r\nHost: a\r\n\r\n"
-      "GET /other/hello.txt HTTP/1.1\r\nHost: a\r\n\r\n"
-      "GET /assets/override HTTP/1.1\r\nHost: a\r\n\r\n"));
+      "HEAD /assets/file.bin HTTP/1.1\r\nHost: a\r\n\r\n"));
   auto head = receive_http_response(client, true);
   DOBA_EXPECT(head.has_value());
   DOBA_EXPECT_EQUAL(head->header("Content-Length").value(),
                     std::to_string(body.size()));
   DOBA_EXPECT(head->body.empty());
+  DOBA_EXPECT(client.send_all(
+      "GET /assets/file.bin HTTP/1.1\r\nHost: a\r\n\r\n"));
   auto data = receive_http_response(client);
   DOBA_EXPECT(data.has_value());
   DOBA_EXPECT_EQUAL(data->body, body);
+  DOBA_EXPECT(client.send_all(
+      "GET /other/hello.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
   auto other = receive_http_response(client);
   DOBA_EXPECT(other.has_value());
   DOBA_EXPECT_EQUAL(other->body, "other");
+  DOBA_EXPECT(client.send_all(
+      "GET /assets/override HTTP/1.1\r\nHost: a\r\n\r\n"));
   auto application = receive_http_response(client);
   DOBA_EXPECT(application.has_value());
   DOBA_EXPECT_EQUAL(application->body, "application");

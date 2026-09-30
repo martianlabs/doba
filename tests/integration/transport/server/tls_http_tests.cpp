@@ -271,7 +271,7 @@ DOBA_TEST("tls preserves a fragmented binary HTTP body") {
 // +===========================================================================+
 // | [>] tls orders HTTP responses before closing                ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("tls orders HTTP responses before closing") {
+DOBA_TEST("tls serves sequential HTTP requests before closing") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -297,17 +297,17 @@ DOBA_TEST("tls orders HTTP responses before closing") {
   http_server.start();
   DOBA_EXPECT(client.socket.connect(port));
   DOBA_EXPECT(client.negotiate());
-  DOBA_EXPECT(client.send(
-      "GET /one HTTP/1.1\r\nHost: example.com\r\n\r\n"
-      "GET /two HTTP/1.1\r\nHost: example.com\r\n\r\n"
-      "GET /three HTTP/1.1\r\nHost: example.com\r\n"
-      "Connection: close\r\n\r\n"));
+  DOBA_EXPECT(client.send("GET /one HTTP/1.1\r\nHost: example.com\r\n\r\n"));
   const auto first = receive_response(client);
   DOBA_EXPECT(first.has_value());
   DOBA_EXPECT_EQUAL(*first, "one");
+  DOBA_EXPECT(client.send("GET /two HTTP/1.1\r\nHost: example.com\r\n\r\n"));
   const auto second = receive_response(client);
   DOBA_EXPECT(second.has_value());
   DOBA_EXPECT_EQUAL(*second, "two");
+  DOBA_EXPECT(client.send(
+      "GET /three HTTP/1.1\r\nHost: example.com\r\n"
+      "Connection: close\r\n\r\n"));
   const auto third = receive_response(client);
   DOBA_EXPECT(third.has_value());
   DOBA_EXPECT_EQUAL(*third, "three");

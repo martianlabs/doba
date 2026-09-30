@@ -124,15 +124,16 @@ struct tls_connection {
     }
   }
   // +=========================================================================+
-  // | [>] output_segments                                          ( public ) |
+  // | [>] output_bytes                                             ( public ) |
   // +=========================================================================+
-  std::size_t output_segments(output_queue&,
-                              std::span<std::span<char>> segments) {
-    if (segments.empty()) return 0;
-    const auto bytes = session_.output_bytes();
-    if (bytes.empty()) return 0;
-    segments[0] = bytes;
-    return 1;
+  std::span<char> output_bytes(output_queue&) {
+    return session_.output_bytes();
+  }
+  std::size_t output_buffers(output_queue& output,
+                             std::span<std::span<char>> buffers) {
+    if (buffers.empty()) return 0;
+    buffers[0] = output_bytes(output);
+    return buffers[0].empty() ? 0 : 1;
   }
   // +=========================================================================+
   // | [>] output_sent                                              ( public ) |

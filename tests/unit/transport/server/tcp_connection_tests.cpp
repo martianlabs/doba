@@ -27,7 +27,6 @@
 #include <cstring>
 #include <functional>
 #include <memory>
-#include <span>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -141,15 +140,12 @@ DOBA_TEST("tcp connection keeps engine callbacks") {
   tcp_connection<test_engine> input(4, factory);
   bool sent = false;
   bool closed = false;
-  input.engine.set_on_send([&sent](std::unique_ptr<char[]> buffer,
-                                   std::size_t size,
+  input.engine.set_on_send([&sent](std::string head, std::string body,
                                    std::unique_ptr<reader>) {
-    sent = size == 1 && buffer[0] == 'x';
+    sent = head == "x" && body.empty();
   });
   input.engine.set_on_close([&closed]() { closed = true; });
-  auto buffer = std::make_unique<char[]>(1);
-  buffer[0] = 'x';
-  input.engine.send(std::move(buffer), 1, nullptr);
+  input.engine.send("x", {}, nullptr);
   input.engine.close();
   DOBA_EXPECT(sent);
   DOBA_EXPECT(closed);
@@ -166,17 +162,48 @@ DOBA_TEST("tcp connection sends queue bytes directly") {
   DOBA_EXPECT(input.eof());
   DOBA_EXPECT(input.close_output());
   output_queue output(8);
-  auto prefix = std::make_unique<char[]>(3);
-  std::memcpy(prefix.get(), "abc", 3);
-  DOBA_EXPECT(output.push(std::move(prefix), 3, nullptr));
+  DOBA_EXPECT(output.push("abc", {}, nullptr));
   DOBA_EXPECT(input.prepare_output(output));
-  std::array<std::span<char>, 2> segments{};
-  DOBA_EXPECT_EQUAL(input.output_segments(output, segments), 1);
-  DOBA_EXPECT_EQUAL(std::string(segments[0].data(), segments[0].size()), "abc");
+  auto bytes = input.output_bytes(output);
+  DOBA_EXPECT_EQUAL(std::string(bytes.data(), bytes.size()), "abc");
   DOBA_EXPECT(input.output_pending(output));
   DOBA_EXPECT(input.output_sent(output, 2));
-  DOBA_EXPECT_EQUAL(input.output_segments(output, segments), 1);
-  DOBA_EXPECT_EQUAL(std::string(segments[0].data(), segments[0].size()), "c");
+  bytes = input.output_bytes(output);
+  DOBA_EXPECT_EQUAL(std::string(bytes.data(), bytes.size()), "c");
   DOBA_EXPECT(input.output_sent(output, 1));
   DOBA_EXPECT(!input.output_pending(output));
+}
+// +===========================================================================+
+// | [>] tcp connection batches queued output                    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("tcp connection batches queued output") {
+  auto factory = []() { return test_engine{}; };
+  tcp_connection<test_engine> input(8, 8, factory, nullptr);
+  output_queue output(32);
+  DOBA_EXPECT(output.push("head", "body", nullptr));
+  DOBA_EXPECT(output.push("next", {}, nullptr));
+  DOBA_EXPECT(input.prepare_output(output));
+  std::array<std::span<char>, 4> buffers{};
+  auto count = input.output_buffers(output, buffers);
+  DOBA_EXPECT_EQUAL(count, 3);
+  DOBA_EXPECT_EQUAL(std::string(buffers[0].data(), buffers[0].size()),
+                    "head");
+  DOBA_EXPECT_EQUAL(std::string(buffers[1].data(), buffers[1].size()),
+                    "body");
+  DOBA_EXPECT_EQUAL(std::string(buffers[2].data(), buffers[2].size()),
+                    "next");
+  DOBA_EXPECT(input.output_sent(output, 5));
+  count = input.output_buffers(output, buffers);
+  DOBA_EXPECT_EQUAL(count, 2);
+  DOBA_EXPECT_EQUAL(std::string(buffers[0].data(), buffers[0].size()),
+                    "ody");
+  output.buffer = "buffer";
+  output.offset = 1;
+  count = input.output_buffers(output, buffers);
+  DOBA_EXPECT_EQUAL(count, 1);
+  DOBA_EXPECT_EQUAL(std::string(buffers[0].data(), buffers[0].size()),
+                    "uffer");
+  DOBA_EXPECT(input.output_sent(output, 5));
+  count = input.output_buffers(output, buffers);
+  DOBA_EXPECT_EQUAL(count, 2);
 }

@@ -28,6 +28,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "protocol/http/v11/server.h"
 #include "http_test_helper.h"
@@ -68,11 +69,12 @@ DOBA_TEST("HTTP/1.1 applies static parametrized and wildcard precedence") {
   http_server.start();
 
   DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(client.send_all(
-      "GET /items/42 HTTP/1.1\r\nHost: a\r\n\r\n"
-      "GET /items/7 HTTP/1.1\r\nHost: a\r\n\r\n"
-      "GET /items/name HTTP/1.1\r\nHost: a\r\n\r\n"));
-  for (const std::string_view body : {"static", "parameter:7", "wildcard"}) {
+  for (const auto [path, body] :
+       {std::pair{"/items/42", "static"},
+        std::pair{"/items/7", "parameter:7"},
+        std::pair{"/items/name", "wildcard"}}) {
+    DOBA_EXPECT(client.send_all(std::string("GET ") + path +
+                                " HTTP/1.1\r\nHost: a\r\n\r\n"));
     const auto result = receive_http_response(client);
     DOBA_EXPECT(result.has_value());
     if (result.has_value()) {

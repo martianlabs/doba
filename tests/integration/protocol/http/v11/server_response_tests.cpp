@@ -75,9 +75,7 @@ DOBA_TEST("HTTP/1.1 transmits and terminates every outgoing chunk") {
   http_server.start();
 
   DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(client.send_all(
-      "GET /chunks HTTP/1.1\r\nHost: a\r\n\r\n"
-      "GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
+  DOBA_EXPECT(client.send_all("GET /chunks HTTP/1.1\r\nHost: a\r\n\r\n"));
   const auto chunks = receive_http_response(client);
   DOBA_EXPECT(chunks.has_value());
   if (chunks.has_value()) {
@@ -87,6 +85,7 @@ DOBA_TEST("HTTP/1.1 transmits and terminates every outgoing chunk") {
     DOBA_EXPECT_EQUAL(chunks->wire_body,
                       "1\r\na\r\n2\r\nbc\r\n3\r\ndef\r\n0\r\n\r\n");
   }
+  DOBA_EXPECT(client.send_all("GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
   const auto next = receive_http_response(client);
   DOBA_EXPECT(next.has_value());
   if (next.has_value()) DOBA_EXPECT_EQUAL(next->body, "next");
@@ -155,33 +154,27 @@ DOBA_TEST("HTTP/1.1 delimits cleared bodies on persistent connections") {
   });
   http_server.start();
 
-  for (bool pipelined : {false, true}) {
-    DOBA_EXPECT(client.connect(port));
-    std::string requests = "GET /clear HTTP/1.1\r\nHost: a\r\n\r\n";
-    if (pipelined) requests += "GET /next HTTP/1.1\r\nHost: a\r\n\r\n";
-    DOBA_EXPECT(client.send_all(requests));
-    const auto cleared = receive_http_response(client);
-    DOBA_EXPECT(cleared.has_value());
-    DOBA_EXPECT_EQUAL(cleared->status, "HTTP/1.1 200 OK");
-    DOBA_EXPECT_EQUAL(cleared->header("Content-Length").value(), "0");
-    DOBA_EXPECT(!cleared->header("Transfer-Encoding").has_value());
-    DOBA_EXPECT(cleared->body.empty());
-    DOBA_EXPECT(cleared->wire_body.empty());
-    if (!pipelined) {
-      DOBA_EXPECT(client.send_all("GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
-    }
-    const auto next = receive_http_response(client);
-    DOBA_EXPECT(next.has_value());
-    DOBA_EXPECT_EQUAL(next->status, "HTTP/1.1 200 OK");
-    DOBA_EXPECT_EQUAL(next->body, "next");
-    DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(100)));
-    client.close();
-  }
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("GET /clear HTTP/1.1\r\nHost: a\r\n\r\n"));
+  const auto cleared = receive_http_response(client);
+  DOBA_EXPECT(cleared.has_value());
+  DOBA_EXPECT_EQUAL(cleared->status, "HTTP/1.1 200 OK");
+  DOBA_EXPECT_EQUAL(cleared->header("Content-Length").value(), "0");
+  DOBA_EXPECT(!cleared->header("Transfer-Encoding").has_value());
+  DOBA_EXPECT(cleared->body.empty());
+  DOBA_EXPECT(cleared->wire_body.empty());
+  DOBA_EXPECT(client.send_all("GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
+  const auto next = receive_http_response(client);
+  DOBA_EXPECT(next.has_value());
+  DOBA_EXPECT_EQUAL(next->status, "HTTP/1.1 200 OK");
+  DOBA_EXPECT_EQUAL(next->body, "next");
+  DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(100)));
+  client.close();
   http_server.stop();
 }
 
 // +===========================================================================+
-// | [>] all bodyless final statuses delimit a pipeline          ( test-case ) |
+// | [>] bodyless statuses delimit sequential responses          ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 suppresses 205 and 304 bodies before successors") {
   tcpip_client client;
@@ -206,10 +199,7 @@ DOBA_TEST("HTTP/1.1 suppresses 205 and 304 bodies before successors") {
   http_server.start();
 
   DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(client.send_all(
-      "GET /reset HTTP/1.1\r\nHost: a\r\n\r\n"
-      "GET /cached HTTP/1.1\r\nHost: a\r\n\r\n"
-      "GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
+  DOBA_EXPECT(client.send_all("GET /reset HTTP/1.1\r\nHost: a\r\n\r\n"));
   const auto reset = receive_http_response(client);
   DOBA_EXPECT(reset.has_value());
   if (reset.has_value()) {
@@ -217,6 +207,7 @@ DOBA_TEST("HTTP/1.1 suppresses 205 and 304 bodies before successors") {
     DOBA_EXPECT_EQUAL(reset->body, "");
     DOBA_EXPECT_EQUAL(reset->header("Content-Length").value(), "0");
   }
+  DOBA_EXPECT(client.send_all("GET /cached HTTP/1.1\r\nHost: a\r\n\r\n"));
   const auto cached = receive_http_response(client);
   DOBA_EXPECT(cached.has_value());
   if (cached.has_value()) {
@@ -224,6 +215,7 @@ DOBA_TEST("HTTP/1.1 suppresses 205 and 304 bodies before successors") {
     DOBA_EXPECT_EQUAL(cached->body, "");
     DOBA_EXPECT_EQUAL(cached->header("Content-Length").value(), "6");
   }
+  DOBA_EXPECT(client.send_all("GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
   const auto next = receive_http_response(client);
   DOBA_EXPECT(next.has_value());
   if (next.has_value()) DOBA_EXPECT_EQUAL(next->body, "next");
@@ -332,14 +324,12 @@ DOBA_TEST("HTTP/1.1 suppresses synchronous HEAD error bodies") {
     http_server.start();
 
     DOBA_EXPECT(client.connect(port));
-    DOBA_EXPECT(client.send_all(
-        "GET /ok HTTP/1.1\r\nHost: a\r\n\r\n"
-        "HEAD /fail HTTP/1.1\r\nHost: a\r\n\r\n"
-        "GET /ok HTTP/1.1\r\nHost: a\r\n\r\n"));
+    DOBA_EXPECT(client.send_all("GET /ok HTTP/1.1\r\nHost: a\r\n\r\n"));
     const auto before = receive_http_response(client);
     DOBA_EXPECT(before.has_value());
     DOBA_EXPECT_EQUAL(before->status, "HTTP/1.1 200 OK");
     DOBA_EXPECT_EQUAL(before->body, "ok");
+    DOBA_EXPECT(client.send_all("HEAD /fail HTTP/1.1\r\nHost: a\r\n\r\n"));
     const auto head = receive_http_response(client, true);
     DOBA_EXPECT(head.has_value());
     DOBA_EXPECT_EQUAL(head->status, "HTTP/1.1 500 Internal Server Error");
@@ -488,13 +478,12 @@ DOBA_TEST("HTTP/1.1 response close drains each body representation") {
     });
     http_server.start();
     DOBA_EXPECT(client.connect(port));
-    DOBA_EXPECT(client.send_all(
-        "GET /before HTTP/1.1\r\nHost: a\r\n\r\n"
-        "POST /last HTTP/1.1\r\nHost: a\r\nContent-Length: 0\r\n\r\n"
-        "GET /later HTTP/1.1\r\nHost: a\r\n\r\n"));
+    DOBA_EXPECT(client.send_all("GET /before HTTP/1.1\r\nHost: a\r\n\r\n"));
     const auto before = receive_http_response(client);
     DOBA_EXPECT(before.has_value());
     if (before) DOBA_EXPECT_EQUAL(before->body, "before");
+    DOBA_EXPECT(client.send_all(
+        "POST /last HTTP/1.1\r\nHost: a\r\nContent-Length: 0\r\n\r\n"));
     const auto last = receive_http_response(client);
     DOBA_EXPECT(last.has_value());
     if (last) {

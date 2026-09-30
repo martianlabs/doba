@@ -226,14 +226,6 @@ int main(int argc, char* argv[]) {
         return res;
       };
   http_server.add_route("GET", "/json/:count", json_handler);
-  // Keep this handler minimal so the profile isolates pipelining overhead.
-  http_server.add_route(
-      "GET", "/pipeline",
-      [](const request& req) {
-        response res = response::ok_200();
-        res.add_header("Content-Type", "text/plain").set_body("ok");
-        return res;
-      });
   martianlabs::doba::transport::server::tls_policies tls_configuration;
   tls_configuration.ip = "0.0.0.0";
   tls_configuration.port = "8081";

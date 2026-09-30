@@ -77,9 +77,10 @@ struct fake_transport {
                                     : observed.request;
     for (int i = 0; i < 2; i++) {
       auto value = factory();
-      value.set_on_send([](std::unique_ptr<char[]> bytes, std::size_t size,
+      value.set_on_send([](std::string head, std::string body,
                            std::unique_ptr<reader> source) {
-        observed.bytes.append(bytes.get(), size);
+        observed.bytes.append(head);
+        observed.bytes.append(body);
         if (source) source->read_all(observed.bytes);
       });
       value.set_on_close([]() {});
@@ -304,10 +305,10 @@ DOBA_TEST("engine factories preserve policies and independence") {
   std::string bytes[2];
   int closed[2] = {};
   for (int i = 0; i < 2; i++) {
-    engines[i]->set_on_send([&, i](std::unique_ptr<char[]> prefix,
-                                  std::size_t size,
+    engines[i]->set_on_send([&, i](std::string head, std::string body,
                                   std::unique_ptr<reader> source) {
-      bytes[i].append(prefix.get(), size);
+      bytes[i].append(head);
+      bytes[i].append(body);
       if (source) source->read_all(bytes[i]);
     });
     engines[i]->set_on_close([&, i]() { closed[i]++; });
