@@ -2707,7 +2707,7 @@ DOBA_TEST("decoder removes a temporary body after handler failure") {
 }
 
 // +===========================================================================+
-// | [>] temporary body creation failure returns 500              ( test-case ) |
+// | [>] temporary body creation failure returns 500             ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("decoder returns 500 when temporary body creation fails") {
   const auto blocked = std::filesystem::absolute(__FILE__).string();
@@ -2752,7 +2752,7 @@ DOBA_TEST("decoder returns 500 when temporary body creation fails") {
 }
 
 // +===========================================================================+
-// | [>] temporary body read-open failure returns 500             ( test-case ) |
+// | [>] temporary body read-open failure returns 500            ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("decoder returns 500 when temporary body cannot reopen") {
   const auto before = body_temp_files();
