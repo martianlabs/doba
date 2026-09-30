@@ -31,7 +31,6 @@
 #include <limits>
 #include <span>
 
-#include "common/writer.h"
 #include "protocol/http/common/helpers.h"
 #include "protocol/http/v11/body/framer_state.h"
 #include "protocol/http/v11/policies.h"
@@ -41,14 +40,11 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] framer_chunked                                              ( class ) |
 // +---------------------------------------------------------------------------+
-// | Validates and accumulates a chunked Transfer-Encoding body into a         |
-// | common::writer.                                                           |
+// | Validates a chunked Transfer-Encoding body.                              |
 // |                                                                           |
-// | The caller pushes incoming transport spans via write(). Each call         |
-// | validates the chunked framing and writes ALL wire bytes - including       |
-// | chunk-size lines, extensions, trailers and terminating CRLF - verbatim    |
-// | into dst. No decoding is performed here; decoding is deferred to a        |
-// | reader pass over the completed buffer.                                    |
+// | The caller pushes incoming transport spans via consume(). Each call      |
+// | validates the framing and counts all wire bytes, including chunk lines,  |
+// | extensions, trailers and the terminating CRLF.                           |
 // |                                                                           |
 // | framer_state::consumed reports the exact number of bytes belonging to     |
 // | this body that were taken from the input span. Any remaining bytes in the |
@@ -98,13 +94,12 @@ class framer_chunked {
   explicit framer_chunked(std::size_t payload_limit)
       : payload_limit_(payload_limit) {}
   // +=========================================================================+
-  // | [>] write                                                    ( public ) |
+  // | [>] consume                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Validates the chunked framing in input and writes every wire byte into  |
-  // | dst unchanged. Returns the number of bytes consumed from input and      |
+  // | Validates the chunked framing in input. Returns bytes consumed and      |
   // | whether the body is complete (last-chunk + terminating CRLF seen).      |
   // +=========================================================================+
-  framer_state write(std::span<const std::byte> input, common::writer& dst) {
+  framer_state consume(std::span<const std::byte> input) {
     framer_state result;
     if (state_ == state::complete) {
       result.complete = true;
@@ -299,7 +294,7 @@ class framer_chunked {
           break;
         }
         // ---------------------------------------------------------------------
-        // Chunk data: bulk-write min(remaining, available) bytes
+        // Chunk data: consume min(remaining, available) bytes
         // ---------------------------------------------------------------------
         case state::data: {
           std::size_t to_take = std::min(chunk_remaining_, input.size() - i);
@@ -307,10 +302,6 @@ class framer_chunked {
               (payload_size_ > payload_limit_ ||
                to_take > payload_limit_ - payload_size_)) {
             return fail(result, framer_error::chunked_size_limit_exceeded);
-          }
-          if (!dst.write(input.subspan(i, to_take))) {
-            // An I/O error occurred while writing to the destination!
-            return fail(result, framer_error::io_error);
           }
           result.consumed += to_take;
           payload_size_ += to_take;
@@ -387,9 +378,6 @@ class framer_chunked {
           if (c != '\n') {
             return fail(result, framer_error::invalid_trailer);
           }
-          if (!dst.write(input.subspan(i, 1))) {
-            return fail(result, framer_error::io_error);
-          }
           result.consumed += 1;
           state_ = state::complete;
           result.complete = true;
@@ -398,11 +386,7 @@ class framer_chunked {
         default:
           break;
       }
-      // Single-byte write for all non-data, non-complete paths.
-      if (!dst.write(input.subspan(i, 1))) {
-        // An I/O error occurred while writing to the destination!
-        return fail(result, framer_error::io_error);
-      }
+      // Count every framing byte in the wire body.
       result.consumed += 1;
       i++;
     }

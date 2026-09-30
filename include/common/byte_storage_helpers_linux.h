@@ -72,6 +72,7 @@ class byte_storage_file {
     if (file_ == -1) return false;
     if (fcntl(file_, F_SETFD, FD_CLOEXEC) == -1) {
       close();
+      ::unlink(name.data());
       return false;
     }
     path = name.data();

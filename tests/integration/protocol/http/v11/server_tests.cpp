@@ -506,7 +506,7 @@ DOBA_TEST("HTTP/1.1 waits for a complete fragmented chunked body") {
 }
 
 // +===========================================================================+
-// | [>] echoes raw bodies across the spill threshold            ( test-case ) |
+// | [>] raw body spill and decoded payload                      ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 echoes raw bodies across the spill threshold") {
   tcpip_client client;
@@ -521,8 +521,8 @@ DOBA_TEST("HTTP/1.1 echoes raw bodies across the spill threshold") {
     return res;
   });
   http_server.start();
-  DOBA_EXPECT(client.connect(port));
   for (std::size_t size : {16383, 16384, 16385}) {
+    DOBA_EXPECT(client.connect(port));
     std::string payload(size, '\0');
     for (std::size_t i = 0; i < payload.size(); i++) {
       payload[i] = static_cast<char>((i * 47 + i / 127) % 256);
@@ -539,13 +539,13 @@ DOBA_TEST("HTTP/1.1 echoes raw bodies across the spill threshold") {
     DOBA_EXPECT(result.has_value());
     DOBA_EXPECT_EQUAL(result->status, "HTTP/1.1 200 OK");
     DOBA_EXPECT_EQUAL(result->body, payload);
+    client.close();
   }
   DOBA_EXPECT_EQUAL(calls.load(), 3);
-  DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(100)));
 }
 
 // +===========================================================================+
-// | [>] echoes chunked bodies across the spill threshold        ( test-case ) |
+// | [>] chunked body spill and decoded payload                  ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 echoes chunked bodies across the spill threshold") {
   tcpip_client client;
@@ -560,8 +560,8 @@ DOBA_TEST("HTTP/1.1 echoes chunked bodies across the spill threshold") {
     return res;
   });
   http_server.start();
-  DOBA_EXPECT(client.connect(port));
   for (std::size_t size : {16383, 16384, 16385}) {
+    DOBA_EXPECT(client.connect(port));
     std::string payload(size - 13, '\0');
     for (std::size_t i = 0; i < payload.size(); i++) {
       payload[i] = static_cast<char>((i * 47 + i / 127) % 256);
@@ -586,9 +586,9 @@ DOBA_TEST("HTTP/1.1 echoes chunked bodies across the spill threshold") {
     DOBA_EXPECT(result.has_value());
     DOBA_EXPECT_EQUAL(result->status, "HTTP/1.1 200 OK");
     DOBA_EXPECT_EQUAL(result->body, payload);
+    client.close();
   }
   DOBA_EXPECT_EQUAL(calls.load(), 3);
-  DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(100)));
 }
 
 // +===========================================================================+

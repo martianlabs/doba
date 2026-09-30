@@ -29,7 +29,6 @@
 #include <cstddef>
 #include <span>
 
-#include "common/writer.h"
 #include "protocol/http/v11/body/framer_state.h"
 
 namespace martianlabs::doba::protocol::http::v11::body {
@@ -38,15 +37,12 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // | [>] framer_raw                                                  ( class ) |
 // +---------------------------------------------------------------------------+
 // | Detects the Content-Length-framed body boundary within an already-wire-   |
-// | encoded input buffer and accumulates it into a common::writer.            |
+// | encoded input buffer.                                                     |
 // |                                                                           |
-// | The caller pushes incoming transport spans via write(); each call         |
+// | The caller pushes incoming transport spans via consume(); each call       |
 // | returns a framer_state indicating how many bytes were consumed from the   |
 // | span and whether the body is complete. Bytes beyond the declared          |
 // | Content-Length are never touched - they belong to the next request.       |
-// |                                                                           |
-// | Once write() reports an error, the failure is latched: every subsequent   |
-// | call returns the same has_error/error without touching dst again.         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class framer_raw {
@@ -56,50 +52,28 @@ class framer_raw {
   // +=========================================================================+
   explicit framer_raw(std::size_t content_length) : expected_(content_length) {}
   // +=========================================================================+
-  // | [>] write                                                    ( public ) |
+  // | [>] consume                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Writes up to (expected_ - accumulated_) bytes from input into dst.      |
+  // | Consumes up to (expected_ - accumulated_) bytes from input.             |
   // | Returns immediately with complete=true when Content-Length is reached.  |
   // | A zero Content-Length body completes on the first call with consumed=0. |
   // +=========================================================================+
-  framer_state write(std::span<const std::byte> input, common::writer& dst) {
+  framer_state consume(std::span<const std::byte> input) {
     framer_state result;
-    if (has_error_) {
-      result.has_error = true;
-      result.error = error_;
-      return result;
-    }
     std::size_t remaining = expected_ - accumulated_;
     std::size_t to_consume = std::min(remaining, input.size());
-    if (to_consume > 0) {
-      if (!dst.write(input.subspan(0, to_consume))) {
-        return fail(result, framer_error::io_error);
-      }
-      accumulated_ += to_consume;
-      result.consumed = to_consume;
-    }
+    accumulated_ += to_consume;
+    result.consumed = to_consume;
     result.complete = (accumulated_ == expected_);
     return result;
   }
 
  private:
   // +=========================================================================+
-  // | [>] fail                                                    ( private ) |
-  // +=========================================================================+
-  framer_state fail(framer_state& result, framer_error err) {
-    has_error_ = true;
-    error_ = err;
-    result.has_error = true;
-    result.error = err;
-    return result;
-  }
-  // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
   std::size_t expected_;
   std::size_t accumulated_{0};
-  bool has_error_{false};
-  framer_error error_{framer_error::none};
 };
 }  // namespace martianlabs::doba::protocol::http::v11::body
 

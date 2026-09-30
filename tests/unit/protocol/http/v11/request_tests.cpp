@@ -24,27 +24,38 @@
 
 #include <array>
 #include <cstddef>
-#include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <vector>
 
-#include "common/writer.h"
+#include "protocol/http/v11/decoder.h"
 #include "protocol/http/v11/request.h"
+#include "protocol/http/v11/response.h"
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::common::writer;
-using martianlabs::doba::protocol::http::header_view;
+using martianlabs::doba::protocol::deserialization_status;
 using martianlabs::doba::protocol::http::helpers;
-using martianlabs::doba::protocol::http::query_parameter_view;
 using martianlabs::doba::protocol::http::target;
+using martianlabs::doba::protocol::http::v11::decoder;
 using martianlabs::doba::protocol::http::v11::request;
+using martianlabs::doba::protocol::http::v11::response;
 
-std::string_view part(const std::string& source, std::string_view value) {
-  const auto offset = source.find(value);
-  return std::string_view(source).substr(offset, value.size());
+template <typename FNty>
+void with_request(std::string_view wire, FNty&& check) {
+  decoder<request, response> value;
+  std::size_t consumed = 0;
+  bool called = false;
+  const auto result = value.deserialize(
+      wire.data(), wire.size(), wire.size(), consumed,
+      [&](const request& decoded) {
+        called = true;
+        check(decoded);
+      });
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+  DOBA_EXPECT_EQUAL(consumed, wire.size());
+  DOBA_EXPECT(called);
 }
 }  // namespace
 
@@ -59,271 +70,194 @@ DOBA_TEST("request is neither copyable nor movable") {
   DOBA_EXPECT(true);
 }
 // +===========================================================================+
-// | [>] factory exposes every request component                 ( test-case ) |
+// | [>] request exposes decoded components                      ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("factory exposes every request component") {
-  const std::string source =
+DOBA_TEST("request exposes decoded components") {
+  constexpr std::string_view wire =
       "GET /a%20b?x=1 HTTP/1.1\r\nHost: example.com:8080\r\n"
-      "X-Test: value\r\nCookie: a=1; b=two=2\r\n\r\n";
-  const auto getter = request::from(
-      source, part(source, "GET"), part(source, "/a%20b"), target::kOriginForm,
-      std::vector<header_view>{
-          {part(source, "Host"), part(source, "example.com:8080")},
-          {part(source, "X-Test"), part(source, "value")},
-          {part(source, "Cookie"), part(source, "a=1; b=two=2")}},
-      std::vector<query_parameter_view>{{part(source, "x"), part(source, "1")}},
-      part(source, "example.com"), part(source, "8080"),
-      helpers::host_type::kRegName, std::nullopt, std::nullopt, std::nullopt,
-      false, 0, true);
-  const auto value = getter(std::nullopt);
-  DOBA_EXPECT_EQUAL(value->get_method(), "GET");
-  DOBA_EXPECT_EQUAL(value->get_target(), target::kOriginForm);
-  DOBA_EXPECT_EQUAL(value->get_absolute_path(), "/a b");
-  DOBA_EXPECT_EQUAL(value->get_headers_length(), 3);
-  DOBA_EXPECT_EQUAL(value->get_header(0).first, "Host");
-  DOBA_EXPECT_EQUAL(value->get_header("host").second, "example.com:8080");
-  DOBA_EXPECT(value->exist_header("X-TEST"));
-  DOBA_EXPECT(!value->exist_header("Missing"));
-  DOBA_EXPECT_EQUAL(value->get_query_parameters_length(), 1);
-  DOBA_EXPECT_EQUAL(value->get_query_parameter(0).second, "1");
-  DOBA_EXPECT(value->get_query_parameter("x").has_value());
-  DOBA_EXPECT(!value->get_query_parameter("X").has_value());
-  DOBA_EXPECT(value->has_host());
-  DOBA_EXPECT_EQUAL(value->get_host(), "example.com");
-  DOBA_EXPECT_EQUAL(value->get_host_port(), "8080");
-  DOBA_EXPECT_EQUAL(value->get_host_type(), helpers::host_type::kRegName);
-  DOBA_EXPECT(!value->has_target_authority());
-  DOBA_EXPECT(!value->has_body_reader());
-  DOBA_EXPECT(value->wants_connection_close());
+      "X-Test: value\r\nCookie: a=1; b=two=2\r\n"
+      "Connection: close\r\n\r\n";
+  with_request(wire, [](const request& value) {
+    DOBA_EXPECT_EQUAL(value.get_method(), "GET");
+    DOBA_EXPECT_EQUAL(value.get_target(), target::kOriginForm);
+    DOBA_EXPECT_EQUAL(value.get_absolute_path(), "/a b");
+    DOBA_EXPECT_EQUAL(value.get_headers_length(), 4);
+    DOBA_EXPECT_EQUAL(value.get_header(0).first, "Host");
+    DOBA_EXPECT_EQUAL(value.get_header("host").second, "example.com:8080");
+    DOBA_EXPECT(value.exist_header("X-TEST"));
+    DOBA_EXPECT(!value.exist_header("Missing"));
+    DOBA_EXPECT_EQUAL(value.get_query_parameters_length(), 1);
+    DOBA_EXPECT_EQUAL(value.get_query_parameter(0).second, "1");
+    DOBA_EXPECT(value.get_query_parameter("x").has_value());
+    DOBA_EXPECT(!value.get_query_parameter("X").has_value());
+    DOBA_EXPECT(value.has_host());
+    DOBA_EXPECT_EQUAL(value.get_host(), "example.com");
+    DOBA_EXPECT_EQUAL(value.get_host_port(), "8080");
+    DOBA_EXPECT_EQUAL(value.get_host_type(),
+                      helpers::host_type::kRegName);
+    DOBA_EXPECT(!value.has_target_authority());
+    DOBA_EXPECT(!value.has_body_reader());
+    DOBA_EXPECT(value.wants_connection_close());
+  });
 }
 // +===========================================================================+
 // | [>] missing named header throws out of range                ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("missing named header throws out of range") {
-  const std::string source = "GET / HTTP/1.1\r\n\r\n";
-  const auto value = request::from(
-      source, part(source, "GET"), part(source, "/"), target::kOriginForm, {},
-      {}, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
-      std::nullopt)(std::nullopt);
-  bool threw = false;
-  try {
-    value->get_header("Missing");
-  } catch (const std::out_of_range&) {
-    threw = true;
-  }
-  DOBA_EXPECT(threw);
+  with_request("GET / HTTP/1.1\r\nHost: a\r\n\r\n",
+               [](const request& value) {
+    bool threw = false;
+    try {
+      value.get_header("Missing");
+    } catch (const std::out_of_range&) {
+      threw = true;
+    }
+    DOBA_EXPECT(threw);
+  });
 }
 // +===========================================================================+
 // | [>] cookie accessors preserve order values and exact names  ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("cookie accessors preserve order values and exact names") {
-  const std::string source =
-      "GET / HTTP/1.1\r\nCookie: a=1; b=two=2; empty=; ignored\r\n\r\n";
-  const auto value = request::from(
-      source, part(source, "GET"), part(source, "/"), target::kOriginForm,
-      {{part(source, "Cookie"), part(source, "a=1; b=two=2; empty=; ignored")}},
-      {}, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
-      std::nullopt)(std::nullopt);
-  DOBA_EXPECT_EQUAL(*value->get_cookie("a"), "1");
-  DOBA_EXPECT_EQUAL(*value->get_cookie("b"), "two=2");
-  DOBA_EXPECT(value->get_cookie("empty").has_value());
-  DOBA_EXPECT(value->get_cookie("empty")->empty());
-  DOBA_EXPECT(!value->get_cookie("A").has_value());
-  DOBA_EXPECT(!value->get_cookie("missing").has_value());
-  const auto cookies = value->get_cookies();
-  DOBA_EXPECT_EQUAL(cookies.size(), 3);
-  DOBA_EXPECT_EQUAL(cookies[0].first, "a");
-  DOBA_EXPECT_EQUAL(cookies[1].second, "two=2");
-  DOBA_EXPECT_EQUAL(cookies[2].first, "empty");
+  with_request(
+      "GET / HTTP/1.1\r\nHost: a\r\n"
+      "Cookie: a=1; b=two=2; empty=\r\n\r\n",
+      [](const request& value) {
+    DOBA_EXPECT_EQUAL(*value.get_cookie("a"), "1");
+    DOBA_EXPECT_EQUAL(*value.get_cookie("b"), "two=2");
+    DOBA_EXPECT(value.get_cookie("empty").has_value());
+    DOBA_EXPECT(value.get_cookie("empty")->empty());
+    DOBA_EXPECT(!value.get_cookie("A").has_value());
+    DOBA_EXPECT(!value.get_cookie("missing").has_value());
+    const auto cookies = value.get_cookies();
+    DOBA_EXPECT_EQUAL(cookies.size(), 3);
+    DOBA_EXPECT_EQUAL(cookies[0].first, "a");
+    DOBA_EXPECT_EQUAL(cookies[1].second, "two=2");
+    DOBA_EXPECT_EQUAL(cookies[2].first, "empty");
+  });
 }
 // +===========================================================================+
 // | [>] absent cookie header returns empty results              ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("absent cookie header returns empty results") {
-  const std::string source = "GET / HTTP/1.1\r\n\r\n";
-  const auto value = request::from(
-      source, part(source, "GET"), part(source, "/"), target::kOriginForm, {},
-      {}, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
-      std::nullopt)(std::nullopt);
-  DOBA_EXPECT(!value->get_cookie("a").has_value());
-  DOBA_EXPECT(value->get_cookies().empty());
+  with_request("GET / HTTP/1.1\r\nHost: a\r\n\r\n",
+               [](const request& value) {
+    DOBA_EXPECT(!value.get_cookie("a").has_value());
+    DOBA_EXPECT(value.get_cookies().empty());
+    DOBA_EXPECT_EQUAL(value.get_query_parameters_length(), 0);
+    DOBA_EXPECT(!value.has_body_reader());
+  });
 }
 // +===========================================================================+
-// | [>] empty components remain valid empty views               ( test-case ) |
+// | [>] malformed cookie syntax is rejected                     ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("empty components remain valid empty views") {
-  const std::string source;
-  const auto value = request::from(
-      source, {}, {}, target::kUnknown, {}, {}, std::nullopt, std::nullopt,
-      std::nullopt, std::nullopt, std::nullopt, std::nullopt)(std::nullopt);
-  DOBA_EXPECT(value->get_method().empty());
-  DOBA_EXPECT(value->get_absolute_path().empty());
-  DOBA_EXPECT_EQUAL(value->get_headers_length(), 0);
-  DOBA_EXPECT_EQUAL(value->get_query_parameters_length(), 0);
-  DOBA_EXPECT(!value->has_host());
-  DOBA_EXPECT(!value->has_target_authority());
-  DOBA_EXPECT(!value->has_body_reader());
+DOBA_TEST("malformed cookie syntax is rejected") {
+  const std::string wire =
+      "GET / HTTP/1.1\r\nHost: a\r\n"
+      "Cookie: a=1;bad; b=2; =empty; tail=3\r\n\r\n";
+  decoder<request, response> value;
+  std::size_t consumed = 0;
+  bool called = false;
+  const auto result = value.deserialize(
+      wire.data(), wire.size(), wire.size(), consumed,
+      [&](const request&) { called = true; });
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+  DOBA_EXPECT(!called);
 }
 // +===========================================================================+
-// | [>] cookie parsing remains bounded on malformed input       ( test-case ) |
+// | [>] raw and chunked requests expose decoded payload         ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("cookie parsing remains bounded on malformed input") {
-  const std::string source =
-      "GET / HTTP/1.1\r\nCookie: a=1;bad; b=2; =empty; tail=3\r\n\r\n";
-  const auto value = request::from(
-      source, part(source, "GET"), part(source, "/"), target::kOriginForm,
-      {{part(source, "Cookie"), part(source, "a=1;bad; b=2; =empty; tail=3")}},
-      {}, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
-      std::nullopt)(std::nullopt);
-  const auto cookies = value->get_cookies();
-  DOBA_EXPECT_EQUAL(cookies.size(), 4);
-  DOBA_EXPECT_EQUAL(cookies[0].first, "a");
-  DOBA_EXPECT_EQUAL(cookies[0].second, "1;bad");
-  DOBA_EXPECT_EQUAL(cookies[1].first, "b");
-  DOBA_EXPECT(cookies[2].first.empty());
-  DOBA_EXPECT_EQUAL(cookies[3].first, "tail");
-  DOBA_EXPECT_EQUAL(*value->get_cookie("tail"), "3");
+DOBA_TEST("raw and chunked requests expose decoded payload") {
+  for (const bool chunked : {false, true}) {
+    const std::string wire =
+        std::string("POST / HTTP/1.1\r\nHost: a\r\n") +
+        (chunked ? "Transfer-Encoding: chunked\r\n\r\n"
+                 : "Content-Length: 3\r\n\r\n") +
+        (chunked ? "3\r\nabc\r\n0\r\n\r\n" : "abc");
+    with_request(wire, [](const request& value) {
+      DOBA_EXPECT(value.has_body_reader());
+      DOBA_EXPECT(value.get_body_reader() != nullptr);
+      std::array<std::byte, 8> output{};
+      const auto state = value.get_body_reader()->read(output);
+      DOBA_EXPECT(!state.has_error);
+      DOBA_EXPECT(state.complete);
+      DOBA_EXPECT_EQUAL(state.produced, 3);
+      DOBA_EXPECT_EQUAL(
+          std::string_view(reinterpret_cast<const char*>(output.data()), 3),
+          "abc");
+    });
+  }
 }
 // +===========================================================================+
-// | [>] raw and chunked storage mount matching body readers     ( test-case ) |
+// | [>] body reader can remain unread                           ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("raw and chunked storage mount matching body readers") {
-  const std::string source = "POST / HTTP/1.1\r\n\r\n";
-  auto raw_getter = request::from(
-      source, part(source, "POST"), part(source, "/"), target::kOriginForm, {},
-      {}, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
-      std::nullopt, false, 3);
-  writer raw_storage;
-  DOBA_EXPECT(raw_storage.write("abc"));
-  const auto raw = raw_getter(raw_storage.release());
-  DOBA_EXPECT(raw->has_body_reader());
-  std::array<std::byte, 8> output{};
-  auto state = raw->get_body_reader()->read(output);
-  DOBA_EXPECT(state.complete);
-  DOBA_EXPECT_EQUAL(state.produced, 3);
-  DOBA_EXPECT_EQUAL(
-      std::string_view(reinterpret_cast<const char*>(output.data()), 3), "abc");
-  auto chunked_getter = request::from(
-      source, part(source, "POST"), part(source, "/"), target::kOriginForm, {},
-      {}, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
-      std::nullopt, true);
-  writer chunked_storage;
-  DOBA_EXPECT(chunked_storage.write("3\r\nabc\r\n0\r\n\r\n"));
-  const auto chunked = chunked_getter(chunked_storage.release());
-  state = chunked->get_body_reader()->read(output);
-  DOBA_EXPECT(state.complete);
-  DOBA_EXPECT_EQUAL(state.produced, 3);
+DOBA_TEST("body reader can remain unread") {
+  with_request(
+      "POST / HTTP/1.1\r\nHost: a\r\n"
+      "Transfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n0\r\n\r\n",
+      [](const request& value) {
+    DOBA_EXPECT(value.has_body_reader());
+  });
 }
 // +===========================================================================+
-// | [>] request views remain independent from the source buffer ( test-case ) |
+// | [>] views refer to decoder storage                         ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("request views remain independent from the source buffer") {
-  std::string source =
+DOBA_TEST("request views remain valid when transport input changes") {
+  std::string wire =
       "GET /?name=value HTTP/1.1\r\nHost: example.com\r\nX: y\r\n\r\n";
-  const auto value = request::from(
-      source, part(source, "GET"), part(source, "/"), target::kOriginForm,
-      {{part(source, "Host"), part(source, "example.com")},
-       {part(source, "X"), part(source, "y")}},
-      {{part(source, "name"), part(source, "value")}},
-      part(source, "example.com"), std::nullopt, helpers::host_type::kRegName,
-      std::nullopt, std::nullopt, std::nullopt)(std::nullopt);
-  source.assign(source.size(), 'x');
-  DOBA_EXPECT_EQUAL(value->get_method(), "GET");
-  DOBA_EXPECT_EQUAL(value->get_absolute_path(), "/");
-  DOBA_EXPECT(value->exist_header("Host"));
-  DOBA_EXPECT_EQUAL(value->get_header("Host").second, "example.com");
-  DOBA_EXPECT_EQUAL(value->get_query_parameter("name")->second, "value");
-  DOBA_EXPECT_EQUAL(value->get_host(), "example.com");
+  decoder<request, response> value;
+  std::size_t consumed = 0;
+  bool called = false;
+  const auto result = value.deserialize(
+      wire.data(), wire.size(), wire.size(), consumed,
+      [&](const request& decoded) {
+        called = true;
+        wire.assign(wire.size(), 'x');
+        DOBA_EXPECT_EQUAL(decoded.get_method(), "GET");
+        DOBA_EXPECT_EQUAL(decoded.get_absolute_path(), "/");
+        DOBA_EXPECT_EQUAL(decoded.get_header("Host").second, "example.com");
+        DOBA_EXPECT_EQUAL(decoded.get_header("X").second, "y");
+        DOBA_EXPECT_EQUAL(decoded.get_query_parameter("name")->second,
+                          "value");
+      });
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+  DOBA_EXPECT(called);
 }
 // +===========================================================================+
-// | [>] factory rejects components outside source buffer        ( test-case ) |
+// | [>] absolute authority views are available in callback      ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("factory rejects components outside the source buffer") {
-  const std::string source = "GET / HTTP/1.1\r\n\r\n";
-  const std::string foreign = "GET";
-  bool threw = false;
-  try {
-    request::from(source, foreign, part(source, "/"), target::kOriginForm, {},
-                  {}, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
-                  std::nullopt, std::nullopt);
-  } catch (const std::invalid_argument& error) {
-    threw = std::string_view(error.what()) ==
-            "request component is outside full buffer";
-  }
-  DOBA_EXPECT(threw);
-}
-// +===========================================================================+
-// | [>] factory owns authority views before invoking the getter ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("factory owns authority views before invoking the getter") {
-  const auto getter = [] {
-    const std::string source =
-        "GET http://target.example:81/a%252F%2Fb?key=unchanged HTTP/1.1\r\n"
-        "Host: source.example:82\r\nX-Tail: preserved\r\n\r\n";
-    return request::from(
-        source, part(source, "GET"), part(source, "/a%252F%2Fb"),
-        target::kAbsoluteForm,
-        {{part(source, "Host"), part(source, "source.example:82")},
-         {part(source, "X-Tail"), part(source, "preserved")}},
-        {{part(source, "key"), part(source, "unchanged")}},
-        part(source, "source.example"), part(source, "82"),
-        helpers::host_type::kRegName, part(source, "target.example"),
-        part(source, "81"), helpers::host_type::kRegName);
-  }();
-  const auto value = getter(std::nullopt);
-  DOBA_EXPECT_EQUAL(value->get_absolute_path(), "/a%2F/b");
-  DOBA_EXPECT_EQUAL(value->get_target(), target::kAbsoluteForm);
-  DOBA_EXPECT_EQUAL(value->get_header(1).first, "X-Tail");
-  DOBA_EXPECT_EQUAL(value->get_header(1).second, "preserved");
-  DOBA_EXPECT_EQUAL(value->get_query_parameter("key")->second, "unchanged");
-  DOBA_EXPECT_EQUAL(value->get_host(), "source.example");
-  DOBA_EXPECT_EQUAL(value->get_host_port(), "82");
-  DOBA_EXPECT(value->has_target_authority());
-  DOBA_EXPECT_EQUAL(value->get_target_authority_host(), "target.example");
-  DOBA_EXPECT_EQUAL(value->get_target_authority_port(), "81");
-  DOBA_EXPECT_EQUAL(value->get_target_authority_type(),
-                    helpers::host_type::kRegName);
-}
-// +===========================================================================+
-// | [>] factory validates each component before rebasing views  ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("factory validates each component before rebasing views") {
-  const std::string source = "GET / HTTP/1.1\r\nHost: example:80\r\n\r\n";
-  const std::string foreign = "outside";
-  for (std::size_t i = 0; i < 9; i++) {
-    martianlabs::doba::tests::unit::test_helper::set_context(std::to_string(i));
-    const auto component = [&](std::size_t index) -> std::string_view {
-      return i == index ? std::string_view(foreign) : part(source, "80");
-    };
-    bool threw = false;
-    try {
-      request::from(
-          source, part(source, "GET"), component(0), target::kOriginForm,
-          {{component(1), component(2)}}, {{component(3), component(4)}},
-          component(5), component(6), helpers::host_type::kRegName,
-          component(7), component(8), helpers::host_type::kRegName);
-    } catch (const std::invalid_argument& error) {
-      threw = std::string_view(error.what()) ==
-              "request component is outside full buffer";
-    }
-    DOBA_EXPECT(threw);
-  }
+DOBA_TEST("absolute authority views are available in callback") {
+  with_request(
+      "GET http://target.example:81/a%252F%2Fb?key=unchanged HTTP/1.1\r\n"
+      "Host: source.example:82\r\nX-Tail: preserved\r\n\r\n",
+      [](const request& value) {
+    DOBA_EXPECT_EQUAL(value.get_absolute_path(), "/a%2F/b");
+    DOBA_EXPECT_EQUAL(value.get_target(), target::kAbsoluteForm);
+    DOBA_EXPECT_EQUAL(value.get_header(1).first, "X-Tail");
+    DOBA_EXPECT_EQUAL(value.get_header(1).second, "preserved");
+    DOBA_EXPECT_EQUAL(value.get_query_parameter("key")->second,
+                      "unchanged");
+    DOBA_EXPECT_EQUAL(value.get_host(), "source.example");
+    DOBA_EXPECT_EQUAL(value.get_host_port(), "82");
+    DOBA_EXPECT(value.has_target_authority());
+    DOBA_EXPECT_EQUAL(value.get_target_authority_host(), "target.example");
+    DOBA_EXPECT_EQUAL(value.get_target_authority_port(), "81");
+    DOBA_EXPECT_EQUAL(value.get_target_authority_type(),
+                      helpers::host_type::kRegName);
+  });
 }
 // +===========================================================================+
 // | [>] duplicate cookies retain the first exact name           ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("duplicate cookies retain the first exact name") {
-  const std::string source =
-      "GET / HTTP/1.1\r\nCookie: sid=first; SID=upper; sid=last\r\n\r\n";
-  const auto value = request::from(
-      source, part(source, "GET"), part(source, "/"), target::kOriginForm,
-      {{part(source, "Cookie"),
-        part(source, "sid=first; SID=upper; sid=last")}},
-      {}, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
-      std::nullopt)(std::nullopt);
-  DOBA_EXPECT_EQUAL(*value->get_cookie("sid"), "first");
-  DOBA_EXPECT_EQUAL(*value->get_cookie("SID"), "upper");
-  const auto cookies = value->get_cookies();
-  DOBA_EXPECT_EQUAL(cookies.size(), 3);
-  DOBA_EXPECT_EQUAL(cookies[2].second, "last");
+  with_request(
+      "GET / HTTP/1.1\r\nHost: a\r\n"
+      "Cookie: sid=first; SID=upper; sid=last\r\n\r\n",
+      [](const request& value) {
+    DOBA_EXPECT_EQUAL(*value.get_cookie("sid"), "first");
+    DOBA_EXPECT_EQUAL(*value.get_cookie("SID"), "upper");
+    const auto cookies = value.get_cookies();
+    DOBA_EXPECT_EQUAL(cookies.size(), 3);
+    DOBA_EXPECT_EQUAL(cookies[2].second, "last");
+  });
 }

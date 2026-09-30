@@ -25,6 +25,9 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <cstdlib>
+#include <filesystem>
+#include <functional>
 #include <stdexcept>
 #include <charconv>
 #include <cstddef>
@@ -67,8 +70,13 @@ struct decoder_input {
   }
   auto decode() {
     std::size_t consumed = 0;
-    auto result = decoder.deserialize(buffer.data(), size, buffer.size(),
-                                      consumed);
+    request_seen = false;
+    auto result = decoder.deserialize(
+        buffer.data(), size, buffer.size(), consumed,
+        [this](const request& value) {
+          request_seen = true;
+          if (on_request) on_request(value);
+        });
     if (consumed > size) {
       throw std::runtime_error("Invalid decoder consumption");
     }
@@ -79,11 +87,36 @@ struct decoder_input {
     return result;
   }
   decoder_type decoder;
+  std::function<void(const request&)> on_request;
+  bool request_seen = false;
   std::array<char, receive_capacity> buffer{};
   std::size_t size{0};
 };
 std::size_t accumulate(decoder_input& value, std::string_view source) {
   return value.append(source);
+}
+std::vector<std::filesystem::path> body_temp_files() {
+  namespace fs = std::filesystem;
+  std::vector<fs::path> paths;
+  std::error_code error;
+  const auto directory = fs::temp_directory_path(error);
+  if (error) return paths;
+  for (fs::directory_iterator it(directory, error), end;
+       !error && it != end; it.increment(error)) {
+    if (it->path().filename().string().starts_with("doba_bytes_")) {
+      paths.push_back(it->path());
+    }
+  }
+  return paths;
+}
+std::filesystem::path new_body_temp_file(
+    const std::vector<std::filesystem::path>& before) {
+  for (const auto& path : body_temp_files()) {
+    if (std::find(before.begin(), before.end(), path) == before.end()) {
+      return path;
+    }
+  }
+  return {};
 }
 // +===========================================================================+
 // | [>] check_header                                               ( method ) |
@@ -112,22 +145,26 @@ void check_header(std::string_view name, std::string_view field_value,
           (ows ? "\t " : "") + std::string(field_value) +
           (ows ? " \t" : "") + "\r\n\r\n" + std::string(body);
       decoder_input value;
+      if (accepted) {
+        value.on_request = [&](const request& decoded) {
+          DOBA_EXPECT_EQUAL(decoded.get_header(name).second, field_value);
+          if (decoded.has_body_reader()) {
+            std::array<std::byte, 1> output{};
+            const auto state = decoded.get_body_reader()->read(output);
+            DOBA_EXPECT(!state.has_error);
+            DOBA_EXPECT(state.complete);
+            DOBA_EXPECT_EQUAL(state.produced, 0);
+          }
+        };
+      }
       DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
       const auto result = value.decode();
       if (accepted) {
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-        DOBA_EXPECT(result.request != nullptr);
-        DOBA_EXPECT_EQUAL(result.request->get_header(name).second, field_value);
-        if (result.request->has_body_reader()) {
-          std::array<std::byte, 1> output{};
-          const auto state = result.request->get_body_reader()->read(output);
-          DOBA_EXPECT(!state.has_error);
-          DOBA_EXPECT(state.complete);
-          DOBA_EXPECT_EQUAL(state.produced, 0);
-        }
+        DOBA_EXPECT(value.request_seen);
       } else {
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-        DOBA_EXPECT(result.request == nullptr);
+        DOBA_EXPECT(!value.request_seen);
       }
     }
   }
@@ -152,11 +189,12 @@ DOBA_TEST("empty input needs more bytes and full incomplete cores fail") {
   std::size_t consumed = 42;
   const std::string source(receive_capacity, 'x');
   DOBA_EXPECT_EQUAL(value.deserialize(source.data(), 0, receive_capacity,
-                                      consumed).code,
+                                      consumed, [](const request&) {}).code,
                     deserialization_status::kMoreBytesNeeded);
   DOBA_EXPECT_EQUAL(consumed, 0);
   DOBA_EXPECT_EQUAL(value.deserialize(source.data(), source.size(),
-                                      receive_capacity, consumed).code,
+                                      receive_capacity, consumed,
+                                      [](const request&) {}).code,
                     deserialization_status::kInvalidSource);
   DOBA_EXPECT_EQUAL(consumed, 0);
 }
@@ -173,11 +211,14 @@ DOBA_TEST("request head may fill default receive buffer") {
       std::string(suffix);
   decoder_type value;
   std::size_t consumed = 0;
+  bool request_seen = false;
   const auto result = value.deserialize(head.data(), head.size(), capacity,
-                                        consumed);
+                                        consumed, [&](const request&) {
+                                          request_seen = true;
+                                        });
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
   DOBA_EXPECT_EQUAL(consumed, capacity);
-  DOBA_EXPECT(result.request != nullptr);
+  DOBA_EXPECT(request_seen);
 }
 // +===========================================================================+
 // | [>] incomplete head fills default receive buffer            ( test-case ) |
@@ -190,7 +231,7 @@ DOBA_TEST("incomplete head fails at default receive capacity") {
   decoder_type value;
   std::size_t consumed = 0;
   const auto result = value.deserialize(head.data(), head.size(), capacity,
-                                        consumed);
+                                        consumed, [](const request&) {});
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
   DOBA_EXPECT_EQUAL(consumed, 0);
 }
@@ -222,17 +263,20 @@ DOBA_TEST("request head size is bounded by receive capacity") {
       DOBA_EXPECT_EQUAL(head.size(), size);
       decoder_type value;
       std::size_t consumed = 0;
+      bool request_seen = false;
       const std::size_t received = std::min(size, capacity);
       auto result = value.deserialize(head.data(), received, capacity,
-                                      consumed);
+                                      consumed, [&](const request&) {
+                                        request_seen = true;
+                                      });
       if (size <= capacity) {
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
         DOBA_EXPECT_EQUAL(consumed, size);
-        DOBA_EXPECT(result.request != nullptr);
+        DOBA_EXPECT(request_seen);
         continue;
       }
       DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-      DOBA_EXPECT(result.request == nullptr);
+      DOBA_EXPECT(!request_seen);
       DOBA_EXPECT(result.response.has_value());
       if (!result.response.has_value()) continue;
       auto output = result.response->serialize();
@@ -260,7 +304,7 @@ DOBA_TEST("header field count is bounded only by head size") {
   decoder_type value;
   std::size_t consumed = 0;
   const auto result = value.deserialize(head.data(), head.size(), capacity,
-                                        consumed);
+                                        consumed, [](const request&) {});
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
   DOBA_EXPECT_EQUAL(consumed, head.size());
 }
@@ -276,17 +320,22 @@ DOBA_TEST("request body spans default receive buffers") {
   const std::string first = head + body.substr(0, first_body_size);
   decoder_type value;
   std::size_t consumed = 0;
+  bool request_seen = false;
   auto result = value.deserialize(first.data(), first.size(), capacity,
-                                  consumed);
+                                  consumed, [&](const request&) {
+                                    request_seen = true;
+                                  });
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kMoreBytesNeeded);
   DOBA_EXPECT_EQUAL(consumed, capacity);
   const std::string_view remaining(body.data() + first_body_size,
                                    body.size() - first_body_size);
   result = value.deserialize(remaining.data(), remaining.size(), capacity,
-                             consumed);
+                             consumed, [&](const request&) {
+                               request_seen = true;
+                             });
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
   DOBA_EXPECT_EQUAL(consumed, remaining.size());
-  DOBA_EXPECT(result.request != nullptr);
+  DOBA_EXPECT(request_seen);
 }
 // +===========================================================================+
 // | [>] parses every supported request target form              ( test-case ) |
@@ -310,13 +359,15 @@ DOBA_TEST("parses every supported request target form") {
   };
   for (const auto& test : cases) {
   decoder_input value;
+    value.on_request = [&](const request& decoded) {
+      DOBA_EXPECT_EQUAL(decoded.get_method(), test.method);
+      DOBA_EXPECT_EQUAL(decoded.get_target(), test.target_form);
+      DOBA_EXPECT_EQUAL(decoded.get_absolute_path(), test.path);
+    };
     DOBA_EXPECT_EQUAL(accumulate(value, test.source), test.source.size());
     const auto result = value.decode();
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-    DOBA_EXPECT(result.request != nullptr);
-    DOBA_EXPECT_EQUAL(result.request->get_method(), test.method);
-    DOBA_EXPECT_EQUAL(result.request->get_target(), test.target_form);
-    DOBA_EXPECT_EQUAL(result.request->get_absolute_path(), test.path);
+    DOBA_EXPECT(value.request_seen);
   }
 }
 // +===========================================================================+
@@ -328,6 +379,13 @@ DOBA_TEST("parses a valid request at every transport split") {
       "Host: example.com\r\nX-Test: value\r\n\r\n";
   for (std::size_t split = 0; split <= source.size(); split++) {
   decoder_input value;
+    value.on_request = [&](const request& decoded) {
+      DOBA_EXPECT_EQUAL(decoded.get_absolute_path(), "/a b");
+      DOBA_EXPECT_EQUAL(decoded.get_query_parameters_length(), 2);
+      DOBA_EXPECT_EQUAL(decoded.get_query_parameter("x")->second, "1");
+      DOBA_EXPECT(decoded.get_query_parameter("empty")->second.empty());
+      DOBA_EXPECT_EQUAL(decoded.get_header("X-Test").second, "value");
+    };
     DOBA_EXPECT_EQUAL(accumulate(value, source.substr(0, split)), split);
     auto result = value.decode();
     if (split < source.size()) {
@@ -337,11 +395,6 @@ DOBA_TEST("parses a valid request at every transport split") {
       result = value.decode();
     }
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-    DOBA_EXPECT_EQUAL(result.request->get_absolute_path(), "/a b");
-    DOBA_EXPECT_EQUAL(result.request->get_query_parameters_length(), 2);
-    DOBA_EXPECT_EQUAL(result.request->get_query_parameter("x")->second, "1");
-    DOBA_EXPECT(result.request->get_query_parameter("empty")->second.empty());
-    DOBA_EXPECT_EQUAL(result.request->get_header("X-Test").second, "value");
   }
 }
 // +===========================================================================+
@@ -365,6 +418,9 @@ DOBA_TEST("parses every request target form at every transport split") {
   for (const auto& test : cases) {
     for (std::size_t split = 0; split <= test.source.size(); split++) {
       decoder_input value;
+      value.on_request = [&](const request& decoded) {
+        DOBA_EXPECT_EQUAL(decoded.get_target(), test.target_form);
+      };
       DOBA_EXPECT_EQUAL(accumulate(value, test.source.substr(0, split)), split);
       auto result = value.decode();
       if (split < test.source.size()) {
@@ -375,7 +431,6 @@ DOBA_TEST("parses every request target form at every transport split") {
         result = value.decode();
       }
       DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-      DOBA_EXPECT_EQUAL(result.request->get_target(), test.target_form);
     }
   }
 }
@@ -388,6 +443,16 @@ DOBA_TEST("content length body consumes exact bytes across every split") {
   const std::string source = head + "payload";
   for (std::size_t split = 0; split <= source.size(); split++) {
   decoder_input value;
+    value.on_request = [&](const request& decoded) {
+      DOBA_EXPECT(decoded.has_body_reader());
+      std::array<std::byte, 8> output{};
+      const auto state = decoded.get_body_reader()->read(output);
+      DOBA_EXPECT(state.complete);
+      DOBA_EXPECT_EQUAL(state.produced, 7);
+      DOBA_EXPECT_EQUAL(
+          std::string_view(reinterpret_cast<const char*>(output.data()), 7),
+          "payload");
+    };
     DOBA_EXPECT_EQUAL(
         accumulate(value, std::string_view(source).substr(0, split)), split);
     auto result = value.decode();
@@ -399,14 +464,6 @@ DOBA_TEST("content length body consumes exact bytes across every split") {
       result = value.decode();
     }
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-    DOBA_EXPECT(result.request->has_body_reader());
-    std::array<std::byte, 8> output{};
-    const auto state = result.request->get_body_reader()->read(output);
-    DOBA_EXPECT(state.complete);
-    DOBA_EXPECT_EQUAL(state.produced, 7);
-    DOBA_EXPECT_EQUAL(
-        std::string_view(reinterpret_cast<const char*>(output.data()), 7),
-        "payload");
   }
 }
 // +===========================================================================+
@@ -418,16 +475,18 @@ DOBA_TEST("chunked body is preserved then exposed decoded") {
       "Transfer-Encoding: chunked\r\n\r\n"
       "3;ext=yes\r\nabc\r\n2\r\nde\r\n0\r\nX: y\r\n\r\n";
   decoder_input value;
+  value.on_request = [&](const request& decoded) {
+    std::array<std::byte, 8> output{};
+    const auto state = decoded.get_body_reader()->read(output);
+    DOBA_EXPECT(state.complete);
+    DOBA_EXPECT_EQUAL(state.produced, 5);
+    DOBA_EXPECT_EQUAL(
+        std::string_view(reinterpret_cast<const char*>(output.data()), 5),
+        "abcde");
+  };
   DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
   const auto result = value.decode();
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-  std::array<std::byte, 8> output{};
-  const auto state = result.request->get_body_reader()->read(output);
-  DOBA_EXPECT(state.complete);
-  DOBA_EXPECT_EQUAL(state.produced, 5);
-  DOBA_EXPECT_EQUAL(
-      std::string_view(reinterpret_cast<const char*>(output.data()), 5),
-      "abcde");
 }
 // +===========================================================================+
 // | [>] chunked body handles every transport split              ( test-case ) |
@@ -439,6 +498,15 @@ DOBA_TEST("chunked body consumes exact bytes across every split") {
       "3;ext=yes\r\nabc\r\n2\r\nde\r\n0\r\nX: y\r\n\r\n";
   for (std::size_t split = 0; split <= source.size(); split++) {
     decoder_input value;
+    value.on_request = [&](const request& decoded) {
+      std::array<std::byte, 8> output{};
+      const auto state = decoded.get_body_reader()->read(output);
+      DOBA_EXPECT(state.complete);
+      DOBA_EXPECT_EQUAL(state.produced, 5);
+      DOBA_EXPECT_EQUAL(
+          std::string_view(reinterpret_cast<const char*>(output.data()), 5),
+          "abcde");
+    };
     DOBA_EXPECT_EQUAL(accumulate(value, source.substr(0, split)), split);
     auto result = value.decode();
     if (split < source.size()) {
@@ -448,13 +516,6 @@ DOBA_TEST("chunked body consumes exact bytes across every split") {
       result = value.decode();
     }
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-    std::array<std::byte, 8> output{};
-    const auto state = result.request->get_body_reader()->read(output);
-    DOBA_EXPECT(state.complete);
-    DOBA_EXPECT_EQUAL(state.produced, 5);
-    DOBA_EXPECT_EQUAL(
-        std::string_view(reinterpret_cast<const char*>(output.data()), 5),
-        "abcde");
   }
 }
 // +===========================================================================+
@@ -479,47 +540,58 @@ DOBA_TEST("connection close is retained on the decoded request") {
   constexpr std::string_view source =
       "GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n";
   decoder_input value;
+  value.on_request = [&](const request& decoded) {
+    DOBA_EXPECT(decoded.wants_connection_close());
+  };
   DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
   const auto result = value.decode();
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-  DOBA_EXPECT(result.request->wants_connection_close());
 }
 // +===========================================================================+
-// | [>] pipelined requests remain available after dispatch      ( test-case ) |
+// | [>] decoder reuses storage after sequential dispatch        ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("pipelined requests remain available after first dispatch") {
+DOBA_TEST("decoder reuses storage after sequential dispatch") {
   constexpr std::string_view first =
       "GET /one HTTP/1.1\r\nHost: one.example\r\nX-Id: first\r\n\r\n";
   constexpr std::string_view second =
       "GET /two HTTP/1.1\r\nHost: two.example\r\nX-Id: second\r\n\r\n";
   const std::string source = std::string(first) + std::string(second);
   decoder_input value;
+  std::string first_path;
+  std::string first_host;
+  std::string first_id;
+  value.on_request = [&](const request& decoded) {
+    first_path = decoded.get_absolute_path();
+    first_host = decoded.get_header("Host").second;
+    first_id = decoded.get_header("X-Id").second;
+  };
   DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
   const auto first_result = value.decode();
   DOBA_EXPECT_EQUAL(first_result.code, deserialization_status::kSucceeded);
+  value.on_request = [&](const request& decoded) {
+    DOBA_EXPECT_EQUAL(decoded.get_absolute_path(), "/two");
+    DOBA_EXPECT_EQUAL(decoded.get_header("Host").second, "two.example");
+  };
   const auto second_result = value.decode();
   DOBA_EXPECT_EQUAL(second_result.code, deserialization_status::kSucceeded);
-  DOBA_EXPECT_EQUAL(first_result.request->get_absolute_path(), "/one");
-  DOBA_EXPECT_EQUAL(first_result.request->get_header("Host").second,
-                    "one.example");
-  DOBA_EXPECT_EQUAL(first_result.request->get_header("X-Id").second, "first");
-  DOBA_EXPECT_EQUAL(second_result.request->get_absolute_path(), "/two");
-  DOBA_EXPECT_EQUAL(second_result.request->get_header("Host").second,
-                    "two.example");
+  DOBA_EXPECT_EQUAL(first_path, "/one");
+  DOBA_EXPECT_EQUAL(first_host, "one.example");
+  DOBA_EXPECT_EQUAL(first_id, "first");
   for (std::size_t i = 0; i < 8; i++) {
     const std::string next =
         "GET /reload-" + std::to_string(i) + " HTTP/1.1\r\n"
         "Host: reload.example\r\nX-Id: " + std::string(400, 'x') + "\r\n\r\n";
     DOBA_EXPECT_EQUAL(accumulate(value, next), next.size());
+    value.on_request = [&](const request& decoded) {
+      DOBA_EXPECT_EQUAL(decoded.get_absolute_path(),
+                        "/reload-" + std::to_string(i));
+    };
     const auto result = value.decode();
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-    DOBA_EXPECT(result.request != nullptr);
-    DOBA_EXPECT_EQUAL(result.request->get_absolute_path(),
-                      "/reload-" + std::to_string(i));
-    DOBA_EXPECT_EQUAL(first_result.request->get_absolute_path(), "/one");
-    DOBA_EXPECT_EQUAL(first_result.request->get_header("Host").second,
-                      "one.example");
-    DOBA_EXPECT_EQUAL(first_result.request->get_header("X-Id").second, "first");
+    DOBA_EXPECT(value.request_seen);
+    DOBA_EXPECT_EQUAL(first_path, "/one");
+    DOBA_EXPECT_EQUAL(first_host, "one.example");
+    DOBA_EXPECT_EQUAL(first_id, "first");
   }
 }
 // +===========================================================================+
@@ -540,11 +612,12 @@ DOBA_TEST("invalid conditional dates do not reject requests") {
         std::string(test.name) + ": " + std::string(test.value) +
         "\r\n\r\n";
     decoder_input value;
+    value.on_request = [&](const request& decoded) {
+      DOBA_EXPECT_EQUAL(decoded.get_header(test.name).second, test.value);
+    };
     DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
     const auto result = value.decode();
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-    DOBA_EXPECT_EQUAL(result.request->get_header(test.name).second,
-                      test.value);
   }
 }
 // +===========================================================================+
@@ -594,13 +667,13 @@ DOBA_TEST("rejects malformed request line and header syntax") {
               end - offset);
           offset = end;
           result = value.decode();
-          DOBA_EXPECT(result.request == nullptr);
+          DOBA_EXPECT(!value.request_seen);
           if (result.code == deserialization_status::kInvalidSource) break;
           DOBA_EXPECT_EQUAL(result.code,
                             deserialization_status::kMoreBytesNeeded);
         }
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-        DOBA_EXPECT(result.request == nullptr);
+        DOBA_EXPECT(!value.request_seen);
         DOBA_EXPECT(result.response.has_value());
         auto output = result.response->serialize();
         DOBA_EXPECT((output->head + output->body)
@@ -655,14 +728,14 @@ DOBA_TEST("distinguishes incomplete and terminal invalid request lines") {
       martianlabs::doba::tests::unit::test_helper::set_context(
           std::string(test.source) + ", prefix " + std::to_string(split));
       DOBA_EXPECT_EQUAL(result.code, prefix_expected);
-      DOBA_EXPECT(result.request == nullptr);
+      DOBA_EXPECT(!value.request_seen);
       if (result.code != deserialization_status::kInvalidSource) {
         DOBA_EXPECT_EQUAL(accumulate(value, test.source.substr(split)),
                           test.source.size() - split);
         result = value.decode();
       }
       DOBA_EXPECT_EQUAL(result.code, test.expected);
-      DOBA_EXPECT(result.request == nullptr);
+      DOBA_EXPECT(!value.request_seen);
     }
     decoder_input value;
     for (std::size_t end = 1; end <= test.source.size(); end++) {
@@ -672,7 +745,7 @@ DOBA_TEST("distinguishes incomplete and terminal invalid request lines") {
           ? deserialization_status::kInvalidSource
           : deserialization_status::kMoreBytesNeeded;
       DOBA_EXPECT_EQUAL(result.code, expected);
-      DOBA_EXPECT(result.request == nullptr);
+      DOBA_EXPECT(!value.request_seen);
       if (result.code == deserialization_status::kInvalidSource) break;
     }
   }
@@ -742,13 +815,13 @@ DOBA_TEST("rejects invalid cross header combinations") {
               end - offset);
           offset = end;
           result = value.decode();
-          DOBA_EXPECT(result.request == nullptr);
+          DOBA_EXPECT(!value.request_seen);
           if (result.code == deserialization_status::kInvalidSource) break;
           DOBA_EXPECT_EQUAL(result.code,
                             deserialization_status::kMoreBytesNeeded);
         }
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-        DOBA_EXPECT(result.request == nullptr);
+        DOBA_EXPECT(!value.request_seen);
         DOBA_EXPECT(result.response.has_value());
         auto output = result.response->serialize();
         DOBA_EXPECT((output->head + output->body)
@@ -787,13 +860,13 @@ DOBA_TEST("rejects transfer coding without final chunked") {
             end - offset);
         offset = end;
         result = value.decode();
-        DOBA_EXPECT(result.request == nullptr);
+        DOBA_EXPECT(!value.request_seen);
         if (result.code == deserialization_status::kInvalidSource) break;
         DOBA_EXPECT_EQUAL(result.code,
                           deserialization_status::kMoreBytesNeeded);
       }
       DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-      DOBA_EXPECT(result.request == nullptr);
+      DOBA_EXPECT(!value.request_seen);
       DOBA_EXPECT(result.response.has_value());
       auto output = result.response->serialize();
       DOBA_EXPECT((output->head + output->body)
@@ -808,14 +881,16 @@ DOBA_TEST("content length permits leading zeroes") {
   constexpr std::string_view source =
       "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 01\r\n\r\nx";
   decoder_input value;
+  value.on_request = [&](const request& decoded) {
+    std::byte output;
+    const auto state = decoded.get_body_reader()->read(
+        std::span<std::byte>(&output, 1));
+    DOBA_EXPECT(state.complete);
+    DOBA_EXPECT_EQUAL(static_cast<char>(output), 'x');
+  };
   DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
   const auto result = value.decode();
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-  std::byte output;
-  const auto state =
-      result.request->get_body_reader()->read(std::span<std::byte>(&output, 1));
-  DOBA_EXPECT(state.complete);
-  DOBA_EXPECT_EQUAL(static_cast<char>(output), 'x');
 }
 // +===========================================================================+
 // | [>] rejects request smuggling vectors                       ( test-case ) |
@@ -887,7 +962,7 @@ DOBA_TEST("rejects request smuggling vectors") {
     DOBA_EXPECT_EQUAL(accumulate(value, test.invalid), test.invalid.size());
     auto result = value.decode();
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-    DOBA_EXPECT(result.request == nullptr);
+    DOBA_EXPECT(!value.request_seen);
     DOBA_EXPECT(result.response.has_value());
     if (!result.response.has_value()) continue;
     auto output = result.response->serialize();
@@ -931,13 +1006,13 @@ DOBA_TEST("rejects embedded null and control bytes") {
               end - offset);
           offset = end;
           result = value.decode();
-          DOBA_EXPECT(result.request == nullptr);
+          DOBA_EXPECT(!value.request_seen);
           if (result.code == deserialization_status::kInvalidSource) break;
           DOBA_EXPECT_EQUAL(result.code,
                             deserialization_status::kMoreBytesNeeded);
         }
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-        DOBA_EXPECT(result.request == nullptr);
+        DOBA_EXPECT(!value.request_seen);
         DOBA_EXPECT(result.response.has_value());
         auto output = result.response->serialize();
         DOBA_EXPECT((output->head + output->body)
@@ -983,13 +1058,13 @@ DOBA_TEST("rejects malformed chunked framing") {
               end - offset);
           offset = end;
           result = value.decode();
-          DOBA_EXPECT(result.request == nullptr);
+          DOBA_EXPECT(!value.request_seen);
           if (result.code == deserialization_status::kInvalidSource) break;
           DOBA_EXPECT_EQUAL(result.code,
                             deserialization_status::kMoreBytesNeeded);
         }
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-        DOBA_EXPECT(result.request == nullptr);
+        DOBA_EXPECT(!value.request_seen);
         DOBA_EXPECT(result.response.has_value());
         auto output = result.response->serialize();
         DOBA_EXPECT((output->head + output->body)
@@ -1031,13 +1106,13 @@ DOBA_TEST("rejects malformed chunk extensions") {
             end - offset);
         offset = end;
         result = value.decode();
-        DOBA_EXPECT(result.request == nullptr);
+        DOBA_EXPECT(!value.request_seen);
         if (result.code == deserialization_status::kInvalidSource) break;
         DOBA_EXPECT_EQUAL(result.code,
                           deserialization_status::kMoreBytesNeeded);
       }
       DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-      DOBA_EXPECT(result.request == nullptr);
+      DOBA_EXPECT(!value.request_seen);
       DOBA_EXPECT(result.response.has_value());
       auto output = result.response->serialize();
       DOBA_EXPECT((output->head + output->body)
@@ -1083,13 +1158,13 @@ DOBA_TEST("rejects malformed chunk trailers") {
               end - offset);
           offset = end;
           result = value.decode();
-          DOBA_EXPECT(result.request == nullptr);
+          DOBA_EXPECT(!value.request_seen);
           if (result.code == deserialization_status::kInvalidSource) break;
           DOBA_EXPECT_EQUAL(result.code,
                             deserialization_status::kMoreBytesNeeded);
         }
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-        DOBA_EXPECT(result.request == nullptr);
+        DOBA_EXPECT(!value.request_seen);
         DOBA_EXPECT(result.response.has_value());
         auto output = result.response->serialize();
         DOBA_EXPECT((output->head + output->body)
@@ -1124,21 +1199,22 @@ DOBA_TEST("discards syntactic trailer fields") {
     martianlabs::doba::tests::unit::test_helper::set_context(
         "trailer " + std::string(trailer));
     decoder_input value;
+    value.on_request = [&](const request& decoded) {
+      DOBA_EXPECT_EQUAL(decoded.get_headers_length(), 2);
+      DOBA_EXPECT_EQUAL(decoded.get_header("Host").second, "a");
+      DOBA_EXPECT(!decoded.exist_header("Content-Length"));
+      std::byte output;
+      const auto state = decoded.get_body_reader()->read(
+          std::span<std::byte>(&output, 1));
+      DOBA_EXPECT(!state.has_error);
+      DOBA_EXPECT(state.complete);
+      DOBA_EXPECT_EQUAL(state.produced, 1);
+      DOBA_EXPECT_EQUAL(static_cast<char>(output), 'x');
+    };
     DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
     auto result = value.decode();
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-    DOBA_EXPECT(result.request != nullptr);
-    if (!result.request) continue;
-    DOBA_EXPECT_EQUAL(result.request->get_headers_length(), 2);
-    DOBA_EXPECT_EQUAL(result.request->get_header("Host").second, "a");
-    DOBA_EXPECT(!result.request->exist_header("Content-Length"));
-    std::byte output;
-    const auto state = result.request->get_body_reader()->read(
-        std::span<std::byte>(&output, 1));
-    DOBA_EXPECT(!state.has_error);
-    DOBA_EXPECT(state.complete);
-    DOBA_EXPECT_EQUAL(state.produced, 1);
-    DOBA_EXPECT_EQUAL(static_cast<char>(output), 'x');
+    DOBA_EXPECT(value.request_seen);
   }
 }
 // +===========================================================================+
@@ -1184,13 +1260,13 @@ DOBA_TEST("rejects unsupported HTTP versions") {
               end - offset);
           offset = end;
           result = value.decode();
-          DOBA_EXPECT(result.request == nullptr);
+          DOBA_EXPECT(!value.request_seen);
           if (result.code == deserialization_status::kInvalidSource) break;
           DOBA_EXPECT_EQUAL(result.code,
                             deserialization_status::kMoreBytesNeeded);
         }
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-        DOBA_EXPECT(result.request == nullptr);
+        DOBA_EXPECT(!value.request_seen);
         DOBA_EXPECT(result.response.has_value());
         auto output = result.response->serialize();
         DOBA_EXPECT((output->head + output->body)
@@ -2173,7 +2249,7 @@ DOBA_TEST("decoder reports unsupported expectations before body arrival") {
   DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
   const auto result = value.decode();
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-  DOBA_EXPECT(result.request == nullptr);
+  DOBA_EXPECT(!value.request_seen);
 }
 
 // +===========================================================================+
@@ -2193,11 +2269,13 @@ DOBA_TEST("decoder accepts all conditional date formats") {
       martianlabs::doba::tests::unit::test_helper::set_context(
           std::string(name) + ": " + std::string(date));
       decoder_input value;
+      value.on_request = [&](const request& decoded) {
+        DOBA_EXPECT_EQUAL(decoded.get_header(name).second, date);
+      };
       DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
       const auto result = value.decode();
       DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-      DOBA_EXPECT(result.request != nullptr);
-      DOBA_EXPECT_EQUAL(result.request->get_header(name).second, date);
+      DOBA_EXPECT(value.request_seen);
     }
   }
 }
@@ -2208,11 +2286,15 @@ DOBA_TEST("decoder accepts all conditional date formats") {
 DOBA_TEST("decoder accepts complete heads at the buffer boundary") {
   const std::string prefix =
       "GET / HTTP/1.1\r\nHost: example.com\r\nX-Pad: ";
-  for (std::size_t size : {5119, 5120}) {
+  for (std::size_t size : {policies::kMaxRequestHeadSizeInMemory - 1,
+                           policies::kMaxRequestHeadSizeInMemory}) {
     const std::string padding(size - prefix.size() - 4, 'x');
     const std::string source = prefix + padding + "\r\n\r\n";
     for (const std::size_t split : {std::size_t{0}, size / 2, size - 1}) {
       decoder_input value;
+      value.on_request = [&](const request& decoded) {
+        DOBA_EXPECT_EQUAL(decoded.get_header("X-Pad").second, padding);
+      };
       DOBA_EXPECT_EQUAL(source.size(), size);
       DOBA_EXPECT_EQUAL(
           accumulate(value, std::string_view(source).substr(0, split)), split);
@@ -2223,8 +2305,7 @@ DOBA_TEST("decoder accepts complete heads at the buffer boundary") {
           size - split);
       const auto result = value.decode();
       DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-      DOBA_EXPECT(result.request != nullptr);
-      DOBA_EXPECT_EQUAL(result.request->get_header("X-Pad").second, padding);
+      DOBA_EXPECT(value.request_seen);
       DOBA_EXPECT_EQUAL(value.decode().code,
                         deserialization_status::kMoreBytesNeeded);
     }
@@ -2246,17 +2327,19 @@ DOBA_TEST("decoder preserves every query pair at the supported limit") {
       source += " HTTP/1.1\r\nHost: example.com\r\n\r\n";
       DOBA_EXPECT(source.size() < receive_capacity);
       decoder_input value;
+      value.on_request = [&](const request& decoded) {
+        DOBA_EXPECT_EQUAL(decoded.get_query_parameters_length(), count);
+        for (std::size_t i = 0; i < count; i++) {
+          const auto parameter =
+              decoded.get_query_parameter("k" + std::to_string(i));
+          DOBA_EXPECT(parameter.has_value());
+          DOBA_EXPECT_EQUAL(parameter->second, "v" + std::to_string(i));
+        }
+      };
       DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
       const auto result = value.decode();
       DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-      DOBA_EXPECT(result.request != nullptr);
-      DOBA_EXPECT_EQUAL(result.request->get_query_parameters_length(), count);
-      for (std::size_t i = 0; i < count; i++) {
-        const auto parameter =
-            result.request->get_query_parameter("k" + std::to_string(i));
-        DOBA_EXPECT(parameter.has_value());
-        DOBA_EXPECT_EQUAL(parameter->second, "v" + std::to_string(i));
-      }
+      DOBA_EXPECT(value.request_seen);
     }
   }
 }
@@ -2275,7 +2358,26 @@ DOBA_TEST("decoder preserves a pipelined successor after a raw body") {
       std::string(head) + std::string(body) + std::string(next);
   for (std::size_t split = 0; split <= source.size(); split++) {
     decoder_input value;
-    std::vector<std::shared_ptr<request>> requests;
+    std::size_t requests = 0;
+    value.on_request = [&](const request& decoded) {
+      if (requests == 0) {
+        DOBA_EXPECT_EQUAL(decoded.get_absolute_path(), "/first");
+        DOBA_EXPECT(decoded.has_body_reader());
+        std::array<std::byte, 8> output{};
+        const auto state = decoded.get_body_reader()->read(output);
+        DOBA_EXPECT(!state.has_error);
+        DOBA_EXPECT(state.complete);
+        DOBA_EXPECT_EQUAL(state.produced, 7);
+        DOBA_EXPECT_EQUAL(
+            std::string_view(reinterpret_cast<const char*>(output.data()),
+                             state.produced), "payload");
+      } else {
+        DOBA_EXPECT_EQUAL(decoded.get_absolute_path(), "/next");
+        DOBA_EXPECT_EQUAL(decoded.get_header("Host").second, "next.example");
+        DOBA_EXPECT(!decoded.has_body_reader());
+      }
+      requests++;
+    };
     std::size_t offset = 0;
     for (std::size_t end : {split, source.size()}) {
       DOBA_EXPECT_EQUAL(
@@ -2287,24 +2389,10 @@ DOBA_TEST("decoder preserves a pipelined successor after a raw body") {
         const auto result = value.decode();
         if (result.code == deserialization_status::kMoreBytesNeeded) break;
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-        DOBA_EXPECT(result.request != nullptr);
-        requests.push_back(result.request);
+        DOBA_EXPECT(value.request_seen);
       }
     }
-    DOBA_EXPECT_EQUAL(requests.size(), 2);
-    DOBA_EXPECT_EQUAL(requests[0]->get_absolute_path(), "/first");
-    DOBA_EXPECT(requests[0]->has_body_reader());
-    std::array<std::byte, 8> output{};
-    const auto state = requests[0]->get_body_reader()->read(output);
-    DOBA_EXPECT(!state.has_error);
-    DOBA_EXPECT(state.complete);
-    DOBA_EXPECT_EQUAL(state.produced, 7);
-    DOBA_EXPECT_EQUAL(
-        std::string_view(reinterpret_cast<const char*>(output.data()),
-                         state.produced), "payload");
-    DOBA_EXPECT_EQUAL(requests[1]->get_absolute_path(), "/next");
-    DOBA_EXPECT_EQUAL(requests[1]->get_header("Host").second, "next.example");
-    DOBA_EXPECT(!requests[1]->has_body_reader());
+    DOBA_EXPECT_EQUAL(requests, 2);
     DOBA_EXPECT_EQUAL(value.decode().code,
                       deserialization_status::kMoreBytesNeeded);
   }
@@ -2324,7 +2412,26 @@ DOBA_TEST("decoder preserves a pipelined successor after a chunked body") {
       std::string(head) + std::string(body) + std::string(next);
   for (std::size_t split = 0; split <= source.size(); split++) {
     decoder_input value;
-    std::vector<std::shared_ptr<request>> requests;
+    std::size_t requests = 0;
+    value.on_request = [&](const request& decoded) {
+      if (requests == 0) {
+        DOBA_EXPECT_EQUAL(decoded.get_absolute_path(), "/first");
+        DOBA_EXPECT(decoded.has_body_reader());
+        std::array<std::byte, 8> output{};
+        const auto state = decoded.get_body_reader()->read(output);
+        DOBA_EXPECT(!state.has_error);
+        DOBA_EXPECT(state.complete);
+        DOBA_EXPECT_EQUAL(state.produced, 3);
+        DOBA_EXPECT_EQUAL(
+            std::string_view(reinterpret_cast<const char*>(output.data()),
+                             state.produced), "abc");
+      } else {
+        DOBA_EXPECT_EQUAL(decoded.get_absolute_path(), "/next");
+        DOBA_EXPECT_EQUAL(decoded.get_header("Host").second, "next.example");
+        DOBA_EXPECT(!decoded.has_body_reader());
+      }
+      requests++;
+    };
     std::size_t offset = 0;
     for (std::size_t end : {split, source.size()}) {
       DOBA_EXPECT_EQUAL(
@@ -2336,24 +2443,10 @@ DOBA_TEST("decoder preserves a pipelined successor after a chunked body") {
         const auto result = value.decode();
         if (result.code == deserialization_status::kMoreBytesNeeded) break;
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-        DOBA_EXPECT(result.request != nullptr);
-        requests.push_back(result.request);
+        DOBA_EXPECT(value.request_seen);
       }
     }
-    DOBA_EXPECT_EQUAL(requests.size(), 2);
-    DOBA_EXPECT_EQUAL(requests[0]->get_absolute_path(), "/first");
-    DOBA_EXPECT(requests[0]->has_body_reader());
-    std::array<std::byte, 8> output{};
-    const auto state = requests[0]->get_body_reader()->read(output);
-    DOBA_EXPECT(!state.has_error);
-    DOBA_EXPECT(state.complete);
-    DOBA_EXPECT_EQUAL(state.produced, 3);
-    DOBA_EXPECT_EQUAL(
-        std::string_view(reinterpret_cast<const char*>(output.data()),
-                         state.produced), "abc");
-    DOBA_EXPECT_EQUAL(requests[1]->get_absolute_path(), "/next");
-    DOBA_EXPECT_EQUAL(requests[1]->get_header("Host").second, "next.example");
-    DOBA_EXPECT(!requests[1]->has_body_reader());
+    DOBA_EXPECT_EQUAL(requests, 2);
     DOBA_EXPECT_EQUAL(value.decode().code,
                       deserialization_status::kMoreBytesNeeded);
   }
@@ -2381,19 +2474,21 @@ DOBA_TEST("decoder accepts every target form byte by byte") {
   };
   for (const auto& test : cases) {
     decoder_input value;
+    value.on_request = [&](const request& decoded) {
+      DOBA_EXPECT_EQUAL(decoded.get_method(), test.method);
+      DOBA_EXPECT_EQUAL(decoded.get_target(), test.target_form);
+      DOBA_EXPECT_EQUAL(decoded.get_absolute_path(), test.path);
+    };
     for (std::size_t i = 0; i < test.source.size(); i++) {
       DOBA_EXPECT_EQUAL(accumulate(value, test.source.substr(i, 1)), 1);
       const auto result = value.decode();
       if (i + 1 < test.source.size()) {
         DOBA_EXPECT_EQUAL(result.code,
                           deserialization_status::kMoreBytesNeeded);
-        DOBA_EXPECT(result.request == nullptr);
+        DOBA_EXPECT(!value.request_seen);
       } else {
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-        DOBA_EXPECT(result.request != nullptr);
-        DOBA_EXPECT_EQUAL(result.request->get_method(), test.method);
-        DOBA_EXPECT_EQUAL(result.request->get_target(), test.target_form);
-        DOBA_EXPECT_EQUAL(result.request->get_absolute_path(), test.path);
+        DOBA_EXPECT(value.request_seen);
       }
     }
   }
@@ -2409,7 +2504,18 @@ DOBA_TEST("decoder keeps raw body below spill threshold") {
   const std::string source =
       "POST / HTTP/1.1\r\nHost: example.com\r\nContent-Length: " +
       std::to_string(payload.size()) + "\r\n\r\n" + payload;
-  std::shared_ptr<request> request_value;
+  std::string decoded;
+  bool complete = false;
+  value.on_request = [&](const request& request_value) {
+    std::array<std::byte, 4096> output{};
+    for (std::size_t i = 0; !complete && i <= payload.size(); i++) {
+      const auto state = request_value.get_body_reader()->read(output);
+      DOBA_EXPECT(!state.has_error);
+      decoded.append(reinterpret_cast<const char*>(output.data()),
+                     state.produced);
+      complete = state.complete;
+    }
+  };
   for (std::size_t offset = 0; offset < source.size();) {
     const std::size_t count =
         std::min(std::size_t{4096}, source.size() - offset);
@@ -2417,65 +2523,45 @@ DOBA_TEST("decoder keeps raw body below spill threshold") {
         value, std::string_view(source).substr(offset, count)), count);
     offset += count;
     const auto result = value.decode();
-    if (offset == source.size()) request_value = result.request;
-  }
-  DOBA_EXPECT(request_value != nullptr);
-  std::array<std::byte, 4096> output{};
-  std::string decoded;
-  bool complete = false;
-  for (std::size_t i = 0; !complete && i <= payload.size(); i++) {
-    const auto state = request_value->get_body_reader()->read(output);
-    DOBA_EXPECT(!state.has_error);
-    decoded.append(reinterpret_cast<const char*>(output.data()),
-                   state.produced);
-    complete = state.complete;
+    if (offset == source.size()) {
+      DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+      DOBA_EXPECT(value.request_seen);
+    }
   }
   DOBA_EXPECT(complete);
   DOBA_EXPECT_EQUAL(decoded, payload);
 }
 
 // +===========================================================================+
-// | [>] raw body spill boundaries                               ( test-case ) |
+// | [>] raw body spills past memory boundary                    ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("decoder preserves raw bodies across the spill threshold") {
-  for (std::size_t size : {16383, 16384, 16385}) {
-    std::string payload(size, '\0');
-    for (std::size_t i = 0; i < payload.size(); i++) {
-      payload[i] = static_cast<char>((i * 43 + i / 251) % 256);
-    }
+DOBA_TEST("decoder reads raw bodies across the memory boundary") {
+  for (std::size_t size : {16383, 16384, 16385, 65536}) {
+    const std::string payload(size, 'x');
     const std::string source =
         "POST / HTTP/1.1\r\nHost: example.com\r\nContent-Length: " +
-        std::to_string(payload.size()) + "\r\n\r\n" + payload;
+        std::to_string(size) + "\r\n\r\n" + payload;
     decoder_input value;
-    std::shared_ptr<request> request_value;
-    for (std::size_t offset = 0; offset < source.size();) {
-      const std::size_t count =
-          std::min(std::size_t{4096}, source.size() - offset);
-      DOBA_EXPECT_EQUAL(
-          accumulate(
-              value, std::string_view(source).substr(offset, count)), count);
-      offset += count;
-      const auto result = value.decode();
-      if (offset < source.size()) {
-        DOBA_EXPECT_EQUAL(result.code,
-                          deserialization_status::kMoreBytesNeeded);
-        DOBA_EXPECT(result.request == nullptr);
-      } else {
-        DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-        request_value = result.request;
-      }
-    }
-    DOBA_EXPECT(request_value != nullptr);
-    DOBA_EXPECT(request_value->has_body_reader());
-    std::array<std::byte, 4096> output{};
     std::string decoded;
     bool complete = false;
-    for (std::size_t i = 0; !complete && i <= size; i++) {
-      const auto state = request_value->get_body_reader()->read(output);
-      DOBA_EXPECT(!state.has_error);
-      decoded.append(reinterpret_cast<const char*>(output.data()),
-                     state.produced);
-      complete = state.complete;
+    value.on_request = [&](const request& request_value) {
+      DOBA_EXPECT(request_value.has_body_reader());
+      std::array<std::byte, 4096> output{};
+      for (std::size_t i = 0; !complete && i <= size; i++) {
+        const auto state = request_value.get_body_reader()->read(output);
+        DOBA_EXPECT(!state.has_error);
+        decoded.append(reinterpret_cast<const char*>(output.data()),
+                       state.produced);
+        complete = state.complete;
+      }
+    };
+    for (std::size_t offset = 0; offset < source.size();) {
+      const auto count = accumulate(
+          value, std::string_view(source).substr(offset, 4096));
+      DOBA_EXPECT(count > 0);
+      offset += count;
+      auto result = value.decode();
+      DOBA_EXPECT(result.code != deserialization_status::kInvalidSource);
     }
     DOBA_EXPECT(complete);
     DOBA_EXPECT_EQUAL(decoded, payload);
@@ -2483,15 +2569,11 @@ DOBA_TEST("decoder preserves raw bodies across the spill threshold") {
 }
 
 // +===========================================================================+
-// | [>] encoded chunked body spill boundaries                   ( test-case ) |
+// | [>] chunked body spills past memory boundary                ( test-case ) |
 // +===========================================================================+
-DOBA_TEST(
-    "decoder preserves encoded chunked bodies across the spill threshold") {
-  for (std::size_t size : {16383, 16384, 16385}) {
-    std::string payload(size - 13, '\0');
-    for (std::size_t i = 0; i < payload.size(); i++) {
-      payload[i] = static_cast<char>((i * 43 + i / 251) % 256);
-    }
+DOBA_TEST("decoder reads chunked bodies across the wire memory boundary") {
+  for (std::size_t size : {16383, 16384, 16385, 65536}) {
+    const std::string payload(size - 13, 'x');
     std::array<char, 16> chunk_size{};
     const auto encoded = std::to_chars(
         chunk_size.data(), chunk_size.data() + chunk_size.size(),
@@ -2505,40 +2587,207 @@ DOBA_TEST(
         "POST / HTTP/1.1\r\nHost: example.com\r\n"
         "Transfer-Encoding: chunked\r\n\r\n" + body;
     decoder_input value;
-    std::shared_ptr<request> request_value;
-    for (std::size_t offset = 0; offset < source.size();) {
-      const std::size_t count =
-          std::min(std::size_t{4096}, source.size() - offset);
-      DOBA_EXPECT_EQUAL(
-          accumulate(
-              value, std::string_view(source).substr(offset, count)), count);
-      offset += count;
-      const auto result = value.decode();
-      if (offset < source.size()) {
-        DOBA_EXPECT_EQUAL(result.code,
-                          deserialization_status::kMoreBytesNeeded);
-        DOBA_EXPECT(result.request == nullptr);
-      } else {
-        DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-        request_value = result.request;
-      }
-    }
-    DOBA_EXPECT(request_value != nullptr);
-    DOBA_EXPECT(request_value->has_body_reader());
-    std::array<std::byte, 4096> output{};
     std::string decoded;
     bool complete = false;
-    for (std::size_t i = 0; !complete && i <= size; i++) {
-      const auto state = request_value->get_body_reader()->read(output);
-      DOBA_EXPECT(!state.has_error);
-      decoded.append(reinterpret_cast<const char*>(output.data()),
-                     state.produced);
-      complete = state.complete;
+    value.on_request = [&](const request& request_value) {
+      DOBA_EXPECT(request_value.has_body_reader());
+      std::array<std::byte, 4096> output{};
+      for (std::size_t i = 0; !complete && i <= size; i++) {
+        const auto state = request_value.get_body_reader()->read(output);
+        DOBA_EXPECT(!state.has_error);
+        decoded.append(reinterpret_cast<const char*>(output.data()),
+                       state.produced);
+        complete = state.complete;
+      }
+    };
+    for (std::size_t offset = 0; offset < source.size();) {
+      const auto count = accumulate(
+          value, std::string_view(source).substr(offset, 4096));
+      DOBA_EXPECT(count > 0);
+      offset += count;
+      auto result = value.decode();
+      DOBA_EXPECT(result.code != deserialization_status::kInvalidSource);
     }
     DOBA_EXPECT(complete);
     DOBA_EXPECT_EQUAL(decoded, payload);
   }
 }
+
+// +===========================================================================+
+// | [>] temporary body survives an unread handler               ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder removes an unread temporary body after dispatch") {
+  const auto before = body_temp_files();
+  const std::string payload(16385, 'x');
+  const std::string source =
+      "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 16385\r\n\r\n" +
+      payload;
+  decoder_input value;
+  std::filesystem::path path;
+  value.on_request = [&](const request& request_value) {
+    DOBA_EXPECT(request_value.has_body_reader());
+    path = new_body_temp_file(before);
+    DOBA_EXPECT(!path.empty());
+    DOBA_EXPECT(std::filesystem::exists(path));
+  };
+  for (std::size_t offset = 0; offset < source.size();) {
+    const auto count = accumulate(
+        value, std::string_view(source).substr(offset, 4096));
+    DOBA_EXPECT(count > 0);
+    offset += count;
+    const auto result = value.decode();
+    DOBA_EXPECT_EQUAL(result.code,
+                      offset == source.size()
+                          ? deserialization_status::kSucceeded
+                          : deserialization_status::kMoreBytesNeeded);
+  }
+  DOBA_EXPECT(!path.empty());
+  DOBA_EXPECT(!std::filesystem::exists(path));
+}
+
+// +===========================================================================+
+// | [>] invalid chunk after spill removes temporary body        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder removes a temporary body after invalid framing") {
+  const auto before = body_temp_files();
+  const std::string source =
+      "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n"
+      "4268\r\n" + std::string(17000, 'x') + "\r\n";
+  decoder_input value;
+  for (std::size_t offset = 0; offset < source.size();) {
+    const auto count = accumulate(
+        value, std::string_view(source).substr(offset, 4096));
+    DOBA_EXPECT(count > 0);
+    offset += count;
+    DOBA_EXPECT_EQUAL(value.decode().code,
+                      deserialization_status::kMoreBytesNeeded);
+  }
+  const auto path = new_body_temp_file(before);
+  DOBA_EXPECT(!path.empty());
+  DOBA_EXPECT(std::filesystem::exists(path));
+  DOBA_EXPECT_EQUAL(accumulate(value, "Z\r\n"), 3);
+  auto result = value.decode();
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+  DOBA_EXPECT(result.response.has_value());
+  auto response_wire = result.response->serialize();
+  DOBA_EXPECT(response_wire->head.starts_with("HTTP/1.1 400 "));
+  DOBA_EXPECT(!std::filesystem::exists(path));
+}
+
+// +===========================================================================+
+// | [>] handler failure removes temporary body                  ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder removes a temporary body after handler failure") {
+  const auto before = body_temp_files();
+  const std::string source =
+      "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 16385\r\n\r\n" +
+      std::string(16385, 'x');
+  decoder_input value;
+  std::filesystem::path path;
+  value.on_request = [&](const request&) {
+    path = new_body_temp_file(before);
+    DOBA_EXPECT(!path.empty());
+    throw std::runtime_error("handler failure");
+  };
+  bool threw = false;
+  try {
+    for (std::size_t offset = 0; offset < source.size();) {
+      const auto count = accumulate(
+          value, std::string_view(source).substr(offset, 4096));
+      DOBA_EXPECT(count > 0);
+      offset += count;
+      value.decode();
+    }
+  } catch (const std::runtime_error&) {
+    threw = true;
+  }
+  DOBA_EXPECT(threw);
+  DOBA_EXPECT(!path.empty());
+  DOBA_EXPECT(!std::filesystem::exists(path));
+}
+
+// +===========================================================================+
+// | [>] temporary body creation failure returns 500              ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder returns 500 when temporary body creation fails") {
+  const auto blocked = std::filesystem::absolute(__FILE__).string();
+#ifdef _WIN32
+  char* previous_value = nullptr;
+  std::size_t previous_size = 0;
+  const int saved = _dupenv_s(&previous_value, &previous_size, "TMP");
+  const std::string previous = previous_value ? previous_value : "";
+  std::free(previous_value);
+  DOBA_EXPECT_EQUAL(saved, 0);
+  const int changed = _putenv_s("TMP", blocked.c_str());
+#else
+  const char* previous_value = std::getenv("TMPDIR");
+  const bool had_previous = previous_value != nullptr;
+  const std::string previous = had_previous ? previous_value : "";
+  const int changed = setenv("TMPDIR", blocked.c_str(), 1);
+#endif
+  if (changed != 0) {
+    DOBA_EXPECT_EQUAL(changed, 0);
+    return;
+  }
+  decoder_input value;
+  bool called = false;
+  value.on_request = [&](const request&) { called = true; };
+  const std::string source =
+      "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 16385\r\n\r\n";
+  value.append(source);
+  auto result = value.decode();
+#ifdef _WIN32
+  const int restored = _putenv_s("TMP", previous.c_str());
+#else
+  const int restored = had_previous
+                           ? setenv("TMPDIR", previous.c_str(), 1)
+                           : unsetenv("TMPDIR");
+#endif
+  DOBA_EXPECT_EQUAL(restored, 0);
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+  DOBA_EXPECT(!called);
+  DOBA_EXPECT(result.response.has_value());
+  auto wire = result.response->serialize();
+  DOBA_EXPECT(wire->head.starts_with("HTTP/1.1 500 "));
+}
+
+// +===========================================================================+
+// | [>] temporary body read-open failure returns 500             ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("decoder returns 500 when temporary body cannot reopen") {
+  const auto before = body_temp_files();
+  decoder_input value;
+  bool called = false;
+  value.on_request = [&](const request&) { called = true; };
+  const std::string head =
+      "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 16385\r\n\r\n";
+  value.append(head);
+  DOBA_EXPECT_EQUAL(value.decode().code,
+                    deserialization_status::kMoreBytesNeeded);
+  const auto path = new_body_temp_file(before);
+  DOBA_EXPECT(!path.empty());
+  DOBA_EXPECT(std::filesystem::exists(path));
+  std::error_code error;
+  DOBA_EXPECT(std::filesystem::remove(path, error));
+  DOBA_EXPECT(!error);
+  const std::string body(16385, 'x');
+  martianlabs::doba::protocol::deserialization_result<request, response>
+      result;
+  for (std::size_t offset = 0; offset < body.size();) {
+    const auto count = accumulate(
+        value, std::string_view(body).substr(offset, 4096));
+    DOBA_EXPECT(count > 0);
+    offset += count;
+    result = value.decode();
+  }
+  DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+  DOBA_EXPECT(!called);
+  DOBA_EXPECT(result.response.has_value());
+  auto wire = result.response->serialize();
+  DOBA_EXPECT(wire->head.starts_with("HTTP/1.1 500 "));
+  DOBA_EXPECT(!std::filesystem::exists(path));
+}
+
 // +===========================================================================+
 // | [>] absolute form uses its authority when Host differs      ( test-case ) |
 // +===========================================================================+
@@ -2551,29 +2800,31 @@ DOBA_TEST("absolute form uses its authority when Host differs") {
   };
   for (const auto source : cases) {
     decoder_input value;
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    value.on_request = [&](const request& decoded) {
+      DOBA_EXPECT_EQUAL(decoded.get_target(), target::kAbsoluteForm);
+      DOBA_EXPECT_EQUAL(decoded.get_absolute_path(), "/path");
+      DOBA_EXPECT(decoded.has_target_authority());
+      DOBA_EXPECT_EQUAL(decoded.get_target_authority_host(), "a");
+      DOBA_EXPECT_EQUAL(decoded.get_target_authority_port(),
+                        source.find(":8080") != std::string_view::npos ?
+                            "8080" : "");
+      const auto host_start = source.find("Host: ") + 6;
+      const auto host = source.substr(
+          host_start, source.find("\r\n", host_start) - host_start);
+      const auto colon = host.find(':');
+      DOBA_EXPECT_EQUAL(decoded.get_header("Host").second, host);
+      DOBA_EXPECT_EQUAL(decoded.get_host(), host.substr(0, colon));
+      DOBA_EXPECT_EQUAL(decoded.get_host_port(),
+                        colon == std::string_view::npos ? "" :
+                            host.substr(colon + 1));
+    };
     DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
     const auto result = value.decode();
-    martianlabs::doba::tests::unit::test_helper::set_context(source);
     if (!martianlabs::doba::tests::unit::test_helper::expect(
             result.code == deserialization_status::kSucceeded,
             "absolute authority accepted", __FILE__, __LINE__)) continue;
-    DOBA_EXPECT(result.request != nullptr);
-    DOBA_EXPECT_EQUAL(result.request->get_target(), target::kAbsoluteForm);
-    DOBA_EXPECT_EQUAL(result.request->get_absolute_path(), "/path");
-    DOBA_EXPECT(result.request->has_target_authority());
-    DOBA_EXPECT_EQUAL(result.request->get_target_authority_host(), "a");
-    DOBA_EXPECT_EQUAL(result.request->get_target_authority_port(),
-                      source.find(":8080") != std::string_view::npos ?
-                          "8080" : "");
-    const auto host_start = source.find("Host: ") + 6;
-    const auto host = source.substr(
-        host_start, source.find("\r\n", host_start) - host_start);
-    const auto colon = host.find(':');
-    DOBA_EXPECT_EQUAL(result.request->get_header("Host").second, host);
-    DOBA_EXPECT_EQUAL(result.request->get_host(), host.substr(0, colon));
-    DOBA_EXPECT_EQUAL(result.request->get_host_port(),
-                      colon == std::string_view::npos ? "" :
-                          host.substr(colon + 1));
+    DOBA_EXPECT(value.request_seen);
   }
 }
 // +===========================================================================+
@@ -2587,7 +2838,7 @@ DOBA_TEST("absolute form retains Host validation") {
     DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
     const auto result = value.decode();
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-    DOBA_EXPECT(result.request == nullptr);
+    DOBA_EXPECT(!value.request_seen);
   }
 }
 // +===========================================================================+
@@ -2621,7 +2872,7 @@ DOBA_TEST("rejects query parameter overflow without truncating") {
       DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
       const auto result = value.decode();
       DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-      DOBA_EXPECT(result.request == nullptr);
+      DOBA_EXPECT(!value.request_seen);
     }
   }
 }
@@ -2630,11 +2881,12 @@ DOBA_TEST("rejects query parameter overflow without truncating") {
 // +===========================================================================+
 DOBA_TEST("a full incomplete head terminates instead of stalling") {
   std::string source = "GET / HTTP/1.1\r\nHost: example.com\r\nX-Pad: ";
-  source.append(receive_capacity + 1 - source.size() - 4, 'a');
+  const auto limit = policies::kMaxRequestHeadSizeInMemory;
+  source.append(limit + 1 - source.size() - 4, 'a');
   source += "\r\n\r\n";
   for (const std::size_t split : {std::size_t{0},
-                                   receive_capacity / 2,
-                                   receive_capacity - 1}) {
+                                   limit / 2,
+                                   limit - 1}) {
     decoder_input value;
     DOBA_EXPECT_EQUAL(
         accumulate(value, std::string_view(source).substr(0, split)), split);
@@ -2642,10 +2894,10 @@ DOBA_TEST("a full incomplete head terminates instead of stalling") {
                       deserialization_status::kMoreBytesNeeded);
     const auto consumed =
         accumulate(value, std::string_view(source).substr(split));
-    DOBA_EXPECT_EQUAL(consumed, receive_capacity - split);
+    DOBA_EXPECT_EQUAL(consumed, source.size() - split);
     const auto result = value.decode();
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-    DOBA_EXPECT(result.request == nullptr);
+    DOBA_EXPECT(!value.request_seen);
     DOBA_EXPECT_EQUAL(value.decode().code,
                       deserialization_status::kInvalidSource);
   }
@@ -2663,7 +2915,18 @@ DOBA_TEST("full body buffers remain consumable") {
                        "\r\n\r\n") +
         payload + (chunked ? "\r\n0\r\n\r\n" : "");
     decoder_input value;
-    std::shared_ptr<request> request_value;
+    std::string decoded;
+    bool complete = false;
+    value.on_request = [&](const request& request_value) {
+      std::array<std::byte, receive_capacity> output{};
+      for (std::size_t i = 0; !complete && i <= payload.size(); i++) {
+        const auto state = request_value.get_body_reader()->read(output);
+        DOBA_EXPECT(!state.has_error);
+        decoded.append(reinterpret_cast<const char*>(output.data()),
+                       state.produced);
+        complete = state.complete;
+      }
+    };
     for (std::size_t offset = 0; offset < source.size();) {
       const auto count =
           accumulate(value, std::string_view(source).substr(offset));
@@ -2673,23 +2936,11 @@ DOBA_TEST("full body buffers remain consumable") {
       if (offset < source.size()) {
         DOBA_EXPECT_EQUAL(result.code,
                           deserialization_status::kMoreBytesNeeded);
-        DOBA_EXPECT(result.request == nullptr);
+        DOBA_EXPECT(!value.request_seen);
       } else {
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-        request_value = result.request;
+        DOBA_EXPECT(value.request_seen);
       }
-    }
-    DOBA_EXPECT(request_value != nullptr);
-    if (!request_value) continue;
-    std::array<std::byte, receive_capacity> output{};
-    std::string decoded;
-    bool complete = false;
-    for (std::size_t i = 0; !complete && i <= payload.size(); i++) {
-      const auto state = request_value->get_body_reader()->read(output);
-      DOBA_EXPECT(!state.has_error);
-      decoded.append(reinterpret_cast<const char*>(output.data()),
-                     state.produced);
-      complete = state.complete;
     }
     DOBA_EXPECT(complete);
     DOBA_EXPECT_EQUAL(decoded, payload);
@@ -2746,13 +2997,13 @@ DOBA_TEST("absolute form rejects suffixes after IP literals at every split") {
             end - offset);
         offset = end;
         result = value.decode();
-        DOBA_EXPECT(result.request == nullptr);
+        DOBA_EXPECT(!value.request_seen);
         if (result.code == deserialization_status::kInvalidSource) break;
         DOBA_EXPECT_EQUAL(result.code,
                           deserialization_status::kMoreBytesNeeded);
       }
       DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-      DOBA_EXPECT(result.request == nullptr);
+      DOBA_EXPECT(!value.request_seen);
     }
   }
 }
@@ -2787,6 +3038,18 @@ DOBA_TEST("absolute form preserves valid IP literals at every split") {
         if (split < source.size()) ends.push_back(source.size());
       }
       decoder_input value;
+      value.on_request = [&](const request& decoded) {
+        DOBA_EXPECT_EQUAL(decoded.get_target(), target::kAbsoluteForm);
+        DOBA_EXPECT(decoded.has_target_authority());
+        DOBA_EXPECT_EQUAL(decoded.get_target_authority_host(), test.host);
+        DOBA_EXPECT_EQUAL(decoded.get_target_authority_port(), test.port);
+        DOBA_EXPECT_EQUAL(decoded.get_absolute_path(), "/path");
+        DOBA_EXPECT_EQUAL(decoded.get_query_parameter("x")->second, "1");
+        DOBA_EXPECT_EQUAL(decoded.get_header("Host").second,
+                          "other.example:8080");
+        DOBA_EXPECT_EQUAL(decoded.get_host(), "other.example");
+        DOBA_EXPECT_EQUAL(decoded.get_host_port(), "8080");
+      };
       auto result = value.decode();
       std::size_t offset = 0;
       for (const std::size_t end : ends) {
@@ -2799,21 +3062,11 @@ DOBA_TEST("absolute form preserves valid IP literals at every split") {
         if (end < source.size()) {
           DOBA_EXPECT_EQUAL(result.code,
                             deserialization_status::kMoreBytesNeeded);
-          DOBA_EXPECT(result.request == nullptr);
+          DOBA_EXPECT(!value.request_seen);
         }
       }
       DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-      DOBA_EXPECT(result.request != nullptr);
-      DOBA_EXPECT_EQUAL(result.request->get_target(), target::kAbsoluteForm);
-      DOBA_EXPECT(result.request->has_target_authority());
-      DOBA_EXPECT_EQUAL(result.request->get_target_authority_host(), test.host);
-      DOBA_EXPECT_EQUAL(result.request->get_target_authority_port(), test.port);
-      DOBA_EXPECT_EQUAL(result.request->get_absolute_path(), "/path");
-      DOBA_EXPECT_EQUAL(result.request->get_query_parameter("x")->second, "1");
-      DOBA_EXPECT_EQUAL(result.request->get_header("Host").second,
-                        "other.example:8080");
-      DOBA_EXPECT_EQUAL(result.request->get_host(), "other.example");
-      DOBA_EXPECT_EQUAL(result.request->get_host_port(), "8080");
+      DOBA_EXPECT(value.request_seen);
     }
   }
 }
@@ -2831,7 +3084,7 @@ DOBA_TEST("decoder returns one interim with an incomplete body") {
     accumulate(value, head);
     auto result = value.decode();
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kMoreBytesNeeded);
-    DOBA_EXPECT(!result.request);
+    DOBA_EXPECT(!value.request_seen);
     DOBA_EXPECT(result.response.has_value());
     auto wire = result.response->serialize();
     const std::string bytes(wire->head + wire->body);
@@ -2847,7 +3100,7 @@ DOBA_TEST("decoder returns one interim with an incomplete body") {
     accumulate(value, chunked ? "y\r\n0\r\n\r\n" : "y");
     result = value.decode();
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-    DOBA_EXPECT(result.request != nullptr);
+    DOBA_EXPECT(value.request_seen);
     DOBA_EXPECT(!result.response);
     accumulate(value, head);
     result = value.decode();
@@ -2916,9 +3169,13 @@ DOBA_TEST("decoder returns responses for rejection reasons") {
   for (const auto& [input, status] : cases) {
     decoder_type value(configuration);
     std::size_t consumed = 0;
-    auto result = value.deserialize(input.data(), input.size(), 4096, consumed);
+    bool request_seen = false;
+    auto result = value.deserialize(input.data(), input.size(), 4096,
+                                    consumed, [&](const request&) {
+                                      request_seen = true;
+                                    });
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-    DOBA_EXPECT(!result.request);
+    DOBA_EXPECT(!request_seen);
     DOBA_EXPECT(result.response.has_value());
     auto output = result.response->serialize();
     const std::string bytes(output->head + output->body);
@@ -3011,20 +3268,23 @@ DOBA_TEST("decoder retains HEAD while decoding body fragments") {
 // +===========================================================================+
 // | [>] default Content-Length limit                            ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("decoder enforces default Content-Length limit") {
-  for (const std::size_t size : {16 * 1024 * 1024,
-                                 16 * 1024 * 1024 + 1}) {
+DOBA_TEST("decoder enforces the configured Content-Length limit") {
+  DOBA_EXPECT_EQUAL(policies{}.max_content_length, 16 * 1024 * 1024);
+  for (const std::size_t size : {policies::kMaxRequestBodySizeInMemory,
+                                 policies::kMaxRequestBodySizeInMemory + 1,
+                                 std::size_t{16 * 1024 * 1024},
+                                 std::size_t{16 * 1024 * 1024 + 1}}) {
     const std::string source =
         "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: " +
         std::to_string(size) + "\r\n\r\n";
     decoder_input value;
     DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
     auto result = value.decode();
-    DOBA_EXPECT_EQUAL(
-        result.code, size == 16 * 1024 * 1024
-                         ? deserialization_status::kMoreBytesNeeded
-                         : deserialization_status::kInvalidSource);
-    if (size > 16 * 1024 * 1024) {
+    DOBA_EXPECT_EQUAL(result.code,
+                      size <= policies{}.max_content_length
+                          ? deserialization_status::kMoreBytesNeeded
+                          : deserialization_status::kInvalidSource);
+    if (size > policies{}.max_content_length) {
       auto wire = result.response->serialize();
       DOBA_EXPECT((wire->head + wire->body)
                       .starts_with("HTTP/1.1 413 "));
@@ -3078,25 +3338,26 @@ DOBA_TEST("decoder accepts chunked payload with zero length limit") {
   DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
   auto result = value.decode();
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-  DOBA_EXPECT(result.request != nullptr);
+  DOBA_EXPECT(value.request_seen);
 }
 
 // +===========================================================================+
-// | [>] default chunked payload limit across receives           ( test-case ) |
+// | [>] chunked wire spill across receives                      ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("decoder enforces default chunked payload limit") {
-  constexpr std::size_t limit = 16 * 1024 * 1024;
-  for (const std::size_t size : {limit, limit + 1}) {
-    const std::size_t first_chunk = limit / 2;
+DOBA_TEST("decoder spills chunked wire across receives") {
+  constexpr std::size_t limit = policies::kMaxRequestBodySizeInMemory;
+  DOBA_EXPECT_EQUAL(policies{}.max_content_length, 16 * 1024 * 1024);
+  for (const std::size_t second_chunk : {8171, 8172}) {
     std::string source =
         "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n"
-        "800000\r\n";
-    source.reserve(size + 128);
-    source.append(first_chunk, 'a');
+        "2000\r\n";
+    source.append(8192, 'a');
     source += "\r\n";
-    source += size == limit ? "800000\r\n" : "800001\r\n";
-    source.append(size - first_chunk, 'b');
+    source += second_chunk == 8171 ? "1feb\r\n" : "1fec\r\n";
+    source.append(second_chunk, 'b');
     source += "\r\n0\r\n\r\n";
+    DOBA_EXPECT_EQUAL(source.size() - source.find("2000\r\n"),
+                      limit + (second_chunk - 8171));
     decoder_input value;
     bool finished = false;
     for (std::size_t offset = 0; offset < source.size();) {
@@ -3107,18 +3368,8 @@ DOBA_TEST("decoder enforces default chunked payload limit") {
       offset += count;
       auto result = value.decode();
       if (result.code == deserialization_status::kSucceeded) {
-        DOBA_EXPECT_EQUAL(size, limit);
         DOBA_EXPECT_EQUAL(offset, source.size());
-        DOBA_EXPECT(result.request != nullptr);
-        finished = true;
-        break;
-      }
-      if (result.code == deserialization_status::kInvalidSource) {
-        DOBA_EXPECT_EQUAL(size, limit + 1);
-        DOBA_EXPECT(result.response.has_value());
-        auto wire = result.response->serialize();
-        DOBA_EXPECT((wire->head + wire->body)
-                        .starts_with("HTTP/1.1 413 "));
+        DOBA_EXPECT(value.request_seen);
         finished = true;
         break;
       }

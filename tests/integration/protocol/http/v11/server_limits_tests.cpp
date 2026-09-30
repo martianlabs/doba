@@ -65,7 +65,7 @@ response read_body(const request& req) {
 // +===========================================================================+
 // | [>] complete head capacity boundaries                       ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("HTTP/1.1 terminates complete heads around decoder capacity") {
+DOBA_TEST("HTTP/1.1 enforces the 4 KiB request head limit") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -82,9 +82,10 @@ DOBA_TEST("HTTP/1.1 terminates complete heads around decoder capacity") {
 
   const std::string prefix =
       "GET /ok HTTP/1.1\r\nHost: example.com\r\nX-Pad: ";
-  for (const std::size_t size : {receive_capacity - 1,
-                                 receive_capacity,
-                                 receive_capacity + 1}) {
+  constexpr std::size_t head_capacity = 4096;
+  for (const std::size_t size : {head_capacity - 1,
+                                 head_capacity,
+                                 head_capacity + 1}) {
     for (bool fragmented : {false, true}) {
       martianlabs::doba::tests::integration::test_helper::set_context(
           "head size " + std::to_string(size) +
@@ -95,14 +96,12 @@ DOBA_TEST("HTTP/1.1 terminates complete heads around decoder capacity") {
       const auto before = calls.load();
       DOBA_EXPECT(client.connect(port));
       if (fragmented) {
-        const auto split = receive_capacity / 2;
+        const auto split = head_capacity / 2;
         DOBA_EXPECT(client.send_all(
             std::string_view(request_wire).substr(0, split)));
         DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(20)));
-        // Leave excess bytes unsent to verify rejection at capacity alone.
-        const auto end = std::min(size, receive_capacity);
         DOBA_EXPECT(client.send_all(
-            std::string_view(request_wire).substr(split, end - split)));
+            std::string_view(request_wire).substr(split)));
       } else {
         DOBA_EXPECT(client.send_all(request_wire));
       }
@@ -110,15 +109,15 @@ DOBA_TEST("HTTP/1.1 terminates complete heads around decoder capacity") {
       DOBA_EXPECT(result.has_value());
       if (result.has_value()) {
         DOBA_EXPECT_EQUAL(result->status,
-                          size <= receive_capacity
+                          size <= head_capacity
                               ? "HTTP/1.1 200 OK"
-                              : "HTTP/1.1 400 Bad Request");
+                              : "HTTP/1.1 431 Request Header Fields Too Large");
       }
-      if (size > receive_capacity) {
+      if (size > head_capacity) {
         DOBA_EXPECT(client.wait_for_close(std::chrono::seconds(3)));
       }
       DOBA_EXPECT_EQUAL(calls.load(),
-                        before + (size <= receive_capacity ? 1 : 0));
+                        before + (size <= head_capacity ? 1 : 0));
       client.close();
     }
   }

@@ -28,6 +28,9 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstring>
+#include <filesystem>
+#include <memory>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -35,15 +38,14 @@
 #include <variant>
 #include <vector>
 
-#include "common/byte_storage.h"
+#include "common/byte_storage_helpers.h"
+#include "common/filesystem.h"
 #include "common/hash_map.h"
-#include "common/writer.h"
 #include "protocol/deserialization.h"
 #include "protocol/http/common/header.h"
 #include "protocol/http/common/helpers.h"
 #include "protocol/http/common/method_names.h"
 #include "protocol/http/common/query_parameter.h"
-#include "protocol/http/common/request_getter.h"
 #include "protocol/http/common/target.h"
 #include "protocol/http/common/headers/accept.h"
 #include "protocol/http/common/headers/accept_charset.h"
@@ -99,6 +101,7 @@
 #include "protocol/http/common/headers/www_authenticate.h"
 #include "protocol/http/v11/body/framer_raw.h"
 #include "protocol/http/v11/body/framer_chunked.h"
+#include "protocol/http/v11/body/reader.h"
 #include "protocol/http/v11/context.h"
 #include "protocol/http/v11/headers/connection.h"
 #include "protocol/http/v11/headers/content_length.h"
@@ -146,12 +149,15 @@ class decoder {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +=========================================================================+
-  explicit decoder(policies configuration = {}) {
+  explicit decoder(policies configuration = {})
+      : buffer_(std::make_unique_for_overwrite<char[]>(
+            policies::kMaxRequestHeadSizeInMemory +
+            policies::kMaxRequestBodySizeInMemory)) {
     context_.policies = configuration;
   }
   decoder(const decoder&) = delete;
   decoder(decoder&&) noexcept = delete;
-  ~decoder() = default;
+  ~decoder() { cleanup_body_file(); }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +=========================================================================+
@@ -160,54 +166,129 @@ class decoder {
   // +=========================================================================+
   // | [>] deserialize                                              ( public ) |
   // +=========================================================================+
+  template <typename FNty>
   deserialization_result<RQty, RSty> deserialize(
       const char* buffer, const std::size_t size, const std::size_t capacity,
-      std::size_t& consumed) {
+      std::size_t& consumed, FNty&& on_request) {
     std::string_view source(buffer, size);
     deserialization_result<RQty, RSty> result =
         body_framer_ ? parse_body(source) : parse_core(source);
     consumed = size - source.size();
     if (result.code == deserialization_status::kMoreBytesNeeded &&
-        !body_framer_ && size == capacity) {
+        !body_framer_ &&
+        (size == capacity ||
+         size >= policies::kMaxRequestHeadSizeInMemory)) {
       result.code = deserialization_status::kInvalidSource;
     }
-    if (result.code == deserialization_status::kInvalidSource) {
-      switch (context_.rejection_reason) {
-        case rejection_reason::kPayloadTooLarge:
-          result.response.emplace(RSty::content_too_large_413());
-          break;
-        case rejection_reason::kUriTooLong:
-          result.response.emplace(RSty::uri_too_long_414());
-          break;
-        case rejection_reason::kExpectationFailed:
-          result.response.emplace(RSty::expectation_failed_417());
-          break;
-        case rejection_reason::kHeaderFieldsTooLarge:
-          result.response.emplace(RSty::request_header_fields_too_large_431());
-          break;
-        case rejection_reason::kUnsupportedFeature:
-          result.response.emplace(RSty::not_implemented_501());
-          break;
-        case rejection_reason::kVersionNotSupported:
-          result.response.emplace(RSty::http_version_not_supported_505());
-          break;
-        default:
-          result.response.emplace(RSty::bad_request_400());
-          break;
+    if (result.code == deserialization_status::kSucceeded) {
+      try {
+        std::optional<std::string_view> host_host;
+        std::optional<std::string_view> host_port;
+        std::optional<helpers::host_type> host_type;
+        if (context_.has_host) {
+          host_host = context_.host.host;
+          host_port = context_.host.port;
+          host_type = context_.host.type;
+        }
+        std::optional<std::string_view> target_authority_host;
+        std::optional<std::string_view> target_authority_port;
+        std::optional<helpers::host_type> target_authority_type;
+        if (context_.has_target_authority) {
+          target_authority_host = context_.target_authority.host;
+          target_authority_port = context_.target_authority.port;
+          target_authority_type = context_.target_authority.type;
+        }
+        std::optional<body::reader> body_reader;
+        if (body_framer_) {
+          if (body_file_path_.empty()) {
+            std::span<const std::byte> wire(
+                reinterpret_cast<const std::byte*>(
+                    buffer_.get() + policies::kMaxRequestHeadSizeInMemory),
+                body_size_);
+            body_reader = context_.connection.chunked
+                              ? body::reader::chunked(wire)
+                              : body::reader::raw(
+                                    wire, context_.content_length);
+          } else {
+            common::filesystem_file file;
+            std::error_code error;
+            if (!file.open(body_file_path_.parent_path(),
+                           body_file_path_.filename().string(), error)) {
+              storage_failed_ = true;
+              result.code = deserialization_status::kInvalidSource;
+            } else {
+              body_reader = context_.connection.chunked
+                                ? body::reader::chunked(std::move(file))
+                                : body::reader::raw(std::move(file),
+                                                    context_.content_length);
+            }
+          }
+        }
+        if (result.code == deserialization_status::kSucceeded) {
+          RQty request(method_, absolute_path_, target_, headers_,
+                       query_parameters_, host_host, host_port,
+                       host_type, target_authority_host, target_authority_port,
+                       target_authority_type,
+                       context_.connection.close_requested,
+                       std::move(body_reader));
+          on_request(request);
+        }
+      } catch (...) {
+        cleanup_body_file();
+        throw;
       }
-      result.response->set_body("Invalid request content!");
+    }
+    if (result.code == deserialization_status::kInvalidSource) {
+      if (storage_failed_) {
+        result.response.emplace(RSty::internal_server_error_500());
+      } else {
+        switch (context_.rejection_reason) {
+          case rejection_reason::kPayloadTooLarge:
+            result.response.emplace(RSty::content_too_large_413());
+            break;
+          case rejection_reason::kUriTooLong:
+            result.response.emplace(RSty::uri_too_long_414());
+            break;
+          case rejection_reason::kExpectationFailed:
+            result.response.emplace(RSty::expectation_failed_417());
+            break;
+          case rejection_reason::kHeaderFieldsTooLarge:
+            result.response.emplace(
+                RSty::request_header_fields_too_large_431());
+            break;
+          case rejection_reason::kUnsupportedFeature:
+            result.response.emplace(RSty::not_implemented_501());
+            break;
+          case rejection_reason::kVersionNotSupported:
+            result.response.emplace(RSty::http_version_not_supported_505());
+            break;
+          default:
+            result.response.emplace(RSty::bad_request_400());
+            break;
+        }
+      }
+      result.response->set_body(storage_failed_ ? "Internal Server Error"
+                                                : "Invalid request content!");
       // RFC 9110 S9.3.2: HEAD errors retain framing but omit content.
       if (head_request_) result.response->suppress_body();
     }
-    // Borrowed views must not survive reuse of the transport's buffer.
-    method_ = {};
-    target_ = target::kUnknown;
-    absolute_path_ = {};
-    query_ = {};
-    headers_ = {};
-    const policies configuration = context_.policies;
-    context_ = {};
-    context_.policies = configuration;
+    if (result.code != deserialization_status::kMoreBytesNeeded ||
+        !body_framer_) {
+      if (!body_file_path_.empty()) cleanup_body_file();
+      body_framer_.reset();
+      head_size_ = 0;
+      body_size_ = 0;
+      storage_failed_ = false;
+      method_ = {};
+      target_ = target::kUnknown;
+      absolute_path_ = {};
+      query_ = {};
+      headers_.clear();
+      query_parameters_.clear();
+      const policies configuration = context_.policies;
+      context_ = {};
+      context_.policies = configuration;
+    }
     return result;
   }
 
@@ -384,27 +465,29 @@ class decoder {
             // source is invalid and we cannot parse the request!
             return deserialization_status::kInvalidSource;
           }
-          // Mount the request object and keep the result!
-          if (!mount_request_getter(sv.substr(0, i))) {
+          if (!store_head(sv.substr(0, i))) {
             return deserialization_status::kInvalidSource;
           }
           source.remove_prefix(i);
-          // Check for the presence of a body and build the body writer for this
-          // request. We only support chunked and raw framing, and only if the
-          // request has a body.
+          // Check for a body and select its framing.
           bool body_expected =
               context_.connection.chunked ||
               (context_.has_content_length && context_.content_length > 0);
           if (body_expected) {
-            body_buffer_ = common::writer();
             if (context_.connection.chunked) {
               body_framer_ =
                   body::framer_chunked(context_.policies.max_content_length);
             } else {
+              if (context_.content_length >
+                      policies::kMaxRequestBodySizeInMemory &&
+                  !spill_body()) {
+                storage_failed_ = true;
+                return deserialization_status::kInvalidSource;
+              }
               body_framer_ = body::framer_raw(context_.content_length);
             }
           }
-          if (!body_framer_) return dispatch(std::nullopt);
+          if (!body_framer_) return deserialization_status::kSucceeded;
           auto result = parse_body(source);
           if (result.code == deserialization_status::kMoreBytesNeeded &&
               context_.connection.expects_continue) {
@@ -470,7 +553,7 @@ class decoder {
         [this, source](auto& arg) -> body::framer_state {
           std::span<const std::byte> byte_span{
               reinterpret_cast<const std::byte*>(source.data()), source.size()};
-          return arg.write(byte_span, *body_buffer_);
+          return arg.consume(byte_span);
         },
         *body_framer_);
     if (state.has_error || state.consumed > source.size()) {
@@ -479,65 +562,119 @@ class decoder {
       }
       return deserialization_status::kInvalidSource;
     }
+    if (state.consumed) {
+      if (body_file_path_.empty() &&
+          state.consumed >
+              policies::kMaxRequestBodySizeInMemory - body_size_ &&
+          !spill_body()) {
+        storage_failed_ = true;
+        return deserialization_status::kInvalidSource;
+      }
+      if (body_file_path_.empty()) {
+        std::memcpy(buffer_.get() + policies::kMaxRequestHeadSizeInMemory +
+                        body_size_,
+                    source.data(), state.consumed);
+      } else if (!body_file_.write(source.data(), state.consumed)) {
+        storage_failed_ = true;
+        return deserialization_status::kInvalidSource;
+      }
+    }
+    body_size_ += state.consumed;
     source.remove_prefix(state.consumed);
     if (!state.complete) return deserialization_status::kMoreBytesNeeded;
-    return dispatch(body_buffer_->release());
+    return deserialization_status::kSucceeded;
   }
   // +=========================================================================+
-  // | [>] mount_request                                            ( public ) |
+  // | [>] spill_body                                              ( private ) |
   // +=========================================================================+
-  bool mount_request_getter(std::string_view buffer_view) {
+  bool spill_body() {
+    std::error_code error;
+    const auto directory = std::filesystem::temp_directory_path(error);
+    if (error) return false;
+    std::filesystem::path path;
+    if (!body_file_.open(directory, path)) return false;
+    body_file_path_ = std::move(path);
+    if (body_size_ &&
+        !body_file_.write(buffer_.get() +
+                              policies::kMaxRequestHeadSizeInMemory,
+                          body_size_)) {
+      return false;
+    }
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] cleanup_body_file                                       ( private ) |
+  // +=========================================================================+
+  void cleanup_body_file() noexcept {
+    body_file_.close();
+    if (body_file_path_.empty()) return;
+    std::error_code error;
+    std::filesystem::remove(body_file_path_, error);
+    body_file_path_.clear();
+  }
+  // +=========================================================================+
+  // | [>] store_head                                              ( private ) |
+  // +=========================================================================+
+  bool store_head(std::string_view buffer_view) {
+    if (buffer_view.size() > policies::kMaxRequestHeadSizeInMemory) {
+      context_.rejection_reason = rejection_reason::kHeaderFieldsTooLarge;
+      return false;
+    }
     // Only if the query part is not empty, we will split it into key-value
     // pairs and set it in the request.
-    std::vector<query_parameter_view> query_parameters;
+    query_parameters_.clear();
     if (!query_.empty()) {
       std::array<std::string_view, policies::kMaxQueryParameters + 1> keys;
       std::array<std::string_view, policies::kMaxQueryParameters + 1> values;
       std::size_t qc = helpers::split_query_parameters(query_, keys, values);
       if (qc > policies::kMaxQueryParameters) return false;
-      query_parameters.reserve(qc);
+      query_parameters_.reserve(qc);
       for (std::size_t q = 0; q < qc; q++) {
-        query_parameters.emplace_back(keys[q], values[q]);
+        query_parameters_.emplace_back(keys[q], values[q]);
       }
     }
-    // Check if the request has a host set it in the request.
-    std::optional<std::string_view> host_host;
-    std::optional<std::string_view> host_port;
-    std::optional<helpers::host_type> host_type;
+    std::memcpy(buffer_.get(), buffer_view.data(), buffer_view.size());
+    head_size_ = buffer_view.size();
+    auto rebase = [this, buffer_view](std::string_view value) {
+      if (value.empty()) return std::string_view{};
+      const std::size_t offset = value.data() - buffer_view.data();
+      return std::string_view(buffer_.get() + offset, value.size());
+    };
+    method_ = rebase(method_);
+    absolute_path_ = rebase(absolute_path_);
+    query_ = rebase(query_);
+    for (auto& header : headers_) {
+      header.first = rebase(header.first);
+      header.second = rebase(header.second);
+    }
+    for (auto& parameter : query_parameters_) {
+      parameter.first = rebase(parameter.first);
+      parameter.second = rebase(parameter.second);
+    }
     if (context_.has_host) {
-      host_host = context_.host.host;
-      host_port = context_.host.port;
-      host_type = context_.host.type;
+      context_.host.host = rebase(context_.host.host);
+      context_.host.port = rebase(context_.host.port);
+      context_.host.scheme = rebase(context_.host.scheme);
     }
-    // Check if the request has a target authority and set it in the request.
-    std::optional<std::string_view> target_authority_host;
-    std::optional<std::string_view> target_authority_port;
-    std::optional<helpers::host_type> target_authority_type;
     if (context_.has_target_authority) {
-      target_authority_host = context_.target_authority.host;
-      target_authority_port = context_.target_authority.port;
-      target_authority_type = context_.target_authority.type;
+      context_.target_authority.host =
+          rebase(context_.target_authority.host);
+      context_.target_authority.port =
+          rebase(context_.target_authority.port);
+      context_.target_authority.scheme =
+          rebase(context_.target_authority.scheme);
     }
-    // Now that the request is fully validated, we can build the request object
-    request_getter_ = RQty::from(
-        buffer_view, method_, absolute_path_, target_, headers_,
-        query_parameters, host_host, host_port, host_type,
-        target_authority_host, target_authority_port, target_authority_type,
-        context_.connection.chunked, context_.content_length,
-        context_.connection.close_requested);
+    for (auto& value : context_.connection.transfer_codings)
+      value = rebase(value);
+    for (auto& value : context_.connection.te_codings)
+      value = rebase(value);
+    for (auto& value : context_.connection.trailer_names)
+      value = rebase(value);
+    for (auto& value : context_.connection.upgrade_offer)
+      value = rebase(value);
+    for (auto& value : context_.connection.options)
+      value = rebase(value);
     return true;
-  }
-  // +=========================================================================+
-  // | [>] dispatch                                                ( private ) |
-  // +=========================================================================+
-  deserialization_result<RQty, RSty> dispatch(
-      std::optional<common::byte_storage> byte_storage) {
-    // Let's return the request object!
-    deserialization_result<RQty, RSty> result(
-        request_getter_(std::move(byte_storage)));
-    body_framer_ = std::nullopt;
-    body_buffer_ = std::nullopt;
-    return result;
   }
   // +=========================================================================+
   // |                      HTTP/1.1 SERVER HEADER CHECKLIST                   |
@@ -972,7 +1109,12 @@ class decoder {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +=========================================================================+
-  std::optional<common::writer> body_buffer_ = std::nullopt;
+  std::unique_ptr<char[]> buffer_;
+  std::size_t head_size_ = 0;
+  std::size_t body_size_ = 0;
+  common::byte_storage_file body_file_;
+  std::filesystem::path body_file_path_;
+  bool storage_failed_ = false;
   std::optional<body_framer_t> body_framer_ = std::nullopt;
   context context_;
   std::string_view query_;
@@ -980,7 +1122,7 @@ class decoder {
   std::string_view absolute_path_;
   target target_ = target::kUnknown;
   std::vector<header_view> headers_;
-  request_getter<RQty> request_getter_;
+  std::vector<query_parameter_view> query_parameters_;
   bool head_request_{false};
 };
 }  // namespace martianlabs::doba::protocol::http::v11

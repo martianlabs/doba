@@ -26,6 +26,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -93,11 +94,23 @@ response file_request(file_router& routes, std::string_view method,
       " HTTP/1.1\r\nHost: example.com\r\n" + std::string(headers) + "\r\n";
   decoder<request, response> decoder;
   std::size_t consumed = 0;
-  auto decoded = decoder.deserialize(wire.data(), wire.size(), 8192, consumed);
-  if (!decoded.request) throw std::runtime_error("Invalid test request");
-  const auto match = routes.match(method, decoded.request->get_absolute_path());
-  if (!match.handler) return response::not_found_404();
-  return (*match.handler)(*decoded.request);
+  std::optional<response> result;
+  auto decoded = decoder.deserialize(
+      wire.data(), wire.size(), 8192, consumed,
+      [&](const request& value) {
+        const auto match = routes.match(method, value.get_absolute_path());
+        if (!match.handler) {
+          result.emplace(response::not_found_404());
+        } else {
+          result.emplace((*match.handler)(value));
+        }
+      });
+  if (decoded.code !=
+          martianlabs::doba::protocol::deserialization_status::kSucceeded ||
+      !result) {
+    throw std::runtime_error("Invalid test request");
+  }
+  return std::move(*result);
 }
 std::string file_body(response& value) {
   auto serialized = value.serialize();
@@ -227,9 +240,11 @@ DOBA_TEST("static file server never escapes its root") {
                              " HTTP/1.1\r\nHost: example.com\r\n\r\n";
     decoder<request, response> value;
     std::size_t consumed = 0;
+    bool delivered = false;
     auto decoded = value.deserialize(wire.data(), wire.size(), 8192,
-                                     consumed);
-    if (!decoded.request) {
+                                     consumed,
+                                     [&](const request&) { delivered = true; });
+    if (!delivered) {
       DOBA_EXPECT_EQUAL(
           decoded.code,
           martianlabs::doba::protocol::deserialization_status::kInvalidSource);

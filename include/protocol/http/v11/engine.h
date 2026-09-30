@@ -80,17 +80,17 @@ class engine {
     if (closed_) return size;
     if (!size) return 0;
     std::size_t consumed = 0;
-    deserialization_result result = decoder_.deserialize(
-        buffer, size, capacity, consumed);
     try {
+      deserialization_result result = decoder_.deserialize(
+          buffer, size, capacity, consumed,
+          [this, size, &consumed](const RQty& request) {
+            bool close = request.wants_connection_close() || consumed < size;
+            RSty response = execute_request(request, close);
+            enqueue_response(request, response, close);
+          });
       switch (result.code) {
-        case deserialization_status::kSucceeded: {
-          const RQty& request = *result.request;
-          bool close = request.wants_connection_close() || consumed < size;
-          RSty response = execute_request(request, close);
-          enqueue_response(request, response, close);
+        case deserialization_status::kSucceeded:
           return consumed;
-        }
         case deserialization_status::kInvalidSource:
           if (result.response) enqueue_response(*result.response, true);
           return size;
@@ -100,9 +100,7 @@ class engine {
       }
     } catch (...) {
       query_for_close();
-      return result.code == deserialization_status::kInvalidSource
-                 ? size
-                 : consumed;
+      return consumed;
     }
     return consumed;
   }

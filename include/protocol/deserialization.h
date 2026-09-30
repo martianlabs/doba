@@ -25,7 +25,6 @@
 #ifndef martianlabs_doba_protocol_deserialization_h
 #define martianlabs_doba_protocol_deserialization_h
 
-#include <memory>
 #include <optional>
 
 namespace martianlabs::doba::protocol {
@@ -59,8 +58,6 @@ struct deserialization_result {
   // +=========================================================================+
   deserialization_result() : code(deserialization_status::kInvalidSource) {}
   deserialization_result(deserialization_status code) : code(code) {}
-  deserialization_result(std::shared_ptr<RQty> request)
-      : code(deserialization_status::kSucceeded), request(request) {}
   deserialization_result(const deserialization_result&) = default;
   deserialization_result(deserialization_result&&) = default;
   // +=========================================================================+
@@ -72,7 +69,6 @@ struct deserialization_result {
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +=========================================================================+
   deserialization_status code = deserialization_status::kInvalidSource;
-  std::shared_ptr<RQty> request = nullptr;
   std::optional<RSty> response;
 };
 }  // namespace martianlabs::doba::protocol

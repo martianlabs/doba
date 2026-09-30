@@ -240,6 +240,9 @@ class filesystem_file {
   // +=========================================================================+
 
   [[nodiscard]] std::size_t size() const noexcept { return size_; }
+  [[nodiscard]] bool is_open() const noexcept {
+    return file_ != INVALID_HANDLE_VALUE;
+  }
   [[nodiscard]] bool eof() const noexcept { return position_ == size_; }
   [[nodiscard]] bool failed() const noexcept { return failed_; }
   // +=========================================================================+

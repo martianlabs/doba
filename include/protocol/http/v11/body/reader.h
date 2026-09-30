@@ -27,6 +27,7 @@
 
 #include <cstddef>
 #include <span>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -40,7 +41,7 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] reader                                                      ( class ) |
 // +---------------------------------------------------------------------------+
-// | Owns the wire-level common::reader source together with the body decoder  |
+// | Holds a borrowed buffer or an owned file with the body decoder.           |
 // | (reader_chunked or reader_raw) matching the encoding actually used by the |
 // | request (Transfer-Encoding: chunked vs Content-Length). This lets callers |
 // | pull already-decoded payload bytes via read() without ever having to know |
@@ -52,11 +53,24 @@ class reader {
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
   // +=========================================================================+
-  static reader chunked(common::reader source) {
-    return reader(std::move(source), reader_chunked());
+  static reader chunked(std::span<const std::byte> source) {
+    if (source.empty()) throw std::invalid_argument("Empty body source");
+    return reader(common::reader::borrowed(source), reader_chunked());
   }
-  static reader raw(common::reader source, std::size_t content_length) {
-    return reader(std::move(source), reader_raw(content_length));
+  static reader chunked(common::filesystem_file&& source) {
+    if (!source.is_open()) throw std::invalid_argument("Body file is not open");
+    return reader(common::reader(std::move(source)), reader_chunked());
+  }
+  static reader raw(std::span<const std::byte> source,
+                    std::size_t content_length) {
+    if (source.empty()) throw std::invalid_argument("Empty body source");
+    return reader(common::reader::borrowed(source), reader_raw(content_length));
+  }
+  static reader raw(common::filesystem_file&& source,
+                    std::size_t content_length) {
+    if (!source.is_open()) throw std::invalid_argument("Body file is not open");
+    return reader(common::reader(std::move(source)),
+                  reader_raw(content_length));
   }
   reader(const reader&) = delete;
   reader(reader&&) noexcept = default;

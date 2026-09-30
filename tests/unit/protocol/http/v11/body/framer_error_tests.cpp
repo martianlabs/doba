@@ -40,7 +40,6 @@ DOBA_TEST("error values preserve the public contract") {
       std::same_as<std::underlying_type_t<framer_error>, std::uint8_t>);
   constexpr framer_error values[] = {
       framer_error::none,
-      framer_error::io_error,
       framer_error::invalid_chunk_size,
       framer_error::chunk_size_overflow,
       framer_error::invalid_chunk_crlf,
