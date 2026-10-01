@@ -100,18 +100,11 @@ namespace martianlabs::doba::protocol::http::headers {
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] origin                                                      ( class ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
 class origin {
  public:
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool check(std::string_view sv) {
     // origin-list-or-null = "null" / origin-list. The "null" literal is a
     // case-sensitive octet sequence (%x6E %x75 %x6C %x6C).
@@ -122,9 +115,8 @@ class origin {
     std::size_t last = 0;
     while (true) {
       const std::size_t sp = sv.find(' ', last);
-      const std::string_view element =
-          sv.substr(last, sp == std::string_view::npos ? sv.size() - last
-                                                        : sp - last);
+      const std::string_view element = sv.substr(
+          last, sp == std::string_view::npos ? sv.size() - last : sp - last);
       if (!helpers::check_serialized_origin(element)) return false;
       if (sp == std::string_view::npos) return true;
       last = sp + 1;

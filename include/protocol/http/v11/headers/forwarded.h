@@ -105,18 +105,11 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] forwarded                                                   ( class ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
 class forwarded {
  public:
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool check(std::string_view sv, parsed_forwarded_list& out) {
     // The producer overload validates each forwarded-element exactly as the
     // pure check() does and captures every non-empty element's name=value
@@ -132,7 +125,7 @@ class forwarded {
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr verdict interpret(
       const parsed_forwarded_list& forwarded_list, v11::connection&,
       const policies& pol) {
@@ -146,7 +139,7 @@ class forwarded {
  private:
   // +=========================================================================+
   // | [>] consume_forwarded_element                               ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | forwarded-element = [ forwarded-pair ] *( ";" [ forwarded-pair ] )      |
   // | forwarded-pair    = token "=" ( token / quoted-string )                 |
   // +-------------------------------------------------------------------------+
@@ -156,7 +149,7 @@ class forwarded {
   // | non-null, each pair is captured, split at the "=" that                  |
   // | consume_parameter (allow_bws=false) has already validated, so no        |
   // | additional parsing is performed.                                        |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool consume_forwarded_element(
       std::string_view sv, parsed_forwarded_element* out = nullptr) {
     return helpers::for_each_forwarded_pair(

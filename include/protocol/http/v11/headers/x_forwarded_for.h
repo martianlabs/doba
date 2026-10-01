@@ -64,18 +64,11 @@ namespace martianlabs::doba::protocol::http::v11::headers {
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] x_forwarded_for                                             ( class ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
 class x_forwarded_for {
  public:
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool check(std::string_view sv, parsed_token_list& out) {
     // The producer overload validates each xff-node exactly as the pure
     // check() does and captures every non-empty node in order.
@@ -87,7 +80,7 @@ class x_forwarded_for {
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr verdict interpret(const parsed_token_list& token_list,
                                      v11::connection&, const policies& pol) {
     if (pol.max_forwarding_hops != 0 &&
@@ -100,12 +93,12 @@ class x_forwarded_for {
  private:
   // +=========================================================================+
   // | [>] consume_xff_node                                        ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | xff-node = IPv4address / IPv6address / IP-literal / "unknown"           |
   // +-------------------------------------------------------------------------+
   // | Ports and general reg-name / host names are intentionally excluded from |
   // | this strict profile; IPvFuture is accepted only inside an IP-literal.   |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool consume_xff_node(std::string_view sv) {
     return helpers::is_ip_v4_address(sv) || helpers::is_ip_v6_address(sv) ||
            helpers::is_ip_literal(sv) || sv == "unknown";

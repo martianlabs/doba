@@ -49,10 +49,8 @@ class static_file_server {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
-
-  static_file_server(std::string_view prefix,
-                     const std::filesystem::path& root)
+  // +-------------------------------------------------------------------------+
+  static_file_server(std::string_view prefix, const std::filesystem::path& root)
       : prefix_(prefix) {
     if (prefix_.empty() || prefix_.front() != '/' ||
         prefix_.find_first_of("*:?#\\") != prefix_.npos) {
@@ -70,14 +68,13 @@ class static_file_server {
     std::error_code error;
     root_ = common::filesystem_root(root, error);
     if (error) {
-      throw std::filesystem::filesystem_error(
-          "Unable to open static file root", root, error);
+      throw std::filesystem::filesystem_error("Unable to open static file root",
+                                              root, error);
     }
   }
   // +=========================================================================+
   // | [>] register_routes                                          ( public ) |
-  // +=========================================================================+
-
+  // +-------------------------------------------------------------------------+
   template <typename Rty>
   void register_routes(Rty& routes) {
     routes.add("GET", prefix_ + "*", &static_file_server::serve);
@@ -87,8 +84,7 @@ class static_file_server {
  private:
   // +=========================================================================+
   // | [>] serve                                                   ( private ) |
-  // +=========================================================================+
-
+  // +-------------------------------------------------------------------------+
   response serve(const request& req) const {
     const auto path = req.get_absolute_path();
     if (!path.starts_with(prefix_)) return response::not_found_404();
@@ -144,20 +140,26 @@ class static_file_server {
   }
   // +=========================================================================+
   // | [>] content_type                                            ( private ) |
-  // +=========================================================================+
-
+  // +-------------------------------------------------------------------------+
   static std::string_view content_type(std::string_view path) {
     const auto dot = path.rfind('.');
     if (dot == path.npos) return "application/octet-stream";
     const auto extension = path.substr(dot);
     constexpr std::pair<std::string_view, std::string_view> types[] = {
-        {".html", "text/html"}, {".htm", "text/html"},
-        {".css", "text/css"}, {".js", "text/javascript"},
-        {".json", "application/json"}, {".txt", "text/plain"},
-        {".svg", "image/svg+xml"}, {".png", "image/png"},
-        {".jpg", "image/jpeg"}, {".jpeg", "image/jpeg"},
-        {".gif", "image/gif"}, {".webp", "image/webp"},
-        {".ico", "image/vnd.microsoft.icon"}, {".pdf", "application/pdf"},
+        {".html", "text/html"},
+        {".htm", "text/html"},
+        {".css", "text/css"},
+        {".js", "text/javascript"},
+        {".json", "application/json"},
+        {".txt", "text/plain"},
+        {".svg", "image/svg+xml"},
+        {".png", "image/png"},
+        {".jpg", "image/jpeg"},
+        {".jpeg", "image/jpeg"},
+        {".gif", "image/gif"},
+        {".webp", "image/webp"},
+        {".ico", "image/vnd.microsoft.icon"},
+        {".pdf", "application/pdf"},
         {".wasm", "application/wasm"},
     };
     for (const auto& type : types) {
@@ -167,8 +169,7 @@ class static_file_server {
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
-
+  // +-------------------------------------------------------------------------+
   std::string prefix_;
   std::filesystem::path root_;
 };

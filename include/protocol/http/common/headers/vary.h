@@ -112,42 +112,39 @@ namespace martianlabs::doba::protocol::http::headers {
 // | IMPORTANT: field-value is supposed to be normalized (no OWS around value).|
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] vary                                                        ( class ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
 class vary {
  public:
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool check(std::string_view sv) {
-    // Vary = #( "*" / field-name )
-    // field-name = token
-    //
-    // "*" is itself a valid token because "*" belongs to tchar. Therefore,
-    // both alternatives can be validated uniformly as token.
-    //
-    // for_each_list_element is expected to:
-    // - accept an empty field-value;
-    // - ignore empty list elements;
-    // - remove OWS surrounding list separators;
-    // - invoke consume_member only for non-empty elements.
+    // +-----------------------------------------------------------------------+
+    // | Vary = #( "*" / field-name )                                          |
+    // | field-name = token                                                    |
+    // |                                                                       |
+    // | "*" is itself a valid token because "*" belongs to tchar. Therefore,  |
+    // | both alternatives can be validated uniformly as token.                |
+    // |                                                                       |
+    // | for_each_list_element is expected to:                                 |
+    // | - accept an empty field-value;                                        |
+    // | - ignore empty list elements;                                         |
+    // | - remove OWS surrounding list separators;                             |
+    // | - invoke consume_member only for non-empty elements.                  |
+    // +-----------------------------------------------------------------------+
     return helpers::for_each_list_element(sv, consume_member);
   }
 
  private:
   // +=========================================================================+
   // | [>] consume_member                                          ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool consume_member(std::string_view sv) {
-    // field-name = token
-    //
-    // consume_token returns the longest valid token prefix. The complete
-    // member is valid only when the consumed token spans the entire element.
+    // +-----------------------------------------------------------------------+
+    // | field-name = token                                                    |
+    // |                                                                       |
+    // | consume_token returns the longest valid token prefix. The complete    |
+    // | member is valid only when the consumed token spans the entire element.|
+    // +-----------------------------------------------------------------------+
     const std::string_view token = helpers::consume_token(sv);
     return !token.empty() && token.size() == sv.size();
   }

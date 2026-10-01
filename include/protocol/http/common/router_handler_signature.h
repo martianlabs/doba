@@ -62,24 +62,68 @@ struct router_handler_signature;
 // /////////////////////////////////////////////////////////////////////////////
 template <typename LOty, typename LQty, typename... Args>
 struct router_handler_signature_base {
+  // +=========================================================================+
+  // | [>] USINGs                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   using return_type = LOty;
   using request_type = LQty;
   using response_type = LOty;
+  // +=========================================================================+
+  // | [>] CONSTANTs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
   static constexpr std::size_t parameter_count = sizeof...(Args);
+  // +=========================================================================+
+  // | [>] bind                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | This static method binds a controller instance and a member function to |
+  // | create a router handler. It returns a lambda that captures the instance |
+  // | and method, and when invoked, it calls the member function on the       |
+  // | instance with the provided request and routing arguments. The lambda is |
+  // | noexcept if the member function is noexcept when invoked with the       |
+  // | given arguments. The method uses std::invoke to call the member         |
+  // | function, allowing for both regular and pointer-to-member function      |
+  // | calls. The method also uses std::forward to perfectly forward the       |
+  // | request and routing arguments to the member function.                   |
+  // +-------------------------------------------------------------------------+
   template <typename Cty, typename Mty>
   static auto bind(std::shared_ptr<Cty> instance, Mty method) {
-    return [instance = std::move(instance), method](LQty req, Args... args)
-        noexcept(std::is_nothrow_invocable_v<Mty, Cty&, LQty, Args...>)
-        -> LOty {
-      return std::invoke(method, *instance, std::forward<LQty>(req),
-                         std::forward<Args>(args)...);
-    };
+    return
+        [instance = std::move(instance), method](
+            LQty req,
+            Args... args) noexcept(std::is_nothrow_invocable_v<Mty, Cty&, LQty,
+                                                               Args...>)
+            -> LOty {
+          return std::invoke(method, *instance, std::forward<LQty>(req),
+                             std::forward<Args>(args)...);
+        };
   }
+  // +=========================================================================+
+  // | [>] make_parametrized                                        ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | This static method creates a parametrized router handler using the      |
+  // | provided pattern and handler. It takes a string_view pattern and a      |
+  // | handler of type Hty, and returns a router_handler_parametrized object   |
+  // | that is constructed with the given pattern and handler. The method uses |
+  // | std::forward to perfectly forward the handler argument to the           |
+  // | constructor of router_handler_parametrized.                             |
+  // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty, typename Hty>
   static auto make_parametrized(std::string_view pattern, Hty&& handler) {
     return make_router_handler_parametrized<RQty, RSty, Args...>(
         pattern, std::forward<Hty>(handler));
   }
+  // +=========================================================================+
+  // | [>] check                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | This static method checks if the types of the handler's arguments match |
+  // | the expected types. It takes two template parameters, RQty and RSty,    |
+  // | which represent the expected request and response types, respectively.  |
+  // | The method uses static_assert to verify that the return type of the     |
+  // | handler matches RSty, the first argument type matches RQty, and that    |
+  // | the first argument is a const lvalue reference. If any of these         |
+  // | conditions are not met, a compile-time error will be generated with an  |
+  // | appropriate message.                                                    |
+  // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty>
   static void check() {
     static_assert(std::same_as<LOty, RSty>,
@@ -94,7 +138,7 @@ struct router_handler_signature_base {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] router_handler_signature [const]                           ( struct ) |
+// | [>] router_handler_signature                                   ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
 // |   Cty - class type of the handler                                         |
@@ -112,32 +156,12 @@ struct router_handler_signature_base {
 template <typename Cty, typename Retty, typename Reqty, typename... Args>
 struct router_handler_signature<Retty (Cty::*)(Reqty, Args...) const>
     : router_handler_signature_base<Retty, Reqty, Args...> {};
-
 template <typename Cty, typename Retty, typename Reqty, typename... Args>
 struct router_handler_signature<Retty (Cty::*)(Reqty, Args...) const noexcept>
     : router_handler_signature_base<Retty, Reqty, Args...> {};
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] router_handler_signature                                   ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// |   Cty - class type of the handler                                         |
-// |   Retty - return type of the handler                                      |
-// |   Reqty - type of the first argument of the handler (request)             |
-// |   Args - types of the remaining arguments of the handler (routing)        |
-// +---------------------------------------------------------------------------+
-// | This specialization of the router_handler_signature struct handles the    |
-// | case where the handler is a non-const member function. It inherits from   |
-// | the router_handler_signature_base struct and provides the same type       |
-// | aliases and static methods for creating parametrized router handlers and  |
-// | checking argument types.                                                  |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
 template <typename Cty, typename Retty, typename Reqty, typename... Args>
 struct router_handler_signature<Retty (Cty::*)(Reqty, Args...)>
     : router_handler_signature_base<Retty, Reqty, Args...> {};
-
 template <typename Cty, typename Retty, typename Reqty, typename... Args>
 struct router_handler_signature<Retty (Cty::*)(Reqty, Args...) noexcept>
     : router_handler_signature_base<Retty, Reqty, Args...> {};

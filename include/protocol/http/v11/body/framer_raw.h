@@ -49,7 +49,7 @@ class framer_raw {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   explicit framer_raw(std::size_t content_length) : expected_(content_length) {}
   // +=========================================================================+
   // | [>] consume                                                  ( public ) |
@@ -57,7 +57,7 @@ class framer_raw {
   // | Consumes up to (expected_ - accumulated_) bytes from input.             |
   // | Returns immediately with complete=true when Content-Length is reached.  |
   // | A zero Content-Length body completes on the first call with consumed=0. |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   framer_state consume(std::span<const std::byte> input) {
     framer_state result;
     std::size_t remaining = expected_ - accumulated_;
@@ -71,7 +71,7 @@ class framer_raw {
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::size_t expected_;
   std::size_t accumulated_{0};
 };

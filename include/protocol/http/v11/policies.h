@@ -46,6 +46,9 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct policies {
+  // +=========================================================================+
+  // | [>] CONSTANTs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
   static constexpr std::size_t kMaxQueryParameters = 128;
   static constexpr std::size_t kMaxChunkedExtensionSize = 1024;
   static constexpr std::size_t kMaxChunkedTrailerSize = 4096;

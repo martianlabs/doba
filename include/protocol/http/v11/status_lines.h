@@ -42,6 +42,7 @@ namespace martianlabs::doba::protocol::http::v11 {
 #define STR_VALUE(x) STR_VALUE_RAW(x)
 #define EAS(x) x
 #define SL(x) "HTTP/1.1 " STR_VALUE(SC_##x) " " STR_VALUE(RP_##x) "\r\n"
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] status_lines                                               ( struct ) |
@@ -51,8 +52,8 @@ namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////
 struct status_lines {
   // +=========================================================================+
-  // | [>] LITERALs                                                 ( public ) |
-  // +=========================================================================+
+  // | [>] CONSTANTs [LITERALs]                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   static constexpr char k100[] = EAS(SL(100_CONTINUE));
   static constexpr char k101[] = EAS(SL(101_SWITCHING_PROTOCOLS));
   static constexpr char k200[] = EAS(SL(200_OK));
@@ -101,8 +102,8 @@ struct status_lines {
   static constexpr char k504[] = EAS(SL(504_GATEWAY_TIMEOUT));
   static constexpr char k505[] = EAS(SL(505_HTTP_VERSION_NOT_SUPPORTED));
   // +=========================================================================+
-  // | [>] SIZEs                                                    ( public ) |
-  // +=========================================================================+
+  // | [>] CONSTANTs [SIZEs]                                        ( public ) |
+  // +-------------------------------------------------------------------------+
   static constexpr std::size_t k100Sz = sizeof(k100) - 1;
   static constexpr std::size_t k101Sz = sizeof(k101) - 1;
   static constexpr std::size_t k200Sz = sizeof(k200) - 1;

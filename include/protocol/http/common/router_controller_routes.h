@@ -53,18 +53,18 @@ class router_controller_routes {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   router_controller_routes(router<RQty, RSty>& owner,
                            std::shared_ptr<Cty> instance)
       : owner_(owner), instance_(std::move(instance)) {}
   router_controller_routes(const router_controller_routes&) = delete;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   router_controller_routes& operator=(const router_controller_routes&) = delete;
   // +=========================================================================+
   // | [>] add                                                      ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <typename Mty>
     requires std::is_member_function_pointer_v<Mty>
   void add(std::string_view method, std::string_view route, Mty member) {
@@ -74,10 +74,13 @@ class router_controller_routes {
   }
 
  private:
+  // +=========================================================================+
+  // | [>] FRIEND-CLASSEs                                          ( private ) |
+  // +-------------------------------------------------------------------------+
   friend class router<RQty, RSty>;
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   router<RQty, RSty>& owner_;
   std::shared_ptr<Cty> instance_;
   std::size_t count_{0};

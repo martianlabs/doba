@@ -57,12 +57,14 @@ namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
 static constexpr DWORD kAcceptAddressBytes =
     static_cast<DWORD>(sizeof(sockaddr_storage) + 16);
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] io_type                                                ( enum-class ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 enum class io_type : uint8_t { kAccept, kSend, kReceive, kOutput };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] FORWARDs                                                   ( public ) |
@@ -70,6 +72,7 @@ enum class io_type : uint8_t { kAccept, kSend, kReceive, kOutput };
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty, typename CNty>
 struct context;
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] overlapped_base                                            ( struct ) |
@@ -84,9 +87,10 @@ struct overlapped_base : OVERLAPPED {
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   const io_type type;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] overlapped_accept                                          ( struct ) |
@@ -100,6 +104,7 @@ struct overlapped_accept : overlapped_base {
   SOCKET socket{INVALID_SOCKET};
   CHAR addresses[(kAcceptAddressBytes * 2)]{0};
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] overlapped_receive                                         ( struct ) |
@@ -113,6 +118,7 @@ struct overlapped_receive : overlapped_base {
       : overlapped_base(io_type::kReceive), ctx{context} {}
   std::shared_ptr<context<ENty, CNty>> ctx;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] overlapped_send                                            ( struct ) |
@@ -130,6 +136,7 @@ struct overlapped_send : overlapped_base {
   DWORD buffer_count{0};
   std::size_t submitted_size{0};
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] context [windowsTM]                                        ( struct ) |
@@ -141,7 +148,7 @@ template <protocol::contracts::engine ENty, typename CNty>
 struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <protocol::contracts::engine_factory<ENty> FAty>
   context(SOCKET in_socket, std::size_t recv_buffer_size,
           std::size_t send_buffer_size, const FAty& create_engine,
@@ -163,12 +170,12 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   ~context() = default;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   context& operator=(const context&) = delete;
   context& operator=(context&&) noexcept = delete;
   // +=========================================================================+
   // | [>] send_completed                                           ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void send_completed(std::size_t size, std::size_t submitted_size) {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     send_state_ = send_status::kIdle;
@@ -185,7 +192,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] output_ready                                             ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void output_ready() {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     send_state_ = send_status::kIdle;
@@ -193,7 +200,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] send                                                     ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void send(std::string head, std::string body,
             std::unique_ptr<common::reader> source) {
     std::lock_guard<std::mutex> lock(sending_mutex_);
@@ -210,7 +217,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] arm_next_receive_operation                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool arm_next_receive_operation() {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     processing_receive_ = false;
@@ -231,7 +238,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] receive_completed                                        ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool receive_completed(std::size_t size) {
     std::lock_guard<std::mutex> receive_lock(receive_mutex_);
     {
@@ -281,7 +288,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] receive_failed                                           ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void receive_failed() {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     receiving_ = false;
@@ -289,7 +296,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] send_failed                                              ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void send_failed() {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     send_state_ = send_status::kIdle;
@@ -297,14 +304,14 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] abort                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void abort() {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     abort_();
   }
   // +=========================================================================+
   // | [>] connected                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void connected(HANDLE completion_port) {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
@@ -324,7 +331,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] close                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void close() {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     if (closing_ || socket_ == INVALID_SOCKET) return;
@@ -337,7 +344,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void stop() {
     // Wait for the active handler before closing the connection.
     {
@@ -353,7 +360,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] notify_disconnection                                     ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void notify_disconnection() {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
@@ -371,7 +378,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] notify_connection                                       ( public )  |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void notify_connection() {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
@@ -382,13 +389,13 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] eof                                                     ( public )  |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool eof() const { return input_.eof(); }
 
  private:
   // +=========================================================================+
   // | [>] receive_                                                ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool receive_() {
     DWORD f = 0, r = 0;
     overlapped_receive<ENty, CNty>* ovr = new (std::nothrow)
@@ -406,7 +413,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] request_output_                                         ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void request_output_() {
     if (processing_receive_ || send_state_ != send_status::kIdle) return;
     auto output = new (std::nothrow) overlapped_send<ENty, CNty>(
@@ -422,7 +429,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] send_pending_                                           ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void send_pending_() {
     if (aborted_) {
       abort_();
@@ -470,7 +477,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] cleanup_resources_                                      ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void cleanup_resources_() {
     if (socket_ == INVALID_SOCKET) {
       retire_();
@@ -499,7 +506,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] abort_                                                  ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void abort_() {
     closing_ = true;
     aborted_ = true;
@@ -508,7 +515,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] close_socket_                                           ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void close_socket_() {
     if (socket_ != INVALID_SOCKET) {
       closesocket(socket_);
@@ -517,7 +524,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] retire_                                                 ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void retire_() {
     if (retired_ || socket_ != INVALID_SOCKET || receiving_ ||
         processing_receive_ || send_state_ != send_status::kIdle) return;
@@ -526,7 +533,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   enum class send_status { kIdle, kQueued, kPending };
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
@@ -551,6 +558,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   bool retired_{false};
   WSABUF ovr_wsa_{0};
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] basic_transport [windowsTM]                                 ( class ) |
@@ -565,11 +573,11 @@ class basic_transport {
  public:
   // +=========================================================================+
   // | [>] TYPEs                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   using policies_type = PTy;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   explicit basic_transport(
       policies_type configuration, FAty create_engine,
       typename CNty::shared_state shared_state)
@@ -596,12 +604,12 @@ class basic_transport {
   ~basic_transport() { stop(); }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   basic_transport& operator=(const basic_transport&) = delete;
   basic_transport& operator=(basic_transport&&) noexcept = delete;
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void start() {
     {
       std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
@@ -629,11 +637,11 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void stop() { stop_(false); }
   // +=========================================================================+
   // | [>] set_on_connection                                        ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <typename FNty>
   void set_on_connection(FNty&& fn) {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
@@ -642,7 +650,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] set_on_disconnection                                     ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <typename FNty>
   void set_on_disconnection(FNty&& fn) {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
@@ -653,7 +661,7 @@ class basic_transport {
  private:
   // +=========================================================================+
   // | [>] stop_                                                   ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void stop_(bool starting_failure) {
     if (current_transport_ == this) {
       throw std::runtime_error(
@@ -721,7 +729,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] parse_port                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   uint16_t parse_port(const char port[]) const {
     if (!port || !*port) {
       throw std::runtime_error("Invalid port (range from 1 to 65535)!");
@@ -737,7 +745,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] ensure_stopped                                          ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void ensure_stopped() const {
     if (starting_ || stopping_ || io_h_ != nullptr) {
       throw std::runtime_error(
@@ -746,7 +754,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] setup_listener                                          ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::size_t setup_listener(in_addr ip, uint16_t port_num) {
     std::size_t workers = configuration_.worker_count;
     if (!workers) {
@@ -809,7 +817,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] setup_accept_pipeline                                   ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void setup_accept_pipeline(std::size_t workers) {
     {
       std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
@@ -822,7 +830,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] setup_workers                                           ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::size_t setup_workers(std::size_t number_of_workers) {
     for (std::size_t i = 0; i < number_of_workers; i++) {
       workers_.emplace_back(std::jthread([this]() {
@@ -871,7 +879,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] get_accept_socket                                       ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   SOCKET get_accept_socket() {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
     if (stopping_) return INVALID_SOCKET;
@@ -879,7 +887,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] finish_accept                                           ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void finish_accept() {
     bool replenish = false;
     {
@@ -892,7 +900,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] register_context                                        ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool register_context(const std::shared_ptr<context<ENty, CNty>>& ctx) {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
     if (stopping_) return false;
@@ -904,7 +912,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] retire_context                                          ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void retire_context(context<ENty, CNty>* ctx) {
     {
       std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
@@ -915,7 +923,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] handle_accept                                           ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void handle_accept(overlapped_accept* ova) {
     SOCKET listener = get_accept_socket();
     if (listener == INVALID_SOCKET) {
@@ -994,7 +1002,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] handle_receive                                          ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void handle_receive(std::shared_ptr<context<ENty, CNty>> ctx,
                       DWORD bytes_received) {
     try {
@@ -1012,7 +1020,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] handle_send                                             ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void handle_send(overlapped_send<ENty, CNty>* ovs, DWORD bytes_sent) {
     try {
       if (ovs->get_type() == io_type::kOutput) ovs->ctx->output_ready();
@@ -1024,7 +1032,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] handle_error                                            ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void handle_error(overlapped_base* ovb) {
     switch (ovb->get_type()) {
       case io_type::kAccept: {
@@ -1045,7 +1053,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] handle_overlapped                                       ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void handle_overlapped(overlapped_base* ovb) {
     switch (ovb->get_type()) {
       case io_type::kAccept:
@@ -1066,7 +1074,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] replenish_accept_pipeline                              ( private )  |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool replenish_accept_pipeline() {
     for (;;) {
       {
@@ -1079,7 +1087,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | [>] post_accept                                             ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool post_accept(bool replacement) {
     SOCKET soc = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0,
                             WSA_FLAG_OVERLAPPED);
@@ -1120,7 +1128,7 @@ class basic_transport {
   }
   // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   const policies_type configuration_;
   const FAty create_engine_;
   const typename CNty::shared_state shared_state_;
@@ -1142,6 +1150,7 @@ class basic_transport {
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tcp [windowsTM]                                             ( class ) |

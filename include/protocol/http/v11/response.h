@@ -56,11 +56,11 @@ class response {
  public:
   // +=========================================================================+
   // | [>] TYPEs                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   using serialized_type = protocol::serialization_result;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   response(const response&) = delete;
   response(response&& in) noexcept
       : head_(std::move(in.head_)),
@@ -88,7 +88,7 @@ class response {
   ~response() = default;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   response& operator=(const response&) = delete;
   response& operator=(response&& in) noexcept {
     if (this == &in) return *this;
@@ -117,18 +117,21 @@ class response {
   }
   // +=========================================================================+
   // | [>] serialize                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Transfers head, body and an optional reader to transport.               |
   // | Consumes this response; destroy or reassign it before further use.      |
   // | The transport drains the reader in bounded segments.                    |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   [[nodiscard]] std::unique_ptr<protocol::serialization_result> serialize() {
     if (head_.empty()) throw std::logic_error("response already serialized!");
-    // RFC 9110 S8.6/S15.3.5/S15.3.6/S15.4.5: 1xx, 204, 205 and 304 responses
-    // must never carry a message body, regardless of what a handler may have
-    // set via set_body(). 1xx/204 must not advertise any body framing at all,
-    // while 205 uses Content-Length: 0. 304 may still describe the resource
-    // via Content-Length (mirroring a hypothetical 200).
+    // +-----------------------------------------------------------------------+
+    // | RFC 9110 S8.6/S15.3.5/S15.3.6/S15.4.5: 1xx, 204, 205 and 304          |
+    // | responses must never carry a message body, regardless of what a       |
+    // | handler may have set via set_body(). 1xx/204 must not advertise any   |
+    // | body framing at all, while 205 uses Content-Length: 0. 304 may still  |
+    // | describe the resource via Content-Length (mirroring a                 |
+    // | hypothetical 200).                                                    |
+    // +-----------------------------------------------------------------------+
     bool is_informational = status_code_ < SC_200_OK;
     bool must_omit_body = is_informational ||
                           status_code_ == SC_204_NO_CONTENT ||
@@ -188,7 +191,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] add_header                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   response& add_header(std::string_view k, std::string_view v) {
     if (!helpers::is_token(k)) {
       throw std::invalid_argument("invalid header name!");
@@ -201,8 +204,8 @@ class response {
     }
     std::size_t k_size = k.size();
     std::size_t v_size = v.size();
-    std::size_t space_left = policies::kMaxResponseHeadSizeInMemory -
-                             sln_len_ - hdr_len_;
+    std::size_t space_left =
+        policies::kMaxResponseHeadSizeInMemory - sln_len_ - hdr_len_;
     // Bytes written by this call: key + ':' + ' ' + value + '\r' + '\n' = k + v
     // + 4. Reserve the 2 bytes of the header-terminating CRLF.
     if (k_size + v_size + 4 + 2 > space_left) {
@@ -227,7 +230,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] add_header                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <typename T>
     requires std::is_arithmetic_v<T>
   response& add_header(std::string_view key, const T& val) {
@@ -235,7 +238,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] set_header                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   response& set_header(std::string_view k, std::string_view v) {
     if (!helpers::is_token(k)) {
       throw std::invalid_argument("invalid header name!");
@@ -254,8 +257,8 @@ class response {
     std::size_t new_v_size = v.size();
     if (new_v_size > val_len) {
       std::size_t grow = new_v_size - val_len;
-      std::size_t space_left = policies::kMaxResponseHeadSizeInMemory -
-                               sln_len_ - hdr_len_;
+      std::size_t space_left =
+          policies::kMaxResponseHeadSizeInMemory - sln_len_ - hdr_len_;
       if (grow + 2 > space_left) {
         throw std::out_of_range("not enough space to set header!");
       }
@@ -274,7 +277,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] set_header                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <typename T>
     requires std::is_arithmetic_v<T>
   response& set_header(std::string_view key, const T& val) {
@@ -282,7 +285,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] has_header                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Returns true if a header whose name case-insensitively matches 'k' is   |
   // | present. Lets callers probe for a header without incurring the cost (or |
   // | control flow) of catching the exception thrown by get_header.           |
@@ -293,16 +296,16 @@ class response {
     return find_header(k, line_off, val_off, val_len, line_len);
   }
   // +=========================================================================+
-  // | [>] wants_connection_close                                  ( public ) |
-  // +=========================================================================+
+  // | [>] wants_connection_close                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   bool wants_connection_close() const { return connection_close_count_ != 0; }
   // +=========================================================================+
-  // | [>] is_continue_100                                        ( public ) |
-  // +=========================================================================+
+  // | [>] is_continue_100                                          ( public ) |
+  // +-------------------------------------------------------------------------+
   bool is_continue_100() const { return status_code_ == SC_100_CONTINUE; }
   // +=========================================================================+
   // | [>] get_header                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Returns the (key, value) pair for the first header whose name           |
   // | case-insensitively matches 'k'. Throws std::runtime_error if the header |
   // | is not present. The returned strings are owned copies: they do NOT      |
@@ -317,7 +320,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] get_header                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Returns the (key, value) pair for the header at position 'index' (in    |
   // | insertion order). Throws std::out_of_range if 'index' is beyond the     |
   // | number of headers. The returned strings are owned copies (see above).   |
@@ -348,7 +351,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] get_headers_length                                       ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Returns the number of headers currently stored. Enables safe indexed    |
   // | iteration via get_header(index) without relying on catching exceptions. |
   // +-------------------------------------------------------------------------+
@@ -371,7 +374,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] remove_header                                            ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Removes the first header whose name case-insensitively matches 'k' and  |
   // | compacts the header block. Removing an absent header is an intentional  |
   // | no-op (idempotent): unlike get_header, it does not throw when 'k' is    |
@@ -397,7 +400,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Stores small payloads in body_; larger ones use a raw writer.           |
   // +-------------------------------------------------------------------------+
   response& set_body(std::string_view sv) {
@@ -419,7 +422,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Adopts a caller-built body::body_writer (possibly already written to)   |
   // | as the response body, replacing any previously set body. Framing        |
   // | headers are emitted at serialization from the writer's mode and size.   |
@@ -433,7 +436,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Convenience overload for numeric types: converts the value to a string  |
   // | and stores it as the response body with deferred framing.               |
   // +-------------------------------------------------------------------------+
@@ -444,7 +447,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // length is the exact number of bytes remaining in source.
   response& set_body(common::reader&& source, std::size_t length) {
     reset_body();
@@ -454,7 +457,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] clear_body                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Discards the body and restores empty-response framing.                  |
   // +-------------------------------------------------------------------------+
   response& clear_body() {
@@ -476,7 +479,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] suppress_body                                            ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Discards body bytes while retaining the advertised framing for HEAD.    |
   // +-------------------------------------------------------------------------+
   response& suppress_body() {
@@ -487,7 +490,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] STATUS-LINEs                                             ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   [[nodiscard]] static response continue_100() {
     // 100_CONTINUE
     return response(status_lines::k100, SC_100_CONTINUE);
@@ -680,17 +683,17 @@ class response {
  private:
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr std::string_view kDatePrefix = "Date: ";
   static constexpr std::size_t kDateLength = 29;
   static constexpr std::size_t kDateLineLength =
       kDatePrefix.size() + kDateLength + 2;
   // +=========================================================================+
   // | [>] add_date_header                                         ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void add_date_header() {
-    std::size_t space_left = policies::kMaxResponseHeadSizeInMemory -
-                             sln_len_ - hdr_len_;
+    std::size_t space_left =
+        policies::kMaxResponseHeadSizeInMemory - sln_len_ - hdr_len_;
     if (kDateLineLength + 2 > space_left) {
       throw std::out_of_range("not enough space to add header!");
     }
@@ -703,17 +706,15 @@ class response {
   }
   // +=========================================================================+
   // | [>] reset_body                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Drops any previously set body (in-memory payload or adopted writer) and |
   // | clears the framing headers, so every set_body() call fully replaces the |
   // | former body instead of accumulating state.                              |
   // +-------------------------------------------------------------------------+
-  void reset_body() {
-    clear_body();
-  }
+  void reset_body() { clear_body(); }
   // +=========================================================================+
   // | [>] apply_body_framing                                      ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Emits deferred framing unless an explicit header already supplies it.   |
   // +-------------------------------------------------------------------------+
   void apply_body_framing() {
@@ -723,8 +724,8 @@ class response {
       throw std::invalid_argument("conflicting response framing headers!");
     }
     if (has_content_length_header_ || has_transfer_encoding_header_) return;
-    std::size_t space_left = policies::kMaxResponseHeadSizeInMemory -
-                             sln_len_ - hdr_len_;
+    std::size_t space_left =
+        policies::kMaxResponseHeadSizeInMemory - sln_len_ - hdr_len_;
     if (chunked_) {
       constexpr std::string_view line = "Transfer-Encoding: chunked\r\n";
       if (line.size() + 2 > space_left) {
@@ -736,8 +737,8 @@ class response {
     } else if (content_length_) {
       constexpr std::string_view prefix = "Content-Length: ";
       char digits[std::numeric_limits<std::size_t>::digits10 + 1];
-      const auto converted = std::to_chars(digits, digits + sizeof(digits),
-                                           *content_length_);
+      const auto converted =
+          std::to_chars(digits, digits + sizeof(digits), *content_length_);
       std::size_t digit_count = converted.ptr - digits;
       if (converted.ec != std::errc() ||
           prefix.size() + digit_count + 4 > space_left) {
@@ -752,13 +753,13 @@ class response {
   }
   // +=========================================================================+
   // | [>] tolower_ascii                                           ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr char tolower_ascii(char c) noexcept {
     return (c >= 'A' && c <= 'Z') ? static_cast<char>(c + 32) : c;
   }
   // +=========================================================================+
   // | [>] iequals                                                 ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool iequals(std::string_view a, std::string_view b) {
     if (a.size() != b.size()) return false;
     for (std::size_t i = 0; i < a.size(); i++) {
@@ -767,8 +768,8 @@ class response {
     return true;
   }
   // +=========================================================================+
-  // | [>] has_close_option                                       ( private ) |
-  // +=========================================================================+
+  // | [>] has_close_option                                        ( private ) |
+  // +-------------------------------------------------------------------------+
   static bool has_close_option(std::string_view value) {
     bool close = false;
     helpers::for_each_list_element(value, [&close](std::string_view option) {
@@ -781,7 +782,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] find_header                                             ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Scans the serialized header block [sln_len_, sln_len_ + hdr_len_) for   |
   // | the first header whose name case-insensitively matches 'k'. On success  |
   // | reports the line start, value start, value length and full line length  |
@@ -816,9 +817,10 @@ class response {
   }
   // +=========================================================================+
   // | [>] CONSTRUCTOR                                             ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   response(std::string_view status_line, int status_code)
-      : head_(status_line), sln_len_(status_line.size()),
+      : head_(status_line),
+        sln_len_(status_line.size()),
         status_code_(status_code) {
     if (sln_len_ > policies::kMaxResponseHeadSizeInMemory) {
       throw std::out_of_range("not enough space to set status line!");
@@ -832,7 +834,7 @@ class response {
   }
   // +=========================================================================+
   // | [>] ATTRIBUTES                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::string head_;
   std::string body_;
   std::size_t sln_len_{0};

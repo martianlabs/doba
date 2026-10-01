@@ -36,12 +36,15 @@ namespace martianlabs::doba::network::detail {
 class environment {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   environment() = default;
   environment(const environment&) = delete;
   environment(environment&&) noexcept = delete;
   ~environment() = default;
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
   environment& operator=(const environment&) = delete;
   environment& operator=(environment&&) noexcept = delete;
 };

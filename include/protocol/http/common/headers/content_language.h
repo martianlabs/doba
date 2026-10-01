@@ -126,18 +126,11 @@ namespace martianlabs::doba::protocol::http::headers {
 // | IMPORTANT: field-value is normalized (outer OWS already removed).         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] content_language                                            ( class ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
 class content_language {
  public:
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool check(std::string_view sv) {
     return helpers::for_each_list_element(sv, consume_language_tag);
   }
@@ -145,13 +138,13 @@ class content_language {
  private:
   // +=========================================================================+
   // | [>] is_alphanum                                             ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool is_alphanum(std::uint8_t c) {
     return helpers::is_alpha(c) || helpers::is_digit(c);
   }
   // +=========================================================================+
   // | [>] is_alpha_subtag                                         ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool is_alpha_subtag(std::string_view sv,
                                         std::size_t min_size,
                                         std::size_t max_size) {
@@ -165,7 +158,7 @@ class content_language {
   }
   // +=========================================================================+
   // | [>] is_digit_subtag                                         ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool is_digit_subtag(std::string_view sv,
                                         std::size_t required_size) {
     if (sv.size() != required_size) return false;
@@ -178,7 +171,7 @@ class content_language {
   }
   // +=========================================================================+
   // | [>] is_alphanum_subtag                                      ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool is_alphanum_subtag(std::string_view sv,
                                            std::size_t min_size,
                                            std::size_t max_size) {
@@ -192,7 +185,7 @@ class content_language {
   }
   // +=========================================================================+
   // | [>] consume_first_subtag                                    ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool consume_first_subtag(std::string_view sv,
                                              std::string_view& subtag,
                                              std::size_t& off) {
@@ -207,7 +200,7 @@ class content_language {
   }
   // +=========================================================================+
   // | [>] peek_next_subtag                                        ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool peek_next_subtag(std::string_view sv, std::size_t off,
                                          std::string_view& subtag,
                                          std::size_t& end) {
@@ -226,7 +219,7 @@ class content_language {
   }
   // +=========================================================================+
   // | [>] ascii_lower                                             ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr std::uint8_t ascii_lower(std::uint8_t c) {
     if (c >= 'A' && c <= 'Z') {
       return static_cast<std::uint8_t>(c + ('a' - 'A'));
@@ -235,7 +228,7 @@ class content_language {
   }
   // +=========================================================================+
   // | [>] ascii_iequals                                           ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool ascii_iequals(std::string_view lhs,
                                       std::string_view rhs) {
     if (lhs.size() != rhs.size()) return false;
@@ -250,7 +243,7 @@ class content_language {
   }
   // +=========================================================================+
   // | [>] is_irregular_grandfathered                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool is_irregular_grandfathered(std::string_view sv) {
     // The regular grandfathered tags already match the langtag ABNF.
     // Only irregular grandfathered tags need explicit recognition.
@@ -266,7 +259,7 @@ class content_language {
   }
   // +=========================================================================+
   // | [>] consume_privateuse                                      ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool consume_privateuse(std::string_view sv) {
     // privateuse = "x" 1*("-" (1*8alphanum))
     std::string_view subtag;
@@ -288,36 +281,36 @@ class content_language {
   }
   // +=========================================================================+
   // | [>] consume_langtag                                         ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool consume_langtag(std::string_view sv) {
-    // -------------------------------------------------------------------------
-    // RFC 5646 S2.1:
-    // -------------------------------------------------------------------------
-    // langtag = language
-    //           ["-" script]
-    //           ["-" region]
-    //           *("-" variant)
-    //           *("-" extension)
-    //           ["-" privateuse]
-    // -------------------------------------------------------------------------
+    // +-----------------------------------------------------------------------+
+    // | RFC 5646 S2.1:                                                        |
+    // +-----------------------------------------------------------------------+
+    // | langtag = language                                                    |
+    // |           ["-" script]                                                |
+    // |           ["-" region]                                                |
+    // |           *("-" variant)                                              |
+    // |           *("-" extension)                                            |
+    // |           ["-" privateuse]                                            |
+    // +-----------------------------------------------------------------------+
     std::string_view subtag;
     std::size_t off = 0;
     std::size_t end = 0;
-    // -------------------------------------------------------------------------
-    // language = 2*3ALPHA [ "-" extlang ]
-    //          / 4ALPHA
-    //          / 5*8ALPHA
-    // -------------------------------------------------------------------------
+    // +-----------------------------------------------------------------------+
+    // | language = 2*3ALPHA [ "-" extlang ]                                   |
+    // |          / 4ALPHA                                                     |
+    // |          / 5*8ALPHA                                                   |
+    // +-----------------------------------------------------------------------+
     if (!consume_first_subtag(sv, subtag, off)) return false;
     if (!is_alpha_subtag(subtag, 2, 8)) return false;
     const std::size_t language_size = subtag.size();
-    // -------------------------------------------------------------------------
-    // extlang = 3ALPHA *2("-" 3ALPHA)
-    //
-    // An extlang is only allowed after a two-letter or three-letter
-    // primary language subtag. The complete production permits up to
-    // three consecutive three-letter subtags.
-    // -------------------------------------------------------------------------
+    // +-----------------------------------------------------------------------+
+    // | extlang = 3ALPHA *2("-" 3ALPHA)                                       |
+    // |                                                                       |
+    // | An extlang is only allowed after a two-letter or three-letter         |
+    // | primary language subtag. The complete production permits up to        |
+    // | three consecutive three-letter subtags.                               |
+    // +-----------------------------------------------------------------------+
     if (language_size <= 3) {
       std::size_t extlang_count = 0;
       while (extlang_count < 3 && peek_next_subtag(sv, off, subtag, end) &&
@@ -326,23 +319,23 @@ class content_language {
         extlang_count++;
       }
     }
-    // -------------------------------------------------------------------------
-    // script = 4ALPHA
-    // -------------------------------------------------------------------------
+    // +-----------------------------------------------------------------------+
+    // | script = 4ALPHA                                                       |
+    // +-----------------------------------------------------------------------+
     if (peek_next_subtag(sv, off, subtag, end) &&
         is_alpha_subtag(subtag, 4, 4)) {
       off = end;
     }
-    // -------------------------------------------------------------------------
-    // region = 2ALPHA / 3DIGIT
-    // -------------------------------------------------------------------------
+    // +-----------------------------------------------------------------------+
+    // | region = 2ALPHA / 3DIGIT                                              |
+    // +-----------------------------------------------------------------------+
     if (peek_next_subtag(sv, off, subtag, end) &&
         (is_alpha_subtag(subtag, 2, 2) || is_digit_subtag(subtag, 3))) {
       off = end;
     }
-    // -------------------------------------------------------------------------
-    // variant = 5*8alphanum / (DIGIT 3alphanum)
-    // -------------------------------------------------------------------------
+    // +-----------------------------------------------------------------------+
+    // | variant = 5*8alphanum / (DIGIT 3alphanum)                             |
+    // +-----------------------------------------------------------------------+
     while (peek_next_subtag(sv, off, subtag, end)) {
       const bool valid_variant =
           is_alphanum_subtag(subtag, 5, 8) ||
@@ -351,11 +344,11 @@ class content_language {
       if (!valid_variant) break;
       off = end;
     }
-    // -------------------------------------------------------------------------
-    // extension = singleton 1*("-" (2*8alphanum))
-    //
-    // singleton = DIGIT / ALPHA except "x"
-    // -------------------------------------------------------------------------
+    // +-----------------------------------------------------------------------+
+    // | extension = singleton 1*("-" (2*8alphanum))                           |
+    // |                                                                       |
+    // | singleton = DIGIT / ALPHA except "x"                                  |
+    // +-----------------------------------------------------------------------+
     while (peek_next_subtag(sv, off, subtag, end) && subtag.size() == 1 &&
            ascii_lower(static_cast<std::uint8_t>(subtag[0])) != 'x') {
       // Consume the singleton.
@@ -368,9 +361,9 @@ class content_language {
       }
       if (!has_extension_subtag) return false;
     }
-    // -------------------------------------------------------------------------
-    // privateuse = "x" 1*("-" (1*8alphanum))
-    // -------------------------------------------------------------------------
+    // +-----------------------------------------------------------------------+
+    // | privateuse = "x" 1*("-" (1*8alphanum))                                |
+    // +-----------------------------------------------------------------------+
     if (peek_next_subtag(sv, off, subtag, end) && subtag.size() == 1 &&
         ascii_lower(static_cast<std::uint8_t>(subtag[0])) == 'x') {
       // Consume the "x" singleton.
@@ -391,14 +384,14 @@ class content_language {
   // | [>] consume_language_tag                                    ( private ) |
   // +=========================================================================+
   static constexpr bool consume_language_tag(std::string_view sv) {
-    // -------------------------------------------------------------------------
-    // RFC 5646 S2.1:
-    // -------------------------------------------------------------------------
-    // Language-Tag = langtag / privateuse / grandfathered
-    //
-    // Regular grandfathered tags match the langtag production. Irregular
-    // grandfathered tags require explicit case-insensitive matching.
-    // -------------------------------------------------------------------------
+    // +-----------------------------------------------------------------------+
+    // | RFC 5646 S2.1:                                                        |
+    // +-----------------------------------------------------------------------+
+    // | Language-Tag = langtag / privateuse / grandfathered                   |
+    // |                                                                       |
+    // | Regular grandfathered tags match the langtag production. Irregular    |
+    // | grandfathered tags require explicit case-insensitive matching.        |
+    // +-----------------------------------------------------------------------+
     if (sv.empty()) return false;
     return is_irregular_grandfathered(sv) || consume_privateuse(sv) ||
            consume_langtag(sv);

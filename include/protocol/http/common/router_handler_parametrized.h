@@ -261,13 +261,13 @@ class router_handler_parametrized {
  public:
   // +=========================================================================+
   // | [>] TYPEs                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   using matcher_type = bool (*)(std::string_view, std::string_view);
   using callback_type =
       std::function<RSty(const RQty&, std::string_view, std::string_view)>;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   router_handler_parametrized(std::string pattern, matcher_type matcher,
                               callback_type callback)
       : pattern_{std::move(pattern)},
@@ -275,13 +275,13 @@ class router_handler_parametrized {
         callback_{std::move(callback)} {}
   // +=========================================================================+
   // | [>] matches                                                  ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   [[nodiscard]] bool matches(std::string_view path) const {
     return matcher_(pattern_, path);
   }
   // +=========================================================================+
   // | [>] invoke                                                   ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   RSty invoke(const RQty& req, std::string_view path) const {
     return callback_(req, pattern_, path);
   }
@@ -289,10 +289,10 @@ class router_handler_parametrized {
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
-  std::string pattern_;
-  matcher_type matcher_;
-  callback_type callback_;
+  // +-------------------------------------------------------------------------+
+  std::string pattern_;     // The route pattern to match against.
+  matcher_type matcher_;    // The function to match the route pattern against.
+  callback_type callback_;  // The function to invoke when there's a matche.
 };
 
 // /////////////////////////////////////////////////////////////////////////////

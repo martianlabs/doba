@@ -45,11 +45,11 @@ template <protocol::contracts::engine ENty>
 struct tcp_connection {
   // +=========================================================================+
   // | [>] TYPEs                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   using shared_state = std::nullptr_t;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <protocol::contracts::engine_factory<ENty> FAty>
   tcp_connection(std::size_t buffer_size, const FAty& create_engine)
       : engine{create_engine()},
@@ -61,13 +61,13 @@ struct tcp_connection {
       : tcp_connection(buffer_size, create_engine) {}
   // +=========================================================================+
   // | [>] process                                                  ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::size_t process() {
     return engine.on_bytes_received(buffer.get(), size, capacity);
   }
   // +=========================================================================+
   // | [>] consume                                                  ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool consume(std::size_t processed) {
     if (processed > size) return false;
     size -= processed;
@@ -76,9 +76,12 @@ struct tcp_connection {
     }
     return true;
   }
+  // +=========================================================================+
+  // | [>] prepare_output                                           ( public ) |
+  // +-------------------------------------------------------------------------+
   bool prepare_output(output_queue& output) {
-    return output.offset != output.buffer.size() ||
-           output.prefix_pending() || output.fill();
+    return output.offset != output.buffer.size() || output.prefix_pending() ||
+           output.fill();
   }
   std::span<char> output_bytes(output_queue& output) {
     if (output.offset != output.buffer.size()) {
@@ -86,6 +89,9 @@ struct tcp_connection {
     }
     return output.prefix_bytes();
   }
+  // +=========================================================================+
+  // | [>] output_buffers                                           ( public ) |
+  // +-------------------------------------------------------------------------+
   std::size_t output_buffers(output_queue& output,
                              std::span<std::span<char>> buffers) {
     if (buffers.empty()) return 0;
@@ -95,6 +101,9 @@ struct tcp_connection {
     }
     return output.prefix_buffers(buffers);
   }
+  // +=========================================================================+
+  // | [>] output_sent                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   bool output_sent(output_queue& output, std::size_t sent) {
     if (output.offset != output.buffer.size()) {
       if (sent > output.buffer.size() - output.offset) return false;
@@ -103,16 +112,31 @@ struct tcp_connection {
     }
     return output.consume_prefixes(sent);
   }
+  // +=========================================================================+
+  // | [>] output_pending                                           ( public ) |
+  // +-------------------------------------------------------------------------+
   bool output_pending(const output_queue& output) const {
     return output.queued() || output.offset != output.buffer.size();
   }
+  // +=========================================================================+
+  // | [>] established                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   bool established() const { return true; }
+  // +=========================================================================+
+  // | [>] peer_closed                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   bool peer_closed() const { return false; }
+  // +=========================================================================+
+  // | [>] eof                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   bool eof() const { return true; }
+  // +=========================================================================+
+  // | [>] close_output                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   bool close_output() { return true; }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   ENty engine;
   std::unique_ptr<char[]> buffer;
   const std::size_t capacity;

@@ -60,7 +60,7 @@ class directives {
  public:
   // +=========================================================================+
   // | [>] apply                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr verdict apply(const context& ctx) {
     for (const std::string_view option : ctx.connection.options) {
       // "upgrade" as a connection option requires a companion Upgrade offer.

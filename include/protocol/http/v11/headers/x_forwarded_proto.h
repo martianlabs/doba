@@ -64,7 +64,7 @@ class x_forwarded_proto {
  public:
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool check(std::string_view sv, parsed_token_list& out) {
     // The producer overload validates each scheme exactly as the pure check()
     // does and captures every non-empty scheme in order.
@@ -76,7 +76,7 @@ class x_forwarded_proto {
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr verdict interpret(const parsed_token_list&, v11::connection&,
                                      const policies&) {
     return verdict::kAccept;
@@ -85,7 +85,7 @@ class x_forwarded_proto {
  private:
   // +=========================================================================+
   // | [>] consume_scheme                                          ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool consume_scheme(std::string_view sv) {
     // Each list element is a bare URI scheme (RFC 3986 S3.1), matching the
     // "proto" parameter value of the RFC 7239 Forwarded header.

@@ -52,7 +52,7 @@ class policy {
  public:
   // +=========================================================================+
   // | [>] apply                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr verdict apply(const context& ctx) {
     if (ctx.policies.max_forwarding_hops != 0 &&
         ctx.forwarding_hops > ctx.policies.max_forwarding_hops) {

@@ -53,7 +53,7 @@ class body_writer {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static body_writer chunked(common::byte_storage_options opts = {}) {
     return body_writer(common::writer(std::move(opts)), writer_chunked());
   }
@@ -64,7 +64,7 @@ class body_writer {
   body_writer(body_writer&&) noexcept = default;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   body_writer& operator=(const body_writer&) = delete;
   body_writer& operator=(body_writer&&) noexcept = default;
   // +=========================================================================+
@@ -72,7 +72,7 @@ class body_writer {
   // +-------------------------------------------------------------------------+
   // | Encodes the caller-supplied raw payload using the framing selected at   |
   // | construction time and appends it into the owned sink.                   |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool write(std::span<const std::byte> payload) {
     if (!std::visit(
             [this, payload](auto& encoder) {
@@ -86,7 +86,7 @@ class body_writer {
   }
   // +=========================================================================+
   // | [>] write                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool write(std::string_view payload) {
     if (!std::visit(
             [this, payload](auto& encoder) {
@@ -103,7 +103,7 @@ class body_writer {
   // +-------------------------------------------------------------------------+
   // | Finalizes the body framing (emits the terminating chunk for chunked     |
   // | encoding; a no-op for raw). Idempotent.                                 |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool end() {
     return std::visit([this](auto& encoder) { return encoder.end(sink_); },
                       encoder_);
@@ -113,7 +113,7 @@ class body_writer {
   // +-------------------------------------------------------------------------+
   // | Finalizes the framing and the underlying storage, then hands over the   |
   // | accumulated (possibly spilled to disk) body bytes to the caller.        |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   [[nodiscard]] common::byte_storage release() {
     end();
     return sink_.release();
@@ -124,7 +124,7 @@ class body_writer {
   // | Reports whether this instance was constructed via chunked() (as opposed |
   // | to raw()). Lets callers that receive an already-built/used body_writer  |
   // | (e.g. response::set_body) pick the matching wire framing headers.       |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   [[nodiscard]] bool is_chunked() const noexcept {
     return std::holds_alternative<writer_chunked>(encoder_);
   }
@@ -135,7 +135,7 @@ class body_writer {
   // | (i.e. before framing overhead). Lets callers that receive an already-   |
   // | used raw body_writer (e.g. response::set_body) derive Content-Length    |
   // | without tracking it themselves.                                         |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   [[nodiscard]] std::size_t bytes_written() const noexcept {
     return bytes_written_;
   }
@@ -143,13 +143,13 @@ class body_writer {
  private:
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                            ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   body_writer(common::writer sink,
               std::variant<writer_chunked, writer_raw> encoder)
       : sink_(std::move(sink)), encoder_(std::move(encoder)) {}
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   common::writer sink_;
   std::variant<writer_chunked, writer_raw> encoder_;
   std::size_t bytes_written_{0};

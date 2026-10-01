@@ -47,11 +47,11 @@ namespace martianlabs::doba::transport::server {
 struct output_queue {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   explicit output_queue(std::size_t capacity) : capacity_{capacity} {}
   // +=========================================================================+
   // | [>] push                                                     ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool push(std::string&& head, std::string&& body,
             std::unique_ptr<common::reader>&& source) {
     const std::size_t available = capacity_ - queued_bytes_ - buffer.size();
@@ -59,8 +59,8 @@ struct output_queue {
       return false;
     }
     const std::size_t size = head.size() + body.size();
-    const std::size_t reserved = source
-        ? std::max(size, std::min<std::size_t>(8192, capacity_)) : size;
+    const std::size_t reserved =
+        source ? std::max(size, std::min<std::size_t>(8192, capacity_)) : size;
     if (reserved > available) return false;
     if (!size && !source) return true;
     queue_.emplace_back(std::move(head), std::move(body), 0, 0,
@@ -70,7 +70,7 @@ struct output_queue {
   }
   // +=========================================================================+
   // | [>] prefix_bytes                                            ( public )  |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::span<char> prefix_bytes() {
     if (queue_.empty()) return {};
     auto& entry = queue_.front();
@@ -84,8 +84,8 @@ struct output_queue {
     return {};
   }
   // +=========================================================================+
-  // | [>] prefix_buffers                                          ( public ) |
-  // +=========================================================================+
+  // | [>] prefix_buffers                                           ( public ) |
+  // +-------------------------------------------------------------------------+
   std::size_t prefix_buffers(std::span<std::span<char>> buffers) {
     std::size_t count = 0;
     for (auto& entry : queue_) {
@@ -104,7 +104,7 @@ struct output_queue {
   }
   // +=========================================================================+
   // | [>] consume_prefixes                                        ( public )  |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool consume_prefixes(std::size_t sent) {
     while (sent) {
       if (queue_.empty()) return false;
@@ -113,21 +113,23 @@ struct output_queue {
       const std::size_t head_left = head.size() - head_offset;
       const std::size_t body_left = body.size() - body_offset;
       if (!head_left && !body_left) return false;
-      const std::size_t taken = std::min(sent,
-                                         head_left ? head_left : body_left);
-      if (head_left) head_offset += taken;
-      else body_offset += taken;
+      const std::size_t taken =
+          std::min(sent, head_left ? head_left : body_left);
+      if (head_left)
+        head_offset += taken;
+      else
+        body_offset += taken;
       reserved -= taken;
       queued_bytes_ -= taken;
       sent -= taken;
-      if (head_offset == head.size() && body_offset == body.size() &&
-          !source) queue_.pop_front();
+      if (head_offset == head.size() && body_offset == body.size() && !source)
+        queue_.pop_front();
     }
     return true;
   }
   // +=========================================================================+
   // | [>] prefix_pending                                          ( public )  |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool prefix_pending() const {
     return !queue_.empty() &&
            (std::get<2>(queue_.front()) < std::get<0>(queue_.front()).size() ||
@@ -135,7 +137,7 @@ struct output_queue {
   }
   // +=========================================================================+
   // | [>] fill                                                     ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool fill() {
     buffer.clear();
     offset = 0;
@@ -163,8 +165,7 @@ struct output_queue {
           const std::size_t next = buffer.size();
           buffer.resize(next + available);
           const std::size_t read = source->read(std::span<std::byte>(
-              reinterpret_cast<std::byte*>(buffer.data() + next),
-              available));
+              reinterpret_cast<std::byte*>(buffer.data() + next), available));
           buffer.resize(next + read);
           if (source->failed() || (!read && !source->eof())) {
             return !buffer.empty();
@@ -177,27 +178,28 @@ struct output_queue {
   }
   // +=========================================================================+
   // | [>] queued                                                   ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool queued() const { return !queue_.empty(); }
   // +=========================================================================+
   // | [>] clear                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void clear() {
     queue_.clear();
     buffer.clear();
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::string buffer;
   std::size_t offset{0};
 
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::list<std::tuple<std::string, std::string, std::size_t, std::size_t,
-                       std::unique_ptr<common::reader>, std::size_t>> queue_;
+                       std::unique_ptr<common::reader>, std::size_t>>
+      queue_;
   const std::size_t capacity_;
   std::size_t queued_bytes_{0};
 };

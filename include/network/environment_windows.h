@@ -38,8 +38,8 @@ namespace martianlabs::doba::network::detail {
 class environment {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   environment() {
     WSADATA wsa_data;
     if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
@@ -49,6 +49,9 @@ class environment {
   environment(const environment&) = delete;
   environment(environment&&) noexcept = delete;
   ~environment() { WSACleanup(); }
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
   environment& operator=(const environment&) = delete;
   environment& operator=(environment&&) noexcept = delete;
 };

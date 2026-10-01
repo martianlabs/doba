@@ -52,7 +52,7 @@ class reader {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static reader chunked(std::span<const std::byte> source) {
     if (source.empty()) throw std::invalid_argument("Empty body source");
     return reader(common::reader::borrowed(source), reader_chunked());
@@ -76,7 +76,7 @@ class reader {
   reader(reader&&) noexcept = default;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   reader& operator=(const reader&) = delete;
   reader& operator=(reader&&) noexcept = default;
   // +=========================================================================+
@@ -85,7 +85,7 @@ class reader {
   // | Pulls wire bytes from the owned source, decodes them using the encoding |
   // | selected at construction time, and writes the decoded payload into      |
   // | output. See reader_chunked::read/reader_raw::read for semantics.        |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   reader_state read(std::span<std::byte> output) {
     return std::visit(
         [this, output](auto& decoder) { return decoder.read(source_, output); },
@@ -95,13 +95,13 @@ class reader {
  private:
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                            ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   reader(common::reader source,
          std::variant<reader_chunked, reader_raw> decoder)
       : source_(std::move(source)), decoder_(std::move(decoder)) {}
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   common::reader source_;
   std::variant<reader_chunked, reader_raw> decoder_;
 };

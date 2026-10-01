@@ -142,13 +142,13 @@ template <typename RQty, typename RSty>
 class decoder {
   // +=========================================================================+
   // | [>] USINGs                                                  ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   using body_framer_t = std::variant<body::framer_chunked, body::framer_raw>;
 
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   explicit decoder(policies configuration = {})
       : buffer_(std::make_unique_for_overwrite<char[]>(
             policies::kMaxRequestHeadSizeInMemory +
@@ -160,24 +160,25 @@ class decoder {
   ~decoder() { cleanup_body_file(); }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   decoder& operator=(const decoder&) = delete;
   decoder& operator=(decoder&&) noexcept = delete;
   // +=========================================================================+
   // | [>] deserialize                                              ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <typename FNty>
-  deserialization_result<RQty, RSty> deserialize(
-      const char* buffer, const std::size_t size, const std::size_t capacity,
-      std::size_t& consumed, FNty&& on_request) {
+  deserialization_result<RQty, RSty> deserialize(const char* buffer,
+                                                 const std::size_t size,
+                                                 const std::size_t capacity,
+                                                 std::size_t& consumed,
+                                                 FNty&& on_request) {
     std::string_view source(buffer, size);
     deserialization_result<RQty, RSty> result =
         body_framer_ ? parse_body(source) : parse_core(source);
     consumed = size - source.size();
     if (result.code == deserialization_status::kMoreBytesNeeded &&
         !body_framer_ &&
-        (size == capacity ||
-         size >= policies::kMaxRequestHeadSizeInMemory)) {
+        (size == capacity || size >= policies::kMaxRequestHeadSizeInMemory)) {
       result.code = deserialization_status::kInvalidSource;
     }
     if (result.code == deserialization_status::kSucceeded) {
@@ -205,10 +206,10 @@ class decoder {
                 reinterpret_cast<const std::byte*>(
                     buffer_.get() + policies::kMaxRequestHeadSizeInMemory),
                 body_size_);
-            body_reader = context_.connection.chunked
-                              ? body::reader::chunked(wire)
-                              : body::reader::raw(
-                                    wire, context_.content_length);
+            body_reader =
+                context_.connection.chunked
+                    ? body::reader::chunked(wire)
+                    : body::reader::raw(wire, context_.content_length);
           } else {
             common::filesystem_file file;
             std::error_code error;
@@ -225,12 +226,11 @@ class decoder {
           }
         }
         if (result.code == deserialization_status::kSucceeded) {
-          RQty request(method_, absolute_path_, target_, headers_,
-                       query_parameters_, host_host, host_port,
-                       host_type, target_authority_host, target_authority_port,
-                       target_authority_type,
-                       context_.connection.close_requested,
-                       std::move(body_reader));
+          RQty request(
+              method_, absolute_path_, target_, headers_, query_parameters_,
+              host_host, host_port, host_type, target_authority_host,
+              target_authority_port, target_authority_type,
+              context_.connection.close_requested, std::move(body_reader));
           on_request(request);
         }
       } catch (...) {
@@ -295,7 +295,7 @@ class decoder {
  private:
   // +=========================================================================+
   // | [>] parse_core                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   deserialization_result<RQty, RSty> parse_core(std::string_view& source) {
     head_request_ = false;
     std::string_view sv = source;
@@ -335,8 +335,8 @@ class decoder {
       if (status == deserialization_status::kSucceeded) {
         target_ = target::kAuthorityForm;
         context_.has_target_authority = true;
-        context_.target_authority = {authority_host, authority_port,
-                                     authority_type, {}};
+        context_.target_authority = {
+            authority_host, authority_port, authority_type, {}};
       }
     } else if (method_ == method_names::kOptions && sv[i] == '*') {
       // Let's try to parse the request-target as asterisk-form, which is the
@@ -449,7 +449,8 @@ class decoder {
       if (!field_name_decoded) {
         if (sv[i] == '\r') {
           if (i != fn_start) return deserialization_status::kInvalidSource;
-          if (i + 1 >= sv.size()) return deserialization_status::kMoreBytesNeeded;
+          if (i + 1 >= sv.size())
+            return deserialization_status::kMoreBytesNeeded;
           if (sv[i + 1] != '\n') return deserialization_status::kInvalidSource;
           i += 2;
           // Every modelled header was already parsed once and interpreted in
@@ -547,7 +548,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] parse_body                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   deserialization_result<RQty, RSty> parse_body(std::string_view& source) {
     body::framer_state state = std::visit(
         [this, source](auto& arg) -> body::framer_state {
@@ -564,16 +565,15 @@ class decoder {
     }
     if (state.consumed) {
       if (body_file_path_.empty() &&
-          state.consumed >
-              policies::kMaxRequestBodySizeInMemory - body_size_ &&
+          state.consumed > policies::kMaxRequestBodySizeInMemory - body_size_ &&
           !spill_body()) {
         storage_failed_ = true;
         return deserialization_status::kInvalidSource;
       }
       if (body_file_path_.empty()) {
-        std::memcpy(buffer_.get() + policies::kMaxRequestHeadSizeInMemory +
-                        body_size_,
-                    source.data(), state.consumed);
+        std::memcpy(
+            buffer_.get() + policies::kMaxRequestHeadSizeInMemory + body_size_,
+            source.data(), state.consumed);
       } else if (!body_file_.write(source.data(), state.consumed)) {
         storage_failed_ = true;
         return deserialization_status::kInvalidSource;
@@ -586,7 +586,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] spill_body                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool spill_body() {
     std::error_code error;
     const auto directory = std::filesystem::temp_directory_path(error);
@@ -595,8 +595,7 @@ class decoder {
     if (!body_file_.open(directory, path)) return false;
     body_file_path_ = std::move(path);
     if (body_size_ &&
-        !body_file_.write(buffer_.get() +
-                              policies::kMaxRequestHeadSizeInMemory,
+        !body_file_.write(buffer_.get() + policies::kMaxRequestHeadSizeInMemory,
                           body_size_)) {
       return false;
     }
@@ -604,7 +603,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] cleanup_body_file                                       ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void cleanup_body_file() noexcept {
     body_file_.close();
     if (body_file_path_.empty()) return;
@@ -614,7 +613,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] store_head                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool store_head(std::string_view buffer_view) {
     if (buffer_view.size() > policies::kMaxRequestHeadSizeInMemory) {
       context_.rejection_reason = rejection_reason::kHeaderFieldsTooLarge;
@@ -657,28 +656,21 @@ class decoder {
       context_.host.scheme = rebase(context_.host.scheme);
     }
     if (context_.has_target_authority) {
-      context_.target_authority.host =
-          rebase(context_.target_authority.host);
-      context_.target_authority.port =
-          rebase(context_.target_authority.port);
+      context_.target_authority.host = rebase(context_.target_authority.host);
+      context_.target_authority.port = rebase(context_.target_authority.port);
       context_.target_authority.scheme =
           rebase(context_.target_authority.scheme);
     }
     for (auto& value : context_.connection.transfer_codings)
       value = rebase(value);
-    for (auto& value : context_.connection.te_codings)
-      value = rebase(value);
-    for (auto& value : context_.connection.trailer_names)
-      value = rebase(value);
-    for (auto& value : context_.connection.upgrade_offer)
-      value = rebase(value);
-    for (auto& value : context_.connection.options)
-      value = rebase(value);
+    for (auto& value : context_.connection.te_codings) value = rebase(value);
+    for (auto& value : context_.connection.trailer_names) value = rebase(value);
+    for (auto& value : context_.connection.upgrade_offer) value = rebase(value);
+    for (auto& value : context_.connection.options) value = rebase(value);
     return true;
   }
   // +=========================================================================+
   // |                      HTTP/1.1 SERVER HEADER CHECKLIST                   |
-  // +=========================================================================+
   // +------------------------------------------------------------+------------+
   // | Header                                                     |  Supported |
   // +------------------------------------------------------------+------------+
@@ -751,18 +743,18 @@ class decoder {
   // +------------------------------------------------------------+------------+
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   using header_dispatch = verdict (*)(std::string_view,
                                       protocol::http::v11::context&);
   // +=========================================================================+
   // | [>] dispatch                                                ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | The dispatcher for every header the semantic layer does not model. It   |
   // | runs the header's single syntactic checker and never touches the        |
   // | context: a value the checker rejects fails deserialization, otherwise it|
   // | is accepted as-is. One template instantiation per checker keeps each    |
   // | registry entry a direct, inlinable call.                                |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <typename CHty>
   static constexpr verdict dispatch(std::string_view sv, context&) {
     return CHty::check(sv) ? verdict::kAccept : verdict::kReject;
@@ -774,7 +766,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] dispatch_host (modelled header)                         ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static verdict dispatch_host(std::string_view host_content,
                                context& context_rules) {
     if (context_rules.has_host) context_rules.multiple_host = true;
@@ -789,7 +781,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] dispatch_content_length (modelled header)               ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static verdict dispatch_content_length(
       std::string_view content_length_content, context& context_rules) {
     std::size_t parsed = 0;
@@ -810,7 +802,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] dispatch_transfer_encoding (modelled header)            ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static verdict dispatch_transfer_encoding(
       std::string_view transfer_encoding_content, context& context_rules) {
     parsed_parameter_list parsed;
@@ -827,7 +819,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] dispatch_connection (modelled header)                   ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static verdict dispatch_connection(std::string_view connection_content,
                                      context& context_rules) {
     parsed_token_list parsed;
@@ -839,7 +831,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] dispatch_te (modelled header)                           ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static verdict dispatch_te(std::string_view te_content,
                              context& context_rules) {
     parsed_parameter_list parsed;
@@ -851,7 +843,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] dispatch_trailer (modelled header)                      ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static verdict dispatch_trailer(std::string_view trailer_content,
                                   context& context_rules) {
     parsed_token_list parsed;
@@ -863,7 +855,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] dispatch_expect (modelled header)                       ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static verdict dispatch_expect(std::string_view expect_content,
                                  context& context_rules) {
     parsed_parameter_list parsed;
@@ -881,7 +873,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] dispatch_upgrade (modelled header)                      ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static verdict dispatch_upgrade(std::string_view upgrade_content,
                                   context& context_rules) {
     parsed_token_list parsed_content;
@@ -897,7 +889,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] dispatch_max_forwards (modelled header)                 ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static verdict dispatch_max_forwards(std::string_view max_forwards_content,
                                        context& context_rules) {
     std::size_t parsed = 0;
@@ -909,7 +901,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] dispatch_via (modelled header)                          ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static verdict dispatch_via(std::string_view via_content,
                               context& context_rules) {
     parsed_via_list parsed;
@@ -922,7 +914,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] dispatch_forwarded (modelled header)                    ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static verdict dispatch_forwarded(std::string_view forwarded_content,
                                     context& context_rules) {
     parsed_forwarded_list parsed;
@@ -935,7 +927,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] dispatch_x_forwarded_for (modelled header)              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static verdict dispatch_x_forwarded_for(
       std::string_view x_forwarded_for_content, context& context_rules) {
     parsed_token_list parsed;
@@ -948,7 +940,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] dispatch_x_forwarded_host (modelled header)             ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static verdict dispatch_x_forwarded_host(
       std::string_view x_forwarded_host_content, context& context_rules) {
     parsed_host_port parsed;
@@ -960,7 +952,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] dispatch_x_forwarded_proto (modelled header)            ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static verdict dispatch_x_forwarded_proto(
       std::string_view x_forwarded_proto_content, context& context_rules) {
     parsed_token_list parsed;
@@ -972,7 +964,7 @@ class decoder {
   }
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static const inline common::hash_map<std::string_view, header_dispatch>
       header_dispatchers_ = {
           {"Host",  // check & interpret!
@@ -1108,7 +1100,7 @@ class decoder {
   };
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::unique_ptr<char[]> buffer_;
   std::size_t head_size_ = 0;
   std::size_t body_size_ = 0;

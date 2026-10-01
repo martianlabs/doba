@@ -55,7 +55,7 @@ class reader_raw {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   explicit reader_raw(std::size_t content_length) : expected_(content_length) {}
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
@@ -63,7 +63,7 @@ class reader_raw {
   // | Pulls up to (expected_ - accumulated_) bytes from src into output.      |
   // | Returns immediately with complete=true when Content-Length is reached.  |
   // | A zero Content-Length body completes on the first call with produced=0. |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   reader_state read(common::reader& src, std::span<std::byte> output) {
     reader_state result;
     if (has_error_) {
@@ -93,7 +93,7 @@ class reader_raw {
  private:
   // +=========================================================================+
   // | [>] fail                                                    ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   reader_state fail(reader_state& result, reader_error err) {
     has_error_ = true;
     error_ = err;
@@ -103,7 +103,7 @@ class reader_raw {
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::size_t expected_;
   std::size_t accumulated_{0};
   bool has_error_{false};

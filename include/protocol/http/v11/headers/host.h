@@ -72,7 +72,7 @@ class host {
  public:
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool check(std::string_view sv, parsed_host_port& out) {
     // The producer overload validates exactly as the pure check() does and, on
     // success, fills the parsed uri-host, port, and host type through the same
@@ -81,7 +81,7 @@ class host {
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr verdict interpret(const parsed_host_port&, v11::connection&,
                                      const policies&) {
     return verdict::kAccept;

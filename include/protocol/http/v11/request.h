@@ -133,36 +133,60 @@ class request {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   request(const request&) = delete;
   request(request&&) noexcept = delete;
   ~request() = default;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   request& operator=(const request&) = delete;
   request& operator=(request&&) noexcept = delete;
   // +=========================================================================+
-  // | [>] GETTERs                                                  ( public ) |
-  // +=========================================================================+
+  // | [>] get_method                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_method() const { return method_; }
+  // +=========================================================================+
+  // | [>] get_target                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_target() const { return target_; }
+  // +=========================================================================+
+  // | [>] get_absolute_path                                        ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_absolute_path() const { return abs_path_; }
+  // +=========================================================================+
+  // | [>] get_header                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_header(std::size_t i) const { return headers_[i]; }
+  // +=========================================================================+
+  // | [>] get_header                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_header(std::string_view name) const {
     for (const auto& header : headers_) {
       if (helpers::iequals(header.first, name)) return header;
     }
     throw std::out_of_range("Header not found: " + std::string(name));
   }
+  // +=========================================================================+
+  // | [>] exist_header                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   auto exist_header(std::string_view name) const {
     for (const auto& header : headers_) {
       if (helpers::iequals(header.first, name)) return true;
     }
     return false;
   }
+  // +=========================================================================+
+  // | [>] get_headers_length                                       ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_headers_length() const { return headers_.size(); }
+  // +=========================================================================+
+  // | [>] get_query_parameter                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_query_parameter(std::size_t i) const { return query_parameters_[i]; }
+  // +=========================================================================+
+  // | [>] get_query_parameter                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_query_parameter(std::string_view name) const
       -> std::optional<query_parameter_view> {
     for (const auto& param : query_parameters_) {
@@ -170,27 +194,63 @@ class request {
     }
     return std::nullopt;
   }
+  // +=========================================================================+
+  // | [>] get_query_parameters_length                              ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_query_parameters_length() const { return query_parameters_.size(); }
+  // +=========================================================================+
+  // | [>] has_hosts                                                ( public ) |
+  // +-------------------------------------------------------------------------+
   auto has_host() const { return !host_.empty(); }
+  // +=========================================================================+
+  // | [>] get_host                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_host() const { return host_; }
+  // +=========================================================================+
+  // | [>] get_host_port                                            ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_host_port() const { return host_port_; }
+  // +=========================================================================+
+  // | [>] get_host_type                                            ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_host_type() const { return host_type_; }
+  // +=========================================================================+
+  // | [>] has_target_authority                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   auto has_target_authority() const { return !ta_host_.empty(); }
+  // +=========================================================================+
+  // | [>] get_target_authority_host                                ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_target_authority_host() const { return ta_host_; }
+  // +=========================================================================+
+  // | [>] get_target_authority_port                                ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_target_authority_port() const { return ta_port_; }
+  // +=========================================================================+
+  // | [>] get_target_authority_type                                ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_target_authority_type() const { return ta_type_; }
+  // +=========================================================================+
+  // | [>] get_body_reader                                          ( public ) |
+  // +-------------------------------------------------------------------------+
   auto get_body_reader() const {
     return body_reader_ ? &*body_reader_ : nullptr;
   }
+  // +=========================================================================+
+  // | [>] has_body_reader                                          ( public ) |
+  // +-------------------------------------------------------------------------+
   auto has_body_reader() const { return body_reader_.has_value(); }
+  // +=========================================================================+
+  // | [>] wants_connection_close                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   auto wants_connection_close() const { return wants_connection_close_; }
   // +=========================================================================+
   // | [>] get_cookie                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Looks up a single cookie-pair by name in the (unparsed) Cookie header,  |
   // | if present. Parsing is done on demand; nothing is cached, mirroring how |
   // | headers_ and query_parameters_ are already accessed by linear scan.     |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::optional<std::string_view> get_cookie(std::string_view name) const {
     std::string_view raw;
     if (!find_cookie_header(raw)) return std::nullopt;
@@ -204,10 +264,10 @@ class request {
   }
   // +=========================================================================+
   // | [>] get_cookies                                              ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Returns every cookie-pair present in the (unparsed) Cookie header,      |
   // | or an empty vector when the header is absent.                           |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::vector<std::pair<std::string_view, std::string_view>> get_cookies()
       const {
     std::vector<std::pair<std::string_view, std::string_view>> cookies;
@@ -223,7 +283,7 @@ class request {
  private:
   // +=========================================================================+
   // | [>] find_cookie_header                                      ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool find_cookie_header(std::string_view& out) const {
     for (const auto& header : headers_) {
       if (helpers::iequals(header.first, header_names::kCookie)) {
@@ -235,10 +295,10 @@ class request {
   }
   // +=========================================================================+
   // | [>] for_each_cookie_pair                                    ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   // | Splits a Cookie header field-value on the exact "; " separator (RFC     |
   // | 6265 S4.2.1) and invokes fn(name, value) for every cookie-pair found.   |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <typename FNty>
   static void for_each_cookie_pair(std::string_view raw, FNty&& fn) {
     std::size_t start = 0;
@@ -256,7 +316,7 @@ class request {
   }
   // +=========================================================================+
   // | [>] emit_cookie_pair                                        ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <typename FNty>
   static void emit_cookie_pair(std::string_view pair, FNty&& fn) {
     std::size_t eq = pair.find('=');
@@ -265,10 +325,9 @@ class request {
   }
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   request(std::string_view method, std::string_view abs_path,
-          target target_form,
-          std::vector<header_view> headers,
+          target target_form, std::vector<header_view> headers,
           std::vector<query_parameter_view> query_parameters,
           std::optional<std::string_view> host,
           std::optional<std::string_view> port,
@@ -295,7 +354,7 @@ class request {
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::string_view method_;           // HTTP method (e.g., GET, POST, etc.)
   std::string_view abs_path_;         // absolute path from the request-target
   target target_ = target::kUnknown;  // request-target form
