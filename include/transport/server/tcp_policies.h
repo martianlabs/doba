@@ -22,8 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_transport_server_policies_h
-#define martianlabs_doba_transport_server_policies_h
+#ifndef martianlabs_doba_transport_server_tcp_policies_h
+#define martianlabs_doba_transport_server_tcp_policies_h
 
 #include <cstddef>
 #include <string>
@@ -31,12 +31,12 @@
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] policies                                                   ( struct ) |
+// | [>] tcp_policies                                               ( struct ) |
 // +---------------------------------------------------------------------------+
-// | TCP/IP operating policies.                                                |
+// | TCP operating policies.                                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-struct policies {
+struct tcp_policies {
   static constexpr std::size_t kDefaultRecvBufferSize = 4 * 1024;
   // Receive capacity per connection, in bytes (must be positive).
   // Engines retain incomplete cores here; bodies may span multiple receives.
@@ -55,15 +55,6 @@ struct policies {
   std::string port;
 };
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] tls_policies                                               ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct tls_policies : policies {
-  std::string certificate_file;
-  std::string private_key_file;
-};
 }  // namespace martianlabs::doba::transport::server
 
 #endif

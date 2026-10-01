@@ -194,9 +194,9 @@ DOBA_TEST("engine rejects handlers without a status") {
   DOBA_EXPECT_EQUAL(current.closes, 1);
 }
 // +===========================================================================+
-// | [>] engine closes after a pipelined successor               ( test-case ) |
+// | [>] engine processes coalesced requests in order            ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("engine closes after a pipelined successor") {
+DOBA_TEST("engine processes coalesced requests in order") {
   router<request, response> routes;
   int count = 0;
   routes.add("GET", "/", [&count](const request&, response& res) {
@@ -205,13 +205,14 @@ DOBA_TEST("engine closes after a pipelined successor") {
   connection current(routes);
   const std::string one = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
   const std::string bytes = one + one;
-  DOBA_EXPECT_EQUAL(current.receive(bytes), one.size());
-  DOBA_EXPECT_EQUAL(count, 1);
-  DOBA_EXPECT_EQUAL(current.blocks.size(), 1U);
-  DOBA_EXPECT(current.wire.ends_with("\r\n\r\n1"));
-  DOBA_EXPECT(current.wire.find("Connection: close\r\n") !=
-              std::string::npos);
-  DOBA_EXPECT_EQUAL(current.closes, 1);
+  DOBA_EXPECT_EQUAL(current.receive(bytes), bytes.size());
+  DOBA_EXPECT_EQUAL(count, 2);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 2U);
+  const auto second = current.wire.find("HTTP/1.1", 1);
+  DOBA_EXPECT(second != std::string::npos);
+  DOBA_EXPECT(current.wire.substr(0, second).ends_with("\r\n\r\n1"));
+  DOBA_EXPECT(current.wire.substr(second).ends_with("\r\n\r\n2"));
+  DOBA_EXPECT_EQUAL(current.closes, 0);
 }
 // +===========================================================================+
 // | [>] engine sends large and chunked response bodies          ( test-case ) |
@@ -622,9 +623,9 @@ DOBA_TEST("engine ignores trailer fields for later requests") {
   DOBA_EXPECT_EQUAL(current.closes, 0);
 }
 // +===========================================================================+
-// | [>] engine closes before a pipelined rejection              ( test-case ) |
+// | [>] engine rejects an invalid coalesced successor           ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("engine closes before a pipelined rejection") {
+DOBA_TEST("engine rejects an invalid coalesced successor") {
   router<request, response> routes;
   int calls = 0;
   routes.add("GET", "/", [&](const request&, response& res) {
@@ -636,11 +637,11 @@ DOBA_TEST("engine closes before a pipelined rejection") {
       "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"
       "GET / HTTP/1.1\r\nHost: localhost\r\nHost: other\r\n\r\n"
       "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
-  current.receive(bytes);
+  DOBA_EXPECT_EQUAL(current.receive(bytes), bytes.size());
   DOBA_EXPECT_EQUAL(calls, 1);
-  DOBA_EXPECT_EQUAL(current.blocks.size(), 1);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 2U);
   DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 200 OK\r\n"));
-  DOBA_EXPECT(current.wire.find("HTTP/1.1 400 ") == std::string::npos);
+  DOBA_EXPECT(current.wire.find("HTTP/1.1 400 ") != std::string::npos);
   DOBA_EXPECT(current.wire.find("first") != std::string::npos);
   DOBA_EXPECT_EQUAL(current.closes, 1);
 }

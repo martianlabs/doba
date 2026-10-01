@@ -256,6 +256,42 @@ DOBA_TEST("HTTP/1.1 reuses a connection for sequential requests") {
 }
 
 // +===========================================================================+
+// | [>] serves coalesced requests before a partial successor    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("HTTP/1.1 serves coalesced requests before a partial successor") {
+  tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server.add_route("POST", "/one", [](const request& req, response& res) {
+    echo_request(req, res);
+  });
+  http_server.add_route("GET", "/two", [](const request&, response& res) {
+    res.ok_200().set_body("two");
+  });
+  http_server.add_route("GET", "/three", [](const request&, response& res) {
+    res.ok_200().set_body("three");
+  });
+  http_server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all(
+      "POST /one HTTP/1.1\r\nHost: example.com\r\nContent-Length: 4\r\n\r\n"
+      "dataGET /two HTTP/1.1\r\nHost: example.com\r\n\r\n"
+      "GET /three HTTP/1.1\r\nHost: example"));
+  const auto first = receive_http_response(client);
+  const auto second = receive_http_response(client);
+  DOBA_EXPECT(first.has_value());
+  DOBA_EXPECT(second.has_value());
+  DOBA_EXPECT_EQUAL(first->body, "data");
+  DOBA_EXPECT_EQUAL(second->body, "two");
+  DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(100)));
+  DOBA_EXPECT(client.send_all(".com\r\n\r\n"));
+  const auto third = receive_http_response(client);
+  DOBA_EXPECT(third.has_value());
+  DOBA_EXPECT_EQUAL(third->body, "three");
+}
+
+// +===========================================================================+
 // | [>] serves three sequential requests                       ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("HTTP/1.1 serves three sequential requests") {

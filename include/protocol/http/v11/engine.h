@@ -79,31 +79,35 @@ class engine {
                                 const std::size_t capacity) {
     if (closed_) return size;
     if (!size) return 0;
-    std::size_t consumed = 0;
-    try {
-      deserialization_result result = decoder_.deserialize(
-          buffer, size, capacity, consumed,
-          [this, size, &consumed](const RQty& request) {
-            bool close = request.wants_connection_close() || consumed < size;
-            RSty response(decoder_.response_storage());
-            execute_request(request, response, close);
-            enqueue_response(request, response, close);
-          });
-      switch (result.code) {
-        case deserialization_status::kSucceeded:
-          return consumed;
-        case deserialization_status::kInvalidSource:
-          if (result.response) enqueue_response(*result.response, true);
-          return size;
-        case deserialization_status::kMoreBytesNeeded:
-          if (result.response) enqueue_response(*result.response, false);
-          return consumed;
+    std::size_t total = 0;
+    while (total < size && !closed_) {
+      std::size_t consumed = 0;
+      try {
+        deserialization_result result = decoder_.deserialize(
+            buffer + total, size - total, capacity, consumed,
+            [this](const RQty& request) {
+              bool close = request.wants_connection_close();
+              RSty response(decoder_.response_storage());
+              execute_request(request, response, close);
+              enqueue_response(request, response, close);
+            });
+        total += consumed;
+        switch (result.code) {
+          case deserialization_status::kSucceeded:
+            break;
+          case deserialization_status::kInvalidSource:
+            if (result.response) enqueue_response(*result.response, true);
+            return size;
+          case deserialization_status::kMoreBytesNeeded:
+            if (result.response) enqueue_response(*result.response, false);
+            return total;
+        }
+      } catch (...) {
+        query_for_close();
+        return total + consumed;
       }
-    } catch (...) {
-      query_for_close();
-      return consumed;
     }
-    return consumed;
+    return total;
   }
 
  private:

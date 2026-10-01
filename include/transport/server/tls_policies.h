@@ -22,38 +22,28 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_transport_server_tcp_h
-#define martianlabs_doba_transport_server_tcp_h
+#ifndef martianlabs_doba_transport_server_tls_policies_h
+#define martianlabs_doba_transport_server_tls_policies_h
 
-#include <functional>
+#include <cstddef>
+#include <string>
 
-#include "platform.h"
-#include "transport/server/contracts.h"
 #include "transport/server/tcp_policies.h"
 
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] types                                                      ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Platform-independent transport delegate types.                            |
+// | [>] tls_policies                                               ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-struct types {
-  using on_client_connected_delegate = std::function<void()>;
-  using on_client_disconnected_delegate = std::function<void()>;
+struct tls_policies : tcp_policies {
+  // Encrypted socket input capacity per connection, in bytes.
+  static constexpr std::size_t kEncryptedReceiveBufferSize = 17 * 1024;
+  // Maximum TLS BIO buffer capacity, in bytes.
+  static constexpr std::size_t kBioBufferSize = 17 * 1024;
+  std::string certificate_file;
+  std::string private_key_file;
 };
 }  // namespace martianlabs::doba::transport::server
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] PLATFORM-DEPENDENT-INCLUDEs                               ( section ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-#ifdef _WIN32
-#include "transport/server/tcp_windows.h"
-#elif __linux__
-#include "transport/server/tcp_linux.h"
-#endif
 
 #endif

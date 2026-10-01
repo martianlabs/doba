@@ -121,7 +121,7 @@ struct bad_start_transport : fake_transport<ENty, FNty> {
 template <typename ENty, typename FNty>
 struct bad_policies_transport : fake_transport<ENty, FNty> {
   using fake_transport<ENty, FNty>::fake_transport;
-  using policies_type = tr::policies;
+  using policies_type = tr::tcp_policies;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -185,13 +185,13 @@ using server_type = http::server<http::request, http::response, routes_type,
 using factory_type = http::engine_factory<engine_type, routes_type>;
 static_assert(std::same_as<
               typename tr::tcp<engine_type, factory_type>::policies_type,
-              tr::policies>);
+              tr::tcp_policies>);
 static_assert(std::constructible_from<server_type, std::unique_ptr<int>>);
 static_assert(std::constructible_from<server_type, std::unique_ptr<int>,
                                       http::policies>);
 static_assert(!std::constructible_from<server_type, http::policies,
                                        std::unique_ptr<int>>);
-static_assert(!std::constructible_from<server_type, tr::policies,
+static_assert(!std::constructible_from<server_type, tr::tcp_policies,
                                        http::policies>);
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

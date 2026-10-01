@@ -34,7 +34,7 @@
 
 #include <openssl/ssl.h>
 
-#include "transport/server/policies.h"
+#include "transport/server/tls_policies.h"
 
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
@@ -100,8 +100,9 @@ class tls_session {
     BIO* internal = nullptr;
     BIO* network = nullptr;
     const std::size_t bio_capacity =
-        (std::min)(send_capacity, std::size_t{17 * 1024});
-    if (BIO_new_bio_pair(&internal, bio_capacity, &network, 17 * 1024) != 1) {
+        (std::min)(send_capacity, tls_policies::kBioBufferSize);
+    if (BIO_new_bio_pair(&internal, bio_capacity, &network,
+                         tls_policies::kBioBufferSize) != 1) {
       throw std::runtime_error("TLS buffers could not be created!");
     }
     SSL_set_bio(ssl_.get(), internal, internal);

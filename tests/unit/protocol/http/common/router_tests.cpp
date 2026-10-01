@@ -514,6 +514,21 @@ struct failing_controller {
   void typed(const request&, response&, int) {}
   int mode_;
 };
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] staged_controller                                         ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct staged_controller {
+  router<request, response>& owner;
+  bool& detached;
+  template <typename Rty>
+  void register_routes(Rty& routes) {
+    routes.add("GET", "/staged", &staged_controller::get);
+    detached = !owner.match("GET", "/staged");
+  }
+  void get(const request&, response&) {}
+};
 }  // namespace
 
 // +===========================================================================+
@@ -542,6 +557,17 @@ DOBA_TEST("controllers share one instance per registration") {
 
   }
   DOBA_EXPECT_EQUAL(alive, 0);
+}
+
+// +===========================================================================+
+// | [>] controller routes are staged before registration        ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("controller routes are staged before registration") {
+  router<request, response> value;
+  bool detached = false;
+  value.add_controller<staged_controller>(value, detached);
+  DOBA_EXPECT(detached);
+  DOBA_EXPECT(value.match("GET", "/staged").handler);
 }
 
 // +===========================================================================+

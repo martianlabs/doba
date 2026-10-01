@@ -164,13 +164,13 @@ class router {
     for (const auto& entry : wildcard_handlers_) {
       wildcard_sizes.push_back(entry.second.size());
     }
-    detail::router_controller_routes<RQty, RSty, Cty> routes(
-        *this, std::move(instance));
+    detail::router_controller_routes<RQty, RSty, Cty> routes(instance);
     try {
-      routes.instance_->register_routes(routes);
-      if (!routes.count_) {
+      instance->register_routes(routes);
+      if (routes.empty()) {
         throw std::invalid_argument("The controller must register a route");
       }
+      routes.apply(*this);
     } catch (...) {
       restore_routes(handlers_, static_sizes);
       restore_routes(parametrized_handlers_, parametrized_sizes);

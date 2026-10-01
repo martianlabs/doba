@@ -111,7 +111,7 @@ void check_drain(bool destroy, bool active_callback) {
   std::array<tcpip_client, 2> clients;
   const auto port = clients[0].find_available_port();
   DOBA_EXPECT(port != 0);
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -247,7 +247,7 @@ void check_reader_drain(bool destroy, bool close, bool empty = false) {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -310,7 +310,7 @@ DOBA_TEST("stop handles failed and overflowing sends") {
     tcpip_client client;
     const auto port = client.find_available_port();
     DOBA_EXPECT(port != 0);
-    tr::policies configuration;
+    tr::tcp_policies configuration;
     configuration.ip = "127.0.0.1";
     configuration.port = std::to_string(port);
     configuration.worker_count = 2;
@@ -343,7 +343,7 @@ DOBA_TEST("stop rejects new engine input") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -400,7 +400,7 @@ DOBA_TEST("sources work with a small send buffer") {
       tcpip_client client;
       const auto port = client.find_available_port();
       DOBA_EXPECT(port != 0);
-      tr::policies configuration;
+      tr::tcp_policies configuration;
       configuration.ip = "127.0.0.1";
       configuration.port = std::to_string(port);
       configuration.worker_count = 2;
@@ -433,7 +433,7 @@ DOBA_TEST("source failure cancels later deliveries") {
     tcpip_client client;
     const auto port = client.find_available_port();
     DOBA_EXPECT(port != 0);
-    tr::policies configuration;
+    tr::tcp_policies configuration;
     configuration.ip = "127.0.0.1";
     configuration.port = std::to_string(port);
     configuration.worker_count = 2;
@@ -471,7 +471,7 @@ DOBA_TEST("sources without progress close the connection") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -498,7 +498,7 @@ DOBA_TEST("source buffers respect the send limit") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -528,7 +528,7 @@ DOBA_TEST("concurrent stops drain before returning") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 8;
@@ -581,7 +581,7 @@ DOBA_TEST("stop from a worker is rejected") {
   tcpip_client client;
   const auto other_port = client.find_available_port();
   DOBA_EXPECT(other_port != 0);
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(other_port);
   configuration.worker_count = 2;
@@ -624,7 +624,7 @@ DOBA_TEST("disconnection can reenter an external stop") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -679,7 +679,7 @@ DOBA_TEST("invalid endpoint policies prevent startup") {
   auto state = std::make_shared<drain_state>();
   auto factory = [state]() -> drain_engine { return drain_engine{state}; };
   for (const auto& [ip, port] : endpoints) {
-    tr::policies configuration;
+    tr::tcp_policies configuration;
     configuration.ip = ip;
     configuration.port = port;
     configuration.worker_count = 1;
@@ -709,7 +709,7 @@ DOBA_TEST("endpoint policies persist across restarts") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -743,7 +743,7 @@ DOBA_TEST("close discards input after draining output") {
     tcpip_client client;
     const auto port = client.find_available_port();
     DOBA_EXPECT(port != 0);
-    tr::policies configuration;
+    tr::tcp_policies configuration;
     configuration.ip = "127.0.0.1";
     configuration.port = std::to_string(port);
     configuration.worker_count = 2;
@@ -802,7 +802,7 @@ DOBA_TEST("rejection discards a pending source and later output") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
