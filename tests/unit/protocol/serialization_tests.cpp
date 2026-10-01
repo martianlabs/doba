@@ -46,15 +46,17 @@ DOBA_TEST("serialization defaults contain no owned output") {
   DOBA_EXPECT(!value.source);
 }
 // +===========================================================================+
-// | [>] serialization moves retain strings and reader cursor    ( test-case ) |
+// | [>] serialization moves retain views and reader cursor      ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("serialization moves retain strings and reader cursor") {
+DOBA_TEST("serialization moves retain views and reader cursor") {
   byte_storage storage;
   DOBA_EXPECT(storage.write("body", 4));
   storage.finish(4);
   serialization_result value;
-  value.head = std::string(32, 'H');
-  value.body = std::string(32, 'B');
+  const std::string head_storage(32, 'H');
+  const std::string body_storage(32, 'B');
+  value.head = head_storage;
+  value.body = body_storage;
   value.source = std::make_unique<reader>(std::move(storage));
   std::byte byte{};
   DOBA_EXPECT(value.source->fetch(byte));
@@ -68,8 +70,8 @@ DOBA_TEST("serialization moves retain strings and reader cursor") {
   DOBA_EXPECT_EQUAL(target.body.data(), body);
   DOBA_EXPECT_EQUAL(target.head, std::string(32, 'H'));
   DOBA_EXPECT_EQUAL(target.body, std::string(32, 'B'));
-  DOBA_EXPECT(value.head.empty());
-  DOBA_EXPECT(moved.head.empty());
+  DOBA_EXPECT_EQUAL(value.head.data(), head);
+  DOBA_EXPECT_EQUAL(moved.head.data(), head);
   std::string output;
   DOBA_EXPECT_EQUAL(target.source->read_all(output), 3);
   DOBA_EXPECT_EQUAL(output, "ody");

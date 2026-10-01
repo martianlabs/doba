@@ -27,7 +27,7 @@
 
 #include <cstddef>
 #include <memory>
-#include <string>
+#include <string_view>
 
 #include "common/reader.h"
 
@@ -36,16 +36,16 @@ namespace martianlabs::doba::protocol {
 // +---------------------------------------------------------------------------+
 // | [>] serialization_result                                       ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Owns head and body bytes followed by an optional source.                  |
-// | The transport consumes the source after both strings.                     |
+// | Borrows head and body bytes and owns an optional source.                  |
+// | The transport copies both views before the call returns.                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct serialization_result {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +=========================================================================+
-  std::string head;
-  std::string body;
+  std::string_view head;
+  std::string_view body;
   std::unique_ptr<common::reader> source;
 };
 }  // namespace martianlabs::doba::protocol

@@ -152,12 +152,20 @@ class decoder {
   explicit decoder(policies configuration = {})
       : buffer_(std::make_unique_for_overwrite<char[]>(
             policies::kMaxRequestHeadSizeInMemory +
-            policies::kMaxRequestBodySizeInMemory)) {
+            policies::kMaxRequestBodySizeInMemory)),
+        response_buffer_(std::make_unique_for_overwrite<char[]>(
+            policies::kMaxResponseHeadSizeInMemory +
+            policies::kMaxResponseBodySizeInMemory)) {
     context_.policies = configuration;
   }
   decoder(const decoder&) = delete;
   decoder(decoder&&) noexcept = delete;
   ~decoder() { cleanup_body_file(); }
+  std::span<char> response_storage() noexcept {
+    return {response_buffer_.get(),
+            policies::kMaxResponseHeadSizeInMemory +
+                policies::kMaxResponseBodySizeInMemory};
+  }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+
@@ -239,31 +247,31 @@ class decoder {
       }
     }
     if (result.code == deserialization_status::kInvalidSource) {
+      result.response.emplace(response_storage());
       if (storage_failed_) {
-        result.response.emplace(RSty::internal_server_error_500());
+        result.response->internal_server_error_500();
       } else {
         switch (context_.rejection_reason) {
           case rejection_reason::kPayloadTooLarge:
-            result.response.emplace(RSty::content_too_large_413());
+            result.response->content_too_large_413();
             break;
           case rejection_reason::kUriTooLong:
-            result.response.emplace(RSty::uri_too_long_414());
+            result.response->uri_too_long_414();
             break;
           case rejection_reason::kExpectationFailed:
-            result.response.emplace(RSty::expectation_failed_417());
+            result.response->expectation_failed_417();
             break;
           case rejection_reason::kHeaderFieldsTooLarge:
-            result.response.emplace(
-                RSty::request_header_fields_too_large_431());
+            result.response->request_header_fields_too_large_431();
             break;
           case rejection_reason::kUnsupportedFeature:
-            result.response.emplace(RSty::not_implemented_501());
+            result.response->not_implemented_501();
             break;
           case rejection_reason::kVersionNotSupported:
-            result.response.emplace(RSty::http_version_not_supported_505());
+            result.response->http_version_not_supported_505();
             break;
           default:
-            result.response.emplace(RSty::bad_request_400());
+            result.response->bad_request_400();
             break;
         }
       }
@@ -492,7 +500,8 @@ class decoder {
           auto result = parse_body(source);
           if (result.code == deserialization_status::kMoreBytesNeeded &&
               context_.connection.expects_continue) {
-            result.response.emplace(RSty::continue_100());
+            result.response.emplace(response_storage());
+            result.response->continue_100();
           }
           return result;
         }
@@ -1102,6 +1111,7 @@ class decoder {
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   std::unique_ptr<char[]> buffer_;
+  std::unique_ptr<char[]> response_buffer_;
   std::size_t head_size_ = 0;
   std::size_t body_size_ = 0;
   common::byte_storage_file body_file_;

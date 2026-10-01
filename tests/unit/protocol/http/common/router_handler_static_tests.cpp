@@ -54,16 +54,14 @@ using martianlabs::doba::protocol::http::router_handler_static;
 DOBA_TEST("alias accepts and invokes the documented callback") {
   static_assert(
       std::same_as<router_handler_static<request, response>,
-                   std::function<response(const request&)>>);
+                   std::function<void(const request&, response&)>>);
   bool invoked = false;
   router_handler_static<request, response> handler =
-      [&invoked](const request&) {
-        response res;
+      [&invoked](const request&, response&) {
         invoked = true;
-        return res;
       };
   request req;
   response res;
-  res = handler(req);
+  handler(req, res);
   DOBA_EXPECT(invoked);
 }

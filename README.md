@@ -112,16 +112,15 @@ using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
 int main() {
-  server srv;
+  server srv({.ip = "0.0.0.0", .port = "8080"});
   srv.add_route(
       "GET", "/hello",
-      [](const request&) {
-        response res = response::ok_200();
+      [](const request&, response& res) {
+        res.ok_200();
         res.add_header("Content-Type", "text/plain")
             .set_body("hello from doba");
-        return res;
       });
-  srv.start("8080");
+  srv.start();
   signaler::wait();
 }
 ```

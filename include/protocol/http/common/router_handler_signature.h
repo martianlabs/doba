@@ -60,14 +60,14 @@ struct router_handler_signature;
 // | expected types.                                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <typename LOty, typename LQty, typename... Args>
+template <typename LOty, typename LQty, typename LSty, typename... Args>
 struct router_handler_signature_base {
   // +=========================================================================+
   // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   using return_type = LOty;
   using request_type = LQty;
-  using response_type = LOty;
+  using response_type = LSty;
   // +=========================================================================+
   // | [>] CONSTANTs                                                ( public ) |
   // +-------------------------------------------------------------------------+
@@ -89,11 +89,12 @@ struct router_handler_signature_base {
   static auto bind(std::shared_ptr<Cty> instance, Mty method) {
     return
         [instance = std::move(instance), method](
-            LQty req,
-            Args... args) noexcept(std::is_nothrow_invocable_v<Mty, Cty&, LQty,
-                                                               Args...>)
+            LQty req, LSty res,
+            Args... args) noexcept(std::is_nothrow_invocable_v<
+                Mty, Cty&, LQty, LSty, Args...>)
             -> LOty {
           return std::invoke(method, *instance, std::forward<LQty>(req),
+                             std::forward<LSty>(res),
                              std::forward<Args>(args)...);
         };
   }
@@ -117,22 +118,22 @@ struct router_handler_signature_base {
   // +-------------------------------------------------------------------------+
   // | This static method checks if the types of the handler's arguments match |
   // | the expected types. It takes two template parameters, RQty and RSty,    |
-  // | which represent the expected request and response types, respectively.  |
-  // | The method uses static_assert to verify that the return type of the     |
-  // | handler matches RSty, the first argument type matches RQty, and that    |
-  // | the first argument is a const lvalue reference. If any of these         |
-  // | conditions are not met, a compile-time error will be generated with an  |
-  // | appropriate message.                                                    |
+  // | which represent the expected request and response types. It requires    |
+  // | void(const RQty&, RSty&, ...).                                          |
   // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty>
   static void check() {
-    static_assert(std::same_as<LOty, RSty>,
-                  "The route handler must return RSty");
+    static_assert(std::same_as<LOty, void>,
+                  "The route handler must return void");
     static_assert(std::same_as<std::decay_t<LQty>, RQty>,
                   "The first route handler argument must be const RQty&");
     static_assert(std::is_lvalue_reference_v<LQty> &&
                       std::is_const_v<std::remove_reference_t<LQty>>,
                   "The first route handler argument must be const RQty&");
+    static_assert(std::same_as<std::remove_cvref_t<LSty>, RSty> &&
+                      std::is_lvalue_reference_v<LSty> &&
+                      !std::is_const_v<std::remove_reference_t<LSty>>,
+                  "The second route handler argument must be RSty&");
   }
 };
 
@@ -153,18 +154,23 @@ struct router_handler_signature_base {
 // | argument types.                                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <typename Cty, typename Retty, typename Reqty, typename... Args>
-struct router_handler_signature<Retty (Cty::*)(Reqty, Args...) const>
-    : router_handler_signature_base<Retty, Reqty, Args...> {};
-template <typename Cty, typename Retty, typename Reqty, typename... Args>
-struct router_handler_signature<Retty (Cty::*)(Reqty, Args...) const noexcept>
-    : router_handler_signature_base<Retty, Reqty, Args...> {};
-template <typename Cty, typename Retty, typename Reqty, typename... Args>
-struct router_handler_signature<Retty (Cty::*)(Reqty, Args...)>
-    : router_handler_signature_base<Retty, Reqty, Args...> {};
-template <typename Cty, typename Retty, typename Reqty, typename... Args>
-struct router_handler_signature<Retty (Cty::*)(Reqty, Args...) noexcept>
-    : router_handler_signature_base<Retty, Reqty, Args...> {};
+template <typename Cty, typename Retty, typename Reqty, typename Resty,
+          typename... Args>
+struct router_handler_signature<Retty (Cty::*)(Reqty, Resty, Args...) const>
+    : router_handler_signature_base<Retty, Reqty, Resty, Args...> {};
+template <typename Cty, typename Retty, typename Reqty, typename Resty,
+          typename... Args>
+struct router_handler_signature<
+    Retty (Cty::*)(Reqty, Resty, Args...) const noexcept>
+    : router_handler_signature_base<Retty, Reqty, Resty, Args...> {};
+template <typename Cty, typename Retty, typename Reqty, typename Resty,
+          typename... Args>
+struct router_handler_signature<Retty (Cty::*)(Reqty, Resty, Args...)>
+    : router_handler_signature_base<Retty, Reqty, Resty, Args...> {};
+template <typename Cty, typename Retty, typename Reqty, typename Resty,
+          typename... Args>
+struct router_handler_signature<Retty (Cty::*)(Reqty, Resty, Args...) noexcept>
+    : router_handler_signature_base<Retty, Reqty, Resty, Args...> {};
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -175,7 +181,7 @@ struct router_handler_signature<Retty (Cty::*)(Reqty, Args...) noexcept>
 // +---------------------------------------------------------------------------+
 // | This concept checks if a given handler type Hty is a valid router handler |
 // | lambda. It requires that the handler has a request_type defined in its    |
-// | signature and returns a value. If these conditions are met,               |
+// | signature and returns void. If these conditions are met,                  |
 // | the concept evaluates to true; otherwise, it evaluates to false.          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
@@ -188,8 +194,13 @@ concept router_handler_lambda = requires {
   requires std::is_const_v<
       std::remove_reference_t<typename router_handler_signature<
           decltype(&std::decay_t<Hty>::operator())>::request_type>>;
-  requires(!std::is_void_v<typename router_handler_signature<
-               decltype(&std::decay_t<Hty>::operator())>::return_type>);
+  requires std::is_void_v<typename router_handler_signature<
+      decltype(&std::decay_t<Hty>::operator())>::return_type>;
+  requires std::is_lvalue_reference_v<typename router_handler_signature<
+      decltype(&std::decay_t<Hty>::operator())>::response_type>;
+  requires !std::is_const_v<std::remove_reference_t<
+      typename router_handler_signature<
+          decltype(&std::decay_t<Hty>::operator())>::response_type>>;
 };
 
 }  // namespace martianlabs::doba::protocol::http

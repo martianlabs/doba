@@ -42,10 +42,9 @@ using martianlabs::doba::protocol::http::v11::policies;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 
-response make_response(std::string_view body) {
-  auto result = response::ok_200();
+void make_response(response& result, std::string_view body) {
+  result.ok_200();
   result.set_header("Date", "fixed").set_body(body);
-  return result;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -57,7 +56,7 @@ struct connection {
   explicit connection(const router<request, response>& routes,
                       policies configuration = {})
       : value(configuration, routes) {
-    value.set_on_send([this](std::string head, std::string body,
+    value.set_on_send([this](std::string_view head, std::string_view body,
                              std::unique_ptr<reader> source) {
       blocks.push_back(head.size() + body.size());
       wire.append(head);
@@ -81,17 +80,17 @@ struct connection {
 // +===========================================================================+
 DOBA_TEST("engine resolves synchronous route forms") {
   router<request, response> routes;
-  routes.add("GET", "/static", [](const request&) {
-    return make_response("one");
+  routes.add("GET", "/static", [](const request&, response& res) {
+    make_response(res, "one");
   });
-  routes.add("POST", "/static", [](const request&) {
-    return make_response("post");
+  routes.add("POST", "/static", [](const request&, response& res) {
+    make_response(res, "post");
   });
-  routes.add("GET", "/item/:id", [](const request&, int id) {
-    return make_response(std::to_string(id));
+  routes.add("GET", "/item/:id", [](const request&, response& res, int id) {
+    make_response(res, std::to_string(id));
   });
-  routes.add("GET", "/assets/*", [](const request&) {
-    return make_response("asset");
+  routes.add("GET", "/assets/*", [](const request&, response& res) {
+    make_response(res, "asset");
   });
   const std::vector<std::pair<std::string, std::string>> cases{
       {"/static", "one"}, {"/item/42", "42"}, {"/assets/a/b", "asset"},
@@ -117,9 +116,9 @@ DOBA_TEST("engine resolves synchronous route forms") {
 DOBA_TEST("engine routes only complete requests") {
   router<request, response> routes;
   int calls = 0;
-  routes.add("POST", "/", [&calls](const request&) {
+  routes.add("POST", "/", [&calls](const request&, response& res) {
     calls++;
-    return make_response("accepted");
+    make_response(res, "accepted");
   });
   const std::string bytes =
       "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 4\r\n\r\ndata";
@@ -142,8 +141,11 @@ DOBA_TEST("engine routes only complete requests") {
 // +===========================================================================+
 DOBA_TEST("engine returns routing and handler errors") {
   router<request, response> routes;
-  routes.add("GET", "/", [](const request&) { return make_response("ok"); });
-  routes.add("GET", "/fail", [](const request&) -> response {
+  routes.add(
+      "GET", "/", [](const request&, response& res) {
+        make_response(res, "ok");
+      });
+  routes.add("GET", "/fail", [](const request&, response& res) -> void {
     throw std::runtime_error("handler failure");
   });
   const std::vector<std::pair<std::string, std::string>> cases{
@@ -165,8 +167,8 @@ DOBA_TEST("engine returns routing and handler errors") {
 // +===========================================================================+
 DOBA_TEST("engine rejects a handler 100 without a final response") {
   router<request, response> routes;
-  routes.add("GET", "/", [](const request&) {
-    return response::continue_100();
+  routes.add("GET", "/", [](const request&, response& res) {
+    res.continue_100();
   });
   connection current(routes);
   const std::string one = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
@@ -179,13 +181,26 @@ DOBA_TEST("engine rejects a handler 100 without a final response") {
   DOBA_EXPECT_EQUAL(current.closes, 1);
 }
 // +===========================================================================+
+// | [>] engine rejects handlers without a status                ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("engine rejects handlers without a status") {
+  router<request, response> routes;
+  routes.add("GET", "/", [](const request&, response&) {});
+  connection current(routes);
+  const std::string bytes = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  DOBA_EXPECT_EQUAL(current.receive(bytes), bytes.size());
+  DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 500 "));
+  DOBA_EXPECT(current.wire.ends_with("\r\n\r\nInternal Server Error"));
+  DOBA_EXPECT_EQUAL(current.closes, 1);
+}
+// +===========================================================================+
 // | [>] engine closes after a pipelined successor               ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("engine closes after a pipelined successor") {
   router<request, response> routes;
   int count = 0;
-  routes.add("GET", "/", [&count](const request&) {
-    return make_response(std::to_string(++count));
+  routes.add("GET", "/", [&count](const request&, response& res) {
+    make_response(res, std::to_string(++count));
   });
   connection current(routes);
   const std::string one = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
@@ -204,15 +219,15 @@ DOBA_TEST("engine closes after a pipelined successor") {
 DOBA_TEST("engine sends large and chunked response bodies") {
   router<request, response> routes;
   const std::string body(24001, 'x');
-  routes.add("GET", "/large", [&body](const request&) {
-    return make_response(body);
+  routes.add("GET", "/large", [&body](const request&, response& res) {
+    make_response(res, body);
   });
-  routes.add("GET", "/chunked", [](const request&) {
+  routes.add("GET", "/chunked", [](const request&, response& res) {
     auto writer = body_writer::chunked();
     if (!writer.write("abc")) throw std::runtime_error("body write failed");
-    auto result = response::ok_200();
-    result.set_body(std::move(writer));
-    return result;
+    res.ok_200();
+    res.set_body(std::move(writer));
+    return;
   });
   connection current(routes);
   const std::string large = "GET /large HTTP/1.1\r\nHost: localhost\r\n\r\n";
@@ -233,8 +248,8 @@ DOBA_TEST("engine sends large and chunked response bodies") {
 // +===========================================================================+
 DOBA_TEST("engine suppresses HEAD bodies") {
   router<request, response> routes;
-  routes.add("HEAD", "/", [](const request&) {
-    return make_response(std::string(9000, 'h'));
+  routes.add("HEAD", "/", [](const request&, response& res) {
+    make_response(res, std::string(9000, 'h'));
   });
   connection current(routes);
   const std::string bytes = "HEAD / HTTP/1.1\r\nHost: localhost\r\n\r\n";
@@ -250,9 +265,9 @@ DOBA_TEST("engine suppresses HEAD bodies") {
 DOBA_TEST("engine requests close without waiting") {
   router<request, response> routes;
   int calls = 0;
-  routes.add("GET", "/", [&calls](const request&) {
+  routes.add("GET", "/", [&calls](const request&, response& res) {
     calls++;
-    return make_response(std::string(17000, 'c'));
+    make_response(res, std::string(17000, 'c'));
   });
   connection current(routes);
   const std::string one = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
@@ -271,11 +286,11 @@ DOBA_TEST("engine requests close without waiting") {
 // +===========================================================================+
 DOBA_TEST("engine honors response close") {
   router<request, response> routes;
-  routes.add("GET", "/", [](const request&) {
-    auto result = make_response("close");
-    result.add_header("Connection", "keep-alive");
-    result.add_header("Connection", " upgrade, ClOsE ");
-    return result;
+  routes.add("GET", "/", [](const request&, response& res) {
+    make_response(res, "close");
+    res.add_header("Connection", "keep-alive");
+    res.add_header("Connection", " upgrade, ClOsE ");
+    return;
   });
   const std::string bytes = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
   connection current(routes);
@@ -290,9 +305,9 @@ DOBA_TEST("engine honors response close") {
 DOBA_TEST("engine rejects invalid and policy limited requests") {
   router<request, response> routes;
   int calls = 0;
-  routes.add("GET", "/", [&calls](const request&) {
+  routes.add("GET", "/", [&calls](const request&, response& res) {
     calls++;
-    return make_response("ok");
+    make_response(res, "ok");
   });
   connection invalid(routes);
   invalid.receive("GET / HTTP/1.0\r\nHost: localhost\r\n\r\n");
@@ -315,8 +330,8 @@ DOBA_TEST("engine rejects invalid and policy limited requests") {
 DOBA_TEST("engine transfers unread sources") {
   router<request, response> routes;
   const std::string body(131073, 'r');
-  routes.add("GET", "/", [&body](const request&) {
-    return make_response(body);
+  routes.add("GET", "/", [&body](const request&, response& res) {
+    make_response(res, body);
   });
   std::string prefix;
   std::unique_ptr<reader> pending;
@@ -325,10 +340,10 @@ DOBA_TEST("engine transfers unread sources") {
   {
     engine<request, response> value({}, routes);
     value.set_on_send(
-        [&](std::string head, std::string body,
+        [&](std::string_view head, std::string_view body,
             std::unique_ptr<reader> source) {
           deliveries++;
-          prefix = head + body;
+          prefix = std::string(head) + std::string(body);
           pending = std::move(source);
         });
     value.set_on_close([&]() { closes++; });
@@ -356,21 +371,21 @@ DOBA_TEST("engine closes after immediate response failures") {
     for (const std::string_view scenario : {"throw", "unknown", "framing"}) {
       router<request, response> routes;
       int successors = 0;
-      auto fail = [scenario]() -> response {
+      auto fail = [scenario](response& res) {
         if (scenario == "throw") throw std::runtime_error("private detail");
         if (scenario == "unknown") throw 1;
-        auto result = make_response("discard");
-        result.set_header("Content-Length", "7");
-        result.set_header("Transfer-Encoding", "chunked");
-        return result;
+        make_response(res, "discard");
+        res.set_header("Content-Length", "7");
+        res.set_header("Transfer-Encoding", "chunked");
+        return;
       };
-      routes.add(method, "/fail", [fail](const request&) {
-        return fail();
+      routes.add(method, "/fail", [fail](const request&, response& res) {
+        fail(res);
       });
 
-      routes.add("GET", "/next", [&](const request&) {
+      routes.add("GET", "/next", [&](const request&, response& res) {
         successors++;
-        return make_response("next");
+        make_response(res, "next");
       });
       connection current(routes);
       const std::string first =
@@ -404,18 +419,18 @@ DOBA_TEST("engine closes after immediate response failures") {
 DOBA_TEST("engine never retries a failed transport delivery") {
   for (const std::string_view scenario : {"ok", "throw", "framing"}) {
     router<request, response> routes;
-    routes.add("GET", "/", [scenario](const request&) {
+    routes.add("GET", "/", [scenario](const request&, response& res) {
       if (scenario == "throw") throw std::runtime_error("private detail");
-      auto result = make_response("ok");
+      make_response(res, "ok");
       if (scenario == "framing") {
-        result.set_header("Transfer-Encoding", "chunked");
-        result.set_header("Content-Length", "2");
+        res.set_header("Transfer-Encoding", "chunked");
+        res.set_header("Content-Length", "2");
       }
-      return result;
+      return;
     });
     connection current(routes);
     int deliveries = 0;
-    current.value.set_on_send([&](std::string, std::string,
+    current.value.set_on_send([&](std::string_view, std::string_view,
                                   std::unique_ptr<reader>) {
       deliveries++;
       throw std::runtime_error("transport failure");
@@ -436,9 +451,9 @@ DOBA_TEST("engine sends one interim for a fragmented body") {
   for (const bool chunked : {false, true}) {
     router<request, response> routes;
     int calls = 0;
-    routes.add("POST", "/", [&](const request&) {
+    routes.add("POST", "/", [&](const request&, response& res) {
       calls++;
-      return make_response("done");
+      make_response(res, "done");
     });
     const std::string head =
         "POST / HTTP/1.1\r\nHost: localhost\r\nExpect: 100-continue\r\n" +
@@ -484,7 +499,7 @@ DOBA_TEST("engine closes when interim delivery fails") {
   router<request, response> routes;
   connection current(routes);
   int deliveries = 0;
-  current.value.set_on_send([&](std::string, std::string,
+  current.value.set_on_send([&](std::string_view, std::string_view,
                                 std::unique_ptr<reader>) {
     deliveries++;
     throw std::runtime_error("transport failure");
@@ -503,9 +518,9 @@ DOBA_TEST("engine closes when interim delivery fails") {
 DOBA_TEST("engine emits a terminal rejection without dispatch") {
   router<request, response> routes;
   int calls = 0;
-  routes.add("GET", "/", [&](const request&) {
+  routes.add("GET", "/", [&](const request&, response& res) {
     calls++;
-    return make_response("unexpected");
+    make_response(res, "unexpected");
   });
   for (const bool head : {false, true}) {
     connection current(routes);
@@ -550,13 +565,13 @@ DOBA_TEST("engine never dispatches a smuggled request") {
     router<request, response> routes;
     int posts = 0;
     int admin = 0;
-    routes.add("POST", "/", [&](const request&) {
+    routes.add("POST", "/", [&](const request&, response& res) {
       posts++;
-      return make_response("post");
+      make_response(res, "post");
     });
-    routes.add("GET", "/admin", [&](const request&) {
+    routes.add("GET", "/admin", [&](const request&, response& res) {
       admin++;
-      return make_response("admin");
+      make_response(res, "admin");
     });
     connection current(routes);
     current.receive(bytes);
@@ -582,15 +597,15 @@ DOBA_TEST("engine ignores trailer fields for later requests") {
   int admin = 0;
   std::string host;
   std::size_t headers = 0;
-  routes.add("POST", "/", [&](const request& req) {
+  routes.add("POST", "/", [&](const request& req, response& res) {
     posts++;
     host = req.get_header("Host").second;
     headers = req.get_headers_length();
-    return make_response("post");
+    make_response(res, "post");
   });
-  routes.add("GET", "/admin", [&](const request&) {
+  routes.add("GET", "/admin", [&](const request&, response& res) {
     admin++;
-    return make_response("admin");
+    make_response(res, "admin");
   });
   connection current(routes);
   const std::string post =
@@ -612,9 +627,9 @@ DOBA_TEST("engine ignores trailer fields for later requests") {
 DOBA_TEST("engine closes before a pipelined rejection") {
   router<request, response> routes;
   int calls = 0;
-  routes.add("GET", "/", [&](const request&) {
+  routes.add("GET", "/", [&](const request&, response& res) {
     calls++;
-    return make_response("first");
+    make_response(res, "first");
   });
   connection current(routes);
   const std::string bytes =
@@ -637,7 +652,7 @@ DOBA_TEST("engine does not retry failed rejection delivery") {
   router<request, response> routes;
   connection current(routes);
   int deliveries = 0;
-  current.value.set_on_send([&](std::string, std::string,
+  current.value.set_on_send([&](std::string_view, std::string_view,
                                 std::unique_ptr<reader>) {
     deliveries++;
     throw std::runtime_error("transport failure");
@@ -653,13 +668,15 @@ DOBA_TEST("engine does not retry failed rejection delivery") {
 DOBA_TEST("engine response close stops immediate dispatch") {
   router<request, response> routes;
   int calls = 0;
-  auto closing = [&calls]() {
+  auto closing = [&calls](response& res) {
     calls++;
-    auto result = make_response("last");
-    result.set_header("Connection", "close");
-    return result;
+    make_response(res, "last");
+    res.set_header("Connection", "close");
+    return;
   };
-  routes.add("GET", "/", [closing](const request&) { return closing(); });
+  routes.add("GET", "/", [closing](const request&, response& res) {
+    closing(res);
+  });
 
   connection current(routes);
   const std::string bytes = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
@@ -680,10 +697,10 @@ DOBA_TEST("engine matches only complete close options") {
   for (const std::string_view option : {"keep-alive", "x-close",
                                         "keep-alive, close-later"}) {
     router<request, response> routes;
-    routes.add("GET", "/", [option](const request&) {
-      auto result = make_response("ok");
-      result.set_header("Connection", option);
-      return result;
+    routes.add("GET", "/", [option](const request&, response& res) {
+      make_response(res, "ok");
+      res.set_header("Connection", option);
+      return;
     });
     connection current(routes);
     const std::string bytes = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";

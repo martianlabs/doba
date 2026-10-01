@@ -22,8 +22,10 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <array>
 #include <atomic>
 #include <chrono>
+#include <deque>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -94,15 +96,18 @@ response file_request(file_router& routes, std::string_view method,
       " HTTP/1.1\r\nHost: example.com\r\n" + std::string(headers) + "\r\n";
   decoder<request, response> decoder;
   std::size_t consumed = 0;
+  static thread_local std::deque<std::array<char, 20480>> storage;
+  storage.emplace_back();
   std::optional<response> result;
+  result.emplace(storage.back());
   auto decoded = decoder.deserialize(
       wire.data(), wire.size(), 8192, consumed,
       [&](const request& value) {
         const auto match = routes.match(method, value.get_absolute_path());
         if (!match.handler) {
-          result.emplace(response::not_found_404());
+          result->not_found_404();
         } else {
-          result.emplace((*match.handler)(value));
+          (*match.handler)(value, *result);
         }
       });
   if (decoded.code !=
@@ -115,12 +120,12 @@ response file_request(file_router& routes, std::string_view method,
 std::string file_body(response& value) {
   auto serialized = value.serialize();
   std::string body;
-  if (serialized->source) serialized->source->read_all(body);
+  if (serialized.source) serialized.source->read_all(body);
   return body;
 }
 std::string file_status(response& value) {
   auto serialized = value.serialize();
-  return serialized->head + serialized->body;
+  return std::string(serialized.head) + std::string(serialized.body);
 }
 }  // namespace
 
@@ -144,7 +149,7 @@ DOBA_TEST("static file server serves types binary empty files and HEAD") {
   auto head = file_request(routes, "HEAD", "/assets/hello.TXT");
   DOBA_EXPECT_EQUAL(head.get_header("Content-Length").second, "5");
   auto serialized = head.serialize();
-  DOBA_EXPECT(!serialized->source);
+  DOBA_EXPECT(!serialized.source);
   auto empty = file_request(routes, "GET", "/assets/empty");
   DOBA_EXPECT_EQUAL(file_body(empty), "");
 }
@@ -252,10 +257,11 @@ DOBA_TEST("static file server never escapes its root") {
     }
     auto result = file_request(routes, "GET", path);
     auto serialized = result.serialize();
-    const std::string status(serialized->head + serialized->body);
+    const std::string status(std::string(serialized.head) +
+        std::string(serialized.body));
     DOBA_EXPECT(status.starts_with("HTTP/1.1 403") ||
                 status.starts_with("HTTP/1.1 404"));
-    DOBA_EXPECT(!serialized->source);
+    DOBA_EXPECT(!serialized.source);
     DOBA_EXPECT(status.find("top-secret") == std::string_view::npos);
   }
   auto control = file_request(routes, "GET", "/files/sub/file");
@@ -301,10 +307,11 @@ DOBA_TEST("static file server evaluates representation conditions") {
   for (const auto& test : cases) {
     auto result = file_request(routes, "GET", "/file", test.fields);
     auto serialized = result.serialize();
-    const std::string prefix((serialized->head + serialized->body));
+    const std::string prefix((std::string(serialized.head) +
+        std::string(serialized.body)));
     DOBA_EXPECT(prefix.starts_with(test.status));
     if (test.status == "HTTP/1.1 304") {
-      DOBA_EXPECT(!serialized->source);
+      DOBA_EXPECT(!serialized.source);
       DOBA_EXPECT(prefix.find("Content-Length:") == prefix.npos);
     }
   }

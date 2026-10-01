@@ -54,6 +54,9 @@ using decoder_type =
 
 constexpr std::size_t receive_capacity = 5120;
 constexpr std::size_t max_query_parameters = 128;
+std::string wire_prefix(const response::serialized_type& result) {
+  return std::string(result.head) + std::string(result.body);
+}
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] decoder_input                                              ( struct ) |
@@ -280,7 +283,7 @@ DOBA_TEST("request head size is bounded by receive capacity") {
       DOBA_EXPECT(result.response.has_value());
       if (!result.response.has_value()) continue;
       auto output = result.response->serialize();
-      DOBA_EXPECT((output->head + output->body)
+      DOBA_EXPECT((wire_prefix(output))
                       .starts_with("HTTP/1.1 400 "));
     }
   }
@@ -676,7 +679,7 @@ DOBA_TEST("rejects malformed request line and header syntax") {
         DOBA_EXPECT(!value.request_seen);
         DOBA_EXPECT(result.response.has_value());
         auto output = result.response->serialize();
-        DOBA_EXPECT((output->head + output->body)
+        DOBA_EXPECT((wire_prefix(output))
                         .starts_with("HTTP/1.1 400 "));
       }
     }
@@ -824,7 +827,7 @@ DOBA_TEST("rejects invalid cross header combinations") {
         DOBA_EXPECT(!value.request_seen);
         DOBA_EXPECT(result.response.has_value());
         auto output = result.response->serialize();
-        DOBA_EXPECT((output->head + output->body)
+        DOBA_EXPECT((wire_prefix(output))
                         .starts_with("HTTP/1.1 400 "));
       }
     }
@@ -869,7 +872,7 @@ DOBA_TEST("rejects transfer coding without final chunked") {
       DOBA_EXPECT(!value.request_seen);
       DOBA_EXPECT(result.response.has_value());
       auto output = result.response->serialize();
-      DOBA_EXPECT((output->head + output->body)
+      DOBA_EXPECT((wire_prefix(output))
                       .starts_with("HTTP/1.1 400 "));
     }
   }
@@ -966,7 +969,7 @@ DOBA_TEST("rejects request smuggling vectors") {
     DOBA_EXPECT(result.response.has_value());
     if (!result.response.has_value()) continue;
     auto output = result.response->serialize();
-    DOBA_EXPECT((output->head + output->body)
+    DOBA_EXPECT((wire_prefix(output))
                     .starts_with(test.status));
   }
 }
@@ -1015,7 +1018,7 @@ DOBA_TEST("rejects embedded null and control bytes") {
         DOBA_EXPECT(!value.request_seen);
         DOBA_EXPECT(result.response.has_value());
         auto output = result.response->serialize();
-        DOBA_EXPECT((output->head + output->body)
+        DOBA_EXPECT((wire_prefix(output))
                         .starts_with("HTTP/1.1 400 "));
       }
     }
@@ -1067,7 +1070,7 @@ DOBA_TEST("rejects malformed chunked framing") {
         DOBA_EXPECT(!value.request_seen);
         DOBA_EXPECT(result.response.has_value());
         auto output = result.response->serialize();
-        DOBA_EXPECT((output->head + output->body)
+        DOBA_EXPECT((wire_prefix(output))
                         .starts_with("HTTP/1.1 400 "));
       }
     }
@@ -1115,7 +1118,7 @@ DOBA_TEST("rejects malformed chunk extensions") {
       DOBA_EXPECT(!value.request_seen);
       DOBA_EXPECT(result.response.has_value());
       auto output = result.response->serialize();
-      DOBA_EXPECT((output->head + output->body)
+      DOBA_EXPECT((wire_prefix(output))
                       .starts_with("HTTP/1.1 400 "));
     }
   }
@@ -1167,7 +1170,7 @@ DOBA_TEST("rejects malformed chunk trailers") {
         DOBA_EXPECT(!value.request_seen);
         DOBA_EXPECT(result.response.has_value());
         auto output = result.response->serialize();
-        DOBA_EXPECT((output->head + output->body)
+        DOBA_EXPECT((wire_prefix(output))
                         .starts_with("HTTP/1.1 400 "));
       }
     }
@@ -1269,7 +1272,7 @@ DOBA_TEST("rejects unsupported HTTP versions") {
         DOBA_EXPECT(!value.request_seen);
         DOBA_EXPECT(result.response.has_value());
         auto output = result.response->serialize();
-        DOBA_EXPECT((output->head + output->body)
+        DOBA_EXPECT((wire_prefix(output))
                         .starts_with("HTTP/1.1 " + std::string(test.status) +
                                      " "));
       }
@@ -2670,7 +2673,7 @@ DOBA_TEST("decoder removes a temporary body after invalid framing") {
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
   DOBA_EXPECT(result.response.has_value());
   auto response_wire = result.response->serialize();
-  DOBA_EXPECT(response_wire->head.starts_with("HTTP/1.1 400 "));
+  DOBA_EXPECT(response_wire.head.starts_with("HTTP/1.1 400 "));
   DOBA_EXPECT(!std::filesystem::exists(path));
 }
 
@@ -2748,7 +2751,7 @@ DOBA_TEST("decoder returns 500 when temporary body creation fails") {
   DOBA_EXPECT(!called);
   DOBA_EXPECT(result.response.has_value());
   auto wire = result.response->serialize();
-  DOBA_EXPECT(wire->head.starts_with("HTTP/1.1 500 "));
+  DOBA_EXPECT(wire.head.starts_with("HTTP/1.1 500 "));
 }
 
 // +===========================================================================+
@@ -2784,7 +2787,7 @@ DOBA_TEST("decoder returns 500 when temporary body cannot reopen") {
   DOBA_EXPECT(!called);
   DOBA_EXPECT(result.response.has_value());
   auto wire = result.response->serialize();
-  DOBA_EXPECT(wire->head.starts_with("HTTP/1.1 500 "));
+  DOBA_EXPECT(wire.head.starts_with("HTTP/1.1 500 "));
   DOBA_EXPECT(!std::filesystem::exists(path));
 }
 
@@ -3087,10 +3090,10 @@ DOBA_TEST("decoder returns one interim with an incomplete body") {
     DOBA_EXPECT(!value.request_seen);
     DOBA_EXPECT(result.response.has_value());
     auto wire = result.response->serialize();
-    const std::string bytes(wire->head + wire->body);
+    const std::string bytes(wire_prefix(wire));
     DOBA_EXPECT(bytes.starts_with("HTTP/1.1 100 Continue\r\n"));
     DOBA_EXPECT(bytes.ends_with("\r\n\r\n"));
-    DOBA_EXPECT(!wire->source);
+    DOBA_EXPECT(!wire.source);
     DOBA_EXPECT(bytes.find("Content-Length:") == std::string_view::npos);
     DOBA_EXPECT(bytes.find("Transfer-Encoding:") == std::string_view::npos);
     accumulate(value, chunked ? "2\r\nx" : "x");
@@ -3144,7 +3147,7 @@ DOBA_TEST("decoder limits interim to accepted incomplete bodies") {
     if (status == deserialization_status::kInvalidSource) {
       DOBA_EXPECT(result.response.has_value());
       auto wire = result.response->serialize();
-      const std::string bytes(wire->head + wire->body);
+      const std::string bytes(wire_prefix(wire));
       DOBA_EXPECT(!bytes.starts_with("HTTP/1.1 100 "));
     } else {
       DOBA_EXPECT(!result.response);
@@ -3178,7 +3181,7 @@ DOBA_TEST("decoder returns responses for rejection reasons") {
     DOBA_EXPECT(!request_seen);
     DOBA_EXPECT(result.response.has_value());
     auto output = result.response->serialize();
-    const std::string bytes(output->head + output->body);
+    const std::string bytes(wire_prefix(output));
     DOBA_EXPECT(bytes.starts_with("HTTP/1.1 " + std::string(status) + " "));
     DOBA_EXPECT(bytes.ends_with("\r\n\r\nInvalid request content!"));
     DOBA_EXPECT(bytes.find("Content-Length: 24\r\n") != std::string_view::npos);
@@ -3212,7 +3215,7 @@ DOBA_TEST("decoder suppresses errors only for a known HEAD") {
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
     DOBA_EXPECT(result.response.has_value());
     auto output = result.response->serialize();
-    const std::string bytes(output->head + output->body);
+    const std::string bytes(wire_prefix(output));
     DOBA_EXPECT(bytes.find("Content-Length: 24\r\n") != std::string_view::npos);
     DOBA_EXPECT(bytes.ends_with(method == "HEAD " ? "\r\n\r\n"
         : "\r\n\r\nInvalid request content!"));
@@ -3226,7 +3229,7 @@ DOBA_TEST("decoder suppresses errors only for a known HEAD") {
   result = partial.decode();
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
   auto output = result.response->serialize();
-  DOBA_EXPECT((output->head + output->body)
+  DOBA_EXPECT((wire_prefix(output))
                   .ends_with("\r\n\r\n"));
 }
 
@@ -3250,7 +3253,7 @@ DOBA_TEST("decoder retains HEAD while decoding body fragments") {
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
   DOBA_EXPECT(result.response.has_value());
   auto output = result.response->serialize();
-  const std::string bytes(output->head + output->body);
+  const std::string bytes(wire_prefix(output));
   DOBA_EXPECT(bytes.starts_with("HTTP/1.1 400 "));
   DOBA_EXPECT(bytes.find("Content-Length: 24\r\n") != std::string_view::npos);
   DOBA_EXPECT(bytes.ends_with("\r\n\r\n"));
@@ -3261,7 +3264,7 @@ DOBA_TEST("decoder retains HEAD while decoding body fragments") {
   result = next.decode();
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
   output = result.response->serialize();
-  DOBA_EXPECT((output->head + output->body)
+  DOBA_EXPECT((wire_prefix(output))
                   .ends_with("\r\n\r\nInvalid request content!"));
 }
 
@@ -3286,7 +3289,7 @@ DOBA_TEST("decoder enforces the configured Content-Length limit") {
                           : deserialization_status::kInvalidSource);
     if (size > policies{}.max_content_length) {
       auto wire = result.response->serialize();
-      DOBA_EXPECT((wire->head + wire->body)
+      DOBA_EXPECT((wire_prefix(wire))
                       .starts_with("HTTP/1.1 413 "));
     }
   }
@@ -3315,7 +3318,7 @@ DOBA_TEST("decoder limits chunked payload across receives") {
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
     DOBA_EXPECT(result.response.has_value());
     auto wire = result.response->serialize();
-    DOBA_EXPECT((wire->head + wire->body)
+    DOBA_EXPECT((wire_prefix(wire))
                     .starts_with("HTTP/1.1 413 "));
   }
   decoder_input allowed(configuration);

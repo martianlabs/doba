@@ -32,10 +32,10 @@ using namespace martianlabs::doba::protocol::http::v11;
 
 int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  auto resource = [](const request&) {
-    response res = response::ok_200();
+  auto resource = [](const request&, response& res) {
+    res.ok_200();
     res.set_body("resource representation");
-    return res;
+    return;
   };
   http_server.add_route(method_names::kGet, "/resource", resource);
   http_server.add_route(method_names::kHead, "/resource", resource);

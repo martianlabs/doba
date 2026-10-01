@@ -40,18 +40,18 @@ using martianlabs::doba::protocol::http::v11::server;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 
-response echo_body(const request& req) {
-  if (!req.has_body_reader()) return response::bad_request_400();
+void echo_body(const request& req, response& res) {
+  if (!req.has_body_reader()) { res.bad_request_400(); return; }
   std::array<std::byte, 1024> buffer{};
   std::string body;
   for (;;) {
     const auto state = req.get_body_reader()->read(buffer);
-    if (state.has_error) return response::bad_request_400();
+    if (state.has_error) { res.bad_request_400(); return; }
     body.append(reinterpret_cast<const char*>(buffer.data()), state.produced);
     if (state.complete) {
-      response result = response::ok_200();
-      result.set_body(body);
-      return result;
+      res.ok_200();
+      res.set_body(body);
+      return;
     }
   }
 }
@@ -66,11 +66,11 @@ DOBA_TEST("HTTP/1.1 rejects hostile requests without dispatching successors") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> dispatched = 0;
   server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/sentinel", [&](const request&) {
+  http_server.add_route("GET", "/sentinel", [&](const request&, response& res) {
     dispatched.fetch_add(1);
-    response res = response::ok_200();
+    res.ok_200();
     res.set_body("sentinel");
-    return res;
+    return;
   });
   http_server.start();
 
@@ -232,13 +232,13 @@ DOBA_TEST("HTTP/1.1 accepts case insensitive framing and valid target forms") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("POST", "/echo", [](const request& req) {
-    return echo_body(req);
+  http_server.add_route("POST", "/echo", [](const request& req, response& res) {
+    echo_body(req, res);
   });
-  http_server.add_route("GET", "/ok", [](const request&) {
-    response res = response::ok_200();
+  http_server.add_route("GET", "/ok", [](const request&, response& res) {
+    res.ok_200();
     res.set_body("ok");
-    return res;
+    return;
   });
   http_server.start();
 
@@ -292,14 +292,15 @@ DOBA_TEST("HTTP/1.1 absolute authority preserves the received Host") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/authority", [](const request& req) {
-    response res = response::ok_200();
+  http_server.add_route(
+      "GET", "/authority", [](const request& req, response& res) {
+    res.ok_200();
     res.set_body(std::string(req.get_target_authority_host()) + "|" +
                  std::string(req.get_target_authority_port()) + "|" +
                  std::string(req.get_host()) + "|" +
                  std::string(req.get_host_port()) + "|" +
                  std::string(req.get_header("Host").second));
-    return res;
+    return;
   });
   http_server.start();
   // +=========================================================================+
@@ -348,13 +349,13 @@ DOBA_TEST(
   const uint16_t port = healthy.find_available_port();
   DOBA_EXPECT(port != 0);
   server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/ok", [](const request&) {
-    response result = response::ok_200();
-    result.set_body("ok");
-    return result;
+  http_server.add_route("GET", "/ok", [](const request&, response& res) {
+    res.ok_200();
+    res.set_body("ok");
+    return;
   });
-  http_server.add_route("POST", "/echo", [](const request& req) {
-    return echo_body(req);
+  http_server.add_route("POST", "/echo", [](const request& req, response& res) {
+    echo_body(req, res);
   });
   http_server.start();
 

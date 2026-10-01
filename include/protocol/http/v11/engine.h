@@ -85,7 +85,8 @@ class engine {
           buffer, size, capacity, consumed,
           [this, size, &consumed](const RQty& request) {
             bool close = request.wants_connection_close() || consumed < size;
-            RSty response = execute_request(request, close);
+            RSty response(decoder_.response_storage());
+            execute_request(request, response, close);
             enqueue_response(request, response, close);
           });
       switch (result.code) {
@@ -109,7 +110,7 @@ class engine {
   // +=========================================================================+
   // | [>] execute_request                                         ( private ) |
   // +-------------------------------------------------------------------------+
-  RSty execute_request(const RQty& request, bool& close) {
+  void execute_request(const RQty& request, RSty& response, bool& close) {
     try {
       switch (request.get_target()) {
         case target::kOriginForm:
@@ -117,27 +118,37 @@ class engine {
           const std::string_view path = request.get_absolute_path();
           const typename ROty::route_match match =
               router_.match(request.get_method(), path);
-          if (match.handler) return (*match.handler)(request);
+          if (match.handler) {
+            (*match.handler)(request, response);
+            return;
+          }
           if (match.parametrized_handler) {
-            return match.parametrized_handler->invoke(request, path);
+            match.parametrized_handler->invoke(request, response, path);
+            return;
           }
           const std::string allowed = router_.allowed_methods(path);
-          if (allowed.empty()) return RSty::not_found_404();
+          if (allowed.empty()) {
+            response.not_found_404();
+            return;
+          }
           // RFC 9110 S15.5.6: a 405 response must advertise allowed methods.
-          RSty response = RSty::method_not_allowed_405();
+          response.method_not_allowed_405();
           response.set_header(header_names::kAllow, allowed);
-          return response;
+          return;
         }
         case target::kAuthorityForm:
-          return RSty::not_implemented_501();
+          response.not_implemented_501();
+          return;
         case target::kAsteriskForm:
-          return RSty::ok_200();
+          response.ok_200();
+          return;
         default:
-          return RSty::bad_request_400();
+          response.bad_request_400();
+          return;
       }
     } catch (...) {
       close = true;
-      return build_error_response();
+      build_error_response(response);
     }
   }
   // +=========================================================================+
@@ -151,10 +162,9 @@ class engine {
   // +=========================================================================+
   // | [>] build_error_response                                    ( private ) |
   // +-------------------------------------------------------------------------+
-  static RSty build_error_response() {
-    RSty response = RSty::internal_server_error_500();
+  static void build_error_response(RSty& response) {
+    response.internal_server_error_500();
     response.set_body("Internal Server Error");
-    return response;
   }
   // +=========================================================================+
   // | [>] enqueue_response                                        ( private ) |
@@ -162,21 +172,20 @@ class engine {
   void enqueue_response(RSty& response, bool close) {
     if (close) response.set_header(header_names::kConnection, "close");
     auto serialized = response.serialize();
-    on_send_(std::move(serialized->head), std::move(serialized->body),
-             std::move(serialized->source));
+    on_send_(serialized.head, serialized.body, std::move(serialized.source));
     if (close) query_for_close();
   }
   // +=========================================================================+
   // | [>] enqueue_response                                        ( private ) |
   // +-------------------------------------------------------------------------+
   void enqueue_response(const RQty& request, RSty& response, bool close) {
-    std::unique_ptr<protocol::serialization_result> serialized;
+    protocol::serialization_result serialized;
     try {
       if (response.is_continue_100()) {
-        // A handler should never return a 100 Continue response. If it does, we
+        // A handler should never set a 100 Continue response. If it does, we
         // treat it as an error.
         close = true;
-        response = build_error_response();
+        build_error_response(response);
       }
       if (close) {
         response.set_header(header_names::kConnection, "close");
@@ -188,13 +197,12 @@ class engine {
       serialized = response.serialize();
     } catch (...) {
       close = true;
-      RSty error = build_error_response();
-      error.set_header(header_names::kConnection, "close");
-      if (request.get_method() == method_names::kHead) error.suppress_body();
-      serialized = error.serialize();
+      build_error_response(response);
+      response.set_header(header_names::kConnection, "close");
+      if (request.get_method() == method_names::kHead) response.suppress_body();
+      serialized = response.serialize();
     }
-    on_send_(std::move(serialized->head), std::move(serialized->body),
-             std::move(serialized->source));
+    on_send_(serialized.head, serialized.body, std::move(serialized.source));
     if (close) query_for_close();
   }
   // +=========================================================================+

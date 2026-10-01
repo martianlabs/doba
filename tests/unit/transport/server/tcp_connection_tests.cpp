@@ -38,7 +38,7 @@ namespace {
 using martianlabs::doba::common::send_delegate;
 using martianlabs::doba::common::reader;
 using martianlabs::doba::transport::server::tcp_connection;
-using martianlabs::doba::transport::server::output_queue;
+using martianlabs::doba::transport::server::send_state;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -140,7 +140,7 @@ DOBA_TEST("tcp connection keeps engine callbacks") {
   tcp_connection<test_engine> input(4, factory);
   bool sent = false;
   bool closed = false;
-  input.engine.set_on_send([&sent](std::string head, std::string body,
+  input.engine.set_on_send([&sent](std::string_view head, std::string_view body,
                                    std::unique_ptr<reader>) {
     sent = head == "x" && body.empty();
   });
@@ -161,7 +161,7 @@ DOBA_TEST("tcp connection sends queue bytes directly") {
   DOBA_EXPECT(!input.peer_closed());
   DOBA_EXPECT(input.eof());
   DOBA_EXPECT(input.close_output());
-  output_queue output(8);
+  send_state output(8);
   DOBA_EXPECT(output.push("abc", {}, nullptr));
   DOBA_EXPECT(input.prepare_output(output));
   auto bytes = input.output_bytes(output);
@@ -179,31 +179,20 @@ DOBA_TEST("tcp connection sends queue bytes directly") {
 DOBA_TEST("tcp connection batches queued output") {
   auto factory = []() { return test_engine{}; };
   tcp_connection<test_engine> input(8, 8, factory, nullptr);
-  output_queue output(32);
+  send_state output(32);
   DOBA_EXPECT(output.push("head", "body", nullptr));
   DOBA_EXPECT(output.push("next", {}, nullptr));
   DOBA_EXPECT(input.prepare_output(output));
   std::array<std::span<char>, 4> buffers{};
   auto count = input.output_buffers(output, buffers);
-  DOBA_EXPECT_EQUAL(count, 3);
+  DOBA_EXPECT_EQUAL(count, 1);
   DOBA_EXPECT_EQUAL(std::string(buffers[0].data(), buffers[0].size()),
-                    "head");
-  DOBA_EXPECT_EQUAL(std::string(buffers[1].data(), buffers[1].size()),
-                    "body");
-  DOBA_EXPECT_EQUAL(std::string(buffers[2].data(), buffers[2].size()),
-                    "next");
+                    "headbodynext");
   DOBA_EXPECT(input.output_sent(output, 5));
-  count = input.output_buffers(output, buffers);
-  DOBA_EXPECT_EQUAL(count, 2);
-  DOBA_EXPECT_EQUAL(std::string(buffers[0].data(), buffers[0].size()),
-                    "ody");
-  output.buffer = "buffer";
-  output.offset = 1;
   count = input.output_buffers(output, buffers);
   DOBA_EXPECT_EQUAL(count, 1);
   DOBA_EXPECT_EQUAL(std::string(buffers[0].data(), buffers[0].size()),
-                    "uffer");
-  DOBA_EXPECT(input.output_sent(output, 5));
-  count = input.output_buffers(output, buffers);
-  DOBA_EXPECT_EQUAL(count, 2);
+                    "odynext");
+  DOBA_EXPECT(input.output_sent(output, 7));
+  DOBA_EXPECT(!input.output_pending(output));
 }

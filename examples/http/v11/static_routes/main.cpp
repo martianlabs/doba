@@ -37,33 +37,33 @@ int main() {
   // A path can expose an independent handler for each HTTP method.
   http_server.add_route(
       method_names::kGet, "/resources",
-      [](const request&) {
-        response res = response::ok_200();
+      [](const request&, response& res) {
+        res.ok_200();
         res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body("resource list");
-        return res;
+        return;
       });
   http_server.add_route(
       method_names::kPost, "/resources",
-      [](const request&) {
-        response res = response::created_201();
+      [](const request&, response& res) {
+        res.created_201();
         res.add_header("Location", "/resources/1")
             .set_body("resource created");
-        return res;
+        return;
       });
   http_server.add_route(
       method_names::kPut, "/resources",
-      [](const request&) {
-        response res = response::ok_200();
+      [](const request&, response& res) {
+        res.ok_200();
         res.set_body("resource replaced");
-        return res;
+        return;
       });
   http_server.add_route(
       method_names::kDelete, "/resources",
-      [](const request&) {
-        response res = response::no_content_204();
+      [](const request&, response& res) {
+        res.no_content_204();
         // no_content_204() leaves the response without a message body.
-        return res;
+        return;
       });
   http_server.start();
   signaler::wait();

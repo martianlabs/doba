@@ -39,26 +39,26 @@ inline void register_echo_route(protocol::http::v11::server<>& http_server) {
   using protocol::http::v11::response;
   http_server.add_route(
       "POST", "/echo",
-      [](const request& req) {
-        response res = response::ok_200();
+      [](const request& req, response& res) {
+        res.ok_200();
         if (!req.has_body_reader()) {
           res.set_body("");
-          return res;
+          return;
         }
         std::array<std::byte, 1024> buffer{};
         std::string body;
         for (;;) {
           const auto state = req.get_body_reader()->read(buffer);
           if (state.has_error) {
-            res = response::bad_request_400();
-            return res;
+            res.bad_request_400();
+            return;
           }
           body.append(reinterpret_cast<const char*>(buffer.data()),
                       state.produced);
           if (state.complete) break;
         }
         res.set_body(body);
-        return res;
+        return;
       });
 }
 }  // namespace martianlabs::doba::examples

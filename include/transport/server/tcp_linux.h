@@ -50,7 +50,6 @@
 #include "network/environment.h"
 #include "platform.h"
 #include "transport/server/tcp_connection.h"
-#include "transport/server/output_queue.h"
 
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
@@ -146,10 +145,10 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       if (auto ctx = weak.lock()) ctx->close();
     });
     input_.engine.set_on_send([weak = this->weak_from_this()](
-                                  std::string head, std::string body,
+                                  std::string_view head, std::string_view body,
                                   std::unique_ptr<common::reader> source) {
       if (auto ctx = weak.lock()) {
-        ctx->send(std::move(head), std::move(body), std::move(source));
+        ctx->send(head, body, std::move(source));
       }
     });
   }
@@ -214,12 +213,12 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] send                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  void send(std::string head, std::string body,
+  void send(std::string_view head, std::string_view body,
             std::unique_ptr<common::reader> source) {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     if (closing_ || socket_ == -1) return;
     if (head.empty() && body.empty() && !source) return;
-    if (!output_.push(std::move(head), std::move(body), std::move(source))) {
+    if (!output_.push(head, body, std::move(source))) {
       abort_();
       return;
     }
@@ -233,10 +232,10 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     if (socket_ == -1 || aborted_) return false;
     for (;;) {
       if (!input_.prepare_output(output_)) return false;
-      std::array<std::span<char>, 16> bytes{};
+      std::array<std::span<char>, 1> bytes{};
       std::size_t count = input_.output_buffers(output_, bytes);
       if (!count) break;
-      std::array<iovec, 16> vectors{};
+      std::array<iovec, 1> vectors{};
       std::size_t total = 0;
       for (std::size_t i = 0; i < count; i++) {
         const std::size_t size = std::min<std::size_t>(
@@ -347,7 +346,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   CNty input_;
   int epoll_fd_{-1};
   mutable std::mutex sending_mutex_;
-  output_queue output_;
+  send_state output_;
   bool send_waiting_{false};
   bool processing_receive_{false};
   bool closing_{false};

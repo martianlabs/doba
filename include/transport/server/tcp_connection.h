@@ -25,15 +25,118 @@
 #ifndef martianlabs_doba_transport_server_tcp_connection_h
 #define martianlabs_doba_transport_server_tcp_connection_h
 
+#include <algorithm>
 #include <cstddef>
 #include <cstring>
+#include <deque>
 #include <memory>
 #include <span>
+#include <string>
+#include <string_view>
+#include <utility>
 
+#include "common/reader.h"
 #include "protocol/contracts.h"
-#include "transport/server/output_queue.h"
 
 namespace martianlabs::doba::transport::server {
+struct send_state {
+  struct source_entry {
+    std::string prefix;
+    std::unique_ptr<common::reader> source;
+  };
+
+  explicit send_state(std::size_t capacity) : capacity_{capacity} {}
+
+  bool push(std::string_view head, std::string_view body,
+            std::unique_ptr<common::reader> source) {
+    const std::size_t size = head.size() + body.size();
+    if (size > capacity_ - inline_bytes_ - source_reservation_) {
+      return false;
+    }
+    if (source) {
+      if (sources_.empty() && !active_from_source_) {
+        source_reservation_ = std::min<std::size_t>(
+            8192, capacity_ - inline_bytes_ - size);
+      }
+      pending_.append(head);
+      pending_.append(body);
+      inline_bytes_ += size;
+      sources_.push_back({std::move(pending_), std::move(source)});
+      pending_.clear();
+    } else {
+      pending_.append(head);
+      pending_.append(body);
+      inline_bytes_ += size;
+    }
+    return true;
+  }
+
+  bool fill() {
+    buffer.clear();
+    offset = 0;
+    active_from_source_ = false;
+    for (;;) {
+      if (sources_.empty()) {
+        buffer.swap(pending_);
+        return true;
+      }
+      auto& entry = sources_.front();
+      if (!entry.prefix.empty()) {
+        buffer.swap(entry.prefix);
+        return true;
+      }
+      if (entry.source->failed()) return false;
+      if (entry.source->eof()) {
+        sources_.pop_front();
+        if (sources_.empty()) source_reservation_ = 0;
+        continue;
+      }
+      const std::size_t available = std::min<std::size_t>(8192, capacity_);
+      buffer.resize(available);
+      const std::size_t count = entry.source->read(
+          std::span<std::byte>(reinterpret_cast<std::byte*>(buffer.data()),
+                               available));
+      buffer.resize(count);
+      if (entry.source->failed() || (!count && !entry.source->eof())) {
+        return false;
+      }
+      if (count) {
+        active_from_source_ = true;
+        return true;
+      }
+    }
+  }
+
+  bool consume(std::size_t sent) {
+    if (sent > buffer.size() - offset) return false;
+    offset += sent;
+    if (!active_from_source_) inline_bytes_ -= sent;
+    return true;
+  }
+
+  bool queued() const { return !pending_.empty() || !sources_.empty(); }
+
+  void clear() {
+    buffer.clear();
+    pending_.clear();
+    sources_.clear();
+    offset = 0;
+    inline_bytes_ = 0;
+    source_reservation_ = 0;
+    active_from_source_ = false;
+  }
+
+  std::string buffer;
+  std::size_t offset{0};
+
+ private:
+  std::string pending_;
+  std::deque<source_entry> sources_;
+  std::size_t capacity_;
+  std::size_t inline_bytes_{0};
+  std::size_t source_reservation_{0};
+  bool active_from_source_{false};
+};
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tcp_connection                                             ( struct ) |
@@ -79,43 +182,31 @@ struct tcp_connection {
   // +=========================================================================+
   // | [>] prepare_output                                           ( public ) |
   // +-------------------------------------------------------------------------+
-  bool prepare_output(output_queue& output) {
-    return output.offset != output.buffer.size() || output.prefix_pending() ||
-           output.fill();
+  bool prepare_output(send_state& output) {
+    return output.offset != output.buffer.size() || output.fill();
   }
-  std::span<char> output_bytes(output_queue& output) {
-    if (output.offset != output.buffer.size()) {
-      return std::span(output.buffer).subspan(output.offset);
-    }
-    return output.prefix_bytes();
+  std::span<char> output_bytes(send_state& output) {
+    return std::span(output.buffer).subspan(output.offset);
   }
   // +=========================================================================+
   // | [>] output_buffers                                           ( public ) |
   // +-------------------------------------------------------------------------+
-  std::size_t output_buffers(output_queue& output,
+  std::size_t output_buffers(send_state& output,
                              std::span<std::span<char>> buffers) {
     if (buffers.empty()) return 0;
-    if (output.offset != output.buffer.size()) {
-      buffers[0] = std::span(output.buffer).subspan(output.offset);
-      return 1;
-    }
-    return output.prefix_buffers(buffers);
+    buffers[0] = output_bytes(output);
+    return buffers[0].empty() ? 0 : 1;
   }
   // +=========================================================================+
   // | [>] output_sent                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  bool output_sent(output_queue& output, std::size_t sent) {
-    if (output.offset != output.buffer.size()) {
-      if (sent > output.buffer.size() - output.offset) return false;
-      output.offset += sent;
-      return true;
-    }
-    return output.consume_prefixes(sent);
+  bool output_sent(send_state& output, std::size_t sent) {
+    return output.consume(sent);
   }
   // +=========================================================================+
   // | [>] output_pending                                           ( public ) |
   // +-------------------------------------------------------------------------+
-  bool output_pending(const output_queue& output) const {
+  bool output_pending(const send_state& output) const {
     return output.queued() || output.offset != output.buffer.size();
   }
   // +=========================================================================+

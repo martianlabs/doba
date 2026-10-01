@@ -36,8 +36,8 @@ int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
       "GET", "/cookies",
-      [](const request& req) {
-        response res = response::ok_200();
+      [](const request& req, response& res) {
+        res.ok_200();
         std::string body = "session: ";
         // Cookie lookup parses the Cookie field on demand.
         const auto session = req.get_cookie("session");
@@ -54,7 +54,7 @@ int main() {
             .add_header("Set-Cookie", "session=doba; Path=/; HttpOnly")
             .add_header("Set-Cookie", "theme=dark; Path=/; SameSite=Lax")
             .set_body(body);
-        return res;
+        return;
       });
   http_server.start();
   signaler::wait();

@@ -32,23 +32,23 @@ int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
       "POST", "/resources",
-      [](const request&) {
-        response res = response::created_201();
+      [](const request&, response& res) {
+        res.created_201();
         res.add_header("Location", "/resources/1");
-        return res;
+        return;
       });
   http_server.add_route(
       "GET", "/redirect",
-      [](const request&) {
-        response res = response::temporary_redirect_307();
+      [](const request&, response& res) {
+        res.temporary_redirect_307();
         res.add_header("Location", "/resources/1");
-        return res;
+        return;
       });
   http_server.add_route(
       "DELETE", "/resources/1",
-      [](const request&) {
-        response res = response::no_content_204();
-        return res;
+      [](const request&, response& res) {
+        res.no_content_204();
+        return;
       });
   http_server.start();
   signaler::wait();

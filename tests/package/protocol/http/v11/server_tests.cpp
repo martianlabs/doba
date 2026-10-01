@@ -45,10 +45,10 @@ class package_controller {
   void register_routes(Rty& routes) {
     routes.add("GET", "/package/:id", &package_controller::get);
   }
-  response get(const request&, int id) const {
-    auto result = response::ok_200();
-    result.set_body(id);
-    return result;
+  void get(const request&, response& res, int id) const {
+    res.ok_200();
+    res.set_body(id);
+    return;
   }
 };
 }  // namespace

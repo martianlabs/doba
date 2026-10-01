@@ -42,6 +42,9 @@ constexpr std::size_t max_response_size_in_memory =
 constexpr std::size_t max_response_body_size_in_memory =
     policies::kMaxResponseBodySizeInMemory;
 
+std::string wire_prefix(const response::serialized_type& result) {
+  return std::string(result.head) + std::string(result.body);
+}
 std::string read_source(reader& source) {
   std::string output;
   source.read_all(output);
@@ -65,15 +68,19 @@ DOBA_TEST("response is movable but not copyable") {
 // | [>] response identifies 100 Continue                        ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("response identifies 100 Continue") {
-  DOBA_EXPECT(response::continue_100().is_continue_100());
-  DOBA_EXPECT(!response::switching_protocols_101().is_continue_100());
-  DOBA_EXPECT(!response::ok_200().is_continue_100());
+  std::array<char, max_response_size_in_memory> storage{};
+  response value(storage);
+  DOBA_EXPECT(value.continue_100().is_continue_100());
+  DOBA_EXPECT(!value.switching_protocols_101().is_continue_100());
+  DOBA_EXPECT(!value.ok_200().is_continue_100());
 }
 // +===========================================================================+
 // | [>] moving preserves response state and owned body writers  ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("moving preserves response state and owned body writers") {
-  response source = response::created_201();
+  std::array<char, max_response_size_in_memory> storage_1{};
+  response source(storage_1);
+  source.created_201();
   auto writer = body_writer::chunked();
   DOBA_EXPECT(writer.write("body"));
   source.set_header("Date", "fixed")
@@ -81,13 +88,15 @@ DOBA_TEST("moving preserves response state and owned body writers") {
       .set_body(std::move(writer));
   response constructed(std::move(source));
   DOBA_EXPECT_EQUAL(constructed.get_header("X-Test").second, "value");
-  response assigned = response::bad_request_400();
+  std::array<char, max_response_size_in_memory> storage_2{};
+  response assigned(storage_2);
+  assigned.bad_request_400();
   assigned.set_body("replaced");
   assigned = std::move(constructed);
   auto serialized = assigned.serialize();
-  const std::string serialized_prefix((serialized->head + serialized->body));
+  const std::string serialized_prefix((wire_prefix(serialized)));
   DOBA_EXPECT(serialized_prefix.starts_with("HTTP/1.1 201 Created\r\n"));
-  DOBA_EXPECT_EQUAL(read_source(*serialized->source),
+  DOBA_EXPECT_EQUAL(read_source(*serialized.source),
                     "4\r\nbody\r\n0\r\n\r\n");
 }
 // +===========================================================================+
@@ -98,44 +107,56 @@ DOBA_TEST("moves preserve the full streamed body") {
   for (std::size_t i = 0; i < body.size(); i++) {
     body[i] = static_cast<char>(i % 256);
   }
-  response source = response::created_201();
+  std::array<char, max_response_size_in_memory> storage_3{};
+  response source(storage_3);
+  source.created_201();
   source.set_header("Date", "fixed").set_body(body);
   response constructed(std::move(source));
-  response assigned = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_4{};
+  response assigned(storage_4);
+  assigned.ok_200();
   assigned.set_body("replaced");
   assigned = std::move(constructed);
   response& alias = assigned;
   assigned = std::move(alias);
   DOBA_EXPECT(!assigned.has_header("Content-Length"));
   auto serialized = assigned.serialize();
-  const std::string serialized_prefix((serialized->head + serialized->body));
+  const std::string serialized_prefix((wire_prefix(serialized)));
   DOBA_EXPECT(serialized_prefix.starts_with("HTTP/1.1 201 Created\r\n"));
   DOBA_EXPECT(serialized_prefix.find("Content-Length: " +
                                      std::to_string(body.size()) + "\r\n") !=
               std::string::npos);
-  DOBA_EXPECT(serialized->source != nullptr);
-  DOBA_EXPECT_EQUAL(read_source(*serialized->source), body);
+  DOBA_EXPECT(serialized.source != nullptr);
+  DOBA_EXPECT_EQUAL(read_source(*serialized.source), body);
 
 }
 // +===========================================================================+
 // | [>] moved responses require factory reassignment            ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("moved responses are reassigned through status factories") {
-  response source = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_5{};
+  response source(storage_5);
+  source.ok_200();
   source.set_header("Date", "fixed")
       .add_header("X-Original", "kept").set_body("original");
   response constructed(std::move(source));
-  source = response::accepted_202();
+  std::array<char, max_response_size_in_memory> new_storage{};
+  response new_response(new_storage);
+  new_response.accepted_202();
+  source = std::move(new_response);
   source.set_header("Date", "fixed").set_body("new");
   auto source_serialized = source.serialize();
-  DOBA_EXPECT((source_serialized->head + source_serialized->body)
+  DOBA_EXPECT((wire_prefix(source_serialized))
                   .starts_with("HTTP/1.1 202 Accepted\r\n"));
   source = std::move(constructed);
-  constructed = response::no_content_204();
+  std::array<char, max_response_size_in_memory> other_storage{};
+  response other_response(other_storage);
+  other_response.no_content_204();
+  constructed = std::move(other_response);
   constructed.set_header("Date", "fixed");
   DOBA_EXPECT_EQUAL(source.get_header("X-Original").second, "kept");
   auto serialized = source.serialize();
-  const std::string serialized_prefix((serialized->head + serialized->body));
+  const std::string serialized_prefix((wire_prefix(serialized)));
   DOBA_EXPECT(serialized_prefix.starts_with("HTTP/1.1 200 OK\r\n"));
   DOBA_EXPECT(serialized_prefix.ends_with("original"));
   DOBA_EXPECT(!constructed.has_header("X-Original"));
@@ -144,27 +165,39 @@ DOBA_TEST("moved responses are reassigned through status factories") {
 // | [>] bodyless responses survive chained moves                ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("bodyless responses survive chained moves") {
-  response source = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_6{};
+  response source(storage_6);
+  source.ok_200();
   response constructed(std::move(source));
-  response assigned = response::bad_request_400();
+  std::array<char, max_response_size_in_memory> storage_7{};
+  response assigned(storage_7);
+  assigned.bad_request_400();
   assigned.set_body("replaced");
   assigned = std::move(constructed);
-  source = response::created_201();
-  constructed = response::accepted_202();
+  std::array<char, max_response_size_in_memory> new_storage{};
+  response new_source(new_storage);
+  new_source.created_201();
+  source = std::move(new_source);
+  std::array<char, max_response_size_in_memory> other_storage{};
+  response new_constructed(other_storage);
+  new_constructed.accepted_202();
+  constructed = std::move(new_constructed);
   for (response* value : {&source, &constructed, &assigned}) {
     value->set_body("").set_header("Date", "fixed");
     auto serialized = value->serialize();
-    const std::string serialized_prefix((serialized->head + serialized->body));
+    const std::string serialized_prefix((wire_prefix(serialized)));
     DOBA_EXPECT(serialized_prefix.find("Content-Length: 0\r\n") !=
                 std::string::npos);
-    DOBA_EXPECT(!serialized->source);
+    DOBA_EXPECT(!serialized.source);
   }
 }
 // +===========================================================================+
 // | [>] headers support mutation lookup removal and indexes     ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("headers support append replace lookup removal and indexes") {
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_8{};
+  response value(storage_8);
+  value.ok_200();
   value.add_header("X-Test", "a").add_header("X-Test", "b");
   value.add_header("X-Number", 42);
   DOBA_EXPECT(value.has_header("x-test"));
@@ -187,7 +220,9 @@ DOBA_TEST("headers support append replace lookup removal and indexes") {
 // | [>] connection close state follows header mutations         ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("connection close state follows header mutations") {
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_9{};
+  response value(storage_9);
+  value.ok_200();
   DOBA_EXPECT(!value.wants_connection_close());
   value.add_header("Connection", "keep-alive, x-close");
   DOBA_EXPECT(!value.wants_connection_close());
@@ -203,7 +238,9 @@ DOBA_TEST("connection close state follows header mutations") {
   DOBA_EXPECT(value.wants_connection_close());
   response moved(std::move(value));
   DOBA_EXPECT(moved.wants_connection_close());
-  response assigned = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_10{};
+  response assigned(storage_10);
+  assigned.ok_200();
   assigned = std::move(moved);
   DOBA_EXPECT(assigned.wants_connection_close());
   assigned.remove_header("Connection");
@@ -213,7 +250,9 @@ DOBA_TEST("connection close state follows header mutations") {
 // | [>] missing and out of range header lookups throw           ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("missing and out of range header lookups throw") {
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_11{};
+  response value(storage_11);
+  value.ok_200();
   bool missing_threw = false;
   try {
     value.get_header("Missing");
@@ -233,7 +272,9 @@ DOBA_TEST("missing and out of range header lookups throw") {
 // | [>] oversized header additions and growth throw             ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("oversized header additions and growth throw") {
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_12{};
+  response value(storage_12);
+  value.ok_200();
   const std::string huge(max_response_size_in_memory, 'x');
   bool add_threw = false;
   try {
@@ -260,7 +301,9 @@ DOBA_TEST("invalid response header names are rejected") {
       "", "Bad Name", "Bad:Name", "Bad\tName", "Bad\r\nX-Test",
   };
   for (const auto name : cases) {
-    response value = response::ok_200();
+    std::array<char, max_response_size_in_memory> storage_13{};
+    response value(storage_13);
+    value.ok_200();
     bool threw = false;
     try {
       value.add_header(name, "value");
@@ -281,7 +324,9 @@ DOBA_TEST("invalid response header values are rejected") {
       std::string("value\0next", 10),
   };
   for (const auto& field_value : cases) {
-    response value = response::ok_200();
+    std::array<char, max_response_size_in_memory> storage_14{};
+    response value(storage_14);
+    value.ok_200();
     bool threw = false;
     try {
       value.add_header("X-Test", field_value);
@@ -295,7 +340,9 @@ DOBA_TEST("invalid response header values are rejected") {
 // | [>] rejected replacement preserves the original header      ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("rejected replacement preserves the original header") {
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_15{};
+  response value(storage_15);
+  value.ok_200();
   value.add_header("X-Test", "original");
   bool threw = false;
   try {
@@ -311,12 +358,14 @@ DOBA_TEST("rejected replacement preserves the original header") {
 // +===========================================================================+
 DOBA_TEST("bounded header views do not copy adjacent bytes") {
   const std::string source = "xxX-Testyyvaluezz";
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_16{};
+  response value(storage_16);
+  value.ok_200();
   value.add_header(std::string_view(source).substr(2, 6),
                   std::string_view(source).substr(10, 5))
       .set_header("Date", "fixed");
   const auto serialized = value.serialize();
-  const std::string serialized_prefix((serialized->head + serialized->body));
+  const std::string serialized_prefix((wire_prefix(serialized)));
   DOBA_EXPECT(serialized_prefix.find("X-Test: value\r\n") !=
               std::string::npos);
   DOBA_EXPECT(serialized_prefix.find("xx") == std::string::npos);
@@ -326,13 +375,15 @@ DOBA_TEST("bounded header views do not copy adjacent bytes") {
 // | [>] small bodies serialize inline including binary bytes    ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("small bodies serialize inline including binary bytes") {
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_17{};
+  response value(storage_17);
+  value.ok_200();
   value.set_header("Date", "fixed")
       .set_body(std::string_view("a\0b", 3));
   DOBA_EXPECT(!value.has_header("Content-Length"));
   const auto serialized = value.serialize();
-  const std::string serialized_prefix((serialized->head + serialized->body));
-  DOBA_EXPECT(!serialized->source);
+  const std::string serialized_prefix((wire_prefix(serialized)));
+  DOBA_EXPECT(!serialized.source);
   DOBA_EXPECT(serialized_prefix.starts_with("HTTP/1.1 200 OK\r\n"));
   DOBA_EXPECT(serialized_prefix.find("Content-Length: 3\r\n") !=
               std::string::npos);
@@ -351,24 +402,26 @@ DOBA_TEST("large bodies serialize through an owned source") {
     for (std::size_t i = 0; i < payload.size(); i++) {
       payload[i] = static_cast<char>((i * 31 + i / 127) % 256);
     }
-    response value = response::ok_200();
+    std::array<char, max_response_size_in_memory> storage_18{};
+    response value(storage_18);
+    value.ok_200();
     value.set_header("Date", "fixed").set_body(payload);
     DOBA_EXPECT(!value.has_header("Content-Length"));
     auto serialized = value.serialize();
-    const std::string serialized_prefix((serialized->head + serialized->body));
+    const std::string serialized_prefix((wire_prefix(serialized)));
     DOBA_EXPECT(serialized_prefix.find("Content-Length: " +
                                        std::to_string(payload.size()) +
                                        "\r\n") != std::string::npos);
     const auto boundary = serialized_prefix.find("\r\n\r\n");
     DOBA_EXPECT(boundary != std::string::npos);
-    DOBA_EXPECT_EQUAL(serialized->source != nullptr,
+    DOBA_EXPECT_EQUAL(serialized.source != nullptr,
                       size > max_response_body_size_in_memory);
     std::string actual = serialized_prefix.substr(boundary + 4);
-    if (serialized->source != nullptr) {
+    if (serialized.source != nullptr) {
       DOBA_EXPECT(actual.empty());
-      actual += read_source(*serialized->source);
-      DOBA_EXPECT(serialized->source->eof());
-      DOBA_EXPECT(!serialized->source->failed());
+      actual += read_source(*serialized.source);
+      DOBA_EXPECT(serialized.source->eof());
+      DOBA_EXPECT(!serialized.source->failed());
     }
     DOBA_EXPECT_EQUAL(actual, payload);
   }
@@ -386,20 +439,22 @@ DOBA_TEST("response head and body limits are independent") {
           framing.size() - 4, 'p');
   for (std::size_t excess : {0, 1}) {
     const std::string payload(body.size() + excess, 'x');
-    response value = response::ok_200();
+    std::array<char, max_response_size_in_memory> storage_19{};
+    response value(storage_19);
+    value.ok_200();
     value.set_header("Date", "fixed").add_header("X-Pad", padding);
     value.set_body(payload);
     auto serialized = value.serialize();
-    std::string actual((serialized->head + serialized->body));
-    if (serialized->source) actual += read_source(*serialized->source);
+    std::string actual((wire_prefix(serialized)));
+    if (serialized.source) actual += read_source(*serialized.source);
     const std::string expected_head =
         head + padding + "\r\nContent-Length: " +
         std::to_string(payload.size()) + "\r\n\r\n";
     DOBA_EXPECT_EQUAL(actual, expected_head + payload);
-    DOBA_EXPECT_EQUAL(serialized->head.size(),
+    DOBA_EXPECT_EQUAL(serialized.head.size(),
                       policies::kMaxResponseHeadSizeInMemory);
-    DOBA_EXPECT_EQUAL(serialized->body.size(), excess ? 0 : body.size());
-    DOBA_EXPECT_EQUAL(serialized->source != nullptr, excess != 0);
+    DOBA_EXPECT_EQUAL(serialized.body.size(), excess ? 0 : body.size());
+    DOBA_EXPECT_EQUAL(serialized.source != nullptr, excess != 0);
   }
 }
 // +===========================================================================+
@@ -408,34 +463,39 @@ DOBA_TEST("response head and body limits are independent") {
 DOBA_TEST("adopted raw and chunked writers set matching framing") {
   auto raw = body_writer::raw();
   DOBA_EXPECT(raw.write("abc"));
-  response raw_response = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_20{};
+  response raw_response(storage_20);
+  raw_response.ok_200();
   raw_response.set_header("Date", "fixed").set_body(std::move(raw));
   DOBA_EXPECT(!raw_response.has_header("Content-Length"));
   auto raw_serialized = raw_response.serialize();
-  DOBA_EXPECT((raw_serialized->head + raw_serialized->body)
+  DOBA_EXPECT((wire_prefix(raw_serialized))
                   .find("Content-Length: 3\r\n") != std::string_view::npos);
-  DOBA_EXPECT_EQUAL(read_source(*raw_serialized->source), "abc");
+  DOBA_EXPECT_EQUAL(read_source(*raw_serialized.source), "abc");
   auto chunked = body_writer::chunked();
   DOBA_EXPECT(chunked.write("abc"));
-  response chunked_response = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_21{};
+  response chunked_response(storage_21);
+  chunked_response.ok_200();
   chunked_response.set_header("Date", "fixed")
       .set_body(std::move(chunked));
   DOBA_EXPECT(!chunked_response.has_header("Transfer-Encoding"));
   DOBA_EXPECT(!chunked_response.has_header("Content-Length"));
   auto chunked_serialized = chunked_response.serialize();
-  const std::string chunked_prefix(chunked_serialized->head +
-                                   chunked_serialized->body);
+  const std::string chunked_prefix(wire_prefix(chunked_serialized));
   DOBA_EXPECT(chunked_prefix.find("Transfer-Encoding: chunked\r\n") !=
               std::string_view::npos);
   DOBA_EXPECT(chunked_prefix.find("Content-Length:") == std::string_view::npos);
-  DOBA_EXPECT_EQUAL(read_source(*chunked_serialized->source),
+  DOBA_EXPECT_EQUAL(read_source(*chunked_serialized.source),
                     "3\r\nabc\r\n0\r\n\r\n");
 }
 // +===========================================================================+
 // | [>] replacing and clearing bodies removes stale framing     ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("replacing and clearing bodies removes stale framing") {
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_22{};
+  response value(storage_22);
+  value.ok_200();
   auto chunked = body_writer::chunked();
   DOBA_EXPECT(chunked.write("abc"));
   value.set_body(std::move(chunked));
@@ -454,7 +514,9 @@ DOBA_TEST("cleared bodies retain zero length across storage modes") {
   const std::string bytes = "hidden";
   for (int mode : {1, 2, 3, 4, 5, 0}) {
     for (bool repeated : {false, true}) {
-      response value = response::ok_200();
+      std::array<char, max_response_size_in_memory> storage_23{};
+      response value(storage_23);
+      value.ok_200();
       value.set_header("Date", "fixed");
       if (mode == 1) {
         value.set_body(bytes);
@@ -474,9 +536,9 @@ DOBA_TEST("cleared bodies retain zero length across storage modes") {
       DOBA_EXPECT(!value.has_header("Content-Length"));
       DOBA_EXPECT(!value.has_header("Transfer-Encoding"));
       auto serialized = value.serialize();
-      DOBA_EXPECT(!serialized->source);
+      DOBA_EXPECT(!serialized.source);
       DOBA_EXPECT_EQUAL(
-          (serialized->head + serialized->body),
+          (wire_prefix(serialized)),
           "HTTP/1.1 200 OK\r\nDate: fixed\r\nContent-Length: 0\r\n\r\n");
     }
   }
@@ -485,7 +547,9 @@ DOBA_TEST("cleared bodies retain zero length across storage modes") {
 // | [>] clearing bodies removes explicit framing                ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("clearing bodies removes explicit framing") {
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_24{};
+  response value(storage_24);
+  value.ok_200();
   value.set_header("Date", "fixed").set_body("hidden");
   value.add_header("Content-Length", "6")
       .add_header("content-length", "6")
@@ -494,16 +558,16 @@ DOBA_TEST("clearing bodies removes explicit framing") {
   value.clear_body();
   DOBA_EXPECT_EQUAL(value.get_headers_length(), 1);
   auto serialized = value.serialize();
-  DOBA_EXPECT(!serialized->source);
+  DOBA_EXPECT(!serialized.source);
   DOBA_EXPECT_EQUAL(
-      (serialized->head + serialized->body),
+      (wire_prefix(serialized)),
       "HTTP/1.1 200 OK\r\nDate: fixed\r\nContent-Length: 0\r\n\r\n");
 }
 // +===========================================================================+
 // | [>] clearing bodies preserves status specific framing       ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("clearing bodies preserves status specific framing") {
-  using setter = response (*)();
+  using setter = response& (response::*)();
   constexpr setter cases[] = {
       &response::continue_100,
       &response::switching_protocols_101,
@@ -512,12 +576,14 @@ DOBA_TEST("clearing bodies preserves status specific framing") {
       &response::not_modified_304,
   };
   for (const auto set : cases) {
-    response value = set();
+    std::array<char, max_response_size_in_memory> storage{};
+    response value(storage);
+    (value.*set)();
     value.set_header("Date", "fixed").set_body("hidden");
     value.clear_body().clear_body();
     auto serialized = value.serialize();
-    const std::string prefix(serialized->head + serialized->body);
-    DOBA_EXPECT(!serialized->source);
+    const std::string prefix(wire_prefix(serialized));
+    DOBA_EXPECT(!serialized.source);
     DOBA_EXPECT(prefix.ends_with("\r\n\r\n"));
     DOBA_EXPECT(prefix.find("Transfer-Encoding:") == std::string_view::npos);
     DOBA_EXPECT_EQUAL(prefix.find("Content-Length: 0\r\n") !=
@@ -529,11 +595,13 @@ DOBA_TEST("clearing bodies preserves status specific framing") {
   }
   auto writer = body_writer::chunked();
   DOBA_EXPECT(writer.write("hidden"));
-  response cached = response::not_modified_304();
+  std::array<char, max_response_size_in_memory> storage_25{};
+  response cached(storage_25);
+  cached.not_modified_304();
   cached.set_body("old").set_body(std::move(writer));
   auto serialized = cached.serialize();
-  const std::string prefix(serialized->head + serialized->body);
-  DOBA_EXPECT(!serialized->source);
+  const std::string prefix(wire_prefix(serialized));
+  DOBA_EXPECT(!serialized.source);
   DOBA_EXPECT(prefix.ends_with("\r\n\r\n"));
   DOBA_EXPECT(prefix.find("Content-Length:") == std::string_view::npos);
   DOBA_EXPECT(prefix.find("Transfer-Encoding:") == std::string_view::npos);
@@ -544,7 +612,9 @@ DOBA_TEST("clearing bodies preserves status specific framing") {
 DOBA_TEST("suppression preserves metadata and permits replacement") {
   for (bool explicit_length : {false, true}) {
     for (int operation : {0, 1, 2}) {
-      response value = response::ok_200();
+      std::array<char, max_response_size_in_memory> storage_26{};
+      response value(storage_26);
+      value.ok_200();
       value.set_header("Date", "fixed").set_body("hidden");
       if (explicit_length) value.set_header("Content-Length", "6");
       DOBA_EXPECT_EQUAL(&value.suppress_body(), &value);
@@ -552,14 +622,14 @@ DOBA_TEST("suppression preserves metadata and permits replacement") {
       if (operation == 1) value.clear_body();
       if (operation == 2) value.set_body("next");
       auto serialized = value.serialize();
-      DOBA_EXPECT(!serialized->source);
+      DOBA_EXPECT(!serialized.source);
       const std::string_view expected = operation == 0
           ? "HTTP/1.1 200 OK\r\nDate: fixed\r\nContent-Length: 6\r\n\r\n"
           : operation == 1
           ? "HTTP/1.1 200 OK\r\nDate: fixed\r\nContent-Length: 0\r\n\r\n"
           : "HTTP/1.1 200 OK\r\nDate: fixed\r\nContent-Length: 4\r\n\r\nnext";
       DOBA_EXPECT_EQUAL(
-          (serialized->head + serialized->body),
+          (wire_prefix(serialized)),
           expected);
     }
   }
@@ -568,7 +638,7 @@ DOBA_TEST("suppression preserves metadata and permits replacement") {
 // | [>] every status method emits its registered status line    ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("every status method emits its registered status line") {
-  using setter = response (*)();
+  using setter = response& (response::*)();
   struct test_case {
     setter set;
     std::string_view line;
@@ -650,11 +720,13 @@ DOBA_TEST("every status method emits its registered status line") {
        "HTTP/1.1 505 HTTP Version Not Supported\r\n", true},
   };
   for (const auto& test : cases) {
-    response value = test.set();
+    std::array<char, max_response_size_in_memory> storage{};
+    response value(storage);
+    (value.*test.set)();
     value.set_header("Date", "fixed");
     DOBA_EXPECT(!value.has_header("Content-Length"));
     const auto serialized = value.serialize();
-    const std::string serialized_prefix((serialized->head + serialized->body));
+    const std::string serialized_prefix((wire_prefix(serialized)));
     DOBA_EXPECT(serialized_prefix.starts_with(test.line));
     DOBA_EXPECT_EQUAL(
         serialized_prefix.find("Content-Length: 0\r\n") != std::string::npos,
@@ -665,7 +737,7 @@ DOBA_TEST("every status method emits its registered status line") {
 // | [>] bodyless statuses never serialize response bodies       ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("informational 204 205 and 304 responses never serialize bodies") {
-  using setter = response (*)();
+  using setter = response& (response::*)();
   constexpr setter cases[] = {
       &response::continue_100,
       &response::switching_protocols_101,
@@ -674,14 +746,16 @@ DOBA_TEST("informational 204 205 and 304 responses never serialize bodies") {
       &response::not_modified_304,
   };
   for (const auto set : cases) {
-    response value = set();
+    std::array<char, max_response_size_in_memory> storage{};
+    response value(storage);
+    (value.*set)();
     value.set_header("Date", "fixed").set_body("body");
     auto serialized = value.serialize();
-    const std::string serialized_prefix((serialized->head + serialized->body));
+    const std::string serialized_prefix((wire_prefix(serialized)));
     const auto boundary = serialized_prefix.find("\r\n\r\n");
     DOBA_EXPECT(boundary != std::string::npos);
     DOBA_EXPECT_EQUAL(serialized_prefix.substr(boundary + 4), "");
-    DOBA_EXPECT(!serialized->source);
+    DOBA_EXPECT(!serialized.source);
     DOBA_EXPECT(serialized_prefix.find("Transfer-Encoding:") ==
                 std::string::npos);
     if (set == &response::reset_content_205) {
@@ -697,33 +771,34 @@ DOBA_TEST("informational 204 205 and 304 responses never serialize bodies") {
   }
   auto writer = body_writer::chunked();
   DOBA_EXPECT(writer.write("body"));
-  response streamed = response::reset_content_205();
+  std::array<char, max_response_size_in_memory> storage_27{};
+  response streamed(storage_27);
+  streamed.reset_content_205();
   streamed.set_header("Date", "fixed")
       .set_body(std::move(writer));
   const auto serialized = streamed.serialize();
-  const std::string serialized_prefix((serialized->head + serialized->body));
+  const std::string serialized_prefix((wire_prefix(serialized)));
   const auto boundary = serialized_prefix.find("\r\n\r\n");
   DOBA_EXPECT(boundary != std::string::npos);
   DOBA_EXPECT_EQUAL(serialized_prefix.substr(boundary + 4), "");
-  DOBA_EXPECT(!serialized->source);
+  DOBA_EXPECT(!serialized.source);
   DOBA_EXPECT(serialized_prefix.find("Transfer-Encoding:") ==
               std::string::npos);
   DOBA_EXPECT(serialized_prefix.find("Content-Length: 0\r\n") !=
               std::string::npos);
 }
 // +===========================================================================+
-// | [>] serialized bytes outlive and detach from the response   ( test-case ) |
+// | [>] serialized views borrow response storage                ( test-case ) |
 // +===========================================================================+
-DOBA_TEST("serialized bytes outlive and detach from the response") {
-  std::unique_ptr<response::serialized_type> serialized;
-  {
-    response value = response::created_201();
-    value.set_header("Date", "fixed").set_body("original");
-    serialized = value.serialize();
-    value = response::internal_server_error_500();
-    value.set_body("replacement");
-  }
-  const std::string prefix((serialized->head + serialized->body));
+DOBA_TEST("serialized views borrow response storage") {
+  std::array<char, max_response_size_in_memory> storage{};
+  response value(storage);
+  value.created_201();
+  value.set_header("Date", "fixed").set_body("original");
+  auto serialized = value.serialize();
+  DOBA_EXPECT_EQUAL(serialized.head.data(), storage.data());
+  const std::string prefix(wire_prefix(serialized));
+  value.internal_server_error_500().set_body("replacement");
   DOBA_EXPECT_EQUAL(prefix,
                     "HTTP/1.1 201 Created\r\nDate: fixed\r\n"
                     "Content-Length: 8\r\n\r\noriginal");
@@ -732,10 +807,12 @@ DOBA_TEST("serialized bytes outlive and detach from the response") {
 // | [>] serializing a consumed response fails safely            ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("serializing a consumed response fails safely") {
-  auto value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_29{};
+  response value(storage_29);
+  value.ok_200();
   value.set_header("Date", "fixed").set_body("body");
   auto serialized = value.serialize();
-  DOBA_EXPECT(serialized != nullptr);
+  DOBA_EXPECT(!serialized.head.empty());
   bool threw = false;
   try {
     (void)value.serialize();
@@ -749,7 +826,9 @@ DOBA_TEST("serializing a consumed response fails safely") {
 // +===========================================================================+
 DOBA_TEST("inline body survives repeated header growth") {
   const std::string body(1024, 'b');
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_30{};
+  response value(storage_30);
+  value.ok_200();
   value.set_body(body).set_header("Date", "fixed");
   for (std::size_t i = 0; i < 12; i++) {
     value.add_header("X-Test", std::string(i * 17, 'x'));
@@ -757,11 +836,11 @@ DOBA_TEST("inline body survives repeated header growth") {
   value.set_header("X-Test", std::string(200, 'y'));
   value.remove_header("X-Test");
   auto serialized = value.serialize();
-  const std::string prefix(serialized->head + serialized->body);
+  const std::string prefix(wire_prefix(serialized));
   DOBA_EXPECT(prefix.find("Content-Length: 1024\r\n") !=
               std::string_view::npos);
   DOBA_EXPECT(prefix.ends_with(body));
-  DOBA_EXPECT(!serialized->source);
+  DOBA_EXPECT(!serialized.source);
 }
 // +===========================================================================+
 // | [>] streamed body survives near-limit headers               ( test-case ) |
@@ -777,20 +856,24 @@ DOBA_TEST("streamed body survives near-limit headers") {
       "Content-Length: " + std::to_string(body.size()) + "\r\n";
   const std::string padding(
       head_limit - 32 - head.size() - framing.size() - 4, 'x');
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_31{};
+  response value(storage_31);
+  value.ok_200();
   value.set_body(body).set_header("Date", "fixed").add_header("X-Pad", padding);
   const auto serialized = value.serialize();
-  const std::string serialized_prefix((serialized->head + serialized->body));
+  const std::string serialized_prefix((wire_prefix(serialized)));
   DOBA_EXPECT_EQUAL(serialized_prefix,
                     head + padding + "\r\n" + framing + "\r\n");
-  DOBA_EXPECT(serialized->source != nullptr);
-  DOBA_EXPECT_EQUAL(read_source(*serialized->source), body);
+  DOBA_EXPECT(serialized.source != nullptr);
+  DOBA_EXPECT_EQUAL(read_source(*serialized.source), body);
 }
 // +===========================================================================+
 // | [>] automatic framing stays deferred until serialization    ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("automatic framing stays deferred until serialization") {
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_32{};
+  response value(storage_32);
+  value.ok_200();
   DOBA_EXPECT_EQUAL(value.get_headers_length(), 0);
   value.add_header("Content-Type", "text/plain").set_body("ok");
   DOBA_EXPECT_EQUAL(value.get_headers_length(), 1);
@@ -806,7 +889,7 @@ DOBA_TEST("automatic framing stays deferred until serialization") {
   value.remove_header("Content-Length");
   value.set_body("replacement").set_body("ok");
   auto serialized = value.serialize();
-  const std::string prefix(serialized->head + serialized->body);
+  const std::string prefix(wire_prefix(serialized));
   DOBA_EXPECT(prefix.find("Content-Length: 2\r\n") != std::string_view::npos);
   DOBA_EXPECT(prefix.find("Content-Length:") ==
               prefix.rfind("Content-Length:"));
@@ -816,18 +899,23 @@ DOBA_TEST("automatic framing stays deferred until serialization") {
 // | [>] body replacement clears explicit framing duplicates     ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("body replacement clears explicit framing duplicates") {
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_33{};
+  response value(storage_33);
+  value.ok_200();
   value.add_header("content-length", "12")
       .add_header("Content-Length", "12")
       .add_header("Transfer-Encoding", "chunked")
       .add_header("transfer-encoding", "chunked");
   response moved(std::move(value));
-  value = response::ok_200();
+  std::array<char, max_response_size_in_memory> new_storage{};
+  response replacement(new_storage);
+  replacement.ok_200();
+  value = std::move(replacement);
   value = std::move(moved);
   value.set_body("xy");
   DOBA_EXPECT_EQUAL(value.get_headers_length(), 0);
   auto serialized = value.serialize();
-  const std::string prefix(serialized->head + serialized->body);
+  const std::string prefix(wire_prefix(serialized));
   DOBA_EXPECT(prefix.find("Content-Length: 2\r\n") != std::string_view::npos);
   DOBA_EXPECT(prefix.find("Transfer-Encoding:") == std::string_view::npos);
   DOBA_EXPECT(prefix.ends_with("\r\n\r\nxy"));
@@ -836,17 +924,21 @@ DOBA_TEST("body replacement clears explicit framing duplicates") {
 // | [>] explicit framing overrides deferred framing             ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("explicit framing overrides deferred framing") {
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_34{};
+  response value(storage_34);
+  value.ok_200();
   value.set_body("abc").set_header("content-length", "3");
   DOBA_EXPECT_EQUAL(value.get_header("Content-Length").second, "3");
   auto serialized = value.serialize();
-  const std::string prefix(serialized->head + serialized->body);
+  const std::string prefix(wire_prefix(serialized));
   DOBA_EXPECT(prefix.find("content-length: 3\r\n") != std::string_view::npos);
   DOBA_EXPECT(prefix.find("Content-Length:") == std::string_view::npos);
-  response head = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_35{};
+  response head(storage_35);
+  head.ok_200();
   head.set_header("Transfer-Encoding", "chunked").suppress_body();
   auto head_serialized = head.serialize();
-  const std::string head_prefix(head_serialized->head + head_serialized->body);
+  const std::string head_prefix(wire_prefix(head_serialized));
   DOBA_EXPECT(head_prefix.find("Transfer-Encoding: chunked\r\n") !=
               std::string_view::npos);
   DOBA_EXPECT(head_prefix.find("Content-Length:") == std::string_view::npos);
@@ -856,7 +948,9 @@ DOBA_TEST("explicit framing overrides deferred framing") {
 // +===========================================================================+
 DOBA_TEST("conflicting response framing is rejected before transmission") {
   for (bool automatic : {false, true}) {
-    response value = response::ok_200();
+    std::array<char, max_response_size_in_memory> storage_36{};
+    response value(storage_36);
+    value.ok_200();
     if (automatic) {
       auto writer = body_writer::chunked();
       DOBA_EXPECT(writer.write("abc"));
@@ -881,14 +975,19 @@ DOBA_TEST("HEAD preserves deferred framing through moves") {
   for (bool chunked : {false, true}) {
     auto writer = chunked ? body_writer::chunked() : body_writer::raw();
     DOBA_EXPECT(writer.write("resource"));
-    response value = response::ok_200();
+    std::array<char, max_response_size_in_memory> storage_37{};
+    response value(storage_37);
+    value.ok_200();
     value.set_body(std::move(writer)).suppress_body();
     response moved(std::move(value));
-    value = response::created_201();
+    std::array<char, max_response_size_in_memory> new_storage{};
+    response replacement(new_storage);
+    replacement.created_201();
+    value = std::move(replacement);
     value = std::move(moved);
     auto serialized = value.serialize();
-    const std::string prefix(serialized->head + serialized->body);
-    DOBA_EXPECT(!serialized->source);
+    const std::string prefix(wire_prefix(serialized));
+    DOBA_EXPECT(!serialized.source);
     DOBA_EXPECT(prefix.ends_with("\r\n\r\n"));
     DOBA_EXPECT_EQUAL(prefix.find("Content-Length: 8\r\n") !=
                           std::string_view::npos,
@@ -904,7 +1003,9 @@ DOBA_TEST("HEAD preserves deferred framing through moves") {
 DOBA_TEST("deferred length respects the exact header boundary") {
   for (std::size_t size : {0, 9, 10, 99, 100}) {
     for (std::size_t excess : {0, 1}) {
-      response value = response::ok_200();
+      std::array<char, max_response_size_in_memory> storage_38{};
+      response value(storage_38);
+      value.ok_200();
       const std::string body(size, 'a');
       const std::string head = "HTTP/1.1 200 OK\r\nDate: fixed\r\nX-Pad: ";
       const std::string framing =
@@ -918,8 +1019,8 @@ DOBA_TEST("deferred length respects the exact header boundary") {
       bool threw = false;
       try {
         auto serialized = value.serialize();
-        std::string actual((serialized->head + serialized->body));
-        if (serialized->source) actual += read_source(*serialized->source);
+        std::string actual((wire_prefix(serialized)));
+        if (serialized.source) actual += read_source(*serialized.source);
         DOBA_EXPECT_EQUAL(actual,
                           head + padding + "\r\n" + framing + "\r\n" + body);
       } catch (const std::out_of_range&) {
@@ -933,12 +1034,14 @@ DOBA_TEST("deferred length respects the exact header boundary") {
 // | [>] removing one Date preserves the remaining explicit Date ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("removing one Date preserves the remaining explicit Date") {
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_39{};
+  response value(storage_39);
+  value.ok_200();
   value.add_header("Date", "first").add_header("Date", "remaining");
   value.remove_header("date");
   DOBA_EXPECT_EQUAL(value.get_header("Date").second, "remaining");
   const auto serialized = value.serialize();
-  const std::string prefix(serialized->head + serialized->body);
+  const std::string prefix(wire_prefix(serialized));
   DOBA_EXPECT_EQUAL(prefix,
                     "HTTP/1.1 200 OK\r\nDate: remaining\r\n"
                     "Content-Length: 0\r\n\r\n");
@@ -947,13 +1050,15 @@ DOBA_TEST("removing one Date preserves the remaining explicit Date") {
 // | [>] removing the last Date restores automatic generation    ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("removing the last Date restores automatic generation") {
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_40{};
+  response value(storage_40);
+  value.ok_200();
   value.add_header("DATE", "first").add_header("date", "remaining");
   value.add_header("X-Keep", "kept");
   value.remove_header("DaTe").remove_header("DATE");
   DOBA_EXPECT(!value.has_header("Date"));
   const auto serialized = value.serialize();
-  const std::string prefix(serialized->head + serialized->body);
+  const std::string prefix(wire_prefix(serialized));
   DOBA_EXPECT(prefix.find("\r\nX-Keep: kept\r\n") != std::string_view::npos);
   const auto date = prefix.find("\r\nDate: ");
   DOBA_EXPECT(date != std::string_view::npos);
@@ -976,7 +1081,9 @@ DOBA_TEST("header names validate every byte before mutation") {
                        std::string_view("!#$%&'*+-.^_|~").find(ch) !=
                            std::string_view::npos;
     for (bool replace : {false, true}) {
-      response value = response::ok_200();
+      std::array<char, max_response_size_in_memory> storage_41{};
+      response value(storage_41);
+      value.ok_200();
       value.add_header("X-Keep", "original");
       bool threw = false;
       try {
@@ -1003,7 +1110,9 @@ DOBA_TEST("header values validate every byte before mutation") {
     const std::string candidate = std::string("a") + ch + "b";
     const bool valid = byte == 9 || (byte >= 32 && byte != 127);
     for (bool replace : {false, true}) {
-      response value = response::ok_200();
+      std::array<char, max_response_size_in_memory> storage_42{};
+      response value(storage_42);
+      value.ok_200();
       value.add_header("X-Keep", "original");
       bool threw = false;
       try {
@@ -1026,7 +1135,9 @@ DOBA_TEST("header values validate every byte before mutation") {
 // | [>] header growth at capacity preserves neighbors and body  ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("header growth at capacity preserves neighbors and body") {
-  response value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_43{};
+  response value(storage_43);
+  value.ok_200();
   const std::string head =
       "HTTP/1.1 200 OK\r\nDate: fixed\r\nContent-Length: 4\r\nX: ";
   const std::string tail = "\r\nY: sentinel\r\n\r\n";
@@ -1051,9 +1162,9 @@ DOBA_TEST("header growth at capacity preserves neighbors and body") {
   value.set_header("X", padding);
   const auto serialized = value.serialize();
   DOBA_EXPECT_EQUAL(
-      (serialized->head + serialized->body),
+      (wire_prefix(serialized)),
       head + padding + tail + "body");
-  DOBA_EXPECT(!serialized->source);
+  DOBA_EXPECT(!serialized.source);
 }
 
 // +===========================================================================+
@@ -1064,17 +1175,21 @@ DOBA_TEST("response adopts a reader at its current position") {
   auto source = reader::borrowed(std::as_bytes(std::span(bytes)));
   std::byte first{};
   DOBA_EXPECT(source.fetch(first));
-  auto value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_44{};
+  response value(storage_44);
+  value.ok_200();
   value.set_body(std::move(source), 5);
   auto moved = std::move(value);
-  auto assigned = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_45{};
+  response assigned(storage_45);
+  assigned.ok_200();
   assigned.set_body("old");
   assigned = std::move(moved);
   auto serialized = assigned.serialize();
-  DOBA_EXPECT(serialized->source != nullptr);
-  const std::string prefix((serialized->head + serialized->body));
+  DOBA_EXPECT(serialized.source != nullptr);
+  const std::string prefix((wire_prefix(serialized)));
   DOBA_EXPECT(prefix.find("Content-Length: 5\r\n") != prefix.npos);
-  DOBA_EXPECT_EQUAL(read_source(*serialized->source), "bcdef");
+  DOBA_EXPECT_EQUAL(read_source(*serialized.source), "bcdef");
 }
 
 // +===========================================================================+
@@ -1082,23 +1197,27 @@ DOBA_TEST("response adopts a reader at its current position") {
 // +===========================================================================+
 DOBA_TEST("reader bodies are replaced or suppressed without leaking bytes") {
   const std::string bytes = "hidden";
-  auto value = response::ok_200();
+  std::array<char, max_response_size_in_memory> storage_46{};
+  response value(storage_46);
+  value.ok_200();
   value.set_body(reader::borrowed(std::as_bytes(std::span(bytes))), 6);
   value.set_body("next");
   auto serialized = value.serialize();
-  DOBA_EXPECT(!serialized->source);
-  DOBA_EXPECT((serialized->head + serialized->body).ends_with("next"));
+  DOBA_EXPECT(!serialized.source);
+  DOBA_EXPECT((wire_prefix(serialized)).ends_with("next"));
   for (auto result : {0, 1, 2, 3, 4}) {
-    auto res = result == 0 ? response::ok_200()
-        : result == 1 ? response::no_content_204()
-        : result == 2 ? response::reset_content_205()
-        : result == 3 ? response::not_modified_304()
-                      : response::continue_100();
+    std::array<char, max_response_size_in_memory> next_storage{};
+    response res(next_storage);
+    if (result == 0) res.ok_200();
+    if (result == 1) res.no_content_204();
+    if (result == 2) res.reset_content_205();
+    if (result == 3) res.not_modified_304();
+    if (result == 4) res.continue_100();
     res.set_body(reader::borrowed(std::as_bytes(std::span(bytes))), 6);
     if (result == 0) res.suppress_body();
     auto wire = res.serialize();
-    DOBA_EXPECT(!wire->source);
-    const std::string prefix((wire->head + wire->body));
+    DOBA_EXPECT(!wire.source);
+    const std::string prefix(wire_prefix(wire));
     DOBA_EXPECT(!prefix.ends_with(bytes));
     if (result == 0) {
       DOBA_EXPECT(prefix.find("Content-Length: 6\r\n") != prefix.npos);

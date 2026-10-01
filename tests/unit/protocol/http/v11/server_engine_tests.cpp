@@ -77,7 +77,7 @@ struct fake_transport {
                                     : observed.request;
     for (int i = 0; i < 2; i++) {
       auto value = factory();
-      value.set_on_send([](std::string head, std::string body,
+      value.set_on_send([](std::string_view head, std::string_view body,
                            std::unique_ptr<reader> source) {
         observed.bytes.append(head);
         observed.bytes.append(body);
@@ -204,10 +204,10 @@ struct controller {
   void register_routes(ROty& routes) {
     routes.add("GET", "/", &controller::handle);
   }
-  http::response handle(const http::request&) {
-    auto response = http::response::ok_200();
-    response.set_body(std::to_string(++calls_));
-    return response;
+  void handle(const http::request&, http::response& res) {
+    res.ok_200();
+    res.set_body(std::to_string(++calls_));
+    return;
   }
   int& calls_;
 };
@@ -232,8 +232,9 @@ DOBA_TEST("server shares its router between engines") {
     DOBA_EXPECT(observed.bytes.ends_with("\r\n\r\n2"));
     bool rejected = false;
     try {
-      value.add_route("GET", "/late", [](const http::request&) {
-        return http::response::ok_200();
+      value.add_route(
+          "GET", "/late", [](const http::request&, http::response& res) {
+        res.ok_200();
       });
     } catch (const std::runtime_error&) {
       rejected = true;
@@ -249,8 +250,9 @@ DOBA_TEST("server shares its router between engines") {
     value.stop();
     value.stop();
     DOBA_EXPECT_EQUAL(observed.stops, 1);
-    value.add_route("GET", "/new", [](const http::request&) {
-      return http::response::ok_200();
+    value.add_route(
+        "GET", "/new", [](const http::request&, http::response& res) {
+      res.ok_200();
     });
     value.start();
     DOBA_EXPECT_EQUAL(calls, 4);
@@ -271,10 +273,10 @@ DOBA_TEST("server recovers from startup failure") {
     failed = true;
   }
   DOBA_EXPECT(failed);
-  value.add_route("GET", "/", [](const http::request&) {
-    auto response = http::response::ok_200();
-    response.set_body("ready");
-    return response;
+  value.add_route("GET", "/", [](const http::request&, http::response& res) {
+    res.ok_200();
+    res.set_body("ready");
+    return;
   });
   observed.fail_start = false;
   value.start();
@@ -289,11 +291,11 @@ DOBA_TEST("server recovers from startup failure") {
 DOBA_TEST("engine factories preserve policies and independence") {
   routes_type routes;
   int calls = 0;
-  routes.add("GET", "/first", [&](const http::request&) {
+  routes.add("GET", "/first", [&](const http::request&, http::response& res) {
     calls++;
-    auto result = http::response::ok_200();
-    result.set_body("first");
-    return result;
+    res.ok_200();
+    res.set_body("first");
+    return;
   });
   http::policies configuration;
   configuration.max_content_length = 1;
@@ -305,7 +307,7 @@ DOBA_TEST("engine factories preserve policies and independence") {
   std::string bytes[2];
   int closed[2] = {};
   for (int i = 0; i < 2; i++) {
-    engines[i]->set_on_send([&, i](std::string head, std::string body,
+    engines[i]->set_on_send([&, i](std::string_view head, std::string_view body,
                                   std::unique_ptr<reader> source) {
       bytes[i].append(head);
       bytes[i].append(body);
@@ -345,9 +347,9 @@ DOBA_TEST("server forwards engine policies to every connection") {
       "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 2\r\n\r\n";
   int calls = 0;
   server_type value(std::make_unique<int>(7), {.max_content_length = 1});
-  value.add_route("GET", "/", [&](const http::request&) {
+  value.add_route("GET", "/", [&](const http::request&, http::response& res) {
     calls++;
-    return http::response::ok_200();
+    res.ok_200();
   });
   value.start();
   DOBA_EXPECT_EQUAL(observed.configuration, 7);

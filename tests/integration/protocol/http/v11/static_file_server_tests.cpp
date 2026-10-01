@@ -107,10 +107,10 @@ DOBA_TEST("HTTP static files preserve binary framing and HEAD") {
   server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_controller<static_file_server>("/assets", first.path());
   value.add_controller<static_file_server>("/other", second.path());
-  value.add_route("GET", "/assets/override", [](const request&) {
-    auto result = response::ok_200();
-    result.set_body("application");
-    return result;
+  value.add_route("GET", "/assets/override", [](const request&, response& res) {
+    res.ok_200();
+    res.set_body("application");
+    return;
   });
   value.start();
   DOBA_EXPECT(client.connect(port));

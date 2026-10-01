@@ -24,6 +24,6 @@ Registration must add at least one route. If construction or registration
 throws, none of that controller's routes remain registered. Registration is
 rejected while the server runs; stopping and restarting preserves instances.
 
-Members return `response` and accept `const request&`, followed by typed route
-arguments. They support `const` and `noexcept` where the implementation permits
-them.
+Members return `void` and accept `const request&`, then `response&`, followed
+by typed route arguments. They support `const` and `noexcept` where the
+implementation permits them.

@@ -57,12 +57,14 @@ class socket_controller {
     routes.add("GET", prefix_ + "/count", &socket_controller::count);
     routes.add("GET", prefix_ + "/fail", &socket_controller::fail);
   }
-  response count(const request&) {
-    auto result = response::ok_200();
-    result.set_body(++count_);
-    return result;
+  void count(const request&, response& res) {
+    res.ok_200();
+    res.set_body(++count_);
+    return;
   }
-  response fail(const request&) { throw std::runtime_error("controller"); }
+  void fail(const request&, response&) {
+    throw std::runtime_error("controller");
+  }
 
  private:
   // +=========================================================================+

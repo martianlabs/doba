@@ -37,13 +37,13 @@ using namespace martianlabs::doba::protocol::http::v11;
 int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
-      method_names::kGet, "/assets/*", [](const request& req) {
-        response res = response::ok_200();
+      method_names::kGet, "/assets/*", [](const request& req, response& res) {
+        res.ok_200();
         std::string body = "requested asset: ";
         body.append(req.get_absolute_path());
         res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(std::move(body));
-        return res;
+        return;
       });
   http_server.start();
   signaler::wait();

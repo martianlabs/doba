@@ -54,7 +54,7 @@ struct memory_transport {
   void start() {
     if (fail) throw std::runtime_error("start failed");
     connection.reset(new ENty(factory()));
-    connection->set_on_send([this](std::string head, std::string body,
+    connection->set_on_send([this](std::string_view head, std::string_view body,
                                    std::unique_ptr<reader> source) {
       bytes.append(head);
       bytes.append(body);
@@ -100,9 +100,9 @@ struct controller {
   void register_routes(ROty& routes) {
     routes.add("GET", "/", &controller::get);
   }
-  http::response get(const http::request&) {
+  void get(const http::request&, http::response& res) {
     calls++;
-    return http::response::ok_200();
+    res.ok_200();
   }
   int& calls;
 };
@@ -122,10 +122,11 @@ DOBA_TEST("server is neither copyable nor movable") {
 // +===========================================================================+
 DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
   test_server value;
-  DOBA_EXPECT_EQUAL(&value.add_route("GET", "/", [](const http::request&) {
-    auto result = http::response::ok_200();
-    result.set_body("body");
-    return result;
+  DOBA_EXPECT_EQUAL(&value.add_route(
+      "GET", "/", [](const http::request&, http::response& res) {
+    res.ok_200();
+    res.set_body("body");
+    return;
   }), &value);
   value.start();
   DOBA_EXPECT(send_request().ends_with("\r\n\r\nbody"));
@@ -161,8 +162,8 @@ DOBA_TEST("failed starts release the date server") {
   bool failed = false;
   try { value.start(); } catch (const std::runtime_error&) { failed = true; }
   DOBA_EXPECT(failed);
-  value.add_route("GET", "/", [](const http::request&) {
-    return http::response::ok_200();
+  value.add_route("GET", "/", [](const http::request&, http::response& res) {
+    res.ok_200();
   });
   test_transport::instance->fail = false;
   value.start();
@@ -175,11 +176,12 @@ DOBA_TEST("failed starts release the date server") {
 // +===========================================================================+
 DOBA_TEST("server accepts new connections after handler failure") {
   test_server value;
-  value.add_route("GET", "/fail", [](const http::request&) -> http::response {
+  value.add_route(
+      "GET", "/fail", [](const http::request&, http::response& res) -> void {
     throw std::runtime_error("handler failed");
   });
-  value.add_route("GET", "/", [](const http::request&) {
-    return http::response::ok_200();
+  value.add_route("GET", "/", [](const http::request&, http::response& res) {
+    res.ok_200();
   });
   value.start();
   DOBA_EXPECT(send_request("GET", "/fail").starts_with("HTTP/1.1 500 "));

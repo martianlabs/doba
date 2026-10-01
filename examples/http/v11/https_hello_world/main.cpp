@@ -46,10 +46,10 @@ int main(int argc, char* argv[]) {
   server<request, response, http::router<request, response>,
          engine<request, response>, transport::tls> http_server(
              configuration);
-  http_server.add_route("GET", "/hello", [](const request&) {
-    response res = response::ok_200();
+  http_server.add_route("GET", "/hello", [](const request&, response& res) {
+    res.ok_200();
     res.set_body("hello from doba");
-    return res;
+    return;
   });
   http_server.start();
   signaler::wait();

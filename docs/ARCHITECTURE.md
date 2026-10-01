@@ -78,8 +78,8 @@ Memory layout and ownership shape the request path:
 | Decode | A contiguous accumulation buffer and views into field data. | Parse without allocating a string for every field. |
 | Own the request | Copy the head into request-owned storage and rebase its views. | Keep metadata valid when the decoder reuses its buffer. |
 | Read metadata | Expose `string_view` and header views. | Access stored data without producing owning copies. |
-| Build a response | Keep headers and small bodies together in a fixed buffer. | Handle small responses without a separate body store. |
-| Transfer a large body | Move a reader into the serialization result. | Let the transport drain it without flattening it into one large string. |
+| Build a response | Write the head and small body into separate regions of the decoder's reusable buffer. | Avoid per-response allocation and byte copies. |
+| Transfer a large body | Move a reader into the serialization result. | Let the transport drain it in bounded segments. |
 
 Copies remain at receive, ownership, and send boundaries. The goal is to
 avoid redundant materialization while keeping lifetimes explicit.
@@ -115,13 +115,16 @@ and transport inactivity timeouts.
   </picture>
 </h2>
 
-Handlers run directly and return a move-only response by value:
-`response(const request&, ...)`. Const and mutable call operators, with or
-without `noexcept`, retain the same request, return and parameter checks.
+Handlers run directly with a response supplied by the engine:
+`void(const request&, response&, ...)`. The handler sets its status before
+returning. Const and mutable call operators, with or without `noexcept`,
+retain the same request and parameter checks.
 
 The engine executes requests in arrival order, serializes each response and
-transfers its owned prefix and optional body reader to the transport. The
-transport preserves delivery order and owns pending socket output.
+passes views of its head and inline body to the transport. The transport
+copies those bytes before returning from `on_send` and owns pending socket
+output. Optional body readers move to the transport, which drains them in
+order.
 
 Protocol processing also has explicit stages: syntax checks, semantic rules,
 body framing, and payload reading. Incoming chunked data is validated as it
@@ -182,35 +185,35 @@ transmission when continuing would corrupt the stream.
   </picture>
 </h2>
 
-Create each response through its status factory, for example:
+The engine creates each response over the decoder's reusable buffer. A handler
+sets its status and body, for example:
 
 ```cpp
-auto res = response::ok_200();
+[](const request&, response& res) {
+res.ok_200();
 res.set_body("ok");
-return res;
+}
 ```
 
-The constructor that allocates storage is private. Status factories write
-the status line and establish the header offset before any fields are added.
-The buffer has fixed capacity and is allocated without zero initialization.
+The decoder allocates the buffer once per connection. Its head and inline body
+regions have fixed capacities of 4 KiB and 16 KiB. Status methods write the
+status line and clear any previous fields and body. For example,
+`res.not_found_404()` replaces the current response status and contents.
 Move construction and move assignment remain public and noexcept.
-To replace a status, assign a fresh response, such as
-`res = response::not_found_404()`. This discards the previous fields and body.
 Synchronous parametrized invocation throws when extraction or conversion
 fails; it never returns an uninitialized
 response or invokes the handler on invalid parameters.
 
-Serialization consumes the response. The returned serialization_result owns
-`prefix` as a unique_ptr<char[]> and bounds its initialized bytes with
-`prefix_size`. A zero length may use a null pointer. Any body reader is owned
-by the result as before. After serialization or moving from a response, only
-destroy it or assign another response before using it again.
+Serialization consumes the response. The returned `serialization_result`
+holds views of the head and inline body and owns an optional body reader.
+The views remain valid until the decoder reuses its buffer. `on_send` copies
+their bytes before returning. After serialization, the response must be reset
+through a status method before it can be used again.
 
-The status line and headers are already in their final positions. Serialization
-adds the terminating CRLF, compacts any inline body with memmove (the regions
-may overlap), and transfers the buffer. It does not copy the header block into
-a separate string. Both transports still copy these bytes into their send
-buffers at the existing point in the queue; serialization timing is unchanged.
+The status line, headers, and inline body are already in their final regions.
+Serialization adds framing and the terminating CRLF without moving the body.
+The transport appends the viewed bytes to its owned send buffer before the
+decoder can reuse them.
 Existing HTTP field, framing and body-suppression rules remain unchanged.
 
 <a name="control-data-movement-as-bodies-grow"></a>
@@ -224,9 +227,8 @@ Existing HTTP field, framing and body-suppression rules remain unchanged.
 </h2>
 
 Body storage starts in memory and can spill to a temporary file. Serialization
-transfers an owned prefix and an optional body reader to the transport.
-The transport drains that reader in bounded chunks and pauses refilling when
-its send-buffer budget is reached.
+moves an optional body reader to the transport. The transport drains that
+reader in bounded chunks after the response's head and inline body.
 
 This separates body storage from network delivery and avoids requiring one
 large contiguous output allocation. Writer-backed body production completes
@@ -235,7 +237,7 @@ before the response is handed off.
 `response.set_body(common::reader&& source, size_t length)` instead transfers
 an existing source at its current cursor. The caller must supply its exact
 remaining length. Replacing or clearing the body closes the previous source.
-Serialization moves it into the existing transport contract, while HEAD and
+Serialization moves it into the transport contract, while HEAD and
 bodyless statuses suppress it under the existing HTTP rules.
 
 `common/filesystem.h` provides `filesystem_root` and the move-only

@@ -68,19 +68,19 @@ class counter_controller {
   // | [>] count                                                   ( private ) |
   // +=========================================================================+
 
-  response count(const request&) {
-    auto result = response::ok_200();
+  void count(const request&, response& result) {
+    result.ok_200();
     result.set_body(++count_);
-    return result;
+    return;
   }
   // +=========================================================================+
   // | [>] echo                                                    ( private ) |
   // +=========================================================================+
 
-  response echo(const request&, int id) const {
-    auto result = response::ok_200();
+  void echo(const request&, response& result, int id) const {
+    result.ok_200();
     result.set_body(id);
-    return result;
+    return;
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |

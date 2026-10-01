@@ -34,7 +34,7 @@
 #include <utility>
 
 #include "protocol/contracts.h"
-#include "transport/server/output_queue.h"
+#include "transport/server/tcp_connection.h"
 #include "transport/server/tls_session.h"
 
 namespace martianlabs::doba::transport::server {
@@ -93,7 +93,7 @@ struct tls_connection {
   // +=========================================================================+
   // | [>] prepare_output                                           ( public ) |
   // +-------------------------------------------------------------------------+
-  bool prepare_output(output_queue& output) {
+  bool prepare_output(send_state& output) {
     for (;;) {
       if (session_.pending()) return true;
       if (!session_.established()) return !session_.failed();
@@ -116,7 +116,7 @@ struct tls_connection {
           session_.write(std::span(output.buffer.data() + output.offset,
                                    output.buffer.size() - output.offset));
       if (result.state == tls_session::status::failed) return false;
-      output.offset += result.size;
+      if (!output.consume(result.size)) return false;
       if (result.state == tls_session::status::need_input) return true;
       if (result.state == tls_session::status::need_output &&
           !session_.pending())
@@ -126,10 +126,10 @@ struct tls_connection {
   // +=========================================================================+
   // | [>] output_bytes                                             ( public ) |
   // +-------------------------------------------------------------------------+
-  std::span<char> output_bytes(output_queue&) {
+  std::span<char> output_bytes(send_state&) {
     return session_.output_bytes();
   }
-  std::size_t output_buffers(output_queue& output,
+  std::size_t output_buffers(send_state& output,
                              std::span<std::span<char>> buffers) {
     if (buffers.empty()) return 0;
     buffers[0] = output_bytes(output);
@@ -138,14 +138,14 @@ struct tls_connection {
   // +=========================================================================+
   // | [>] output_sent                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  bool output_sent(output_queue&, std::size_t sent) {
+  bool output_sent(send_state&, std::size_t sent) {
     session_.output_sent(sent);
     return true;
   }
   // +=========================================================================+
   // | [>] output_pending                                           ( public ) |
   // +-------------------------------------------------------------------------+
-  bool output_pending(const output_queue& output) const {
+  bool output_pending(const send_state& output) const {
     return session_.pending() || output.queued() ||
            output.offset != output.buffer.size() ||
            (close_requested_ && !shutdown_complete_);

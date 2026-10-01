@@ -204,10 +204,10 @@ DOBA_TEST("tls serves an HTTP response") {
          martianlabs::doba::protocol::http::router<request, response>,
          martianlabs::doba::protocol::http::v11::engine<request, response>,
          tls> http_server(server_policies(port));
-  http_server.add_route("GET", "/ready", [](const request&) {
-    response res = response::ok_200();
+  http_server.add_route("GET", "/ready", [](const request&, response& res) {
+    res.ok_200();
     res.set_body("ready");
-    return res;
+    return;
   });
   http_server.start();
   DOBA_EXPECT(client.socket.connect(port));
@@ -232,22 +232,22 @@ DOBA_TEST("tls preserves a fragmented binary HTTP body") {
          martianlabs::doba::protocol::http::router<request, response>,
          martianlabs::doba::protocol::http::v11::engine<request, response>,
          tls> http_server(server_policies(port));
-  http_server.add_route("POST", "/echo", [](const request& req) {
-    if (!req.has_body_reader()) return response::bad_request_400();
+  http_server.add_route("POST", "/echo", [](const request& req, response& res) {
+    if (!req.has_body_reader()) { res.bad_request_400(); return; }
     std::array<std::byte, 1024> buffer{};
     std::string body;
     for (int i = 0; i < 32; ++i) {
       const auto state = req.get_body_reader()->read(buffer);
-      if (state.has_error) return response::bad_request_400();
+      if (state.has_error) { res.bad_request_400(); return; }
       body.append(reinterpret_cast<const char*>(buffer.data()),
                   state.produced);
       if (state.complete) {
-        response res = response::ok_200();
+        res.ok_200();
         res.set_body(body);
-        return res;
+        return;
       }
     }
-    return response::bad_request_400();
+    { res.bad_request_400(); return; }
   });
   http_server.start();
   DOBA_EXPECT(client.socket.connect(port));
@@ -279,20 +279,20 @@ DOBA_TEST("tls serves sequential HTTP requests before closing") {
          martianlabs::doba::protocol::http::router<request, response>,
          martianlabs::doba::protocol::http::v11::engine<request, response>,
          tls> http_server(server_policies(port));
-  http_server.add_route("GET", "/one", [](const request&) {
-    response res = response::ok_200();
+  http_server.add_route("GET", "/one", [](const request&, response& res) {
+    res.ok_200();
     res.set_body("one");
-    return res;
+    return;
   });
-  http_server.add_route("GET", "/two", [](const request&) {
-    response res = response::ok_200();
+  http_server.add_route("GET", "/two", [](const request&, response& res) {
+    res.ok_200();
     res.set_body("two");
-    return res;
+    return;
   });
-  http_server.add_route("GET", "/three", [](const request&) {
-    response res = response::ok_200();
+  http_server.add_route("GET", "/three", [](const request&, response& res) {
+    res.ok_200();
     res.set_body("three");
-    return res;
+    return;
   });
   http_server.start();
   DOBA_EXPECT(client.socket.connect(port));

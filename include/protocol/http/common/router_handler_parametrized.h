@@ -227,7 +227,7 @@ bool parse_route_parameters_(
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename Hty, typename RQty, typename RSty, typename... Args>
-RSty invoke_route_handler(Hty& handler, const RQty& req,
+void invoke_route_handler(Hty& handler, const RQty& req, RSty& res,
                           std::string_view pattern, std::string_view path) {
   std::array<std::string_view, sizeof...(Args)> parameters;
   if (!extract_route_parameters(pattern, path, parameters)) {
@@ -238,9 +238,9 @@ RSty invoke_route_handler(Hty& handler, const RQty& req,
                                         std::index_sequence_for<Args...>{})) {
     throw std::runtime_error("The route parameters could not be parsed");
   }
-  return std::apply(
-      [&handler, &req](auto&... value) {
-        return std::invoke(handler, req, value...);
+  std::apply(
+      [&handler, &req, &res](auto&... value) {
+        std::invoke(handler, req, res, value...);
       },
       values);
 }
@@ -263,8 +263,8 @@ class router_handler_parametrized {
   // | [>] TYPEs                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   using matcher_type = bool (*)(std::string_view, std::string_view);
-  using callback_type =
-      std::function<RSty(const RQty&, std::string_view, std::string_view)>;
+  using callback_type = std::function<void(const RQty&, RSty&,
+                                           std::string_view, std::string_view)>;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
@@ -282,8 +282,8 @@ class router_handler_parametrized {
   // +=========================================================================+
   // | [>] invoke                                                   ( public ) |
   // +-------------------------------------------------------------------------+
-  RSty invoke(const RQty& req, std::string_view path) const {
-    return callback_(req, pattern_, path);
+  void invoke(const RQty& req, RSty& res, std::string_view path) const {
+    callback_(req, res, pattern_, path);
   }
 
  private:
@@ -317,10 +317,10 @@ auto make_router_handler_parametrized(std::string_view pattern, Hty&& handler) {
   return router_handler_parametrized<RQty, RSty>(
       std::string(pattern), &detail::match_route_parameters<Args...>,
       [handler = handler_type(std::forward<Hty>(handler))](
-          const RQty& req, std::string_view route_pattern,
+          const RQty& req, RSty& res, std::string_view route_pattern,
           std::string_view path) mutable {
-        return detail::invoke_route_handler<handler_type, RQty, RSty, Args...>(
-            handler, req, route_pattern, path);
+        detail::invoke_route_handler<handler_type, RQty, RSty, Args...>(
+            handler, req, res, route_pattern, path);
       });
 }
 

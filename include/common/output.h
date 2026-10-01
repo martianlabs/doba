@@ -28,27 +28,15 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
-#include <string>
+#include <string_view>
 
 #include "common/reader.h"
 
 namespace martianlabs::doba::common {
-// Head, body and optional source are moved into the connection's FIFO.
-// Concurrent submissions are serialized; engines determine protocol order.
-// The source follows both strings; later deliveries cannot overtake it.
-// Output queued during an input callback starts after that callback returns.
-// Other submissions activate output without requiring new input.
-// Empty deliveries without a source reserve no bytes.
-// Submissions after closing are ignored, including calls through a retained
-// delegate after transport destruction.
-// Sources initially reserve up to 8192 bytes, or their strings if larger.
-// Queued reservations and the entire active batch share the send capacity.
-// Source-owned storage is outside this limit; borrowed storage must stay valid
-// until delivery finishes or is discarded.
-// Invalid deliveries or overflow close the connection; rejected data is freed.
-// The transport never calls back into the engine while sending.
-using send_delegate =
-    std::function<void(std::string, std::string, std::unique_ptr<reader>)>;
+// The transport copies both views before returning and owns the moved source.
+// Engines determine protocol order; the transport preserves submission order.
+using send_delegate = std::function<void(
+    std::string_view, std::string_view, std::unique_ptr<reader>)>;
 }  // namespace martianlabs::doba::common
 
 #endif

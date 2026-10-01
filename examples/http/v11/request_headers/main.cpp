@@ -36,8 +36,8 @@ int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
       "GET", "/headers",
-      [](const request& req) {
-        response res = response::ok_200();
+      [](const request& req, response& res) {
+        res.ok_200();
         std::string body = "user-agent: ";
         // Header-name lookup is case-insensitive.
         if (req.exist_header("User-Agent")) {
@@ -56,7 +56,7 @@ int main() {
         }
         res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(body);
-        return res;
+        return;
       });
   http_server.start();
   signaler::wait();

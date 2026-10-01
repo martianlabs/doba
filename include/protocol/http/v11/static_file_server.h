@@ -85,12 +85,16 @@ class static_file_server {
   // +=========================================================================+
   // | [>] serve                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  response serve(const request& req) const {
+  void serve(const request& req, response& result) const {
     const auto path = req.get_absolute_path();
-    if (!path.starts_with(prefix_)) return response::not_found_404();
+    if (!path.starts_with(prefix_)) {
+      result.not_found_404();
+      return;
+    }
     const auto relative = path.substr(prefix_.size());
     if (relative.empty() || relative.back() == '/') {
-      return response::not_found_404();
+      result.not_found_404();
+      return;
     }
     common::filesystem_file file;
     std::error_code error;
@@ -98,14 +102,17 @@ class static_file_server {
       if (error == std::errc::no_such_file_or_directory ||
           error == std::errc::not_a_directory ||
           error == std::errc::is_a_directory) {
-        return response::not_found_404();
+        result.not_found_404();
+        return;
       }
       if (error == std::errc::permission_denied ||
           error == std::errc::operation_not_permitted ||
           error == std::errc::too_many_symbolic_link_levels) {
-        return response::forbidden_403();
+        result.forbidden_403();
+        return;
       }
-      return response::internal_server_error_500();
+      result.internal_server_error_500();
+      return;
     }
     // RFC 9110 S13.2.2: evaluate If-Match before If-None-Match.
     bool if_match = false;
@@ -122,13 +129,16 @@ class static_file_server {
         none_star = none_star || value == "*";
       }
     }
-    if (if_match && !match_star) return response::precondition_failed_412();
-    if (none_star) {
-      auto result = response::not_modified_304();
-      result.clear_body();
-      return result;
+    if (if_match && !match_star) {
+      result.precondition_failed_412();
+      return;
     }
-    auto result = response::ok_200();
+    if (none_star) {
+      result.not_modified_304();
+      result.clear_body();
+      return;
+    }
+    result.ok_200();
     result.set_header("Content-Type", content_type(relative));
     const auto length = file.size();
     if (req.get_method() == "HEAD") {
@@ -136,7 +146,6 @@ class static_file_server {
     } else {
       result.set_body(common::reader(std::move(file)), length);
     }
-    return result;
   }
   // +=========================================================================+
   // | [>] content_type                                            ( private ) |

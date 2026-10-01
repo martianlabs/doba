@@ -39,34 +39,34 @@ int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
       "POST", "/echo",
-      [](const request& req) {
-        response res = response::ok_200();
+      [](const request& req, response& res) {
+        res.ok_200();
         // The reader hides Content-Length and chunked request framing.
         if (!req.has_body_reader()) {
-          res = response::bad_request_400();
+          res.bad_request_400();
           res.set_body("request body required");
-          return res;
+          return;
         }
         std::array<std::byte, 1024> buffer{};
         auto writer = body::body_writer::raw();
         for (;;) {
           const auto state = req.get_body_reader()->read(buffer);
           if (state.has_error) {
-            res = response::bad_request_400();
+            res.bad_request_400();
             res.set_body("unable to read request body");
-            return res;
+            return;
           }
           // Forward only the bytes produced by this read, without conversion.
           if (!writer.write(
                   std::span<const std::byte>(buffer.data(), state.produced))) {
-            res = response::internal_server_error_500();
-            return res;
+            res.internal_server_error_500();
+            return;
           }
           if (state.complete) break;
         }
         res.add_header("Content-Type", "application/octet-stream")
             .set_body(std::move(writer));
-        return res;
+        return;
       });
   http_server.start();
   signaler::wait();

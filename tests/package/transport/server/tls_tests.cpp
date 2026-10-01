@@ -45,8 +45,9 @@ int main() {
   configuration.certificate_file = (fixtures / "server.crt").string();
   configuration.private_key_file = (fixtures / "server.key").string();
   tls_server value(configuration);
-  value.add_route("GET", "/", [](const v11::request&) {
-    return v11::response::ok_200();
+  value.add_route("GET", "/", [](const v11::request&,
+                                  v11::response& res) {
+    res.ok_200();
   });
   return 0;
 }
