@@ -32,7 +32,7 @@
 
 // +===========================================================================+
 // | [>] environment retains exclusive lifecycle ownership       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("environment retains exclusive lifecycle ownership") {
   using martianlabs::doba::network::detail::environment;
   static_assert(std::is_default_constructible_v<environment>);

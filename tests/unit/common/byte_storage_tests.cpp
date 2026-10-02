@@ -39,19 +39,16 @@
 namespace {
 using martianlabs::doba::common::byte_storage;
 using martianlabs::doba::common::byte_storage_options;
-
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] spill_directory                                             ( class ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class spill_directory {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   spill_directory() {
     namespace fs = std::filesystem;
     static std::atomic<std::size_t> sequence{0};
@@ -66,16 +63,26 @@ class spill_directory {
     std::error_code error;
     std::filesystem::remove_all(path_, error);
   }
-
+  // +=========================================================================+
+  // | [>] path                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   const std::filesystem::path& path() const { return path_; }
 
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::filesystem::path path_;
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] only_spill_file                                          ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function returns the path of the only spill file in the specified    |
+// | directory.                                                                |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 std::filesystem::path only_spill_file(const std::filesystem::path& directory) {
   std::filesystem::path result;
   for (const auto& entry : std::filesystem::directory_iterator(directory)) {
@@ -87,13 +94,13 @@ std::filesystem::path only_spill_file(const std::filesystem::path& directory) {
 
 // +===========================================================================+
 // | [>] default spill threshold and explicit disable            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("default spill threshold and explicit disable") {
   spill_directory directory;
   const std::string bytes(byte_storage_options::kDefaultSpillThreshold, 'x');
   {
-    byte_storage storage(byte_storage_options{
-        .spill_dir = directory.path().string()});
+    byte_storage storage(
+        byte_storage_options{.spill_dir = directory.path().string()});
     DOBA_EXPECT(storage.write(bytes.data(), bytes.size()));
     DOBA_EXPECT(only_spill_file(directory.path()).empty());
     DOBA_EXPECT(storage.write("y", 1));
@@ -111,7 +118,7 @@ DOBA_TEST("default spill threshold and explicit disable") {
 
 // +===========================================================================+
 // | [>] spilling preserves existing files                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("spilling preserves existing files") {
   spill_directory directory;
   const auto existing = directory.path() / "existing.tmp";
@@ -120,9 +127,8 @@ DOBA_TEST("spilling preserves existing files") {
     stream << "preserved";
   }
   {
-    byte_storage storage(
-        byte_storage_options{.spill_threshold = 1,
-                             .spill_dir = directory.path().string()});
+    byte_storage storage(byte_storage_options{
+        .spill_threshold = 1, .spill_dir = directory.path().string()});
     DOBA_EXPECT(storage.write("body", 4));
     storage.finish(4);
     DOBA_EXPECT(storage.ok());
@@ -132,9 +138,10 @@ DOBA_TEST("spilling preserves existing files") {
   std::string content((std::istreambuf_iterator<char>(stream)), {});
   DOBA_EXPECT_EQUAL(content, "preserved");
 }
+
 // +===========================================================================+
 // | [>] finishing seals memory and spilled storage              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("finishing seals memory and spilled storage") {
   spill_directory directory;
   byte_storage_options cases[] = {
@@ -157,12 +164,11 @@ DOBA_TEST("finishing seals memory and spilled storage") {
 
 // +===========================================================================+
 // | [>] memory threshold 6                                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("storage below the threshold remains in memory") {
   spill_directory directory;
-  byte_storage storage(
-      byte_storage_options{.spill_threshold = 8,
-                           .spill_dir = directory.path().string()});
+  byte_storage storage(byte_storage_options{
+      .spill_threshold = 8, .spill_dir = directory.path().string()});
   DOBA_EXPECT(storage.write("abcdef", 6));
   storage.finish(6);
   DOBA_EXPECT_EQUAL(storage.total_size().value(), 6);
@@ -176,12 +182,11 @@ DOBA_TEST("storage below the threshold remains in memory") {
 
 // +===========================================================================+
 // | [>] memory threshold 8                                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("storage at the threshold remains in memory") {
   spill_directory directory;
-  byte_storage storage(
-      byte_storage_options{.spill_threshold = 8,
-                           .spill_dir = directory.path().string()});
+  byte_storage storage(byte_storage_options{
+      .spill_threshold = 8, .spill_dir = directory.path().string()});
   DOBA_EXPECT(storage.write("abcdefgh", 8));
   storage.finish(8);
   DOBA_EXPECT_EQUAL(storage.total_size().value(), 8);
@@ -195,20 +200,20 @@ DOBA_TEST("storage at the threshold remains in memory") {
 
 // +===========================================================================+
 // | [>] spill preserves memory prefix                           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("crossing the threshold preserves the memory prefix") {
   spill_directory directory;
   {
-    byte_storage storage(
-        byte_storage_options{.spill_threshold = 8,
-                             .spill_dir = directory.path().string()});
+    byte_storage storage(byte_storage_options{
+        .spill_threshold = 8, .spill_dir = directory.path().string()});
     DOBA_EXPECT(storage.write("abcdef", 6));
     DOBA_EXPECT(std::filesystem::is_empty(directory.path()));
     DOBA_EXPECT(storage.write("GHIJ", 4));
     storage.finish(10);
     DOBA_EXPECT_EQUAL(
         std::distance(std::filesystem::directory_iterator(directory.path()),
-                      std::filesystem::directory_iterator()), 1);
+                      std::filesystem::directory_iterator()),
+        1);
     std::array<char, 10> output{};
     DOBA_EXPECT_EQUAL(storage.read(output.data(), output.size()), 10);
     DOBA_EXPECT_EQUAL(std::string_view(output.data(), output.size()),
@@ -221,12 +226,11 @@ DOBA_TEST("crossing the threshold preserves the memory prefix") {
 
 // +===========================================================================+
 // | [>] zero spill threshold                                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("zero threshold disables spilling") {
   spill_directory directory;
-  byte_storage storage(
-      byte_storage_options{.spill_threshold = 0,
-                           .spill_dir = directory.path().string()});
+  byte_storage storage(byte_storage_options{
+      .spill_threshold = 0, .spill_dir = directory.path().string()});
   for (std::size_t i = 0; i < 4; i++) DOBA_EXPECT(storage.write("abcdefgh", 8));
   storage.finish(32);
   DOBA_EXPECT(std::filesystem::is_empty(directory.path()));
@@ -240,13 +244,12 @@ DOBA_TEST("zero threshold disables spilling") {
 
 // +===========================================================================+
 // | [>] successive spill writes                                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("successive spill writes append without duplication") {
   spill_directory directory;
   {
-    byte_storage storage(
-        byte_storage_options{.spill_threshold = 8,
-                             .spill_dir = directory.path().string()});
+    byte_storage storage(byte_storage_options{
+        .spill_threshold = 8, .spill_dir = directory.path().string()});
     DOBA_EXPECT(storage.write("abcdef", 6));
     DOBA_EXPECT(storage.write("GHIJ", 4));
     const auto spill = only_spill_file(directory.path());
@@ -256,7 +259,8 @@ DOBA_TEST("successive spill writes append without duplication") {
     DOBA_EXPECT_EQUAL(only_spill_file(directory.path()), spill);
     DOBA_EXPECT_EQUAL(
         std::distance(std::filesystem::directory_iterator(directory.path()),
-                      std::filesystem::directory_iterator()), 1);
+                      std::filesystem::directory_iterator()),
+        1);
     std::array<char, 15> output{};
     DOBA_EXPECT_EQUAL(storage.read(output.data(), output.size()), 15);
     DOBA_EXPECT_EQUAL(std::string_view(output.data(), output.size()),
@@ -269,7 +273,7 @@ DOBA_TEST("successive spill writes append without duplication") {
 
 // +===========================================================================+
 // | [>] binary storage round trip                               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("storage preserves every byte value") {
   spill_directory directory;
   std::string input(256, '\0');
@@ -297,15 +301,14 @@ DOBA_TEST("storage preserves every byte value") {
 
 // +===========================================================================+
 // | [>] memory move construction                                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("memory move construction preserves the cursor") {
   spill_directory directory;
   {
     std::optional<byte_storage> destination;
     {
-      byte_storage storage(
-          byte_storage_options{.spill_threshold = 0,
-                               .spill_dir = directory.path().string()});
+      byte_storage storage(byte_storage_options{
+          .spill_threshold = 0, .spill_dir = directory.path().string()});
       DOBA_EXPECT(storage.write("abcdef", 6));
       storage.finish(6);
       std::array<char, 2> prefix{};
@@ -332,9 +335,8 @@ DOBA_TEST("spill move construction transfers cursor and ownership") {
   {
     std::optional<byte_storage> destination;
     {
-      byte_storage storage(
-          byte_storage_options{.spill_threshold = 1,
-                               .spill_dir = directory.path().string()});
+      byte_storage storage(byte_storage_options{
+          .spill_threshold = 1, .spill_dir = directory.path().string()});
       DOBA_EXPECT(storage.write("abcdef", 6));
       storage.finish(6);
       std::array<char, 2> prefix{};
@@ -355,20 +357,18 @@ DOBA_TEST("spill move construction transfers cursor and ownership") {
 
 // +===========================================================================+
 // | [>] move assignment spill to spill                          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("spill move assignment releases the previous file") {
   spill_directory directory;
   {
-    byte_storage destination(
-        byte_storage_options{.spill_threshold = 1,
-                             .spill_dir = directory.path().string()});
+    byte_storage destination(byte_storage_options{
+        .spill_threshold = 1, .spill_dir = directory.path().string()});
     DOBA_EXPECT(destination.write("old", 3));
     destination.finish(3);
     const auto previous_file = only_spill_file(directory.path());
     {
-      byte_storage source(
-          byte_storage_options{.spill_threshold = 1,
-                               .spill_dir = directory.path().string()});
+      byte_storage source(byte_storage_options{
+          .spill_threshold = 1, .spill_dir = directory.path().string()});
       DOBA_EXPECT(source.write("abcdef", 6));
       source.finish(6);
       std::array<char, 2> prefix{};
@@ -381,7 +381,8 @@ DOBA_TEST("spill move assignment releases the previous file") {
     }
     DOBA_EXPECT_EQUAL(
         std::distance(std::filesystem::directory_iterator(directory.path()),
-                      std::filesystem::directory_iterator()), 1);
+                      std::filesystem::directory_iterator()),
+        1);
     DOBA_EXPECT_EQUAL(destination.total_size().value(), 6);
     std::array<char, 4> output{};
     DOBA_EXPECT_EQUAL(destination.read(output.data(), output.size()), 4);
@@ -394,20 +395,18 @@ DOBA_TEST("spill move assignment releases the previous file") {
 
 // +===========================================================================+
 // | [>] move assignment memory to spill                         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("memory move assignment releases a spilled destination") {
   spill_directory directory;
   {
-    byte_storage destination(
-        byte_storage_options{.spill_threshold = 1,
-                             .spill_dir = directory.path().string()});
+    byte_storage destination(byte_storage_options{
+        .spill_threshold = 1, .spill_dir = directory.path().string()});
     DOBA_EXPECT(destination.write("old", 3));
     destination.finish(3);
     const auto previous_file = only_spill_file(directory.path());
     {
-      byte_storage source(
-          byte_storage_options{.spill_threshold = 0,
-                               .spill_dir = directory.path().string()});
+      byte_storage source(byte_storage_options{
+          .spill_threshold = 0, .spill_dir = directory.path().string()});
       DOBA_EXPECT(source.write("abcdef", 6));
       source.finish(6);
       std::array<char, 2> prefix{};
@@ -420,7 +419,8 @@ DOBA_TEST("memory move assignment releases a spilled destination") {
     }
     DOBA_EXPECT_EQUAL(
         std::distance(std::filesystem::directory_iterator(directory.path()),
-                      std::filesystem::directory_iterator()), 0);
+                      std::filesystem::directory_iterator()),
+        0);
     DOBA_EXPECT_EQUAL(destination.total_size().value(), 6);
     std::array<char, 4> output{};
     DOBA_EXPECT_EQUAL(destination.read(output.data(), output.size()), 4);
@@ -433,20 +433,18 @@ DOBA_TEST("memory move assignment releases a spilled destination") {
 
 // +===========================================================================+
 // | [>] move assignment spill to memory                         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("spill move assignment replaces memory and preserves cursor") {
   spill_directory directory;
   {
-    byte_storage destination(
-        byte_storage_options{.spill_threshold = 0,
-                             .spill_dir = directory.path().string()});
+    byte_storage destination(byte_storage_options{
+        .spill_threshold = 0, .spill_dir = directory.path().string()});
     DOBA_EXPECT(destination.write("old", 3));
     destination.finish(3);
     const auto previous_file = only_spill_file(directory.path());
     {
-      byte_storage source(
-          byte_storage_options{.spill_threshold = 1,
-                               .spill_dir = directory.path().string()});
+      byte_storage source(byte_storage_options{
+          .spill_threshold = 1, .spill_dir = directory.path().string()});
       DOBA_EXPECT(source.write("abcdef", 6));
       source.finish(6);
       std::array<char, 2> prefix{};
@@ -459,7 +457,8 @@ DOBA_TEST("spill move assignment replaces memory and preserves cursor") {
     }
     DOBA_EXPECT_EQUAL(
         std::distance(std::filesystem::directory_iterator(directory.path()),
-                      std::filesystem::directory_iterator()), 1);
+                      std::filesystem::directory_iterator()),
+        1);
     DOBA_EXPECT_EQUAL(destination.total_size().value(), 6);
     std::array<char, 4> output{};
     DOBA_EXPECT_EQUAL(destination.read(output.data(), output.size()), 4);
@@ -472,7 +471,7 @@ DOBA_TEST("spill move assignment replaces memory and preserves cursor") {
 
 // +===========================================================================+
 // | [>] persistent spill creation error                         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("spill creation failure remains observable") {
   spill_directory directory;
   const auto blocked = directory.path() / "existing.tmp";
@@ -480,9 +479,8 @@ DOBA_TEST("spill creation failure remains observable") {
     std::ofstream file(blocked);
     file << "preserved";
   }
-  byte_storage storage(
-      byte_storage_options{.spill_threshold = 1,
-                           .spill_dir = blocked.string()});
+  byte_storage storage(byte_storage_options{.spill_threshold = 1,
+                                            .spill_dir = blocked.string()});
   DOBA_EXPECT(!storage.write("abcdef", 6));
   DOBA_EXPECT(!storage.ok());
   DOBA_EXPECT(!storage.write("x", 1));
@@ -501,7 +499,7 @@ DOBA_TEST("spill creation failure remains observable") {
 
 // +===========================================================================+
 // | [>] shared read and fetch cursor                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("read and fetch share one storage cursor") {
   spill_directory directory;
   for (std::size_t threshold : {0, 1}) {
@@ -530,7 +528,7 @@ DOBA_TEST("read and fetch share one storage cursor") {
 
 // +===========================================================================+
 // | [>] concurrent spill ownership                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("concurrent spill owners keep distinct files and contents") {
   spill_directory directory;
   {
@@ -542,9 +540,8 @@ DOBA_TEST("concurrent spill owners keep distinct files and contents") {
     for (std::size_t i = 0; i < count; i++) {
       workers[i] = std::jthread([&, i]() {
         start.arrive_and_wait();
-        storage[i] = byte_storage(
-            byte_storage_options{.spill_threshold = 1,
-                                 .spill_dir = directory.path().string()});
+        storage[i] = byte_storage(byte_storage_options{
+            .spill_threshold = 1, .spill_dir = directory.path().string()});
         const std::string value = "owner-" + std::to_string(i);
         written[i] = storage[i].write(value.data(), value.size());
         storage[i].finish(value.size());
@@ -553,7 +550,8 @@ DOBA_TEST("concurrent spill owners keep distinct files and contents") {
     for (auto& worker : workers) worker.join();
     DOBA_EXPECT_EQUAL(
         std::distance(std::filesystem::directory_iterator(directory.path()),
-                      std::filesystem::directory_iterator()), count);
+                      std::filesystem::directory_iterator()),
+        count);
     for (std::size_t i = 0; i < count; i++) {
       DOBA_EXPECT(written[i]);
       std::array<char, 7> output{};
@@ -568,7 +566,7 @@ DOBA_TEST("concurrent spill owners keep distinct files and contents") {
 
 // +===========================================================================+
 // | [>] empty storage lifecycle                                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("empty storage finishes without an error") {
   byte_storage storage;
   DOBA_EXPECT(storage.write(nullptr, 0));
@@ -583,7 +581,7 @@ DOBA_TEST("empty storage finishes without an error") {
 
 // +===========================================================================+
 // | [>] memory storage grows after its read cursor reaches EOF  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("memory storage can grow after its read cursor reaches EOF") {
   byte_storage value;
   DOBA_EXPECT(!value.total_size().has_value());

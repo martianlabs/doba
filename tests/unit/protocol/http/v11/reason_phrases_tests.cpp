@@ -32,7 +32,7 @@
 
 // +===========================================================================+
 // | [>] macros expose the documented reason phrases             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("macros expose the documented reason phrases") {
   constexpr std::string_view actual[] = {
       DOBA_STRINGIZE(RP_100_CONTINUE),

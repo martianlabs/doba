@@ -35,28 +35,38 @@
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the application. It creates an HTTP server     |
+// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
+// | The server has a single route "/large" that responds to GET requests.     |
+// | The response body is generated using a body writer that can spill to a    |
+// | temporary file if the in-memory threshold is exceeded. The response is    |
+// | sent with a "Content-Type" of "application/octet-stream". The server      |
+// | runs until a termination signal is received.                              |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  http_server.add_route(
-      "GET", "/large",
-      [](const request&, response& res) {
-        res.ok_200();
-        // Storage spills to a temporary file after this in-memory threshold.
-        byte_storage_options options{.spill_threshold = 1024,
-                                     .spill_dir = {}};
-        auto writer = body::body_writer::raw(options);
-        const std::string block(1024, 'x');
-        for (int i = 0; i < 8; i++) {
-          if (!writer.write(block)) {
-            res.internal_server_error_500();
-            return;
-          }
-        }
-        res.add_header("Content-Type", "application/octet-stream")
-            // The response adopts the writer and its storage.
-            .set_body(std::move(writer));
+  http_server.add_route("GET", "/large", [](const request&, response& res) {
+    res.ok_200();
+    // Storage spills to a temporary file after this in-memory threshold.
+    byte_storage_options options{.spill_threshold = 1024, .spill_dir = {}};
+    auto writer = body::body_writer::raw(options);
+    const std::string block(1024, 'x');
+    for (int i = 0; i < 8; i++) {
+      if (!writer.write(block)) {
+        res.internal_server_error_500();
         return;
-      });
+      }
+    }
+    res.add_header("Content-Type", "application/octet-stream")
+        // The response adopts the writer and its storage.
+        .set_body(std::move(writer));
+    return;
+  });
   http_server.start();
   signaler::wait();
   return 0;

@@ -37,7 +37,7 @@ using martianlabs::doba::transport::server::send_state;
 
 // +===========================================================================+
 // | [>] send state copies inline bytes before returning         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("send state owns and batches inline bytes") {
   send_state output(16);
   std::string head = "head";
@@ -57,14 +57,14 @@ DOBA_TEST("send state owns and batches inline bytes") {
 
 // +===========================================================================+
 // | [>] send state preserves source order and ownership         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("send state preserves source order") {
   send_state output(16384);
   std::string source_bytes = "source";
   DOBA_EXPECT(output.push("one", {}, nullptr));
-  DOBA_EXPECT(output.push(
-      "head", "body", std::make_unique<reader>(reader::borrowed(
-                          std::as_bytes(std::span(source_bytes))))));
+  DOBA_EXPECT(output.push("head", "body",
+                          std::make_unique<reader>(reader::borrowed(
+                              std::as_bytes(std::span(source_bytes))))));
   DOBA_EXPECT(output.push("later", {}, nullptr));
   DOBA_EXPECT(output.fill());
   DOBA_EXPECT_EQUAL(output.buffer, "oneheadbody");
@@ -78,7 +78,7 @@ DOBA_TEST("send state preserves source order") {
 
 // +===========================================================================+
 // | [>] send state enforces inline capacity                     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("send state enforces inline capacity") {
   send_state output(8);
   DOBA_EXPECT(!output.push("123456789", {}, nullptr));
@@ -93,15 +93,15 @@ DOBA_TEST("send state enforces inline capacity") {
 
 // +===========================================================================+
 // | [>] send state reports a failed source after its prefix     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("send state reports a failed source after its prefix") {
   reader source(filesystem_file{});
   std::byte byte{};
   source.read(std::span<std::byte>(&byte, 1));
   DOBA_EXPECT(source.failed());
   send_state output(16384);
-  DOBA_EXPECT(output.push("head", {},
-                          std::make_unique<reader>(std::move(source))));
+  DOBA_EXPECT(
+      output.push("head", {}, std::make_unique<reader>(std::move(source))));
   DOBA_EXPECT(output.fill());
   DOBA_EXPECT_EQUAL(output.buffer, "head");
   DOBA_EXPECT(output.consume(4));

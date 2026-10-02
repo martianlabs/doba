@@ -31,7 +31,7 @@
 
 // +===========================================================================+
 // | [>] signaler exposes a static nonconstructible wait         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("signaler exposes a static nonconstructible wait") {
   using martianlabs::doba::common::signaler;
   static_assert(!std::is_default_constructible_v<signaler>);

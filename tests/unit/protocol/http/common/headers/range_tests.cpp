@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::range;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "bytes=0-499",    "bytes=500-999",  "bytes=9500-", "bytes=-500",
@@ -48,9 +48,10 @@ DOBA_TEST("check accepts valid values") {
         range::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",        " ",           "bytes",
@@ -62,9 +63,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!range::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!range::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!range::check(std::string_view{"a\0", 2}));
@@ -88,38 +90,28 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(range::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check accepts unit and list alternatives                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts unit and list alternatives") {
   constexpr std::string_view cases[] = {
-      "BYTES=0-0",
-      "bytes=-0",
-      "bytes=9-1",
-      "bytes=, ,0-1, ,",
-      "bytes=\t0-1\t, -2",
-      "example=:-/!",
-      "items=-",
-      "example=abc,0-1,-2",
+      "BYTES=0-0",         "bytes=-0",     "bytes=9-1", "bytes=, ,0-1, ,",
+      "bytes=\t0-1\t, -2", "example=:-/!", "items=-",   "example=abc,0-1,-2",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
     DOBA_EXPECT(range::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects unit and list alternatives                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects unit and list alternatives") {
   constexpr std::string_view cases[] = {
-      "BYTES=abc",
-      "bytes=+1-2",
-      "bytes=0-+2",
-      "bytes=0-1x",
-      "bytes=0-1,-",
-      "bytes=, ,",
-      "items=abc\tdef",
-      "example=abc,def ghi",
+      "BYTES=abc",   "bytes=+1-2", "bytes=0-+2",     "bytes=0-1x",
+      "bytes=0-1,-", "bytes=, ,",  "items=abc\tdef", "example=abc,def ghi",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);

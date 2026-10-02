@@ -32,12 +32,17 @@
 #include "platform.h"
 
 namespace martianlabs::doba::common {
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] filesystem_root                                          ( function ) |
-// +===========================================================================+
-
-inline std::filesystem::path filesystem_root(
-    const std::filesystem::path& path, std::error_code& error) {
+// +---------------------------------------------------------------------------+
+// | Returns the canonical path of the given directory, or an empty path if    |
+// | the directory does not exist or is not a directory. The error code is     |
+// | set to indicate the reason for failure.                                   |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+inline std::filesystem::path filesystem_root(const std::filesystem::path& path,
+                                             std::error_code& error) {
   error.clear();
   auto root = std::filesystem::canonical(path, error);
   if (error) return {};
@@ -49,6 +54,14 @@ inline std::filesystem::path filesystem_root(
 }
 
 namespace detail {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] filesystem_relative_path                                 ( function ) |
+// +---------------------------------------------------------------------------+
+// | Returns true if the given path is a valid relative path, false otherwise. |
+// | The error code is set to indicate the reason for failure.                 |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 inline bool filesystem_relative_path(std::string_view path,
                                      std::error_code& error) {
   if (path.empty()) {
@@ -78,6 +91,11 @@ inline bool filesystem_relative_path(std::string_view path,
 }  // namespace detail
 }  // namespace martianlabs::doba::common
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] PLATFORM-DEPENDENT-INCLUDEs                               ( section ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 #ifdef _WIN32
 #include "common/filesystem_windows.h"
 #elif __linux__

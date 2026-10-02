@@ -46,29 +46,33 @@ using martianlabs::doba::common::filesystem_file;
 // +---------------------------------------------------------------------------+
 // | [>] file_directory                                              ( class ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class file_directory {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   file_directory() {
     static std::atomic<unsigned int> counter{0};
     const auto stamp =
         std::chrono::steady_clock::now().time_since_epoch().count();
     do {
       path_ = fs::temp_directory_path() /
-          ("doba_files_" + std::to_string(stamp) + "_" +
-           std::to_string(counter.fetch_add(1)));
+              ("doba_files_" + std::to_string(stamp) + "_" +
+               std::to_string(counter.fetch_add(1)));
     } while (!fs::create_directory(path_));
   }
   ~file_directory() {
     std::error_code error;
     fs::remove_all(path_, error);
   }
+  // +=========================================================================+
+  // | [>] path                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   const fs::path& path() const { return path_; }
+  // +=========================================================================+
+  // | [>] write                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void write(std::string_view name, std::string_view contents) {
     const fs::path relative(std::u8string(name.begin(), name.end()));
     std::ofstream output(path_ / relative, std::ios::binary);
@@ -80,9 +84,23 @@ class file_directory {
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   fs::path path_;
 };
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] create_junction                                          ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function creates a junction point (reparse point) in the filesystem, |
+// | which is a type of symbolic link on Windows. It allows you to create a    |
+// | directory that points to another directory, effectively creating          |
+// | a "shortcut" to that directory. This is useful for testing how the        |
+// | filesystem handles reparse points and junctions, especially in scenarios  |
+// | where you want to ensure that your code correctly handles or rejects      |
+// | such paths.                                                               |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void create_junction(const fs::path& path, const fs::path& target) {
   fs::create_directory(path);
   struct junction_data {
@@ -111,9 +129,9 @@ void create_junction(const fs::path& path, const fs::path& target) {
     throw std::runtime_error("Unable to open junction");
   }
   DWORD returned = 0;
-  const bool created = DeviceIoControl(
-      handle, FSCTL_SET_REPARSE_POINT, &data, 8 + data.length,
-      nullptr, 0, &returned, nullptr) != 0;
+  const bool created =
+      DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, &data, 8 + data.length,
+                      nullptr, 0, &returned, nullptr) != 0;
   const DWORD error = GetLastError();
   CloseHandle(handle);
   if (!created) {
@@ -124,7 +142,7 @@ void create_junction(const fs::path& path, const fs::path& target) {
 
 // +===========================================================================+
 // | [>] filesystem Windows path rejection                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem rejects Windows device stream and alias paths") {
   file_directory directory;
   directory.write("file", "data");
@@ -139,7 +157,7 @@ DOBA_TEST("filesystem rejects Windows device stream and alias paths") {
 
 // +===========================================================================+
 // | [>] filesystem Windows releases its owned handle            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem Windows releases its owned handle") {
   file_directory directory;
   directory.write("file", "data");
@@ -149,12 +167,12 @@ DOBA_TEST("filesystem Windows releases its owned handle") {
     std::error_code error;
     DOBA_EXPECT(file.open(directory.path(), "file", error));
     HANDLE exclusive = CreateFileW(path.c_str(), GENERIC_READ, 0, nullptr,
-                                    OPEN_EXISTING, 0, nullptr);
+                                   OPEN_EXISTING, 0, nullptr);
     DOBA_EXPECT(exclusive == INVALID_HANDLE_VALUE);
     if (exclusive != INVALID_HANDLE_VALUE) CloseHandle(exclusive);
   }
   HANDLE exclusive = CreateFileW(path.c_str(), GENERIC_READ, 0, nullptr,
-                                  OPEN_EXISTING, 0, nullptr);
+                                 OPEN_EXISTING, 0, nullptr);
   DOBA_EXPECT(exclusive != INVALID_HANDLE_VALUE);
   if (exclusive != INVALID_HANDLE_VALUE) CloseHandle(exclusive);
 }
@@ -162,7 +180,7 @@ DOBA_TEST("filesystem Windows releases its owned handle") {
 
 // +===========================================================================+
 // | [>] filesystem Windows rejects reparse points               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem Windows rejects reparse points") {
   file_directory directory;
   file_directory outside;
@@ -179,7 +197,7 @@ DOBA_TEST("filesystem Windows rejects reparse points") {
 
 // +===========================================================================+
 // | [>] filesystem Windows keeps opened files after replacement ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem Windows keeps opened files after replacement") {
   file_directory directory;
   file_directory outside;
@@ -196,8 +214,8 @@ DOBA_TEST("filesystem Windows keeps opened files after replacement") {
   directory.write("root/data", "replacement");
   std::array<std::byte, 8> bytes{};
   DOBA_EXPECT_EQUAL(file.read(bytes), 6);
-  DOBA_EXPECT_EQUAL(std::string_view(
-      reinterpret_cast<char*>(bytes.data()), 6), "inside");
+  DOBA_EXPECT_EQUAL(std::string_view(reinterpret_cast<char*>(bytes.data()), 6),
+                    "inside");
   file.close();
   fs::rename(root, directory.path() / "old");
   create_junction(root, outside.path());
@@ -206,10 +224,9 @@ DOBA_TEST("filesystem Windows keeps opened files after replacement") {
   DOBA_EXPECT(fs::remove(root));
 }
 
-
 // +===========================================================================+
 // | [>] filesystem Windows reparse mutation race ( test-case )                |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem Windows confines concurrent reparse mutations") {
   file_directory directory;
   file_directory outside;
@@ -222,8 +239,9 @@ DOBA_TEST("filesystem Windows confines concurrent reparse mutations") {
     DOBA_EXPECT(file.open(root, "control", error));
     std::array<std::byte, 6> bytes{};
     DOBA_EXPECT_EQUAL(file.read(bytes), bytes.size());
-    DOBA_EXPECT_EQUAL(std::string_view(
-        reinterpret_cast<char*>(bytes.data()), bytes.size()), "inside");
+    DOBA_EXPECT_EQUAL(
+        std::string_view(reinterpret_cast<char*>(bytes.data()), bytes.size()),
+        "inside");
   }
   DOBA_EXPECT(fs::remove(root / "control"));
   outside.write("secret", "outside");
@@ -251,9 +269,9 @@ DOBA_TEST("filesystem Windows confines concurrent reparse mutations") {
   } clear{IO_REPARSE_TAG_MOUNT_POINT, 0, 0};
   HANDLE mutation = CreateFileW(
       root.c_str(), FILE_WRITE_ATTRIBUTES,
-      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-      nullptr, OPEN_EXISTING,
-      FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+      OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+      nullptr);
   DOBA_EXPECT(mutation != INVALID_HANDLE_VALUE);
   std::atomic<unsigned int> changes{0};
   std::atomic<bool> failed{false};
@@ -262,17 +280,15 @@ DOBA_TEST("filesystem Windows confines concurrent reparse mutations") {
     std::jthread mutator([&](std::stop_token token) {
       DWORD returned = 0;
       while (!token.stop_requested()) {
-        if (!DeviceIoControl(mutation, FSCTL_SET_REPARSE_POINT,
-                             &data, 8 + data.length, nullptr, 0,
-                             &returned, nullptr)) {
+        if (!DeviceIoControl(mutation, FSCTL_SET_REPARSE_POINT, &data,
+                             8 + data.length, nullptr, 0, &returned, nullptr)) {
           failed = true;
           break;
         }
         changes++;
         std::this_thread::yield();
-        if (!DeviceIoControl(
-                mutation, FSCTL_DELETE_REPARSE_POINT,
-                &clear, sizeof(clear), nullptr, 0, &returned, nullptr)) {
+        if (!DeviceIoControl(mutation, FSCTL_DELETE_REPARSE_POINT, &clear,
+                             sizeof(clear), nullptr, 0, &returned, nullptr)) {
           failed = true;
           break;
         }
@@ -280,8 +296,7 @@ DOBA_TEST("filesystem Windows confines concurrent reparse mutations") {
     });
     const auto deadline =
         std::chrono::steady_clock::now() + std::chrono::seconds(2);
-    while (!changes && !failed &&
-           std::chrono::steady_clock::now() < deadline) {
+    while (!changes && !failed && std::chrono::steady_clock::now() < deadline) {
       std::this_thread::yield();
     }
     for (unsigned int i = 0; i < 2000; i++) {
@@ -298,7 +313,7 @@ DOBA_TEST("filesystem Windows confines concurrent reparse mutations") {
 
 // +===========================================================================+
 // | [>] filesystem Windows resolves equivalent root paths       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem Windows resolves equivalent root paths") {
   file_directory directory;
   fs::create_directory(directory.path() / "MixedCaseRoot");
@@ -306,25 +321,26 @@ DOBA_TEST("filesystem Windows resolves equivalent root paths") {
   const auto root = fs::canonical(directory.path() / "MixedCaseRoot");
   filesystem_file file;
   std::error_code error;
-  for (const auto& path : {root, root / "", root / ".",
-                           root.parent_path() / "mIXEDcASErOOT"}) {
+  for (const auto& path :
+       {root, root / "", root / ".", root.parent_path() / "mIXEDcASErOOT"}) {
     DOBA_EXPECT(file.open(path, "file", error));
     DOBA_EXPECT(!error);
     std::array<std::byte, 6> bytes{};
     DOBA_EXPECT_EQUAL(file.read(bytes), bytes.size());
-    DOBA_EXPECT_EQUAL(std::string_view(
-        reinterpret_cast<char*>(bytes.data()), bytes.size()), "inside");
+    DOBA_EXPECT_EQUAL(
+        std::string_view(reinterpret_cast<char*>(bytes.data()), bytes.size()),
+        "inside");
   }
   const auto relative = (root / "file").relative_path().generic_u8string();
   DOBA_EXPECT(file.open(root.root_path(),
-                         std::string(relative.begin(), relative.end()), error));
+                        std::string(relative.begin(), relative.end()), error));
   DOBA_EXPECT(!error);
   DOBA_EXPECT_EQUAL(file.size(), 6);
 }
 
 // +===========================================================================+
 // | [>] filesystem Windows resolves short root names            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem Windows resolves short root names") {
   file_directory directory;
   directory.write("file", "inside");
@@ -342,8 +358,9 @@ DOBA_TEST("filesystem Windows resolves short root names") {
   DOBA_EXPECT(!error);
   std::array<std::byte, 6> bytes{};
   DOBA_EXPECT_EQUAL(file.read(bytes), bytes.size());
-  DOBA_EXPECT_EQUAL(std::string_view(
-      reinterpret_cast<char*>(bytes.data()), bytes.size()), "inside");
+  DOBA_EXPECT_EQUAL(
+      std::string_view(reinterpret_cast<char*>(bytes.data()), bytes.size()),
+      "inside");
 }
 
 #endif

@@ -48,8 +48,6 @@ namespace martianlabs::doba::tests {
 // +---------------------------------------------------------------------------+
 // | [>] test_helper_result                                         ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct test_helper_result {
   int exit_code{-1};
@@ -57,9 +55,16 @@ struct test_helper_result {
   std::string output;
 };
 
-// +===========================================================================+
-// | [>] run_test_helper                                            ( method ) |
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] run_test_helper                                           ( function) |
+// +---------------------------------------------------------------------------+
+// | This function runs the test helper process with the specified             |
+// | command-line arguments and waits for its completion or a timeout.         |
+// | It captures the exit code, whether the process timed out, and the output  |
+// | written to stdout and stderr.                                             |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 inline test_helper_result run_test_helper(
     std::initializer_list<const char*> arguments,
     std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
@@ -87,7 +92,8 @@ inline test_helper_result run_test_helper(
     ~process() {
       if (pid > 0) {
         ::kill(pid, SIGKILL);
-        while (::waitpid(pid, nullptr, 0) < 0 && errno == EINTR) {}
+        while (::waitpid(pid, nullptr, 0) < 0 && errno == EINTR) {
+        }
       }
       if (pipes[1] >= 0) ::close(pipes[1]);
       if (pipes[0] >= 0) ::close(pipes[0]);
@@ -110,8 +116,7 @@ inline test_helper_result run_test_helper(
         slashes++;
         continue;
       }
-      command.append(character == L'"' ? slashes * 2 + 1 : slashes,
-                     L'\\');
+      command.append(character == L'"' ? slashes * 2 + 1 : slashes, L'\\');
       command += character;
       slashes = 0;
     }
@@ -132,8 +137,8 @@ inline test_helper_result run_test_helper(
   startup.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
   startup.hStdOutput = child.write;
   startup.hStdError = child.write;
-  if (!CreateProcessW(program.c_str(), command.data(), nullptr, nullptr,
-                      TRUE, CREATE_NO_WINDOW, nullptr, nullptr, &startup,
+  if (!CreateProcessW(program.c_str(), command.data(), nullptr, nullptr, TRUE,
+                      CREATE_NO_WINDOW, nullptr, nullptr, &startup,
                       &child.info)) {
     fail();
   }
@@ -227,8 +232,8 @@ inline test_helper_result run_test_helper(
       if (waited > 0) {
         child.pid = -1;
         finished = true;
-        result.exit_code = WIFEXITED(status) ? WEXITSTATUS(status)
-                                            : 128 + WTERMSIG(status);
+        result.exit_code =
+            WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
       }
 #endif
     }

@@ -32,30 +32,28 @@ namespace martianlabs::doba::tests::integration {
 // +---------------------------------------------------------------------------+
 // | [>] test_helper                                                 ( class ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class test_helper {
  public:
   // +=========================================================================+
   // | [>] USINGs                                                   ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   using test_t = void (*)();
   // +=========================================================================+
   // | [>] add                                                      ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool add(std::string_view, int, std::string_view, test_t);
   // +=========================================================================+
   // | [>] expect                                                   ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool expect(bool, std::string_view, std::string_view, int);
   // +=========================================================================+
   // | [>] set_context                                              ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static void set_context(std::string_view);
   // +=========================================================================+
   // | [>] run                                                      ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static int run(int, char**);
 };
 }  // namespace martianlabs::doba::tests::integration
@@ -68,20 +66,20 @@ class test_helper {
 #define DOBA_TEST_JOIN_INNER(left, right) left##right
 #define DOBA_TEST_JOIN(left, right) DOBA_TEST_JOIN_INNER(left, right)
 #define DOBA_TEST(name) DOBA_TEST_IMPL(name, __LINE__)
-#define DOBA_TEST_IMPL(name, line)                                  \
-  static void DOBA_TEST_JOIN(doba_test_, line)();                   \
-  namespace {                                                       \
-  const bool DOBA_TEST_JOIN(doba_test_registered_, line) =          \
-      martianlabs::doba::tests::integration::test_helper::add(     \
-          __FILE__, line, name, &DOBA_TEST_JOIN(doba_test_, line)); \
-  }                                                                 \
+#define DOBA_TEST_IMPL(name, line)                                             \
+  static void DOBA_TEST_JOIN(doba_test_, line)();                              \
+  namespace {                                                                  \
+  const bool DOBA_TEST_JOIN(doba_test_registered_, line) =                     \
+      martianlabs::doba::tests::integration::test_helper::add(                 \
+          __FILE__, line, name, &DOBA_TEST_JOIN(doba_test_, line));            \
+  }                                                                            \
   static void DOBA_TEST_JOIN(doba_test_, line)()
-#define DOBA_EXPECT(expression)                                      \
-  do {                                                               \
-    if (!martianlabs::doba::tests::integration::test_helper::expect( \
-            expression, #expression, __FILE__, __LINE__)) {         \
-      return;                                                        \
-    }                                                                \
+#define DOBA_EXPECT(expression)                                                \
+  do {                                                                         \
+    if (!martianlabs::doba::tests::integration::test_helper::expect(           \
+            expression, #expression, __FILE__, __LINE__)) {                    \
+      return;                                                                  \
+    }                                                                          \
   } while (false)
 #define DOBA_EXPECT_EQUAL(actual, expected) DOBA_EXPECT((actual) == (expected))
 

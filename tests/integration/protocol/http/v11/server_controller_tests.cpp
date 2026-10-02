@@ -36,8 +36,8 @@
 
 namespace {
 using namespace martianlabs::doba::protocol::http::v11;
-using martianlabs::doba::tests::integration::tcpip_client;
 using martianlabs::doba::tests::integration::receive_http_response;
+using martianlabs::doba::tests::integration::tcpip_client;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] socket_controller                                           ( class ) |
@@ -48,20 +48,28 @@ using martianlabs::doba::tests::integration::receive_http_response;
 class socket_controller {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  explicit socket_controller(std::string prefix) : prefix_(std::move(prefix)) {}
   // +=========================================================================+
-  explicit socket_controller(std::string prefix)
-      : prefix_(std::move(prefix)) {}
+  // | [>] register_routes                                          ( public ) |
+  // +-------------------------------------------------------------------------+
   template <typename Rty>
   void register_routes(Rty& routes) {
     routes.add("GET", prefix_ + "/count", &socket_controller::count);
     routes.add("GET", prefix_ + "/fail", &socket_controller::fail);
   }
+  // +=========================================================================+
+  // | [>] count                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void count(const request&, response& res) {
     res.ok_200();
     res.set_body(++count_);
     return;
   }
+  // +=========================================================================+
+  // | [>] fail                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   void fail(const request&, response&) {
     throw std::runtime_error("controller");
   }
@@ -69,7 +77,7 @@ class socket_controller {
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::string prefix_;
   std::atomic<unsigned int> count_{0};
 };
@@ -77,7 +85,7 @@ class socket_controller {
 
 // +===========================================================================+
 // | [>] HTTP controller concurrency and errors                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP controller state supports concurrent requests and failures") {
   tcpip_client client;
   const auto port = client.find_available_port();
@@ -91,8 +99,9 @@ DOBA_TEST("HTTP controller state supports concurrent requests and failures") {
     for (unsigned int i = 0; i < 4; i++) {
       clients.emplace_back([&]() {
         tcpip_client connection;
-        if (!connection.connect(port) || !connection.send_all(
-                "GET /a/count HTTP/1.1\r\nHost: a\r\n\r\n")) return;
+        if (!connection.connect(port) ||
+            !connection.send_all("GET /a/count HTTP/1.1\r\nHost: a\r\n\r\n"))
+          return;
         auto result = receive_http_response(connection);
         if (result) total += static_cast<unsigned int>(std::stoi(result->body));
       });
@@ -100,15 +109,13 @@ DOBA_TEST("HTTP controller state supports concurrent requests and failures") {
   }
   DOBA_EXPECT_EQUAL(total.load(), 10);
   DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(client.send_all(
-      "GET /a/fail HTTP/1.1\r\nHost: a\r\n\r\n"));
+  DOBA_EXPECT(client.send_all("GET /a/fail HTTP/1.1\r\nHost: a\r\n\r\n"));
   const auto error = receive_http_response(client);
   DOBA_EXPECT(error.has_value());
   DOBA_EXPECT_EQUAL(error->status, "HTTP/1.1 500 Internal Server Error");
   client.close();
   DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(client.send_all(
-      "GET /a/count HTTP/1.1\r\nHost: a\r\n\r\n"));
+  DOBA_EXPECT(client.send_all("GET /a/count HTTP/1.1\r\nHost: a\r\n\r\n"));
   const auto next = receive_http_response(client);
   DOBA_EXPECT(next.has_value());
   DOBA_EXPECT_EQUAL(next->body, "5");

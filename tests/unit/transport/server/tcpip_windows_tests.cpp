@@ -30,7 +30,7 @@ using namespace martianlabs::doba::transport::server;
 
 // +===========================================================================+
 // | [>] overlapped accept initializes its native operation      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("overlapped accept initializes its native operation") {
   overlapped_accept value{INVALID_SOCKET};
   DOBA_EXPECT_EQUAL(value.get_type(), io_type::kAccept);
@@ -40,7 +40,9 @@ DOBA_TEST("overlapped accept initializes its native operation") {
   DOBA_EXPECT_EQUAL(value.Offset, 0);
   DOBA_EXPECT_EQUAL(value.OffsetHigh, 0);
   DOBA_EXPECT(value.hEvent == nullptr);
-  for (char byte : value.addresses) DOBA_EXPECT_EQUAL(byte, 0);
+  for (char byte : value.addresses) {
+    DOBA_EXPECT_EQUAL(byte, 0);
+  }
 }
 
 #endif

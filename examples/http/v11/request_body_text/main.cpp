@@ -34,36 +34,45 @@
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the application. It creates an HTTP server     |
+// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
+// | The server has a single route "/echo" that responds to POST requests.     |
+// | The lambda function reads the text request body and echoes it back in     |
+// | the response. The response is sent with a "Content-Type"                  |
+// | of "text/plain; charset=utf-8". The server runs until a termination       |
+// | signal is received.                                                       |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  http_server.add_route(
-      "POST", "/echo",
-      [](const request& req, response& res) {
-        res.ok_200();
-        // The reader hides Content-Length and chunked request framing.
-        if (!req.has_body_reader()) {
-          res.bad_request_400();
-          res.set_body("request body required");
-          return;
-        }
-        std::array<std::byte, 1024> buffer{};
-        std::string text;
-        for (;;) {
-          // produced is the valid byte count; complete ends the read loop.
-          const auto state = req.get_body_reader()->read(buffer);
-          if (state.has_error) {
-            res.bad_request_400();
-            res.set_body("unable to read request body");
-            return;
-          }
-          text.append(reinterpret_cast<const char*>(buffer.data()),
-                      state.produced);
-          if (state.complete) break;
-        }
-        res.add_header("Content-Type", "text/plain; charset=utf-8")
-            .set_body(text);
+  http_server.add_route("POST", "/echo", [](const request& req, response& res) {
+    res.ok_200();
+    // The reader hides Content-Length and chunked request framing.
+    if (!req.has_body_reader()) {
+      res.bad_request_400();
+      res.set_body("request body required");
+      return;
+    }
+    std::array<std::byte, 1024> buffer{};
+    std::string text;
+    for (;;) {
+      // produced is the valid byte count; complete ends the read loop.
+      const auto state = req.get_body_reader()->read(buffer);
+      if (state.has_error) {
+        res.bad_request_400();
+        res.set_body("unable to read request body");
         return;
-      });
+      }
+      text.append(reinterpret_cast<const char*>(buffer.data()), state.produced);
+      if (state.complete) break;
+    }
+    res.add_header("Content-Type", "text/plain; charset=utf-8").set_body(text);
+    return;
+  });
   http_server.start();
   signaler::wait();
   return 0;

@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::vary;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "",        ",",         "*", "Accept-Encoding", "accept-language",
@@ -46,9 +46,10 @@ DOBA_TEST("check accepts valid values") {
     DOBA_EXPECT(vary::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       " ",   "Accept Encoding", "\"Accept\"", "Accept:", "Accept/Encoding",
@@ -58,9 +59,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!vary::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!vary::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!vary::check(std::string_view{"a\0", 2}));
@@ -84,9 +86,10 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(vary::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check accepts wildcard list members                     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts wildcard list members") {
   constexpr std::string_view cases[] = {
       "*, Accept",
@@ -98,9 +101,10 @@ DOBA_TEST("check accepts wildcard list members") {
     DOBA_EXPECT(vary::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects wildcard list members                     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects wildcard list members") {
   constexpr std::string_view cases[] = {
       "*,Accept:",
@@ -111,9 +115,10 @@ DOBA_TEST("check rejects wildcard list members") {
     DOBA_EXPECT(!vary::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check validates every byte inside a token               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check validates every byte inside a token") {
   constexpr std::string_view punctuation = "!#$%&'*+-.^_`|~";
   for (unsigned int byte = 0; byte <= 255; ++byte) {

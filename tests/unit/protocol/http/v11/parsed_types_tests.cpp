@@ -32,7 +32,7 @@ using martianlabs::doba::protocol::http::helpers;
 
 // +===========================================================================+
 // | [>] parsed products default to empty zero copy values       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("parsed products default to empty zero copy values") {
   const parsed_host_port host;
   DOBA_EXPECT(host.host.empty());
@@ -46,9 +46,10 @@ DOBA_TEST("parsed products default to empty zero copy values") {
   DOBA_EXPECT(parsed_forwarded_list{}.elements.empty());
   DOBA_EXPECT(parsed_host_port_list{}.elements.empty());
 }
+
 // +===========================================================================+
 // | [>] parsed products retain all nested fields                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("parsed products retain all nested fields") {
   const parsed_host_port host{"example.com", "443",
                               helpers::host_type::kRegName, "https"};

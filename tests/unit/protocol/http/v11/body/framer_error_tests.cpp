@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::v11::body::framer_error;
 
 // +===========================================================================+
 // | [>] error values preserve the public contract               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("error values preserve the public contract") {
   static_assert(
       std::same_as<std::underlying_type_t<framer_error>, std::uint8_t>);

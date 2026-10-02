@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::origin;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "null",
@@ -50,9 +50,10 @@ DOBA_TEST("check accepts valid values") {
         origin::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",
@@ -70,9 +71,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!origin::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!origin::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!origin::check(std::string_view{"a\0", 2}));
@@ -96,9 +98,10 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(origin::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check accepts serialized origin alternatives            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts serialized origin alternatives") {
   constexpr std::string_view cases[] = {
       "HTTP://example.com:0",
@@ -110,20 +113,15 @@ DOBA_TEST("check accepts serialized origin alternatives") {
     DOBA_EXPECT(origin::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects serialized origin alternatives            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects serialized origin alternatives") {
   constexpr std::string_view cases[] = {
-      "https://a\thttps://b",
-      "https://user@host",
-      "https://host?x",
-      "https://host#x",
-      "https://[::1",
-      "https://host:abc",
-      "1http://host",
-      "null https://host",
-      "https://host null",
+      "https://a\thttps://b", "https://user@host", "https://host?x",
+      "https://host#x",       "https://[::1",      "https://host:abc",
+      "1http://host",         "null https://host", "https://host null",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);

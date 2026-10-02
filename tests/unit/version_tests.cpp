@@ -30,16 +30,17 @@
 
 // +===========================================================================+
 // | [>] version string matches its numeric components           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("version string matches its numeric components") {
   const std::string expected = std::to_string(DOBA_VERSION_MAJOR) + "." +
                                std::to_string(DOBA_VERSION_MINOR) + "." +
                                std::to_string(DOBA_VERSION_PATCH);
   DOBA_EXPECT_EQUAL(std::string_view(DOBA_VERSION), expected);
 }
+
 // +===========================================================================+
 // | [>] version stringification expands macro arguments         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("version stringification expands macro arguments") {
   DOBA_EXPECT_EQUAL(std::string_view(DOBA_VERSION_STRINGIFY(123)), "123");
   DOBA_EXPECT_EQUAL(

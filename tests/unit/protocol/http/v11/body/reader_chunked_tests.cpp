@@ -37,6 +37,15 @@ using martianlabs::doba::common::reader;
 using martianlabs::doba::protocol::http::v11::body::reader_chunked;
 using martianlabs::doba::protocol::http::v11::body::reader_error;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] bytes                                                    ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function converts a string_view to a span of bytes. It is used to    |
+// | simulate the transport layer, which provides a span of bytes to           |
+// | the framer.                                                               |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 std::span<const std::byte> bytes(std::string_view value) {
   return {reinterpret_cast<const std::byte*>(value.data()), value.size()};
 }
@@ -44,7 +53,7 @@ std::span<const std::byte> bytes(std::string_view value) {
 
 // +===========================================================================+
 // | [>] decodes chunks extensions and trailers                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("decodes chunks extensions and trailers") {
   constexpr std::string_view wire =
       "5;name=value\r\nhello\r\n6\r\n world\r\n0\r\nX: y\r\n\r\n";
@@ -64,12 +73,13 @@ DOBA_TEST("decodes chunks extensions and trailers") {
       complete = state.complete;
     }
     DOBA_EXPECT(complete);
-  DOBA_EXPECT_EQUAL(decoded, "hello world");
+    DOBA_EXPECT_EQUAL(decoded, "hello world");
   }
 }
+
 // +===========================================================================+
 // | [>] empty output consumes framing but not payload           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("empty output consumes framing but not payload") {
   reader source = reader::borrowed(bytes("1\r\na\r\n0\r\n\r\n"));
   reader_chunked value;
@@ -83,9 +93,10 @@ DOBA_TEST("empty output consumes framing but not payload") {
   DOBA_EXPECT(state.complete);
   DOBA_EXPECT_EQUAL(static_cast<char>(output), 'a');
 }
+
 // +===========================================================================+
 // | [>] truncated sources report and latch incomplete           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("truncated sources report and latch incomplete") {
   constexpr std::string_view wire = "1\r\na\r\n0\r\n\r\n";
   for (std::size_t size = 0; size < wire.size(); size++) {
@@ -101,9 +112,10 @@ DOBA_TEST("truncated sources report and latch incomplete") {
     DOBA_EXPECT_EQUAL(state.produced, 0);
   }
 }
+
 // +===========================================================================+
 // | [>] rejects malformed chunk sizes and CRLF sequences        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("rejects malformed chunk sizes and CRLF sequences") {
   struct test_case {
     std::string_view source;
@@ -127,9 +139,10 @@ DOBA_TEST("rejects malformed chunk sizes and CRLF sequences") {
     DOBA_EXPECT_EQUAL(state.error, test.expected);
   }
 }
+
 // +===========================================================================+
 // | [>] rejects malformed chunk extensions                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("rejects malformed chunk extensions") {
   constexpr std::string_view cases[] = {
       "1;\r\na\r\n0\r\n\r\n",
@@ -148,9 +161,10 @@ DOBA_TEST("rejects malformed chunk extensions") {
     DOBA_EXPECT_EQUAL(state.error, reader_error::invalid_chunk_size);
   }
 }
+
 // +===========================================================================+
 // | [>] rejects malformed trailer fields                        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("rejects malformed trailer fields") {
   constexpr std::string_view cases[] = {
       "0\r\nInvalid\r\n\r\n",         "0\r\n: value\r\n\r\n",
@@ -166,19 +180,19 @@ DOBA_TEST("rejects malformed trailer fields") {
     DOBA_EXPECT_EQUAL(state.error, reader_error::invalid_trailer);
   }
 }
+
 // +===========================================================================+
 // | [>] discards syntactic trailer fields                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("discards syntactic trailer fields") {
   constexpr std::string_view names[] = {
-      "Content-Length", "content-length", "Transfer-Encoding", "Host",
+      "Content-Length",  "content-length",  "Transfer-Encoding",  "Host",
       "Content-Lengthx", "XContent-Length", "Transfer-Encodings", "X-Host",
   };
   for (const auto name : names) {
-    const std::string wire = "1\r\nx\r\n0\r\n" + std::string(name) +
-                             ": 1\r\n\r\n";
-    martianlabs::doba::tests::unit::test_helper::set_context(
-        std::string(name));
+    const std::string wire =
+        "1\r\nx\r\n0\r\n" + std::string(name) + ": 1\r\n\r\n";
+    martianlabs::doba::tests::unit::test_helper::set_context(std::string(name));
     reader source = reader::borrowed(bytes(wire));
     reader_chunked value;
     std::byte output;
@@ -190,9 +204,10 @@ DOBA_TEST("discards syntactic trailer fields") {
     DOBA_EXPECT(source.eof());
   }
 }
+
 // +===========================================================================+
 // | [>] rejects smuggling-prone chunk size forms                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("rejects smuggling-prone chunk size forms") {
   constexpr std::string_view accepted[] = {
       "A\r\n0123456789\r\n0\r\n\r\n",
@@ -201,8 +216,8 @@ DOBA_TEST("rejects smuggling-prone chunk size forms") {
       "000\r\n\r\n",
   };
   for (const auto wire : accepted) {
-    martianlabs::doba::tests::unit::test_helper::set_context(
-        "accepted " + std::string(wire));
+    martianlabs::doba::tests::unit::test_helper::set_context("accepted " +
+                                                             std::string(wire));
     reader source = reader::borrowed(bytes(wire));
     reader_chunked value;
     std::array<std::byte, 16> output{};
@@ -212,30 +227,29 @@ DOBA_TEST("rejects smuggling-prone chunk size forms") {
     DOBA_EXPECT(source.eof());
   }
   constexpr std::string_view rejected[] = {
-      "0x1\r\na\r\n0\r\n\r\n", "-1\r\na\r\n0\r\n\r\n",
-      "+1\r\na\r\n0\r\n\r\n",  " 1\r\na\r\n0\r\n\r\n",
-      "1\na\r\n0\r\n\r\n",     "1\r\na\n0\r\n\r\n",
+      "0x1\r\na\r\n0\r\n\r\n", "-1\r\na\r\n0\r\n\r\n", "+1\r\na\r\n0\r\n\r\n",
+      " 1\r\na\r\n0\r\n\r\n",  "1\na\r\n0\r\n\r\n",    "1\r\na\n0\r\n\r\n",
       "1\r\na\r\n0\n\r\n",
   };
   for (const auto wire : rejected) {
-    martianlabs::doba::tests::unit::test_helper::set_context(
-        "rejected " + std::string(wire));
+    martianlabs::doba::tests::unit::test_helper::set_context("rejected " +
+                                                             std::string(wire));
     reader source = reader::borrowed(bytes(wire));
     reader_chunked value;
     std::array<std::byte, 16> output{};
     auto state = value.read(source, output);
-    for (std::size_t i = 0; !state.complete && !state.has_error &&
-                            i <= wire.size();
-         i++) {
+    for (std::size_t i = 0;
+         !state.complete && !state.has_error && i <= wire.size(); i++) {
       state = value.read(source, output);
     }
     DOBA_EXPECT(state.has_error);
     DOBA_EXPECT(!state.complete);
   }
 }
+
 // +===========================================================================+
 // | [>] accepts the widest chunk size that fits                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("accepts the widest chunk size that fits") {
   const std::string wire = std::string(sizeof(std::size_t) * 2, 'f') + "\r\n";
   reader source = reader::borrowed(bytes(wire));
@@ -245,9 +259,10 @@ DOBA_TEST("accepts the widest chunk size that fits") {
   DOBA_EXPECT(state.has_error);
   DOBA_EXPECT_EQUAL(state.error, reader_error::chunked_incomplete);
 }
+
 // +===========================================================================+
 // | [>] rejects chunk size overflow                             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("rejects chunk size overflow") {
   const std::string wire(sizeof(std::size_t) * 2 + 1, 'f');
   reader source = reader::borrowed(bytes(wire));
@@ -257,21 +272,22 @@ DOBA_TEST("rejects chunk size overflow") {
   DOBA_EXPECT(state.has_error);
   DOBA_EXPECT_EQUAL(state.error, reader_error::chunk_size_overflow);
 }
+
 // +===========================================================================+
 // | [>] enforces extension and trailer size limits              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("enforces extension and trailer size limits") {
   for (bool extension : {true, false}) {
-    const std::size_t limit =
-        extension ? reader_chunked::kMaxChunkedExtensionSize
-                  : reader_chunked::kMaxChunkedTrailerSize;
+    const std::size_t limit = extension
+                                  ? reader_chunked::kMaxChunkedExtensionSize
+                                  : reader_chunked::kMaxChunkedTrailerSize;
     for (std::size_t length : {limit - 1, limit, limit + 1}) {
-      const std::string wire = extension
-          ? "1;" + std::string(length - 1, 'x') + "\r\na\r\n0\r\n\r\n"
-          : "0\r\nX: " + std::string(length - 7, 'x') + "\r\n\r\n";
-      const auto expected = extension
-          ? reader_error::chunk_extension_size_limit_exceeded
-          : reader_error::trailer_size_limit_exceeded;
+      const std::string wire =
+          extension ? "1;" + std::string(length - 1, 'x') + "\r\na\r\n0\r\n\r\n"
+                    : "0\r\nX: " + std::string(length - 7, 'x') + "\r\n\r\n";
+      const auto expected =
+          extension ? reader_error::chunk_extension_size_limit_exceeded
+                    : reader_error::trailer_size_limit_exceeded;
       for (std::size_t output_size : {1, 8}) {
         martianlabs::doba::tests::unit::test_helper::set_context(
             std::string(extension ? "extension " : "trailer ") +
@@ -279,13 +295,12 @@ DOBA_TEST("enforces extension and trailer size limits") {
         reader source = reader::borrowed(bytes(wire));
         reader_chunked value;
         std::array<std::byte, 8> output{};
-        auto state =
-            value.read(source,
-                       std::span<std::byte>(output.data(), output_size));
+        auto state = value.read(
+            source, std::span<std::byte>(output.data(), output_size));
         std::string decoded(reinterpret_cast<const char*>(output.data()),
                             state.produced);
-        for (std::size_t i = 0; !state.complete && !state.has_error &&
-                                i <= wire.size(); i++) {
+        for (std::size_t i = 0;
+             !state.complete && !state.has_error && i <= wire.size(); i++) {
           state = value.read(source,
                              std::span<std::byte>(output.data(), output_size));
           decoded.append(reinterpret_cast<const char*>(output.data()),
@@ -311,7 +326,7 @@ DOBA_TEST("enforces extension and trailer size limits") {
 
 // +===========================================================================+
 // | [>] chunked reader preserves successor                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("chunked reader preserves the following request bytes") {
   constexpr std::string_view wire = "1\r\na\r\n0\r\nX: y\r\n\r\nNEXT";
   for (std::size_t output_size : {1, 8}) {
@@ -338,9 +353,10 @@ DOBA_TEST("chunked reader preserves the following request bytes") {
     DOBA_EXPECT(source.eof());
   }
 }
+
 // +===========================================================================+
 // | [>] quoted extensions respect output bounds and sentinels   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("quoted extensions decode with bounded output and sentinels") {
   const std::string wire =
       "1 \t; flag \t; name \t= \t\"a\\\"b\\\\c\" \t"
@@ -364,9 +380,10 @@ DOBA_TEST("quoted extensions decode with bounded output and sentinels") {
         "NEXT");
   }
 }
+
 // +===========================================================================+
 // | [>] truncation covers extension and trailer transitions     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("truncation covers extension and trailer transitions") {
   const std::string wire =
       "1 \t; flag \t; name \t= \t\"a\\\"b\\\\c\" \t"
@@ -390,9 +407,10 @@ DOBA_TEST("truncation covers extension and trailer transitions") {
     DOBA_EXPECT_EQUAL(repeated.produced, 0);
   }
 }
+
 // +===========================================================================+
 // | [>] rejects invalid bytes after extension transitions       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("rejects invalid bytes after extension transitions") {
   constexpr std::string_view cases[] = {
       "1 ;=x\r\n",
@@ -412,9 +430,10 @@ DOBA_TEST("rejects invalid bytes after extension transitions") {
     DOBA_EXPECT_EQUAL(state.error, reader_error::invalid_chunk_size);
   }
 }
+
 // +===========================================================================+
 // | [>] maximum chunk size reports missing data                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("maximum chunk size reports missing data without overflow") {
   const std::string wire = std::string(sizeof(std::size_t) * 2, 'f') + "\r\n";
   auto source = reader::borrowed(bytes(wire));
@@ -425,9 +444,10 @@ DOBA_TEST("maximum chunk size reports missing data without overflow") {
   DOBA_EXPECT_EQUAL(state.error, reader_error::chunked_incomplete);
   DOBA_EXPECT_EQUAL(state.produced, 0);
 }
+
 // +===========================================================================+
 // | [>] extension budget resets for each chunk                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("extension budget resets for each chunk") {
   const std::string chunk =
       "1;" + std::string(reader_chunked::kMaxChunkedExtensionSize - 1, 'x') +
@@ -443,9 +463,10 @@ DOBA_TEST("extension budget resets for each chunk") {
   DOBA_EXPECT_EQUAL(output[0], std::byte{'a'});
   DOBA_EXPECT_EQUAL(output[1], std::byte{'a'});
 }
+
 // +===========================================================================+
 // | [>] trailer budget includes all fields and the final line   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("trailer budget includes all fields and the final line") {
   const auto limit = reader_chunked::kMaxChunkedTrailerSize;
   for (const std::size_t length : {limit - 1, limit, limit + 1}) {
@@ -458,8 +479,7 @@ DOBA_TEST("trailer budget includes all fields and the final line") {
     DOBA_EXPECT_EQUAL(state.has_error, length > limit);
     DOBA_EXPECT_EQUAL(state.complete, length <= limit);
     if (length > limit) {
-      DOBA_EXPECT_EQUAL(state.error,
-                        reader_error::trailer_size_limit_exceeded);
+      DOBA_EXPECT_EQUAL(state.error, reader_error::trailer_size_limit_exceeded);
     }
   }
 }

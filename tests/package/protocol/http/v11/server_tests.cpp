@@ -39,12 +39,15 @@ using namespace martianlabs::doba::protocol::http::v11;
 class package_controller {
  public:
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
-  // +=========================================================================+
+  // | [>] register_routes                                          ( public ) |
+  // +-------------------------------------------------------------------------+
   template <typename Rty>
   void register_routes(Rty& routes) {
     routes.add("GET", "/package/:id", &package_controller::get);
   }
+  // +=========================================================================+
+  // | [>] get                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   void get(const request&, response& res, int id) const {
     res.ok_200();
     res.set_body(id);
@@ -53,6 +56,16 @@ class package_controller {
 };
 }  // namespace
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is a simple example of how to use the HTTP/1.1 server with a package |
+// | controller and a static file server. It sets up routes for both the       |
+// | package controller and the static file server, and starts the server to   |
+// | listen for incoming requests.                                             |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   std::error_code error;
   const auto root = martianlabs::doba::common::filesystem_root(".", error);
@@ -60,7 +73,7 @@ int main() {
   martianlabs::doba::common::filesystem_file file;
   martianlabs::doba::common::reader input(std::move(file));
   server<> value;
-  value.add_controller<package_controller>()
-      .add_controller<static_file_server>("/files", root);
+  value.add_controller<package_controller>().add_controller<static_file_server>(
+      "/files", root);
   return 0;
 }

@@ -37,7 +37,7 @@ using martianlabs::doba::protocol::http::header_view;
 
 // +===========================================================================+
 // | [>] aliases preserve owning and view semantics              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("aliases preserve owning and view semantics") {
   static_assert(std::same_as<header, std::pair<std::string, std::string>>);
   static_assert(

@@ -33,7 +33,7 @@ using martianlabs::doba::protocol::http::v11::status_lines;
 
 // +===========================================================================+
 // | [>] literals contain complete HTTP 1.1 status lines         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("literals contain complete HTTP 1.1 status lines") {
   struct test_case {
     std::string_view actual;

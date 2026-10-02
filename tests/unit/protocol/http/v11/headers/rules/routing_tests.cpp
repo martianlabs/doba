@@ -33,7 +33,7 @@ using martianlabs::doba::protocol::http::v11::headers::rules::routing;
 
 // +===========================================================================+
 // | [>] requires exactly one host field                         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("requires exactly one host field") {
   context ctx;
   DOBA_EXPECT_EQUAL(routing::apply(ctx), verdict::kReject);
@@ -49,9 +49,10 @@ DOBA_TEST("requires exactly one host field") {
   ctx.multiple_host = false;
   DOBA_EXPECT_EQUAL(routing::apply(ctx), verdict::kReject);
 }
+
 // +===========================================================================+
 // | [>] target and host names compare case insensitively        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("target and host names compare case insensitively") {
   context ctx;
   ctx.has_host = true;
@@ -62,9 +63,10 @@ DOBA_TEST("target and host names compare case insensitively") {
   ctx.target_authority.host = "other.example";
   DOBA_EXPECT_EQUAL(routing::apply(ctx), verdict::kReject);
 }
+
 // +===========================================================================+
 // | [>] absolute form accepts differing Host ports              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("absolute form accepts differing Host ports") {
   // RFC 9112 S3.2.2: absolute-form authority overrides Host.
   struct test_case {
@@ -92,30 +94,30 @@ DOBA_TEST("absolute form accepts differing Host ports") {
     ctx.target_authority.host = "example.com";
     ctx.target_authority.port = test.target_port;
     ctx.target_authority.scheme = test.scheme;
-    martianlabs::doba::tests::unit::test_helper::set_context(
-        test.host_port);
+    martianlabs::doba::tests::unit::test_helper::set_context(test.host_port);
     martianlabs::doba::tests::unit::test_helper::expect(
         routing::apply(ctx) == test.expected, "absolute authority precedence",
         __FILE__, __LINE__);
   }
 }
+
 // +===========================================================================+
 // | [>] authority form requires exact port equality             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("authority form requires exact port equality") {
   context ctx;
   ctx.has_host = true;
   ctx.host = {.host = "example.com", .port = "443", .scheme = {}};
   ctx.has_target_authority = true;
-  ctx.target_authority = {
-      .host = "example.com", .port = "443", .scheme = {}};
+  ctx.target_authority = {.host = "example.com", .port = "443", .scheme = {}};
   DOBA_EXPECT_EQUAL(routing::apply(ctx), verdict::kAccept);
   ctx.target_authority.port = "";
   DOBA_EXPECT_EQUAL(routing::apply(ctx), verdict::kReject);
 }
+
 // +===========================================================================+
 // | [>] absolute form authority overrides a different Host name ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("absolute form authority overrides a different Host name") {
   context ctx;
   ctx.has_host = true;

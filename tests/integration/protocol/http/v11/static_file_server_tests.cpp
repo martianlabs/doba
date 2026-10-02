@@ -46,14 +46,12 @@ using martianlabs::doba::common::filesystem_file;
 // +---------------------------------------------------------------------------+
 // | [>] file_directory                                              ( class ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class file_directory {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   file_directory() {
     static std::atomic<unsigned int> counter{0};
     const auto stamp =
@@ -68,7 +66,13 @@ class file_directory {
     std::error_code error;
     fs::remove_all(path_, error);
   }
+  // +=========================================================================+
+  // | [>] path                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   const fs::path& path() const { return path_; }
+  // +=========================================================================+
+  // | [>] write                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void write(std::string_view name, std::string_view contents) {
     const fs::path relative(std::u8string(name.begin(), name.end()));
     std::ofstream output(path_ / relative, std::ios::binary);
@@ -80,20 +84,20 @@ class file_directory {
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   fs::path path_;
 };
 }  // namespace
 
 namespace {
 using namespace martianlabs::doba::protocol::http::v11;
-using martianlabs::doba::tests::integration::tcpip_client;
 using martianlabs::doba::tests::integration::receive_http_response;
+using martianlabs::doba::tests::integration::tcpip_client;
 }  // namespace
 
 // +===========================================================================+
 // | [>] HTTP static file framing                                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP static files preserve binary framing and HEAD") {
   file_directory first;
   file_directory second;
@@ -114,25 +118,25 @@ DOBA_TEST("HTTP static files preserve binary framing and HEAD") {
   });
   value.start();
   DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(client.send_all(
-      "HEAD /assets/file.bin HTTP/1.1\r\nHost: a\r\n\r\n"));
+  DOBA_EXPECT(
+      client.send_all("HEAD /assets/file.bin HTTP/1.1\r\nHost: a\r\n\r\n"));
   auto head = receive_http_response(client, true);
   DOBA_EXPECT(head.has_value());
   DOBA_EXPECT_EQUAL(head->header("Content-Length").value(),
                     std::to_string(body.size()));
   DOBA_EXPECT(head->body.empty());
-  DOBA_EXPECT(client.send_all(
-      "GET /assets/file.bin HTTP/1.1\r\nHost: a\r\n\r\n"));
+  DOBA_EXPECT(
+      client.send_all("GET /assets/file.bin HTTP/1.1\r\nHost: a\r\n\r\n"));
   auto data = receive_http_response(client);
   DOBA_EXPECT(data.has_value());
   DOBA_EXPECT_EQUAL(data->body, body);
-  DOBA_EXPECT(client.send_all(
-      "GET /other/hello.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
+  DOBA_EXPECT(
+      client.send_all("GET /other/hello.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
   auto other = receive_http_response(client);
   DOBA_EXPECT(other.has_value());
   DOBA_EXPECT_EQUAL(other->body, "other");
-  DOBA_EXPECT(client.send_all(
-      "GET /assets/override HTTP/1.1\r\nHost: a\r\n\r\n"));
+  DOBA_EXPECT(
+      client.send_all("GET /assets/override HTTP/1.1\r\nHost: a\r\n\r\n"));
   auto application = receive_http_response(client);
   DOBA_EXPECT(application.has_value());
   DOBA_EXPECT_EQUAL(application->body, "application");
@@ -142,7 +146,7 @@ DOBA_TEST("HTTP static files preserve binary framing and HEAD") {
 
 // +===========================================================================+
 // | [>] HTTP static file paths and changes                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP static files reject escapes and expose current file contents") {
   file_directory directory;
   directory.write("file.txt", "old");
@@ -168,7 +172,8 @@ DOBA_TEST("HTTP static files reject escapes and expose current file contents") {
   };
   for (const auto& test : cases) {
     DOBA_EXPECT(client.send_all(std::string(test.method) + " " +
-        std::string(test.path) + " HTTP/1.1\r\nHost: a\r\n\r\n"));
+                                std::string(test.path) +
+                                " HTTP/1.1\r\nHost: a\r\n\r\n"));
     const auto result = receive_http_response(client);
     DOBA_EXPECT(result.has_value());
     DOBA_EXPECT_EQUAL(result->status, test.status);
@@ -179,8 +184,7 @@ DOBA_TEST("HTTP static files reject escapes and expose current file contents") {
   }
   for (std::string_view text : {"first", "second"}) {
     directory.write("file.txt", text);
-    DOBA_EXPECT(client.send_all(
-        "GET /file.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
+    DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
     const auto result = receive_http_response(client);
     DOBA_EXPECT(result.has_value());
     DOBA_EXPECT_EQUAL(result->body, text);
@@ -190,7 +194,7 @@ DOBA_TEST("HTTP static files reject escapes and expose current file contents") {
 
 // +===========================================================================+
 // | [>] HTTP static file concurrent downloads                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP static files handle concurrent and abandoned downloads") {
   file_directory directory;
   const std::string body(262145, 'x');
@@ -204,8 +208,7 @@ DOBA_TEST("HTTP static files handle concurrent and abandoned downloads") {
   {
     tcpip_client abandoned;
     DOBA_EXPECT(abandoned.connect(port));
-    DOBA_EXPECT(abandoned.send_all(
-        "GET /large HTTP/1.1\r\nHost: a\r\n\r\n"));
+    DOBA_EXPECT(abandoned.send_all("GET /large HTTP/1.1\r\nHost: a\r\n\r\n"));
     abandoned.close();
   }
   std::atomic<unsigned int> completed{0};
@@ -214,8 +217,9 @@ DOBA_TEST("HTTP static files handle concurrent and abandoned downloads") {
     for (unsigned int i = 0; i < 4; i++) {
       clients.emplace_back([&]() {
         tcpip_client client;
-        if (!client.connect(port) || !client.send_all(
-                "GET /large HTTP/1.1\r\nHost: a\r\n\r\n")) return;
+        if (!client.connect(port) ||
+            !client.send_all("GET /large HTTP/1.1\r\nHost: a\r\n\r\n"))
+          return;
         auto result = receive_http_response(client);
         if (result && result->body == body) completed++;
       });

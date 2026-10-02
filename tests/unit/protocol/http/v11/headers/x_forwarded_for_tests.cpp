@@ -38,7 +38,7 @@ using martianlabs::doba::protocol::http::v11::headers::x_forwarded_for;
 
 // +===========================================================================+
 // | [>] check parses forwarding nodes                           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check parses forwarding nodes") {
   parsed_token_list parsed;
   DOBA_EXPECT(x_forwarded_for::check(
@@ -54,9 +54,10 @@ DOBA_TEST("check parses forwarding nodes") {
   parsed_token_list empty;
   DOBA_EXPECT(x_forwarded_for::check("", empty));
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid forwarding nodes                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid forwarding nodes") {
   constexpr std::string_view cases[] = {
       " ",       "UNKNOWN",      "example.com", "999.0.0.1",
@@ -70,9 +71,10 @@ DOBA_TEST("check rejects invalid forwarding nodes") {
   DOBA_EXPECT(
       !x_forwarded_for::check(std::string_view{"unknown\0", 8}, parsed));
 }
+
 // +===========================================================================+
 // | [>] interpret limits forwarding nodes                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("interpret limits forwarding nodes") {
   parsed_token_list parsed;
   DOBA_EXPECT(x_forwarded_for::check("192.0.2.1, unknown", parsed));
@@ -87,9 +89,10 @@ DOBA_TEST("interpret limits forwarding nodes") {
   DOBA_EXPECT_EQUAL(x_forwarded_for::interpret(parsed, state, policy),
                     verdict::kReject);
 }
+
 // +===========================================================================+
 // | [>] check appends ordered views from repeated fields        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check appends ordered views from repeated fields") {
   const std::string first = "unknown";
   const std::string second = "::1";
@@ -104,16 +107,14 @@ DOBA_TEST("check appends ordered views from repeated fields") {
   DOBA_EXPECT(x_forwarded_for::check(",,", parsed));
   DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
 }
+
 // +===========================================================================+
 // | [>] check accepts address alternatives                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts address alternatives") {
   constexpr std::string_view cases[] = {
-      "0.0.0.0,255.255.255.255",
-      "::",
-      "::ffff:192.0.2.1",
-      "[::1],unknown",
-      "[v1.a]",
+      "0.0.0.0,255.255.255.255", "::",     "::ffff:192.0.2.1",
+      "[::1],unknown",           "[v1.a]",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
@@ -121,19 +122,14 @@ DOBA_TEST("check accepts address alternatives") {
     DOBA_EXPECT(x_forwarded_for::check(source, parsed));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects address alternatives                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects address alternatives") {
   constexpr std::string_view cases[] = {
-      "256.0.0.1",
-      "01.2.3.4",
-      "1.2.3",
-      "1.2.3.4:80",
-      "[::1]:80",
-      ":::",
-      "1::2::3",
-      "unknownx",
+      "256.0.0.1", "01.2.3.4", "1.2.3",   "1.2.3.4:80",
+      "[::1]:80",  ":::",      "1::2::3", "unknownx",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);

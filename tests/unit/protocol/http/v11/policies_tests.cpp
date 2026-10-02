@@ -31,7 +31,7 @@ using martianlabs::doba::protocol::http::v11::policies;
 
 // +===========================================================================+
 // | [>] defaults are bounded and allow supported features       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("defaults are bounded and allow supported features") {
   const policies value;
   DOBA_EXPECT_EQUAL(value.max_content_length, 16 * 1024 * 1024);
@@ -47,9 +47,10 @@ DOBA_TEST("defaults are bounded and allow supported features") {
   DOBA_EXPECT(value.allow_chunked);
   DOBA_EXPECT(value.allow_upgrade);
 }
+
 // +===========================================================================+
 // | [>] fields retain configured boundaries and switches        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("fields retain configured boundaries and switches") {
   const policies value{.max_content_length = 1,
                        .max_forwarding_hops = 2,

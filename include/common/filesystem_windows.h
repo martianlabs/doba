@@ -48,8 +48,7 @@ class filesystem_file {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
-
+  // +-------------------------------------------------------------------------+
   filesystem_file() = default;
   filesystem_file(const filesystem_file&) = delete;
   filesystem_file(filesystem_file&& in) noexcept
@@ -60,8 +59,7 @@ class filesystem_file {
   ~filesystem_file() { close(); }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
-
+  // +-------------------------------------------------------------------------+
   filesystem_file& operator=(const filesystem_file&) = delete;
   filesystem_file& operator=(filesystem_file&& in) noexcept {
     if (this == &in) return *this;
@@ -74,8 +72,7 @@ class filesystem_file {
   }
   // +=========================================================================+
   // | [>] open                                                     ( public ) |
-  // +=========================================================================+
-
+  // +-------------------------------------------------------------------------+
   bool open(const std::filesystem::path& root, std::string_view path,
             std::error_code& error) {
     close();
@@ -89,11 +86,9 @@ class filesystem_file {
     if (directory.has_relative_path() && !directory.has_filename()) {
       directory = directory.parent_path();
     }
-
     std::filesystem::path relative;
     try {
-      relative = std::filesystem::path(
-          std::u8string(path.begin(), path.end()));
+      relative = std::filesystem::path(std::u8string(path.begin(), path.end()));
     } catch (const std::filesystem::filesystem_error& failure) {
       error = failure.code();
       return false;
@@ -110,13 +105,12 @@ class filesystem_file {
       for (auto& c : name) {
         if (c >= L'a' && c <= L'z') c -= L'a' - L'A';
       }
-      if (name == L"CON" || name == L"PRN" ||
-          name == L"AUX" || name == L"NUL" ||
-          name == L"CONIN$" || name == L"CONOUT$" ||
+      if (name == L"CON" || name == L"PRN" || name == L"AUX" ||
+          name == L"NUL" || name == L"CONIN$" || name == L"CONOUT$" ||
           (name.size() == 4 &&
            (name.starts_with(L"COM") || name.starts_with(L"LPT")) &&
-           ((name[3] >= L'1' && name[3] <= L'9') ||
-            name[3] == 0xb9 || name[3] == 0xb2 || name[3] == 0xb3))) {
+           ((name[3] >= L'1' && name[3] <= L'9') || name[3] == 0xb9 ||
+            name[3] == 0xb2 || name[3] == 0xb3))) {
         error = std::make_error_code(std::errc::permission_denied);
         return false;
       }
@@ -126,8 +120,7 @@ class filesystem_file {
     const auto parts = target.relative_path();
     auto part = parts.begin();
     if (target.root_name().native().starts_with(L"\\\\")) {
-      if (target.root_name() == L"\\\\?" ||
-          target.root_name() == L"\\\\.") {
+      if (target.root_name() == L"\\\\?" || target.root_name() == L"\\\\.") {
         error = std::make_error_code(std::errc::permission_denied);
         return false;
       }
@@ -145,14 +138,14 @@ class filesystem_file {
           nullptr, OPEN_EXISTING,
           FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nullptr);
       if (next.file_ == INVALID_HANDLE_VALUE) {
-        error = std::error_code(
-            static_cast<int>(GetLastError()), std::system_category());
+        error = std::error_code(static_cast<int>(GetLastError()),
+                                std::system_category());
         return false;
       }
       BY_HANDLE_FILE_INFORMATION info{};
       if (!GetFileInformationByHandle(next.file_, &info)) {
-        error = std::error_code(
-            static_cast<int>(GetLastError()), std::system_category());
+        error = std::error_code(static_cast<int>(GetLastError()),
+                                std::system_category());
         return false;
       }
       if ((info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) ||
@@ -163,8 +156,8 @@ class filesystem_file {
       const bool is_directory =
           (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
       if (is_directory == last) {
-        error = std::make_error_code(
-            last ? std::errc::is_a_directory : std::errc::not_a_directory);
+        error = std::make_error_code(last ? std::errc::is_a_directory
+                                          : std::errc::not_a_directory);
         return false;
       }
       if (current_path == directory || last) {
@@ -172,18 +165,18 @@ class filesystem_file {
         const DWORD capacity =
             GetFinalPathNameByHandleW(next.file_, nullptr, 0, 0);
         if (!capacity) {
-          error = std::error_code(
-              static_cast<int>(GetLastError()), std::system_category());
+          error = std::error_code(static_cast<int>(GetLastError()),
+                                  std::system_category());
           return false;
         }
         std::wstring resolved(capacity, L'\0');
-        const DWORD path_length = GetFinalPathNameByHandleW(
-            next.file_, resolved.data(), capacity, 0);
+        const DWORD path_length =
+            GetFinalPathNameByHandleW(next.file_, resolved.data(), capacity, 0);
         if (!path_length || path_length >= capacity) {
           error = path_length
-              ? std::make_error_code(std::errc::filename_too_long)
-              : std::error_code(
-                    static_cast<int>(GetLastError()), std::system_category());
+                      ? std::make_error_code(std::errc::filename_too_long)
+                      : std::error_code(static_cast<int>(GetLastError()),
+                                        std::system_category());
           return false;
         }
         resolved.resize(path_length);
@@ -213,22 +206,21 @@ class filesystem_file {
   }
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
-  // +=========================================================================+
-
+  // +-------------------------------------------------------------------------+
   std::size_t read(std::span<std::byte> output) {
     if (output.empty() || failed_) return 0;
     if (file_ == INVALID_HANDLE_VALUE) {
       failed_ = true;
       return 0;
     }
-
-    const auto count = std::min(
-        {output.size(), size_ - position_,
-         static_cast<std::size_t>(std::numeric_limits<DWORD>::max())});
+    const auto count =
+        std::min({output.size(), size_ - position_,
+                  static_cast<std::size_t>(std::numeric_limits<DWORD>::max())});
     if (!count) return 0;
     DWORD result = 0;
-    if (!ReadFile(file_, output.data(), static_cast<DWORD>(count),
-                  &result, nullptr) || !result) {
+    if (!ReadFile(file_, output.data(), static_cast<DWORD>(count), &result,
+                  nullptr) ||
+        !result) {
       failed_ = true;
       return 0;
     }
@@ -236,19 +228,26 @@ class filesystem_file {
     return result;
   }
   // +=========================================================================+
-  // | [>] size/eof/failed                                          ( public ) |
-  // +=========================================================================+
-
+  // | [>] size                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   [[nodiscard]] std::size_t size() const noexcept { return size_; }
+  // +=========================================================================+
+  // | [>] is_open                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   [[nodiscard]] bool is_open() const noexcept {
     return file_ != INVALID_HANDLE_VALUE;
   }
+  // +=========================================================================+
+  // | [>] eof                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   [[nodiscard]] bool eof() const noexcept { return position_ == size_; }
+  // +=========================================================================+
+  // | [>] failed                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   [[nodiscard]] bool failed() const noexcept { return failed_; }
   // +=========================================================================+
   // | [>] close                                                    ( public ) |
-  // +=========================================================================+
-
+  // +-------------------------------------------------------------------------+
   void close() noexcept {
     if (file_ != INVALID_HANDLE_VALUE) CloseHandle(file_);
     file_ = INVALID_HANDLE_VALUE;
@@ -260,9 +259,8 @@ class filesystem_file {
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   HANDLE file_{INVALID_HANDLE_VALUE};
-
   std::size_t size_{0};
   std::size_t position_{0};
   bool failed_{false};

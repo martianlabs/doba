@@ -34,7 +34,7 @@ using martianlabs::doba::common::gm_time;
 
 // +===========================================================================+
 // | [>] utc conversion preserves calendar boundaries            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("utc conversion preserves calendar boundaries") {
   struct test_case {
     time_t timestamp;
@@ -57,7 +57,7 @@ DOBA_TEST("utc conversion preserves calendar boundaries") {
       {978307200, 2001, 1, 1, 0, 0, 0, 1, 0},
   };
   for (const auto& value : cases) {
-    struct tm output {};
+    struct tm output{};
     gm_time(&output, &value.timestamp);
     DOBA_EXPECT_EQUAL(output.tm_year + 1900, value.year);
     DOBA_EXPECT_EQUAL(output.tm_mon + 1, value.month);
@@ -73,10 +73,10 @@ DOBA_TEST("utc conversion preserves calendar boundaries") {
 
 // +===========================================================================+
 // | [>] utc conversion reports success                          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("utc conversion reports success") {
   time_t timestamp = 0;
-  struct tm output {};
+  struct tm output{};
   DOBA_EXPECT_EQUAL(gm_time(&output, &timestamp), 0);
 }
 

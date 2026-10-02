@@ -48,7 +48,7 @@ class tcpip_client {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   tcpip_client() = default;
   tcpip_client(const tcpip_client&) = delete;
   tcpip_client(tcpip_client&&) noexcept = delete;
@@ -56,8 +56,8 @@ class tcpip_client {
   tcpip_client& operator=(const tcpip_client&) = delete;
   tcpip_client& operator=(tcpip_client&&) noexcept = delete;
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
+  // | [>] find_available_port                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   uint16_t find_available_port() const {
     socket_type socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (socket == invalid_socket()) return 0;
@@ -83,6 +83,9 @@ class tcpip_client {
     close_socket(socket);
     return ntohs(address.sin_port);
   }
+  // +=========================================================================+
+  // | [>] connect                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   bool connect(uint16_t port,
                std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
     close();
@@ -139,9 +142,11 @@ class tcpip_client {
     close();
     return false;
   }
-  bool send_all(
-      std::string_view value,
-      std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
+  // +=========================================================================+
+  // | [>] send_all                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool send_all(std::string_view value,
+                std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
     operation_ = "send";
     error_ = {};
     native_error_ = 0;
@@ -162,6 +167,9 @@ class tcpip_client {
     }
     return true;
   }
+  // +=========================================================================+
+  // | [>] receive                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   std::optional<std::string> receive(
       std::size_t size,
       std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
@@ -173,10 +181,11 @@ class tcpip_client {
     std::size_t received = 0;
     while (received < size) {
       if (!wait_ready(false, deadline)) return std::nullopt;
-      int count = ::recv(
-          socket_, result.data() + received,
-          static_cast<int>(std::min(size - received,
-                                    static_cast<std::size_t>(INT_MAX))), 0);
+      int count =
+          ::recv(socket_, result.data() + received,
+                 static_cast<int>(std::min(size - received,
+                                           static_cast<std::size_t>(INT_MAX))),
+                 0);
       if (count < 0 && pending(socket_error())) continue;
       if (count == 0) {
         error_ = "eof";
@@ -190,36 +199,43 @@ class tcpip_client {
     }
     return result;
   }
+  // +=========================================================================+
+  // | [>] receive_some                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   std::optional<std::string> receive_some(
       std::size_t maximum,
       std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
     operation_ = "receive";
     error_ = {};
     native_error_ = 0;
-    if (!maximum || !wait_ready(
-            false, std::chrono::steady_clock::now() + timeout)) {
+    if (!maximum ||
+        !wait_ready(false, std::chrono::steady_clock::now() + timeout)) {
       return std::nullopt;
     }
-    std::string result((std::min)(maximum,
-                                  static_cast<std::size_t>(INT_MAX)), '\0');
-    const int count = ::recv(socket_, result.data(),
-                             static_cast<int>(result.size()), 0);
+    std::string result((std::min)(maximum, static_cast<std::size_t>(INT_MAX)),
+                       '\0');
+    const int count =
+        ::recv(socket_, result.data(), static_cast<int>(result.size()), 0);
     if (count <= 0) {
-      if (count == 0) error_ = "eof";
-      else fail_socket();
+      if (count == 0)
+        error_ = "eof";
+      else
+        fail_socket();
       return std::nullopt;
     }
     result.resize(static_cast<std::size_t>(count));
     return result;
   }
+  // +=========================================================================+
+  // | [>] has_data                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   bool has_data(std::chrono::milliseconds timeout) const {
     fd_set read_set;
     FD_ZERO(&read_set);
     FD_SET(socket_, &read_set);
     timeval value{};
     value.tv_sec = static_cast<long>(timeout.count() / 1000);
-    value.tv_usec =
-        static_cast<long>((timeout.count() % 1000) * 1000);
+    value.tv_usec = static_cast<long>((timeout.count() % 1000) * 1000);
 #ifdef _WIN32
     int ready = ::select(0, &read_set, nullptr, nullptr, &value);
 #else
@@ -227,6 +243,9 @@ class tcpip_client {
 #endif
     return ready > 0 && FD_ISSET(socket_, &read_set);
   }
+  // +=========================================================================+
+  // | [>] wait_for_close                                           ( public ) |
+  // +-------------------------------------------------------------------------+
   bool wait_for_close(std::chrono::milliseconds timeout) {
     operation_ = "receive";
     error_ = {};
@@ -240,6 +259,9 @@ class tcpip_client {
     if (count == 0) error_ = "eof";
     return count == 0;
   }
+  // +=========================================================================+
+  // | [>] receive_until_close                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   std::optional<std::string> receive_until_close(
       std::size_t maximum,
       std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
@@ -268,9 +290,21 @@ class tcpip_client {
       result.append(buffer, static_cast<std::size_t>(count));
     }
   }
+  // +=========================================================================+
+  // | [>] operation                                                ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string_view operation() const { return operation_; }
+  // +=========================================================================+
+  // | [>] error                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string_view error() const { return error_; }
+  // +=========================================================================+
+  // | [>] native_error                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   int native_error() const { return native_error_; }
+  // +=========================================================================+
+  // | [>] shutdown_write                                           ( public ) |
+  // +-------------------------------------------------------------------------+
   bool shutdown_write() {
     if (socket_ == invalid_socket()) return false;
 #ifdef _WIN32
@@ -279,14 +313,20 @@ class tcpip_client {
     return ::shutdown(socket_, SHUT_WR) == 0;
 #endif
   }
+  // +=========================================================================+
+  // | [>] set_receive_buffer_size                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   bool set_receive_buffer_size(int size) {
     if (size <= 0) return false;
     receive_buffer_size_ = size;
     return socket_ == invalid_socket() ||
            ::setsockopt(socket_, SOL_SOCKET, SO_RCVBUF,
-                        reinterpret_cast<const char*>(&size), sizeof(size)) ==
-               0;
+                        reinterpret_cast<const char*>(&size),
+                        sizeof(size)) == 0;
   }
+  // +=========================================================================+
+  // | [>] abort                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void abort() {
     if (socket_ == invalid_socket()) return;
     linger value{1, 0};
@@ -295,6 +335,9 @@ class tcpip_client {
     close_socket(socket_);
     socket_ = invalid_socket();
   }
+  // +=========================================================================+
+  // | [>] close                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void close() {
     if (socket_ == invalid_socket()) return;
 #ifdef _WIN32
@@ -309,7 +352,7 @@ class tcpip_client {
  private:
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
 #ifdef _WIN32
   using socket_type = SOCKET;
   static socket_type invalid_socket() { return INVALID_SOCKET; }
@@ -320,8 +363,8 @@ class tcpip_client {
   static void close_socket(socket_type socket) { ::close(socket); }
 #endif
   // +=========================================================================+
-  // | [>] METHODs                                                 ( private ) |
-  // +=========================================================================+
+  // | [>] socket_error                                            ( private ) |
+  // +-------------------------------------------------------------------------+
   static int socket_error() {
 #ifdef _WIN32
     return ::WSAGetLastError();
@@ -329,6 +372,9 @@ class tcpip_client {
     return errno;
 #endif
   }
+  // +=========================================================================+
+  // | [>] pending                                                 ( private ) |
+  // +-------------------------------------------------------------------------+
   static bool pending(int error) {
 #ifdef _WIN32
     return error == WSAEWOULDBLOCK || error == WSAEINPROGRESS ||
@@ -338,17 +384,23 @@ class tcpip_client {
            error == EINTR;
 #endif
   }
+  // +=========================================================================+
+  // | [>] fail_socket                                             ( private ) |
+  // +-------------------------------------------------------------------------+
   bool fail_socket() {
     error_ = "socket";
     native_error_ = socket_error();
     return false;
   }
+  // +=========================================================================+
+  // | [>] wait_ready                                              ( private ) |
+  // +-------------------------------------------------------------------------+
   bool wait_ready(bool writing,
                   std::chrono::steady_clock::time_point deadline) {
     for (;;) {
       const auto remaining =
           std::chrono::duration_cast<std::chrono::microseconds>(
-          deadline - std::chrono::steady_clock::now());
+              deadline - std::chrono::steady_clock::now());
       if (remaining.count() <= 0) {
         error_ = "timeout";
         return false;
@@ -363,13 +415,13 @@ class tcpip_client {
       timeout.tv_sec = static_cast<long>(remaining.count() / 1000000);
       timeout.tv_usec = static_cast<long>(remaining.count() % 1000000);
 #ifdef _WIN32
-      const int count = ::select(0, writing ? nullptr : &selected,
-                                 writing ? &selected : nullptr, &errors,
-                                 &timeout);
+      const int count =
+          ::select(0, writing ? nullptr : &selected,
+                   writing ? &selected : nullptr, &errors, &timeout);
 #else
-      const int count = ::select(socket_ + 1, writing ? nullptr : &selected,
-                                 writing ? &selected : nullptr, &errors,
-                                 &timeout);
+      const int count =
+          ::select(socket_ + 1, writing ? nullptr : &selected,
+                   writing ? &selected : nullptr, &errors, &timeout);
 #endif
       if (count > 0) return true;
       if (count == 0) {
@@ -381,7 +433,7 @@ class tcpip_client {
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   [[maybe_unused]] network::detail::environment environment_;
   socket_type socket_{invalid_socket()};
   int receive_buffer_size_ = 0;

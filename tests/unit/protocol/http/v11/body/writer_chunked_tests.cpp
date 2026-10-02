@@ -37,6 +37,14 @@ using martianlabs::doba::common::reader;
 using martianlabs::doba::common::writer;
 using martianlabs::doba::protocol::http::v11::body::writer_chunked;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] release                                                  ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function releases the writer's buffer and reads it into a string.    |
+// | It is used to verify the wire output of the chunked writer.               |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 std::string release(writer& value) {
   reader source(value.release());
   std::string output;
@@ -47,7 +55,7 @@ std::string release(writer& value) {
 
 // +===========================================================================+
 // | [>] writes one RFC 9112 chunk per nonempty payload          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("writes one RFC 9112 chunk per nonempty payload") {
   struct test_case {
     std::size_t size;
@@ -69,9 +77,10 @@ DOBA_TEST("writes one RFC 9112 chunk per nonempty payload") {
     DOBA_EXPECT_EQUAL(release(destination), expected);
   }
 }
+
 // +===========================================================================+
 // | [>] empty payloads are skipped and end is idempotent        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("empty payloads are skipped and end is idempotent") {
   writer destination;
   writer_chunked value;
@@ -81,9 +90,10 @@ DOBA_TEST("empty payloads are skipped and end is idempotent") {
   DOBA_EXPECT(value.end(destination));
   DOBA_EXPECT_EQUAL(release(destination), "0\r\n\r\n");
 }
+
 // +===========================================================================+
 // | [>] multiple writes preserve payload and chunk boundaries   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("multiple writes preserve payload and chunk boundaries") {
   writer destination;
   writer_chunked value;
@@ -101,9 +111,10 @@ DOBA_TEST("multiple writes preserve payload and chunk boundaries") {
   DOBA_EXPECT_EQUAL(std::string_view(output).substr(prefix.size() + 2),
                     "\r\n0\r\n\r\n");
 }
+
 // +===========================================================================+
 // | [>] writes after the terminating chunk are rejected         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("writes after the terminating chunk are rejected") {
   writer destination;
   writer_chunked value;
@@ -113,9 +124,10 @@ DOBA_TEST("writes after the terminating chunk are rejected") {
   DOBA_EXPECT(!value.write(std::span<const std::byte>{}, destination));
   DOBA_EXPECT_EQUAL(release(destination), "6\r\nbefore\r\n0\r\n\r\n");
 }
+
 // +===========================================================================+
 // | [>] failed chunk and terminator writes are reported         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("failed chunk and terminator writes are reported") {
   writer destination;
   destination.finish(0);

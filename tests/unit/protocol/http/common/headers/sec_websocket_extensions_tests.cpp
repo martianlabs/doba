@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::sec_websocket_extensions;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "permessage-deflate",
@@ -52,9 +52,10 @@ DOBA_TEST("check accepts valid values") {
         std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",
@@ -72,9 +73,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!sec_websocket_extensions::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!sec_websocket_extensions::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!sec_websocket_extensions::check(std::string_view{"a\0", 2}));
@@ -99,9 +101,10 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(sec_websocket_extensions::check(
       std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check accepts extension parameter boundaries            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts extension parameter boundaries") {
   constexpr std::string_view cases[] = {
       "x;p=\"\"",
@@ -114,16 +117,13 @@ DOBA_TEST("check accepts extension parameter boundaries") {
     DOBA_EXPECT(sec_websocket_extensions::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects extension parameter boundaries            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects extension parameter boundaries") {
   constexpr std::string_view cases[] = {
-      "x;p= v",
-      "x;p=\"v\"junk",
-      "x;p=\"v\\",
-      "x;p=v y",
-      "x;p=v, y;=z",
+      "x;p= v", "x;p=\"v\"junk", "x;p=\"v\\", "x;p=v y", "x;p=v, y;=z",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);

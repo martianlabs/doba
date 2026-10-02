@@ -49,12 +49,28 @@
 #include "transport/server/tls.h"
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] general                                                    ( usings ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 namespace tr = martianlabs::doba::transport::server;
 using martianlabs::doba::tests::integration::tcpip_client;
 using namespace std::chrono_literals;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] byte_engine                                                ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct byte_engine {
+  // +=========================================================================+
+  // | [>] USINGs                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   using policies_type = int;
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   martianlabs::doba::common::send_delegate send;
   std::function<void()> close;
   bool split{false};
@@ -63,15 +79,22 @@ struct byte_engine {
   std::atomic<bool>* failed_source_received{nullptr};
   std::string body;
   std::function<std::size_t(byte_engine&, const char*, std::size_t,
-                            std::size_t)> receive;
-  std::function<void(
-      const martianlabs::doba::common::send_delegate&)> capture;
+                            std::size_t)>
+      receive;
+  std::function<void(const martianlabs::doba::common::send_delegate&)> capture;
+  // +=========================================================================+
+  // | [>] set_on_send                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_send(martianlabs::doba::common::send_delegate value) {
     send = std::move(value);
   }
-  void set_on_close(std::function<void()> value) {
-    close = std::move(value);
-  }
+  // +=========================================================================+
+  // | [>] set_on_close                                             ( public ) |
+  // +-------------------------------------------------------------------------+
+  void set_on_close(std::function<void()> value) { close = std::move(value); }
+  // +=========================================================================+
+  // | [>] on_bytes_received                                        ( public ) |
+  // +-------------------------------------------------------------------------+
   std::size_t on_bytes_received(const char* bytes, std::size_t size,
                                 std::size_t capacity) {
     if (receive) return receive(*this, bytes, size, capacity);
@@ -109,14 +132,24 @@ struct byte_engine {
   }
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] tls_client                                                 ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct tls_client {
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   tcpip_client socket;
   std::unique_ptr<SSL_CTX, decltype(&SSL_CTX_free)> context{
       SSL_CTX_new(TLS_client_method()), SSL_CTX_free};
   std::unique_ptr<SSL, decltype(&SSL_free)> ssl{
       context ? SSL_new(context.get()) : nullptr, SSL_free};
   std::unique_ptr<BIO, decltype(&BIO_free)> network{nullptr, BIO_free};
-
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   tls_client() {
     BIO* internal = nullptr;
     BIO* external = nullptr;
@@ -127,47 +160,61 @@ struct tls_client {
     network.reset(external);
     SSL_set_connect_state(ssl.get());
   }
+  // +=========================================================================+
+  // | [>] exchange                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   bool exchange(std::size_t fragment = 4096) {
     std::array<char, 4096> bytes;
     while (BIO_ctrl_pending(network.get())) {
       std::size_t size = 0;
       if (BIO_read_ex(network.get(), bytes.data(),
                       (std::min)(fragment, bytes.size()), &size) != 1 ||
-          !socket.send_all(std::string_view(bytes.data(), size))) return false;
+          !socket.send_all(std::string_view(bytes.data(), size)))
+        return false;
     }
     if (!socket.has_data(10ms)) return true;
     auto received = socket.receive_some(bytes.size());
     if (!received) return false;
     std::size_t written = 0;
     return BIO_write_ex(network.get(), received->data(), received->size(),
-                        &written) == 1 && written == received->size();
+                        &written) == 1 &&
+           written == received->size();
   }
+  // +=========================================================================+
+  // | [>] negotiate                                                ( public ) |
+  // +-------------------------------------------------------------------------+
   bool negotiate(std::size_t fragment = 4096) {
     for (int step = 0; step < 100; ++step) {
       const int result = SSL_do_handshake(ssl.get());
       if (result != 1) {
         const int error = SSL_get_error(ssl.get(), result);
-        if (error != SSL_ERROR_WANT_READ &&
-            error != SSL_ERROR_WANT_WRITE) return false;
+        if (error != SSL_ERROR_WANT_READ && error != SSL_ERROR_WANT_WRITE)
+          return false;
       }
       if (!exchange(fragment)) return false;
       if (SSL_is_init_finished(ssl.get())) return true;
     }
     return false;
   }
+  // +=========================================================================+
+  // | [>] send                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   bool send(std::string_view value, std::size_t fragment = 4096) {
     for (int step = 0; step < 100; ++step) {
       std::size_t written = 0;
-      const int result = SSL_write_ex(ssl.get(), value.data(),
-                                      value.size(), &written);
+      const int result =
+          SSL_write_ex(ssl.get(), value.data(), value.size(), &written);
       const int error = result == 1 ? 0 : SSL_get_error(ssl.get(), result);
       if (!exchange(fragment)) return false;
       if (result == 1) return written == value.size();
-      if (error != SSL_ERROR_WANT_READ &&
-          error != SSL_ERROR_WANT_WRITE) return false;
+      if (error != SSL_ERROR_WANT_READ && error != SSL_ERROR_WANT_WRITE)
+        return false;
     }
     return false;
   }
+  // +=========================================================================+
+  // | [>] receive                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   std::optional<std::string> receive(std::size_t size) {
     std::string result(size, '\0');
     std::size_t total = 0;
@@ -181,33 +228,45 @@ struct tls_client {
         continue;
       }
       const int error = SSL_get_error(ssl.get(), value);
-      if (error != SSL_ERROR_WANT_READ &&
-          error != SSL_ERROR_WANT_WRITE) return std::nullopt;
+      if (error != SSL_ERROR_WANT_READ && error != SSL_ERROR_WANT_WRITE)
+        return std::nullopt;
       if (!exchange()) return std::nullopt;
     }
     return std::nullopt;
   }
+  // +=========================================================================+
+  // | [>] receive_close                                            ( public ) |
+  // +-------------------------------------------------------------------------+
   bool receive_close() {
     std::array<char, 32> bytes;
     for (int step = 0; step < 100; ++step) {
       std::size_t received = 0;
-      const int result = SSL_read_ex(ssl.get(), bytes.data(),
-                                     bytes.size(), &received);
+      const int result =
+          SSL_read_ex(ssl.get(), bytes.data(), bytes.size(), &received);
       if (result == 1) return false;
       const int error = SSL_get_error(ssl.get(), result);
       if (error == SSL_ERROR_ZERO_RETURN) return true;
-      if (error != SSL_ERROR_WANT_READ &&
-          error != SSL_ERROR_WANT_WRITE) return false;
+      if (error != SSL_ERROR_WANT_READ && error != SSL_ERROR_WANT_WRITE)
+        return false;
       if (!exchange()) return false;
     }
     return false;
   }
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] server_policies                                          ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function returns a TLS server configuration with the given port and  |
+// | a self-signed certificate and private key for testing purposes.           |
+// | It sets the IP address to "127.0.0.1" and the worker count to 2.          |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 tr::tls_policies server_policies(uint16_t port) {
   tr::tls_policies configuration;
   const auto fixtures = std::filesystem::path(__FILE__).parent_path() /
-      "../../../unit/transport/server/fixtures";
+                        "../../../unit/transport/server/fixtures";
   configuration.certificate_file = (fixtures / "server.crt").string();
   configuration.private_key_file = (fixtures / "server.key").string();
   configuration.ip = "127.0.0.1";
@@ -219,14 +278,14 @@ tr::tls_policies server_policies(uint16_t port) {
 
 // +===========================================================================+
 // | [>] tls exchanges encrypted bytes on loopback               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls exchanges encrypted bytes on loopback") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   auto factory = []() { return byte_engine{}; };
-  tr::tls<byte_engine, decltype(factory)> server(
-      server_policies(port), factory);
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   server.start();
@@ -242,14 +301,14 @@ DOBA_TEST("tls exchanges encrypted bytes on loopback") {
 
 // +===========================================================================+
 // | [>] tls accepts fragmented handshake and request            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls accepts fragmented handshake and request") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   auto factory = []() { return byte_engine{}; };
-  tr::tls<byte_engine, decltype(factory)> server(
-      server_policies(port), factory);
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   server.start();
@@ -265,23 +324,23 @@ DOBA_TEST("tls accepts fragmented handshake and request") {
 
 // +===========================================================================+
 // | [>] tls retains unconsumed plaintext                        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls retains unconsumed plaintext") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   auto factory = []() {
     byte_engine engine;
-    engine.receive = [](byte_engine& value, const char* bytes,
-                        std::size_t size, std::size_t) {
+    engine.receive = [](byte_engine& value, const char* bytes, std::size_t size,
+                        std::size_t) {
       if (size < 4) return std::size_t{0};
       value.send(std::string(bytes, 4), {}, nullptr);
       return std::size_t{4};
     };
     return engine;
   };
-  tr::tls<byte_engine, decltype(factory)> server(
-      server_policies(port), factory);
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   server.start();
@@ -302,14 +361,14 @@ DOBA_TEST("tls retains unconsumed plaintext") {
 
 // +===========================================================================+
 // | [>] tls receives binary data beyond one encrypted buffer    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls receives binary data beyond one encrypted buffer") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   auto factory = []() { return byte_engine{}; };
-  tr::tls<byte_engine, decltype(factory)> server(
-      server_policies(port), factory);
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   server.start();
@@ -329,21 +388,21 @@ DOBA_TEST("tls receives binary data beyond one encrypted buffer") {
 
 // +===========================================================================+
 // | [>] tls closes when unconsumed plaintext fills the buffer   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls closes when unconsumed plaintext fills the buffer") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   auto factory = []() {
     byte_engine engine;
-    engine.receive = [](byte_engine&, const char*, std::size_t,
-                        std::size_t) { return std::size_t{0}; };
+    engine.receive = [](byte_engine&, const char*, std::size_t, std::size_t) {
+      return std::size_t{0};
+    };
     return engine;
   };
   auto configuration = server_policies(port);
   configuration.recv_buffer_size = 16;
-  tr::tls<byte_engine, decltype(factory)> server(
-      configuration, factory);
+  tr::tls<byte_engine, decltype(factory)> server(configuration, factory);
   std::atomic<int> connected{0};
   std::atomic<int> disconnected{0};
   server.set_on_connection([&]() { ++connected; });
@@ -352,13 +411,13 @@ DOBA_TEST("tls closes when unconsumed plaintext fills the buffer") {
   DOBA_EXPECT(client.socket.connect(port));
   DOBA_EXPECT(client.negotiate());
   std::size_t written = 0;
-  DOBA_EXPECT(SSL_write_ex(client.ssl.get(), "xxxxxxxxxxxxxxxx", 16,
-                           &written) == 1);
+  DOBA_EXPECT(
+      SSL_write_ex(client.ssl.get(), "xxxxxxxxxxxxxxxx", 16, &written) == 1);
   DOBA_EXPECT_EQUAL(written, 16);
   std::array<char, 128> bytes;
   std::size_t size = 0;
-  DOBA_EXPECT(BIO_read_ex(client.network.get(), bytes.data(),
-                          bytes.size(), &size) == 1);
+  DOBA_EXPECT(BIO_read_ex(client.network.get(), bytes.data(), bytes.size(),
+                          &size) == 1);
   DOBA_EXPECT(client.socket.send_all(std::string_view(bytes.data(), size)));
   DOBA_EXPECT(client.socket.wait_for_close(3s));
   client.socket.close();
@@ -369,7 +428,7 @@ DOBA_TEST("tls closes when unconsumed plaintext fills the buffer") {
 
 // +===========================================================================+
 // | [>] tls isolates invalid engine input                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls isolates invalid engine input") {
   for (const bool throwing : {false, true}) {
     tls_client failed;
@@ -379,17 +438,16 @@ DOBA_TEST("tls isolates invalid engine input") {
     auto factory = [&]() {
       byte_engine engine;
       if (created++ == 0) {
-        engine.receive = [throwing](byte_engine&, const char*,
-                                    std::size_t size, std::size_t)
-            -> std::size_t {
+        engine.receive = [throwing](byte_engine&, const char*, std::size_t size,
+                                    std::size_t) -> std::size_t {
           if (throwing) throw std::runtime_error("receive failed");
           return size + 1;
         };
       }
       return engine;
     };
-    tr::tls<byte_engine, decltype(factory)> server(
-        server_policies(port), factory);
+    tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                   factory);
     std::atomic<int> connected{0};
     std::atomic<int> disconnected{0};
     server.set_on_connection([&]() { ++connected; });
@@ -402,8 +460,8 @@ DOBA_TEST("tls isolates invalid engine input") {
     DOBA_EXPECT_EQUAL(written, 1);
     std::array<char, 128> bytes;
     std::size_t size = 0;
-    DOBA_EXPECT(BIO_read_ex(failed.network.get(), bytes.data(),
-                            bytes.size(), &size) == 1);
+    DOBA_EXPECT(BIO_read_ex(failed.network.get(), bytes.data(), bytes.size(),
+                            &size) == 1);
     DOBA_EXPECT(failed.socket.send_all(std::string_view(bytes.data(), size)));
     DOBA_EXPECT(failed.socket.wait_for_close(3s));
     failed.socket.close();
@@ -423,7 +481,7 @@ DOBA_TEST("tls isolates invalid engine input") {
 
 // +===========================================================================+
 // | [>] tls preserves queued response order                     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls preserves queued response order") {
   tls_client client;
   const auto port = client.socket.find_available_port();
@@ -433,8 +491,8 @@ DOBA_TEST("tls preserves queued response order") {
     engine.split = true;
     return engine;
   };
-  tr::tls<byte_engine, decltype(factory)> server(
-      server_policies(port), factory);
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   server.start();
@@ -450,7 +508,7 @@ DOBA_TEST("tls preserves queued response order") {
 
 // +===========================================================================+
 // | [>] tls streams a body beyond the send buffer               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls streams a body beyond the send buffer") {
   tls_client client;
   const auto port = client.socket.find_available_port();
@@ -462,8 +520,7 @@ DOBA_TEST("tls streams a body beyond the send buffer") {
   };
   auto configuration = server_policies(port);
   configuration.max_send_buffer_size = 4096;
-  tr::tls<byte_engine, decltype(factory)> server(
-      configuration, factory);
+  tr::tls<byte_engine, decltype(factory)> server(configuration, factory);
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   server.start();
@@ -480,7 +537,7 @@ DOBA_TEST("tls streams a body beyond the send buffer") {
 
 // +===========================================================================+
 // | [>] tls accepts concurrent response producers               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls accepts concurrent response producers") {
   tls_client client;
   const auto port = client.socket.find_available_port();
@@ -495,8 +552,8 @@ DOBA_TEST("tls accepts concurrent response producers") {
     };
     return engine;
   };
-  tr::tls<byte_engine, decltype(factory)> server(
-      server_policies(port), factory);
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   server.start();
@@ -531,7 +588,7 @@ DOBA_TEST("tls accepts concurrent response producers") {
 
 // +===========================================================================+
 // | [>] tls closes after a failed response source               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls closes after a failed response source") {
   tls_client client;
   const auto port = client.socket.find_available_port();
@@ -543,8 +600,8 @@ DOBA_TEST("tls closes after a failed response source") {
     engine.failed_source_received = &received;
     return engine;
   };
-  tr::tls<byte_engine, decltype(factory)> server(
-      server_policies(port), factory);
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   server.start();
@@ -562,7 +619,7 @@ DOBA_TEST("tls closes after a failed response source") {
 
 // +===========================================================================+
 // | [>] tls sends close notify after queued output              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls sends close notify after queued output") {
   tls_client client;
   const auto port = client.socket.find_available_port();
@@ -572,8 +629,8 @@ DOBA_TEST("tls sends close notify after queued output") {
     engine.close_after = true;
     return engine;
   };
-  tr::tls<byte_engine, decltype(factory)> server(
-      server_policies(port), factory);
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
   std::atomic<int> connected{0};
   std::atomic<int> disconnected{0};
   server.set_on_connection([&]() { ++connected; });
@@ -595,14 +652,14 @@ DOBA_TEST("tls sends close notify after queued output") {
 
 // +===========================================================================+
 // | [>] tls answers peer close notify                           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls answers peer close notify") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   auto factory = []() { return byte_engine{}; };
-  tr::tls<byte_engine, decltype(factory)> server(
-      server_policies(port), factory);
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
   std::atomic<int> disconnected{0};
   server.set_on_connection([]() {});
   server.set_on_disconnection([&]() { ++disconnected; });
@@ -619,14 +676,14 @@ DOBA_TEST("tls answers peer close notify") {
 
 // +===========================================================================+
 // | [>] tls aborts on peer EOF without close notify             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls aborts on peer EOF without close notify") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   auto factory = []() { return byte_engine{}; };
-  tr::tls<byte_engine, decltype(factory)> server(
-      server_policies(port), factory);
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
   std::atomic<int> connected{0};
   std::atomic<int> disconnected{0};
   server.set_on_connection([&]() { ++connected; });
@@ -644,14 +701,14 @@ DOBA_TEST("tls aborts on peer EOF without close notify") {
 
 // +===========================================================================+
 // | [>] tls omits callbacks for incomplete negotiation          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls omits callbacks for incomplete negotiation") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   auto factory = []() { return byte_engine{}; };
-  tr::tls<byte_engine, decltype(factory)> server(
-      server_policies(port), factory);
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
   std::atomic<int> connected{0};
   std::atomic<int> disconnected{0};
   server.set_on_connection([&]() { ++connected; });
@@ -663,8 +720,8 @@ DOBA_TEST("tls omits callbacks for incomplete negotiation") {
                     SSL_ERROR_WANT_READ);
   std::array<char, 16> bytes;
   std::size_t size = 0;
-  DOBA_EXPECT(BIO_read_ex(client.network.get(), bytes.data(),
-                          bytes.size(), &size) == 1);
+  DOBA_EXPECT(BIO_read_ex(client.network.get(), bytes.data(), bytes.size(),
+                          &size) == 1);
   DOBA_EXPECT(size > 0);
   DOBA_EXPECT(client.socket.send_all(std::string_view(bytes.data(), 1)));
   server.stop();
@@ -673,15 +730,15 @@ DOBA_TEST("tls omits callbacks for incomplete negotiation") {
 }
 
 // +===========================================================================+
-// | [>] tls survives an invalid handshake                      ( test-case ) |
-// +===========================================================================+
+// | [>] tls survives an invalid handshake                       ( test-case ) |
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls survives an invalid handshake") {
   tcpip_client invalid;
   const auto port = invalid.find_available_port();
   DOBA_EXPECT(port != 0);
   auto factory = []() { return byte_engine{}; };
-  tr::tls<byte_engine, decltype(factory)> server(
-      server_policies(port), factory);
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
   std::atomic<int> connected{0};
   std::atomic<int> disconnected{0};
   server.set_on_connection([&]() { ++connected; });
@@ -706,7 +763,7 @@ DOBA_TEST("tls survives an invalid handshake") {
 
 // +===========================================================================+
 // | [>] tls stop drains queued output                           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls stop drains queued output") {
   tls_client client;
   const auto port = client.socket.find_available_port();
@@ -723,8 +780,7 @@ DOBA_TEST("tls stop drains queued output") {
   };
   auto configuration = server_policies(port);
   configuration.max_send_buffer_size = 65536;
-  tr::tls<byte_engine, decltype(factory)> server(
-      configuration, factory);
+  tr::tls<byte_engine, decltype(factory)> server(configuration, factory);
   std::atomic<int> connected{0};
   std::atomic<int> disconnected{0};
   server.set_on_connection([&]() { ++connected; });
@@ -752,14 +808,14 @@ DOBA_TEST("tls stop drains queued output") {
 
 // +===========================================================================+
 // | [>] tls restarts after stopping                             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls restarts after a stopped connection") {
   tls_client first;
   const auto port = first.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   auto factory = []() { return byte_engine{}; };
-  tr::tls<byte_engine, decltype(factory)> server(
-      server_policies(port), factory);
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   server.start();

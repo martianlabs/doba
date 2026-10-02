@@ -69,32 +69,58 @@ namespace h = martianlabs::doba::protocol::http::headers;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct header_case {
-  std::string_view name;
+  // +=========================================================================+
+  // | [>] check                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   bool (*check)(std::string_view);
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::string_view name;
   std::string_view sample;
 };
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] check                                                    ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function is a wrapper to allow the use of template header checkers   |
+// | in the header_case struct. It is used to call the check function of the   |
+// | header type passed as a template parameter. It returns true if the value  |
+// | is valid for the header type, false otherwise.                            |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 template <typename Hty>
 bool check(std::string_view value) {
   return Hty::check(value);
 }
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] constants                                                  ( public ) |
+// +---------------------------------------------------------------------------+
+// | This constants array contains the header names, their corresponding check |
+// | functions, and sample values that should be accepted by the checkers.     |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 constexpr header_case kCases[] = {
     {"Accept", &check<h::accept>, "text/html, application/json;q=0.9"},
     {"Accept-Charset", &check<h::accept_charset>, "utf-8, iso-8859-1;q=0.5"},
     {"Accept-Encoding", &check<h::accept_encoding>, "gzip, br;q=0.8"},
     {"Accept-Language", &check<h::accept_language>, "en-US, es;q=0.7"},
     {"Accept-Ranges", &check<h::accept_ranges>, "bytes"},
-    {"Access-Control-Allow-Headers",
-     &check<h::access_control_allow_headers>, "X-A, X-B"},
-    {"Access-Control-Allow-Methods",
-     &check<h::access_control_allow_methods>, "GET, POST"},
+    {"Access-Control-Allow-Headers", &check<h::access_control_allow_headers>,
+     "X-A, X-B"},
+    {"Access-Control-Allow-Methods", &check<h::access_control_allow_methods>,
+     "GET, POST"},
     {"Access-Control-Allow-Origin", &check<h::access_control_allow_origin>,
      "https://example.com"},
-    {"Access-Control-Expose-Headers",
-     &check<h::access_control_expose_headers>, "X-A, X-B"},
+    {"Access-Control-Expose-Headers", &check<h::access_control_expose_headers>,
+     "X-A, X-B"},
     {"Access-Control-Request-Headers",
      &check<h::access_control_request_headers>, "x-a, x-b"},
-    {"Access-Control-Request-Method",
-     &check<h::access_control_request_method>, "PUT"},
+    {"Access-Control-Request-Method", &check<h::access_control_request_method>,
+     "PUT"},
     {"Age", &check<h::age>, "3600"},
     {"Allow", &check<h::allow>, "GET, HEAD"},
     {"Authorization", &check<h::authorization>, "Bearer abc.def"},
@@ -120,16 +146,17 @@ constexpr header_case kCases[] = {
 
 // +===========================================================================+
 // | [>] header checkers accept their reference samples          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("header checkers accept their reference samples") {
   for (const auto& value : kCases) {
     martianlabs::doba::tests::unit::test_helper::set_context(value.name);
     DOBA_EXPECT(value.check(value.sample));
   }
 }
+
 // +===========================================================================+
 // | [>] header checkers reject injected control bytes           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("header checkers reject injected control bytes") {
   for (const auto& value : kCases) {
     const std::size_t positions[] = {0, value.sample.size() / 2,
@@ -140,9 +167,8 @@ DOBA_TEST("header checkers reject injected control bytes") {
         source.insert(source.begin() + static_cast<std::ptrdiff_t>(position),
                       control);
         martianlabs::doba::tests::unit::test_helper::set_context(
-            std::string(value.name) + ", position " +
-            std::to_string(position) + ", byte " +
-            std::to_string(static_cast<unsigned char>(control)));
+            std::string(value.name) + ", position " + std::to_string(position) +
+            ", byte " + std::to_string(static_cast<unsigned char>(control)));
         DOBA_EXPECT(!value.check(source));
       }
     }

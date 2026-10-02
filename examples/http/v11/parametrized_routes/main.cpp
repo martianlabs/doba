@@ -35,6 +35,20 @@ using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http;
 using namespace martianlabs::doba::protocol::http::v11;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the application. It creates an HTTP server     |
+// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
+// | The server has a single route "/resources/:id/:detailed" that responds to |
+// | GET requests. The lambda function extracts the "id" and "detailed"        |
+// | parameters from the URL and constructs a response body accordingly.       |
+// | The response is sent with a "Content-Type" of                             |
+// | "text/plain; charset=utf-8". The server runs until a termination signal   |
+// | is received.                                                              |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(

@@ -149,9 +149,9 @@ class router {
   // +=========================================================================+
   // | [>] add_controller                                           ( public ) |
   // +-------------------------------------------------------------------------+
-  template <typename Cty, typename... Args>
+  template <typename CTty, typename... Args>
   void add_controller(Args&&... args) {
-    auto instance = std::make_shared<Cty>(std::forward<Args>(args)...);
+    auto instance = std::make_shared<CTty>(std::forward<Args>(args)...);
     std::vector<std::size_t> static_sizes;
     std::vector<std::size_t> parametrized_sizes;
     std::vector<std::size_t> wildcard_sizes;
@@ -164,7 +164,7 @@ class router {
     for (const auto& entry : wildcard_handlers_) {
       wildcard_sizes.push_back(entry.second.size());
     }
-    detail::router_controller_routes<RQty, RSty, Cty> routes(instance);
+    detail::router_controller_routes<RQty, RSty, CTty> routes(instance);
     try {
       instance->register_routes(routes);
       if (routes.empty()) {

@@ -44,29 +44,33 @@ using martianlabs::doba::common::filesystem_file;
 // +---------------------------------------------------------------------------+
 // | [>] file_directory                                              ( class ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class file_directory {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   file_directory() {
     static std::atomic<unsigned int> counter{0};
     const auto stamp =
         std::chrono::steady_clock::now().time_since_epoch().count();
     do {
       path_ = fs::temp_directory_path() /
-          ("doba_files_" + std::to_string(stamp) + "_" +
-           std::to_string(counter.fetch_add(1)));
+              ("doba_files_" + std::to_string(stamp) + "_" +
+               std::to_string(counter.fetch_add(1)));
     } while (!fs::create_directory(path_));
   }
   ~file_directory() {
     std::error_code error;
     fs::remove_all(path_, error);
   }
+  // +=========================================================================+
+  // | [>] path                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   const fs::path& path() const { return path_; }
+  // +=========================================================================+
+  // | [>] write                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void write(std::string_view name, std::string_view contents) {
     const fs::path relative(std::u8string(name.begin(), name.end()));
     std::ofstream output(path_ / relative, std::ios::binary);
@@ -78,14 +82,14 @@ class file_directory {
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   fs::path path_;
 };
 }  // namespace
 
 // +===========================================================================+
 // | [>] filesystem rejects Linux links and special files        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem rejects Linux links and special files") {
   file_directory directory;
   file_directory outside;
@@ -104,7 +108,7 @@ DOBA_TEST("filesystem rejects Linux links and special files") {
 
 // +===========================================================================+
 // | [>] filesystem Linux replacement                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem Linux descriptor remains bound after replacement") {
   file_directory directory;
   file_directory outside;
@@ -118,16 +122,15 @@ DOBA_TEST("filesystem Linux descriptor remains bound after replacement") {
   fs::create_directory_symlink(outside.path(), directory.path() / "sub");
   std::array<std::byte, 8> bytes{};
   DOBA_EXPECT_EQUAL(file.read(bytes), 6);
-  DOBA_EXPECT_EQUAL(std::string_view(
-      reinterpret_cast<char*>(bytes.data()), 6), "inside");
+  DOBA_EXPECT_EQUAL(std::string_view(reinterpret_cast<char*>(bytes.data()), 6),
+                    "inside");
   DOBA_EXPECT(!file.open(directory.path(), "sub/data", error));
   DOBA_EXPECT(error == std::errc::permission_denied);
 }
 
-
 // +===========================================================================+
 // | [>] filesystem Linux rejects a replaced root                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem Linux rejects a replaced root") {
   file_directory directory;
   file_directory outside;
@@ -147,7 +150,7 @@ DOBA_TEST("filesystem Linux rejects a replaced root") {
 
 // +===========================================================================+
 // | [>] filesystem Linux reports access denial                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem Linux reports access denial") {
   file_directory directory;
   directory.write("private", "secret");
@@ -166,17 +169,18 @@ DOBA_TEST("filesystem Linux reports access denial") {
 
 // +===========================================================================+
 // | [>] filesystem Linux traverses unreadable directories       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem Linux traverses unreadable directories") {
   file_directory directory;
   fs::create_directories(directory.path() / "root/sub");
   directory.write("root/sub/file", "inside");
   fs::permissions(directory.path(), fs::perms::all);
   const auto root = directory.path() / "root";
-  const auto execute = fs::perms::owner_exec | fs::perms::group_exec |
-      fs::perms::others_exec;
+  const auto execute =
+      fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec;
   fs::permissions(root / "sub/file", fs::perms::owner_read |
-      fs::perms::group_read | fs::perms::others_read);
+                                         fs::perms::group_read |
+                                         fs::perms::others_read);
   fs::permissions(root / "sub", execute);
   fs::permissions(root, execute);
   filesystem_file file;
@@ -194,22 +198,25 @@ DOBA_TEST("filesystem Linux traverses unreadable directories") {
   DOBA_EXPECT(!error);
   std::array<std::byte, 6> bytes{};
   DOBA_EXPECT_EQUAL(file.read(bytes), bytes.size());
-  DOBA_EXPECT_EQUAL(std::string_view(
-      reinterpret_cast<char*>(bytes.data()), bytes.size()), "inside");
+  DOBA_EXPECT_EQUAL(
+      std::string_view(reinterpret_cast<char*>(bytes.data()), bytes.size()),
+      "inside");
 }
 
 // +===========================================================================+
 // | [>] filesystem Linux requires directory search permission   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem Linux requires directory search permission") {
   file_directory directory;
   fs::create_directory(directory.path() / "sub");
   directory.write("sub/file", "inside");
   fs::permissions(directory.path(), fs::perms::all);
   fs::permissions(directory.path() / "sub/file", fs::perms::owner_read |
-      fs::perms::group_read | fs::perms::others_read);
+                                                     fs::perms::group_read |
+                                                     fs::perms::others_read);
   fs::permissions(directory.path() / "sub", fs::perms::owner_read |
-      fs::perms::group_read | fs::perms::others_read);
+                                                fs::perms::group_read |
+                                                fs::perms::others_read);
   filesystem_file file;
   std::error_code error;
   const int previous = ::setfsuid(static_cast<uid_t>(-1));

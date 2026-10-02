@@ -40,7 +40,7 @@ using martianlabs::doba::protocol::http::helpers;
 
 // +===========================================================================+
 // | [>] character predicates cover every possible byte          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("character predicates cover every possible byte") {
   for (unsigned int value = 0; value <= 0xff; value++) {
     const auto c = static_cast<unsigned char>(value);
@@ -102,9 +102,10 @@ DOBA_TEST("character predicates cover every possible byte") {
     DOBA_EXPECT_EQUAL(helpers::is_token(static_cast<char>(c)), token);
   }
 }
+
 // +===========================================================================+
 // | [>] decimal helpers reject invalid and overflow values      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("decimal helpers reject empty invalid and overflow values") {
   constexpr std::string_view digits[] = {"0", "00", "1", "1234567890"};
   for (const auto value : digits) DOBA_EXPECT(helpers::is_digits(value));
@@ -128,9 +129,10 @@ DOBA_TEST("decimal helpers reject empty invalid and overflow values") {
     DOBA_EXPECT(!helpers::parse_size_t(value, parsed));
   }
 }
+
 // +===========================================================================+
 // | [>] token entity tag and quality grammars cover boundaries  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("token entity tag and quality grammars cover boundaries") {
   constexpr std::string_view tokens[] = {
       "a", "A-Z", "0123", "!#$%&'*+-.^_`|~", "token",
@@ -178,9 +180,10 @@ DOBA_TEST("token entity tag and quality grammars cover boundaries") {
     DOBA_EXPECT(!helpers::consume_weight(value));
   }
 }
+
 // +===========================================================================+
 // | [>] whitespace trimming preserves the referenced buffer     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("whitespace trimming preserves the referenced buffer") {
   constexpr std::string_view cases[] = {
       "", "value", " value", "value ", "\tvalue\t", " \tvalue\t ", " \t ",
@@ -199,9 +202,10 @@ DOBA_TEST("whitespace trimming preserves the referenced buffer") {
   helpers::ows_rtrim(value);
   DOBA_EXPECT_EQUAL(value, "value");
 }
+
 // +===========================================================================+
 // | [>] IP address validators cover canonical forms             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("IP address validators cover canonical forms") {
   constexpr std::string_view dec_octets[] = {
       "0", "9", "10", "99", "100", "199", "200", "249", "250", "255",
@@ -259,9 +263,10 @@ DOBA_TEST("IP address validators cover canonical forms") {
   DOBA_EXPECT(!helpers::is_ip_literal("::1"));
   DOBA_EXPECT(!helpers::is_ip_literal("[::1"));
 }
+
 // +===========================================================================+
 // | [>] host validators classify every URI host alternative     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("host validators classify every URI host alternative") {
   using host_type = helpers::host_type;
   DOBA_EXPECT_EQUAL(helpers::check_uri_host(""), host_type::kRegName);
@@ -312,9 +317,10 @@ DOBA_TEST("host validators classify every URI host alternative") {
     DOBA_EXPECT(!helpers::check_host_port(value));
   }
 }
+
 // +===========================================================================+
 // | [>] token68 and base64 validators enforce padding           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("token68 and base64 validators enforce padding") {
   constexpr std::string_view token68[] = {
       "a", "abc", "a-b_c.d~e+f/g", "abc=", "abc==",
@@ -342,9 +348,10 @@ DOBA_TEST("token68 and base64 validators enforce padding") {
     DOBA_EXPECT(!helpers::check_base64_value(value));
   }
 }
+
 // +===========================================================================+
 // | [>] token string and comment consumers stop at boundaries   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("token string and comment consumers stop at boundaries") {
   DOBA_EXPECT_EQUAL(helpers::consume_token("token rest"), "token");
   DOBA_EXPECT(helpers::consume_token("").empty());
@@ -366,9 +373,10 @@ DOBA_TEST("token string and comment consumers stop at boundaries") {
   DOBA_EXPECT_EQUAL(helpers::consume_token_or_quoted_string("\"a b\"rest"),
                     "\"a b\"");
 }
+
 // +===========================================================================+
 // | [>] mailbox helpers validate address grammar                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("mailbox helpers validate address grammar") {
   constexpr std::string_view valid[] = {
       "a@example.com",
@@ -412,9 +420,10 @@ DOBA_TEST("mailbox helpers validate address grammar") {
   DOBA_EXPECT(helpers::consume_word("atom rest", i));
   DOBA_EXPECT_EQUAL(i, 5);
 }
+
 // +===========================================================================+
 // | [>] cookie and directive validators enforce complete values ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("cookie and directive validators enforce complete values") {
   constexpr std::string_view cookie_values[] = {
       "", "value", "\"\"", "\"value\"", "!#$%&'()*+-./:<=>?@[]^_`{|}~",
@@ -448,6 +457,7 @@ DOBA_TEST("cookie and directive validators enforce complete values") {
     DOBA_EXPECT(!helpers::is_directive(value));
   }
 }
+
 // +===========================================================================+
 // | [>] parameter and list iterators enforce boundaries         ( test-case ) |
 // +===========================================================================+
@@ -491,9 +501,10 @@ DOBA_TEST("parameter and list iterators enforce consumer boundaries") {
   DOBA_EXPECT(!helpers::for_each_list_element(
       "a", [](std::string_view) { return false; }));
 }
+
 // +===========================================================================+
 // | [>] authentication and product grammars cover alternatives  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("authentication and product grammars cover alternatives") {
   constexpr std::string_view auth_params[] = {
       "", "name=value", "name = \"value\"", "a=1, b=2", ",,a=1,,",
@@ -534,9 +545,10 @@ DOBA_TEST("authentication and product grammars cover alternatives") {
   DOBA_EXPECT(!helpers::check_product_list(" doba"));
   DOBA_EXPECT(!helpers::check_product_list("doba "));
 }
+
 // +===========================================================================+
 // | [>] URI component validators enforce RFC 3986 syntax        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("URI component validators enforce RFC 3986 syntax") {
   constexpr std::string_view schemes[] = {
       "http", "HTTPS", "a", "git+ssh", "a-b.c1",
@@ -578,9 +590,10 @@ DOBA_TEST("URI component validators enforce RFC 3986 syntax") {
   DOBA_EXPECT(helpers::check_uri_authority("[::1]:443"));
   DOBA_EXPECT(!helpers::check_uri_authority("user@@example.com"));
 }
+
 // +===========================================================================+
 // | [>] URI references cover paths queries and fragments        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("URI references cover relative absolute query and fragment") {
   constexpr std::string_view valid[] = {
       "",
@@ -615,9 +628,10 @@ DOBA_TEST("URI references cover relative absolute query and fragment") {
   DOBA_EXPECT(!helpers::ports_equivalent("http", "", "8080"));
   DOBA_EXPECT(helpers::ports_equivalent("ftp", "21", "21"));
 }
+
 // +===========================================================================+
 // | [>] request target deserializers report precise consumption ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("request target deserializers report precise consumption") {
   using host_type = helpers::host_type;
   std::string_view host;
@@ -672,9 +686,10 @@ DOBA_TEST("request target deserializers report precise consumption") {
   DOBA_EXPECT_EQUAL(query, "q=1");
   DOBA_EXPECT_EQUAL(used, 24);
 }
+
 // +===========================================================================+
 // | [>] path and query parsers handle truncated buffers         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("path and query deserializers handle empty truncated buffers") {
   std::string_view value;
   std::size_t used = 99;
@@ -708,9 +723,10 @@ DOBA_TEST("path and query deserializers handle empty truncated buffers") {
   DOBA_EXPECT_EQUAL(helpers::try_to_deserialize_as_query("a%", value, used),
                     deserialization_status::kMoreBytesNeeded);
 }
+
 // +===========================================================================+
 // | [>] case and query helpers preserve views                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("case and query helpers preserve views") {
   DOBA_EXPECT(helpers::iequals("Content-Type", "content-type"));
   DOBA_EXPECT(helpers::iequals("", ""));
@@ -734,9 +750,10 @@ DOBA_TEST("case and query helpers preserve views") {
   DOBA_EXPECT_EQUAL(helpers::split_query_parameters("a=1", no_keys, no_values),
                     0);
 }
+
 // +===========================================================================+
 // | [>] percent decoding preserves adjacent bytes               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("percent decoding preserves adjacent bytes and decodes once") {
   constexpr std::string_view digits = "0123456789ABCDEF";
   for (unsigned int byte = 0; byte <= 255; ++byte) {
@@ -758,9 +775,10 @@ DOBA_TEST("percent decoding preserves adjacent bytes and decodes once") {
                       "?query=kept!");
   }
 }
+
 // +===========================================================================+
 // | [>] parameter iterators reject invalid consumer progress    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("parameter iterators reject invalid consumer progress") {
   for (const std::size_t used : {std::size_t{0}, std::size_t{4},
                                  std::numeric_limits<std::size_t>::max()}) {
@@ -782,9 +800,10 @@ DOBA_TEST("parameter iterators reject invalid consumer progress") {
       }));
   DOBA_EXPECT_EQUAL(calls, 2);
 }
+
 // +===========================================================================+
 // | [>] quoted pair consumers validate every escaped byte       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("quoted pair consumers validate every escaped byte") {
   for (unsigned int byte = 0; byte <= 255; ++byte) {
     const bool expected = byte == 9 || (byte >= 32 && byte != 127);
@@ -802,25 +821,21 @@ DOBA_TEST("quoted pair consumers validate every escaped byte") {
     if (expected) DOBA_EXPECT_EQUAL(consumed.size(), 4);
   }
 }
+
 // +===========================================================================+
 // | [>] IPv6 validates every mixed IPv4 compression boundary    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("IPv6 validates every mixed IPv4 compression boundary") {
   struct test_case {
     std::string_view source;
     bool valid;
   };
   constexpr test_case cases[] = {
-      {"1:2:3:4:5:6:192.0.2.1", true},
-      {"1:2:3:4:5:192.0.2.1", false},
-      {"1:2:3:4:5:6:260.0.2.1", false},
-      {"::192.0.2.1", true},
-      {"1:2:3:4:5::192.0.2.1", true},
-      {"1:2:3:4:5:6::192.0.2.1", false},
-      {"1::2:3:4:5:192.0.2.1", true},
-      {"1::2:3:4:5:6:192.0.2.1", false},
-      {"::gg:192.0.2.1", false},
-      {"::192.0.2.1:1", false},
+      {"1:2:3:4:5:6:192.0.2.1", true},  {"1:2:3:4:5:192.0.2.1", false},
+      {"1:2:3:4:5:6:260.0.2.1", false}, {"::192.0.2.1", true},
+      {"1:2:3:4:5::192.0.2.1", true},   {"1:2:3:4:5:6::192.0.2.1", false},
+      {"1::2:3:4:5:192.0.2.1", true},   {"1::2:3:4:5:6:192.0.2.1", false},
+      {"::gg:192.0.2.1", false},        {"::192.0.2.1:1", false},
       {"1:2:3:4:5:6:7:", false},
   };
   for (const auto& value : cases) {
@@ -830,9 +845,10 @@ DOBA_TEST("IPv6 validates every mixed IPv4 compression boundary") {
   DOBA_EXPECT(!helpers::is_ip_v_future("vg.name"));
   DOBA_EXPECT(!helpers::is_ip_v_future("v1.name%20"));
 }
+
 // +===========================================================================+
 // | [>] absolute URI parsing preserves every component view     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("absolute URI parsing preserves every component view") {
   struct test_case {
     std::string_view source;
@@ -844,8 +860,8 @@ DOBA_TEST("absolute URI parsing preserves every component view") {
     bool authority;
   };
   constexpr test_case cases[] = {
-      {"h+1.-://u:p%2f@a%2fb:009/a%2f?x=%25", "h+1.-", "a%2fb", "009",
-       "/a%2f", "x=%25", true},
+      {"h+1.-://u:p%2f@a%2fb:009/a%2f?x=%25", "h+1.-", "a%2fb", "009", "/a%2f",
+       "x=%25", true},
       {"http://[::1]:80/%20", "http", "[::1]", "80", "/%20", "", true},
       {"http://[::1]", "http", "[::1]", "", "", "", true},
       {"http://[::1]?x=1", "http", "[::1]", "", "", "x=1", true},
@@ -876,9 +892,9 @@ DOBA_TEST("absolute URI parsing preserves every component view") {
       DOBA_EXPECT_EQUAL(host, value.host);
       DOBA_EXPECT_EQUAL(port, value.port);
       DOBA_EXPECT_EQUAL(host.data(), source.data() + source.find(value.host));
-      DOBA_EXPECT_EQUAL(type, value.host.front() == '[' ?
-                        helpers::host_type::kIpLiteral :
-                        helpers::host_type::kRegName);
+      DOBA_EXPECT_EQUAL(type, value.host.front() == '['
+                                  ? helpers::host_type::kIpLiteral
+                                  : helpers::host_type::kRegName);
     }
     if (!value.path.empty()) {
       DOBA_EXPECT_EQUAL(path.data(), source.data() + source.find(value.path));
@@ -888,9 +904,10 @@ DOBA_TEST("absolute URI parsing preserves every component view") {
     }
   }
 }
+
 // +===========================================================================+
 // | [>] absolute URI errors distinguish truncation from syntax  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("absolute URI errors distinguish truncation from syntax") {
   struct test_case {
     std::string_view source;
@@ -931,8 +948,9 @@ DOBA_TEST("absolute URI errors distinguish truncation from syntax") {
     bool authority = true;
     std::size_t used = 99;
     DOBA_EXPECT_EQUAL(helpers::try_to_deserialize_as_absolute_form(
-        value.source, path, query, authority, host, port, type, scheme, used),
-        value.expected);
+                          value.source, path, query, authority, host, port,
+                          type, scheme, used),
+                      value.expected);
     DOBA_EXPECT_EQUAL(used, 0);
   }
 }

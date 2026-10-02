@@ -122,14 +122,14 @@ class server {
   // +=========================================================================+
   // | [>] add_controller                                           ( public ) |
   // +-------------------------------------------------------------------------+
-  template <typename Cty, typename... Args>
+  template <typename CTty, typename... Args>
   server& add_controller(Args&&... args) {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     if (locked_) {
       throw std::runtime_error(
           "Cannot add controller when the server is running");
     }
-    router_.template add_controller<Cty>(std::forward<Args>(args)...);
+    router_.template add_controller<CTty>(std::forward<Args>(args)...);
     return *this;
   }
 

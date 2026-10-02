@@ -33,40 +33,51 @@
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the application. It creates an HTTP server     |
+// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
+// | The server registers four routes:                                         |
+// |   * "/text" for GET requests,                                             |
+// |   * "/binary" for GET requests,                                           |
+// |   * "/integer" for GET requests, and                                      |
+// |   * "/floating-point" for GET requests.                                   |
+// | Each route has a corresponding lambda function that handles the request   |
+// | and constructs an appropriate response. The server runs until a           |
+// | termination signal is received.                                           |
+// | The goal is to expose different ways to set response bodies using various |
+// | data types, including strings, string views, integers, and floating-point |
+// | numbers. The response is sent with appropriate "Content-Type" headers for |
+// | each route.                                                               |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
+  http_server.add_route("GET", "/text", [](const request&, response& res) {
+    res.ok_200();
+    const std::string text = "body stored in the response buffer";
+    // set_body() copies the value; text need not outlive this handler.
+    res.add_header("Content-Type", "text/plain; charset=utf-8").set_body(text);
+    return;
+  });
+  http_server.add_route("GET", "/binary", [](const request&, response& res) {
+    res.ok_200();
+    const char bytes[] = {'d', 'o', 'b', 'a', '\0'};
+    // An explicit size preserves embedded zero bytes.
+    res.add_header("Content-Type", "application/octet-stream")
+        .set_body(std::string_view(bytes, sizeof(bytes)));
+    return;
+  });
+  http_server.add_route("GET", "/integer", [](const request&, response& res) {
+    res.ok_200();
+    // Arithmetic values use the constrained numeric set_body() overload.
+    res.add_header("Content-Type", "text/plain; charset=utf-8").set_body(42);
+    return;
+  });
   http_server.add_route(
-      "GET", "/text",
-      [](const request&, response& res) {
-        res.ok_200();
-        const std::string text = "body stored in the response buffer";
-        // set_body() copies the value; text need not outlive this handler.
-        res.add_header("Content-Type", "text/plain; charset=utf-8")
-            .set_body(text);
-        return;
-      });
-  http_server.add_route(
-      "GET", "/binary",
-      [](const request&, response& res) {
-        res.ok_200();
-        const char bytes[] = {'d', 'o', 'b', 'a', '\0'};
-        // An explicit size preserves embedded zero bytes.
-        res.add_header("Content-Type", "application/octet-stream")
-            .set_body(std::string_view(bytes, sizeof(bytes)));
-        return;
-      });
-  http_server.add_route(
-      "GET", "/integer",
-      [](const request&, response& res) {
-        res.ok_200();
-        // Arithmetic values use the constrained numeric set_body() overload.
-        res.add_header("Content-Type", "text/plain; charset=utf-8")
-            .set_body(42);
-        return;
-      });
-  http_server.add_route(
-      "GET", "/floating-point",
-      [](const request&, response& res) {
+      "GET", "/floating-point", [](const request&, response& res) {
         res.ok_200();
         // Numeric bodies follow std::to_string formatting.
         res.add_header("Content-Type", "text/plain; charset=utf-8")

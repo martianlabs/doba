@@ -39,8 +39,8 @@ namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,
           protocol::contracts::engine_factory<ENty> FAty>
-class tcp : public basic_transport<ENty, FAty, tcp_connection<ENty>,
-                                   tcp_policies> {
+class tcp
+    : public basic_transport<ENty, FAty, tcp_connection<ENty>, tcp_policies> {
  public:
   explicit tcp(tcp_policies configuration, FAty create_engine)
       : basic_transport<ENty, FAty, tcp_connection<ENty>, tcp_policies>(

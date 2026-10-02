@@ -35,14 +35,12 @@ namespace {
 // +---------------------------------------------------------------------------+
 // | [>] native_peer                                                 ( class ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class native_peer {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   explicit native_peer(bool listening = true) {
     listener_ = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (listener_ == invalid_socket()) return;
@@ -50,27 +48,35 @@ class native_peer {
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     if (::bind(listener_, reinterpret_cast<sockaddr*>(&address),
-               sizeof(address)) != 0) return;
+               sizeof(address)) != 0)
+      return;
 #ifdef _WIN32
     int size = sizeof(address);
 #else
     socklen_t size = sizeof(address);
 #endif
     if (::getsockname(listener_, reinterpret_cast<sockaddr*>(&address),
-                      &size) != 0) return;
+                      &size) != 0)
+      return;
     if (listening && ::listen(listener_, 1) != 0) return;
     port_ = ntohs(address.sin_port);
   }
   native_peer(const native_peer&) = delete;
-  native_peer& operator=(const native_peer&) = delete;
   ~native_peer() {
     close();
     if (listener_ != invalid_socket()) close_socket(listener_);
   }
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
+  // | [>] OPERATORs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  native_peer& operator=(const native_peer&) = delete;
   // +=========================================================================+
+  // | [>] port                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   uint16_t port() const { return port_; }
+  // +=========================================================================+
+  // | [>] accept                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   bool accept() {
     fd_set selected;
     FD_ZERO(&selected);
@@ -85,6 +91,9 @@ class native_peer {
     peer_ = ::accept(listener_, nullptr, nullptr);
     return peer_ != invalid_socket();
   }
+  // +=========================================================================+
+  // | [>] send                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   bool send(std::string_view value) {
 #ifdef _WIN32
     int count = ::send(peer_, value.data(), static_cast<int>(value.size()), 0);
@@ -94,6 +103,9 @@ class native_peer {
 #endif
     return count == static_cast<int>(value.size());
   }
+  // +=========================================================================+
+  // | [>] close                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void close(bool reset = false) {
     if (peer_ == invalid_socket()) return;
     if (reset) {
@@ -108,7 +120,7 @@ class native_peer {
  private:
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
 #ifdef _WIN32
   using socket_type = SOCKET;
   static socket_type invalid_socket() { return INVALID_SOCKET; }
@@ -120,7 +132,7 @@ class native_peer {
 #endif
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   [[maybe_unused]] martianlabs::doba::network::detail::environment environment_;
   socket_type listener_{invalid_socket()};
   socket_type peer_{invalid_socket()};
@@ -130,7 +142,7 @@ class native_peer {
 
 // +===========================================================================+
 // | [>] refused connection diagnostic                           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("client reports refused connections") {
   native_peer peer(false);
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -146,7 +158,7 @@ DOBA_TEST("client reports refused connections") {
 
 // +===========================================================================+
 // | [>] silent receive deadline                                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("client bounds silent receive operations") {
   native_peer peer;
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -165,7 +177,7 @@ DOBA_TEST("client bounds silent receive operations") {
 
 // +===========================================================================+
 // | [>] partial receive deadline                                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("client preserves the deadline after a partial receive") {
   native_peer peer;
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -190,7 +202,7 @@ DOBA_TEST("client preserves the deadline after a partial receive") {
 
 // +===========================================================================+
 // | [>] progress does not extend deadline                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("client bounds receive until close despite progress") {
   native_peer peer;
   martianlabs::doba::tests::integration::tcpip_client client;
@@ -218,7 +230,7 @@ DOBA_TEST("client bounds receive until close despite progress") {
 
 // +===========================================================================+
 // | [>] eof and reset diagnostics                               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("client distinguishes eof from reset") {
   for (bool reset : {false, true}) {
     native_peer peer;

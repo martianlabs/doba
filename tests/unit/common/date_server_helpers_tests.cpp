@@ -29,7 +29,7 @@
 
 // +===========================================================================+
 // | [>] date helper selects the platform conversion             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("date helper selects the platform conversion") {
   using martianlabs::doba::common::gm_time;
 #ifdef _WIN32

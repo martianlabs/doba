@@ -29,7 +29,7 @@
 
 // +===========================================================================+
 // | [>] signaler selects its platform                           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("signaler selects the platform implementation") {
 #ifdef _WIN32
 #ifndef martianlabs_doba_common_signaler_windows_h

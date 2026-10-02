@@ -28,7 +28,7 @@
 
 // +===========================================================================+
 // | [>] platform exposes its native socket and event types      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("platform exposes its native socket and event types") {
 #ifdef _WIN32
 #ifndef NOMINMAX

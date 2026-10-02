@@ -27,7 +27,7 @@
 
 // +===========================================================================+
 // | [>] logger options enable each metadata field               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("logger options enable each metadata field") {
   const martianlabs::doba::common::console_logger_options value;
   DOBA_EXPECT(value.show_name);

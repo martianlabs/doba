@@ -67,14 +67,29 @@ struct drain_state {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct drain_engine {
+  // +=========================================================================+
+  // | [>] USINGs                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   using policies_type = int;
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   explicit drain_engine(std::shared_ptr<drain_state> state)
       : state_(std::move(state)) {}
   drain_engine(const drain_engine&) = delete;
   drain_engine(drain_engine&&) = delete;
   ~drain_engine() { state_->destroyed++; }
+  // +=========================================================================+
+  // | [>] set_on_send                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_send(send_delegate output) { output_ = std::move(output); }
+  // +=========================================================================+
+  // | [>] set_on_close                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()>) {}
+  // +=========================================================================+
+  // | [>] on_bytes_received                                        ( public ) |
+  // +-------------------------------------------------------------------------+
   std::size_t on_bytes_received(const char* bytes, std::size_t size,
                                 std::size_t) {
     state_->entered++;
@@ -91,10 +106,22 @@ struct drain_engine {
     state_->queued++;
     return size;
   }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   std::shared_ptr<drain_state> state_;
   send_delegate output_;
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] wait_count                                               ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function waits for an atomic integer to reach a specific value       |
+// | within a 5-second timeout. It returns true if the expected value is       |
+// | reached, false otherwise.                                                 |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 bool wait_count(const std::atomic<int>& value, int expected) {
   const auto deadline = std::chrono::steady_clock::now() + 5s;
   while (value.load() < expected &&
@@ -104,6 +131,19 @@ bool wait_count(const std::atomic<int>& value, int expected) {
   return value.load() == expected;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] check_drain                                              ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function tests the behavior of a TCP transport engine with respect   |
+// | to draining connections. It sets up a TCP server and clients, sends data, |
+// | and verifies that the engine correctly handles the draining process,      |
+// | including connection closure and data integrity. The function takes two   |
+// | boolean parameters: `destroy`, which indicates whether to destroy the     |
+// | transport or stop it gracefully, and `active_callback`, which determines  |
+// | if the callback should be active during the test.                         |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void check_drain(bool destroy, bool active_callback) {
   auto state = std::make_shared<drain_state>();
   state->release = !active_callback;
@@ -124,11 +164,11 @@ void check_drain(bool destroy, bool active_callback) {
   const int count = active_callback ? 1 : 2;
   for (int i = 0; i < count; i++) {
     DOBA_EXPECT(clients[i].connect(port));
-    DOBA_EXPECT(clients[i].send_all(
-        std::string(1, static_cast<char>('a' + i))));
+    DOBA_EXPECT(
+        clients[i].send_all(std::string(1, static_cast<char>('a' + i))));
   }
-  DOBA_EXPECT(wait_count(active_callback ? state->entered : state->queued,
-                         count));
+  DOBA_EXPECT(
+      wait_count(active_callback ? state->entered : state->queued, count));
   auto stopped = std::async(std::launch::async, [&]() {
     if (destroy) {
       transport.reset();
@@ -165,12 +205,16 @@ void check_drain(bool destroy, bool active_callback) {
     transport->stop();
   }
 }
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] reader_state                                               ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct reader_state {
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   std::atomic<int> queued{0};
   bool close{false};
   bool single{false};
@@ -187,11 +231,26 @@ struct reader_state {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct reader_engine {
+  // +=========================================================================+
+  // | [>] USINGs                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   using policies_type = int;
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   explicit reader_engine(std::shared_ptr<reader_state> state)
       : state_(std::move(state)) {}
+  // +=========================================================================+
+  // | [>] set_on_send                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_send(send_delegate output) { output_ = std::move(output); }
+  // +=========================================================================+
+  // | [>] set_on_close                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()> close) { close_ = std::move(close); }
+  // +=========================================================================+
+  // | [>] on_bytes_received                                        ( public ) |
+  // +-------------------------------------------------------------------------+
   std::size_t on_bytes_received(const char*, std::size_t size, std::size_t) {
     namespace common = martianlabs::doba::common;
     common::reader source;
@@ -219,9 +278,9 @@ struct reader_engine {
     if (!state_->single) {
       output_("B", {}, nullptr);
       output_("C", {},
-              std::make_unique<common::reader>(common::reader::borrowed(
-                  std::as_bytes(std::span(state_->later.data(),
-                                          state_->later.size())))));
+              std::make_unique<common::reader>(
+                  common::reader::borrowed(std::as_bytes(
+                      std::span(state_->later.data(), state_->later.size())))));
       output_({}, {}, std::make_unique<common::reader>());
       output_("DE", {}, nullptr);
     }
@@ -239,6 +298,21 @@ struct reader_engine {
   std::function<void()> close_;
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] check_reader_drain                                       ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function tests the behavior of a TCP transport engine with respect   |
+// | to draining connections when using a reader engine. It sets up a TCP      |
+// | server and client, sends data, and verifies that the engine correctly     |
+// | handles the draining process, including connection closure and data       |
+// | integrity. The function takes three boolean parameters: `destroy`, which  |
+// | indicates whether to destroy the transport or stop it gracefully;         |
+// | `close`, which indicates whether to close the connection after sending;   |
+// | and `empty`, which determines if empty deliveries should be sent          |
+// | during the test.                                                          |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void check_reader_drain(bool destroy, bool close, bool empty = false) {
   auto state = std::make_shared<reader_state>();
   state->close = close;
@@ -261,15 +335,17 @@ void check_reader_drain(bool destroy, bool close, bool empty = false) {
   DOBA_EXPECT(client.send_all("x"));
   DOBA_EXPECT(wait_count(state->queued, 1));
   auto stopped = std::async(std::launch::async, [&]() {
-    if (destroy) transport.reset();
-    else if (!close) transport->stop();
+    if (destroy)
+      transport.reset();
+    else if (!close)
+      transport->stop();
   });
   bool waited = true;
   if (!close) {
     waited = stopped.wait_for(150ms) == std::future_status::timeout;
   }
-  const std::string expected =
-      "A" + std::string(state->size, 'a') + "BC" + std::string(1025, 'd') + "DE";
+  const std::string expected = "A" + std::string(state->size, 'a') + "BC" +
+                               std::string(1025, 'd') + "DE";
   const auto bytes = client.receive(expected.size(), 15s);
   const bool closed = client.wait_for_close(5s);
   client.close();
@@ -284,25 +360,28 @@ void check_reader_drain(bool destroy, bool close, bool empty = false) {
 
 // +===========================================================================+
 // | [>] stop drains pending bytes                               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("stop drains pending bytes") {
   check_drain(false, false);
 }
+
 // +===========================================================================+
 // | [>] destruction drains pending bytes                        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("destruction drains pending bytes") {
   check_drain(true, false);
 }
+
 // +===========================================================================+
 // | [>] stop lets an active engine callback finish              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("stop lets an active engine callback finish") {
   check_drain(false, true);
 }
+
 // +===========================================================================+
 // | [>] stop handles failed and overflowing sends               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("stop handles failed and overflowing sends") {
   for (const bool overflow : {false, true}) {
     auto state = std::make_shared<drain_state>();
@@ -333,9 +412,10 @@ DOBA_TEST("stop handles failed and overflowing sends") {
     DOBA_EXPECT_EQUAL(state->destroyed.load(), 1);
   }
 }
+
 // +===========================================================================+
 // | [>] stop rejects new engine input                           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("stop rejects new engine input") {
   auto state = std::make_shared<drain_state>();
   state->release = false;
@@ -368,27 +448,31 @@ DOBA_TEST("stop rejects new engine input") {
   DOBA_EXPECT(sent);
   DOBA_EXPECT_EQUAL(state->entered.load(), 1);
 }
+
 // +===========================================================================+
 // | [>] stop drains ordered byte sources                        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("stop drains ordered byte sources") {
   check_reader_drain(false, false);
 }
+
 // +===========================================================================+
 // | [>] destruction drains ordered byte sources                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("destruction drains ordered byte sources") {
   check_reader_drain(true, false);
 }
+
 // +===========================================================================+
 // | [>] close drains ordered byte sources                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("close drains ordered byte sources") {
   check_reader_drain(false, true);
 }
+
 // +===========================================================================+
 // | [>] sources work with a small send buffer                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("sources work with a small send buffer") {
   for (const std::size_t capacity : {1U, 7U, 8192U}) {
     for (const std::size_t length : {0U, 37U}) {
@@ -396,7 +480,9 @@ DOBA_TEST("sources work with a small send buffer") {
       state->single = true;
       state->close = true;
       state->size = length;
-      auto factory = [state]() -> reader_engine { return reader_engine{state}; };
+      auto factory = [state]() -> reader_engine {
+        return reader_engine{state};
+      };
       tcpip_client client;
       const auto port = client.find_available_port();
       DOBA_EXPECT(port != 0);
@@ -422,9 +508,10 @@ DOBA_TEST("sources work with a small send buffer") {
     }
   }
 }
+
 // +===========================================================================+
 // | [>] source failure cancels later deliveries                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("source failure cancels later deliveries") {
   for (const int source_error : {1, 2}) {
     auto state = std::make_shared<reader_state>();
@@ -454,14 +541,16 @@ DOBA_TEST("source failure cancels later deliveries") {
     DOBA_EXPECT(bytes.has_value() || error == "socket");
     if (bytes) {
       const std::string expected = source_error == 1
-          ? std::string(state->size, 'A') : "A" + std::string(state->size, 'a');
+                                       ? std::string(state->size, 'A')
+                                       : "A" + std::string(state->size, 'a');
       DOBA_EXPECT_EQUAL(*bytes, expected);
     }
   }
 }
+
 // +===========================================================================+
 // | [>] sources without progress close the connection           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("sources without progress close the connection") {
   auto state = std::make_shared<reader_state>();
   state->single = true;
@@ -489,9 +578,10 @@ DOBA_TEST("sources without progress close the connection") {
   DOBA_EXPECT(!bytes || bytes->empty());
   DOBA_EXPECT(error != "timeout");
 }
+
 // +===========================================================================+
 // | [>] source buffers respect the send limit                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("source buffers respect the send limit") {
   auto state = std::make_shared<reader_state>();
   auto factory = [state]() -> reader_engine { return reader_engine{state}; };
@@ -517,11 +607,11 @@ DOBA_TEST("source buffers respect the send limit") {
   transport.stop();
   DOBA_EXPECT(!bytes || bytes->size() < state->size + 1);
   DOBA_EXPECT(error != "timeout");
-  // Report both the active source cancellation and the rejected delivery.
 }
+
 // +===========================================================================+
 // | [>] concurrent stops drain before returning                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("concurrent stops drain before returning") {
   auto state = std::make_shared<drain_state>();
   auto factory = [state]() -> drain_engine { return drain_engine{state}; };
@@ -572,9 +662,10 @@ DOBA_TEST("concurrent stops drain before returning") {
     DOBA_EXPECT_EQUAL(state->destroyed.load(), iteration + 1);
   }
 }
+
 // +===========================================================================+
 // | [>] stop from a worker is rejected                          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("stop from a worker is rejected") {
   auto state = std::make_shared<drain_state>();
   auto factory = [state]() -> drain_engine { return drain_engine{state}; };
@@ -615,9 +706,10 @@ DOBA_TEST("stop from a worker is rejected") {
   transport.start();
   transport.stop();
 }
+
 // +===========================================================================+
 // | [>] disconnection can reenter an external stop              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("disconnection can reenter an external stop") {
   auto state = std::make_shared<drain_state>();
   auto factory = [state]() -> drain_engine { return drain_engine{state}; };
@@ -657,9 +749,10 @@ DOBA_TEST("disconnection can reenter an external stop") {
   transport.start();
   transport.stop();
 }
+
 // +===========================================================================+
 // | [>] invalid endpoint policies prevent startup               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("invalid endpoint policies prevent startup") {
   const std::array<std::pair<const char*, const char*>, 13> endpoints{{
       {"", ""},
@@ -700,9 +793,10 @@ DOBA_TEST("invalid endpoint policies prevent startup") {
     }
   }
 }
+
 // +===========================================================================+
 // | [>] endpoint policies persist across restarts               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("endpoint policies persist across restarts") {
   auto state = std::make_shared<drain_state>();
   auto factory = [state]() -> drain_engine { return drain_engine{state}; };
@@ -732,7 +826,7 @@ DOBA_TEST("endpoint policies persist across restarts") {
 
 // +===========================================================================+
 // | [>] close discards input after draining output              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("close discards input after draining output") {
   for (const bool stop : {false, true}) {
     auto state = std::make_shared<reader_state>();
@@ -750,7 +844,7 @@ DOBA_TEST("close discards input after draining output") {
     configuration.recv_buffer_size = 1;
     configuration.max_send_buffer_size = 32768;
     tr::tcp<reader_engine, decltype(factory)> transport(configuration,
-                                                         std::move(factory));
+                                                        std::move(factory));
     std::atomic<int> disconnected{0};
     transport.set_on_connection([]() {});
     transport.set_on_disconnection([&]() { disconnected++; });
@@ -779,20 +873,21 @@ DOBA_TEST("close discards input after draining output") {
 
 // +===========================================================================+
 // | [>] stop drains empty deliveries with sources               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("stop drains empty deliveries with sources") {
   check_reader_drain(false, false, true);
 }
+
 // +===========================================================================+
 // | [>] close drains empty deliveries with sources              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("close drains empty deliveries with sources") {
   check_reader_drain(false, true, true);
 }
 
 // +===========================================================================+
 // | [>] rejection with a pending body source                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("rejection discards a pending source and later output") {
   auto state = std::make_shared<reader_state>();
   state->single = true;
@@ -808,7 +903,7 @@ DOBA_TEST("rejection discards a pending source and later output") {
   configuration.worker_count = 2;
   configuration.max_send_buffer_size = 8192;
   tr::tcp<reader_engine, decltype(factory)> transport(configuration,
-                                                       std::move(factory));
+                                                      std::move(factory));
   transport.set_on_connection([]() {});
   transport.set_on_disconnection([]() {});
   transport.start();

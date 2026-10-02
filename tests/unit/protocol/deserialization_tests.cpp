@@ -35,7 +35,7 @@ using martianlabs::doba::protocol::deserialization_status;
 
 // +===========================================================================+
 // | [>] deserialization errors preserve status and defaults     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("deserialization errors preserve status and defaults") {
   deserialization_result<int, int> empty;
   DOBA_EXPECT_EQUAL(empty.code, deserialization_status::kInvalidSource);
@@ -47,12 +47,12 @@ DOBA_TEST("deserialization errors preserve status and defaults") {
     DOBA_EXPECT(!value.response);
   }
 }
+
 // +===========================================================================+
 // | [>] deserialization copies and moves preserve values        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("deserialization copies and moves preserve values") {
-  deserialization_result<int, int> value(
-      deserialization_status::kSucceeded);
+  deserialization_result<int, int> value(deserialization_status::kSucceeded);
   value.response.emplace(9);
   auto copy = value;
   deserialization_result<int, int> moved(std::move(copy));
@@ -67,7 +67,7 @@ DOBA_TEST("deserialization copies and moves preserve values") {
 
 // +===========================================================================+
 // | [>] deserialization moves an optional response              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("deserialization moves an optional response") {
   deserialization_result<int, std::unique_ptr<int>> value(
       deserialization_status::kMoreBytesNeeded);

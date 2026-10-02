@@ -37,6 +37,14 @@ using martianlabs::doba::common::reader;
 using martianlabs::doba::common::writer;
 using martianlabs::doba::protocol::http::v11::body::writer_raw;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] release                                                  ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function releases the writer's buffer and reads it into a string.    |
+// | It is used to verify the wire output of the raw writer.                   |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 std::string release(writer& value) {
   reader source(value.release());
   std::string output;
@@ -47,7 +55,7 @@ std::string release(writer& value) {
 
 // +===========================================================================+
 // | [>] writes string and byte spans without framing            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("writes string and byte spans without framing") {
   writer destination;
   DOBA_EXPECT(writer_raw::write(std::string_view("ab\0c", 4), destination));
@@ -61,9 +69,10 @@ DOBA_TEST("writes string and byte spans without framing") {
   DOBA_EXPECT_EQUAL(static_cast<unsigned char>(output[4]), 'd');
   DOBA_EXPECT_EQUAL(static_cast<unsigned char>(output[5]), 0xff);
 }
+
 // +===========================================================================+
 // | [>] empty buffers and repeated end calls write nothing      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("empty buffers and repeated end calls write nothing") {
   writer destination;
   DOBA_EXPECT(writer_raw::write(std::string_view{}, destination));
@@ -72,9 +81,10 @@ DOBA_TEST("empty buffers and repeated end calls write nothing") {
   DOBA_EXPECT(writer_raw::end(destination));
   DOBA_EXPECT(release(destination).empty());
 }
+
 // +===========================================================================+
 // | [>] write overloads propagate a sealed sink failure         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("write overloads propagate a sealed sink failure") {
   writer destination;
   destination.finish(0);

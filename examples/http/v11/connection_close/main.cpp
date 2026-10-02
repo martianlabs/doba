@@ -28,17 +28,22 @@
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the application. It creates an HTTP server     |
+// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  http_server.add_route(
-      "GET", "/resource",
-      [](const request&, response& res) {
-        res.ok_200();
-        res.set_body("resource");
-        return;
-      });
+  http_server.add_route("GET", "/resource", [](const request&, response& res) {
+    res.ok_200();
+    res.set_body("resource");
+    return;
+  });
   http_server.start();
   signaler::wait();
   return 0;
 }
-

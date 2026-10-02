@@ -47,14 +47,12 @@ using martianlabs::doba::common::console_logger;
 // +---------------------------------------------------------------------------+
 // | [>] output_capture                                              ( class ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class output_capture {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   output_capture() {
     static std::atomic<std::size_t> sequence{0};
     const auto stamp =
@@ -75,13 +73,19 @@ class output_capture {
     }
   }
   output_capture(const output_capture&) = delete;
-  output_capture& operator=(const output_capture&) = delete;
   ~output_capture() {
     restore();
     std::fclose(file_);
     std::error_code error;
     std::filesystem::remove(path_, error);
   }
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  output_capture& operator=(const output_capture&) = delete;
+  // +=========================================================================+
+  // | [>] output                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string output() {
     restore();
     std::rewind(file_);
@@ -97,8 +101,8 @@ class output_capture {
 
  private:
   // +=========================================================================+
-  // | [>] METHODs                                                 ( private ) |
-  // +=========================================================================+
+  // | [>] restore                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   void restore() {
     if (saved_ == -1) return;
     std::fflush(stdout);
@@ -106,6 +110,9 @@ class output_capture {
     close(saved_);
     saved_ = -1;
   }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   std::filesystem::path path_;
   FILE* file_ = nullptr;
   int saved_ = -1;
@@ -114,7 +121,7 @@ class output_capture {
 
 // +===========================================================================+
 // | [>] logger emits the label for every severity               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("logger emits the label for every severity") {
   output_capture capture;
   console_logger value{"unit", {false, false, false, false}};
@@ -128,9 +135,10 @@ DOBA_TEST("logger emits the label for every severity") {
                     "[DBG] debug\n[INF] info\n[WRN] warning\n"
                     "[ERR] error\n[CRT] critical\n");
 }
+
 // +===========================================================================+
 // | [>] logger owns its name and uses the supplied location     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("logger owns its name and uses the supplied location") {
   output_capture capture;
   std::string name = "original";
@@ -143,9 +151,10 @@ DOBA_TEST("logger owns its name and uses the supplied location") {
                                std::to_string(source.line()) + " message\n";
   DOBA_EXPECT_EQUAL(capture.output(), expected);
 }
+
 // +===========================================================================+
 // | [>] logger preserves empty and binary messages              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("logger preserves empty and binary messages") {
   output_capture capture;
   console_logger value{"unit", {false, false, false, false}};
@@ -156,16 +165,17 @@ DOBA_TEST("logger preserves empty and binary messages") {
   expected += '\n';
   DOBA_EXPECT_EQUAL(capture.output(), expected);
 }
+
 // +===========================================================================+
 // | [>] logger streams scalar limits without losing bytes       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("logger streams scalar limits without losing bytes") {
   output_capture capture;
   console_logger value{"unit", {false, false, false, false}};
   {
     auto line = value.warning();
-    line << std::string_view("a\0b", 3) << ' ' << true << ' ' << false
-         << ' ' << std::numeric_limits<int64_t>::min() << ' '
+    line << std::string_view("a\0b", 3) << ' ' << true << ' ' << false << ' '
+         << std::numeric_limits<int64_t>::min() << ' '
          << std::numeric_limits<uint64_t>::max() << ' ' << 1.25;
   }
   std::string expected = "[WRN] ";
@@ -173,9 +183,10 @@ DOBA_TEST("logger streams scalar limits without losing bytes") {
   expected += " true false -9223372036854775808 18446744073709551615 1.25\n";
   DOBA_EXPECT_EQUAL(capture.output(), expected);
 }
+
 // +===========================================================================+
 // | [>] moved logger lines commit the message exactly once      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("moved logger lines commit the message exactly once") {
   output_capture capture;
   console_logger value{"unit", {false, false, false, false}};
@@ -187,20 +198,21 @@ DOBA_TEST("moved logger lines commit the message exactly once") {
   }
   DOBA_EXPECT_EQUAL(capture.output(), "[INF] first second\n");
 }
+
 // +===========================================================================+
 // | [>] redirected logger output omits terminal color codes     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("redirected logger output omits terminal color codes") {
   output_capture capture;
   console_logger value{"unit", {false, false, false, false}};
   {
     auto line = value.error();
-    for (console_log_color color : {
-             console_log_color::kDefault, console_log_color::kBlack,
-             console_log_color::kRed, console_log_color::kGreen,
-             console_log_color::kYellow, console_log_color::kBlue,
-             console_log_color::kMagenta, console_log_color::kCyan,
-             console_log_color::kWhite}) {
+    for (console_log_color color :
+         {console_log_color::kDefault, console_log_color::kBlack,
+          console_log_color::kRed, console_log_color::kGreen,
+          console_log_color::kYellow, console_log_color::kBlue,
+          console_log_color::kMagenta, console_log_color::kCyan,
+          console_log_color::kWhite}) {
       line << color << color << 'x';
     }
   }

@@ -47,16 +47,16 @@ namespace detail {
 // | Template parameters:                                                      |
 // |   RQty - request being used                                               |
 // |   RSty - response being used                                              |
-// |   Cty - controller being registered                                       |
+// |   CTty - controller being registered                                      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <typename RQty, typename RSty, typename Cty>
+template <typename RQty, typename RSty, typename CTty>
 class router_controller_routes {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  explicit router_controller_routes(std::shared_ptr<Cty> instance)
+  explicit router_controller_routes(std::shared_ptr<CTty> instance)
       : instance_(std::move(instance)) {}
   router_controller_routes(const router_controller_routes&) = delete;
   // +=========================================================================+
@@ -91,7 +91,7 @@ class router_controller_routes {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  std::shared_ptr<Cty> instance_;
+  std::shared_ptr<CTty> instance_;
   std::vector<std::function<void(router<RQty, RSty>&)>> registrations_;
 };
 }  // namespace detail

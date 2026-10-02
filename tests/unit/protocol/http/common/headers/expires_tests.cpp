@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::expires;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "Sun, 06 Nov 1994 08:49:37 GMT",
@@ -48,9 +48,10 @@ DOBA_TEST("check accepts valid values") {
         expires::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",
@@ -63,9 +64,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!expires::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!expires::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!expires::check(std::string_view{"a\0", 2}));
@@ -89,9 +91,10 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(expires::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check rejects incomplete and corrupted date fields      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects incomplete and corrupted date fields") {
   constexpr std::string_view seeds[] = {
       "Sun, 06 Nov 1994 08:49:37 GMT",

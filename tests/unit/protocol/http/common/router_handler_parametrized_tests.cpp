@@ -40,6 +40,7 @@ namespace {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct request {};
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] response                                                   ( struct ) |
@@ -48,69 +49,72 @@ struct request {};
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct response {
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string value;
 };
-using martianlabs::doba::protocol::http::make_router_handler_parametrized;
 
+using martianlabs::doba::protocol::http::make_router_handler_parametrized;
 }  // namespace
 
 // +===========================================================================+
 // | [>] matches routes with typed parameters                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("matches routes with typed parameters") {
-  auto handler = make_router_handler_parametrized<
-      request, response, std::uint64_t, bool, double, std::string_view>(
-      "/items/:id/:enabled/:score/:name",
-      [](const request&, response& res, std::uint64_t, bool, double,
-         std::string_view) {
-      });
+  auto handler =
+      make_router_handler_parametrized<request, response, std::uint64_t, bool,
+                                       double, std::string_view>(
+          "/items/:id/:enabled/:score/:name",
+          [](const request&, response& res, std::uint64_t, bool, double,
+             std::string_view) {});
   DOBA_EXPECT(handler.matches("/items/42/TRUE/1.5/doba"));
   DOBA_EXPECT(!handler.matches("/items/x/true/1.5/doba"));
   DOBA_EXPECT(!handler.matches("/items/42/yes/1.5/doba"));
   DOBA_EXPECT(!handler.matches("/items/42/true/score/doba"));
 }
+
 // +===========================================================================+
 // | [>] matching requires the complete route shape              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("matching requires the complete route shape") {
   auto handler = make_router_handler_parametrized<request, response, int>(
-      "/items/:id",
-      [](const request&, response& res, int) {
-      });
+      "/items/:id", [](const request&, response& res, int) {});
   DOBA_EXPECT(handler.matches("/items/42"));
   DOBA_EXPECT(!handler.matches("/items/"));
   DOBA_EXPECT(!handler.matches("/items/42/"));
   DOBA_EXPECT(!handler.matches("/items/42/details"));
 }
+
 // +===========================================================================+
 // | [>] invoke passes parsed values to the callback             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("invoke passes parsed values to the callback") {
   bool invoked = false;
-  auto handler = make_router_handler_parametrized<
-      request, response, std::uint64_t, bool, double, std::string>(
-      "/items/:id/:enabled/:score/:name",
-      [&invoked](const request&, response& res, std::uint64_t id, bool enabled,
-                 double score, const std::string& name) {
-        invoked = id == 42 && enabled && score == 1.5 && name == "doba";
-        res.value = name;
-      });
+  auto handler =
+      make_router_handler_parametrized<request, response, std::uint64_t, bool,
+                                       double, std::string>(
+          "/items/:id/:enabled/:score/:name",
+          [&invoked](const request&, response& res, std::uint64_t id,
+                     bool enabled, double score, const std::string& name) {
+            invoked = id == 42 && enabled && score == 1.5 && name == "doba";
+            res.value = name;
+          });
   request req;
   response res;
   handler.invoke(req, res, "/items/42/true/1.5/doba");
   DOBA_EXPECT(invoked);
   DOBA_EXPECT_EQUAL(res.value, "doba");
 }
+
 // +===========================================================================+
 // | [>] invoke rejects paths with invalid parameters            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("invoke rejects paths with invalid parameters") {
   bool invoked = false;
   auto handler = make_router_handler_parametrized<request, response, int>(
       "/items/:id",
-      [&invoked](const request&, response& res, int) {
-        invoked = true;
-      });
+      [&invoked](const request&, response& res, int) { invoked = true; });
   request req;
   response res;
   bool threw = false;
@@ -132,9 +136,10 @@ DOBA_TEST("invoke rejects paths with invalid parameters") {
   DOBA_EXPECT(threw);
   DOBA_EXPECT(!invoked);
 }
+
 // +===========================================================================+
 // | [>] accepts every boolean spelling                          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("route conversion accepts every boolean spelling") {
   using parameter = bool;
   struct test_case {
@@ -142,24 +147,21 @@ DOBA_TEST("route conversion accepts every boolean spelling") {
     parameter expected;
   };
   const test_case cases[] = {
-      {"false", false},
-      {"FALSE", false},
-      {"FaLsE", false},
-      {"0", false},
-      {"1", true},
+      {"false", false}, {"FALSE", false}, {"FaLsE", false},
+      {"0", false},     {"1", true},
   };
   for (const auto& test : cases) {
     const std::string path = "/value/" + std::string(test.input);
     martianlabs::doba::tests::unit::test_helper::set_context(test.input);
     std::size_t sync_calls = 0;
     parameter sync_value{};
-    auto handler = make_router_handler_parametrized<
-        request, response, parameter>(
-        "/value/:value",
-        [&](const request&, response& res, parameter value) {
-          sync_calls++;
-          sync_value = value;
-        });
+    auto handler =
+        make_router_handler_parametrized<request, response, parameter>(
+            "/value/:value",
+            [&](const request&, response& res, parameter value) {
+              sync_calls++;
+              sync_value = value;
+            });
     DOBA_EXPECT_EQUAL(handler.matches(path), true);
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
@@ -172,7 +174,7 @@ DOBA_TEST("route conversion accepts every boolean spelling") {
 
 // +===========================================================================+
 // | [>] accepts signed integer boundaries                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("route conversion accepts signed integer boundaries") {
   using parameter = std::int64_t;
   struct test_case {
@@ -190,13 +192,13 @@ DOBA_TEST("route conversion accepts signed integer boundaries") {
     martianlabs::doba::tests::unit::test_helper::set_context(test.input);
     std::size_t sync_calls = 0;
     parameter sync_value{};
-    auto handler = make_router_handler_parametrized<
-        request, response, parameter>(
-        "/value/:value",
-        [&](const request&, response& res, parameter value) {
-          sync_calls++;
-          sync_value = value;
-        });
+    auto handler =
+        make_router_handler_parametrized<request, response, parameter>(
+            "/value/:value",
+            [&](const request&, response& res, parameter value) {
+              sync_calls++;
+              sync_value = value;
+            });
     DOBA_EXPECT_EQUAL(handler.matches(path), true);
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
@@ -209,7 +211,7 @@ DOBA_TEST("route conversion accepts signed integer boundaries") {
 
 // +===========================================================================+
 // | [>] accepts unsigned integer boundaries                     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("route conversion accepts unsigned integer boundaries") {
   using parameter = std::uint64_t;
   struct test_case {
@@ -225,13 +227,13 @@ DOBA_TEST("route conversion accepts unsigned integer boundaries") {
     martianlabs::doba::tests::unit::test_helper::set_context(test.input);
     std::size_t sync_calls = 0;
     parameter sync_value{};
-    auto handler = make_router_handler_parametrized<
-        request, response, parameter>(
-        "/value/:value",
-        [&](const request&, response& res, parameter value) {
-          sync_calls++;
-          sync_value = value;
-        });
+    auto handler =
+        make_router_handler_parametrized<request, response, parameter>(
+            "/value/:value",
+            [&](const request&, response& res, parameter value) {
+              sync_calls++;
+              sync_value = value;
+            });
     DOBA_EXPECT_EQUAL(handler.matches(path), true);
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
@@ -244,7 +246,7 @@ DOBA_TEST("route conversion accepts unsigned integer boundaries") {
 
 // +===========================================================================+
 // | [>] rejects integer overflow                                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("route conversion rejects integer overflow") {
   {
     using parameter = std::int64_t;
@@ -259,12 +261,10 @@ DOBA_TEST("route conversion rejects integer overflow") {
       const std::string path = "/value/" + std::string(test.input);
       martianlabs::doba::tests::unit::test_helper::set_context(test.input);
       std::size_t sync_calls = 0;
-      auto handler = make_router_handler_parametrized<
-          request, response, parameter>(
-          "/value/:value",
-          [&](const request&, response& res, parameter) {
-            sync_calls++;
-          });
+      auto handler =
+          make_router_handler_parametrized<request, response, parameter>(
+              "/value/:value",
+              [&](const request&, response& res, parameter) { sync_calls++; });
       DOBA_EXPECT_EQUAL(handler.matches(path), false);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
@@ -292,12 +292,10 @@ DOBA_TEST("route conversion rejects integer overflow") {
       const std::string path = "/value/" + std::string(test.input);
       martianlabs::doba::tests::unit::test_helper::set_context(test.input);
       std::size_t sync_calls = 0;
-      auto handler = make_router_handler_parametrized<
-          request, response, parameter>(
-          "/value/:value",
-          [&](const request&, response& res, parameter) {
-            sync_calls++;
-          });
+      auto handler =
+          make_router_handler_parametrized<request, response, parameter>(
+              "/value/:value",
+              [&](const request&, response& res, parameter) { sync_calls++; });
       DOBA_EXPECT_EQUAL(handler.matches(path), false);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
@@ -317,7 +315,7 @@ DOBA_TEST("route conversion rejects integer overflow") {
 
 // +===========================================================================+
 // | [>] rejects partial numbers spaces and plus signs           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
   {
     using parameter = int;
@@ -334,12 +332,10 @@ DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
       const std::string path = "/value/" + std::string(test.input);
       martianlabs::doba::tests::unit::test_helper::set_context(test.input);
       std::size_t sync_calls = 0;
-      auto handler = make_router_handler_parametrized<
-          request, response, parameter>(
-          "/value/:value",
-          [&](const request&, response& res, parameter) {
-            sync_calls++;
-          });
+      auto handler =
+          make_router_handler_parametrized<request, response, parameter>(
+              "/value/:value",
+              [&](const request&, response& res, parameter) { sync_calls++; });
       DOBA_EXPECT_EQUAL(handler.matches(path), false);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
@@ -368,12 +364,10 @@ DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
       const std::string path = "/value/" + std::string(test.input);
       martianlabs::doba::tests::unit::test_helper::set_context(test.input);
       std::size_t sync_calls = 0;
-      auto handler = make_router_handler_parametrized<
-          request, response, parameter>(
-          "/value/:value",
-          [&](const request&, response& res, parameter) {
-            sync_calls++;
-          });
+      auto handler =
+          make_router_handler_parametrized<request, response, parameter>(
+              "/value/:value",
+              [&](const request&, response& res, parameter) { sync_calls++; });
       DOBA_EXPECT_EQUAL(handler.matches(path), false);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
@@ -393,7 +387,7 @@ DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
 
 // +===========================================================================+
 // | [>] rejects negative unsigned values                        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("route conversion rejects negative unsigned values") {
   using parameter = std::uint64_t;
   struct test_case {
@@ -407,12 +401,10 @@ DOBA_TEST("route conversion rejects negative unsigned values") {
     const std::string path = "/value/" + std::string(test.input);
     martianlabs::doba::tests::unit::test_helper::set_context(test.input);
     std::size_t sync_calls = 0;
-    auto handler = make_router_handler_parametrized<
-        request, response, parameter>(
-        "/value/:value",
-        [&](const request&, response& res, parameter) {
-          sync_calls++;
-        });
+    auto handler =
+        make_router_handler_parametrized<request, response, parameter>(
+            "/value/:value",
+            [&](const request&, response& res, parameter) { sync_calls++; });
     DOBA_EXPECT_EQUAL(handler.matches(path), false);
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
@@ -431,7 +423,7 @@ DOBA_TEST("route conversion rejects negative unsigned values") {
 
 // +===========================================================================+
 // | [>] accepts finite floating point values                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("route conversion accepts finite floating point values") {
   using parameter = double;
   struct test_case {
@@ -449,13 +441,13 @@ DOBA_TEST("route conversion accepts finite floating point values") {
     martianlabs::doba::tests::unit::test_helper::set_context(test.input);
     std::size_t sync_calls = 0;
     parameter sync_value{};
-    auto handler = make_router_handler_parametrized<
-        request, response, parameter>(
-        "/value/:value",
-        [&](const request&, response& res, parameter value) {
-          sync_calls++;
-          sync_value = value;
-        });
+    auto handler =
+        make_router_handler_parametrized<request, response, parameter>(
+            "/value/:value",
+            [&](const request&, response& res, parameter value) {
+              sync_calls++;
+              sync_value = value;
+            });
     DOBA_EXPECT_EQUAL(handler.matches(path), true);
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
@@ -468,7 +460,7 @@ DOBA_TEST("route conversion accepts finite floating point values") {
 
 // +===========================================================================+
 // | [>] rejects floating point range errors                     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("route conversion rejects floating point range errors") {
   using parameter = double;
   struct test_case {
@@ -482,12 +474,10 @@ DOBA_TEST("route conversion rejects floating point range errors") {
     const std::string path = "/value/" + std::string(test.input);
     martianlabs::doba::tests::unit::test_helper::set_context(test.input);
     std::size_t sync_calls = 0;
-    auto handler = make_router_handler_parametrized<
-        request, response, parameter>(
-        "/value/:value",
-        [&](const request&, response& res, parameter) {
-          sync_calls++;
-        });
+    auto handler =
+        make_router_handler_parametrized<request, response, parameter>(
+            "/value/:value",
+            [&](const request&, response& res, parameter) { sync_calls++; });
     DOBA_EXPECT_EQUAL(handler.matches(path), false);
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
@@ -503,9 +493,10 @@ DOBA_TEST("route conversion rejects floating point range errors") {
     DOBA_EXPECT_EQUAL(sync_calls, 0);
   }
 }
+
 // +===========================================================================+
 // | [>] narrow integer conversions enforce each type boundary   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("narrow integer conversions enforce each type boundary") {
   const auto check = []<typename T>() {
     const long long minimum = std::numeric_limits<T>::min();
@@ -515,8 +506,8 @@ DOBA_TEST("narrow integer conversions enforce each type boundary") {
       bool valid;
     };
     const test_case cases[] = {
-        {minimum - 1, false}, {minimum, true}, {0, true},
-        {maximum, true}, {maximum + 1, false},
+        {minimum - 1, false}, {minimum, true},      {0, true},
+        {maximum, true},      {maximum + 1, false},
     };
     for (const auto& test : cases) {
       const std::string path = "/value/" + std::to_string(test.input);
@@ -549,15 +540,15 @@ DOBA_TEST("narrow integer conversions enforce each type boundary") {
   check.operator()<std::int32_t>();
   check.operator()<std::uint32_t>();
 }
+
 // +===========================================================================+
 // | [>] later parameter failures never invoke the callback      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("later parameter failures never invoke the callback") {
   std::size_t calls = 0;
   auto handler = make_router_handler_parametrized<request, response, int, bool>(
-      "/:id/:enabled", [&](const request&, response& res, int, bool) {
-        calls++;
-      });
+      "/:id/:enabled",
+      [&](const request&, response& res, int, bool) { calls++; });
   for (std::string_view path : {"/7/yes", "/7/truex", "/7/2"}) {
     DOBA_EXPECT(!handler.matches(path));
     bool threw = false;

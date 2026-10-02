@@ -29,7 +29,7 @@
 
 // +===========================================================================+
 // | [>] logo exposes a static dump entry point                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("logo exposes a static dump entry point") {
   using martianlabs::doba::common::logo;
   static_assert(std::is_same_v<decltype(&logo::dump), void (*)()>);

@@ -35,7 +35,7 @@ using header = headers::access_control_allow_credentials;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "true",
@@ -47,9 +47,10 @@ DOBA_TEST("check accepts valid values") {
         header::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",      "false", "True",      "TRUE",     "*",
@@ -59,9 +60,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!header::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!header::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!header::check(std::string_view{"a\0", 2}));
@@ -85,9 +87,10 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(header::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check requires every byte of the literal true           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check requires every byte of the literal true") {
   constexpr std::string_view seed = "true";
   for (std::size_t position = 0; position < seed.size(); ++position) {

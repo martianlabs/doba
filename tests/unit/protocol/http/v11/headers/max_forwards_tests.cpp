@@ -38,7 +38,7 @@ using martianlabs::doba::protocol::http::v11::headers::max_forwards;
 
 // +===========================================================================+
 // | [>] check parses decimal values                             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check parses decimal values") {
   constexpr std::string_view cases[] = {"0", "1", "10", "000"};
   for (const auto source : cases) {
@@ -54,9 +54,10 @@ DOBA_TEST("check parses decimal values") {
   DOBA_EXPECT(max_forwards::check(maximum, parsed));
   DOBA_EXPECT_EQUAL(parsed, std::numeric_limits<std::size_t>::max());
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid decimal values                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid decimal values") {
   constexpr std::string_view cases[] = {
       "", " ", "-1", "+1", "1.0", "1x", " 1", "1 ",
@@ -72,9 +73,10 @@ DOBA_TEST("check rejects invalid decimal values") {
   DOBA_EXPECT(!max_forwards::check(overflow, parsed));
   DOBA_EXPECT(!max_forwards::check(std::string_view{"1\0", 2}, parsed));
 }
+
 // +===========================================================================+
 // | [>] interpret preserves remaining forwarding budget         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("interpret preserves remaining forwarding budget") {
   martianlabs::doba::protocol::http::v11::connection state;
   policies policy;
@@ -86,9 +88,10 @@ DOBA_TEST("interpret preserves remaining forwarding budget") {
   DOBA_EXPECT_EQUAL(max_forwards::interpret(11, state, policy),
                     verdict::kAccept);
 }
+
 // +===========================================================================+
 // | [>] check preserves output at the decimal overflow boundary ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check preserves output at the decimal overflow boundary") {
   const std::string maximum =
       std::to_string(std::numeric_limits<std::size_t>::max());
@@ -108,15 +111,16 @@ DOBA_TEST("check preserves output at the decimal overflow boundary") {
   DOBA_EXPECT(max_forwards::check(std::string(64, '0') + maximum, parsed));
   DOBA_EXPECT_EQUAL(parsed, std::numeric_limits<std::size_t>::max());
 }
+
 // +===========================================================================+
 // | [>] check rejects every overflow without touching output    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects every overflow without touching output") {
   const std::string maximum =
       std::to_string(std::numeric_limits<std::size_t>::max());
-  const std::string cases[] = {
-      maximum + "0", "1" + maximum, std::string(maximum.size() + 1, '9'),
-      std::string(4096, '9'), "0" + maximum + "9"};
+  const std::string cases[] = {maximum + "0", "1" + maximum,
+                               std::string(maximum.size() + 1, '9'),
+                               std::string(4096, '9'), "0" + maximum + "9"};
   for (const auto& source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
     std::size_t parsed = 7;

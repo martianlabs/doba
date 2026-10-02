@@ -38,16 +38,17 @@ using martianlabs::doba::protocol::serialization_result;
 
 // +===========================================================================+
 // | [>] serialization defaults contain no owned output          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("serialization defaults contain no owned output") {
   serialization_result value;
   DOBA_EXPECT(value.head.empty());
   DOBA_EXPECT(value.body.empty());
   DOBA_EXPECT(!value.source);
 }
+
 // +===========================================================================+
 // | [>] serialization moves retain views and reader cursor      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("serialization moves retain views and reader cursor") {
   byte_storage storage;
   DOBA_EXPECT(storage.write("body", 4));

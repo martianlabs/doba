@@ -28,17 +28,27 @@
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the application. It creates an HTTP server     |
+// | that listens on all interfaces (0.0.0.0) and port 8080. The server has a  |
+// | single route defined for the GET method at the path "/date".              |
+// | When a request is made to this route, the server responds with a 200 OK   |
+// | status and a body containing the string "dated". The server runs until it |
+// | receives a termination signal, at which point it stops gracefully.        |
+// | It automatically puts the current date in the response header "Date".     |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  http_server.add_route(
-      "GET", "/date",
-      [](const request&, response& res) {
-        res.ok_200();
-        res.set_body("dated");
-        return;
-      });
+  http_server.add_route("GET", "/date", [](const request&, response& res) {
+    res.ok_200();
+    res.set_body("dated");
+    return;
+  });
   http_server.start();
   signaler::wait();
   return 0;
 }
-

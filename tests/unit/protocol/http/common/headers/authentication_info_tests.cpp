@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::authentication_info;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "",
@@ -54,9 +54,10 @@ DOBA_TEST("check accepts valid values") {
         std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       " ",
@@ -72,9 +73,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!authentication_info::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!authentication_info::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!authentication_info::check(std::string_view{"a\0", 2}));
@@ -96,12 +98,13 @@ DOBA_TEST("check handles string view boundaries") {
   std::string padded(seed);
   padded.push_back('\0');
   padded += "suffix";
-  DOBA_EXPECT(authentication_info::check(
-      std::string_view(padded.data(), seed.size())));
+  DOBA_EXPECT(
+      authentication_info::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check accepts authentication parameter boundaries       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts authentication parameter boundaries") {
   constexpr std::string_view cases[] = {
       "a=\"\", b=token",
@@ -114,17 +117,13 @@ DOBA_TEST("check accepts authentication parameter boundaries") {
     DOBA_EXPECT(authentication_info::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects authentication parameter boundaries       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects authentication parameter boundaries") {
   constexpr std::string_view cases[] = {
-      "a=b,c",
-      "a=b,c=",
-      "a=\"x\"junk",
-      "a=\"x\\",
-      "a=b;c=d",
-      "=x,a=b",
+      "a=b,c", "a=b,c=", "a=\"x\"junk", "a=\"x\\", "a=b;c=d", "=x,a=b",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);

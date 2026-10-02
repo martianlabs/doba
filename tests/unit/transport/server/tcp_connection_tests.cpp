@@ -35,6 +35,11 @@
 #include "transport/server/tcp_connection.h"
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] usings                                                    ( public )  |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::common::send_delegate;
 using martianlabs::doba::common::reader;
 using martianlabs::doba::transport::server::tcp_connection;
@@ -49,21 +54,27 @@ using martianlabs::doba::transport::server::send_state;
 // /////////////////////////////////////////////////////////////////////////////
 struct test_engine {
   // +=========================================================================+
-  // | [>] TYPEs                                                    ( public ) |
-  // +=========================================================================+
+  // | [>] USINGs                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   using policies_type = int;
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
+  // | [>] set_on_send                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_send(send_delegate value) { send = std::move(value); }
+  // +=========================================================================+
+  // | [>] set_on_close                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()> value) { close = std::move(value); }
+  // +=========================================================================+
+  // | [>] on_bytes_received                                        ( public ) |
+  // +-------------------------------------------------------------------------+
   std::size_t on_bytes_received(const char* bytes, std::size_t size,
                                 std::size_t capacity) {
     return receive(bytes, size, capacity);
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::function<std::size_t(const char*, std::size_t, std::size_t)> receive;
   send_delegate send;
   std::function<void()> close;
@@ -72,7 +83,7 @@ struct test_engine {
 
 // +===========================================================================+
 // | [>] tcp connection retains unconsumed fragments             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcp connection retains unconsumed fragments") {
   auto factory = []() { return test_engine{}; };
   tcp_connection<test_engine> input(8, factory);
@@ -100,7 +111,7 @@ DOBA_TEST("tcp connection retains unconsumed fragments") {
 
 // +===========================================================================+
 // | [>] tcp connection rejects invalid consumption              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcp connection rejects invalid consumption") {
   auto factory = []() { return test_engine{}; };
   tcp_connection<test_engine> input(4, factory);
@@ -114,12 +125,14 @@ DOBA_TEST("tcp connection rejects invalid consumption") {
 
 // +===========================================================================+
 // | [>] tcp connection propagates engine errors                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcp connection propagates engine errors") {
   auto factory = []() { return test_engine{}; };
   tcp_connection<test_engine> input(4, factory);
-  input.engine.receive = [](const char*, std::size_t, std::size_t)
-      -> std::size_t { throw std::runtime_error("receive failed"); };
+  input.engine.receive = [](const char*, std::size_t,
+                            std::size_t) -> std::size_t {
+    throw std::runtime_error("receive failed");
+  };
   std::memcpy(input.buffer.get(), "x", 1);
   input.size = 1;
   bool caught = false;
@@ -134,16 +147,15 @@ DOBA_TEST("tcp connection propagates engine errors") {
 
 // +===========================================================================+
 // | [>] tcp connection keeps engine callbacks                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcp connection keeps engine callbacks") {
   auto factory = []() { return test_engine{}; };
   tcp_connection<test_engine> input(4, factory);
   bool sent = false;
   bool closed = false;
-  input.engine.set_on_send([&sent](std::string_view head, std::string_view body,
-                                   std::unique_ptr<reader>) {
-    sent = head == "x" && body.empty();
-  });
+  input.engine.set_on_send(
+      [&sent](std::string_view head, std::string_view body,
+              std::unique_ptr<reader>) { sent = head == "x" && body.empty(); });
   input.engine.set_on_close([&closed]() { closed = true; });
   input.engine.send("x", {}, nullptr);
   input.engine.close();
@@ -153,7 +165,7 @@ DOBA_TEST("tcp connection keeps engine callbacks") {
 
 // +===========================================================================+
 // | [>] tcp connection sends queue bytes directly               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcp connection sends queue bytes directly") {
   auto factory = []() { return test_engine{}; };
   tcp_connection<test_engine> input(8, 8, factory, nullptr);
@@ -173,9 +185,10 @@ DOBA_TEST("tcp connection sends queue bytes directly") {
   DOBA_EXPECT(input.output_sent(output, 1));
   DOBA_EXPECT(!input.output_pending(output));
 }
+
 // +===========================================================================+
 // | [>] tcp connection batches queued output                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcp connection batches queued output") {
   auto factory = []() { return test_engine{}; };
   tcp_connection<test_engine> input(8, 8, factory, nullptr);

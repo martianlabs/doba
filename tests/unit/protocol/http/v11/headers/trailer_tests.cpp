@@ -38,7 +38,7 @@ using martianlabs::doba::protocol::http::v11::headers::trailer;
 
 // +===========================================================================+
 // | [>] check parses trailer names                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check parses trailer names") {
   parsed_token_list parsed;
   DOBA_EXPECT(trailer::check("ETag, Digest, X-Checksum", parsed));
@@ -79,9 +79,10 @@ DOBA_TEST("interpret records trailer names") {
   DOBA_EXPECT_EQUAL(state.trailer_names.size(), 2u);
   DOBA_EXPECT_EQUAL(state.trailer_names[1], "Digest");
 }
+
 // +===========================================================================+
 // | [>] check appends ordered views from repeated fields        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check appends ordered views from repeated fields") {
   const std::string first = "Digest";
   const std::string second = "X-Checksum";
@@ -96,9 +97,10 @@ DOBA_TEST("check appends ordered views from repeated fields") {
   DOBA_EXPECT(trailer::check(",,", parsed));
   DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
 }
+
 // +===========================================================================+
 // | [>] interpret appends trailers without changing framing     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("interpret appends trailers without changing framing") {
   connection state;
   state.chunked = true;

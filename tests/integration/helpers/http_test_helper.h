@@ -42,22 +42,24 @@ namespace martianlabs::doba::tests::integration {
 // +---------------------------------------------------------------------------+
 // | [>] http_test_response                                         ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
+// | This struct represents an HTTP response received from a server.           |
+// | It contains the status line, headers, trailers, body, and the raw wire    |
+// | body of the response. It also provides a method to retrieve a specific    |
+// | header value by name.                                                     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct http_test_response {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::string status;
   std::vector<std::pair<std::string, std::string>> headers;
   std::vector<std::pair<std::string, std::string>> trailers;
   std::string body;
   std::string wire_body;
-
   // +=========================================================================+
   // | [>] header                                                   ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::optional<std::string_view> header(std::string_view name) const {
     for (const auto& field : headers) {
       if (field.first.size() != name.size()) continue;
@@ -78,9 +80,17 @@ struct http_test_response {
   }
 };
 
-// +===========================================================================+
-// | [>] receive_http_line                                          ( method ) |
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] receive_http_line                                        ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function reads a single line from the TCP/IP client until it         |
+// | encounters a CRLF ("\r\n") sequence or reaches the specified              |
+// | maximum length. It returns an optional string containing the line         |
+// | without the CRLF, or std::nullopt if the maximum length is exceeded or    |
+// | the deadline is reached.                                                  |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 inline std::optional<std::string> receive_http_line(
     tcpip_client& client, std::chrono::steady_clock::time_point deadline,
     std::size_t maximum = 16384) {
@@ -99,21 +109,29 @@ inline std::optional<std::string> receive_http_line(
   return line;
 }
 
-// +===========================================================================+
-// | [>] valid_http_date                                            ( method ) |
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] valid_http_date                                          ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function checks if the given string value is a valid HTTP date in    |
+// | the format "Day, DD Mon YYYY HH:MM:SS GMT". It verifies the structure of  |
+// | the date and checks if the day, month, and time components are valid.     |
+// | It returns true if the date is valid, and false otherwise.                |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 inline bool valid_http_date(std::string_view value) {
   if (value.size() != 29 || value[3] != ',' || value[4] != ' ' ||
       value[7] != ' ' || value[11] != ' ' || value[16] != ' ' ||
       value[19] != ':' || value[22] != ':' || value[25] != ' ' ||
-      value.substr(26) != "GMT") return false;
-  constexpr std::string_view days[] = {
-      "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-  constexpr std::string_view months[] = {
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-  constexpr std::size_t digits[] = {
-      5, 6, 12, 13, 14, 15, 17, 18, 20, 21, 23, 24};
+      value.substr(26) != "GMT")
+    return false;
+  constexpr std::string_view days[] = {"Sun", "Mon", "Tue", "Wed",
+                                       "Thu", "Fri", "Sat"};
+  constexpr std::string_view months[] = {"Jan", "Feb", "Mar", "Apr",
+                                         "May", "Jun", "Jul", "Aug",
+                                         "Sep", "Oct", "Nov", "Dec"};
+  constexpr std::size_t digits[] = {5,  6,  12, 13, 14, 15,
+                                    17, 18, 20, 21, 23, 24};
   for (std::size_t position : digits) {
     if (value[position] < '0' || value[position] > '9') return false;
   }
@@ -128,25 +146,35 @@ inline bool valid_http_date(std::string_view value) {
   const std::chrono::year_month_day date{
       std::chrono::year(year), std::chrono::month(month),
       std::chrono::day(static_cast<unsigned int>(number(5)))};
-  if (!date.ok() || number(17) > 23 || number(20) > 59 ||
-      number(23) > 60) return false;
+  if (!date.ok() || number(17) > 23 || number(20) > 59 || number(23) > 60)
+    return false;
   const std::chrono::weekday weekday{std::chrono::sys_days(date)};
   return value.substr(0, 3) == days[weekday.c_encoding()];
 }
 
-// +===========================================================================+
-// | [>] receive_http_response                                      ( method ) |
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] receive_http_response                                    ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function receives an HTTP response from the given TCP/IP client.     |
+// | It reads the status line, headers, and body of the response, and          |
+// | constructs an `http_test_response` object. The function handles both      |
+// | regular and chunked transfer encoding, as well as various HTTP status     |
+// | codes. It returns an optional `http_test_response` object if the          |
+// | response is successfully received and parsed, or `std::nullopt` if        |
+// | there is an error or timeout.                                             |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 inline std::optional<http_test_response> receive_http_response(
     tcpip_client& client, bool head = false) {
-  const auto deadline = std::chrono::steady_clock::now() +
-                        std::chrono::seconds(3);
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(3);
   std::string wire;
   while (!wire.ends_with("\r\n\r\n")) {
     if (wire.size() >= 16384) return std::nullopt;
     const auto remaining =
         std::chrono::duration_cast<std::chrono::milliseconds>(
-        deadline - std::chrono::steady_clock::now());
+            deadline - std::chrono::steady_clock::now());
     if (remaining.count() <= 0) return std::nullopt;
     const auto byte = client.receive(1, remaining);
     if (!byte.has_value()) return std::nullopt;
@@ -156,23 +184,27 @@ inline std::optional<http_test_response> receive_http_response(
   std::size_t position = wire.find("\r\n");
   result.status = wire.substr(0, position);
   if (!result.status.starts_with("HTTP/1.1 ") || result.status.size() < 13 ||
-      result.status[12] != ' ') return std::nullopt;
+      result.status[12] != ' ')
+    return std::nullopt;
   int status = 0;
-  const auto parsed_status = std::from_chars(
-      result.status.data() + 9, result.status.data() + 12, status);
+  const auto parsed_status = std::from_chars(result.status.data() + 9,
+                                             result.status.data() + 12, status);
   if (parsed_status.ec != std::errc{} ||
-      parsed_status.ptr != result.status.data() + 12) return std::nullopt;
+      parsed_status.ptr != result.status.data() + 12)
+    return std::nullopt;
   position += 2;
   while (position + 2 < wire.size()) {
     const auto end = wire.find("\r\n", position);
     const auto colon = wire.find(':', position);
     if (end == std::string::npos || colon == std::string::npos ||
-        colon == position || colon >= end) return std::nullopt;
+        colon == position || colon >= end)
+      return std::nullopt;
     std::size_t begin = colon + 1;
     while (begin < end && (wire[begin] == ' ' || wire[begin] == '\t')) begin++;
     const std::string name = wire.substr(position, colon - position);
     if ((name == "Content-Length" || name == "Transfer-Encoding" ||
-         name == "Date") && result.header(name).has_value()) {
+         name == "Date") &&
+        result.header(name).has_value()) {
       return std::nullopt;
     }
     result.headers.emplace_back(name, wire.substr(begin, end - begin));
@@ -187,8 +219,8 @@ inline std::optional<http_test_response> receive_http_response(
   if (length.has_value() && transfer_encoding.has_value()) return std::nullopt;
   std::size_t size = 0;
   if (length.has_value()) {
-    const auto parsed = std::from_chars(
-        length->data(), length->data() + length->size(), size);
+    const auto parsed =
+        std::from_chars(length->data(), length->data() + length->size(), size);
     if (parsed.ec != std::errc{} ||
         parsed.ptr != length->data() + length->size()) {
       return std::nullopt;
@@ -235,8 +267,8 @@ inline std::optional<http_test_response> receive_http_response(
                  ((*trailer)[begin] == ' ' || (*trailer)[begin] == '\t')) {
             begin++;
           }
-          result.trailers.emplace_back(
-              trailer->substr(0, colon), trailer->substr(begin));
+          result.trailers.emplace_back(trailer->substr(0, colon),
+                                       trailer->substr(begin));
         }
       }
       if (chunk > 1024 * 1024 - result.body.size()) return std::nullopt;
@@ -263,13 +295,21 @@ inline std::optional<http_test_response> receive_http_response(
   return result;
 }
 
-// +===========================================================================+
-// | [>] wait_for_http_count                                        ( method ) |
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] wait_for_http_count                                      ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function waits for the given atomic value to reach the               |
+// | expected count. It repeatedly checks the value until it matches the       |
+// | expected count or the deadline is reached. The function returns true if   |
+// | the value reaches the expected count within the deadline,                 |
+// | or false otherwise.                                                       |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 inline bool wait_for_http_count(const std::atomic<std::size_t>& value,
                                 std::size_t expected) {
-  const auto deadline = std::chrono::steady_clock::now() +
-                        std::chrono::seconds(3);
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(3);
   while (value.load() < expected &&
          std::chrono::steady_clock::now() < deadline) {
     std::this_thread::yield();

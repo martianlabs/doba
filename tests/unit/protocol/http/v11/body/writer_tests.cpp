@@ -35,6 +35,14 @@ namespace {
 using martianlabs::doba::common::reader;
 using martianlabs::doba::protocol::http::v11::body::body_writer;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] release                                                  ( function ) |
+// +---------------------------------------------------------------------------+
+// |  This function releases the writer's buffer and reads it into a string.   |
+// | It is used to verify the wire output of the body writer.                  |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 std::string release(body_writer& value) {
   reader source(value.release());
   std::string output;
@@ -45,7 +53,7 @@ std::string release(body_writer& value) {
 
 // +===========================================================================+
 // | [>] body writer is movable but not copyable                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("body writer is movable but not copyable") {
   static_assert(!std::is_copy_constructible_v<body_writer>);
   static_assert(!std::is_copy_assignable_v<body_writer>);
@@ -53,9 +61,10 @@ DOBA_TEST("body writer is movable but not copyable") {
   static_assert(std::is_move_assignable_v<body_writer>);
   DOBA_EXPECT(true);
 }
+
 // +===========================================================================+
 // | [>] raw writer tracks payload size and releases raw bytes   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("raw writer tracks payload size and releases raw bytes") {
   auto value = body_writer::raw();
   DOBA_EXPECT(!value.is_chunked());
@@ -71,9 +80,10 @@ DOBA_TEST("raw writer tracks payload size and releases raw bytes") {
   DOBA_EXPECT_EQUAL(std::string_view(output.data(), 3), "abc");
   DOBA_EXPECT_EQUAL(output[3], '\0');
 }
+
 // +===========================================================================+
 // | [>] chunked writer tracks payload size excluding framing    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("chunked writer tracks payload size excluding framing") {
   auto value = body_writer::chunked();
   DOBA_EXPECT(value.is_chunked());
@@ -84,9 +94,10 @@ DOBA_TEST("chunked writer tracks payload size excluding framing") {
   DOBA_EXPECT(value.end());
   DOBA_EXPECT_EQUAL(release(value), "5\r\nhello\r\n5\r\nworld\r\n0\r\n\r\n");
 }
+
 // +===========================================================================+
 // | [>] finalized chunked writers reject additional payloads    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("finalized chunked writers reject additional payloads") {
   auto value = body_writer::chunked();
   DOBA_EXPECT(value.write("before"));
@@ -95,9 +106,10 @@ DOBA_TEST("finalized chunked writers reject additional payloads") {
   DOBA_EXPECT_EQUAL(value.bytes_written(), 6);
   DOBA_EXPECT_EQUAL(release(value), "6\r\nbefore\r\n0\r\n\r\n");
 }
+
 // +===========================================================================+
 // | [>] moves preserve encoding mode and payload accounting     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("moves preserve encoding mode and payload accounting") {
   for (const bool chunked : {false, true}) {
     auto value = chunked ? body_writer::chunked() : body_writer::raw();
@@ -114,3 +126,4 @@ DOBA_TEST("moves preserve encoding mode and payload accounting") {
                       chunked ? "1\r\na\r\n2\r\nbc\r\n0\r\n\r\n" : "abc");
   }
 }
+

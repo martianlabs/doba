@@ -32,6 +32,11 @@
 #include "test_helper.h"
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] usings                                                     ( public ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::common::reader;
 namespace protocol = martianlabs::doba::protocol;
 namespace http = martianlabs::doba::protocol::http::v11;
@@ -46,6 +51,9 @@ using engine_type = http::engine<http::request, http::response>;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct observation {
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   int starts{0};
   int stops{0};
   bool fail_start{false};
@@ -61,13 +69,28 @@ struct observation {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename ENty, typename FNty>
 struct fake_transport {
+  // +=========================================================================+
+  // | [>] USINGs                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   using policies_type = std::unique_ptr<int>;
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   fake_transport(policies_type configuration, FNty create_engine)
       : factory(std::move(create_engine)) {
     observed.configuration = configuration ? *configuration : 0;
   }
+  // +=========================================================================+
+  // | [>] set_on_connection                                        ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_connection(std::function<void()>) {}
+  // +=========================================================================+
+  // | [>] set_on_disconnection                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_disconnection(std::function<void()>) {}
+  // +=========================================================================+
+  // | [>] start                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void start() {
     if (observed.fail_start) throw std::runtime_error("start failed");
     observed.starts++;
@@ -87,7 +110,13 @@ struct fake_transport {
       value.on_bytes_received(request.data(), request.size(), 4096);
     }
   }
+  // +=========================================================================+
+  // | [>] stop                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   void stop() { observed.stops++; }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   FNty factory;
 };
 
@@ -146,28 +175,57 @@ struct bad_engine : engine_type {
   explicit bad_engine(http::policies);
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] bad_receive_engine                                         ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct bad_receive_engine : engine_type {
   void on_bytes_received(const char*, std::size_t, std::size_t);
 };
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] bad_send_engine                                            ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct bad_send_engine : engine_type {
   void set_on_send(std::function<void(const char*, std::size_t)>);
 };
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] asserts                                                    ( static ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 static_assert(!protocol::contracts::engine<bad_receive_engine>);
 static_assert(!protocol::contracts::engine<bad_send_engine>);
-static_assert(!protocol::contracts::engine_factory<
-              decltype([]() { return 0; }), engine_type>);
+static_assert(!protocol::contracts::engine_factory<decltype([]() { return 0; }),
+                                                   engine_type>);
 static_assert(!protocol::contracts::engine_factory<
               decltype([](int) -> engine_type { throw 0; }), engine_type>);
 static_assert(!protocol::contracts::engine_factory<
               decltype([value = 0]() mutable -> engine_type {
                 value++;
                 throw value;
-              }), engine_type>);
+              }),
+              engine_type>);
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] accepts_server                                            ( concept ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 template <typename ENty, template <typename, typename> class TRty>
 concept accepts_server = requires {
   typename http::server<http::request, http::response, routes_type, ENty, TRty>;
 };
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] asserts                                                    ( static ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 static_assert(protocol::contracts::engine<engine_type>);
 static_assert(!std::constructible_from<engine_type, http::policies>);
 static_assert(accepts_server<engine_type, fake_transport>);
@@ -180,42 +238,66 @@ static_assert(protocol::contracts::engine<bad_engine>);
 static_assert(!accepts_server<bad_engine, fake_transport>);
 static_assert(!accepts_server<int, fake_transport>);
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] usings                                                     ( public ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 using server_type = http::server<http::request, http::response, routes_type,
                                  engine_type, fake_transport>;
 using factory_type = http::engine_factory<engine_type, routes_type>;
-static_assert(std::same_as<
-              typename tr::tcp<engine_type, factory_type>::policies_type,
-              tr::tcp_policies>);
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] asserts                                                    ( static ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+static_assert(
+    std::same_as<typename tr::tcp<engine_type, factory_type>::policies_type,
+                 tr::tcp_policies>);
 static_assert(std::constructible_from<server_type, std::unique_ptr<int>>);
-static_assert(std::constructible_from<server_type, std::unique_ptr<int>,
-                                      http::policies>);
+static_assert(
+    std::constructible_from<server_type, std::unique_ptr<int>, http::policies>);
 static_assert(!std::constructible_from<server_type, http::policies,
                                        std::unique_ptr<int>>);
-static_assert(!std::constructible_from<server_type, tr::tcp_policies,
-                                       http::policies>);
+static_assert(
+    !std::constructible_from<server_type, tr::tcp_policies, http::policies>);
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] controller                                                 ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct controller {
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   explicit controller(int& calls) : calls_(calls) {}
+  // +=========================================================================+
+  // | [>] register_routes                                          ( public ) |
+  // +-------------------------------------------------------------------------+
   template <typename ROty>
   void register_routes(ROty& routes) {
     routes.add("GET", "/", &controller::handle);
   }
+  // +=========================================================================+
+  // | [>] handle                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   void handle(const http::request&, http::response& res) {
     res.ok_200();
     res.set_body(std::to_string(++calls_));
     return;
   }
+  // +=========================================================================+
+  // | [>] ATTRIUBUTEs                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   int& calls_;
 };
 }  // namespace
 
 // +===========================================================================+
 // | [>] server shares its router between engines                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("server shares its router between engines") {
   observed = {};
   int calls = 0;
@@ -233,9 +315,8 @@ DOBA_TEST("server shares its router between engines") {
     bool rejected = false;
     try {
       value.add_route(
-          "GET", "/late", [](const http::request&, http::response& res) {
-        res.ok_200();
-      });
+          "GET", "/late",
+          [](const http::request&, http::response& res) { res.ok_200(); });
     } catch (const std::runtime_error&) {
       rejected = true;
     }
@@ -251,17 +332,17 @@ DOBA_TEST("server shares its router between engines") {
     value.stop();
     DOBA_EXPECT_EQUAL(observed.stops, 1);
     value.add_route(
-        "GET", "/new", [](const http::request&, http::response& res) {
-      res.ok_200();
-    });
+        "GET", "/new",
+        [](const http::request&, http::response& res) { res.ok_200(); });
     value.start();
     DOBA_EXPECT_EQUAL(calls, 4);
   }
   DOBA_EXPECT_EQUAL(observed.stops, 2);
 }
+
 // +===========================================================================+
 // | [>] server recovers from startup failure                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("server recovers from startup failure") {
   observed = {};
   observed.fail_start = true;
@@ -287,7 +368,7 @@ DOBA_TEST("server recovers from startup failure") {
 
 // +===========================================================================+
 // | [>] engine factories preserve policies and independence     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("engine factories preserve policies and independence") {
   routes_type routes;
   int calls = 0;
@@ -308,7 +389,7 @@ DOBA_TEST("engine factories preserve policies and independence") {
   int closed[2] = {};
   for (int i = 0; i < 2; i++) {
     engines[i]->set_on_send([&, i](std::string_view head, std::string_view body,
-                                  std::unique_ptr<reader> source) {
+                                   std::unique_ptr<reader> source) {
       bytes[i].append(head);
       bytes[i].append(body);
       if (source) source->read_all(bytes[i]);
@@ -316,16 +397,18 @@ DOBA_TEST("engine factories preserve policies and independence") {
     engines[i]->set_on_close([&, i]() { closed[i]++; });
   }
   const std::string partial = "GET /first HTTP/1.1\r\nHost: local";
-  DOBA_EXPECT_EQUAL(first.on_bytes_received(
-      partial.data(), partial.size(), 4096), 0);
+  DOBA_EXPECT_EQUAL(
+      first.on_bytes_received(partial.data(), partial.size(), 4096), 0);
   const std::string complete = partial + "host\r\n\r\n";
-  DOBA_EXPECT_EQUAL(second.on_bytes_received(
-      complete.data(), complete.size(), 4096), complete.size());
+  DOBA_EXPECT_EQUAL(
+      second.on_bytes_received(complete.data(), complete.size(), 4096),
+      complete.size());
   DOBA_EXPECT(bytes[0].empty());
   DOBA_EXPECT(bytes[1].ends_with("\r\n\r\nfirst"));
   DOBA_EXPECT_EQUAL(calls, 1);
-  DOBA_EXPECT_EQUAL(first.on_bytes_received(
-      complete.data(), complete.size(), 4096), complete.size());
+  DOBA_EXPECT_EQUAL(
+      first.on_bytes_received(complete.data(), complete.size(), 4096),
+      complete.size());
   DOBA_EXPECT_EQUAL(calls, 2);
   const std::string rejected =
       "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 2\r\n\r\n";
@@ -340,7 +423,7 @@ DOBA_TEST("engine factories preserve policies and independence") {
 
 // +===========================================================================+
 // | [>] server forwards engine policies to every connection     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("server forwards engine policies to every connection") {
   observed = {};
   observed.request =

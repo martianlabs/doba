@@ -32,11 +32,25 @@
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the application. It creates an HTTP server     |
+// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
+// | The server has a single route "/cookies" that responds to GET requests.   |
+// | When a request is made to this route, the server checks for a "session"   |
+// | cookie and returns its value in the response body. If the cookie is not   |
+// | provided, it indicates that in the response. Additionally, the server     |
+// | lists all cookies present in the request and sets two cookies in the      |
+// | response: "session" and "theme". The server runs until it receives a      |
+// | termination signal, at which point it stops gracefully.                   |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
-      "GET", "/cookies",
-      [](const request& req, response& res) {
+      "GET", "/cookies", [](const request& req, response& res) {
         res.ok_200();
         std::string body = "session: ";
         // Cookie lookup parses the Cookie field on demand.

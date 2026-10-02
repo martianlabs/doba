@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::cache_control;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "",
@@ -53,9 +53,10 @@ DOBA_TEST("check accepts valid values") {
         std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       " ",
@@ -73,9 +74,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!cache_control::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!cache_control::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!cache_control::check(std::string_view{"a\0", 2}));
@@ -97,15 +99,16 @@ DOBA_TEST("check handles string view boundaries") {
   std::string padded(seed);
   padded.push_back('\0');
   padded += "suffix";
-  DOBA_EXPECT(cache_control::check(
-      std::string_view(padded.data(), seed.size())));
+  DOBA_EXPECT(
+      cache_control::check(std::string_view(padded.data(), seed.size())));
   const std::string obs_text(1, static_cast<char>(0x80));
   DOBA_EXPECT(cache_control::check("note=\"" + obs_text + "\""));
   DOBA_EXPECT(!cache_control::check("max-" + obs_text + "age=60"));
 }
+
 // +===========================================================================+
 // | [>] check accepts quoted directive boundaries               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts quoted directive boundaries") {
   constexpr std::string_view cases[] = {
       "extension=\"\"",
@@ -118,17 +121,14 @@ DOBA_TEST("check accepts quoted directive boundaries") {
     DOBA_EXPECT(cache_control::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects quoted directive boundaries               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects quoted directive boundaries") {
   constexpr std::string_view cases[] = {
-      "extension=\"a\"b",
-      "extension=\"a\\",
-      "extension =v",
-      "extension= v",
-      "extension=v;other=x",
-      "extension=v,other=",
+      "extension=\"a\"b", "extension=\"a\\",     "extension =v",
+      "extension= v",     "extension=v;other=x", "extension=v,other=",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);

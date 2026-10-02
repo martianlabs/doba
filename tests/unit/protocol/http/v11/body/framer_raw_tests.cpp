@@ -34,6 +34,15 @@ namespace {
 using martianlabs::doba::protocol::http::v11::body::framer_error;
 using martianlabs::doba::protocol::http::v11::body::framer_raw;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] bytes                                                    ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function converts a string_view to a span of bytes. It is used to    |
+// | simulate the transport layer, which provides a span of bytes to           |
+// | the framer.                                                               |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 std::span<const std::byte> bytes(std::string_view value) {
   return {reinterpret_cast<const std::byte*>(value.data()), value.size()};
 }
@@ -41,45 +50,41 @@ std::span<const std::byte> bytes(std::string_view value) {
 
 // +===========================================================================+
 // | [>] zero length completes without consuming input           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("zero length completes without consuming input") {
   framer_raw value(0);
-
   auto state = value.consume(bytes("next request"));
   DOBA_EXPECT_EQUAL(state.consumed, 0);
   DOBA_EXPECT(state.complete);
   DOBA_EXPECT(!state.has_error);
-
 }
+
 // +===========================================================================+
 // | [>] consumes exactly content length across every split      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("consumes exactly content length across every split") {
   constexpr std::string_view source = "payloadNEXT";
   constexpr std::size_t length = 7;
   for (std::size_t split = 0; split <= source.size(); split++) {
     framer_raw value(length);
-
     const auto first = value.consume(bytes(source.substr(0, split)));
     const auto second = value.consume(bytes(source.substr(split)));
     DOBA_EXPECT_EQUAL(first.consumed + second.consumed, length);
     DOBA_EXPECT(second.complete || first.complete);
     DOBA_EXPECT(!first.has_error);
     DOBA_EXPECT(!second.has_error);
-
   }
 }
+
 // +===========================================================================+
 // | [>] empty writes preserve incomplete state                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("empty writes preserve incomplete state") {
   framer_raw value(1);
-
   for (int i = 0; i < 2; i++) {
     const auto state = value.consume({});
     DOBA_EXPECT_EQUAL(state.consumed, 0);
     DOBA_EXPECT(!state.complete);
     DOBA_EXPECT(!state.has_error);
   }
-
 }

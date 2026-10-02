@@ -29,7 +29,7 @@
 
 // +===========================================================================+
 // | [>] byte_storage_helpers selects its platform               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("byte_storage_helpers selects the platform implementation") {
 #ifdef _WIN32
 #ifndef martianlabs_doba_common_byte_storage_helpers_windows_h

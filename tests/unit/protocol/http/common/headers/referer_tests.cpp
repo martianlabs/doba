@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::referer;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "",
@@ -52,9 +52,10 @@ DOBA_TEST("check accepts valid values") {
         referer::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "#fragment",
@@ -72,9 +73,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!referer::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!referer::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!referer::check(std::string_view{"a\0", 2}));
@@ -98,9 +100,10 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(referer::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check accepts URI component boundaries                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts URI component boundaries") {
   constexpr std::string_view cases[] = {
       "//user:pass@[::1]:8080/a?b=c",
@@ -115,9 +118,10 @@ DOBA_TEST("check accepts URI component boundaries") {
     DOBA_EXPECT(referer::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects URI component boundaries                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects URI component boundaries") {
   constexpr std::string_view cases[] = {
       "/a%",

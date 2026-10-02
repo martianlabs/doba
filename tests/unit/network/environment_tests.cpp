@@ -29,7 +29,7 @@
 
 // +===========================================================================+
 // | [>] environment selects its platform                        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("environment selects the platform implementation") {
 #ifdef _WIN32
 #ifndef martianlabs_doba_network_environment_windows_h

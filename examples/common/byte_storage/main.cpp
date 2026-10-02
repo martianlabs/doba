@@ -28,6 +28,15 @@
 
 using namespace martianlabs::doba::common;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is a simple example of how to use the byte_storage class. It writes  |
+// | some data to the storage, finishes it, and then reads it back and prints  |
+// | it to the console.                                                        |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   byte_storage storage({.spill_threshold = 4, .spill_dir = {}});
   if (!storage.write("doba", 4) || !storage.write(" storage", 8)) return 1;
@@ -38,4 +47,3 @@ int main() {
   std::cout << '\n';
   return 0;
 }
-

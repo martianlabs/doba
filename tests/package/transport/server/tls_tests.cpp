@@ -35,18 +35,24 @@ using engine_type = v11::engine<v11::request, v11::response, router_type>;
 using tls_server = v11::server<v11::request, v11::response, router_type,
                                engine_type, transport::tls>;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is a simple example of how to use the TLS server with an HTTP/1.1    | 
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   SSL_CTX* context = SSL_CTX_new(TLS_server_method());
   if (!context) return 1;
   SSL_CTX_free(context);
   const auto fixtures = std::filesystem::path(__FILE__).parent_path() /
-      "../../../unit/transport/server/fixtures";
+                        "../../../unit/transport/server/fixtures";
   transport::tls_policies configuration;
   configuration.certificate_file = (fixtures / "server.crt").string();
   configuration.private_key_file = (fixtures / "server.key").string();
   tls_server value(configuration);
-  value.add_route("GET", "/", [](const v11::request&,
-                                  v11::response& res) {
+  value.add_route("GET", "/", [](const v11::request&, v11::response& res) {
     res.ok_200();
   });
   return 0;

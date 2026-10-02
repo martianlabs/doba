@@ -33,7 +33,7 @@ using martianlabs::doba::protocol::http::v11::rejection_reason;
 
 // +===========================================================================+
 // | [>] default context has no request derived signals          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("default context has no request derived signals") {
   const context value;
   DOBA_EXPECT(!value.has_content_length);

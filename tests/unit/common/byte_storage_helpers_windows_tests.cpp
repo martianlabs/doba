@@ -38,19 +38,16 @@
 
 namespace {
 using martianlabs::doba::common::byte_storage_file;
-
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] spill_directory                                             ( class ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class spill_directory {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   spill_directory() {
     namespace fs = std::filesystem;
     static std::atomic<std::size_t> sequence{0};
@@ -65,13 +62,15 @@ class spill_directory {
     std::error_code error;
     std::filesystem::remove_all(path_, error);
   }
-
+  // +=========================================================================+
+  // | [>] path                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   const std::filesystem::path& path() const { return path_; }
 
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::filesystem::path path_;
 };
 
@@ -79,7 +78,7 @@ class spill_directory {
 
 // +===========================================================================+
 // | [>] closed files reject nonempty reads and writes           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("closed files reject nonempty reads and writes") {
   byte_storage_file value;
   char output = '!';
@@ -92,9 +91,10 @@ DOBA_TEST("closed files reject nonempty reads and writes") {
   value.close();
   DOBA_EXPECT(!value.write("x", 1));
 }
+
 // +===========================================================================+
 // | [>] file writes preserve every byte and positional reads    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("file writes preserve every byte and positional reads") {
   spill_directory directory;
   byte_storage_file value;
@@ -116,9 +116,9 @@ DOBA_TEST("file writes preserve every byte and positional reads") {
     DOBA_EXPECT(value.read(position, output.data(), 256, read));
     const std::size_t expected = position < 256 ? 256 - position : 0;
     DOBA_EXPECT_EQUAL(read, expected);
-    DOBA_EXPECT_EQUAL(std::string_view(output.data(), read),
-                      std::string_view(input).substr(
-                          position < 256 ? position : 256));
+    DOBA_EXPECT_EQUAL(
+        std::string_view(output.data(), read),
+        std::string_view(input).substr(position < 256 ? position : 256));
     for (std::size_t i = read; i < output.size(); i++) {
       DOBA_EXPECT_EQUAL(output[i], '!');
     }
@@ -126,9 +126,10 @@ DOBA_TEST("file writes preserve every byte and positional reads") {
   value.close();
   DOBA_EXPECT(std::filesystem::exists(path));
 }
+
 // +===========================================================================+
 // | [>] empty file operations preserve the supplied buffer      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("empty file operations preserve the supplied buffer") {
   spill_directory directory;
   byte_storage_file value;
@@ -146,9 +147,10 @@ DOBA_TEST("empty file operations preserve the supplied buffer") {
   DOBA_EXPECT_EQUAL(read, 0);
   DOBA_EXPECT_EQUAL(std::filesystem::file_size(path), 0);
 }
+
 // +===========================================================================+
 // | [>] file open failure permits a later valid open            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("file open failure permits a later valid open") {
   spill_directory directory;
   byte_storage_file value;
@@ -161,9 +163,10 @@ DOBA_TEST("file open failure permits a later valid open") {
   value.close();
   DOBA_EXPECT_EQUAL(std::filesystem::file_size(path), 2);
 }
+
 // +===========================================================================+
 // | [>] independent files keep distinct paths and contents      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("independent files keep distinct paths and contents") {
   spill_directory directory;
   byte_storage_file first;
@@ -184,9 +187,10 @@ DOBA_TEST("independent files keep distinct paths and contents") {
   DOBA_EXPECT_EQUAL(read, 5);
   DOBA_EXPECT_EQUAL(std::string_view(output.data(), read), "other");
 }
+
 // +===========================================================================+
 // | [>] file moves transfer ownership and preserve contents     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("file moves transfer ownership and preserve contents") {
   spill_directory directory;
   std::optional<byte_storage_file> moved;

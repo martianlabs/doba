@@ -897,7 +897,6 @@ class basic_transport {
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
 };
-
 }  // namespace martianlabs::doba::transport::server
 
 #endif

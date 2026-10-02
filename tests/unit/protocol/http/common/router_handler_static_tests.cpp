@@ -37,6 +37,7 @@ namespace {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct request {};
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] response                                                   ( struct ) |
@@ -50,16 +51,13 @@ using martianlabs::doba::protocol::http::router_handler_static;
 
 // +===========================================================================+
 // | [>] alias accepts and invokes the documented callback       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("alias accepts and invokes the documented callback") {
-  static_assert(
-      std::same_as<router_handler_static<request, response>,
-                   std::function<void(const request&, response&)>>);
+  static_assert(std::same_as<router_handler_static<request, response>,
+                             std::function<void(const request&, response&)>>);
   bool invoked = false;
   router_handler_static<request, response> handler =
-      [&invoked](const request&, response&) {
-        invoked = true;
-      };
+      [&invoked](const request&, response&) { invoked = true; };
   request req;
   response res;
   handler(req, res);

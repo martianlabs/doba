@@ -28,6 +28,15 @@
 
 using namespace martianlabs::doba::common;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the program. It initializes and starts the     |
+// | date server, prints the current date, and then stops the server           |
+// | before exiting.                                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   auto& dates = date_server::get();
   dates.start();
@@ -35,4 +44,3 @@ int main() {
   dates.stop();
   return 0;
 }
-

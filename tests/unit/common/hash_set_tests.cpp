@@ -34,7 +34,7 @@ using martianlabs::doba::common::hash_set;
 
 // +===========================================================================+
 // | [>] owned keys retain case insensitive identity             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("owned keys retain case insensitive identity") {
   hash_set<std::string> values;
   std::string key = "Content-Type";

@@ -41,8 +41,12 @@ namespace {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct request {
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   int event{0};
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] response                                                   ( struct ) |
@@ -51,15 +55,17 @@ struct request {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct response {
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string value;
 };
 using martianlabs::doba::protocol::http::router;
-
 }  // namespace
 
 // +===========================================================================+
 // | [>] router type is neither copyable nor movable             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("router type is neither copyable nor movable") {
   static_assert(!std::is_copy_constructible_v<router<request, response>>);
   static_assert(!std::is_copy_assignable_v<router<request, response>>);
@@ -67,9 +73,10 @@ DOBA_TEST("router type is neither copyable nor movable") {
   static_assert(!std::is_move_assignable_v<router<request, response>>);
   DOBA_EXPECT(true);
 }
+
 // +===========================================================================+
 // | [>] match returns handler without executing it              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("match returns handler without executing it") {
   router<request, response> value;
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/items")));
@@ -88,9 +95,10 @@ DOBA_TEST("match returns handler without executing it") {
   DOBA_EXPECT_EQUAL(res.value, "matched");
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/Items")));
 }
+
 // +===========================================================================+
 // | [>] static routes use exact path matching                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("static routes use exact path matching") {
   router<request, response> value;
   auto handler = [](const request&, response&) {};
@@ -98,9 +106,10 @@ DOBA_TEST("static routes use exact path matching") {
   DOBA_EXPECT(static_cast<bool>(value.match("GET", "/assets")));
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/assets/a")));
 }
+
 // +===========================================================================+
 // | [>] wildcard routes match their prefix                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("wildcard routes match their prefix") {
   router<request, response> value;
   bool invoked = false;
@@ -127,9 +136,10 @@ DOBA_TEST("wildcard routes match their prefix") {
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/assets")));
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/Assets/a")));
 }
+
 // +===========================================================================+
 // | [>] protected routes resist lookalike paths and methods     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("protected routes resist lookalike paths and methods") {
   router<request, response> value;
   auto handler = [](const request&, response&) {};
@@ -138,10 +148,10 @@ DOBA_TEST("protected routes resist lookalike paths and methods") {
   value.add("GET", "/user/:id", [](const request&, response&, int) {});
   const std::string nul_admin("/admin\0x", 7);
   const std::string_view paths[] = {
-      "/admin/", "/admin/x", "/adminx", "/Admin", "/ADMIN", "admin",
-      "//admin", "/admin ", " /admin", "/admin%00", nul_admin,
-      "/privatex", "/private", "/Private/a", "/privat/a", "private/a",
-      "/user/1/x", "/user/", "/user"};
+      "/admin/",   "/admin/x",  "/adminx",  "/Admin",     "/ADMIN",
+      "admin",     "//admin",   "/admin ",  " /admin",    "/admin%00",
+      nul_admin,   "/privatex", "/private", "/Private/a", "/privat/a",
+      "private/a", "/user/1/x", "/user/",   "/user"};
   for (const auto path : paths) {
     martianlabs::doba::tests::unit::test_helper::set_context(path);
     DOBA_EXPECT(!static_cast<bool>(value.match("GET", path)));
@@ -153,21 +163,17 @@ DOBA_TEST("protected routes resist lookalike paths and methods") {
   DOBA_EXPECT(static_cast<bool>(value.match("GET", "/admin")));
   DOBA_EXPECT(static_cast<bool>(value.match("GET", "/private/a")));
 }
+
 // +===========================================================================+
 // | [>] static routes take precedence over parametrized routes  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("static routes take precedence over parametrized routes") {
   router<request, response> value;
-  value.add(
-      "GET", "/items/:id",
-      [](const request&, response& res, int) {
-        res.value = "parametrized";
-      });
-  value.add(
-      "GET", "/items/42",
-      [](const request&, response& res) {
-        res.value = "static";
-      });
+  value.add("GET", "/items/:id", [](const request&, response& res, int) {
+    res.value = "parametrized";
+  });
+  value.add("GET", "/items/42",
+            [](const request&, response& res) { res.value = "static"; });
   auto match = value.match("GET", "/items/42");
   DOBA_EXPECT(match.handler != nullptr);
   DOBA_EXPECT(match.parametrized_handler == nullptr);
@@ -176,26 +182,19 @@ DOBA_TEST("static routes take precedence over parametrized routes") {
   match.handler->operator()(req, res);
   DOBA_EXPECT_EQUAL(res.value, "static");
 }
+
 // +===========================================================================+
 // | [>] route precedence ends with wildcard routes              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("route precedence ends with wildcard routes") {
   router<request, response> value;
-  value.add(
-      "GET", "/items/*",
-      [](const request&, response& res) {
-        res.value = "wildcard";
-      });
-  value.add(
-      "GET", "/items/:id",
-      [](const request&, response& res, int) {
-        res.value = "parametrized";
-      });
-  value.add(
-      "GET", "/items/42",
-      [](const request&, response& res) {
-        res.value = "static";
-      });
+  value.add("GET", "/items/*",
+            [](const request&, response& res) { res.value = "wildcard"; });
+  value.add("GET", "/items/:id", [](const request&, response& res, int) {
+    res.value = "parametrized";
+  });
+  value.add("GET", "/items/42",
+            [](const request&, response& res) { res.value = "static"; });
   request req;
   response res;
   auto match = value.match("GET", "/items/42");
@@ -208,21 +207,18 @@ DOBA_TEST("route precedence ends with wildcard routes") {
   match.handler->operator()(req, res);
   DOBA_EXPECT_EQUAL(res.value, "wildcard");
 }
+
 // +===========================================================================+
 // | [>] parametrized routes preserve typed registration order   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("parametrized routes preserve typed registration order") {
   router<request, response> value;
-  value.add(
-      "GET", "/items/:value",
-      [](const request&, response& res, int) {
-        res.value = "integer";
-      });
-  value.add(
-      "GET", "/items/:value",
-      [](const request&, response& res, std::string_view) {
-        res.value = "text";
-      });
+  value.add("GET", "/items/:value",
+            [](const request&, response& res, int) { res.value = "integer"; });
+  value.add("GET", "/items/:value",
+            [](const request&, response& res, std::string_view) {
+              res.value = "text";
+            });
   request req;
   response res;
   auto integer = value.match("GET", "/items/42");
@@ -232,39 +228,38 @@ DOBA_TEST("parametrized routes preserve typed registration order") {
   text.parametrized_handler->invoke(req, res, "/items/value");
   DOBA_EXPECT_EQUAL(res.value, "text");
 }
+
 // +===========================================================================+
 // | [>] parametrized routes validate pattern and handler shape  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("parametrized routes validate pattern and handler shape") {
   router<request, response> value;
   bool threw = false;
   try {
-    value.add("GET", "/items/:id", [](const request&, response& res) {
-    });
+    value.add("GET", "/items/:id", [](const request&, response& res) {});
   } catch (const std::invalid_argument&) {
     threw = true;
   }
   DOBA_EXPECT(threw);
   threw = false;
   try {
-    value.add("GET", "/items", [](const request&, response& res, int) {
-    });
+    value.add("GET", "/items", [](const request&, response& res, int) {});
   } catch (const std::invalid_argument&) {
     threw = true;
   }
   DOBA_EXPECT(threw);
   threw = false;
   try {
-    value.add("GET", "/items/:", [](const request&, response& res, int) {
-    });
+    value.add("GET", "/items/:", [](const request&, response& res, int) {});
   } catch (const std::invalid_argument&) {
     threw = true;
   }
   DOBA_EXPECT(threw);
 }
+
 // +===========================================================================+
 // | [>] wildcard routes validate pattern and handler shape      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("wildcard routes validate pattern and handler shape") {
   constexpr std::string_view invalid[] = {
       "*", "/a*", "/a/*/b", "/a/**", "/a/*x",
@@ -273,8 +268,7 @@ DOBA_TEST("wildcard routes validate pattern and handler shape") {
     router<request, response> value;
     bool threw = false;
     try {
-      value.add("GET", route, [](const request&, response& res) {
-      });
+      value.add("GET", route, [](const request&, response& res) {});
     } catch (const std::invalid_argument&) {
       threw = true;
     }
@@ -283,40 +277,30 @@ DOBA_TEST("wildcard routes validate pattern and handler shape") {
   router<request, response> value;
   bool threw = false;
   try {
-    value.add("GET", "/items/:id/*", [](const request&, response& res) {
-    });
+    value.add("GET", "/items/:id/*", [](const request&, response& res) {});
   } catch (const std::invalid_argument&) {
     threw = true;
   }
   DOBA_EXPECT(threw);
   threw = false;
   try {
-    value.add("GET", "/items/*", [](const request&, response& res, int) {
-    });
+    value.add("GET", "/items/*", [](const request&, response& res, int) {});
   } catch (const std::invalid_argument&) {
     threw = true;
   }
   DOBA_EXPECT(threw);
 }
+
 // +===========================================================================+
 // | [>] match preserves first handler                           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("match preserves first handler") {
   router<request, response> value;
-  value.add(
-      "GET", "/resource",
-      [](const request&, response& res) {
-        res.value = "first";
-      });
-  value.add(
-      "GET", "/resource",
-      [](const request&, response& res) {
-        res.value = "second";
-      });
-  value.add(
-      "POST", "/resource",
-      [](const request&, response& res) {
-      });
+  value.add("GET", "/resource",
+            [](const request&, response& res) { res.value = "first"; });
+  value.add("GET", "/resource",
+            [](const request&, response& res) { res.value = "second"; });
+  value.add("POST", "/resource", [](const request&, response& res) {});
   auto get = value.match("GET", "/resource");
   auto post = value.match("POST", "/resource");
   request req;
@@ -327,49 +311,44 @@ DOBA_TEST("match preserves first handler") {
   DOBA_EXPECT_EQUAL(value.allowed_methods("/resource"), "GET, POST");
   DOBA_EXPECT(value.allowed_methods("/missing").empty());
 }
+
 // +===========================================================================+
 // | [>] allowed methods include matching parametrized routes    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("allowed methods include matching parametrized routes") {
   router<request, response> value;
-  value.add("GET", "/items/:id", [](const request&, response& res, int) {
-  });
+  value.add("GET", "/items/:id", [](const request&, response& res, int) {});
   value.add("POST", "/items/:name",
-            [](const request&, response& res, std::string_view) {
-  });
+            [](const request&, response& res, std::string_view) {});
   DOBA_EXPECT_EQUAL(value.allowed_methods("/items/42"), "GET, POST");
   DOBA_EXPECT_EQUAL(value.allowed_methods("/items/name"), "POST");
 }
+
 // +===========================================================================+
 // | [>] allowed methods include matching wildcard routes        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("allowed methods include matching wildcard routes") {
   router<request, response> value;
-  value.add("GET", "/assets/logo", [](const request&, response& res) {
-  });
-  value.add("GET", "/assets/*", [](const request&, response& res) {
-  });
-  value.add("POST", "/assets/:id", [](const request&, response& res, int) {
-  });
-  value.add("DELETE", "/assets/*", [](const request&, response& res) {
-  });
+  value.add("GET", "/assets/logo", [](const request&, response& res) {});
+  value.add("GET", "/assets/*", [](const request&, response& res) {});
+  value.add("POST", "/assets/:id", [](const request&, response& res, int) {});
+  value.add("DELETE", "/assets/*", [](const request&, response& res) {});
   DOBA_EXPECT_EQUAL(value.allowed_methods("/assets/logo"), "GET, DELETE");
-  DOBA_EXPECT_EQUAL(value.allowed_methods("/assets/42"),
-                    "POST, GET, DELETE");
+  DOBA_EXPECT_EQUAL(value.allowed_methods("/assets/42"), "POST, GET, DELETE");
   DOBA_EXPECT(value.allowed_methods("/assets").empty());
 }
+
 // +===========================================================================+
 // | [>] noexcept handlers register and execute                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("noexcept handlers register and execute") {
   router<request, response> value;
-  value.add("GET", "/sync", [](const request&, response& res) noexcept {
-    res.value = "sync";
-  });
+  value.add("GET", "/sync",
+            [](const request&, response& res) noexcept { res.value = "sync"; });
   value.add("GET", "/mutable/:id",
             [](const request&, response& res, int id) mutable noexcept {
-    res.value = std::to_string(id);
-  });
+              res.value = std::to_string(id);
+            });
   request req;
   response res;
   const auto sync = value.match("GET", "/sync");
@@ -378,11 +357,11 @@ DOBA_TEST("noexcept handlers register and execute") {
   const auto mutable_sync = value.match("GET", "/mutable/42");
   mutable_sync.parametrized_handler->invoke(req, res, "/mutable/42");
   DOBA_EXPECT_EQUAL(res.value, "42");
-
 }
+
 // +===========================================================================+
 // | [>] registration owns method and all route pattern forms    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("registration owns method and all route pattern forms") {
   router<request, response> value;
   {
@@ -390,15 +369,13 @@ DOBA_TEST("registration owns method and all route pattern forms") {
     std::string fixed = "/fixed";
     std::string parameter = "/value/:id";
     std::string wildcard = "/assets/*";
-    value.add(method, fixed, [](const request&, response& res) {
-      res.value = "fixed";
-    });
+    value.add(method, fixed,
+              [](const request&, response& res) { res.value = "fixed"; });
     value.add(method, parameter, [](const request&, response& res, int id) {
       res.value = std::to_string(id);
     });
-    value.add(method, wildcard, [](const request&, response& res) {
-      res.value = "wildcard";
-    });
+    value.add(method, wildcard,
+              [](const request&, response& res) { res.value = "wildcard"; });
     method.assign(method.size(), 'x');
     fixed.assign(fixed.size(), 'x');
     parameter.assign(parameter.size(), 'x');
@@ -419,14 +396,14 @@ DOBA_TEST("registration owns method and all route pattern forms") {
   wildcard.handler->operator()(req, res);
   DOBA_EXPECT_EQUAL(res.value, "wildcard");
 }
+
 // +===========================================================================+
 // | [>] invalid registration preserves existing route selection ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("invalid registration preserves existing route selection") {
   router<request, response> value;
-  value.add("GET", "/kept", [](const request&, response& res) {
-    res.value = "kept";
-  });
+  value.add("GET", "/kept",
+            [](const request&, response& res) { res.value = "kept"; });
   for (std::string_view pattern : {"/:", "/x/*/tail", "/x/:id/*"}) {
     bool threw = false;
     try {
@@ -457,37 +434,50 @@ namespace {
 class controller_probe {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   controller_probe(std::string prefix, int& alive)
-      : prefix_(std::move(prefix)), alive_(alive) { alive_++; }
+      : prefix_(std::move(prefix)), alive_(alive) {
+    alive_++;
+  }
   controller_probe(const controller_probe&) = delete;
   controller_probe(controller_probe&&) = delete;
   ~controller_probe() { alive_--; }
+  // +=========================================================================+
+  // | [>] register_routes                                          ( public ) |
+  // +-------------------------------------------------------------------------+
   template <typename Rty>
   void register_routes(Rty& routes) {
     routes.add("GET", prefix_ + "/count", &controller_probe::count);
     routes.add("GET", prefix_ + "/value/:id", &controller_probe::value);
     routes.add("GET", prefix_ + "/wild/*", &controller_probe::value_zero);
   }
+  // +=========================================================================+
+  // | [>] count                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void count(const request&, response& res) {
     res.value = std::to_string(++count_);
   }
+  // +=========================================================================+
+  // | [>] value                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void value(const request&, response& res, int id) const noexcept {
     res.value = std::to_string(count_ + id);
   }
-  void value_zero(const request&, response& res) const {
-    res.value = prefix_;
-  }
+  // +=========================================================================+
+  // | [>] value_zero                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  void value_zero(const request&, response& res) const { res.value = prefix_; }
 
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::string prefix_;
   int& alive_;
   int count_{0};
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] failing_controller                                         ( struct ) |
@@ -496,9 +486,15 @@ class controller_probe {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct failing_controller {
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   explicit failing_controller(int mode) : mode_(mode) {
     if (mode == 0) throw std::runtime_error("constructor");
   }
+  // +=========================================================================+
+  // | [>] register_routes                                          ( public ) |
+  // +-------------------------------------------------------------------------+
   template <typename Rty>
   void register_routes(Rty& routes) {
     if (mode_ == 1) return;
@@ -510,30 +506,49 @@ struct failing_controller {
     routes.add("POST", "/new/*", &failing_controller::get);
     routes.add("GET", "/invalid/:id", &failing_controller::get);
   }
+  // +=========================================================================+
+  // | [>] get                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   void get(const request&, response&) {}
+  // +=========================================================================+
+  // | [>] typed                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void typed(const request&, response&, int) {}
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   int mode_;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] staged_controller                                         ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct staged_controller {
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   router<request, response>& owner;
   bool& detached;
+  // +=========================================================================+
+  // | [>] register_routes                                          ( public ) |
+  // +-------------------------------------------------------------------------+
   template <typename Rty>
   void register_routes(Rty& routes) {
     routes.add("GET", "/staged", &staged_controller::get);
     detached = !owner.match("GET", "/staged");
   }
+  // +=========================================================================+
+  // | [>] get                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   void get(const request&, response&) {}
 };
 }  // namespace
 
 // +===========================================================================+
 // | [>] controllers share one instance per registration         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("controllers share one instance per registration") {
   int alive = 0;
   {
@@ -554,14 +569,13 @@ DOBA_TEST("controllers share one instance per registration") {
     DOBA_EXPECT_EQUAL(res.value, "1");
     value.match("GET", "/a/wild/x").handler->operator()({}, res);
     DOBA_EXPECT_EQUAL(res.value, "/a");
-
   }
   DOBA_EXPECT_EQUAL(alive, 0);
 }
 
 // +===========================================================================+
 // | [>] controller routes are staged before registration        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("controller routes are staged before registration") {
   router<request, response> value;
   bool detached = false;
@@ -572,12 +586,11 @@ DOBA_TEST("controller routes are staged before registration") {
 
 // +===========================================================================+
 // | [>] controller registration rolls back every route category ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("controller registration rolls back every route category") {
   router<request, response> value;
-  value.add("GET", "/old", [](const request&, response& res) {
-    res.value = "old";
-  });
+  value.add("GET", "/old",
+            [](const request&, response& res) { res.value = "old"; });
   value.add("GET", "/old/:id",
             [](const request&, response& res, int) { res.value = "typed"; });
   value.add("GET", "/old/*",
@@ -586,7 +599,9 @@ DOBA_TEST("controller registration rolls back every route category") {
     bool threw = false;
     try {
       value.add_controller<failing_controller>(mode);
-    } catch (const std::exception&) { threw = true; }
+    } catch (const std::exception&) {
+      threw = true;
+    }
     DOBA_EXPECT(threw);
     DOBA_EXPECT(!value.match("GET", "/new"));
     DOBA_EXPECT(!value.match("POST", "/new"));

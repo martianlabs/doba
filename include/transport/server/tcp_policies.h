@@ -54,7 +54,6 @@ struct tcp_policies {
   std::string ip;
   std::string port;
 };
-
 }  // namespace martianlabs::doba::transport::server
 
 #endif

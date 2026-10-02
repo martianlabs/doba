@@ -33,6 +33,20 @@
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the application. It creates an HTTP server     |
+// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
+// | The server registers two static file servers:                             |
+// |   * "/assets" serving files from the directory specified by argv[1],      |
+// |   * "/downloads" serving files from the same directory.                   |
+// | The server runs until a termination signal is received.                   |
+// | The root directory for the static file servers must be provided as        |
+// | a command-line argument.                                                  |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
   if (argc != 2) {
     std::cerr << "Usage: static_file_server <root>\n";

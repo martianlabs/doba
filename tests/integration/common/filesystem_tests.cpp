@@ -41,29 +41,37 @@ using martianlabs::doba::common::filesystem_file;
 // +---------------------------------------------------------------------------+
 // | [>] file_directory                                              ( class ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
+// | This class represents a temporary directory for testing purposes.         |        
+// | It creates a unique temporary directory upon construction and removes it  |
+// | upon destruction.                                                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class file_directory {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   file_directory() {
     static std::atomic<unsigned int> counter{0};
     const auto stamp =
         std::chrono::steady_clock::now().time_since_epoch().count();
     do {
       path_ = fs::temp_directory_path() /
-          ("doba_files_" + std::to_string(stamp) + "_" +
-           std::to_string(counter.fetch_add(1)));
+              ("doba_files_" + std::to_string(stamp) + "_" +
+               std::to_string(counter.fetch_add(1)));
     } while (!fs::create_directory(path_));
   }
   ~file_directory() {
     std::error_code error;
     fs::remove_all(path_, error);
   }
+  // +=========================================================================+
+  // | [>] path                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   const fs::path& path() const { return path_; }
+  // +=========================================================================+
+  // | [>] write                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void write(std::string_view name, std::string_view contents) {
     const fs::path relative(std::u8string(name.begin(), name.end()));
     std::ofstream output(path_ / relative, std::ios::binary);
@@ -75,14 +83,14 @@ class file_directory {
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   fs::path path_;
 };
 }  // namespace
 
 // +===========================================================================+
 // | [>] file reader ownership and cursors                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem readers retain separate cursors across ownership moves") {
   file_directory directory;
   fs::create_directory(directory.path() / "sub");
@@ -107,7 +115,7 @@ DOBA_TEST("filesystem readers retain separate cursors across ownership moves") {
 
 // +===========================================================================+
 // | [>] file reader direct access                               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem readers observe changes before the first read") {
   file_directory directory;
   directory.write("file", "old");

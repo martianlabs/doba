@@ -33,7 +33,7 @@ using martianlabs::doba::protocol::http::header_names;
 
 // +===========================================================================+
 // | [>] constants contain canonical field names                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("constants contain canonical field names") {
   constexpr std::string_view actual[] = {
       header_names::kConnection,
