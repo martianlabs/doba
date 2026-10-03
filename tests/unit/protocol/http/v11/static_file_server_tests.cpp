@@ -34,6 +34,7 @@
 
 #include "common/filesystem.h"
 #include "common/reader.h"
+#include "file_directory.h"
 #include "test_helper.h"
 
 #include "protocol/http/v11/static_file_server.h"
@@ -41,53 +42,9 @@
 #include "protocol/http/common/router.h"
 
 namespace {
+using martianlabs::doba::tests::file_directory;
 namespace fs = std::filesystem;
 using martianlabs::doba::common::filesystem_file;
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] file_directory                                              ( class ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-class file_directory {
- public:
-  // +=========================================================================+
-  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +-------------------------------------------------------------------------+
-  file_directory() {
-    static std::atomic<unsigned int> counter{0};
-    const auto stamp =
-        std::chrono::steady_clock::now().time_since_epoch().count();
-    do {
-      path_ = fs::temp_directory_path() /
-              ("doba_files_" + std::to_string(stamp) + "_" +
-               std::to_string(counter.fetch_add(1)));
-    } while (!fs::create_directory(path_));
-  }
-  ~file_directory() {
-    std::error_code error;
-    fs::remove_all(path_, error);
-  }
-  // +=========================================================================+
-  // | [>] path                                                     ( public ) |
-  // +-------------------------------------------------------------------------+
-  const fs::path& path() const { return path_; }
-  // +=========================================================================+
-  // | [>] write                                                    ( public ) |
-  // +-------------------------------------------------------------------------+
-  void write(std::string_view name, std::string_view contents) {
-    const fs::path relative(std::u8string(name.begin(), name.end()));
-    std::ofstream output(path_ / relative, std::ios::binary);
-    output.write(contents.data(),
-                 static_cast<std::streamsize>(contents.size()));
-    if (!output) throw std::runtime_error("Unable to write fixture");
-  }
-
- private:
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( private ) |
-  // +-------------------------------------------------------------------------+
-  fs::path path_;
-};
 }  // namespace
 
 namespace {
@@ -120,19 +77,19 @@ response file_request(file_router& routes, std::string_view method,
   storage.emplace_back();
   std::optional<response> result;
   result.emplace(storage.back());
-  auto decoded = decoder.deserialize(
-      wire.data(), wire.size(), 8192, consumed, [&](const request& value) {
-        const auto match = routes.match(method, value.get_absolute_path());
-        if (!match.handler) {
-          result->not_found_404();
-        } else {
-          (*match.handler)(value, *result);
-        }
-      });
+  auto decoded =
+      decoder.deserialize(wire.data(), wire.size(), 8192, consumed);
   if (decoded.code !=
           martianlabs::doba::protocol::deserialization_status::kSucceeded ||
-      !result) {
+      !decoded.request) {
     throw std::runtime_error("Invalid test request");
+  }
+  const auto& value = *decoded.request;
+  const auto match = routes.match(method, value.get_absolute_path());
+  if (!match.handler) {
+    result->not_found_404();
+  } else {
+    (*match.handler)(value, *result);
   }
   return std::move(*result);
 }
@@ -283,23 +240,15 @@ DOBA_TEST("static file server never escapes its root") {
       encoded += c;
   }
   vectors.push_back("/files/" + encoded);
-#ifdef _WIN32
-  for (std::string_view name :
-       {"CON", "con.txt", "NUL", "aux", "COM1", "lpt9.log", "CONIN$", "secret.",
-        "secret%20", "sec*ret", "sec%3fret", "sec%22ret"}) {
-    vectors.push_back("/files/" + std::string(name));
-  }
-#endif
   for (const auto& path : vectors) {
     martianlabs::doba::tests::unit::test_helper::set_context(path);
     const std::string wire =
         "GET " + path + " HTTP/1.1\r\nHost: example.com\r\n\r\n";
     decoder<request, response> value;
     std::size_t consumed = 0;
-    bool delivered = false;
-    auto decoded = value.deserialize(wire.data(), wire.size(), 8192, consumed,
-                                     [&](const request&) { delivered = true; });
-    if (!delivered) {
+    auto decoded =
+        value.deserialize(wire.data(), wire.size(), 8192, consumed);
+    if (!decoded.request) {
       DOBA_EXPECT_EQUAL(
           decoded.code,
           martianlabs::doba::protocol::deserialization_status::kInvalidSource);

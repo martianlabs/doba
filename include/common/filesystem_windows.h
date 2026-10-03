@@ -93,6 +93,68 @@ class filesystem_file {
       error = failure.code();
       return false;
     }
+    if (!valid_path(relative, error)) return false;
+    const auto target = directory / relative;
+    return open_target(directory, target, error);
+  }
+  // +=========================================================================+
+  // | [>] read                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::size_t read(std::span<std::byte> output) {
+    if (output.empty() || failed_) return 0;
+    if (file_ == INVALID_HANDLE_VALUE) {
+      failed_ = true;
+      return 0;
+    }
+    const auto count =
+        std::min({output.size(), size_ - position_,
+                  static_cast<std::size_t>(std::numeric_limits<DWORD>::max())});
+    if (!count) return 0;
+    DWORD result = 0;
+    if (!ReadFile(file_, output.data(), static_cast<DWORD>(count), &result,
+                  nullptr) ||
+        !result) {
+      failed_ = true;
+      return 0;
+    }
+    position_ += result;
+    return result;
+  }
+  // +=========================================================================+
+  // | [>] size                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] std::size_t size() const noexcept { return size_; }
+  // +=========================================================================+
+  // | [>] is_open                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] bool is_open() const noexcept {
+    return file_ != INVALID_HANDLE_VALUE;
+  }
+  // +=========================================================================+
+  // | [>] eof                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] bool eof() const noexcept { return position_ == size_; }
+  // +=========================================================================+
+  // | [>] failed                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] bool failed() const noexcept { return failed_; }
+  // +=========================================================================+
+  // | [>] close                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  void close() noexcept {
+    if (file_ != INVALID_HANDLE_VALUE) CloseHandle(file_);
+    file_ = INVALID_HANDLE_VALUE;
+    size_ = 0;
+    position_ = 0;
+    failed_ = false;
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] valid_path                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  static bool valid_path(const std::filesystem::path& relative,
+                         std::error_code& error) {
     for (const auto& part : relative) {
       auto name = part.native();
       if (name.back() == L'.' || name.back() == L' ' ||
@@ -115,7 +177,14 @@ class filesystem_file {
         return false;
       }
     }
-    const auto target = directory / relative;
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] open_target                                             ( private ) |
+  // +-------------------------------------------------------------------------+
+  bool open_target(const std::filesystem::path& directory,
+                   const std::filesystem::path& target,
+                   std::error_code& error) {
     auto current_path = target.root_path();
     const auto parts = target.relative_path();
     auto part = parts.begin();
@@ -204,59 +273,6 @@ class filesystem_file {
       current_path /= *part++;
     }
   }
-  // +=========================================================================+
-  // | [>] read                                                     ( public ) |
-  // +-------------------------------------------------------------------------+
-  std::size_t read(std::span<std::byte> output) {
-    if (output.empty() || failed_) return 0;
-    if (file_ == INVALID_HANDLE_VALUE) {
-      failed_ = true;
-      return 0;
-    }
-    const auto count =
-        std::min({output.size(), size_ - position_,
-                  static_cast<std::size_t>(std::numeric_limits<DWORD>::max())});
-    if (!count) return 0;
-    DWORD result = 0;
-    if (!ReadFile(file_, output.data(), static_cast<DWORD>(count), &result,
-                  nullptr) ||
-        !result) {
-      failed_ = true;
-      return 0;
-    }
-    position_ += result;
-    return result;
-  }
-  // +=========================================================================+
-  // | [>] size                                                     ( public ) |
-  // +-------------------------------------------------------------------------+
-  [[nodiscard]] std::size_t size() const noexcept { return size_; }
-  // +=========================================================================+
-  // | [>] is_open                                                  ( public ) |
-  // +-------------------------------------------------------------------------+
-  [[nodiscard]] bool is_open() const noexcept {
-    return file_ != INVALID_HANDLE_VALUE;
-  }
-  // +=========================================================================+
-  // | [>] eof                                                      ( public ) |
-  // +-------------------------------------------------------------------------+
-  [[nodiscard]] bool eof() const noexcept { return position_ == size_; }
-  // +=========================================================================+
-  // | [>] failed                                                   ( public ) |
-  // +-------------------------------------------------------------------------+
-  [[nodiscard]] bool failed() const noexcept { return failed_; }
-  // +=========================================================================+
-  // | [>] close                                                    ( public ) |
-  // +-------------------------------------------------------------------------+
-  void close() noexcept {
-    if (file_ != INVALID_HANDLE_VALUE) CloseHandle(file_);
-    file_ = INVALID_HANDLE_VALUE;
-    size_ = 0;
-    position_ = 0;
-    failed_ = false;
-  }
-
- private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+

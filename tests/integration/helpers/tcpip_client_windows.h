@@ -1,0 +1,398 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+#ifndef martianlabs_doba_tests_integration_tcpip_client_windows_h
+#define martianlabs_doba_tests_integration_tcpip_client_windows_h
+
+#include <algorithm>
+#include <chrono>
+#include <climits>
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <string_view>
+
+#include "network/environment.h"
+
+namespace martianlabs::doba::tests::integration {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] tcpip_client                                                ( class ) |
+// +---------------------------------------------------------------------------+
+// | TCP/IP client implementation.                                             |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+class tcpip_client {
+ public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  tcpip_client() = default;
+  tcpip_client(const tcpip_client&) = delete;
+  tcpip_client(tcpip_client&&) noexcept = delete;
+  ~tcpip_client() { close(); }
+  tcpip_client& operator=(const tcpip_client&) = delete;
+  tcpip_client& operator=(tcpip_client&&) noexcept = delete;
+  // +=========================================================================+
+  // | [>] find_available_port                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  uint16_t find_available_port() const {
+    socket_type socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (socket == invalid_socket()) return 0;
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_port = 0;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (::bind(socket, reinterpret_cast<sockaddr*>(&address),
+               sizeof(address)) != 0) {
+      close_socket(socket);
+      return 0;
+    }
+    int size = sizeof(address);
+    if (::getsockname(socket, reinterpret_cast<sockaddr*>(&address), &size) !=
+        0) {
+      close_socket(socket);
+      return 0;
+    }
+    close_socket(socket);
+    return ntohs(address.sin_port);
+  }
+  // +=========================================================================+
+  // | [>] connect                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool connect(uint16_t port,
+               std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
+    close();
+    operation_ = "connect";
+    error_ = {};
+    native_error_ = 0;
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    socket_ = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (socket_ == invalid_socket()) return fail_socket();
+    u_long nonblocking = 1;
+    if (::ioctlsocket(socket_, FIONBIO, &nonblocking) != 0) {
+      fail_socket();
+      close();
+      return false;
+    }
+    if (receive_buffer_size_ != 0 &&
+        !set_receive_buffer_size(receive_buffer_size_)) {
+      fail_socket();
+      close();
+      return false;
+    }
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (::connect(socket_, reinterpret_cast<sockaddr*>(&address),
+                  sizeof(address)) == 0) {
+      return true;
+    }
+    if (!pending(socket_error()) || !wait_ready(true, deadline)) {
+      if (error_.empty()) fail_socket();
+      close();
+      return false;
+    }
+    int error = 0;
+    int size = sizeof(error);
+    if (::getsockopt(socket_, SOL_SOCKET, SO_ERROR,
+                     reinterpret_cast<char*>(&error), &size) != 0) {
+      fail_socket();
+    } else if (error != 0) {
+      error_ = "socket";
+      native_error_ = error;
+    } else {
+      return true;
+    }
+    close();
+    return false;
+  }
+  // +=========================================================================+
+  // | [>] send_all                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool send_all(std::string_view value,
+                std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
+    operation_ = "send";
+    error_ = {};
+    native_error_ = 0;
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    std::size_t sent = 0;
+    while (sent < value.size()) {
+      if (!wait_ready(true, deadline)) return false;
+      const int size = static_cast<int>(
+          std::min(value.size() - sent, static_cast<std::size_t>(INT_MAX)));
+      int count = ::send(socket_, value.data() + sent, size, 0);
+      if (count < 0 && pending(socket_error())) continue;
+      if (count <= 0) return fail_socket();
+      sent += static_cast<std::size_t>(count);
+    }
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] receive                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::optional<std::string> receive(
+      std::size_t size,
+      std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
+    operation_ = "receive";
+    error_ = {};
+    native_error_ = 0;
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    std::string result(size, '\0');
+    std::size_t received = 0;
+    while (received < size) {
+      if (!wait_ready(false, deadline)) return std::nullopt;
+      int count =
+          ::recv(socket_, result.data() + received,
+                 static_cast<int>(std::min(size - received,
+                                           static_cast<std::size_t>(INT_MAX))),
+                 0);
+      if (count < 0 && pending(socket_error())) continue;
+      if (count == 0) {
+        error_ = "eof";
+        return std::nullopt;
+      }
+      if (count < 0) {
+        fail_socket();
+        return std::nullopt;
+      }
+      received += static_cast<std::size_t>(count);
+    }
+    return result;
+  }
+  // +=========================================================================+
+  // | [>] receive_some                                             ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::optional<std::string> receive_some(
+      std::size_t maximum,
+      std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
+    operation_ = "receive";
+    error_ = {};
+    native_error_ = 0;
+    if (!maximum ||
+        !wait_ready(false, std::chrono::steady_clock::now() + timeout)) {
+      return std::nullopt;
+    }
+    std::string result((std::min)(maximum, static_cast<std::size_t>(INT_MAX)),
+                       '\0');
+    const int count =
+        ::recv(socket_, result.data(), static_cast<int>(result.size()), 0);
+    if (count <= 0) {
+      if (count == 0)
+        error_ = "eof";
+      else
+        fail_socket();
+      return std::nullopt;
+    }
+    result.resize(static_cast<std::size_t>(count));
+    return result;
+  }
+  // +=========================================================================+
+  // | [>] has_data                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool has_data(std::chrono::milliseconds timeout) const {
+    fd_set read_set;
+    FD_ZERO(&read_set);
+    FD_SET(socket_, &read_set);
+    timeval value{};
+    value.tv_sec = static_cast<long>(timeout.count() / 1000);
+    value.tv_usec = static_cast<long>((timeout.count() % 1000) * 1000);
+    int ready = ::select(0, &read_set, nullptr, nullptr, &value);
+    return ready > 0 && FD_ISSET(socket_, &read_set);
+  }
+  // +=========================================================================+
+  // | [>] wait_for_close                                           ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool wait_for_close(std::chrono::milliseconds timeout) {
+    operation_ = "receive";
+    error_ = {};
+    native_error_ = 0;
+    if (!wait_ready(false, std::chrono::steady_clock::now() + timeout)) {
+      return false;
+    }
+    char value = 0;
+    int count = ::recv(socket_, &value, 1, 0);
+    if (count < 0) return fail_socket();
+    if (count == 0) error_ = "eof";
+    return count == 0;
+  }
+  // +=========================================================================+
+  // | [>] receive_until_close                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::optional<std::string> receive_until_close(
+      std::size_t maximum,
+      std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
+    operation_ = "receive";
+    error_ = {};
+    native_error_ = 0;
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    std::string result;
+    char buffer[8192];
+    for (;;) {
+      if (!wait_ready(false, deadline)) return std::nullopt;
+      int count = ::recv(socket_, buffer, sizeof(buffer), 0);
+      if (count < 0 && pending(socket_error())) continue;
+      if (count == 0) {
+        error_ = "eof";
+        return result;
+      }
+      if (count < 0) {
+        fail_socket();
+        return std::nullopt;
+      }
+      if (static_cast<std::size_t>(count) > maximum - result.size()) {
+        error_ = "limit";
+        return std::nullopt;
+      }
+      result.append(buffer, static_cast<std::size_t>(count));
+    }
+  }
+  // +=========================================================================+
+  // | [>] operation                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::string_view operation() const { return operation_; }
+  // +=========================================================================+
+  // | [>] error                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::string_view error() const { return error_; }
+  // +=========================================================================+
+  // | [>] native_error                                             ( public ) |
+  // +-------------------------------------------------------------------------+
+  int native_error() const { return native_error_; }
+  bool connection_reset() const { return native_error_ == WSAECONNRESET; }
+  // +=========================================================================+
+  // | [>] shutdown_write                                           ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool shutdown_write() {
+    if (socket_ == invalid_socket()) return false;
+    return ::shutdown(socket_, SD_SEND) == 0;
+  }
+  // +=========================================================================+
+  // | [>] set_receive_buffer_size                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool set_receive_buffer_size(int size) {
+    if (size <= 0) return false;
+    receive_buffer_size_ = size;
+    return socket_ == invalid_socket() ||
+           ::setsockopt(socket_, SOL_SOCKET, SO_RCVBUF,
+                        reinterpret_cast<const char*>(&size),
+                        sizeof(size)) == 0;
+  }
+  // +=========================================================================+
+  // | [>] abort                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  void abort() {
+    if (socket_ == invalid_socket()) return;
+    linger value{1, 0};
+    ::setsockopt(socket_, SOL_SOCKET, SO_LINGER,
+                 reinterpret_cast<const char*>(&value), sizeof(value));
+    close_socket(socket_);
+    socket_ = invalid_socket();
+  }
+  // +=========================================================================+
+  // | [>] close                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  void close() {
+    if (socket_ == invalid_socket()) return;
+    ::shutdown(socket_, SD_BOTH);
+    close_socket(socket_);
+    socket_ = invalid_socket();
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] TYPEs                                                   ( private ) |
+  // +-------------------------------------------------------------------------+
+  using socket_type = SOCKET;
+  static socket_type invalid_socket() { return INVALID_SOCKET; }
+  static void close_socket(socket_type socket) { ::closesocket(socket); }
+  // +=========================================================================+
+  // | [>] socket_error                                            ( private ) |
+  // +-------------------------------------------------------------------------+
+  static int socket_error() {
+    return ::WSAGetLastError();
+  }
+  // +=========================================================================+
+  // | [>] pending                                                 ( private ) |
+  // +-------------------------------------------------------------------------+
+  static bool pending(int error) {
+    return error == WSAEWOULDBLOCK || error == WSAEINPROGRESS ||
+           error == WSAEINTR;
+  }
+  // +=========================================================================+
+  // | [>] fail_socket                                             ( private ) |
+  // +-------------------------------------------------------------------------+
+  bool fail_socket() {
+    error_ = "socket";
+    native_error_ = socket_error();
+    return false;
+  }
+  // +=========================================================================+
+  // | [>] wait_ready                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  bool wait_ready(bool writing,
+                  std::chrono::steady_clock::time_point deadline) {
+    for (;;) {
+      const auto remaining =
+          std::chrono::duration_cast<std::chrono::microseconds>(
+              deadline - std::chrono::steady_clock::now());
+      if (remaining.count() <= 0) {
+        error_ = "timeout";
+        return false;
+      }
+      fd_set selected;
+      fd_set errors;
+      FD_ZERO(&selected);
+      FD_ZERO(&errors);
+      FD_SET(socket_, &selected);
+      FD_SET(socket_, &errors);
+      timeval timeout{};
+      timeout.tv_sec = static_cast<long>(remaining.count() / 1000000);
+      timeout.tv_usec = static_cast<long>(remaining.count() % 1000000);
+      const int count =
+          ::select(0, writing ? nullptr : &selected,
+                   writing ? &selected : nullptr, &errors, &timeout);
+      if (count > 0) return true;
+      if (count == 0) {
+        error_ = "timeout";
+        return false;
+      }
+      if (!pending(socket_error())) return fail_socket();
+    }
+  }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  [[maybe_unused]] network::detail::environment environment_;
+  socket_type socket_{invalid_socket()};
+  int receive_buffer_size_ = 0;
+  std::string_view operation_;
+  std::string_view error_;
+  int native_error_ = 0;
+};
+}  // namespace martianlabs::doba::tests::integration
+
+#endif

@@ -47,7 +47,7 @@ int main() {
   if (!context) return 1;
   SSL_CTX_free(context);
   const auto fixtures = std::filesystem::path(__FILE__).parent_path() /
-                        "../../../unit/transport/server/fixtures";
+                        "fixtures";
   transport::tls_policies configuration;
   configuration.certificate_file = (fixtures / "server.crt").string();
   configuration.private_key_file = (fixtures / "server.key").string();

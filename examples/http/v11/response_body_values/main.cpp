@@ -26,7 +26,6 @@
 #include <string_view>
 
 #include "common/console_logger.h"
-#include "common/logo.h"
 #include "common/signaler.h"
 #include "protocol/http/v11/server.h"
 

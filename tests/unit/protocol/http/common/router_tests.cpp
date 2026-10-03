@@ -30,6 +30,7 @@
 #include <utility>
 
 #include "protocol/http/common/router.h"
+#include "router_value_response.h"
 #include "test_helper.h"
 
 namespace {
@@ -47,19 +48,7 @@ struct request {
   int event{0};
 };
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] response                                                   ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Test message representation.                                              |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct response {
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
-  // +-------------------------------------------------------------------------+
-  std::string value;
-};
+using response = martianlabs::doba::tests::unit::router_value_response;
 using martianlabs::doba::protocol::http::router;
 }  // namespace
 

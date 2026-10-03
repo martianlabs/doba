@@ -22,20 +22,47 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <array>
 #include <cstddef>
 #include <string>
 
-#include "../../../../../examples/http/v11/expect_continue/echo_handler.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
+#include "protocol/http/v11/server.h"
 
 namespace {
-using martianlabs::doba::examples::register_echo_route;
 using martianlabs::doba::protocol::http::v11::server;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 using martianlabs::doba::tests::integration::test_helper;
+void register_echo_route(server<>& http_server) {
+  using martianlabs::doba::protocol::http::v11::request;
+  using martianlabs::doba::protocol::http::v11::response;
+  http_server.add_route(
+      "POST", "/echo",
+      [](const request& req, response& res) {
+        res.ok_200();
+        if (!req.has_body_reader()) {
+          res.set_body("");
+          return;
+        }
+        std::array<std::byte, 1024> buffer{};
+        std::string body;
+        for (;;) {
+          const auto state = req.get_body_reader()->read(buffer);
+          if (state.has_error) {
+            res.bad_request_400();
+            return;
+          }
+          body.append(reinterpret_cast<const char*>(buffer.data()),
+                      state.produced);
+          if (state.complete) break;
+        }
+        res.set_body(body);
+        return;
+      });
+}
 }  // namespace
 
 // +===========================================================================+

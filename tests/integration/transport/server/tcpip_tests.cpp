@@ -33,14 +33,16 @@
 #include <string>
 #include <thread>
 
-#include "common/output.h"
+#include "protocol/send_delegate.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
+#include "wait_count.h"
 #include "transport/server/tcp.h"
 
 namespace {
 namespace tr = martianlabs::doba::transport::server;
 using martianlabs::doba::tests::integration::tcpip_client;
+using martianlabs::doba::tests::integration::wait_count;
 using namespace std::chrono_literals;
 struct byte_engine;
 
@@ -70,7 +72,7 @@ struct byte_engine {
   // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  void set_on_send(martianlabs::doba::common::send_delegate value) {
+  void set_on_send(martianlabs::doba::protocol::send_delegate value) {
     send = std::move(value);
   }
   // +=========================================================================+
@@ -97,28 +99,10 @@ struct byte_engine {
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
   std::shared_ptr<byte_state> state;
-  martianlabs::doba::common::send_delegate send;
+  martianlabs::doba::protocol::send_delegate send;
   std::function<void()> close;
 };
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] wait_count                                               ( function ) |
-// +---------------------------------------------------------------------------+
-// | This function waits for an atomic integer to reach a specific value.      |
-// | It checks the value of the atomic integer in a loop until it matches the  |
-// | expected value or a timeout occurs. If the expected value is reached, it  |
-// | returns true; otherwise, it returns false after the timeout period.       |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-bool wait_count(const std::atomic<int>& count, int expected) {
-  const auto deadline = std::chrono::steady_clock::now() + 3s;
-  while (count.load() < expected &&
-         std::chrono::steady_clock::now() < deadline) {
-    std::this_thread::yield();
-  }
-  return count.load() == expected;
-}
 }  // namespace
 
 // +===========================================================================+
@@ -1017,7 +1001,7 @@ DOBA_TEST("tcpip accepts concurrent producers without new input") {
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
-  martianlabs::doba::common::send_delegate output;
+  martianlabs::doba::protocol::send_delegate output;
   std::atomic<int> ready{0};
   state->receive = [&](byte_engine& engine, const char*, std::size_t size,
                        std::size_t) {
@@ -1115,7 +1099,7 @@ DOBA_TEST("tcpip closes safely while producers enqueue") {
     const auto port = client.find_available_port();
     DOBA_EXPECT(port != 0);
     auto state = std::make_shared<byte_state>();
-    martianlabs::doba::common::send_delegate output;
+    martianlabs::doba::protocol::send_delegate output;
     std::atomic<int> ready{0};
     std::atomic<bool> release{false};
     state->receive = [&](byte_engine& engine, const char*, std::size_t size,

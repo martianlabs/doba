@@ -39,11 +39,13 @@ using martianlabs::doba::protocol::deserialization_status;
 DOBA_TEST("deserialization errors preserve status and defaults") {
   deserialization_result<int, int> empty;
   DOBA_EXPECT_EQUAL(empty.code, deserialization_status::kInvalidSource);
+  DOBA_EXPECT(!empty.request);
   DOBA_EXPECT(!empty.response);
   for (const auto status : {deserialization_status::kInvalidSource,
                             deserialization_status::kMoreBytesNeeded}) {
     deserialization_result<int, int> value(status);
     DOBA_EXPECT_EQUAL(value.code, status);
+    DOBA_EXPECT(!value.request);
     DOBA_EXPECT(!value.response);
   }
 }
@@ -53,6 +55,7 @@ DOBA_TEST("deserialization errors preserve status and defaults") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("deserialization copies and moves preserve values") {
   deserialization_result<int, int> value(deserialization_status::kSucceeded);
+  value.request.emplace(7);
   value.response.emplace(9);
   auto copy = value;
   deserialization_result<int, int> moved(std::move(copy));
@@ -61,6 +64,8 @@ DOBA_TEST("deserialization copies and moves preserve values") {
   value = {};
   moved = {};
   DOBA_EXPECT_EQUAL(target.code, deserialization_status::kSucceeded);
+  DOBA_EXPECT(target.request.has_value());
+  DOBA_EXPECT_EQUAL(*target.request, 7);
   DOBA_EXPECT(target.response.has_value());
   DOBA_EXPECT_EQUAL(*target.response, 9);
 }

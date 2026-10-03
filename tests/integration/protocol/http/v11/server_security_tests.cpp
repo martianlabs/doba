@@ -29,6 +29,7 @@
 #include <vector>
 
 #include "protocol/http/v11/server.h"
+#include "echo_body.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
@@ -42,38 +43,10 @@ namespace {
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::protocol::http::v11::server;
+using martianlabs::doba::tests::integration::echo_body;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] echo_body                                                ( function ) |
-// +---------------------------------------------------------------------------+
-// | This function reads the entire body of an HTTP request and echoes it back |
-// | in the response.                                                          |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-void echo_body(const request& req, response& res) {
-  if (!req.has_body_reader()) {
-    res.bad_request_400();
-    return;
-  }
-  std::array<std::byte, 1024> buffer{};
-  std::string body;
-  for (;;) {
-    const auto state = req.get_body_reader()->read(buffer);
-    if (state.has_error) {
-      res.bad_request_400();
-      return;
-    }
-    body.append(reinterpret_cast<const char*>(buffer.data()), state.produced);
-    if (state.complete) {
-      res.ok_200();
-      res.set_body(body);
-      return;
-    }
-  }
-}
 }  // namespace
 
 // +===========================================================================+

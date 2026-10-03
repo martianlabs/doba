@@ -29,32 +29,15 @@
 #include <utility>
 
 #include "protocol/http/common/router_handler_parametrized.h"
+#include "router_empty_request.h"
+#include "router_input_case.h"
+#include "router_value_response.h"
 #include "test_helper.h"
 
 namespace {
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] request                                                    ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Test message representation.                                              |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct request {};
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] response                                                   ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Test message representation.                                              |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct response {
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
-  // +-------------------------------------------------------------------------+
-  std::string value;
-};
-
+using martianlabs::doba::tests::unit::router_input_case;
+using request = martianlabs::doba::tests::unit::router_empty_request;
+using response = martianlabs::doba::tests::unit::router_value_response;
 using martianlabs::doba::protocol::http::make_router_handler_parametrized;
 }  // namespace
 
@@ -250,10 +233,7 @@ DOBA_TEST("route conversion accepts unsigned integer boundaries") {
 DOBA_TEST("route conversion rejects integer overflow") {
   {
     using parameter = std::int64_t;
-    struct test_case {
-      std::string_view input;
-    };
-    const test_case cases[] = {
+    const router_input_case cases[] = {
         {"-9223372036854775809"},
         {"9223372036854775808"},
     };
@@ -282,10 +262,7 @@ DOBA_TEST("route conversion rejects integer overflow") {
   }
   {
     using parameter = std::uint64_t;
-    struct test_case {
-      std::string_view input;
-    };
-    const test_case cases[] = {
+    const router_input_case cases[] = {
         {"18446744073709551616"},
     };
     for (const auto& test : cases) {
@@ -319,10 +296,7 @@ DOBA_TEST("route conversion rejects integer overflow") {
 DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
   {
     using parameter = int;
-    struct test_case {
-      std::string_view input;
-    };
-    const test_case cases[] = {
+    const router_input_case cases[] = {
         {"42x"},
         {" 42"},
         {"42 "},
@@ -353,10 +327,7 @@ DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
   }
   {
     using parameter = double;
-    struct test_case {
-      std::string_view input;
-    };
-    const test_case cases[] = {
+    const router_input_case cases[] = {
         {"1.5x"},
         {"+1.5"},
     };
@@ -390,10 +361,7 @@ DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("route conversion rejects negative unsigned values") {
   using parameter = std::uint64_t;
-  struct test_case {
-    std::string_view input;
-  };
-  const test_case cases[] = {
+  const router_input_case cases[] = {
       {"-1"},
       {"-0"},
   };
@@ -463,10 +431,7 @@ DOBA_TEST("route conversion accepts finite floating point values") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("route conversion rejects floating point range errors") {
   using parameter = double;
-  struct test_case {
-    std::string_view input;
-  };
-  const test_case cases[] = {
+  const router_input_case cases[] = {
       {"1e9999"},
       {"1e-9999"},
   };

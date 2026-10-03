@@ -174,12 +174,10 @@ class decoder {
   // +=========================================================================+
   // | [>] deserialize                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  template <typename FNty>
   deserialization_result<RQty, RSty> deserialize(const char* buffer,
                                                  const std::size_t size,
                                                  const std::size_t capacity,
-                                                 std::size_t& consumed,
-                                                 FNty&& on_request) {
+                                                 std::size_t& consumed) {
     std::string_view source(buffer, size);
     deserialization_result<RQty, RSty> result =
         body_framer_ ? parse_body(source) : parse_core(source);
@@ -239,7 +237,7 @@ class decoder {
               host_host, host_port, host_type, target_authority_host,
               target_authority_port, target_authority_type,
               context_.connection.close_requested, std::move(body_reader));
-          on_request(request);
+          result.request.emplace(std::move(request));
         }
       } catch (...) {
         cleanup_body_file();

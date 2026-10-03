@@ -34,9 +34,11 @@
 #include "protocol/http/v11/server.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
+#include "file_directory.h"
 #include "test_helper.h"
 
 namespace {
+using martianlabs::doba::tests::file_directory;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] general                                                 ( constants ) |
@@ -353,58 +355,13 @@ namespace {
 namespace fs = std::filesystem;
 using martianlabs::doba::common::filesystem_file;
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] response_file_directory                                     ( class ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-class response_file_directory {
- public:
-  // +=========================================================================+
-  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +-------------------------------------------------------------------------+
-  response_file_directory() {
-    static std::atomic<unsigned int> counter{0};
-    const auto stamp =
-        std::chrono::steady_clock::now().time_since_epoch().count();
-    do {
-      path_ = fs::temp_directory_path() /
-              ("doba_files_" + std::to_string(stamp) + "_" +
-               std::to_string(counter.fetch_add(1)));
-    } while (!fs::create_directory(path_));
-  }
-  ~response_file_directory() {
-    std::error_code error;
-    fs::remove_all(path_, error);
-  }
-  // +=========================================================================+
-  // | [>] path                                                     ( public ) |
-  // +-------------------------------------------------------------------------+
-  const fs::path& path() const { return path_; }
-  // +=========================================================================+
-  // | [>] write                                                    ( public ) |
-  // +-------------------------------------------------------------------------+
-  void write(std::string_view name, std::string_view contents) {
-    const fs::path relative(std::u8string(name.begin(), name.end()));
-    std::ofstream output(path_ / relative, std::ios::binary);
-    output.write(contents.data(),
-                 static_cast<std::streamsize>(contents.size()));
-    if (!output) throw std::runtime_error("Unable to write fixture");
-  }
-
- private:
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( private ) |
-  // +-------------------------------------------------------------------------+
-  fs::path path_;
-};
 }  // namespace
 
 // +===========================================================================+
 // | [>] incomplete file response                                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP closes incomplete file responses before subsequent bytes") {
-  response_file_directory directory;
+  file_directory directory;
   directory.write("file", "abcdef");
   tcpip_client client;
   const auto port = client.find_available_port();
@@ -438,13 +395,9 @@ DOBA_TEST("HTTP closes incomplete file responses before subsequent bytes") {
     if (!byte) break;
     wire += *byte;
   }
-#ifdef _WIN32
-  const int reset = WSAECONNRESET;
-#else
-  const int reset = ECONNRESET;
-#endif
+
   DOBA_EXPECT(client.error() == "eof" ||
-              (client.error() == "socket" && client.native_error() == reset));
+              (client.error() == "socket" && client.connection_reset()));
   DOBA_EXPECT(wire.find("must-not-be-transmitted") == wire.npos);
   DOBA_EXPECT(wire.find("abcdef") == wire.npos);
   value.stop();

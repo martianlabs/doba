@@ -23,7 +23,6 @@
 // permissions and limitations under the License.
 
 #include "common/console_logger.h"
-#include "common/logo.h"
 #include "common/signaler.h"
 #include "protocol/http/common/method_names.h"
 #include "protocol/http/v11/server.h"

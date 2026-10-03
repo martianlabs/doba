@@ -22,7 +22,6 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifdef DOBA_ENABLE_TLS
 
 #include <algorithm>
 #include <array>
@@ -43,8 +42,10 @@
 #include "platform.h"
 #include <openssl/ssl.h>
 
-#include "common/output.h"
+#include "protocol/send_delegate.h"
 #include "tcpip_client.h"
+#include "tls_client.h"
+#include "tls_server_policies.h"
 #include "test_helper.h"
 #include "transport/server/tls.h"
 
@@ -55,7 +56,9 @@ namespace {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 namespace tr = martianlabs::doba::transport::server;
+using martianlabs::doba::tests::integration::server_policies;
 using martianlabs::doba::tests::integration::tcpip_client;
+using martianlabs::doba::tests::integration::tls_client;
 using namespace std::chrono_literals;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -71,7 +74,7 @@ struct byte_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  martianlabs::doba::common::send_delegate send;
+  martianlabs::doba::protocol::send_delegate send;
   std::function<void()> close;
   bool split{false};
   bool close_after{false};
@@ -81,11 +84,12 @@ struct byte_engine {
   std::function<std::size_t(byte_engine&, const char*, std::size_t,
                             std::size_t)>
       receive;
-  std::function<void(const martianlabs::doba::common::send_delegate&)> capture;
+  std::function<void(const martianlabs::doba::protocol::send_delegate&)>
+      capture;
   // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  void set_on_send(martianlabs::doba::common::send_delegate value) {
+  void set_on_send(martianlabs::doba::protocol::send_delegate value) {
     send = std::move(value);
   }
   // +=========================================================================+
@@ -131,149 +135,6 @@ struct byte_engine {
     return size;
   }
 };
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] tls_client                                                 ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct tls_client {
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
-  // +-------------------------------------------------------------------------+
-  tcpip_client socket;
-  std::unique_ptr<SSL_CTX, decltype(&SSL_CTX_free)> context{
-      SSL_CTX_new(TLS_client_method()), SSL_CTX_free};
-  std::unique_ptr<SSL, decltype(&SSL_free)> ssl{
-      context ? SSL_new(context.get()) : nullptr, SSL_free};
-  std::unique_ptr<BIO, decltype(&BIO_free)> network{nullptr, BIO_free};
-  // +=========================================================================+
-  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +-------------------------------------------------------------------------+
-  tls_client() {
-    BIO* internal = nullptr;
-    BIO* external = nullptr;
-    if (!ssl || BIO_new_bio_pair(&internal, 0, &external, 0) != 1) {
-      throw std::runtime_error("TLS client could not be created!");
-    }
-    SSL_set_bio(ssl.get(), internal, internal);
-    network.reset(external);
-    SSL_set_connect_state(ssl.get());
-  }
-  // +=========================================================================+
-  // | [>] exchange                                                 ( public ) |
-  // +-------------------------------------------------------------------------+
-  bool exchange(std::size_t fragment = 4096) {
-    std::array<char, 4096> bytes;
-    while (BIO_ctrl_pending(network.get())) {
-      std::size_t size = 0;
-      if (BIO_read_ex(network.get(), bytes.data(),
-                      (std::min)(fragment, bytes.size()), &size) != 1 ||
-          !socket.send_all(std::string_view(bytes.data(), size)))
-        return false;
-    }
-    if (!socket.has_data(10ms)) return true;
-    auto received = socket.receive_some(bytes.size());
-    if (!received) return false;
-    std::size_t written = 0;
-    return BIO_write_ex(network.get(), received->data(), received->size(),
-                        &written) == 1 &&
-           written == received->size();
-  }
-  // +=========================================================================+
-  // | [>] negotiate                                                ( public ) |
-  // +-------------------------------------------------------------------------+
-  bool negotiate(std::size_t fragment = 4096) {
-    for (int step = 0; step < 100; ++step) {
-      const int result = SSL_do_handshake(ssl.get());
-      if (result != 1) {
-        const int error = SSL_get_error(ssl.get(), result);
-        if (error != SSL_ERROR_WANT_READ && error != SSL_ERROR_WANT_WRITE)
-          return false;
-      }
-      if (!exchange(fragment)) return false;
-      if (SSL_is_init_finished(ssl.get())) return true;
-    }
-    return false;
-  }
-  // +=========================================================================+
-  // | [>] send                                                     ( public ) |
-  // +-------------------------------------------------------------------------+
-  bool send(std::string_view value, std::size_t fragment = 4096) {
-    for (int step = 0; step < 100; ++step) {
-      std::size_t written = 0;
-      const int result =
-          SSL_write_ex(ssl.get(), value.data(), value.size(), &written);
-      const int error = result == 1 ? 0 : SSL_get_error(ssl.get(), result);
-      if (!exchange(fragment)) return false;
-      if (result == 1) return written == value.size();
-      if (error != SSL_ERROR_WANT_READ && error != SSL_ERROR_WANT_WRITE)
-        return false;
-    }
-    return false;
-  }
-  // +=========================================================================+
-  // | [>] receive                                                  ( public ) |
-  // +-------------------------------------------------------------------------+
-  std::optional<std::string> receive(std::size_t size) {
-    std::string result(size, '\0');
-    std::size_t total = 0;
-    for (int step = 0; step < 400 && total < size; ++step) {
-      std::size_t received = 0;
-      const int value = SSL_read_ex(ssl.get(), result.data() + total,
-                                    size - total, &received);
-      total += received;
-      if (value == 1) {
-        if (total == size) return result;
-        continue;
-      }
-      const int error = SSL_get_error(ssl.get(), value);
-      if (error != SSL_ERROR_WANT_READ && error != SSL_ERROR_WANT_WRITE)
-        return std::nullopt;
-      if (!exchange()) return std::nullopt;
-    }
-    return std::nullopt;
-  }
-  // +=========================================================================+
-  // | [>] receive_close                                            ( public ) |
-  // +-------------------------------------------------------------------------+
-  bool receive_close() {
-    std::array<char, 32> bytes;
-    for (int step = 0; step < 100; ++step) {
-      std::size_t received = 0;
-      const int result =
-          SSL_read_ex(ssl.get(), bytes.data(), bytes.size(), &received);
-      if (result == 1) return false;
-      const int error = SSL_get_error(ssl.get(), result);
-      if (error == SSL_ERROR_ZERO_RETURN) return true;
-      if (error != SSL_ERROR_WANT_READ && error != SSL_ERROR_WANT_WRITE)
-        return false;
-      if (!exchange()) return false;
-    }
-    return false;
-  }
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] server_policies                                          ( function ) |
-// +---------------------------------------------------------------------------+
-// | This function returns a TLS server configuration with the given port and  |
-// | a self-signed certificate and private key for testing purposes.           |
-// | It sets the IP address to "127.0.0.1" and the worker count to 2.          |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-tr::tls_policies server_policies(uint16_t port) {
-  tr::tls_policies configuration;
-  const auto fixtures = std::filesystem::path(__FILE__).parent_path() /
-                        "../../../unit/transport/server/fixtures";
-  configuration.certificate_file = (fixtures / "server.crt").string();
-  configuration.private_key_file = (fixtures / "server.key").string();
-  configuration.ip = "127.0.0.1";
-  configuration.port = std::to_string(port);
-  configuration.worker_count = 2;
-  return configuration;
-}
 }  // namespace
 
 // +===========================================================================+
@@ -542,7 +403,7 @@ DOBA_TEST("tls accepts concurrent response producers") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
-  martianlabs::doba::common::send_delegate output;
+  martianlabs::doba::protocol::send_delegate output;
   std::atomic<bool> ready{false};
   auto factory = [&]() {
     byte_engine engine;
@@ -768,7 +629,7 @@ DOBA_TEST("tls stop drains queued output") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
-  martianlabs::doba::common::send_delegate output;
+  martianlabs::doba::protocol::send_delegate output;
   std::atomic<bool> ready{false};
   auto factory = [&]() {
     byte_engine engine;
@@ -834,5 +695,3 @@ DOBA_TEST("tls restarts after a stopped connection") {
   second.socket.close();
   server.stop();
 }
-
-#endif

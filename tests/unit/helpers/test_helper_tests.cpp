@@ -26,7 +26,7 @@
 #include <initializer_list>
 #include <string>
 
-#include "../../helpers/test_helper_process.h"
+#include "test_helper_process.h"
 #include "test_helper.h"
 
 namespace {

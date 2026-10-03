@@ -26,9 +26,11 @@
 #include <string_view>
 
 #include "protocol/http/v11/headers/host.h"
+#include "host_port_case.h"
 #include "test_helper.h"
 
 namespace {
+using martianlabs::doba::tests::unit::host_port_case;
 using martianlabs::doba::protocol::http::helpers;
 using martianlabs::doba::protocol::http::v11::connection;
 using martianlabs::doba::protocol::http::v11::parsed_host_port;
@@ -41,13 +43,7 @@ using martianlabs::doba::protocol::http::v11::headers::host;
 // | [>] check parses host and optional port                     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("check parses host and optional port") {
-  struct test_case {
-    std::string_view source;
-    std::string_view host;
-    std::string_view port;
-    helpers::host_type type;
-  };
-  constexpr test_case cases[] = {
+  constexpr host_port_case cases[] = {
       {"example.com", "example.com", "", helpers::host_type::kRegName},
       {"example.com:80", "example.com", "80", helpers::host_type::kRegName},
       {"192.0.2.1:8080", "192.0.2.1", "8080", helpers::host_type::kIpV4Address},
@@ -106,13 +102,7 @@ DOBA_TEST("interpret accepts parsed host") {
 // | [>] check preserves host types and exact port views         ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("check preserves host types and exact port views") {
-  struct test_case {
-    std::string_view source;
-    std::string_view host;
-    std::string_view port;
-    helpers::host_type type;
-  };
-  constexpr test_case cases[] = {
+  constexpr host_port_case cases[] = {
       {":", "", "", helpers::host_type::kRegName},
       {"[::1]:", "[::1]", "", helpers::host_type::kIpLiteral},
       {"[v1.a]:9", "[v1.a]", "9", helpers::host_type::kIpLiteral},

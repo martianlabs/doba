@@ -41,7 +41,9 @@ struct tls_policies : tcp_policies {
   static constexpr std::size_t kEncryptedReceiveBufferSize = 17 * 1024;
   // Maximum TLS BIO buffer capacity, in bytes.
   static constexpr std::size_t kBioBufferSize = 17 * 1024;
+  // Path to the server certificate chain in PEM format.
   std::string certificate_file;
+  // Path to the matching private key in PEM format.
   std::string private_key_file;
 };
 }  // namespace martianlabs::doba::transport::server

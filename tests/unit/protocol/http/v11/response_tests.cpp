@@ -29,6 +29,7 @@
 
 #include "common/reader.h"
 #include "protocol/http/v11/response.h"
+#include "response_wire.h"
 #include "test_helper.h"
 
 namespace {
@@ -40,6 +41,7 @@ namespace {
 using martianlabs::doba::common::reader;
 using martianlabs::doba::protocol::http::v11::policies;
 using martianlabs::doba::protocol::http::v11::response;
+using martianlabs::doba::tests::unit::wire_prefix;
 using martianlabs::doba::protocol::http::v11::body::body_writer;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -53,18 +55,6 @@ constexpr std::size_t max_response_size_in_memory =
 constexpr std::size_t max_response_body_size_in_memory =
     policies::kMaxResponseBodySizeInMemory;
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] wire_prefix                                              ( function ) |
-// +---------------------------------------------------------------------------+
-// | This function returns the serialized wire prefix of a response, which     |
-// | includes the head and body. It is used for testing purposes to verify the |
-// | correctness of the serialized output.                                     |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-std::string wire_prefix(const response::serialized_type& result) {
-  return std::string(result.head) + std::string(result.body);
-}
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

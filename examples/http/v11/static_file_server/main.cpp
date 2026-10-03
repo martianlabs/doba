@@ -25,7 +25,6 @@
 #include <iostream>
 
 #include "common/console_logger.h"
-#include "common/logo.h"
 #include "common/signaler.h"
 #include "protocol/http/v11/server.h"
 #include "protocol/http/v11/static_file_server.h"

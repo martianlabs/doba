@@ -30,27 +30,14 @@
 #include "common/reader.h"
 #include "common/writer.h"
 #include "protocol/http/v11/body/writer_raw.h"
+#include "writer_release.h"
 #include "test_helper.h"
 
 namespace {
 using martianlabs::doba::common::reader;
 using martianlabs::doba::common::writer;
 using martianlabs::doba::protocol::http::v11::body::writer_raw;
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] release                                                  ( function ) |
-// +---------------------------------------------------------------------------+
-// | This function releases the writer's buffer and reads it into a string.    |
-// | It is used to verify the wire output of the raw writer.                   |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-std::string release(writer& value) {
-  reader source(value.release());
-  std::string output;
-  source.read_all(output);
-  return output;
-}
+using martianlabs::doba::tests::unit::release;
 }  // namespace
 
 // +===========================================================================+

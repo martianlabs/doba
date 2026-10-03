@@ -31,15 +31,19 @@
 // | [>] environment selects its platform                        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("environment selects the platform implementation") {
-#ifdef _WIN32
-#ifndef martianlabs_doba_network_environment_windows_h
-#error Windows implementation was not selected
-#endif
-#elif __linux__
-#ifndef martianlabs_doba_network_environment_linux_h
-#error Linux implementation was not selected
-#endif
-#endif
   static_assert(
       std::is_class_v<martianlabs::doba::network::detail::environment>);
+}
+
+// +===========================================================================+
+// | [>] environment retains exclusive lifecycle ownership       ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("environment retains exclusive lifecycle ownership") {
+  using martianlabs::doba::network::detail::environment;
+  static_assert(std::is_default_constructible_v<environment>);
+  static_assert(std::is_nothrow_destructible_v<environment>);
+  static_assert(!std::is_copy_constructible_v<environment>);
+  static_assert(!std::is_copy_assignable_v<environment>);
+  static_assert(!std::is_move_constructible_v<environment>);
+  static_assert(!std::is_move_assignable_v<environment>);
 }

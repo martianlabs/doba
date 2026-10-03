@@ -135,13 +135,13 @@ class request {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   request(const request&) = delete;
-  request(request&&) noexcept = delete;
+  request(request&&) noexcept = default;
   ~request() = default;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+
   request& operator=(const request&) = delete;
-  request& operator=(request&&) noexcept = delete;
+  request& operator=(request&&) noexcept = default;
   // +=========================================================================+
   // | [>] get_method                                               ( public ) |
   // +-------------------------------------------------------------------------+

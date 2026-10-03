@@ -69,6 +69,7 @@ struct deserialization_result {
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +=========================================================================+
   deserialization_status code = deserialization_status::kInvalidSource;
+  std::optional<RQty> request;
   std::optional<RSty> response;
 };
 }  // namespace martianlabs::doba::protocol

@@ -22,7 +22,6 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifdef DOBA_ENABLE_TLS
 
 #include <algorithm>
 #include <array>
@@ -591,5 +590,3 @@ DOBA_TEST("tls session handles malformed handshake records") {
     }
   }
 }
-
-#endif

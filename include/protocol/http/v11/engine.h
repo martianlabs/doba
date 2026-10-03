@@ -31,7 +31,7 @@
 #include <string_view>
 #include <utility>
 
-#include "common/output.h"
+#include "protocol/send_delegate.h"
 #include "protocol/serialization.h"
 #include "protocol/deserialization.h"
 #include "protocol/http/common/header_names.h"
@@ -63,7 +63,7 @@ class engine {
   // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  void set_on_send(common::send_delegate output) {
+  void set_on_send(protocol::send_delegate output) {
     on_send_ = std::move(output);
   }
   // +=========================================================================+
@@ -84,24 +84,24 @@ class engine {
       std::size_t consumed = 0;
       try {
         deserialization_result result = decoder_.deserialize(
-            buffer + total, size - total, capacity, consumed,
-            [this](const RQty& request) {
-              bool close = request.wants_connection_close();
-              RSty response(decoder_.response_storage());
-              execute_request(request, response, close);
-              enqueue_response(request, response, close);
-            });
-        total += consumed;
+            buffer + total, size - total, capacity, consumed);
         switch (result.code) {
-          case deserialization_status::kSucceeded:
+          case deserialization_status::kSucceeded: {
+            const RQty& request = *result.request;
+            bool close = request.wants_connection_close();
+            RSty response(decoder_.response_storage());
+            execute_request(request, response, close);
+            enqueue_response(request, response, close);
             break;
+          }
           case deserialization_status::kInvalidSource:
             if (result.response) enqueue_response(*result.response, true);
             return size;
           case deserialization_status::kMoreBytesNeeded:
             if (result.response) enqueue_response(*result.response, false);
-            return total;
+            return total + consumed;
         }
+        total += consumed;
       } catch (...) {
         query_for_close();
         return total + consumed;
@@ -214,7 +214,7 @@ class engine {
   // +-------------------------------------------------------------------------+
   const ROty& router_;  // Reference to the router for handling requests.
   decoder<RQty, RSty> decoder_;  // Decoder for processing incoming requests.
-  common::send_delegate on_send_;
+  protocol::send_delegate on_send_;
   std::function<void()> on_close_;
   bool closed_{false};
 };

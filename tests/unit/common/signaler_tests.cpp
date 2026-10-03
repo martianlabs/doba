@@ -31,14 +31,14 @@
 // | [>] signaler selects its platform                           ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("signaler selects the platform implementation") {
-#ifdef _WIN32
-#ifndef martianlabs_doba_common_signaler_windows_h
-#error Windows implementation was not selected
-#endif
-#elif __linux__
-#ifndef martianlabs_doba_common_signaler_linux_h
-#error Linux implementation was not selected
-#endif
-#endif
   static_assert(std::is_class_v<martianlabs::doba::common::signaler>);
+}
+
+// +===========================================================================+
+// | [>] signaler exposes a static nonconstructible wait         ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("signaler exposes a static nonconstructible wait") {
+  using martianlabs::doba::common::signaler;
+  static_assert(!std::is_default_constructible_v<signaler>);
+  static_assert(std::is_same_v<decltype(&signaler::wait), void (*)()>);
 }

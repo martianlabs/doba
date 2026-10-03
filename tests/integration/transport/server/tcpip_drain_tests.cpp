@@ -41,11 +41,12 @@
 #include "protocol/http/v11/server.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
+#include "wait_count.h"
 #include "transport/server/tcp.h"
 
 namespace {
 namespace tr = martianlabs::doba::transport::server;
-using martianlabs::doba::common::send_delegate;
+using martianlabs::doba::protocol::send_delegate;
 using martianlabs::doba::tests::integration::tcpip_client;
 using namespace std::chrono_literals;
 
@@ -123,12 +124,8 @@ struct drain_engine {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 bool wait_count(const std::atomic<int>& value, int expected) {
-  const auto deadline = std::chrono::steady_clock::now() + 5s;
-  while (value.load() < expected &&
-         std::chrono::steady_clock::now() < deadline) {
-    std::this_thread::yield();
-  }
-  return value.load() == expected;
+  return martianlabs::doba::tests::integration::wait_count(value, expected,
+                                                         5s);
 }
 
 // /////////////////////////////////////////////////////////////////////////////

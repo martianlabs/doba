@@ -30,6 +30,7 @@
 #include <string_view>
 
 #include "protocol/http/v11/server.h"
+#include "echo_body.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
@@ -53,41 +54,10 @@ constexpr std::size_t max_chunked_trailer_size = 4096;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::protocol::http::v11::server;
+using martianlabs::doba::tests::integration::echo_body;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] read_body                                                ( function ) |
-// +---------------------------------------------------------------------------+
-// | This function reads the body of an HTTP request using a body reader.      |
-// | It appends the read data to a string and sets the response accordingly.   |
-// | If there is an error during reading, it responds with a 400 Bad           |
-// | Request status. If the reading is complete, it responds with a 200 OK     |
-// | status and includes the body in the response.                             |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-void read_body(const request& req, response& res) {
-  if (!req.has_body_reader()) {
-    res.bad_request_400();
-    return;
-  }
-  std::array<std::byte, 1024> buffer{};
-  std::string body;
-  for (;;) {
-    const auto state = req.get_body_reader()->read(buffer);
-    if (state.has_error) {
-      res.bad_request_400();
-      return;
-    }
-    body.append(reinterpret_cast<const char*>(buffer.data()), state.produced);
-    if (state.complete) {
-      res.ok_200();
-      res.set_body(body);
-      return;
-    }
-  }
-}
 }  // namespace
 
 // +===========================================================================+
@@ -215,7 +185,7 @@ DOBA_TEST("HTTP/1.1 enforces chunk extension and trailer wire limits") {
                         .ip = "127.0.0.1",
                         .port = std::to_string(port)});
   http_server.add_route("POST", "/body", [](const request& req, response& res) {
-    read_body(req, res);
+    echo_body(req, res);
   });
   http_server.start();
   for (const bool extension : {true, false}) {

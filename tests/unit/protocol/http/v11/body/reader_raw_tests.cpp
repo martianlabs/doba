@@ -29,25 +29,14 @@
 
 #include "common/reader.h"
 #include "protocol/http/v11/body/reader_raw.h"
+#include "body_bytes.h"
 #include "test_helper.h"
 
 namespace {
 using martianlabs::doba::common::reader;
 using martianlabs::doba::protocol::http::v11::body::reader_error;
 using martianlabs::doba::protocol::http::v11::body::reader_raw;
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] bytes                                                    ( function ) |
-// +---------------------------------------------------------------------------+
-// | This function converts a string_view to a span of bytes. It is used to    |
-// | simulate the transport layer, which provides a span of bytes to           |
-// | the framer.                                                               |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-std::span<const std::byte> bytes(std::string_view value) {
-  return {reinterpret_cast<const std::byte*>(value.data()), value.size()};
-}
+using martianlabs::doba::tests::unit::bytes;
 }  // namespace
 
 // +===========================================================================+

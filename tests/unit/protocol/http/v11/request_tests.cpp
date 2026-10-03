@@ -60,26 +60,23 @@ template <typename FNty>
 void with_request(std::string_view wire, FNty&& check) {
   decoder<request, response> value;
   std::size_t consumed = 0;
-  bool called = false;
-  const auto result = value.deserialize(wire.data(), wire.size(), wire.size(),
-                                        consumed, [&](const request& decoded) {
-                                          called = true;
-                                          check(decoded);
-                                        });
+  const auto result =
+      value.deserialize(wire.data(), wire.size(), wire.size(), consumed);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
   DOBA_EXPECT_EQUAL(consumed, wire.size());
-  DOBA_EXPECT(called);
+  DOBA_EXPECT(result.request.has_value());
+  check(*result.request);
 }
 }  // namespace
 
 // +===========================================================================+
-// | [>] request is neither copyable nor movable                 ( test-case ) |
+// | [>] request moves but does not copy                         ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("request is neither copyable nor movable") {
+DOBA_TEST("request is movable and not copyable") {
   static_assert(!std::is_copy_constructible_v<request>);
   static_assert(!std::is_copy_assignable_v<request>);
-  static_assert(!std::is_move_constructible_v<request>);
-  static_assert(!std::is_move_assignable_v<request>);
+  static_assert(std::is_nothrow_move_constructible_v<request>);
+  static_assert(std::is_nothrow_move_assignable_v<request>);
   DOBA_EXPECT(true);
 }
 
@@ -172,12 +169,10 @@ DOBA_TEST("malformed cookie syntax is rejected") {
       "Cookie: a=1;bad; b=2; =empty; tail=3\r\n\r\n";
   decoder<request, response> value;
   std::size_t consumed = 0;
-  bool called = false;
   const auto result =
-      value.deserialize(wire.data(), wire.size(), wire.size(), consumed,
-                        [&](const request&) { called = true; });
+      value.deserialize(wire.data(), wire.size(), wire.size(), consumed);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
-  DOBA_EXPECT(!called);
+  DOBA_EXPECT(!result.request.has_value());
 }
 
 // +===========================================================================+
@@ -222,20 +217,17 @@ DOBA_TEST("request views remain valid when transport input changes") {
       "GET /?name=value HTTP/1.1\r\nHost: example.com\r\nX: y\r\n\r\n";
   decoder<request, response> value;
   std::size_t consumed = 0;
-  bool called = false;
-  const auto result = value.deserialize(
-      wire.data(), wire.size(), wire.size(), consumed,
-      [&](const request& decoded) {
-        called = true;
-        wire.assign(wire.size(), 'x');
-        DOBA_EXPECT_EQUAL(decoded.get_method(), "GET");
-        DOBA_EXPECT_EQUAL(decoded.get_absolute_path(), "/");
-        DOBA_EXPECT_EQUAL(decoded.get_header("Host").second, "example.com");
-        DOBA_EXPECT_EQUAL(decoded.get_header("X").second, "y");
-        DOBA_EXPECT_EQUAL(decoded.get_query_parameter("name")->second, "value");
-      });
+  const auto result =
+      value.deserialize(wire.data(), wire.size(), wire.size(), consumed);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-  DOBA_EXPECT(called);
+  DOBA_EXPECT(result.request.has_value());
+  wire.assign(wire.size(), 'x');
+  const request& decoded = *result.request;
+  DOBA_EXPECT_EQUAL(decoded.get_method(), "GET");
+  DOBA_EXPECT_EQUAL(decoded.get_absolute_path(), "/");
+  DOBA_EXPECT_EQUAL(decoded.get_header("Host").second, "example.com");
+  DOBA_EXPECT_EQUAL(decoded.get_header("X").second, "y");
+  DOBA_EXPECT_EQUAL(decoded.get_query_parameter("name")->second, "value");
 }
 
 // +===========================================================================+

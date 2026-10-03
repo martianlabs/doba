@@ -26,26 +26,13 @@
 #include <type_traits>
 
 #include "protocol/http/common/router_handler_signature.h"
+#include "router_empty_request.h"
+#include "router_empty_response.h"
 #include "test_helper.h"
 
 namespace {
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] request                                                    ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Test message representation.                                              |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct request {};
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] response                                                   ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Test message representation.                                              |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct response {};
+using request = martianlabs::doba::tests::unit::router_empty_request;
+using response = martianlabs::doba::tests::unit::router_empty_response;
 using martianlabs::doba::protocol::http::router_handler_lambda;
 }  // namespace
 

@@ -27,7 +27,6 @@
 
 #include "common/byte_storage.h"
 #include "common/console_logger.h"
-#include "common/logo.h"
 #include "common/signaler.h"
 #include "protocol/http/v11/body/writer.h"
 #include "protocol/http/v11/server.h"

@@ -33,65 +33,21 @@
 #include <utility>
 
 #include "common/reader.h"
+#include "file_directory.h"
+#include "only_spill_file.h"
+#include "spill_directory.h"
 #include "test_helper.h"
 
 namespace {
+using martianlabs::doba::tests::spill_directory;
+using martianlabs::doba::tests::only_spill_file;
+using martianlabs::doba::tests::file_directory;
 using martianlabs::doba::common::byte_storage;
 using martianlabs::doba::common::byte_storage_options;
 using martianlabs::doba::common::reader;
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] spill_directory                                             ( class ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-class spill_directory {
- public:
-  // +=========================================================================+
-  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +-------------------------------------------------------------------------+
-  spill_directory() {
-    namespace fs = std::filesystem;
-    static std::atomic<std::size_t> sequence{0};
-    const auto stamp =
-        std::chrono::steady_clock::now().time_since_epoch().count();
-    path_ = fs::temp_directory_path() /
-            ("doba_reader_" + std::to_string(stamp) + "_" +
-             std::to_string(sequence.fetch_add(1)));
-    fs::create_directory(path_);
-  }
-  ~spill_directory() {
-    std::error_code error;
-    std::filesystem::remove_all(path_, error);
-  }
-  // +=========================================================================+
-  // | [>] path                                                     ( public ) |
-  // +-------------------------------------------------------------------------+
-  const std::filesystem::path& path() const { return path_; }
 
- private:
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( private ) |
-  // +-------------------------------------------------------------------------+
-  std::filesystem::path path_;
-};
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] only_spill_file                                          ( function ) |
-// +---------------------------------------------------------------------------+
-// | This function returns the only spill file in the given directory.         |
-// | It is used to locate the spill file created by the reader when it         |
-// | spills to disk.                                                           |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-std::filesystem::path only_spill_file(const std::filesystem::path& directory) {
-  std::filesystem::path result;
-  for (const auto& entry : std::filesystem::directory_iterator(directory)) {
-    if (entry.path().filename() != "existing.tmp") result = entry.path();
-  }
-  return result;
-}
 }  // namespace
 
 // +===========================================================================+
@@ -211,7 +167,7 @@ DOBA_TEST("borrowed reads allow overlapping storage") {
 // | [>] truncated spill files fail the reader                  ( test-case )  |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("truncated spill files fail the reader") {
-  spill_directory directory;
+  spill_directory directory{"doba_reader_"};
   {
     byte_storage storage(byte_storage_options{
         .spill_threshold = 1, .spill_dir = directory.path().string()});
@@ -241,7 +197,7 @@ DOBA_TEST("truncated spill files fail the reader") {
 // | [>] reader owns moved storage                               ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("reader owns storage after the moved source is destroyed") {
-  spill_directory directory;
+  spill_directory directory{"doba_reader_"};
   for (std::size_t threshold : {0, 1}) {
     {
       std::optional<reader> destination;
@@ -287,58 +243,13 @@ DOBA_TEST("moving a borrowed reader preserves the view and cursor") {
 namespace {
 namespace fs = std::filesystem;
 using martianlabs::doba::common::filesystem_file;
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] reader_file_directory                                       ( class ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-class reader_file_directory {
- public:
-  // +=========================================================================+
-  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +-------------------------------------------------------------------------+
-  reader_file_directory() {
-    static std::atomic<unsigned int> counter{0};
-    const auto stamp =
-        std::chrono::steady_clock::now().time_since_epoch().count();
-    do {
-      path_ = fs::temp_directory_path() /
-              ("doba_files_" + std::to_string(stamp) + "_" +
-               std::to_string(counter.fetch_add(1)));
-    } while (!fs::create_directory(path_));
-  }
-  ~reader_file_directory() {
-    std::error_code error;
-    fs::remove_all(path_, error);
-  }
-  // +=========================================================================+
-  // | [>] path                                                     ( public ) |
-  // +-------------------------------------------------------------------------+
-  const fs::path& path() const { return path_; }
-  // +=========================================================================+
-  // | [>] write                                                    ( public ) |
-  // +-------------------------------------------------------------------------+
-  void write(std::string_view name, std::string_view contents) {
-    const fs::path relative(std::u8string(name.begin(), name.end()));
-    std::ofstream output(path_ / relative, std::ios::binary);
-    output.write(contents.data(),
-                 static_cast<std::streamsize>(contents.size()));
-    if (!output) throw std::runtime_error("Unable to write fixture");
-  }
-
- private:
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( private ) |
-  // +-------------------------------------------------------------------------+
-  fs::path path_;
-};
 }  // namespace
 
 // +===========================================================================+
 // | [>] reader file ownership                                   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("reader adopts and moves an open file with a shared read cursor") {
-  reader_file_directory directory;
+  file_directory directory;
   directory.write("file", "abcdef");
   filesystem_file file;
   std::error_code error;

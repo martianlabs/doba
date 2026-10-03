@@ -40,7 +40,7 @@ namespace {
 // | [>] usings                                                    ( public )  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-using martianlabs::doba::common::send_delegate;
+using martianlabs::doba::protocol::send_delegate;
 using martianlabs::doba::common::reader;
 using martianlabs::doba::transport::server::tcp_connection;
 using martianlabs::doba::transport::server::send_state;
