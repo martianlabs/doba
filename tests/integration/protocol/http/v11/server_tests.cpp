@@ -541,7 +541,7 @@ DOBA_TEST("HTTP/1.1 echoes raw bodies across the spill threshold") {
                         [&](const request& req, response& res) {
                           res.ok_200();
                           calls.fetch_add(1);
-                          echo_request(req, res);
+                          res.set_body(req.get_body_reader());
                           return;
                         });
   http_server.start();
@@ -581,7 +581,7 @@ DOBA_TEST("HTTP/1.1 echoes chunked bodies across the spill threshold") {
                         [&](const request& req, response& res) {
                           res.ok_200();
                           calls.fetch_add(1);
-                          echo_request(req, res);
+                          res.set_body(req.get_body_reader());
                           return;
                         });
   http_server.start();

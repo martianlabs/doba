@@ -28,6 +28,7 @@
 #include <type_traits>
 
 #include "common/reader.h"
+#include "protocol/http/v11/body/reader.h"
 #include "protocol/http/v11/response.h"
 #include "response_wire.h"
 #include "test_helper.h"
@@ -422,6 +423,111 @@ DOBA_TEST("small bodies serialize inline including binary bytes") {
   DOBA_EXPECT_EQUAL(
       std::string_view(serialized_prefix).substr(serialized_prefix.size() - 3),
       std::string_view("a\0b", 3));
+}
+
+// +===========================================================================+
+// | [>] request reader echoes into inline response body         ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("request reader echoes into inline response body") {
+  std::string payload(10240, '\0');
+  for (std::size_t i = 0; i < payload.size(); i++) {
+    payload[i] = static_cast<char>((i * 31 + i / 127) % 256);
+  }
+  auto source = martianlabs::doba::protocol::http::v11::body::reader::raw(
+      std::as_bytes(std::span(payload)), payload.size());
+  std::array<char, max_response_size_in_memory> storage{};
+  response value(storage);
+  value.ok_200().set_header("Date", "fixed").set_body(&source);
+  auto serialized = value.serialize();
+  DOBA_EXPECT(!serialized.source);
+  DOBA_EXPECT(wire_prefix(serialized).find("Content-Length: 10240\r\n") !=
+              std::string_view::npos);
+  DOBA_EXPECT_EQUAL(serialized.body, payload);
+}
+
+// +===========================================================================+
+// | [>] request reader crosses inline response limit            ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("request reader crosses inline response limit") {
+  for (std::size_t size : {max_response_body_size_in_memory,
+                           max_response_body_size_in_memory + 1}) {
+    std::string payload(size, '\0');
+    for (std::size_t i = 0; i < payload.size(); i++) {
+      payload[i] = static_cast<char>((i * 31 + i / 127) % 256);
+    }
+    auto source = martianlabs::doba::protocol::http::v11::body::reader::raw(
+        std::as_bytes(std::span(payload)), payload.size());
+    std::array<char, max_response_size_in_memory> storage{};
+    response value(storage);
+    value.ok_200().set_header("Date", "fixed").set_body(&source);
+    auto serialized = value.serialize();
+    const std::string prefix(wire_prefix(serialized));
+    DOBA_EXPECT(prefix.find("Content-Length: " + std::to_string(size) +
+                            "\r\n") != std::string::npos);
+    DOBA_EXPECT(prefix.find("Transfer-Encoding:") == std::string::npos);
+    DOBA_EXPECT_EQUAL(serialized.source != nullptr,
+                      size > max_response_body_size_in_memory);
+    std::string actual(serialized.body);
+    if (serialized.source) actual += read_source(*serialized.source);
+    DOBA_EXPECT_EQUAL(actual, payload);
+  }
+}
+
+// +===========================================================================+
+// | [>] chunked request reader emits decoded raw response       ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("chunked request reader emits decoded raw response") {
+  for (std::size_t size : {max_response_body_size_in_memory,
+                           max_response_body_size_in_memory + 1}) {
+    const std::string payload(size, 'x');
+    const std::string encoded =
+        (size == max_response_body_size_in_memory ? "4000" : "4001") +
+        std::string("\r\n") + payload + "\r\n0\r\nX-Test: a\r\n\r\n";
+    auto source = martianlabs::doba::protocol::http::v11::body::reader::chunked(
+        std::as_bytes(std::span(encoded)));
+    std::array<char, max_response_size_in_memory> storage{};
+    response value(storage);
+    value.ok_200().set_header("Date", "fixed").set_body(&source);
+    auto serialized = value.serialize();
+    const std::string prefix(wire_prefix(serialized));
+    DOBA_EXPECT(prefix.find("Content-Length: " + std::to_string(size) +
+                            "\r\n") != std::string::npos);
+    DOBA_EXPECT(prefix.find("Transfer-Encoding:") == std::string::npos);
+    DOBA_EXPECT_EQUAL(serialized.source != nullptr,
+                      size > max_response_body_size_in_memory);
+    std::string actual(serialized.body);
+    if (serialized.source) actual += read_source(*serialized.source);
+    DOBA_EXPECT_EQUAL(actual, payload);
+  }
+}
+
+// +===========================================================================+
+// | [>] request reader errors do not emit partial bodies        ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("request reader errors do not emit partial bodies") {
+  std::array<char, max_response_size_in_memory> storage{};
+  response value(storage);
+  value.ok_200().set_header("Date", "fixed").set_body("old");
+  auto source = martianlabs::doba::protocol::http::v11::body::reader::raw(
+      std::as_bytes(std::span("abc", 3)), 4);
+  bool failed = false;
+  try {
+    value.set_body(&source);
+  } catch (const std::runtime_error&) {
+    failed = true;
+  }
+  DOBA_EXPECT(failed);
+  auto serialized = value.serialize();
+  DOBA_EXPECT(serialized.body.empty());
+  DOBA_EXPECT(!serialized.source);
+
+  std::array<char, max_response_size_in_memory> empty_storage{};
+  response empty(empty_storage);
+  empty.ok_200().set_header("Date", "fixed").set_body("old");
+  empty.set_body(nullptr);
+  auto empty_serialized = empty.serialize();
+  DOBA_EXPECT(empty_serialized.body.empty());
+  DOBA_EXPECT(!empty_serialized.source);
 }
 
 // +===========================================================================+

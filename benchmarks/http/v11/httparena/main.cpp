@@ -242,22 +242,8 @@ int main(int argc, char* argv[]) {
       "POST", "/echo",
       [](const request& req, response& res) {
         res.ok_200();
-        std::string body;
-        if (req.has_body_reader()) {
-          std::array<std::byte, 8192> buffer{};
-          for (;;) {
-            const auto state = req.get_body_reader()->read(buffer);
-            if (state.has_error) {
-              res.bad_request_400();
-              return;
-            }
-            body.append(reinterpret_cast<const char*>(buffer.data()),
-                        state.produced);
-            if (state.complete) break;
-          }
-        }
         res.add_header("Content-Type", "application/octet-stream")
-            .set_body(body);
+            .set_body(req.get_body_reader());
       });
   http_server.start();
   tls_server.start();

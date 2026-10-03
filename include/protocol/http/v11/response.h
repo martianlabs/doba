@@ -38,6 +38,7 @@
 #include "common/date_server.h"
 #include "platform.h"
 #include "protocol/http/common/helpers.h"
+#include "protocol/http/v11/body/reader.h"
 #include "protocol/http/v11/body/writer.h"
 #include "protocol/http/v11/policies.h"
 #include "protocol/http/common/header_names.h"
@@ -438,6 +439,61 @@ class response {
     bdy_writer_.emplace(std::move(writer));
     content_length_ = bdy_writer_->bytes_written();
     return *this;
+  }
+  // +=========================================================================+
+  // | [>] set_body                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Consumes a request body reader while its source is still alive.         |
+  // +-------------------------------------------------------------------------+
+  response& set_body(body::reader* source) {
+    reset_body();
+    if (!source) {
+      content_length_ = 0;
+      return *this;
+    }
+    std::size_t size = 0;
+    for (;;) {
+      const auto state =
+          source->read(std::as_writable_bytes(body_.subspan(size)));
+      if (state.has_error) throw std::runtime_error("unable to read body!");
+      size += state.produced;
+      if (state.complete) {
+        body_size_ = size;
+        content_length_ = size;
+        return *this;
+      }
+      if (!state.produced && size < body_.size()) {
+        throw std::runtime_error("unable to read body!");
+      }
+      if (size == body_.size()) break;
+    }
+    std::byte next;
+    auto state = source->read(std::span(&next, 1));
+    if (state.has_error) throw std::runtime_error("unable to read body!");
+    if (state.complete && !state.produced) {
+      body_size_ = size;
+      content_length_ = size;
+      return *this;
+    }
+    if (!state.produced) throw std::runtime_error("unable to read body!");
+    auto writer = body::body_writer::raw();
+    if (!writer.write(std::string_view(body_.data(), size)) ||
+        !writer.write(std::span(&next, state.produced))) {
+      throw std::runtime_error("unable to write body!");
+    }
+    while (!state.complete) {
+      std::byte buffer[8192];
+      state = source->read(buffer);
+      if (state.has_error) throw std::runtime_error("unable to read body!");
+      if (!state.produced && !state.complete) {
+        throw std::runtime_error("unable to read body!");
+      }
+      if (state.produced &&
+          !writer.write(std::span(buffer, state.produced))) {
+        throw std::runtime_error("unable to write body!");
+      }
+    }
+    return set_body(std::move(writer));
   }
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
