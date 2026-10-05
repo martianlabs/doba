@@ -26,6 +26,7 @@
 #define martianlabs_doba_protocol_http_v11_body_reader_h
 
 #include <cstddef>
+#include <optional>
 #include <span>
 #include <stdexcept>
 #include <utility>
@@ -64,7 +65,8 @@ class reader {
   static reader raw(std::span<const std::byte> source,
                     std::size_t content_length) {
     if (source.empty()) throw std::invalid_argument("Empty body source");
-    return reader(common::reader::borrowed(source), reader_raw(content_length));
+    return reader(common::reader::borrowed(source), reader_raw(content_length),
+                  source);
   }
   static reader raw(common::filesystem_file&& source,
                     std::size_t content_length) {
@@ -91,19 +93,32 @@ class reader {
         [this, output](auto& decoder) { return decoder.read(source_, output); },
         decoder_);
   }
+  // +=========================================================================+
+  // | [>] take_borrowed_raw                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::optional<std::span<const std::byte>> take_borrowed_raw(
+      std::size_t maximum) {
+    if (borrowed_raw_.empty()) return std::nullopt;
+    auto* decoder = std::get_if<reader_raw>(&decoder_);
+    return decoder ? decoder->take_view(borrowed_raw_, maximum) : std::nullopt;
+  }
 
  private:
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                            ( private ) |
   // +-------------------------------------------------------------------------+
   reader(common::reader source,
-         std::variant<reader_chunked, reader_raw> decoder)
-      : source_(std::move(source)), decoder_(std::move(decoder)) {}
+         std::variant<reader_chunked, reader_raw> decoder,
+         std::span<const std::byte> borrowed_raw = {})
+      : source_(std::move(source)),
+        decoder_(std::move(decoder)),
+        borrowed_raw_(borrowed_raw) {}
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   common::reader source_;
   std::variant<reader_chunked, reader_raw> decoder_;
+  std::span<const std::byte> borrowed_raw_;
 };
 }  // namespace martianlabs::doba::protocol::http::v11::body
 

@@ -569,6 +569,34 @@ DOBA_TEST("HTTP/1.1 echoes raw bodies across the spill threshold") {
 }
 
 // +===========================================================================+
+// | [>] raw echo survives decoder buffer reuse                 ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("HTTP/1.1 raw echo survives decoder buffer reuse") {
+  tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server.add_route("POST", "/echo",
+                        [](const request& req, response& res) {
+                          res.ok_200().set_body(req.get_body_reader());
+                        });
+  http_server.start();
+  DOBA_EXPECT(client.connect(port));
+  for (char value : {'a', 'b'}) {
+    const std::string payload(10240, value);
+    const std::string head =
+        "POST /echo HTTP/1.1\r\nHost: example.com\r\n"
+        "Content-Length: 10240\r\n\r\n";
+    DOBA_EXPECT(client.send_all(head + payload));
+    const auto result = receive_http_response(client);
+    DOBA_EXPECT(result.has_value());
+    DOBA_EXPECT_EQUAL(result->status, "HTTP/1.1 200 OK");
+    DOBA_EXPECT_EQUAL(result->body, payload);
+  }
+  client.close();
+}
+
+// +===========================================================================+
 // | [>] chunked body spill and decoded payload                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 echoes chunked bodies across the spill threshold") {

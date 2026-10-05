@@ -76,6 +76,7 @@ class response {
   response(response&& in) noexcept
       : head_(in.head_),
         body_(in.body_),
+        borrowed_body_(in.borrowed_body_),
         head_size_(in.head_size_),
         body_size_(in.body_size_),
         sln_len_(in.sln_len_),
@@ -93,6 +94,7 @@ class response {
     in.hdr_len_ = 0;
     in.head_ = {};
     in.body_ = {};
+    in.borrowed_body_ = {};
     in.head_size_ = 0;
     in.body_size_ = 0;
     in.status_code_ = 0;
@@ -110,6 +112,7 @@ class response {
     if (this == &in) return *this;
     head_ = in.head_;
     body_ = in.body_;
+    borrowed_body_ = in.borrowed_body_;
     head_size_ = in.head_size_;
     body_size_ = in.body_size_;
     sln_len_ = in.sln_len_;
@@ -127,6 +130,7 @@ class response {
     in.hdr_len_ = 0;
     in.head_ = {};
     in.body_ = {};
+    in.borrowed_body_ = {};
     in.head_size_ = 0;
     in.body_size_ = 0;
     in.status_code_ = 0;
@@ -173,7 +177,10 @@ class response {
         content_length_ = 0;
       }
     }
-    if (must_omit_body) body_size_ = 0;
+    if (must_omit_body) {
+      body_size_ = 0;
+      borrowed_body_ = {};
+    }
     apply_body_framing();
     if (!has_date_header_) {
       add_date_header();
@@ -204,7 +211,9 @@ class response {
     }
     append_head(hdr_len_ ? "\r\n" : "\r\n\r\n");
     result.head = std::string_view(head_.data(), head_size_);
-    result.body = std::string_view(body_.data(), body_size_);
+    result.body = borrowed_body_.empty()
+                      ? std::string_view(body_.data(), body_size_)
+                      : borrowed_body_;
     head_size_ = 0;
     return result;
   }
@@ -443,12 +452,18 @@ class response {
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Consumes a request body reader while its source is still alive.         |
+  // | Borrows complete raw payloads until the transport copies them.          |
   // +-------------------------------------------------------------------------+
   response& set_body(body::reader* source) {
     reset_body();
     if (!source) {
       content_length_ = 0;
+      return *this;
+    }
+    if (const auto borrowed = source->take_borrowed_raw(body_.size())) {
+      borrowed_body_ = std::string_view(
+          reinterpret_cast<const char*>(borrowed->data()), borrowed->size());
+      content_length_ = borrowed->size();
       return *this;
     }
     std::size_t size = 0;
@@ -559,6 +574,7 @@ class response {
   // +-------------------------------------------------------------------------+
   response& suppress_body() {
     body_size_ = 0;
+    borrowed_body_ = {};
     bdy_reader_.reset();
     bdy_writer_.reset();
     return *this;
@@ -794,6 +810,7 @@ class response {
     }
     head_size_ = 0;
     body_size_ = 0;
+    borrowed_body_ = {};
     sln_len_ = line.size();
     hdr_len_ = 0;
     status_code_ = code;
@@ -944,6 +961,7 @@ class response {
   // +-------------------------------------------------------------------------+
   std::span<char> head_;
   std::span<char> body_;
+  std::string_view borrowed_body_;
   std::size_t head_size_{0};
   std::size_t body_size_{0};
   std::size_t sln_len_{0};

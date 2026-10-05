@@ -443,6 +443,50 @@ DOBA_TEST("request reader echoes into inline response body") {
   DOBA_EXPECT(wire_prefix(serialized).find("Content-Length: 10240\r\n") !=
               std::string_view::npos);
   DOBA_EXPECT_EQUAL(serialized.body, payload);
+  DOBA_EXPECT_EQUAL(serialized.body.data(), payload.data());
+  std::array<std::byte, 1> remaining{};
+  const auto state = source.read(remaining);
+  DOBA_EXPECT(state.complete);
+  DOBA_EXPECT_EQUAL(state.produced, 0);
+}
+
+// +===========================================================================+
+// | [>] partially read raw body uses remaining borrowed bytes ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("partially read raw body uses remaining borrowed bytes") {
+  std::string payload = "abcdef";
+  auto source = martianlabs::doba::protocol::http::v11::body::reader::raw(
+      std::as_bytes(std::span(payload)), payload.size());
+  std::array<std::byte, 2> prefix{};
+  const auto first = source.read(prefix);
+  DOBA_EXPECT_EQUAL(first.produced, 2);
+  std::array<char, max_response_size_in_memory> storage{};
+  response value(storage);
+  value.ok_200().set_header("Date", "fixed").set_body(&source);
+  const auto serialized = value.serialize();
+  DOBA_EXPECT_EQUAL(serialized.body, "cdef");
+  DOBA_EXPECT_EQUAL(serialized.body.data(), payload.data() + 2);
+  DOBA_EXPECT(wire_prefix(serialized).find("Content-Length: 4\r\n") !=
+              std::string_view::npos);
+}
+
+// +===========================================================================+
+// | [>] borrowed raw body survives moves and replacement        ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("borrowed raw body survives moves and replacement") {
+  std::string payload(10240, 'x');
+  auto source = martianlabs::doba::protocol::http::v11::body::reader::raw(
+      std::as_bytes(std::span(payload)), payload.size());
+  std::array<char, max_response_size_in_memory> storage{};
+  response value(storage);
+  value.ok_200().set_header("Date", "fixed").set_body(&source);
+  response moved(std::move(value));
+  const auto borrowed = moved.serialize();
+  DOBA_EXPECT_EQUAL(borrowed.body.data(), payload.data());
+  moved.ok_200().set_header("Date", "fixed").set_body("new");
+  const auto replaced = moved.serialize();
+  DOBA_EXPECT_EQUAL(replaced.body, "new");
+  DOBA_EXPECT(replaced.body.data() != payload.data());
 }
 
 // +===========================================================================+
@@ -467,6 +511,9 @@ DOBA_TEST("request reader crosses inline response limit") {
     DOBA_EXPECT(prefix.find("Transfer-Encoding:") == std::string::npos);
     DOBA_EXPECT_EQUAL(serialized.source != nullptr,
                       size > max_response_body_size_in_memory);
+    if (size <= max_response_body_size_in_memory) {
+      DOBA_EXPECT_EQUAL(serialized.body.data(), payload.data());
+    }
     std::string actual(serialized.body);
     if (serialized.source) actual += read_source(*serialized.source);
     DOBA_EXPECT_EQUAL(actual, payload);
