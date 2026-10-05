@@ -225,21 +225,21 @@ DOBA_TEST("parametrized routes validate pattern and handler shape") {
   router<request, response> value;
   bool threw = false;
   try {
-    value.add("GET", "/items/:id", [](const request&, response& res) {});
+    value.add("GET", "/items/:id", [](const request&, response&) {});
   } catch (const std::invalid_argument&) {
     threw = true;
   }
   DOBA_EXPECT(threw);
   threw = false;
   try {
-    value.add("GET", "/items", [](const request&, response& res, int) {});
+    value.add("GET", "/items", [](const request&, response&, int) {});
   } catch (const std::invalid_argument&) {
     threw = true;
   }
   DOBA_EXPECT(threw);
   threw = false;
   try {
-    value.add("GET", "/items/:", [](const request&, response& res, int) {});
+    value.add("GET", "/items/:", [](const request&, response&, int) {});
   } catch (const std::invalid_argument&) {
     threw = true;
   }
@@ -257,7 +257,7 @@ DOBA_TEST("wildcard routes validate pattern and handler shape") {
     router<request, response> value;
     bool threw = false;
     try {
-      value.add("GET", route, [](const request&, response& res) {});
+      value.add("GET", route, [](const request&, response&) {});
     } catch (const std::invalid_argument&) {
       threw = true;
     }
@@ -266,14 +266,14 @@ DOBA_TEST("wildcard routes validate pattern and handler shape") {
   router<request, response> value;
   bool threw = false;
   try {
-    value.add("GET", "/items/:id/*", [](const request&, response& res) {});
+    value.add("GET", "/items/:id/*", [](const request&, response&) {});
   } catch (const std::invalid_argument&) {
     threw = true;
   }
   DOBA_EXPECT(threw);
   threw = false;
   try {
-    value.add("GET", "/items/*", [](const request&, response& res, int) {});
+    value.add("GET", "/items/*", [](const request&, response&, int) {});
   } catch (const std::invalid_argument&) {
     threw = true;
   }
@@ -289,7 +289,7 @@ DOBA_TEST("match preserves first handler") {
             [](const request&, response& res) { res.value = "first"; });
   value.add("GET", "/resource",
             [](const request&, response& res) { res.value = "second"; });
-  value.add("POST", "/resource", [](const request&, response& res) {});
+  value.add("POST", "/resource", [](const request&, response&) {});
   auto get = value.match("GET", "/resource");
   auto post = value.match("POST", "/resource");
   request req;
@@ -306,9 +306,9 @@ DOBA_TEST("match preserves first handler") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("allowed methods include matching parametrized routes") {
   router<request, response> value;
-  value.add("GET", "/items/:id", [](const request&, response& res, int) {});
+  value.add("GET", "/items/:id", [](const request&, response&, int) {});
   value.add("POST", "/items/:name",
-            [](const request&, response& res, std::string_view) {});
+            [](const request&, response&, std::string_view) {});
   DOBA_EXPECT_EQUAL(value.allowed_methods("/items/42"), "GET, POST");
   DOBA_EXPECT_EQUAL(value.allowed_methods("/items/name"), "POST");
 }
@@ -318,10 +318,10 @@ DOBA_TEST("allowed methods include matching parametrized routes") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("allowed methods include matching wildcard routes") {
   router<request, response> value;
-  value.add("GET", "/assets/logo", [](const request&, response& res) {});
-  value.add("GET", "/assets/*", [](const request&, response& res) {});
-  value.add("POST", "/assets/:id", [](const request&, response& res, int) {});
-  value.add("DELETE", "/assets/*", [](const request&, response& res) {});
+  value.add("GET", "/assets/logo", [](const request&, response&) {});
+  value.add("GET", "/assets/*", [](const request&, response&) {});
+  value.add("POST", "/assets/:id", [](const request&, response&, int) {});
+  value.add("DELETE", "/assets/*", [](const request&, response&) {});
   DOBA_EXPECT_EQUAL(value.allowed_methods("/assets/logo"), "GET, DELETE");
   DOBA_EXPECT_EQUAL(value.allowed_methods("/assets/42"), "POST, GET, DELETE");
   DOBA_EXPECT(value.allowed_methods("/assets").empty());

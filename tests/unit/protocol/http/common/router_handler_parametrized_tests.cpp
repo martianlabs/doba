@@ -49,7 +49,7 @@ DOBA_TEST("matches routes with typed parameters") {
       make_router_handler_parametrized<request, response, std::uint64_t, bool,
                                        double, std::string_view>(
           "/items/:id/:enabled/:score/:name",
-          [](const request&, response& res, std::uint64_t, bool, double,
+          [](const request&, response&, std::uint64_t, bool, double,
              std::string_view) {});
   DOBA_EXPECT(handler.matches("/items/42/TRUE/1.5/doba"));
   DOBA_EXPECT(!handler.matches("/items/x/true/1.5/doba"));
@@ -62,7 +62,7 @@ DOBA_TEST("matches routes with typed parameters") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("matching requires the complete route shape") {
   auto handler = make_router_handler_parametrized<request, response, int>(
-      "/items/:id", [](const request&, response& res, int) {});
+      "/items/:id", [](const request&, response&, int) {});
   DOBA_EXPECT(handler.matches("/items/42"));
   DOBA_EXPECT(!handler.matches("/items/"));
   DOBA_EXPECT(!handler.matches("/items/42/"));
@@ -97,7 +97,7 @@ DOBA_TEST("invoke rejects paths with invalid parameters") {
   bool invoked = false;
   auto handler = make_router_handler_parametrized<request, response, int>(
       "/items/:id",
-      [&invoked](const request&, response& res, int) { invoked = true; });
+      [&invoked](const request&, response&, int) { invoked = true; });
   request req;
   response res;
   bool threw = false;
@@ -141,7 +141,7 @@ DOBA_TEST("route conversion accepts every boolean spelling") {
     auto handler =
         make_router_handler_parametrized<request, response, parameter>(
             "/value/:value",
-            [&](const request&, response& res, parameter value) {
+            [&](const request&, response&, parameter value) {
               sync_calls++;
               sync_value = value;
             });
@@ -178,7 +178,7 @@ DOBA_TEST("route conversion accepts signed integer boundaries") {
     auto handler =
         make_router_handler_parametrized<request, response, parameter>(
             "/value/:value",
-            [&](const request&, response& res, parameter value) {
+            [&](const request&, response&, parameter value) {
               sync_calls++;
               sync_value = value;
             });
@@ -213,7 +213,7 @@ DOBA_TEST("route conversion accepts unsigned integer boundaries") {
     auto handler =
         make_router_handler_parametrized<request, response, parameter>(
             "/value/:value",
-            [&](const request&, response& res, parameter value) {
+            [&](const request&, response&, parameter value) {
               sync_calls++;
               sync_value = value;
             });
@@ -244,7 +244,7 @@ DOBA_TEST("route conversion rejects integer overflow") {
       auto handler =
           make_router_handler_parametrized<request, response, parameter>(
               "/value/:value",
-              [&](const request&, response& res, parameter) { sync_calls++; });
+              [&](const request&, response&, parameter) { sync_calls++; });
       DOBA_EXPECT_EQUAL(handler.matches(path), false);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
@@ -272,7 +272,7 @@ DOBA_TEST("route conversion rejects integer overflow") {
       auto handler =
           make_router_handler_parametrized<request, response, parameter>(
               "/value/:value",
-              [&](const request&, response& res, parameter) { sync_calls++; });
+              [&](const request&, response&, parameter) { sync_calls++; });
       DOBA_EXPECT_EQUAL(handler.matches(path), false);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
@@ -309,7 +309,7 @@ DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
       auto handler =
           make_router_handler_parametrized<request, response, parameter>(
               "/value/:value",
-              [&](const request&, response& res, parameter) { sync_calls++; });
+              [&](const request&, response&, parameter) { sync_calls++; });
       DOBA_EXPECT_EQUAL(handler.matches(path), false);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
@@ -338,7 +338,7 @@ DOBA_TEST("route conversion rejects partial numbers spaces and plus signs") {
       auto handler =
           make_router_handler_parametrized<request, response, parameter>(
               "/value/:value",
-              [&](const request&, response& res, parameter) { sync_calls++; });
+              [&](const request&, response&, parameter) { sync_calls++; });
       DOBA_EXPECT_EQUAL(handler.matches(path), false);
       DOBA_EXPECT_EQUAL(sync_calls, 0);
       request req;
@@ -372,7 +372,7 @@ DOBA_TEST("route conversion rejects negative unsigned values") {
     auto handler =
         make_router_handler_parametrized<request, response, parameter>(
             "/value/:value",
-            [&](const request&, response& res, parameter) { sync_calls++; });
+            [&](const request&, response&, parameter) { sync_calls++; });
     DOBA_EXPECT_EQUAL(handler.matches(path), false);
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
@@ -412,7 +412,7 @@ DOBA_TEST("route conversion accepts finite floating point values") {
     auto handler =
         make_router_handler_parametrized<request, response, parameter>(
             "/value/:value",
-            [&](const request&, response& res, parameter value) {
+            [&](const request&, response&, parameter value) {
               sync_calls++;
               sync_value = value;
             });
@@ -442,7 +442,7 @@ DOBA_TEST("route conversion rejects floating point range errors") {
     auto handler =
         make_router_handler_parametrized<request, response, parameter>(
             "/value/:value",
-            [&](const request&, response& res, parameter) { sync_calls++; });
+            [&](const request&, response&, parameter) { sync_calls++; });
     DOBA_EXPECT_EQUAL(handler.matches(path), false);
     DOBA_EXPECT_EQUAL(sync_calls, 0);
     request req;
@@ -480,7 +480,7 @@ DOBA_TEST("narrow integer conversions enforce each type boundary") {
       std::size_t calls = 0;
       T converted{};
       auto handler = make_router_handler_parametrized<request, response, T>(
-          "/value/:value", [&](const request&, response& res, T value) {
+          "/value/:value", [&](const request&, response&, T value) {
             calls++;
             converted = value;
           });
@@ -513,7 +513,7 @@ DOBA_TEST("later parameter failures never invoke the callback") {
   std::size_t calls = 0;
   auto handler = make_router_handler_parametrized<request, response, int, bool>(
       "/:id/:enabled",
-      [&](const request&, response& res, int, bool) { calls++; });
+      [&](const request&, response&, int, bool) { calls++; });
   for (std::string_view path : {"/7/yes", "/7/truex", "/7/2"}) {
     DOBA_EXPECT(!handler.matches(path));
     bool threw = false;

@@ -163,7 +163,7 @@ DOBA_TEST("engine returns routing and handler errors") {
   router<request, response> routes;
   routes.add("GET", "/",
              [](const request&, response& res) { make_response(res, "ok"); });
-  routes.add("GET", "/fail", [](const request&, response& res) -> void {
+  routes.add("GET", "/fail", [](const request&, response&) -> void {
     throw std::runtime_error("handler failure");
   });
   const std::vector<std::pair<std::string, std::string>> cases{

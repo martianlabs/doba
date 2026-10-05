@@ -243,7 +243,7 @@ DOBA_TEST("failed starts release the date server") {
 DOBA_TEST("server accepts new connections after handler failure") {
   test_server value;
   value.add_route("GET", "/fail",
-                  [](const http::request&, http::response& res) -> void {
+                  [](const http::request&, http::response&) -> void {
                     throw std::runtime_error("handler failed");
                   });
   value.add_route("GET", "/", [](const http::request&, http::response& res) {

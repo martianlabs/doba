@@ -243,11 +243,11 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
   DOBA_EXPECT(port != 0);
   server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/throw",
-                        [](const request&, response& res) -> void {
+                        [](const request&, response&) -> void {
                           throw std::runtime_error("doba-private-sync-token");
                         });
   http_server.add_route("GET", "/unknown",
-                        [](const request&, response& res) -> void { throw 1; });
+                        [](const request&, response&) -> void { throw 1; });
   http_server.add_route("GET", "/framing", [](const request&, response& res) {
     res.ok_200();
     res.set_header("Transfer-Encoding", "chunked");
