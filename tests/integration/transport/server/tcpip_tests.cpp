@@ -140,6 +140,34 @@ DOBA_TEST("tcpip serves independent loopback connections") {
 }
 
 // +===========================================================================+
+// | [>] tcpip receives bytes beyond one readiness event         ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("tcpip receives bytes beyond one readiness event") {
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  auto state = std::make_shared<byte_state>();
+  auto factory = [state]() { return byte_engine{state, {}, {}}; };
+  tr::tcp<byte_engine, decltype(factory)> server(
+      {.recv_buffer_size = 8,
+       .worker_count = 1,
+       .ip = "127.0.0.1",
+       .port = std::to_string(port)},
+      factory);
+  server.set_on_connection([]() {});
+  server.set_on_disconnection([]() {});
+  server.start();
+  DOBA_EXPECT(client.connect(port));
+  const std::string request(4096, 'x');
+  DOBA_EXPECT(client.send_all(request));
+  const auto response = client.receive(request.size(), 5s);
+  DOBA_EXPECT(response.has_value());
+  if (response) DOBA_EXPECT_EQUAL(*response, request);
+  client.close();
+  server.stop();
+}
+
+// +===========================================================================+
 // | [>] tcpip reuses a connection after each completed send     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip reuses a connection after each completed send") {
