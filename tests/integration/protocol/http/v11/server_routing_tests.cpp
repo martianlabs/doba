@@ -82,7 +82,7 @@ DOBA_TEST("HTTP/1.1 applies static parametrized and wildcard precedence") {
   });
   http_server.start();
   DOBA_EXPECT(client.connect(port));
-  for (const auto [path, body] :
+  for (const auto& [path, body] :
        {std::pair{"/items/42", "static"}, std::pair{"/items/7", "parameter:7"},
         std::pair{"/items/name", "wildcard"}}) {
     DOBA_EXPECT(client.send_all(std::string("GET ") + path +
