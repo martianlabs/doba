@@ -296,35 +296,30 @@ struct worker {
       return;
     }
     if (stopping_.load()) ctx->stop(true);
+    bool should_send = (events & EPOLLOUT) != 0;
     if (ctx->can_receive() && (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP))) {
-      if (!handle_receive(ctx)) {
-        close_context(ctx);
-        return;
+      if (stopping_.load()) {
+        ctx->stop(true);
+      } else {
+        const ssize_t received = ctx->receive();
+        if (received > 0) {
+          should_send = true;
+        } else if (received == 0) {
+          if (!ctx->eof()) {
+            close_context(ctx);
+            return;
+          }
+          ctx->stop();
+        } else if (errno != EINTR && errno != EAGAIN &&
+                   errno != EWOULDBLOCK) {
+          close_context(ctx);
+          return;
+        }
       }
     }
-    if (!ctx->can_receive() || (events & EPOLLOUT)) {
+    if (should_send || !ctx->can_receive()) {
       if (!ctx->send_pending()) close_context(ctx);
     }
-  }
-  // +=========================================================================+
-  // | [>] handle_receive                                          ( private ) |
-  // +-------------------------------------------------------------------------+
-  bool handle_receive(context<ENty, CNty>* ctx) {
-    if (stopping_.load()) {
-      ctx->stop(true);
-      return true;
-    }
-    const ssize_t received = ctx->receive();
-    if (received > 0) return true;
-    if (received == 0) {
-      if (!ctx->eof()) return false;
-      ctx->stop();
-      return true;
-    }
-    if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
-      return true;
-    }
-    return false;
   }
   // +=========================================================================+
   // | [>] close_context                                           ( private ) |

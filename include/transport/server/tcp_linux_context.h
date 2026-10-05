@@ -109,7 +109,6 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       }
     }
     notify_connection();
-    if (!send_pending()) abort();
     return received;
   }
   // +=========================================================================+
@@ -119,7 +118,6 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
       epoll_fd_ = epoll_fd;
-      connected_ = true;
     }
     input_.engine.set_on_close([weak = this->weak_from_this()]() {
       if (auto ctx = weak.lock()) ctx->close();
@@ -152,7 +150,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       abort_();
       return;
     }
-    if (!processing_receive_ && !watch_write_(true)) abort_();
+    if (!processing_receive_ && !update_interest_(true)) abort_();
   }
   // +=========================================================================+
   // | [>] abort                                                    ( public ) |
@@ -185,7 +183,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   void notify_connection() {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
-      if (!connected_ || notified_ || !input_.established()) return;
+      if (notified_ || !input_.established()) return;
       notified_ = true;
     }
     on_connection_();
@@ -202,7 +200,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       abort_();
       return;
     }
-    if (!processing_receive_ && !watch_write_(true)) abort_();
+    if (!processing_receive_ && !update_interest_(true)) abort_();
   }
   // +=========================================================================+
   // | [>] send_pending                                             ( public ) |
@@ -224,9 +222,9 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
         if (!input_.output_sent(output_, static_cast<std::size_t>(sent))) {
           return false;
         }
-        if (input_.output_pending(output_)) return watch_write_(true);
+        if (input_.output_pending(output_)) return update_interest_(true);
       } else if (sent == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-        return watch_write_(true);
+        return update_interest_(true);
       } else {
         return false;
       }
@@ -238,7 +236,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       }
       if (stopping_ || input_.peer_closed()) return false;
     }
-    if (!watch_write_(false)) return false;
+    if (!update_interest_(false)) return false;
     if (closing_) {
       // Discard input until peer EOF to avoid resetting the final response.
       ssize_t received;
@@ -269,8 +267,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   void notify_disconnection() {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
-      if (!notified_ || disconnected_) return;
-      disconnected_ = true;
+      if (!notified_) return;
     }
     try {
       on_disconnection_();
@@ -284,9 +281,9 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
 
  private:
   // +=========================================================================+
-  // | [>] watch_write_                                            ( private ) |
+  // | [>] update_interest_                                        ( private ) |
   // +-------------------------------------------------------------------------+
-  bool watch_write_(bool enabled) {
+  bool update_interest_(bool enabled) {
     uint32_t events = EPOLLIN | EPOLLRDHUP;
     if (closing_ && !socket_shutdown_) events = 0;
     if (enabled) events |= EPOLLOUT;
@@ -325,9 +322,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   bool stopping_{false};
   bool socket_shutdown_{false};
   bool aborted_{false};
-  bool connected_{false};
   bool notified_{false};
-  bool disconnected_{false};
 };
 
 }  // namespace martianlabs::doba::transport::server

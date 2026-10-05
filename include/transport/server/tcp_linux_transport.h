@@ -41,7 +41,6 @@
 #include <utility>
 #include <vector>
 
-#include "network/environment.h"
 #include "platform.h"
 #include "transport/server/tcp_linux_worker.h"
 
@@ -228,7 +227,6 @@ class basic_transport {
   const policies_type configuration_;
   const FAty create_engine_;
   const typename CNty::shared_state shared_state_;
-  network::detail::environment environment_;
   std::vector<std::unique_ptr<worker<ENty, FAty, CNty, PTy>>> workers_;
   std::mutex lifecycle_mutex_;
   std::condition_variable lifecycle_condition_;

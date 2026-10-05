@@ -564,6 +564,7 @@ DOBA_TEST("tcpip survives failing connection callbacks") {
   client.close();
   server.stop();
   DOBA_EXPECT_EQUAL(state->connected.load(), 2);
+  DOBA_EXPECT_EQUAL(state->disconnected.load(), 2);
 }
 
 // +===========================================================================+
