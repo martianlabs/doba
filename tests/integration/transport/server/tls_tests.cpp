@@ -623,6 +623,39 @@ DOBA_TEST("tls survives an invalid handshake") {
 }
 
 // +===========================================================================+
+// | [>] tls rejects an oversized record on the wire             ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("tls rejects an oversized record on the wire") {
+  tcpip_client invalid;
+  const auto port = invalid.find_available_port();
+  DOBA_EXPECT(port != 0);
+  auto factory = []() { return byte_engine{}; };
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
+  std::atomic<int> connected{0};
+  std::atomic<int> disconnected{0};
+  server.set_on_connection([&]() { ++connected; });
+  server.set_on_disconnection([&]() { ++disconnected; });
+  server.start();
+  DOBA_EXPECT(invalid.connect(port));
+  DOBA_EXPECT(invalid.send_all(std::string_view("\x16\x03\x01\xff\xff", 5)));
+  const auto rejected = invalid.receive_until_close(1024, 3s);
+  DOBA_EXPECT(rejected.has_value() || invalid.error() == "socket");
+  invalid.close();
+  tls_client healthy;
+  DOBA_EXPECT(healthy.socket.connect(port));
+  DOBA_EXPECT(healthy.negotiate());
+  DOBA_EXPECT(healthy.send("ok"));
+  const auto response = healthy.receive(2);
+  DOBA_EXPECT(response.has_value());
+  if (response) DOBA_EXPECT_EQUAL(*response, "ok");
+  healthy.socket.close();
+  server.stop();
+  DOBA_EXPECT_EQUAL(connected.load(), 1);
+  DOBA_EXPECT_EQUAL(disconnected.load(), 1);
+}
+
+// +===========================================================================+
 // | [>] tls stop drains queued output                           ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tls stop drains queued output") {

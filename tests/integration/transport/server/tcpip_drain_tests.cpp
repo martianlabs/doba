@@ -661,6 +661,96 @@ DOBA_TEST("concurrent stops drain before returning") {
 }
 
 // +===========================================================================+
+// | [>] stop retires an accept burst                            ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("stop retires an accept burst") {
+  auto state = std::make_shared<drain_state>();
+  auto factory = [state]() -> drain_engine { return drain_engine{state}; };
+  std::array<tcpip_client, 24> clients;
+  const auto port = clients[0].find_available_port();
+  DOBA_EXPECT(port != 0);
+  tr::tcp_policies configuration;
+  configuration.ip = "127.0.0.1";
+  configuration.port = std::to_string(port);
+  configuration.worker_count = 2;
+  std::atomic<int> connected{0};
+  std::atomic<int> disconnected{0};
+  tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
+  transport.set_on_connection([&]() { connected++; });
+  transport.set_on_disconnection([&]() { disconnected++; });
+  transport.start();
+  DOBA_EXPECT(clients[0].connect(port));
+  DOBA_EXPECT(wait_count(connected, 1));
+  for (std::size_t i = 1; i < clients.size(); i++) {
+    DOBA_EXPECT(clients[i].connect(port));
+    if (i % 2) clients[i].abort();
+  }
+  auto stopped = std::async(std::launch::async, [&]() { transport.stop(); });
+  for (std::size_t i = 0; i < clients.size(); i += 2) clients[i].close();
+  DOBA_EXPECT(stopped.wait_for(5s) == std::future_status::ready);
+  stopped.get();
+  DOBA_EXPECT_EQUAL(connected.load(), disconnected.load());
+  transport.start();
+  DOBA_EXPECT(clients[0].connect(port));
+  DOBA_EXPECT(wait_count(connected, disconnected.load() + 1));
+  clients[0].close();
+  transport.stop();
+  DOBA_EXPECT_EQUAL(connected.load(), disconnected.load());
+}
+
+// +===========================================================================+
+// | [>] concurrent start and stop permit restart                ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("concurrent start and stop permit restart") {
+  auto state = std::make_shared<drain_state>();
+  auto factory = [state]() -> drain_engine { return drain_engine{state}; };
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  tr::tcp_policies configuration;
+  configuration.ip = "127.0.0.1";
+  configuration.port = std::to_string(port);
+  configuration.worker_count = 8;
+  std::atomic<int> connected{0};
+  std::atomic<int> disconnected{0};
+  tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
+  transport.set_on_connection([&]() { connected++; });
+  transport.set_on_disconnection([&]() { disconnected++; });
+  for (int iteration = 0; iteration < 8; iteration++) {
+    std::promise<void> release;
+    auto ready = release.get_future().share();
+    std::atomic<int> failures{0};
+    std::jthread starting([&]() {
+      ready.wait();
+      try {
+        transport.start();
+      } catch (...) {
+        failures++;
+      }
+    });
+    std::jthread stopping([&]() {
+      ready.wait();
+      try {
+        transport.stop();
+      } catch (...) {
+        failures++;
+      }
+    });
+    release.set_value();
+    starting.join();
+    stopping.join();
+    transport.stop();
+    DOBA_EXPECT_EQUAL(failures.load(), 0);
+    transport.start();
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(wait_count(connected, iteration + 1));
+    client.close();
+    transport.stop();
+    DOBA_EXPECT_EQUAL(connected.load(), disconnected.load());
+  }
+}
+
+// +===========================================================================+
 // | [>] stop from a worker is rejected                          ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("stop from a worker is rejected") {
@@ -864,6 +954,7 @@ DOBA_TEST("close discards input after draining output") {
       DOBA_EXPECT(wait_count(disconnected, 1));
       transport.stop();
     }
+    DOBA_EXPECT_EQUAL(disconnected.load(), 1);
     DOBA_EXPECT_EQUAL(state->queued.load(), 1);
   }
 }

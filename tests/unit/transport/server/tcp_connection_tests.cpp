@@ -26,6 +26,7 @@
 #include <cstddef>
 #include <cstring>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -121,6 +122,31 @@ DOBA_TEST("tcp connection rejects invalid consumption") {
   DOBA_EXPECT(!input.consume(5));
   DOBA_EXPECT_EQUAL(input.size, 4);
   DOBA_EXPECT_EQUAL(std::string(input.buffer.get(), input.size), "abcd");
+  DOBA_EXPECT(!input.consume(std::numeric_limits<std::size_t>::max()));
+  DOBA_EXPECT_EQUAL(input.size, 4);
+}
+
+// +===========================================================================+
+// | [>] tcp connection consumes a one byte buffer              ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("tcp connection consumes a one byte buffer") {
+  auto factory = []() { return test_engine{}; };
+  tcp_connection<test_engine> input(1, factory);
+  std::size_t received_capacity = 0;
+  char received = 0;
+  input.engine.receive = [&](const char* bytes, std::size_t size,
+                             std::size_t capacity) {
+    received_capacity = capacity;
+    received = bytes[0];
+    return size;
+  };
+  input.buffer[0] = 'x';
+  input.size = 1;
+  DOBA_EXPECT(input.consume(input.process()));
+  DOBA_EXPECT_EQUAL(received_capacity, 1);
+  DOBA_EXPECT_EQUAL(received, 'x');
+  DOBA_EXPECT_EQUAL(input.size, 0);
+  DOBA_EXPECT(input.consume(0));
 }
 
 // +===========================================================================+
@@ -201,6 +227,8 @@ DOBA_TEST("tcp connection batches queued output") {
   DOBA_EXPECT_EQUAL(count, 1);
   DOBA_EXPECT_EQUAL(std::string(buffers[0].data(), buffers[0].size()),
                     "headbodynext");
+  DOBA_EXPECT(!input.output_sent(output, 13));
+  DOBA_EXPECT_EQUAL(output.offset, 0);
   DOBA_EXPECT(input.output_sent(output, 5));
   count = input.output_buffers(output, buffers);
   DOBA_EXPECT_EQUAL(count, 1);
@@ -208,4 +236,5 @@ DOBA_TEST("tcp connection batches queued output") {
                     "odynext");
   DOBA_EXPECT(input.output_sent(output, 7));
   DOBA_EXPECT(!input.output_pending(output));
+  DOBA_EXPECT_EQUAL(input.output_buffers(output, {}), 0);
 }

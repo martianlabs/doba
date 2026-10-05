@@ -27,6 +27,7 @@
 #include <chrono>
 #include <cstring>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <span>
 #include <stdexcept>
@@ -140,6 +141,34 @@ DOBA_TEST("tcpip serves independent loopback connections") {
 }
 
 // +===========================================================================+
+// | [>] tcpip receives bytes beyond one readiness event         ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("tcpip receives bytes beyond one readiness event") {
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  auto state = std::make_shared<byte_state>();
+  auto factory = [state]() { return byte_engine{state, {}, {}}; };
+  tr::tcp<byte_engine, decltype(factory)> server(
+      {.recv_buffer_size = 8,
+       .worker_count = 1,
+       .ip = "127.0.0.1",
+       .port = std::to_string(port)},
+      factory);
+  server.set_on_connection([]() {});
+  server.set_on_disconnection([]() {});
+  server.start();
+  DOBA_EXPECT(client.connect(port));
+  const std::string request(4096, 'x');
+  DOBA_EXPECT(client.send_all(request));
+  const auto response = client.receive(request.size(), 5s);
+  DOBA_EXPECT(response.has_value());
+  if (response) DOBA_EXPECT_EQUAL(*response, request);
+  client.close();
+  server.stop();
+}
+
+// +===========================================================================+
 // | [>] tcpip reuses a connection after each completed send     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip reuses a connection after each completed send") {
@@ -239,26 +268,43 @@ DOBA_TEST("tcpip preserves binary bytes across receive boundaries") {
 // | [>] tcpip rejects invalid engine consumption counts         ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip rejects invalid engine consumption counts") {
-  tcpip_client client;
-  const auto port = client.find_available_port();
-  DOBA_EXPECT(port != 0);
-  auto state = std::make_shared<byte_state>();
-  auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::tcp_policies configuration;
-  configuration.ip = "127.0.0.1";
-  configuration.port = std::to_string(port);
-  configuration.worker_count = 2;
-  tr::tcp<byte_engine, decltype(factory)> server(configuration, factory);
-  server.set_on_connection([state]() { state->connected++; });
-  server.set_on_disconnection([state]() { state->disconnected++; });
-  state->receive = [](byte_engine&, const char*, std::size_t size,
-                      std::size_t) { return size + 1; };
-  server.start();
-  DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(client.send_all("x"));
-  DOBA_EXPECT(client.wait_for_close(3s));
-  client.close();
-  server.stop();
+  for (const std::size_t invalid :
+       {std::size_t{2}, std::numeric_limits<std::size_t>::max()}) {
+    tcpip_client client;
+    const auto port = client.find_available_port();
+    DOBA_EXPECT(port != 0);
+    auto state = std::make_shared<byte_state>();
+    auto factory = [state]() { return byte_engine{state, {}, {}}; };
+    tr::tcp_policies configuration;
+    configuration.ip = "127.0.0.1";
+    configuration.port = std::to_string(port);
+    configuration.worker_count = 2;
+    tr::tcp<byte_engine, decltype(factory)> server(configuration, factory);
+    server.set_on_connection([state]() { state->connected++; });
+    server.set_on_disconnection([state]() { state->disconnected++; });
+    state->receive = [invalid](byte_engine&, const char*, std::size_t,
+                               std::size_t) { return invalid; };
+    server.start();
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send_all("x"));
+    DOBA_EXPECT(client.wait_for_close(3s));
+    DOBA_EXPECT(wait_count(state->disconnected, 1));
+    client.close();
+    state->receive = [](byte_engine& engine, const char* bytes,
+                        std::size_t size, std::size_t) {
+      engine.echo(bytes, size);
+      return size;
+    };
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(client.send_all("ok"));
+    const auto bytes = client.receive(2);
+    DOBA_EXPECT(bytes.has_value());
+    if (bytes) DOBA_EXPECT_EQUAL(*bytes, "ok");
+    client.close();
+    server.stop();
+    DOBA_EXPECT_EQUAL(state->connected.load(), 2);
+    DOBA_EXPECT_EQUAL(state->disconnected.load(), 2);
+  }
 }
 
 // +===========================================================================+
@@ -536,6 +582,43 @@ DOBA_TEST("tcpip survives failing connection callbacks") {
   client.close();
   server.stop();
   DOBA_EXPECT_EQUAL(state->connected.load(), 2);
+  DOBA_EXPECT_EQUAL(state->disconnected.load(), 2);
+}
+
+// +===========================================================================+
+// | [>] tcpip recovers after an engine factory failure          ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("tcpip recovers after an engine factory failure") {
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  auto state = std::make_shared<byte_state>();
+  std::atomic<int> attempts{0};
+  auto factory = [state, &attempts]() -> byte_engine {
+    if (attempts++ == 0) throw std::runtime_error("factory failed");
+    return byte_engine{state, {}, {}};
+  };
+  tr::tcp_policies configuration;
+  configuration.ip = "127.0.0.1";
+  configuration.port = std::to_string(port);
+  configuration.worker_count = 2;
+  tr::tcp<byte_engine, decltype(factory)> server(configuration, factory);
+  server.set_on_connection([state]() { state->connected++; });
+  server.set_on_disconnection([state]() { state->disconnected++; });
+  server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.wait_for_close(3s));
+  client.close();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("ok"));
+  const auto bytes = client.receive(2);
+  DOBA_EXPECT(bytes.has_value());
+  if (bytes) DOBA_EXPECT_EQUAL(*bytes, "ok");
+  client.close();
+  server.stop();
+  DOBA_EXPECT_EQUAL(attempts.load(), 2);
+  DOBA_EXPECT_EQUAL(state->connected.load(), 1);
+  DOBA_EXPECT_EQUAL(state->disconnected.load(), 1);
 }
 
 // +===========================================================================+
