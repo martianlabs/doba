@@ -558,7 +558,7 @@ class decoder {
   // +-------------------------------------------------------------------------+
   deserialization_result<RQty, RSty> parse_body(std::string_view& source) {
     body::framer_state state = std::visit(
-        [this, source](auto& arg) -> body::framer_state {
+        [source](auto& arg) -> body::framer_state {
           std::span<const std::byte> byte_span{
               reinterpret_cast<const std::byte*>(source.data()), source.size()};
           return arg.consume(byte_span);
