@@ -864,6 +864,7 @@ DOBA_TEST("close discards input after draining output") {
       DOBA_EXPECT(wait_count(disconnected, 1));
       transport.stop();
     }
+    DOBA_EXPECT_EQUAL(disconnected.load(), 1);
     DOBA_EXPECT_EQUAL(state->queued.load(), 1);
   }
 }

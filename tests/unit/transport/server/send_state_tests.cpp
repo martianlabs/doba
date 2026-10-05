@@ -22,6 +22,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <limits>
 #include <memory>
 #include <span>
 #include <string>
@@ -89,6 +90,48 @@ DOBA_TEST("send state enforces inline capacity") {
   DOBA_EXPECT(!output.consume(7));
   DOBA_EXPECT(output.consume(6));
   DOBA_EXPECT(output.push("789", {}, nullptr));
+}
+
+// +===========================================================================+
+// | [>] send state keeps exact capacity across partial sends   ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("send state keeps exact capacity across partial sends") {
+  send_state output(4);
+  DOBA_EXPECT(output.push("ab", "cd", nullptr));
+  DOBA_EXPECT(!output.push("e", {}, nullptr));
+  DOBA_EXPECT(output.fill());
+  DOBA_EXPECT_EQUAL(output.buffer, "abcd");
+  DOBA_EXPECT(!output.consume(std::numeric_limits<std::size_t>::max()));
+  DOBA_EXPECT_EQUAL(output.offset, 0);
+  DOBA_EXPECT(output.consume(2));
+  DOBA_EXPECT(output.push("ef", {}, nullptr));
+  DOBA_EXPECT(!output.push("g", {}, nullptr));
+  DOBA_EXPECT(output.consume(2));
+  DOBA_EXPECT(output.fill());
+  DOBA_EXPECT_EQUAL(output.buffer, "ef");
+  DOBA_EXPECT(output.consume(2));
+}
+
+// +===========================================================================+
+// | [>] send state reserves capacity for a byte source         ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("send state reserves capacity for a byte source") {
+  std::string source_bytes = "xy";
+  send_state output(4);
+  DOBA_EXPECT(output.push(
+      "a", {}, std::make_unique<reader>(reader::borrowed(
+                   std::as_bytes(std::span(source_bytes))))));
+  DOBA_EXPECT(!output.push("b", {}, nullptr));
+  DOBA_EXPECT(output.fill());
+  DOBA_EXPECT_EQUAL(output.buffer, "a");
+  DOBA_EXPECT(output.consume(1));
+  DOBA_EXPECT(output.fill());
+  DOBA_EXPECT_EQUAL(output.buffer, "xy");
+  DOBA_EXPECT(output.consume(2));
+  DOBA_EXPECT(output.fill());
+  DOBA_EXPECT(output.push("bcde", {}, nullptr));
+  DOBA_EXPECT(output.fill());
+  DOBA_EXPECT_EQUAL(output.buffer, "bcde");
 }
 
 // +===========================================================================+
