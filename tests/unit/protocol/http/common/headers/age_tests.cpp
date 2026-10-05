@@ -22,6 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <cstddef>
+#include <limits>
 #include <string>
 #include <string_view>
 
@@ -34,7 +36,7 @@ using martianlabs::doba::protocol::http::headers::age;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "0", "1", "42", "000", "999999999999999999999999999999",
@@ -45,9 +47,10 @@ DOBA_TEST("check accepts valid values") {
     DOBA_EXPECT(age::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "", " ", "-1", "+1", "1.0", "1s", "0x10", "1,2", " 1", "1 ",
@@ -56,9 +59,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!age::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!age::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!age::check(std::string_view{"a\0", 2}));
@@ -82,9 +86,10 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(age::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check scans the complete decimal value                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check scans the complete decimal value") {
   for (unsigned int byte = 0; byte <= 255; ++byte) {
     std::string source(64, '9');
@@ -92,5 +97,18 @@ DOBA_TEST("check scans the complete decimal value") {
     martianlabs::doba::tests::unit::test_helper::set_context(
         "byte " + std::to_string(byte));
     DOBA_EXPECT_EQUAL(age::check(source), byte >= '0' && byte <= '9');
+  }
+}
+
+// +===========================================================================+
+// | [>] check is syntactic beyond the size_t range              ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check is syntactic beyond the size_t range") {
+  const std::string maximum =
+      std::to_string(std::numeric_limits<std::size_t>::max());
+  for (const auto& source : {maximum, maximum + "0", std::string(4096, '9')}) {
+    DOBA_EXPECT(age::check(source));
+    DOBA_EXPECT(!age::check(source + " "));
+    DOBA_EXPECT(!age::check("-" + source));
   }
 }

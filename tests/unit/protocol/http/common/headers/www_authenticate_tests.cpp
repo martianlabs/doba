@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::www_authenticate;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "",
@@ -56,9 +56,10 @@ DOBA_TEST("check accepts valid values") {
         std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       " ",
@@ -70,9 +71,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!www_authenticate::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!www_authenticate::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!www_authenticate::check(std::string_view{"a\0", 2}));
@@ -94,12 +96,13 @@ DOBA_TEST("check handles string view boundaries") {
   std::string padded(seed);
   padded.push_back('\0');
   padded += "suffix";
-  DOBA_EXPECT(www_authenticate::check(
-      std::string_view(padded.data(), seed.size())));
+  DOBA_EXPECT(
+      www_authenticate::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check accepts challenge transitions                     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts challenge transitions") {
   constexpr std::string_view cases[] = {
       "Scheme abc==, Other",
@@ -112,26 +115,25 @@ DOBA_TEST("check accepts challenge transitions") {
     DOBA_EXPECT(www_authenticate::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects challenge transitions                     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects challenge transitions") {
   constexpr std::string_view cases[] = {
-      "a=b",
-      "Scheme token, a=b",
-      "Scheme, a=b",
-      "Scheme a=b, Other token, c=d",
-      "Scheme\ttoken",
-      "Scheme a=\"x\"z",
+      "a=b",           "Scheme token, a=b",
+      "Scheme, a=b",   "Scheme a=b, Other token, c=d",
+      "Scheme\ttoken", "Scheme a=\"x\"z",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
     DOBA_EXPECT(!www_authenticate::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check accepts BWS in continuing auth parameters         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts BWS in a continuing authentication parameter") {
   DOBA_EXPECT(www_authenticate::check("Scheme a=b, Other =x"));
 }

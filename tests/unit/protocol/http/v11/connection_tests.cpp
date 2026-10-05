@@ -31,7 +31,7 @@ using martianlabs::doba::protocol::http::v11::connection;
 
 // +===========================================================================+
 // | [>] default state represents persistent HTTP 1.1 connection ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("default state represents persistent HTTP 1.1 connection") {
   const connection value;
   DOBA_EXPECT(value.persistent);
@@ -45,9 +45,10 @@ DOBA_TEST("default state represents persistent HTTP 1.1 connection") {
   DOBA_EXPECT(value.options.empty());
   DOBA_EXPECT(!value.expects_continue);
 }
+
 // +===========================================================================+
 // | [>] state retains zero copy parsed values                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("state retains zero copy parsed values") {
   connection value;
   value.transfer_codings = {"gzip", "chunked"};

@@ -26,16 +26,25 @@
 #include <initializer_list>
 #include <string>
 
-#include "../../helpers/test_helper_process.h"
+#include "test_helper_process.h"
 #include "test_helper.h"
 
 namespace {
 using martianlabs::doba::tests::test_helper_result;
 using martianlabs::doba::tests::integration::test_helper;
-
-// +===========================================================================+
-// | [>] run_probe                                                  ( method ) |
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] run_probe                                                ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function runs the test_helper with the specified arguments and       |
+// | timeout. It takes an initializer list of const char* as arguments and an  |
+// | optional timeout duration (defaulting to 3 seconds). The function calls   |
+// | run_test_helper from the martianlabs::doba::tests namespace, passing the  |
+// | arguments and timeout. It then sets the context of the test_helper with   |
+// | the output from the result and returns the test_helper_result containing  |
+// | the exit code, timeout status, and output of the test_helper execution.   |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 test_helper_result run_probe(
     std::initializer_list<const char*> arguments,
     std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
@@ -47,7 +56,7 @@ test_helper_result run_probe(
 
 // +===========================================================================+
 // | [>] listing does not execute tests                          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("listing does not execute tests") {
 const auto result = run_probe({"--list"});
   DOBA_EXPECT(!result.timed_out);
@@ -58,10 +67,10 @@ const auto result = run_probe({"--list"});
 
 // +===========================================================================+
 // | [>] file and name filters select one test                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("file and name filters select one test") {
-const auto result = run_probe(
-      {"--file", "test_helper_probe.cpp", "--name", "probe passes"});
+  const auto result =
+      run_probe({"--file", "test_helper_probe.cpp", "--name", "probe passes"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 0);
   DOBA_EXPECT(result.output.find("probe body") != std::string::npos);
@@ -70,9 +79,9 @@ const auto result = run_probe(
 
 // +===========================================================================+
 // | [>] unmatched filter reports an error                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("unmatched filter reports an error") {
-const auto result = run_probe({"--name", "nonexistent"});
+  const auto result = run_probe({"--name", "nonexistent"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 2);
   DOBA_EXPECT(result.output.find("No tests matched") != std::string::npos);
@@ -80,9 +89,9 @@ const auto result = run_probe({"--name", "nonexistent"});
 
 // +===========================================================================+
 // | [>] assertion failure reports expression and location       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("assertion failure reports expression and location") {
-const auto result = run_probe({"--name", "probe assertion fails"});
+  const auto result = run_probe({"--name", "probe assertion fails"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 1);
   DOBA_EXPECT(result.output.find("2 + 2 == 5") != std::string::npos);
@@ -96,9 +105,9 @@ const auto result = run_probe({"--name", "probe assertion fails"});
 
 // +===========================================================================+
 // | [>] standard exception reports its message                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("standard exception reports its message") {
-const auto result = run_probe({"--name", "probe standard exception"});
+  const auto result = run_probe({"--name", "probe standard exception"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 1);
   DOBA_EXPECT(result.output.find("probe standard error") != std::string::npos);
@@ -106,9 +115,9 @@ const auto result = run_probe({"--name", "probe standard exception"});
 
 // +===========================================================================+
 // | [>] unknown exception reports an error                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("unknown exception reports an error") {
-const auto result = run_probe({"--name", "probe unknown exception"});
+  const auto result = run_probe({"--name", "probe unknown exception"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 1);
   DOBA_EXPECT(result.output.find("Unknown exception") != std::string::npos);
@@ -116,9 +125,9 @@ const auto result = run_probe({"--name", "probe unknown exception"});
 
 // +===========================================================================+
 // | [>] execution continues after failed tests                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("execution continues after failed tests") {
-const auto result = run_probe(
+  const auto result = run_probe(
       {"--file", "test_helper_probe.cpp", "--exclude", "probe blocks"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 1);
@@ -127,9 +136,9 @@ const auto result = run_probe(
 
 // +===========================================================================+
 // | [>] unknown argument reports an error                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("unknown argument reports an error") {
-const auto result = run_probe({"--unknown"});
+  const auto result = run_probe({"--unknown"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 2);
   DOBA_EXPECT(result.output.find("Invalid test arguments") !=
@@ -138,9 +147,9 @@ const auto result = run_probe({"--unknown"});
 
 // +===========================================================================+
 // | [>] assertion failure reports row context                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("assertion failure reports row context") {
-const auto result = run_probe({"--name", "probe row context"});
+  const auto result = run_probe({"--name", "probe row context"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 1);
   DOBA_EXPECT(result.output.find("case: row 7: input=invalid") !=
@@ -149,10 +158,10 @@ const auto result = run_probe({"--name", "probe row context"});
 
 // +===========================================================================+
 // | [>] blocked test is identified before timeout               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("blocked test is identified before timeout") {
-const auto result = run_probe({"--name", "probe blocks"},
-                                std::chrono::seconds(1));
+  const auto result =
+      run_probe({"--name", "probe blocks"}, std::chrono::seconds(1));
   DOBA_EXPECT(result.timed_out);
   const auto name = result.output.find(" - probe blocks");
   DOBA_EXPECT(name != std::string::npos);
@@ -163,10 +172,10 @@ const auto result = run_probe({"--name", "probe blocks"},
 
 // +===========================================================================+
 // | [>] assertion failure unwinds active transport              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("assertion failure unwinds active transport") {
-const auto result = run_probe(
-      {"--name", "probe failure cleans up active transport"});
+  const auto result =
+      run_probe({"--name", "probe failure cleans up active transport"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 1);
   DOBA_EXPECT(result.output.find("probe cleanup complete") !=

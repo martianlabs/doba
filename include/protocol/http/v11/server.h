@@ -62,7 +62,7 @@ class server {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   explicit server(typename TRty<ENty, engine_factory<ENty, ROty>>::policies_type
                       transport_configuration = {},
                   typename ENty::policies_type engine_configuration = {})
@@ -77,12 +77,12 @@ class server {
   ~server() { stop(); }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   server& operator=(const server&) = delete;
   server& operator=(server&&) noexcept = delete;
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void start() {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     if (locked_) return;
@@ -97,7 +97,7 @@ class server {
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   void stop() {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     if (!locked_) return;
@@ -107,7 +107,7 @@ class server {
   }
   // +=========================================================================+
   // | [>] add_route                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <typename Hty>
     requires router_handler_lambda<Hty>
   server& add_route(std::string_view method, std::string_view route,
@@ -121,22 +121,22 @@ class server {
   }
   // +=========================================================================+
   // | [>] add_controller                                           ( public ) |
-  // +=========================================================================+
-  template <typename Cty, typename... Args>
+  // +-------------------------------------------------------------------------+
+  template <typename CTty, typename... Args>
   server& add_controller(Args&&... args) {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     if (locked_) {
       throw std::runtime_error(
           "Cannot add controller when the server is running");
     }
-    router_.template add_controller<Cty>(std::forward<Args>(args)...);
+    router_.template add_controller<CTty>(std::forward<Args>(args)...);
     return *this;
   }
 
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   ROty router_;
   bool locked_{false};
   std::mutex locked_mutex_;

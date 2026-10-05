@@ -111,43 +111,42 @@ int main(int argc, char* argv[]) {
   // Parse every baseline value; HttpArena randomizes them to detect shortcuts.
   http_server.add_route(
       "GET", "/baseline11",
-      [](const request& req) {
-        response res = response::ok_200();
+      [](const request& req, response& res) {
+        res.ok_200();
         std::int64_t value = 0;
         if (!read_query_sum(req, value)) {
-          res = response::bad_request_400();
+          res.bad_request_400();
           res.set_body("invalid request");
-          return res;
+          return;
         }
         res.add_header("Content-Type", "text/plain")
             .set_body(std::to_string(value));
-        return res;
       });
   http_server.add_route(
       "POST", "/baseline11",
-      [](const request& req) {
-        response res = response::ok_200();
+      [](const request& req, response& res) {
+        res.ok_200();
         std::int64_t value = 0;
         std::int64_t body_value = 0;
         if (!read_query_sum(req, value) ||
             !read_body_integer(req, body_value)) {
-          res = response::bad_request_400();
+          res.bad_request_400();
           res.set_body("invalid request");
-          return res;
+          return;
         }
         res.add_header("Content-Type", "text/plain")
             .set_body(std::to_string(value + body_value));
-        return res;
       });
   auto json_handler =
-      [&dataset](const request& req, std::uint64_t requested_count) {
-        response res = response::ok_200();
+      [&dataset](const request& req, response& res,
+                 std::uint64_t requested_count) {
+        res.ok_200();
         std::int64_t multiplier = 1;
         const auto m = req.get_query_parameter("m");
         if (m && !parse_integer(m->second, multiplier)) {
-          res = response::bad_request_400();
+          res.bad_request_400();
           res.set_body("invalid multiplier");
-          return res;
+          return;
         }
         const auto count = std::min<std::uint64_t>(requested_count,
                                                    dataset.Size());
@@ -204,7 +203,8 @@ int main(int argc, char* argv[]) {
           if (deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
                            MAX_WBITS + 16, MAX_MEM_LEVEL,
                            Z_DEFAULT_STRATEGY) != Z_OK) {
-            return response::internal_server_error_500();
+            res.internal_server_error_500();
+            return;
           }
           std::string compressed(deflateBound(&stream, body.size()), '\0');
           stream.next_in = reinterpret_cast<Bytef*>(
@@ -215,7 +215,8 @@ int main(int argc, char* argv[]) {
           const int result = deflate(&stream, Z_FINISH);
           deflateEnd(&stream);
           if (result != Z_STREAM_END) {
-            return response::internal_server_error_500();
+            res.internal_server_error_500();
+            return;
           }
           compressed.resize(stream.total_out);
           res.add_header("Content-Encoding", "gzip");
@@ -223,17 +224,8 @@ int main(int argc, char* argv[]) {
         } else {
           res.set_body(body);
         }
-        return res;
       };
   http_server.add_route("GET", "/json/:count", json_handler);
-  // Keep this handler minimal so the profile isolates pipelining overhead.
-  http_server.add_route(
-      "GET", "/pipeline",
-      [](const request& req) {
-        response res = response::ok_200();
-        res.add_header("Content-Type", "text/plain").set_body("ok");
-        return res;
-      });
   martianlabs::doba::transport::server::tls_policies tls_configuration;
   tls_configuration.ip = "0.0.0.0";
   tls_configuration.port = "8081";
@@ -248,24 +240,10 @@ int main(int argc, char* argv[]) {
   tls_server.add_controller<static_file_server>("/static", "/data/static");
   tls_server.add_route(
       "POST", "/echo",
-      [](const request& req) {
-        response res = response::ok_200();
-        std::string body;
-        if (req.has_body_reader()) {
-          std::array<std::byte, 8192> buffer{};
-          for (;;) {
-            const auto state = req.get_body_reader()->read(buffer);
-            if (state.has_error) {
-              return response::bad_request_400();
-            }
-            body.append(reinterpret_cast<const char*>(buffer.data()),
-                        state.produced);
-            if (state.complete) break;
-          }
-        }
+      [](const request& req, response& res) {
+        res.ok_200();
         res.add_header("Content-Type", "application/octet-stream")
-            .set_body(body);
-        return res;
+            .set_body(req.get_body_reader());
       });
   http_server.start();
   tls_server.start();

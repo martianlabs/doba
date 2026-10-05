@@ -33,16 +33,19 @@
 #include <string>
 #include <thread>
 
-#include "common/output.h"
+#include "protocol/send_delegate.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
+#include "wait_count.h"
 #include "transport/server/tcp.h"
 
 namespace {
 namespace tr = martianlabs::doba::transport::server;
 using martianlabs::doba::tests::integration::tcpip_client;
+using martianlabs::doba::tests::integration::wait_count;
 using namespace std::chrono_literals;
 struct byte_engine;
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] byte_state                                                 ( struct ) |
@@ -50,26 +53,41 @@ struct byte_engine;
 // /////////////////////////////////////////////////////////////////////////////
 struct byte_state {
   std::function<std::size_t(byte_engine&, const char*, std::size_t,
-                            std::size_t)> receive;
+                            std::size_t)>
+      receive;
   std::atomic<int> connected{0};
   std::atomic<int> disconnected{0};
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] byte_engine                                                ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct byte_engine {
+  // +=========================================================================+
+  // | [>] USINGs                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   using policies_type = int;
-  void set_on_send(martianlabs::doba::common::send_delegate value) {
+  // +=========================================================================+
+  // | [>] set_on_send                                              ( public ) |
+  // +-------------------------------------------------------------------------+
+  void set_on_send(martianlabs::doba::protocol::send_delegate value) {
     send = std::move(value);
   }
+  // +=========================================================================+
+  // | [>] set_on_close                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()> value) { close = std::move(value); }
+  // +=========================================================================+
+  // | [>] echo                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   void echo(const char* bytes, std::size_t size) {
-    auto buffer = std::make_unique<char[]>(size);
-    if (size) std::memcpy(buffer.get(), bytes, size);
-    send(std::move(buffer), size, std::nullopt);
+    send(std::string(bytes, size), {}, nullptr);
   }
+  // +=========================================================================+
+  // | [>] on_bytes_received                                        ( public ) |
+  // +-------------------------------------------------------------------------+
   std::size_t on_bytes_received(const char* bytes, std::size_t size,
                                 std::size_t capacity) {
     if (!size || size > capacity) throw std::runtime_error("Invalid input");
@@ -77,28 +95,26 @@ struct byte_engine {
     echo(bytes, size);
     return size;
   }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   std::shared_ptr<byte_state> state;
-  martianlabs::doba::common::send_delegate send;
+  martianlabs::doba::protocol::send_delegate send;
   std::function<void()> close;
 };
-bool wait_count(const std::atomic<int>& count, int expected) {
-  const auto deadline = std::chrono::steady_clock::now() + 3s;
-  while (count.load() < expected && std::chrono::steady_clock::now() < deadline) {
-    std::this_thread::yield();
-  }
-  return count.load() == expected;
-}
+
 }  // namespace
+
 // +===========================================================================+
 // | [>] tcpip serves independent loopback connections           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip serves independent loopback connections") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -109,7 +125,8 @@ DOBA_TEST("tcpip serves independent loopback connections") {
   std::array<tcpip_client, 4> clients;
   for (std::size_t i = 0; i < clients.size(); i++) {
     DOBA_EXPECT(clients[i].connect(port));
-    DOBA_EXPECT(clients[i].send_all(std::string(1, static_cast<char>('a' + i))));
+    DOBA_EXPECT(
+        clients[i].send_all(std::string(1, static_cast<char>('a' + i))));
   }
   for (std::size_t i = 0; i < clients.size(); i++) {
     const auto bytes = clients[i].receive(1);
@@ -121,16 +138,17 @@ DOBA_TEST("tcpip serves independent loopback connections") {
   DOBA_EXPECT_EQUAL(state->connected.load(), 4);
   DOBA_EXPECT_EQUAL(state->disconnected.load(), 4);
 }
+
 // +===========================================================================+
 // | [>] tcpip reuses a connection after each completed send     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip reuses a connection after each completed send") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -148,16 +166,17 @@ DOBA_TEST("tcpip reuses a connection after each completed send") {
   client.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] tcpip retains unconsumed fragments for the engine       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip retains unconsumed fragments for the engine") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -165,7 +184,7 @@ DOBA_TEST("tcpip retains unconsumed fragments for the engine") {
   server.set_on_connection([state]() { state->connected++; });
   server.set_on_disconnection([state]() { state->disconnected++; });
   state->receive = [](byte_engine& engine, const char* bytes, std::size_t size,
-                       std::size_t) -> std::size_t {
+                      std::size_t) -> std::size_t {
     if (size < 4) return 0;
     engine.echo(bytes, 4);
     return 4;
@@ -186,16 +205,17 @@ DOBA_TEST("tcpip retains unconsumed fragments for the engine") {
   client.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] transport contract                                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip preserves binary bytes across receive boundaries") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -214,16 +234,17 @@ DOBA_TEST("tcpip preserves binary bytes across receive boundaries") {
   client.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] tcpip rejects invalid engine consumption counts         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip rejects invalid engine consumption counts") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -231,7 +252,7 @@ DOBA_TEST("tcpip rejects invalid engine consumption counts") {
   server.set_on_connection([state]() { state->connected++; });
   server.set_on_disconnection([state]() { state->disconnected++; });
   state->receive = [](byte_engine&, const char*, std::size_t size,
-                       std::size_t) { return size + 1; };
+                      std::size_t) { return size + 1; };
   server.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("x"));
@@ -239,16 +260,17 @@ DOBA_TEST("tcpip rejects invalid engine consumption counts") {
   client.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] transport contract                                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip closes when unconsumed input fills the receive buffer") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -257,7 +279,7 @@ DOBA_TEST("tcpip closes when unconsumed input fills the receive buffer") {
   server.set_on_connection([state]() { state->connected++; });
   server.set_on_disconnection([state]() { state->disconnected++; });
   state->receive = [](byte_engine&, const char*, std::size_t,
-                       std::size_t) -> std::size_t { return 0; };
+                      std::size_t) -> std::size_t { return 0; };
   server.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(std::string(15, 'x')));
@@ -267,16 +289,17 @@ DOBA_TEST("tcpip closes when unconsumed input fills the receive buffer") {
   client.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] tcpip drains an engine close delivery before eof        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip drains an engine close delivery before eof") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -284,7 +307,7 @@ DOBA_TEST("tcpip drains an engine close delivery before eof") {
   server.set_on_connection([state]() { state->connected++; });
   server.set_on_disconnection([state]() { state->disconnected++; });
   state->receive = [](byte_engine& engine, const char* bytes, std::size_t size,
-                       std::size_t) {
+                      std::size_t) {
     engine.echo(bytes, size);
     engine.close();
     return size;
@@ -298,16 +321,17 @@ DOBA_TEST("tcpip drains an engine close delivery before eof") {
   client.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] transport contract                                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip removes an empty delivery without blocking its queue") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -315,7 +339,7 @@ DOBA_TEST("tcpip removes an empty delivery without blocking its queue") {
   server.set_on_connection([state]() { state->connected++; });
   server.set_on_disconnection([state]() { state->disconnected++; });
   state->receive = [](byte_engine& engine, const char* bytes, std::size_t size,
-                       std::size_t) {
+                      std::size_t) {
     engine.echo(bytes, 0);
     engine.echo(bytes, size);
     return size;
@@ -329,16 +353,17 @@ DOBA_TEST("tcpip removes an empty delivery without blocking its queue") {
   client.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] tcpip closes when a delivery exceeds the send limit     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip closes when a delivery exceeds the send limit") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -353,16 +378,17 @@ DOBA_TEST("tcpip closes when a delivery exceeds the send limit") {
   client.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] tcpip isolates engine exceptions to the connection      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip isolates engine exceptions to the connection") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -370,7 +396,7 @@ DOBA_TEST("tcpip isolates engine exceptions to the connection") {
   server.set_on_connection([state]() { state->connected++; });
   server.set_on_disconnection([state]() { state->disconnected++; });
   state->receive = [](byte_engine& engine, const char* bytes, std::size_t size,
-                       std::size_t) {
+                      std::size_t) {
     if (bytes[0] == '!') throw std::runtime_error("engine failed");
     engine.echo(bytes, size);
     return size;
@@ -388,16 +414,17 @@ DOBA_TEST("tcpip isolates engine exceptions to the connection") {
   client.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] tcpip drains bytes after the client half closes         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip drains bytes after the client half closes") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -414,16 +441,17 @@ DOBA_TEST("tcpip drains bytes after the client half closes") {
   client.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] tcpip closes incomplete input after eof                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip closes incomplete input after eof") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -431,7 +459,7 @@ DOBA_TEST("tcpip closes incomplete input after eof") {
   server.set_on_connection([state]() { state->connected++; });
   server.set_on_disconnection([state]() { state->disconnected++; });
   state->receive = [](byte_engine&, const char*, std::size_t,
-                       std::size_t) -> std::size_t { return 0; };
+                      std::size_t) -> std::size_t { return 0; };
   server.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("partial"));
@@ -440,16 +468,17 @@ DOBA_TEST("tcpip closes incomplete input after eof") {
   client.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] tcpip restarts the same server on the same port         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip restarts the same server on the same port") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -471,16 +500,17 @@ DOBA_TEST("tcpip restarts the same server on the same port") {
   DOBA_EXPECT_EQUAL(state->connected.load(), 3);
   DOBA_EXPECT_EQUAL(state->disconnected.load(), 3);
 }
+
 // +===========================================================================+
 // | [>] tcpip survives failing connection callbacks             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip survives failing connection callbacks") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -507,16 +537,17 @@ DOBA_TEST("tcpip survives failing connection callbacks") {
   server.stop();
   DOBA_EXPECT_EQUAL(state->connected.load(), 2);
 }
+
 // +===========================================================================+
 // | [>] tcpip survives failing disconnection callbacks          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip survives failing disconnection callbacks") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -537,16 +568,17 @@ DOBA_TEST("tcpip survives failing disconnection callbacks") {
   DOBA_EXPECT_EQUAL(state->connected.load(), 2);
   DOBA_EXPECT_EQUAL(state->disconnected.load(), 2);
 }
+
 // +===========================================================================+
 // | [>] tcpip rejects callback mutation while active            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip rejects callback mutation while active") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -556,24 +588,31 @@ DOBA_TEST("tcpip rejects callback mutation while active") {
   server.start();
   bool connection_rejected = false;
   bool disconnection_rejected = false;
-  try { server.set_on_connection([]() {}); }
-  catch (const std::runtime_error&) { connection_rejected = true; }
-  try { server.set_on_disconnection([]() {}); }
-  catch (const std::runtime_error&) { disconnection_rejected = true; }
+  try {
+    server.set_on_connection([]() {});
+  } catch (const std::runtime_error&) {
+    connection_rejected = true;
+  }
+  try {
+    server.set_on_disconnection([]() {});
+  } catch (const std::runtime_error&) {
+    disconnection_rejected = true;
+  }
   server.stop();
   DOBA_EXPECT(connection_rejected);
   DOBA_EXPECT(disconnection_rejected);
 }
+
 // +===========================================================================+
 // | [>] tcpip drains a large ordered delivery sequence          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip drains a large ordered delivery sequence") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -581,7 +620,7 @@ DOBA_TEST("tcpip drains a large ordered delivery sequence") {
   server.set_on_connection([state]() { state->connected++; });
   server.set_on_disconnection([state]() { state->disconnected++; });
   state->receive = [](byte_engine& engine, const char* bytes, std::size_t size,
-                       std::size_t) {
+                      std::size_t) {
     for (std::size_t i = 0; i < size; i++) engine.echo(bytes + i, 1);
     return size;
   };
@@ -596,16 +635,17 @@ DOBA_TEST("tcpip drains a large ordered delivery sequence") {
   client.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] transport contract                                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip serves another client while a large delivery is blocked") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -639,16 +679,17 @@ DOBA_TEST("tcpip serves another client while a large delivery is blocked") {
   other.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] transport contract                                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip recovers after a client resets a large delivery") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -682,16 +723,17 @@ DOBA_TEST("tcpip recovers after a client resets a large delivery") {
   client.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] tcpip recovers after a reset during byte reception      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip recovers after a reset during byte reception") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -699,7 +741,7 @@ DOBA_TEST("tcpip recovers after a reset during byte reception") {
   server.set_on_connection([state]() { state->connected++; });
   server.set_on_disconnection([state]() { state->disconnected++; });
   state->receive = [](byte_engine& engine, const char* bytes, std::size_t size,
-                       std::size_t) -> std::size_t {
+                      std::size_t) -> std::size_t {
     if (bytes[0] == 'x') return 0;
     engine.echo(bytes, size);
     return size;
@@ -718,16 +760,17 @@ DOBA_TEST("tcpip recovers after a reset during byte reception") {
   client.close();
   server.stop();
 }
+
 // +===========================================================================+
 // | [>] transport contract                                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip isolates interleaved fragments from concurrent clients") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -735,7 +778,7 @@ DOBA_TEST("tcpip isolates interleaved fragments from concurrent clients") {
   server.set_on_connection([state]() { state->connected++; });
   server.set_on_disconnection([state]() { state->disconnected++; });
   state->receive = [](byte_engine& engine, const char* bytes, std::size_t size,
-                       std::size_t) -> std::size_t {
+                      std::size_t) -> std::size_t {
     if (size < 4) return 0;
     engine.echo(bytes, 4);
     return 4;
@@ -745,7 +788,8 @@ DOBA_TEST("tcpip isolates interleaved fragments from concurrent clients") {
   for (auto& connection : clients) DOBA_EXPECT(connection.connect(port));
   for (int fragment = 0; fragment < 4; fragment++) {
     for (std::size_t i = 0; i < clients.size(); i++) {
-      DOBA_EXPECT(clients[i].send_all(std::string(1, static_cast<char>('a' + i))));
+      DOBA_EXPECT(
+          clients[i].send_all(std::string(1, static_cast<char>('a' + i))));
     }
   }
   for (std::size_t i = 0; i < clients.size(); i++) {
@@ -759,7 +803,7 @@ DOBA_TEST("tcpip isolates interleaved fragments from concurrent clients") {
 
 // +===========================================================================+
 // | [>] isolated empty deliveries                               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip completes isolated empty deliveries") {
   for (const bool null_buffer : {false, true}) {
     tcpip_client client;
@@ -767,7 +811,7 @@ DOBA_TEST("tcpip completes isolated empty deliveries") {
     DOBA_EXPECT(port != 0);
     auto state = std::make_shared<byte_state>();
     auto factory = [state]() { return byte_engine{state, {}, {}}; };
-    tr::policies configuration;
+    tr::tcp_policies configuration;
     configuration.ip = "127.0.0.1";
     configuration.port = std::to_string(port);
     configuration.worker_count = 2;
@@ -780,14 +824,16 @@ DOBA_TEST("tcpip completes isolated empty deliveries") {
                          std::size_t size, std::size_t) {
       if (bytes[0] == 'e') {
         for (int i = 0; i < 3; i++) {
-          if (null_buffer) engine.send(nullptr, 0, std::nullopt);
-          else engine.echo(bytes, 0);
+          if (null_buffer)
+            engine.send({}, {}, nullptr);
+          else
+            engine.echo(bytes, 0);
         }
       } else {
         engine.echo("a", 1);
-        engine.send(nullptr, 0, std::nullopt);
+        engine.send({}, {}, nullptr);
         engine.echo("b", 1);
-        engine.send(nullptr, 0, std::nullopt);
+        engine.send({}, {}, nullptr);
         engine.close();
       }
       received++;
@@ -805,9 +851,10 @@ DOBA_TEST("tcpip completes isolated empty deliveries") {
     server.stop();
   }
 }
+
 // +===========================================================================+
 // | [>] rejected send notification                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip rejects invalid deliveries and ignores later output") {
   for (const int mode : {0, 1, 2}) {
     tcpip_client client;
@@ -815,7 +862,7 @@ DOBA_TEST("tcpip rejects invalid deliveries and ignores later output") {
     DOBA_EXPECT(port != 0);
     auto state = std::make_shared<byte_state>();
     auto factory = [state]() { return byte_engine{state, {}, {}}; };
-    tr::policies configuration;
+    tr::tcp_policies configuration;
     configuration.ip = "127.0.0.1";
     configuration.port = std::to_string(port);
     configuration.worker_count = 2;
@@ -825,10 +872,12 @@ DOBA_TEST("tcpip rejects invalid deliveries and ignores later output") {
     server.set_on_disconnection([]() {});
     state->receive = [&](byte_engine& engine, const char*, std::size_t size,
                          std::size_t) {
-      if (mode == 1) engine.send(nullptr, 1, std::nullopt);
-      else engine.echo("01234567890123456", 17);
+      if (mode == 1)
+        engine.send("0", std::string(16, '1'), nullptr);
+      else
+        engine.echo("01234567890123456", 17);
       engine.echo("ignored", 7);
-      engine.send(nullptr, 0, std::nullopt);
+      engine.send({}, {}, nullptr);
       if (mode == 2) throw std::runtime_error("After rejection");
       return size;
     };
@@ -841,9 +890,10 @@ DOBA_TEST("tcpip rejects invalid deliveries and ignores later output") {
     server.stop();
   }
 }
+
 // +===========================================================================+
 // | [>] tcpip recovers receive space after partial consumption  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip recovers receive space after partial consumption") {
   tcpip_client client;
   const auto port = client.find_available_port();
@@ -866,8 +916,11 @@ DOBA_TEST("tcpip recovers receive space after partial consumption") {
   };
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
   tr::tcp<byte_engine, decltype(factory)> transport(
-      {.recv_buffer_size = 16, .worker_count = 2, .ip = "127.0.0.1",
-        .port = std::to_string(port)}, factory);
+      {.recv_buffer_size = 16,
+       .worker_count = 2,
+       .ip = "127.0.0.1",
+       .port = std::to_string(port)},
+      factory);
   transport.set_on_connection([state]() { state->connected++; });
   transport.set_on_disconnection([state]() { state->disconnected++; });
   transport.start();
@@ -885,9 +938,10 @@ DOBA_TEST("tcpip recovers receive space after partial consumption") {
   DOBA_EXPECT_EQUAL(full.load(), 1);
   DOBA_EXPECT_EQUAL(invalid.load(), 0);
 }
+
 // +===========================================================================+
 // | [>] tcpip batches output after the receive callback         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip batches output after the receive callback") {
   for (const std::size_t count : {1U, 16U, 256U}) {
     tcpip_client client;
@@ -898,7 +952,7 @@ DOBA_TEST("tcpip batches output after the receive callback") {
     std::atomic<bool> release{false};
     const std::string payload(37, 'x');
     state->receive = [&](byte_engine& engine, const char*, std::size_t size,
-                          std::size_t) {
+                         std::size_t) {
       for (std::size_t i = 0; i < count; i++) {
         engine.echo(payload.data(), payload.size());
       }
@@ -913,7 +967,7 @@ DOBA_TEST("tcpip batches output after the receive callback") {
       return size;
     };
     auto factory = [state]() { return byte_engine{state, {}, {}}; };
-    tr::policies configuration;
+    tr::tcp_policies configuration;
     configuration.ip = "127.0.0.1";
     configuration.port = std::to_string(port);
     configuration.worker_count = 2;
@@ -938,24 +992,25 @@ DOBA_TEST("tcpip batches output after the receive callback") {
     }
   }
 }
+
 // +===========================================================================+
 // | [>] tcpip accepts concurrent producers without new input    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip accepts concurrent producers without new input") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
-  martianlabs::doba::common::send_delegate output;
+  martianlabs::doba::protocol::send_delegate output;
   std::atomic<int> ready{0};
   state->receive = [&](byte_engine& engine, const char*, std::size_t size,
-                        std::size_t) {
+                       std::size_t) {
     output = engine.send;
     ready++;
     return size;
   };
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 4;
@@ -973,10 +1028,9 @@ DOBA_TEST("tcpip accepts concurrent producers without new input") {
       for (std::size_t i = 0; i < producers.size(); i++) {
         producers[i] = std::jthread([output, i]() {
           for (int sequence = 0; sequence < 128; sequence++) {
-            auto bytes = std::make_unique<char[]>(16);
-            std::memset(bytes.get(), static_cast<int>('a' + i), 16);
+            std::string bytes(16, static_cast<char>('a' + i));
             bytes[1] = static_cast<char>(sequence);
-            output(std::move(bytes), 16, std::nullopt);
+            output(std::move(bytes), {}, nullptr);
           }
         });
       }
@@ -999,24 +1053,25 @@ DOBA_TEST("tcpip accepts concurrent producers without new input") {
     client.close();
     server.stop();
   }
-  output(std::make_unique<char[]>(16), 16, std::nullopt);
+  output(std::string(16, '\0'), {}, nullptr);
 }
+
 // +===========================================================================+
 // | [>] tcpip limits the sum of queued deliveries               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip limits the sum of queued deliveries") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   state->receive = [](byte_engine& engine, const char*, std::size_t size,
-                       std::size_t) {
+                      std::size_t) {
     const std::string payload(32, 'x');
     for (int i = 0; i < 3; i++) engine.echo(payload.data(), payload.size());
     return size;
   };
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::policies configuration;
+  tr::tcp_policies configuration;
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
@@ -1034,26 +1089,27 @@ DOBA_TEST("tcpip limits the sum of queued deliveries") {
   DOBA_EXPECT(bytes.has_value() || error == "socket");
   if (bytes) DOBA_EXPECT(bytes->empty());
 }
+
 // +===========================================================================+
 // | [>] tcpip closes safely while producers enqueue             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip closes safely while producers enqueue") {
   for (const bool destroy : {false, true}) {
     tcpip_client client;
     const auto port = client.find_available_port();
     DOBA_EXPECT(port != 0);
     auto state = std::make_shared<byte_state>();
-    martianlabs::doba::common::send_delegate output;
+    martianlabs::doba::protocol::send_delegate output;
     std::atomic<int> ready{0};
     std::atomic<bool> release{false};
     state->receive = [&](byte_engine& engine, const char*, std::size_t size,
-                          std::size_t) {
+                         std::size_t) {
       output = engine.send;
       ready++;
       return size;
     };
     auto factory = [state]() { return byte_engine{state, {}, {}}; };
-    tr::policies configuration;
+    tr::tcp_policies configuration;
     configuration.ip = "127.0.0.1";
     configuration.port = std::to_string(port);
     configuration.worker_count = 4;
@@ -1061,7 +1117,7 @@ DOBA_TEST("tcpip closes safely while producers enqueue") {
         configuration, factory);
     server->set_on_connection([]() {});
     server->set_on_disconnection([state, &output]() {
-      output(std::make_unique<char[]>(32), 32, std::nullopt);
+      output(std::string(32, '\0'), {}, nullptr);
       state->disconnected++;
     });
     server->start();
@@ -1073,17 +1129,20 @@ DOBA_TEST("tcpip closes safely while producers enqueue") {
       producer = std::jthread([&]() {
         while (!release.load()) std::this_thread::yield();
         for (int i = 0; i < 1024; i++) {
-          output(std::make_unique<char[]>(32), 32, std::nullopt);
+          output(std::string(32, '\0'), {}, nullptr);
         }
       });
     }
     release = true;
-    if (destroy) server.reset();
-    else client.abort();
+    if (destroy)
+      server.reset();
+    else
+      client.abort();
     for (auto& producer : producers) producer.join();
     client.close();
     if (server) server->stop();
     DOBA_EXPECT_EQUAL(state->disconnected.load(), 1);
-    output(std::make_unique<char[]>(32), 32, std::nullopt);
+    output(std::string(32, '\0'), {}, nullptr);
   }
 }
+

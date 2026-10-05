@@ -38,7 +38,7 @@ using martianlabs::doba::protocol::http::v11::headers::upgrade;
 
 // +===========================================================================+
 // | [>] check parses protocol offers                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check parses protocol offers") {
   parsed_token_list parsed;
   DOBA_EXPECT(upgrade::check("HTTP/2.0, websocket, h2c/1", parsed));
@@ -52,9 +52,10 @@ DOBA_TEST("check parses protocol offers") {
   parsed_token_list empty;
   DOBA_EXPECT(upgrade::check("", empty));
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid protocol offers                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid protocol offers") {
   constexpr std::string_view cases[] = {
       " ", "/1", "HTTP/", "HTTP//2", "HTTP 2", "\"websocket\"", "HTTP/2/extra",
@@ -66,9 +67,10 @@ DOBA_TEST("check rejects invalid protocol offers") {
   parsed_token_list parsed;
   DOBA_EXPECT(!upgrade::check(std::string_view{"h2c\0", 4}, parsed));
 }
+
 // +===========================================================================+
 // | [>] interpret applies upgrade policy                        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("interpret applies upgrade policy") {
   parsed_token_list parsed;
   DOBA_EXPECT(upgrade::check("websocket, h2c", parsed));
@@ -83,9 +85,10 @@ DOBA_TEST("interpret applies upgrade policy") {
                     verdict::kReject);
   DOBA_EXPECT_EQUAL(denied.upgrade_offer.size(), 2u);
 }
+
 // +===========================================================================+
 // | [>] check appends ordered views from repeated fields        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check appends ordered views from repeated fields") {
   const std::string first = "websocket";
   const std::string second = "custom/2";
@@ -100,9 +103,10 @@ DOBA_TEST("check appends ordered views from repeated fields") {
   DOBA_EXPECT(upgrade::check(",,", parsed));
   DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
 }
+
 // +===========================================================================+
 // | [>] check accepts protocol version boundaries               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts protocol version boundaries") {
   constexpr std::string_view cases[] = {
       "x/!#$%&'*+-.^_`|~",
@@ -114,18 +118,13 @@ DOBA_TEST("check accepts protocol version boundaries") {
     DOBA_EXPECT(upgrade::check(source, parsed));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects protocol version boundaries               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects protocol version boundaries") {
   constexpr std::string_view cases[] = {
-      "x/",
-      "x//1",
-      "x/1/2",
-      "x /1",
-      "x/ 1",
-      "x/1;v=2",
-      "x/1,y/",
+      "x/", "x//1", "x/1/2", "x /1", "x/ 1", "x/1;v=2", "x/1,y/",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
@@ -133,9 +132,10 @@ DOBA_TEST("check rejects protocol version boundaries") {
     DOBA_EXPECT(!upgrade::check(source, parsed));
   }
 }
+
 // +===========================================================================+
 // | [>] interpret applies policy to accumulated offers          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("interpret applies policy to accumulated offers") {
   connection state;
   policies policy;

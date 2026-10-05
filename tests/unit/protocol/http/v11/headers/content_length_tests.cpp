@@ -38,7 +38,7 @@ using martianlabs::doba::protocol::http::v11::headers::content_length;
 
 // +===========================================================================+
 // | [>] check accepts decimal values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts decimal values") {
   struct test_case {
     std::string_view source;
@@ -62,9 +62,10 @@ DOBA_TEST("check accepts decimal values") {
   DOBA_EXPECT(content_length::check(source, parsed));
   DOBA_EXPECT_EQUAL(parsed, maximum);
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",    "+1",  "-1", " 1", "1 ", "\t1",  "1\t",
@@ -81,9 +82,10 @@ DOBA_TEST("check rejects invalid values") {
   ovf += '0';
   DOBA_EXPECT(!content_length::check(ovf, parsed));
 }
+
 // +===========================================================================+
 // | [>] interpret applies the configured limit                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("interpret applies the configured limit") {
   connection connection;
   policies policies;
@@ -104,9 +106,10 @@ DOBA_TEST("interpret applies the configured limit") {
   DOBA_EXPECT_EQUAL(content_length::interpret(11, connection, policies),
                     verdict::kReject);
 }
+
 // +===========================================================================+
 // | [>] check preserves output at the decimal overflow boundary ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check preserves output at the decimal overflow boundary") {
   const std::string maximum =
       std::to_string(std::numeric_limits<std::size_t>::max());

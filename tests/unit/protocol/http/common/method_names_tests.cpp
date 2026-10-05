@@ -33,7 +33,7 @@ using martianlabs::doba::protocol::http::method_names;
 
 // +===========================================================================+
 // | [>] constants contain standard method names                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("constants contain standard method names") {
   constexpr std::string_view actual[] = {
       method_names::kGet,     method_names::kHead,   method_names::kPost,

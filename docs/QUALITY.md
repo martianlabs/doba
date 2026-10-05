@@ -69,7 +69,7 @@ configurations exercised.
 
 Use focused unit tests for parsing, framing, value types, and object
 contracts. Use real-socket integration tests for behavior that depends on the
-transport: fragmentation, pipelining, response ordering, concurrent clients,
+transport: fragmentation, sequential requests, concurrent clients,
 cancellation, disconnects, and restart.
 
 Changes to shared transport behavior require equivalent coverage in IOCP and

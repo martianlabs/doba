@@ -52,7 +52,7 @@ class writer_chunked {
   // | [>] write                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   // | Encodes payload as a single chunk and writes it into dst.               |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool write(std::span<const std::byte> payload, common::writer& dst) {
     if (ended_) return false;
     if (payload.empty()) return true;
@@ -62,7 +62,7 @@ class writer_chunked {
   }
   // +=========================================================================+
   // | [>] write                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool write(std::string_view payload, common::writer& dst) {
     return write(
         std::span<const std::byte>(
@@ -74,7 +74,7 @@ class writer_chunked {
   // +-------------------------------------------------------------------------+
   // | Emits the terminating chunk (no trailers). Idempotent: subsequent calls |
   // | are no-ops.                                                             |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool end(common::writer& dst) {
     if (ended_) return true;
     if (!dst.write(std::string_view("0\r\n\r\n"))) return false;
@@ -85,7 +85,7 @@ class writer_chunked {
  private:
   // +=========================================================================+
   // | [>] write_chunk_size                                        ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool write_chunk_size(std::size_t size, common::writer& dst) {
     static constexpr char kHexDigits[] = "0123456789abcdef";
     std::string hex;
@@ -99,7 +99,7 @@ class writer_chunked {
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool ended_{false};
 };
 }  // namespace martianlabs::doba::protocol::http::v11::body

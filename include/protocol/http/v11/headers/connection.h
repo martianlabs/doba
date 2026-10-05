@@ -100,7 +100,7 @@ class connection {
  public:
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool check(std::string_view sv, parsed_token_list& out) {
     // The producer overload validates each connection-option exactly as the
     // pure check() does and captures every non-empty element in order.
@@ -112,7 +112,7 @@ class connection {
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr verdict interpret(const parsed_token_list& token_list,
                                      v11::connection& connection_out,
                                      const policies&) {
@@ -130,7 +130,7 @@ class connection {
  private:
   // +=========================================================================+
   // | [>] consume_connection_option                               ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool consume_connection_option(std::string_view sv) {
     return helpers::is_token(sv);
   }

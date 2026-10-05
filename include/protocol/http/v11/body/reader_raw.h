@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <optional>
 #include <span>
 
 #include "common/reader.h"
@@ -55,7 +56,7 @@ class reader_raw {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   explicit reader_raw(std::size_t content_length) : expected_(content_length) {}
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
@@ -63,7 +64,7 @@ class reader_raw {
   // | Pulls up to (expected_ - accumulated_) bytes from src into output.      |
   // | Returns immediately with complete=true when Content-Length is reached.  |
   // | A zero Content-Length body completes on the first call with produced=0. |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   reader_state read(common::reader& src, std::span<std::byte> output) {
     reader_state result;
     if (has_error_) {
@@ -89,11 +90,24 @@ class reader_raw {
     result.complete = (accumulated_ == expected_);
     return result;
   }
+  // +=========================================================================+
+  // | [>] take_view                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::optional<std::span<const std::byte>> take_view(
+      std::span<const std::byte> source, std::size_t maximum) {
+    if (has_error_ || source.size() < expected_ ||
+        expected_ - accumulated_ > maximum)
+      return std::nullopt;
+    const auto result =
+        source.subspan(accumulated_, expected_ - accumulated_);
+    accumulated_ = expected_;
+    return result;
+  }
 
  private:
   // +=========================================================================+
   // | [>] fail                                                    ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   reader_state fail(reader_state& result, reader_error err) {
     has_error_ = true;
     error_ = err;
@@ -103,7 +117,7 @@ class reader_raw {
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::size_t expected_;
   std::size_t accumulated_{0};
   bool has_error_{false};

@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::user_agent;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "doba",
@@ -50,9 +50,10 @@ DOBA_TEST("check accepts valid values") {
         user_agent::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",          " ",         "/1.0",          "doba/",
@@ -63,9 +64,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!user_agent::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!user_agent::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!user_agent::check(std::string_view{"a\0", 2}));
@@ -92,9 +94,10 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(user_agent::check("doba/1.0 (" + obs_text + ")"));
   DOBA_EXPECT(!user_agent::check("doba" + obs_text + "/1.0"));
 }
+
 // +===========================================================================+
 // | [>] check accepts product and comment boundaries            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts product and comment boundaries") {
   constexpr std::string_view cases[] = {
       "Product/1 (a(b)c) Other/2",
@@ -107,17 +110,15 @@ DOBA_TEST("check accepts product and comment boundaries") {
     DOBA_EXPECT(user_agent::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects product and comment boundaries            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects product and comment boundaries") {
   constexpr std::string_view cases[] = {
-      "Product/",
-      "Product/1/2",
-      "Product(comment)",
-      "Product (unterminated",
-      "Product (a\\",
-      "Product (a)junk",
+      "Product/",           "Product/1/2",
+      "Product(comment)",   "Product (unterminated",
+      "Product (a\\",       "Product (a)junk",
       "Product/1, Other/2",
   };
   for (const auto source : cases) {

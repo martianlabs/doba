@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::content_type;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "text/plain",
@@ -55,9 +55,10 @@ DOBA_TEST("check accepts valid values") {
         content_type::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",
@@ -78,9 +79,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!content_type::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!content_type::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!content_type::check(std::string_view{"a\0", 2}));
@@ -102,15 +104,16 @@ DOBA_TEST("check handles string view boundaries") {
   std::string padded(seed);
   padded.push_back('\0');
   padded += "suffix";
-  DOBA_EXPECT(content_type::check(
-      std::string_view(padded.data(), seed.size())));
+  DOBA_EXPECT(
+      content_type::check(std::string_view(padded.data(), seed.size())));
   const std::string obs_text(1, static_cast<char>(0x80));
   DOBA_EXPECT(content_type::check("text/plain;note=\"" + obs_text + "\""));
   DOBA_EXPECT(!content_type::check("text/" + obs_text + "plain"));
 }
+
 // +===========================================================================+
 // | [>] check accepts parameter delimiters                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts parameter delimiters") {
   constexpr std::string_view cases[] = {
       "x/y;;a=b",
@@ -123,17 +126,14 @@ DOBA_TEST("check accepts parameter delimiters") {
     DOBA_EXPECT(content_type::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects parameter delimiters                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects parameter delimiters") {
   constexpr std::string_view cases[] = {
-      "x/y;a= b",
-      "x/y;a=b c",
-      "x/y;a=\"a\"b",
-      "x/y;a=\"a\\",
-      "x/y;=b",
-      "x/y;a=b,other/type",
+      "x/y;a= b",    "x/y;a=b c", "x/y;a=\"a\"b",
+      "x/y;a=\"a\\", "x/y;=b",    "x/y;a=b,other/type",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);

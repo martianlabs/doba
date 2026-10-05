@@ -27,7 +27,7 @@
 
 #include <cstddef>
 #include <memory>
-#include <optional>
+#include <string_view>
 
 #include "common/reader.h"
 
@@ -36,18 +36,17 @@ namespace martianlabs::doba::protocol {
 // +---------------------------------------------------------------------------+
 // | [>] serialization_result                                       ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Owns prefix_size initialized bytes in prefix. An empty prefix may be null.|
-// | source, when present, is a generic byte reader owned by the transport     |
-// | and consumed later in bounded segments.                                   |
+// | Borrows head and body bytes and owns an optional source.                  |
+// | The transport copies both views before the call returns.                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct serialization_result {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +=========================================================================+
-  std::unique_ptr<char[]> prefix;
-  std::size_t prefix_size{0};
-  std::optional<common::reader> source;
+  std::string_view head;
+  std::string_view body;
+  std::unique_ptr<common::reader> source;
 };
 }  // namespace martianlabs::doba::protocol
 

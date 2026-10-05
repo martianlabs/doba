@@ -34,7 +34,7 @@
 #include <utility>
 
 #include "protocol/contracts.h"
-#include "transport/server/output_queue.h"
+#include "transport/server/tcp_connection.h"
 #include "transport/server/tls_session.h"
 
 namespace martianlabs::doba::transport::server {
@@ -42,36 +42,36 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // | [>] tls_connection                                             ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
+// | Adapts a TLS session to an HTTP engine.                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
 struct tls_connection {
   // +=========================================================================+
   // | [>] TYPEs                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   using shared_state = tls_context;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <protocol::contracts::engine_factory<ENty> FAty>
-  tls_connection(std::size_t recv_buffer_size,
-                 std::size_t send_buffer_size, const FAty& create_engine,
-                 shared_state context)
+  tls_connection(std::size_t recv_buffer_size, std::size_t send_buffer_size,
+                 const FAty& create_engine, shared_state context)
       : engine{create_engine()},
-        buffer{std::make_unique<char[]>(17 * 1024)},
-        capacity{17 * 1024},
+        buffer{std::make_unique<char[]>(
+            tls_policies::kEncryptedReceiveBufferSize)},
+        capacity{tls_policies::kEncryptedReceiveBufferSize},
         session_{std::move(context), send_buffer_size},
         plaintext_{std::make_unique<char[]>(recv_buffer_size)},
         plaintext_capacity_{recv_buffer_size} {}
   // +=========================================================================+
   // | [>] process                                                  ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::size_t process() {
     std::size_t received = 0;
     while (received < size) {
-      const std::size_t next = session_.receive(
-          std::span(buffer.get() + received, size - received));
+      const std::size_t next =
+          session_.receive(std::span(buffer.get() + received, size - received));
       received += next;
       if (!process_plaintext_()) {
         throw std::runtime_error("TLS receive failed!");
@@ -82,7 +82,7 @@ struct tls_connection {
   }
   // +=========================================================================+
   // | [>] consume                                                  ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool consume(std::size_t processed) {
     if (processed > size) return false;
     size -= processed;
@@ -93,8 +93,8 @@ struct tls_connection {
   }
   // +=========================================================================+
   // | [>] prepare_output                                           ( public ) |
-  // +=========================================================================+
-  bool prepare_output(output_queue& output) {
+  // +-------------------------------------------------------------------------+
+  bool prepare_output(send_state& output) {
     for (;;) {
       if (session_.pending()) return true;
       if (!session_.established()) return !session_.failed();
@@ -113,51 +113,59 @@ struct tls_connection {
           continue;
         }
       }
-      const auto result = session_.write(std::span(
-          output.buffer.data() + output.offset,
-          output.buffer.size() - output.offset));
+      const auto result =
+          session_.write(std::span(output.buffer.data() + output.offset,
+                                   output.buffer.size() - output.offset));
       if (result.state == tls_session::status::failed) return false;
-      output.offset += result.size;
+      if (!output.consume(result.size)) return false;
       if (result.state == tls_session::status::need_input) return true;
       if (result.state == tls_session::status::need_output &&
-          !session_.pending()) return false;
+          !session_.pending())
+        return false;
     }
   }
   // +=========================================================================+
   // | [>] output_bytes                                             ( public ) |
-  // +=========================================================================+
-  std::span<char> output_bytes(output_queue&) {
+  // +-------------------------------------------------------------------------+
+  std::span<char> output_bytes(send_state&) {
     return session_.output_bytes();
+  }
+  std::size_t output_buffers(send_state& output,
+                             std::span<std::span<char>> buffers) {
+    if (buffers.empty()) return 0;
+    buffers[0] = output_bytes(output);
+    return buffers[0].empty() ? 0 : 1;
   }
   // +=========================================================================+
   // | [>] output_sent                                              ( public ) |
-  // +=========================================================================+
-  void output_sent(output_queue&, std::size_t sent) {
+  // +-------------------------------------------------------------------------+
+  bool output_sent(send_state&, std::size_t sent) {
     session_.output_sent(sent);
+    return true;
   }
   // +=========================================================================+
   // | [>] output_pending                                           ( public ) |
-  // +=========================================================================+
-  bool output_pending(const output_queue& output) const {
-    return session_.pending() ||
-        output.queued() || output.offset != output.buffer.size() ||
-        (close_requested_ && !shutdown_complete_);
+  // +-------------------------------------------------------------------------+
+  bool output_pending(const send_state& output) const {
+    return session_.pending() || output.queued() ||
+           output.offset != output.buffer.size() ||
+           (close_requested_ && !shutdown_complete_);
   }
   // +=========================================================================+
-  // | [>] established                                             ( public ) |
-  // +=========================================================================+
+  // | [>] established                                             ( public )  |
+  // +-------------------------------------------------------------------------+
   bool established() const { return session_.established(); }
   // +=========================================================================+
-  // | [>] peer_closed                                             ( public ) |
-  // +=========================================================================+
+  // | [>] peer_closed                                             ( public )  |
+  // +-------------------------------------------------------------------------+
   bool peer_closed() const { return peer_closed_; }
   // +=========================================================================+
-  // | [>] eof                                                     ( public ) |
-  // +=========================================================================+
+  // | [>] eof                                                     ( public )  |
+  // +-------------------------------------------------------------------------+
   bool eof() const { return peer_closed_; }
   // +=========================================================================+
-  // | [>] close_output                                            ( public ) |
-  // +=========================================================================+
+  // | [>] close_output                                            ( public )  |
+  // +-------------------------------------------------------------------------+
   bool close_output() {
     if (!session_.established()) return false;
     close_requested_ = true;
@@ -165,7 +173,7 @@ struct tls_connection {
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   ENty engine;
   std::unique_ptr<char[]> buffer;
   const std::size_t capacity;
@@ -174,19 +182,20 @@ struct tls_connection {
  private:
   // +=========================================================================+
   // | [>] process_plaintext_                                      ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool process_plaintext_() {
     if (!session_.established()) {
       const auto state = session_.handshake();
       if (state == tls_session::status::failed ||
-          state == tls_session::status::closed) return false;
+          state == tls_session::status::closed)
+        return false;
     }
     if (!session_.established()) return true;
     for (;;) {
       if (plaintext_size_ == plaintext_capacity_) return false;
-      const auto result = session_.read(std::span(
-          plaintext_.get() + plaintext_size_,
-          plaintext_capacity_ - plaintext_size_));
+      const auto result =
+          session_.read(std::span(plaintext_.get() + plaintext_size_,
+                                  plaintext_capacity_ - plaintext_size_));
       if (result.state == tls_session::status::failed) return false;
       if (result.state == tls_session::status::closed) {
         peer_closed_ = true;
@@ -207,7 +216,7 @@ struct tls_connection {
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   tls_session session_;
   std::unique_ptr<char[]> plaintext_;
   const std::size_t plaintext_capacity_;

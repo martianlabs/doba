@@ -32,43 +32,47 @@
 
 namespace {
 using martianlabs::doba::common::byte_storage;
+using martianlabs::doba::common::reader;
 using martianlabs::doba::protocol::serialization_result;
 }  // namespace
 
 // +===========================================================================+
 // | [>] serialization defaults contain no owned output          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("serialization defaults contain no owned output") {
   serialization_result value;
-  DOBA_EXPECT(!value.prefix);
-  DOBA_EXPECT_EQUAL(value.prefix_size, 0);
-  DOBA_EXPECT(!value.source.has_value());
+  DOBA_EXPECT(value.head.empty());
+  DOBA_EXPECT(value.body.empty());
+  DOBA_EXPECT(!value.source);
 }
+
 // +===========================================================================+
-// | [>] serialization moves retain prefix and reader cursor     ( test-case ) |
-// +===========================================================================+
-DOBA_TEST("serialization moves retain prefix and reader cursor") {
+// | [>] serialization moves retain views and reader cursor      ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("serialization moves retain views and reader cursor") {
   byte_storage storage;
   DOBA_EXPECT(storage.write("body", 4));
   storage.finish(4);
   serialization_result value;
-  value.prefix = std::make_unique<char[]>(4);
-  std::memcpy(value.prefix.get(), "HEAD", 4);
-  value.prefix_size = 4;
-  value.source.emplace(std::move(storage));
+  const std::string head_storage(32, 'H');
+  const std::string body_storage(32, 'B');
+  value.head = head_storage;
+  value.body = body_storage;
+  value.source = std::make_unique<reader>(std::move(storage));
   std::byte byte{};
   DOBA_EXPECT(value.source->fetch(byte));
-  auto* prefix = value.prefix.get();
+  const char* head = value.head.data();
+  const char* body = value.body.data();
   serialization_result moved(std::move(value));
   serialization_result target;
-  target.prefix = std::make_unique<char[]>(1);
-  target.prefix[0] = '!';
+  target.head = "!";
   target = std::move(moved);
-  DOBA_EXPECT_EQUAL(target.prefix.get(), prefix);
-  DOBA_EXPECT_EQUAL(std::string_view(target.prefix.get(), target.prefix_size),
-                    "HEAD");
-  DOBA_EXPECT(!value.prefix);
-  DOBA_EXPECT(!moved.prefix);
+  DOBA_EXPECT_EQUAL(target.head.data(), head);
+  DOBA_EXPECT_EQUAL(target.body.data(), body);
+  DOBA_EXPECT_EQUAL(target.head, std::string(32, 'H'));
+  DOBA_EXPECT_EQUAL(target.body, std::string(32, 'B'));
+  DOBA_EXPECT_EQUAL(value.head.data(), head);
+  DOBA_EXPECT_EQUAL(moved.head.data(), head);
   std::string output;
   DOBA_EXPECT_EQUAL(target.source->read_all(output), 3);
   DOBA_EXPECT_EQUAL(output, "ody");

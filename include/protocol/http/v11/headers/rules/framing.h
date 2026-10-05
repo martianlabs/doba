@@ -58,7 +58,7 @@ class framing {
  public:
   // +=========================================================================+
   // | [>] apply                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr verdict apply(const context& ctx) {
     // Multiple Content-Length header fields are always a framing error, even
     // when every occurrence carries the same value (RFC 9112 S6.3 bullet 4).

@@ -9,7 +9,7 @@
   "enabled": true,
   "tests": ["baseline", "limited-conn", "json-comp", "json-tls",
             "latency-1m", "latency-10k", "latency-500k-8cpu",
-            "pipelined", "8gbit",
+            "8gbit",
             "static-tls"],
   "completeness": {
     "routing": true,

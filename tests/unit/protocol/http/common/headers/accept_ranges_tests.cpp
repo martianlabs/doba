@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::accept_ranges;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "bytes",       "none",   "example-unit", "*",
@@ -47,9 +47,10 @@ DOBA_TEST("check accepts valid values") {
         std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",          ",",      ", ,",    " ",      "byte range",
@@ -59,9 +60,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!accept_ranges::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!accept_ranges::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!accept_ranges::check(std::string_view{"a\0", 2}));
@@ -83,12 +85,13 @@ DOBA_TEST("check handles string view boundaries") {
   std::string padded(seed);
   padded.push_back('\0');
   padded += "suffix";
-  DOBA_EXPECT(accept_ranges::check(
-      std::string_view(padded.data(), seed.size())));
+  DOBA_EXPECT(
+      accept_ranges::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check validates every byte inside a token               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check validates every byte inside a token") {
   constexpr std::string_view punctuation = "!#$%&'*+-.^_`|~";
   for (unsigned int byte = 0; byte <= 255; ++byte) {

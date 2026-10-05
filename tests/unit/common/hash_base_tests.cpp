@@ -36,7 +36,7 @@ using martianlabs::doba::common::base_hash;
 
 // +===========================================================================+
 // | [>] ascii folding preserves every non-uppercase byte        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("ascii folding preserves every non-uppercase byte") {
   for (unsigned int byte = 0; byte <= 255; ++byte) {
     const auto expected = static_cast<unsigned char>(
@@ -45,9 +45,10 @@ DOBA_TEST("ascii folding preserves every non-uppercase byte") {
                       expected);
   }
 }
+
 // +===========================================================================+
 // | [>] hash equality includes embedded nulls and high bytes    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("hash equality includes embedded nulls and high bytes") {
   base_hash hash;
   base_equal equal;

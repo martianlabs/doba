@@ -22,6 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <cstddef>
+#include <limits>
 #include <string>
 #include <string_view>
 
@@ -34,7 +36,7 @@ using martianlabs::doba::protocol::http::headers::retry_after;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "0",
@@ -53,9 +55,10 @@ DOBA_TEST("check accepts valid values") {
         retry_after::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",
@@ -71,9 +74,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!retry_after::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!retry_after::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!retry_after::check(std::string_view{"a\0", 2}));
@@ -97,9 +101,10 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(retry_after::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check scans the complete decimal value                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check scans the complete decimal value") {
   for (unsigned int byte = 0; byte <= 255; ++byte) {
     std::string source(64, '9');
@@ -109,9 +114,10 @@ DOBA_TEST("check scans the complete decimal value") {
     DOBA_EXPECT_EQUAL(retry_after::check(source), byte >= '0' && byte <= '9');
   }
 }
+
 // +===========================================================================+
 // | [>] check accepts date alternative boundaries               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts date alternative boundaries") {
   constexpr std::string_view cases[] = {
       "Wednesday, 01-Jan-00 00:00:00 GMT",
@@ -122,9 +128,10 @@ DOBA_TEST("check accepts date alternative boundaries") {
     DOBA_EXPECT(retry_after::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects date alternative boundaries               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects date alternative boundaries") {
   constexpr std::string_view cases[] = {
       "Sun, 06 Nov 1994 08:49:37 GMT,1",
@@ -135,5 +142,18 @@ DOBA_TEST("check rejects date alternative boundaries") {
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
     DOBA_EXPECT(!retry_after::check(source));
+  }
+}
+
+// +===========================================================================+
+// | [>] check is syntactic beyond the size_t range              ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check is syntactic beyond the size_t range") {
+  const std::string maximum =
+      std::to_string(std::numeric_limits<std::size_t>::max());
+  for (const auto& source : {maximum, maximum + "0", std::string(4096, '9')}) {
+    DOBA_EXPECT(retry_after::check(source));
+    DOBA_EXPECT(!retry_after::check(source + " "));
+    DOBA_EXPECT(!retry_after::check("-" + source));
   }
 }

@@ -35,15 +35,16 @@ using martianlabs::doba::common::hash_map;
 
 // +===========================================================================+
 // | [>] hash map header is self contained                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("hash map header is self contained") {
   hash_map<std::string_view, int> values;
   values.emplace("key", 1);
   DOBA_EXPECT_EQUAL(values.at("KEY"), 1);
 }
+
 // +===========================================================================+
 // | [>] owned keys use complete case insensitive lookup         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("owned keys use complete case insensitive lookup") {
   hash_map<std::string, int> values;
   std::string key = "Content-Length";

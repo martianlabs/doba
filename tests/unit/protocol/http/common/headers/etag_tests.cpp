@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::etag;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "\"\"",      "\"abc\"", "\"a\\b\"", "\"!#$%&'()*+,-./:;<=>?@[]^_`{|}~\"",
@@ -46,9 +46,10 @@ DOBA_TEST("check accepts valid values") {
     DOBA_EXPECT(etag::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",          " ",          "abc",        "W/abc",
@@ -59,9 +60,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!etag::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!etag::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!etag::check(std::string_view{"a\0", 2}));
@@ -88,16 +90,17 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(etag::check("\"" + obs_text + "\""));
   DOBA_EXPECT(!etag::check(obs_text));
 }
+
 // +===========================================================================+
 // | [>] check applies the entity tag byte grammar               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check applies the entity tag byte grammar") {
   for (unsigned int byte = 0; byte <= 255; ++byte) {
     std::string source = "\"";
     source += static_cast<char>(byte);
     source += '"';
-    const bool expected = byte == 0x21 ||
-                          (byte >= 0x23 && byte <= 0x7e) || byte >= 0x80;
+    const bool expected =
+        byte == 0x21 || (byte >= 0x23 && byte <= 0x7e) || byte >= 0x80;
     martianlabs::doba::tests::unit::test_helper::set_context(
         "byte " + std::to_string(byte));
     DOBA_EXPECT_EQUAL(etag::check(source), expected);

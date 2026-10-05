@@ -30,7 +30,7 @@
 #include <functional>
 #include <utility>
 
-#include "common/output.h"
+#include "protocol/send_delegate.h"
 
 namespace martianlabs::doba::protocol::contracts {
 // /////////////////////////////////////////////////////////////////////////////
@@ -47,7 +47,7 @@ namespace martianlabs::doba::protocol::contracts {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename ENty>
 concept engine = requires(ENty& engine, const char* buf, std::size_t sze,
-                          std::size_t capacity, common::send_delegate output,
+                          std::size_t capacity, protocol::send_delegate output,
                           std::function<void()> close) {
   typename ENty::policies_type;
   { engine.set_on_send(std::move(output)) } -> std::same_as<void>;

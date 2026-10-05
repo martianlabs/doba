@@ -22,25 +22,52 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <array>
 #include <cstddef>
 #include <string>
 
-#include "../../../../../examples/http/v11/expect_continue/echo_handler.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
+#include "protocol/http/v11/server.h"
 
 namespace {
-using martianlabs::doba::examples::register_echo_route;
 using martianlabs::doba::protocol::http::v11::server;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 using martianlabs::doba::tests::integration::test_helper;
+void register_echo_route(server<>& http_server) {
+  using martianlabs::doba::protocol::http::v11::request;
+  using martianlabs::doba::protocol::http::v11::response;
+  http_server.add_route(
+      "POST", "/echo",
+      [](const request& req, response& res) {
+        res.ok_200();
+        if (!req.has_body_reader()) {
+          res.set_body("");
+          return;
+        }
+        std::array<std::byte, 1024> buffer{};
+        std::string body;
+        for (;;) {
+          const auto state = req.get_body_reader()->read(buffer);
+          if (state.has_error) {
+            res.bad_request_400();
+            return;
+          }
+          body.append(reinterpret_cast<const char*>(buffer.data()),
+                      state.produced);
+          if (state.complete) break;
+        }
+        res.set_body(body);
+        return;
+      });
+}
 }  // namespace
 
 // +===========================================================================+
 // | [>] unframed requests return an empty echo                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("expect continue example accepts requests without body framing") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
@@ -49,7 +76,6 @@ DOBA_TEST("expect continue example accepts requests without body framing") {
   register_echo_route(http_server);
   http_server.start();
   DOBA_EXPECT(client.connect(port));
-
   for (const bool expect : {false, true}) {
     test_helper::set_context(expect ? "with Expect" : "without Expect");
     std::string wire = "POST /echo HTTP/1.1\r\nHost: a\r\n";
@@ -61,7 +87,6 @@ DOBA_TEST("expect continue example accepts requests without body framing") {
     DOBA_EXPECT_EQUAL(result->status, "HTTP/1.1 200 OK");
     DOBA_EXPECT_EQUAL(result->header("Content-Length").value(), "0");
     DOBA_EXPECT_EQUAL(result->body, "");
-
     DOBA_EXPECT(client.send_all(
         "POST /echo HTTP/1.1\r\nHost: a\r\nContent-Length: 4\r\n\r\nnext"));
     const auto next = receive_http_response(client);
@@ -73,7 +98,7 @@ DOBA_TEST("expect continue example accepts requests without body framing") {
 
 // +===========================================================================+
 // | [>] zero content length returns an empty echo               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("expect continue example accepts zero content length") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
@@ -82,7 +107,6 @@ DOBA_TEST("expect continue example accepts zero content length") {
   register_echo_route(http_server);
   http_server.start();
   DOBA_EXPECT(client.connect(port));
-
   for (const bool expect : {false, true}) {
     test_helper::set_context(expect ? "with Expect" : "without Expect");
     std::string wire = "POST /echo HTTP/1.1\r\nHost: a\r\n";
@@ -95,7 +119,6 @@ DOBA_TEST("expect continue example accepts zero content length") {
     DOBA_EXPECT_EQUAL(result->status, "HTTP/1.1 200 OK");
     DOBA_EXPECT_EQUAL(result->header("Content-Length").value(), "0");
     DOBA_EXPECT_EQUAL(result->body, "");
-
     DOBA_EXPECT(client.send_all(
         "POST /echo HTTP/1.1\r\nHost: a\r\nContent-Length: 4\r\n\r\nnext"));
     const auto next = receive_http_response(client);
@@ -107,7 +130,7 @@ DOBA_TEST("expect continue example accepts zero content length") {
 
 // +===========================================================================+
 // | [>] empty chunked requests return an empty echo             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("expect continue example accepts empty chunked bodies") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
@@ -124,7 +147,6 @@ DOBA_TEST("expect continue example accepts empty chunked bodies") {
   DOBA_EXPECT_EQUAL(result->status, "HTTP/1.1 200 OK");
   DOBA_EXPECT_EQUAL(result->header("Content-Length").value(), "0");
   DOBA_EXPECT_EQUAL(result->body, "");
-
   DOBA_EXPECT(client.send_all(
       "POST /echo HTTP/1.1\r\nHost: a\r\nContent-Length: 4\r\n\r\nnext"));
   const auto next = receive_http_response(client);
@@ -135,7 +157,7 @@ DOBA_TEST("expect continue example accepts empty chunked bodies") {
 
 // +===========================================================================+
 // | [>] raw and chunked echo preserve multiple binary reads     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("expect continue example preserves raw and chunked binary bodies") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
@@ -148,7 +170,6 @@ DOBA_TEST("expect continue example preserves raw and chunked binary bodies") {
   for (std::size_t i = 0; i < body.size(); i++) {
     body[i] = static_cast<char>(i % 256);
   }
-
   for (const bool chunked : {false, true}) {
     test_helper::set_context(chunked ? "chunked" : "content length");
     std::string wire = "POST /echo HTTP/1.1\r\nHost: a\r\n";
@@ -170,7 +191,7 @@ DOBA_TEST("expect continue example preserves raw and chunked binary bodies") {
 
 // +===========================================================================+
 // | [>] pending raw and chunked bodies receive 100 Continue     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("expect continue example sends interim before reading the body") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
@@ -179,7 +200,6 @@ DOBA_TEST("expect continue example sends interim before reading the body") {
   register_echo_route(http_server);
   http_server.start();
   DOBA_EXPECT(client.connect(port));
-
   for (const bool chunked : {false, true}) {
     test_helper::set_context(chunked ? "chunked" : "content length");
     std::string wire =

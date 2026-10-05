@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::date;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "Sun, 06 Nov 1994 08:49:37 GMT", "Monday, 06-Nov-94 08:49:37 GMT",
@@ -47,9 +47,10 @@ DOBA_TEST("check accepts valid values") {
     DOBA_EXPECT(date::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",
@@ -69,6 +70,7 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!date::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
 // +===========================================================================+
@@ -95,9 +97,10 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(date::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check rejects incomplete and corrupted date fields      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects incomplete and corrupted date fields") {
   constexpr std::string_view seeds[] = {
       "Sun, 06 Nov 1994 08:49:37 GMT",
@@ -115,18 +118,43 @@ DOBA_TEST("check rejects incomplete and corrupted date fields") {
     }
   }
 }
+
+// +===========================================================================+
+// | [>] check is syntactic for out of range date fields         ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check is syntactic for out of range date fields") {
+  // RFC 9110 S5.6.7: this checker parses syntax; calendar validity is separate.
+  constexpr std::string_view cases[] = {
+      "Sun, 00 Nov 1994 08:49:37 GMT",  "Sun, 32 Nov 1994 08:49:37 GMT",
+      "Sun, 06 Nov 1994 24:00:00 GMT",  "Sun, 06 Nov 1994 08:60:37 GMT",
+      "Sun, 06 Nov 1994 08:49:61 GMT",  "Sun, 99 Nov 1994 99:99:99 GMT",
+      "Sunday, 00-Nov-94 08:49:37 GMT", "Sunday, 06-Nov-94 25:49:37 GMT",
+      "Sun Nov 32 08:49:37 1994",       "Sun Nov  6 08:49:99 1994",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(date::check(source));
+  }
+  for (const std::string_view source :
+       {"Sun, 0A Nov 1994 08:49:37 GMT", "Sun, 06 Nov 1994 0x:49:37 GMT",
+        "Sun, 06 Nov 199x 08:49:37 GMT", "Sun Nov  x 08:49:37 1994"}) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!date::check(source));
+  }
+}
+
 // +===========================================================================+
 // | [>] check recognizes all weekday and month names            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check recognizes all weekday and month names") {
-  constexpr std::string_view short_days[] = {
-      "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
-  constexpr std::string_view long_days[] = {
-      "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
-      "Sunday"};
-  constexpr std::string_view months[] = {
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct",
-      "Nov", "Dec"};
+  constexpr std::string_view short_days[] = {"Mon", "Tue", "Wed", "Thu",
+                                             "Fri", "Sat", "Sun"};
+  constexpr std::string_view long_days[] = {"Monday",   "Tuesday", "Wednesday",
+                                            "Thursday", "Friday",  "Saturday",
+                                            "Sunday"};
+  constexpr std::string_view months[] = {"Jan", "Feb", "Mar", "Apr",
+                                         "May", "Jun", "Jul", "Aug",
+                                         "Sep", "Oct", "Nov", "Dec"};
   for (std::size_t day = 0; day < 7; ++day) {
     for (const auto month : months) {
       const std::string imf = std::string(short_days[day]) + ", 01 " +

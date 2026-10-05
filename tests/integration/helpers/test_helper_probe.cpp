@@ -34,7 +34,7 @@
 
 // +===========================================================================+
 // | [>] probe passes                                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("probe passes") {
   std::puts("probe body");
   DOBA_EXPECT(true);
@@ -42,28 +42,28 @@ DOBA_TEST("probe passes") {
 
 // +===========================================================================+
 // | [>] probe assertion fails                                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("probe assertion fails") {
   DOBA_EXPECT(2 + 2 == 5);
 }
 
 // +===========================================================================+
 // | [>] probe standard exception                                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("probe standard exception") {
   throw std::runtime_error("probe standard error");
 }
 
 // +===========================================================================+
 // | [>] probe unknown exception                                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("probe unknown exception") {
   throw 7;
 }
 
 // +===========================================================================+
 // | [>] probe continues after failures                          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("probe continues after failures") {
   std::puts("probe continued");
   DOBA_EXPECT(true);
@@ -71,14 +71,14 @@ DOBA_TEST("probe continues after failures") {
 
 // +===========================================================================+
 // | [>] probe blocks                                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("probe blocks") {
   std::this_thread::sleep_for(std::chrono::seconds(30));
 }
 
 // +===========================================================================+
 // | [>] probe row context                                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("probe row context") {
   martianlabs::doba::tests::integration::test_helper::set_context(
       "row 7: input=invalid");
@@ -87,7 +87,7 @@ DOBA_TEST("probe row context") {
 
 // +===========================================================================+
 // | [>] failure unwinds active transport                        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("probe failure cleans up active transport") {
   using namespace martianlabs::doba;
   std::atomic<std::size_t> connected = 0;
@@ -97,11 +97,12 @@ DOBA_TEST("probe failure cleans up active transport") {
   DOBA_EXPECT(port != 0);
   const auto exercise = [&]() {
     protocol::http::router<protocol::http::v11::request,
-                            protocol::http::v11::response> routes;
+                           protocol::http::v11::response>
+        routes;
     auto factory = [&routes]() {
       return protocol::http::v11::engine<protocol::http::v11::request,
-                                          protocol::http::v11::response>(
-          {}, routes);
+                                         protocol::http::v11::response>({},
+                                                                        routes);
     };
     using engine_type = decltype(factory());
     transport::server::tcp<engine_type, decltype(factory)> server(
@@ -110,8 +111,8 @@ DOBA_TEST("probe failure cleans up active transport") {
     server.set_on_disconnection([&]() { disconnected.fetch_add(1); });
     server.start();
     DOBA_EXPECT(client.connect(port));
-    const auto deadline = std::chrono::steady_clock::now() +
-                          std::chrono::seconds(2);
+    const auto deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(2);
     while (connected.load() == 0 &&
            std::chrono::steady_clock::now() < deadline) {
       std::this_thread::yield();

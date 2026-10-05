@@ -77,7 +77,7 @@ class te {
  public:
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool check(std::string_view sv, parsed_parameter_list& out) {
     // The producer overload validates each t-codings element exactly as the
     // pure check() does and captures every non-empty element ("trailers" or a
@@ -90,7 +90,7 @@ class te {
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr verdict interpret(
       const parsed_parameter_list& parameters_list, v11::connection& conn,
       const policies&) {
@@ -111,14 +111,14 @@ class te {
  private:
   // +=========================================================================+
   // | [>] consume_t_codings                                       ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool consume_t_codings(std::string_view sv) {
     if (sv.size() == 8 && helpers::iequals(sv, "trailers")) return true;
     return consume_transfer_coding(sv);
   }
   // +=========================================================================+
   // | [>] consume_transfer_coding                                 ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool consume_transfer_coding(std::string_view sv) {
     std::size_t off = 0;
     const std::string_view token = helpers::consume_token(sv);
@@ -138,7 +138,7 @@ class te {
   }
   // +=========================================================================+
   // | [>] consume_parameter                                       ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool consume_parameter(std::string_view sv,
                                           std::size_t& bytes_used,
                                           bool& q_found) {

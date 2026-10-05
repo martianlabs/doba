@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::set_cookie;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "a=b",
@@ -59,9 +59,10 @@ DOBA_TEST("check accepts valid values") {
         set_cookie::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",      " ",    "=b",           "a",
@@ -72,9 +73,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!set_cookie::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!set_cookie::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!set_cookie::check(std::string_view{"a\0", 2}));
@@ -98,15 +100,14 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(set_cookie::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check accepts attribute boundaries                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts attribute boundaries") {
   constexpr std::string_view cases[] = {
-      "a=\"\"; Secure; Secure",
-      "a=b; Extension=one,two",
-      "a=b; Extension=\"x y\"",
-      "a=b; Max-Age=-1; Domain=.example.com",
+      "a=\"\"; Secure; Secure",  "a=b; Extension=one,two",
+      "a=b; Extension=\"x y\"",  "a=b; Max-Age=-1; Domain=.example.com",
       "a=b; Expires=not-a-date",
   };
   for (const auto source : cases) {
@@ -114,9 +115,10 @@ DOBA_TEST("check accepts attribute boundaries") {
     DOBA_EXPECT(set_cookie::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects attribute boundaries                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects attribute boundaries") {
   constexpr std::string_view cases[] = {
       "a=b; Path=/\r\nInjected: yes",

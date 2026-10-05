@@ -22,7 +22,6 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifdef DOBA_ENABLE_TLS
 
 #include <algorithm>
 #include <array>
@@ -31,20 +30,42 @@
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 #include "test_helper.h"
 #include "transport/server/tls_session.h"
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] usings                                                    ( public )  |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::transport::server::make_tls_context;
 using martianlabs::doba::transport::server::tls_policies;
 using martianlabs::doba::transport::server::tls_session;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] fixture                                                 ( function )  |
+// +---------------------------------------------------------------------------+
+// | This function returns the path to a test fixture file. It is used to load |
+// | TLS credentials for the tests.                                            |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 std::string fixture(const char* name) {
   return (std::filesystem::path(__FILE__).parent_path() / "fixtures" / name)
       .string();
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] rejects                                                 ( function )  |
+// +---------------------------------------------------------------------------+
+// | This function returns true if the provided TLS configuration is           |
+// | rejected by the TLS context factory.                                      |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 bool rejects(const tls_policies& configuration) {
   try {
     make_tls_context(configuration);
@@ -54,7 +75,17 @@ bool rejects(const tls_policies& configuration) {
   return false;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] test_client                                               ( struct )  |
+// +---------------------------------------------------------------------------+
+// | TLS client used by TLS session tests.                                     |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct test_client {
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   test_client()
       : context{SSL_CTX_new(TLS_client_method()), SSL_CTX_free},
         ssl{context ? SSL_new(context.get()) : nullptr, SSL_free},
@@ -69,12 +100,22 @@ struct test_client {
     network.reset(external);
     SSL_set_connect_state(ssl.get());
   }
-
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   std::unique_ptr<SSL_CTX, decltype(&SSL_CTX_free)> context;
   std::unique_ptr<SSL, decltype(&SSL_free)> ssl;
   std::unique_ptr<BIO, decltype(&BIO_free)> network;
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] server_policies                                         ( function )  |
+// +---------------------------------------------------------------------------+
+// | This function returns a TLS configuration that loads the test server      |
+// | certificate and key.                                                      |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 tls_policies server_policies() {
   tls_policies configuration;
   configuration.certificate_file = fixture("server.crt");
@@ -82,8 +123,18 @@ tls_policies server_policies() {
   return configuration;
 }
 
-bool exchange(tls_session& server, test_client& client,
-              std::size_t fragment) {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] exchange                                                ( function )  |
+// +---------------------------------------------------------------------------+
+// | This function exchanges data between the TLS session and the test client. |
+// | It reads any pending data from the test client and feeds it into the TLS  |
+// | session. It then drains any pending data from the TLS session and writes  |
+// | it to the test client. The function returns true if the exchange was      |
+// | successful, and false if any errors occurred during the exchange.         |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+bool exchange(tls_session& server, test_client& client, std::size_t fragment) {
   std::array<char, 4096> bytes;
   while (BIO_ctrl_pending(client.network.get())) {
     std::size_t size = 0;
@@ -94,20 +145,31 @@ bool exchange(tls_session& server, test_client& client,
     if (server.receive(std::span(bytes.data(), size)) != size) return false;
   }
   while (server.pending()) {
-    const std::size_t size =
-        server.drain(std::span(bytes).first(fragment));
+    const std::size_t size = server.drain(std::span(bytes).first(fragment));
     if (!size) return false;
     std::size_t written = 0;
-    if (BIO_write_ex(client.network.get(), bytes.data(), size,
-                     &written) != 1 || written != size) {
+    if (BIO_write_ex(client.network.get(), bytes.data(), size, &written) != 1 ||
+        written != size) {
       return false;
     }
   }
   return true;
 }
 
-bool negotiate(tls_session& server, test_client& client,
-               std::size_t fragment) {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] negotiate                                               ( function )  |
+// +---------------------------------------------------------------------------+
+// | This function performs the TLS handshake between the TLS session and the  |
+// | test client. It repeatedly calls SSL_do_handshake on the test client and  |
+// | tls_session::handshake on the TLS session until the handshake is complete |
+// | or an error occurs. The function returns true if the handshake was        |
+// | successful, and false if any errors occurred during the negotiation.      |
+// | The fragment parameter specifies the maximum number of bytes to read      |
+// | from the test client at a time.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+bool negotiate(tls_session& server, test_client& client, std::size_t fragment) {
   for (int step = 0; step < 64; ++step) {
     const int value = SSL_do_handshake(client.ssl.get());
     if (value != 1) {
@@ -128,7 +190,7 @@ bool negotiate(tls_session& server, test_client& client,
 
 // +===========================================================================+
 // | [>] tls context loads matching credentials                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls context loads matching credentials") {
   tls_policies configuration;
   configuration.certificate_file = fixture("server.crt");
@@ -140,7 +202,7 @@ DOBA_TEST("tls context loads matching credentials") {
 
 // +===========================================================================+
 // | [>] tls context requires both credential paths              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls context requires both credential paths") {
   tls_policies configuration;
   DOBA_EXPECT(rejects(configuration));
@@ -153,7 +215,7 @@ DOBA_TEST("tls context requires both credential paths") {
 
 // +===========================================================================+
 // | [>] tls context rejects missing credential files            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls context rejects missing credential files") {
   tls_policies configuration;
   configuration.certificate_file = fixture("missing.crt");
@@ -166,7 +228,7 @@ DOBA_TEST("tls context rejects missing credential files") {
 
 // +===========================================================================+
 // | [>] tls context rejects a mismatched private key            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls context rejects a mismatched private key") {
   tls_policies configuration;
   configuration.certificate_file = fixture("server.crt");
@@ -176,13 +238,12 @@ DOBA_TEST("tls context rejects a mismatched private key") {
 
 // +===========================================================================+
 // | [>] tls session negotiates fragmented input                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls session negotiates fragmented input") {
   tls_session server(make_tls_context(server_policies()), 32768);
   test_client client;
   std::array<char, 1> bytes;
-  DOBA_EXPECT_EQUAL(server.read(bytes).state,
-                    tls_session::status::need_input);
+  DOBA_EXPECT_EQUAL(server.read(bytes).state, tls_session::status::need_input);
   DOBA_EXPECT_EQUAL(server.write(std::span("x", 1)).state,
                     tls_session::status::need_input);
   DOBA_EXPECT_EQUAL(server.handshake(), tls_session::status::need_input);
@@ -199,7 +260,7 @@ DOBA_TEST("tls session negotiates fragmented input") {
 
 // +===========================================================================+
 // | [>] tls session rejects a zero send capacity                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls session rejects a zero send capacity") {
   bool rejected = false;
   try {
@@ -212,14 +273,13 @@ DOBA_TEST("tls session rejects a zero send capacity") {
 
 // +===========================================================================+
 // | [>] tls session exchanges application data                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls session exchanges application data") {
   tls_session server(make_tls_context(server_policies()), 32768);
   test_client client;
   DOBA_EXPECT(negotiate(server, client, 1024));
   std::size_t written = 0;
-  DOBA_EXPECT(SSL_write_ex(client.ssl.get(), "request", 7,
-                           &written) == 1);
+  DOBA_EXPECT(SSL_write_ex(client.ssl.get(), "request", 7, &written) == 1);
   DOBA_EXPECT_EQUAL(written, 7);
   DOBA_EXPECT(exchange(server, client, 3));
   std::array<char, 32> bytes;
@@ -238,7 +298,7 @@ DOBA_TEST("tls session exchanges application data") {
 
 // +===========================================================================+
 // | [>] tls session consumes output in place                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls session consumes output in place") {
   tls_session server(make_tls_context(server_policies()), 32768);
   test_client client;
@@ -250,8 +310,8 @@ DOBA_TEST("tls session consumes output in place") {
   DOBA_EXPECT_EQUAL(first.size(), pending);
   DOBA_EXPECT(first.size() > 1);
   std::size_t written = 0;
-  DOBA_EXPECT(BIO_write_ex(client.network.get(), first.data(), 1,
-                           &written) == 1);
+  DOBA_EXPECT(BIO_write_ex(client.network.get(), first.data(), 1, &written) ==
+              1);
   DOBA_EXPECT_EQUAL(written, 1);
   server.output_sent(1);
   DOBA_EXPECT_EQUAL(server.pending(), pending - 1);
@@ -272,7 +332,7 @@ DOBA_TEST("tls session consumes output in place") {
 
 // +===========================================================================+
 // | [>] tls session bounds encrypted input                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls session bounds encrypted input") {
   tls_session server(make_tls_context(server_policies()), 32768);
   const std::string bytes(64 * 1024, 'x');
@@ -285,7 +345,7 @@ DOBA_TEST("tls session bounds encrypted input") {
 
 // +===========================================================================+
 // | [>] tls session resumes after its encrypted input fills     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls session resumes after its encrypted input fills") {
   tls_session server(make_tls_context(server_policies()), 32768);
   test_client client;
@@ -293,15 +353,15 @@ DOBA_TEST("tls session resumes after its encrypted input fills") {
   const std::string body(16 * 1024, 'x');
   const std::string last(16 * 1024, 'y');
   std::size_t written = 0;
-  DOBA_EXPECT(SSL_write_ex(client.ssl.get(), body.data(), body.size(),
-                           &written) == 1);
+  DOBA_EXPECT(
+      SSL_write_ex(client.ssl.get(), body.data(), body.size(), &written) == 1);
   DOBA_EXPECT_EQUAL(written, body.size());
   std::string encrypted(BIO_ctrl_pending(client.network.get()), '\0');
   DOBA_EXPECT(BIO_read_ex(client.network.get(), encrypted.data(),
                           encrypted.size(), &written) == 1);
   DOBA_EXPECT_EQUAL(written, encrypted.size());
-  DOBA_EXPECT(SSL_write_ex(client.ssl.get(), last.data(), last.size(),
-                           &written) == 1);
+  DOBA_EXPECT(
+      SSL_write_ex(client.ssl.get(), last.data(), last.size(), &written) == 1);
   DOBA_EXPECT_EQUAL(written, last.size());
   std::string encrypted_next(BIO_ctrl_pending(client.network.get()), '\0');
   DOBA_EXPECT(BIO_read_ex(client.network.get(), encrypted_next.data(),
@@ -328,14 +388,13 @@ DOBA_TEST("tls session resumes after its encrypted input fills") {
 
 // +===========================================================================+
 // | [>] tls session bounds encrypted output                     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls session bounds encrypted output") {
   tls_session server(make_tls_context(server_policies()), 4096);
   test_client client;
   DOBA_EXPECT(negotiate(server, client, 1024));
   std::array<char, 1024> bytes{};
-  DOBA_EXPECT_EQUAL(server.read(bytes).state,
-                    tls_session::status::need_input);
+  DOBA_EXPECT_EQUAL(server.read(bytes).state, tls_session::status::need_input);
   bool blocked = false;
   std::size_t sent = 0;
   for (int step = 0; step < 16; ++step) {
@@ -353,8 +412,8 @@ DOBA_TEST("tls session bounds encrypted output") {
   std::string received;
   for (int step = 0; step < 16; ++step) {
     std::size_t size = 0;
-    const int value = SSL_read_ex(client.ssl.get(), bytes.data(),
-                                  bytes.size(), &size);
+    const int value =
+        SSL_read_ex(client.ssl.get(), bytes.data(), bytes.size(), &size);
     if (value == 1) {
       received.append(bytes.data(), size);
       continue;
@@ -370,8 +429,8 @@ DOBA_TEST("tls session bounds encrypted output") {
   DOBA_EXPECT(retry.size <= bytes.size());
   DOBA_EXPECT(exchange(server, client, 1024));
   std::size_t size = 0;
-  DOBA_EXPECT(SSL_read_ex(client.ssl.get(), bytes.data(),
-                          bytes.size(), &size) == 1);
+  DOBA_EXPECT(
+      SSL_read_ex(client.ssl.get(), bytes.data(), bytes.size(), &size) == 1);
   DOBA_EXPECT_EQUAL(size, retry.size);
   DOBA_EXPECT_EQUAL(std::string(bytes.data(), size),
                     std::string(retry.size, '\0'));
@@ -379,7 +438,7 @@ DOBA_TEST("tls session bounds encrypted output") {
 
 // +===========================================================================+
 // | [>] tls session bounds default encrypted output             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls session bounds default encrypted output") {
   tls_session server(make_tls_context(server_policies()), 1024 * 1024);
   test_client client;
@@ -395,7 +454,7 @@ DOBA_TEST("tls session bounds default encrypted output") {
 
 // +===========================================================================+
 // | [>] tls session encrypts a large body in segments           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls session encrypts a large body in segments") {
   tls_session server(make_tls_context(server_policies()), 4096);
   test_client client;
@@ -404,11 +463,10 @@ DOBA_TEST("tls session encrypts a large body in segments") {
   std::string received;
   std::array<char, 4096> bytes;
   std::size_t offset = 0;
-  for (int step = 0; step < 128 && received.size() < body.size();
-       ++step) {
+  for (int step = 0; step < 128 && received.size() < body.size(); ++step) {
     if (offset < body.size()) {
-      const auto result = server.write(std::span(
-          body.data() + offset, body.size() - offset));
+      const auto result =
+          server.write(std::span(body.data() + offset, body.size() - offset));
       DOBA_EXPECT(result.state != tls_session::status::failed);
       offset += result.size;
     }
@@ -423,8 +481,8 @@ DOBA_TEST("tls session encrypts a large body in segments") {
     }
     while (true) {
       std::size_t size = 0;
-      const int value = SSL_read_ex(client.ssl.get(), bytes.data(),
-                                    bytes.size(), &size);
+      const int value =
+          SSL_read_ex(client.ssl.get(), bytes.data(), bytes.size(), &size);
       if (value == 1) {
         received.append(bytes.data(), size);
         continue;
@@ -440,7 +498,7 @@ DOBA_TEST("tls session encrypts a large body in segments") {
 
 // +===========================================================================+
 // | [>] tls session sends close notify                          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls session sends close notify") {
   tls_session server(make_tls_context(server_policies()), 32768);
   test_client client;
@@ -449,8 +507,8 @@ DOBA_TEST("tls session sends close notify") {
   DOBA_EXPECT(exchange(server, client, 1024));
   std::array<char, 32> bytes;
   std::size_t received = 0;
-  const int result = SSL_read_ex(client.ssl.get(), bytes.data(),
-                                  bytes.size(), &received);
+  const int result =
+      SSL_read_ex(client.ssl.get(), bytes.data(), bytes.size(), &received);
   DOBA_EXPECT_EQUAL(SSL_get_error(client.ssl.get(), result),
                     SSL_ERROR_ZERO_RETURN);
   DOBA_EXPECT_EQUAL(server.shutdown(), tls_session::status::ready);
@@ -460,7 +518,7 @@ DOBA_TEST("tls session sends close notify") {
 
 // +===========================================================================+
 // | [>] tls session receives close notify                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls session receives close notify") {
   tls_session server(make_tls_context(server_policies()), 32768);
   test_client client;
@@ -468,8 +526,7 @@ DOBA_TEST("tls session receives close notify") {
   DOBA_EXPECT_EQUAL(SSL_shutdown(client.ssl.get()), 0);
   DOBA_EXPECT(exchange(server, client, 1024));
   std::array<char, 32> bytes;
-  DOBA_EXPECT_EQUAL(server.read(bytes).state,
-                    tls_session::status::closed);
+  DOBA_EXPECT_EQUAL(server.read(bytes).state, tls_session::status::closed);
   DOBA_EXPECT_EQUAL(server.shutdown(), tls_session::status::need_output);
   DOBA_EXPECT(exchange(server, client, 1024));
   DOBA_EXPECT_EQUAL(SSL_shutdown(client.ssl.get()), 1);
@@ -477,19 +534,59 @@ DOBA_TEST("tls session receives close notify") {
 
 // +===========================================================================+
 // | [>] tls session rejects invalid negotiation                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("tls session rejects invalid negotiation") {
   tls_session server(make_tls_context(server_policies()), 32768);
-  DOBA_EXPECT_EQUAL(server.receive(std::span("GET / HTTP/1.1\r\n", 16)),
-                    16);
+  DOBA_EXPECT_EQUAL(server.receive(std::span("GET / HTTP/1.1\r\n", 16)), 16);
   DOBA_EXPECT_EQUAL(server.handshake(), tls_session::status::failed);
   DOBA_EXPECT(server.failed());
   DOBA_EXPECT_EQUAL(server.handshake(), tls_session::status::failed);
   std::array<char, 1> bytes;
-  DOBA_EXPECT_EQUAL(server.read(bytes).state,
-                    tls_session::status::failed);
+  DOBA_EXPECT_EQUAL(server.read(bytes).state, tls_session::status::failed);
   DOBA_EXPECT_EQUAL(server.write(std::span("x", 1)).state,
                     tls_session::status::failed);
 }
 
-#endif
+// +===========================================================================+
+// | [>] tls session handles malformed handshake records         ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("tls session handles malformed handshake records") {
+  struct test_case {
+    std::string_view name;
+    std::string_view wire;
+    tls_session::status expected;
+  };
+  constexpr test_case cases[] = {
+      {"oversized record",
+       {"\x16\x03\x01\xff\xff", 5},
+       tls_session::status::failed},
+      {"fatal alert",
+       {"\x15\x03\x03\x00\x02\x02\x28", 7},
+       tls_session::status::failed},
+      {"application data before handshake",
+       {"\x17\x03\x03\x00\x01x", 6},
+       tls_session::status::failed},
+      {"SSLv2 ClientHello",
+       {"\x80\x09\x01\x00\x02\x00\x00\x00\x00\x00\x00", 11},
+       tls_session::status::failed},
+      {"truncated handshake",
+       {"\x16\x03\x03\x00\x04\x01\x00\x00\x10", 9},
+       tls_session::status::need_input},
+  };
+  for (const auto& test : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(test.name);
+    tls_session server(make_tls_context(server_policies()), 32768);
+    DOBA_EXPECT_EQUAL(
+        server.receive(std::span(test.wire.data(), test.wire.size())),
+        test.wire.size());
+    DOBA_EXPECT_EQUAL(server.handshake(), test.expected);
+    DOBA_EXPECT_EQUAL(server.failed(),
+                      test.expected == tls_session::status::failed);
+    if (test.expected == tls_session::status::failed) {
+      std::array<char, 1> bytes;
+      DOBA_EXPECT_EQUAL(server.read(bytes).state, tls_session::status::failed);
+      DOBA_EXPECT_EQUAL(server.write(std::span("x", 1)).state,
+                        tls_session::status::failed);
+    }
+  }
+}

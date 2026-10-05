@@ -112,7 +112,7 @@ class expect {
  public:
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool check(std::string_view sv, parsed_parameter_list& out) {
     // The producer overload validates each expectation exactly as the pure
     // check() does and captures every non-empty element (its token plus any
@@ -125,7 +125,7 @@ class expect {
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr verdict interpret(
       const parsed_parameter_list& parameters_list, v11::connection& conn,
       const policies&) {
@@ -143,7 +143,7 @@ class expect {
  private:
   // +=========================================================================+
   // | [>] consume_expectation                                     ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool consume_expectation(std::string_view sv) {
     std::size_t i = 0;
     const std::string_view token = helpers::consume_token(sv);

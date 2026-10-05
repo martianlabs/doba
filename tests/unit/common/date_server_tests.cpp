@@ -32,29 +32,34 @@
 #include <vector>
 
 #include "common/date_server.h"
+#include "http_date.h"
 #include "protocol/http/v11/response.h"
 #include "test_helper.h"
 
 namespace {
 using martianlabs::doba::common::date_server;
+using martianlabs::doba::tests::valid_http_date;
 using martianlabs::doba::protocol::http::v11::response;
-
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] date_owner                                                  ( class ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class date_owner {
  public:
   // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   date_owner() { date_server::get().start(); }
   date_owner(const date_owner&) = delete;
-  date_owner& operator=(const date_owner&) = delete;
   ~date_owner() { stop(); }
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  date_owner& operator=(const date_owner&) = delete;
+  // +=========================================================================+
+  // | [>] stop                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   void stop() {
     if (!active_) return;
     date_server::get().stop();
@@ -64,46 +69,15 @@ class date_owner {
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   bool active_ = true;
 };
 
-bool valid_http_date(std::string_view value) {
-  if (value.size() != 29 || value[3] != ',' || value[4] != ' ' ||
-      value[7] != ' ' || value[11] != ' ' || value[16] != ' ' ||
-      value[19] != ':' || value[22] != ':' || value[25] != ' ' ||
-      value.substr(26) != "GMT") return false;
-  constexpr std::string_view days[] = {
-      "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-  constexpr std::string_view months[] = {
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-  constexpr std::size_t digits[] = {
-      5, 6, 12, 13, 14, 15, 17, 18, 20, 21, 23, 24};
-  for (std::size_t position : digits) {
-    if (value[position] < '0' || value[position] > '9') return false;
-  }
-  const auto number = [&](std::size_t position) {
-    return (value[position] - '0') * 10 + value[position + 1] - '0';
-  };
-  const int year = number(12) * 100 + number(14);
-  unsigned int month = 0;
-  for (unsigned int i = 0; i < 12; i++) {
-    if (value.substr(8, 3) == months[i]) month = i + 1;
-  }
-  const std::chrono::year_month_day date{
-      std::chrono::year(year), std::chrono::month(month),
-      std::chrono::day(static_cast<unsigned int>(number(5)))};
-  if (!date.ok() || number(17) > 23 || number(20) > 59 ||
-      number(23) > 60) return false;
-  const std::chrono::weekday weekday{std::chrono::sys_days(date)};
-  return value.substr(0, 3) == days[weekday.c_encoding()];
-}
 }  // namespace
 
 // +===========================================================================+
 // | [>] concurrent serialization preserves HTTP dates           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("concurrent serialization preserves HTTP dates") {
   date_owner owner;
   std::atomic<bool> valid{true};
@@ -113,12 +87,13 @@ DOBA_TEST("concurrent serialization preserves HTTP dates") {
   std::vector<std::jthread> threads;
   for (std::size_t thread = 0; thread < operations.size(); ++thread) {
     threads.emplace_back([&, thread] {
+      std::array<char, 20480> storage{};
       start.arrive_and_wait();
       while (std::chrono::steady_clock::now() < end) {
-        response value = response::ok_200();
+        response value(storage);
+        value.ok_200();
         auto serialized = value.serialize();
-        const std::string serialized_prefix(serialized->prefix.get(),
-                                            serialized->prefix_size);
+        const std::string serialized_prefix(serialized.head);
         const std::size_t begin = serialized_prefix.find("Date: ");
         operations[thread]++;
         if (begin == std::string::npos ||
@@ -137,9 +112,10 @@ DOBA_TEST("concurrent serialization preserves HTTP dates") {
   for (std::size_t count : operations) DOBA_EXPECT(count > 0);
   DOBA_EXPECT(valid_http_date(date_server::get().current()));
 }
+
 // +===========================================================================+
 // | [>] date server waits for last owner                        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("date server remains active until its last owner stops") {
   auto& value = date_server::get();
   date_owner first;
@@ -147,8 +123,8 @@ DOBA_TEST("date server remains active until its last owner stops") {
   first.stop();
   const std::string initial(value.current());
   DOBA_EXPECT(valid_http_date(initial));
-  const auto deadline = std::chrono::steady_clock::now() +
-                        std::chrono::milliseconds(2200);
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(2200);
   bool updated = false;
   while (std::chrono::steady_clock::now() < deadline) {
     if (value.current() != initial) {
@@ -162,9 +138,10 @@ DOBA_TEST("date server remains active until its last owner stops") {
   DOBA_EXPECT(valid_http_date(current));
   DOBA_EXPECT(updated);
 }
+
 // +===========================================================================+
 // | [>] concurrent owners preserve lifecycle                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("concurrent date server owners preserve lifecycle and dates") {
   auto& value = date_server::get();
   date_owner owner;
@@ -185,20 +162,19 @@ DOBA_TEST("concurrent date server owners preserve lifecycle and dates") {
   for (std::size_t count : operations) DOBA_EXPECT_EQUAL(count, 100);
   DOBA_EXPECT(valid.load());
   DOBA_EXPECT(valid_http_date(value.current()));
-
 }
 
 // +===========================================================================+
 // | [>] date server restarts from zero owners                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("date server restarts after the last owner stops") {
   auto& value = date_server::get();
   for (std::size_t cycle = 0; cycle < 3; cycle++) {
     date_owner owner;
     const std::string initial(value.current());
     DOBA_EXPECT(valid_http_date(initial));
-    const auto deadline = std::chrono::steady_clock::now() +
-                          std::chrono::milliseconds(2200);
+    const auto deadline =
+        std::chrono::steady_clock::now() + std::chrono::milliseconds(2200);
     std::string current = initial;
     while (current == initial && std::chrono::steady_clock::now() < deadline) {
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -215,7 +191,7 @@ DOBA_TEST("date server restarts after the last owner stops") {
 
 // +===========================================================================+
 // | [>] concurrent last stop and first start                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("date server handles concurrent last stop and first start") {
   auto& value = date_server::get();
   for (std::size_t cycle = 0; cycle < 3; cycle++) {
@@ -233,8 +209,8 @@ DOBA_TEST("date server handles concurrent last stop and first start") {
     std::jthread starting([&]() {
       start.arrive_and_wait();
       date_owner next;
-      const auto deadline = std::chrono::steady_clock::now() +
-                            std::chrono::milliseconds(2200);
+      const auto deadline =
+          std::chrono::steady_clock::now() + std::chrono::milliseconds(2200);
       while (!stopped.load() && std::chrono::steady_clock::now() < deadline) {
         std::this_thread::yield();
       }

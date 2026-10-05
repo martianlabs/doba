@@ -25,19 +25,31 @@
 #include <string>
 
 #include "common/console_logger.h"
-#include "common/logo.h"
 #include "common/signaler.h"
 #include "protocol/http/v11/server.h"
 
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the application. It creates an HTTP server     |
+// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
+// | The server has a single route "/search" that responds to GET requests.    |
+// | The lambda function extracts the "q" query parameter from the URL and     |
+// | constructs a response body accordingly. It also lists all query           |
+// | parameters present in the request. The response is sent with              |
+// | a "Content-Type" of "text/plain; charset=utf-8". The server runs until a  |
+// | termination signal is received.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
-      "GET", "/search",
-      [](const request& req) {
-        response res = response::ok_200();
+      "GET", "/search", [](const request& req, response& res) {
+        res.ok_200();
         std::string body;
         // Lookup by name is optional because the parameter may be absent.
         const auto query = req.get_query_parameter("q");
@@ -54,7 +66,7 @@ int main() {
         }
         res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(body);
-        return res;
+        return;
       });
   http_server.start();
   signaler::wait();

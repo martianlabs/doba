@@ -33,7 +33,7 @@ using martianlabs::doba::protocol::http::target;
 
 // +===========================================================================+
 // | [>] values are distinct and begin with unknown              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("values are distinct and begin with unknown") {
   static_assert(std::is_enum_v<target>);
   DOBA_EXPECT_EQUAL(static_cast<int>(target::kUnknown), 0);

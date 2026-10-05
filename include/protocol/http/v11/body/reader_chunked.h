@@ -62,7 +62,7 @@ namespace martianlabs::doba::protocol::http::v11::body {
 class reader_chunked {
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   enum class state : std::uint8_t {
     chunk_size,
     extension_before_semicolon,
@@ -90,14 +90,14 @@ class reader_chunked {
  public:
   // +=========================================================================+
   // | [>] CONSTANTs                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr std::size_t kMaxChunkedExtensionSize =
       policies::kMaxChunkedExtensionSize;
   static constexpr std::size_t kMaxChunkedTrailerSize =
       policies::kMaxChunkedTrailerSize;
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   reader_chunked() = default;
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
@@ -106,7 +106,7 @@ class reader_chunked {
   // | chunk-data bytes into output. Returns the number of decoded payload     |
   // | bytes produced and whether the body is complete (last-chunk +           |
   // | terminating CRLF seen).                                                 |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   reader_state read(common::reader& src, std::span<std::byte> output) {
     reader_state result;
     if (state_ == state::complete) {
@@ -181,9 +181,9 @@ class reader_chunked {
         return fail(result, reader_error::trailer_size_limit_exceeded);
       }
       switch (state_) {
-        // ---------------------------------------------------------------------
-        // Chunk-size line: accumulate hex digits, handle extension and CR
-        // ---------------------------------------------------------------------
+        // +-------------------------------------------------------------------+
+        // | chunk_size: accumulate hex digits, handle extension and CR        |
+        // +-------------------------------------------------------------------+
         case state::chunk_size: {
           if (c == ';') {
             if (!chunk_size_started_) {
@@ -222,9 +222,9 @@ class reader_chunked {
           chunk_size_started_ = true;
           break;
         }
-        // ---------------------------------------------------------------------
-        // Chunk-extension
-        // ---------------------------------------------------------------------
+        // +-------------------------------------------------------------------+
+        // | extension_before_semicolon                                        |
+        // +-------------------------------------------------------------------+
         case state::extension_before_semicolon: {
           if (c == ' ' || c == '\t') break;
           if (c == ';') {
@@ -234,6 +234,9 @@ class reader_chunked {
           result.produced = out_pos;
           return fail(result, reader_error::invalid_chunk_size);
         }
+        // +-------------------------------------------------------------------+
+        // | extension_before_name                                             |
+        // +-------------------------------------------------------------------+
         case state::extension_before_name: {
           if (c == ' ' || c == '\t') break;
           if (helpers::is_token(c)) {
@@ -243,6 +246,9 @@ class reader_chunked {
           result.produced = out_pos;
           return fail(result, reader_error::invalid_chunk_size);
         }
+        // +-------------------------------------------------------------------+
+        // | extension_name                                                    |
+        // +-------------------------------------------------------------------+
         case state::extension_name: {
           if (helpers::is_token(c)) break;
           if (c == ' ' || c == '\t') {
@@ -264,6 +270,9 @@ class reader_chunked {
           result.produced = out_pos;
           return fail(result, reader_error::invalid_chunk_size);
         }
+        // +-------------------------------------------------------------------+
+        // | extension_after_name                                              |
+        // +-------------------------------------------------------------------+
         case state::extension_after_name: {
           if (c == ' ' || c == '\t') break;
           if (c == '=') {
@@ -281,6 +290,9 @@ class reader_chunked {
           result.produced = out_pos;
           return fail(result, reader_error::invalid_chunk_size);
         }
+        // +-------------------------------------------------------------------+
+        // | extension_before_value                                            |
+        // +-------------------------------------------------------------------+
         case state::extension_before_value: {
           if (c == ' ' || c == '\t') break;
           if (helpers::is_token(c)) {
@@ -294,6 +306,9 @@ class reader_chunked {
           result.produced = out_pos;
           return fail(result, reader_error::invalid_chunk_size);
         }
+        // +-------------------------------------------------------------------+
+        // | extension_token_value                                             |
+        // +-------------------------------------------------------------------+
         case state::extension_token_value: {
           if (helpers::is_token(c)) break;
           if (c == ' ' || c == '\t') {
@@ -311,6 +326,9 @@ class reader_chunked {
           result.produced = out_pos;
           return fail(result, reader_error::invalid_chunk_size);
         }
+        // +-------------------------------------------------------------------+
+        // | extension_quoted_value                                            |
+        // +-------------------------------------------------------------------+
         case state::extension_quoted_value: {
           if (helpers::is_qdtext(c)) break;
           if (c == '\\') {
@@ -324,6 +342,9 @@ class reader_chunked {
           result.produced = out_pos;
           return fail(result, reader_error::invalid_chunk_size);
         }
+        // +-------------------------------------------------------------------+
+        // | extension_quoted_pair                                             |
+        // +-------------------------------------------------------------------+
         case state::extension_quoted_pair: {
           if (c == '\t' || c == ' ' || helpers::is_vchar(c) ||
               helpers::is_obs_text(c)) {
@@ -333,6 +354,9 @@ class reader_chunked {
           result.produced = out_pos;
           return fail(result, reader_error::invalid_chunk_size);
         }
+        // +-------------------------------------------------------------------+
+        // | extension_after_value                                             |
+        // +-------------------------------------------------------------------+
         case state::extension_after_value: {
           if (c == ' ' || c == '\t') break;
           if (c == ';') {
@@ -346,9 +370,9 @@ class reader_chunked {
           result.produced = out_pos;
           return fail(result, reader_error::invalid_chunk_size);
         }
-        // ---------------------------------------------------------------------
-        // LF after chunk-size CR: decide data vs last-chunk
-        // ---------------------------------------------------------------------
+        // +-------------------------------------------------------------------+
+        // | size_lf: decide data vs last-chunk                                |
+        // +-------------------------------------------------------------------+
         case state::size_lf: {
           if (c != '\n') {
             // Invalid LF after chunk-size CR!
@@ -364,9 +388,9 @@ class reader_chunked {
           }
           break;
         }
-        // ---------------------------------------------------------------------
-        // Post-data CRLF
-        // ---------------------------------------------------------------------
+        // +-------------------------------------------------------------------+
+        // | data_cr: post data CR                                             |
+        // +-------------------------------------------------------------------+
         case state::data_cr: {
           if (c != '\r') {
             // Invalid CR after chunk data!
@@ -376,6 +400,9 @@ class reader_chunked {
           state_ = state::data_lf;
           break;
         }
+        // +-------------------------------------------------------------------+
+        // | data_lf: post data LF                                             |
+        // +-------------------------------------------------------------------+
         case state::data_lf: {
           if (c != '\n') {
             // Invalid LF after chunk data CR!
@@ -387,9 +414,9 @@ class reader_chunked {
           state_ = state::chunk_size;
           break;
         }
-        // ---------------------------------------------------------------------
-        // Trailer section
-        // ---------------------------------------------------------------------
+        // +-------------------------------------------------------------------+
+        // | trailer_line_start                                                |
+        // +-------------------------------------------------------------------+
         case state::trailer_line_start: {
           if (helpers::is_token(c)) {
             state_ = state::trailer_name;
@@ -402,6 +429,9 @@ class reader_chunked {
           result.produced = out_pos;
           return fail(result, reader_error::invalid_trailer);
         }
+        // +-------------------------------------------------------------------+
+        // | trailer_name                                                      |
+        // +-------------------------------------------------------------------+
         case state::trailer_name: {
           if (helpers::is_token(c)) break;
           if (c == ':') {
@@ -411,6 +441,9 @@ class reader_chunked {
           result.produced = out_pos;
           return fail(result, reader_error::invalid_trailer);
         }
+        // +-------------------------------------------------------------------+
+        // | trailer_value                                                     |
+        // +-------------------------------------------------------------------+
         case state::trailer_value: {
           if (c == '\r') {
             state_ = state::trailer_line_lf;
@@ -423,6 +456,9 @@ class reader_chunked {
           result.produced = out_pos;
           return fail(result, reader_error::invalid_trailer);
         }
+        // +-------------------------------------------------------------------+
+        // | trailer_line_lf                                                   |
+        // +-------------------------------------------------------------------+
         case state::trailer_line_lf: {
           if (c != '\n') {
             result.produced = out_pos;
@@ -431,6 +467,9 @@ class reader_chunked {
           state_ = state::trailer_line_start;
           break;
         }
+        // +-------------------------------------------------------------------+
+        // | trailer_end_lf                                                    |
+        // +-------------------------------------------------------------------+
         case state::trailer_end_lf: {
           if (c != '\n') {
             result.produced = out_pos;
@@ -453,7 +492,7 @@ class reader_chunked {
  private:
   // +=========================================================================+
   // | [>] hex_digit                                               ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static int hex_digit(char c) noexcept {
     if (c >= '0' && c <= '9') {
       return c - '0';
@@ -468,7 +507,7 @@ class reader_chunked {
   }
   // +=========================================================================+
   // | [>] fail                                                    ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   reader_state fail(reader_state& result, reader_error err) {
     state_ = state::error;
     error_ = err;
@@ -478,7 +517,7 @@ class reader_chunked {
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   state state_{state::chunk_size};
   reader_error error_{reader_error::none};
   std::size_t chunk_remaining_{0};

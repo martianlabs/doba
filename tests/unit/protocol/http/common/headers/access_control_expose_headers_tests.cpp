@@ -35,7 +35,7 @@ using header =
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "",
@@ -54,9 +54,10 @@ DOBA_TEST("check accepts valid values") {
         header::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       " ",         "Content Length", "\"ETag\"",    "ETag:",
@@ -66,9 +67,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!header::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!header::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!header::check(std::string_view{"a\0", 2}));
@@ -92,9 +94,10 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(header::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check accepts token boundaries                          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts token boundaries") {
   constexpr std::string_view cases[] = {
       "!#$%&'*+-.^_`|~",
@@ -107,16 +110,14 @@ DOBA_TEST("check accepts token boundaries") {
     DOBA_EXPECT(header::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects token boundaries                          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects token boundaries") {
   constexpr std::string_view cases[] = {
-      "X-Custom=1",
-      "X-Custom;other",
-      "X-Custom\tOther",
-      "X-Custom/Other",
-      "A,B:",
+      "X-Custom=1",     "X-Custom;other", "X-Custom\tOther",
+      "X-Custom/Other", "A,B:",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);

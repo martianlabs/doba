@@ -10,11 +10,11 @@ with Ctrl+C.
 | --- | --- |
 | Routing | `hello_world`, `static_routes`, `parametrized_routes`, `wildcard_routes` |
 | Request data | `request_information`, `query_parameters`, `request_headers`, `cookies` |
-| Request bodies | `request_body_text`, `request_body_binary`, `expect_continue` |
+| Request body | `request_body_text`, `request_body_binary`, `request_limits` |
 | Response construction | `response_statuses`, `response_headers`, `response_body_values`, `response_body_writers`, `large_response_bodies` |
-| Server behavior | `head_requests`, `automatic_not_found`, `method_not_allowed`, `options_asterisk`, `connection_close`, `automatic_date`, `request_rejections` |
+| Server behavior | `head_requests` |
 | Controllers | `controllers` |
-| Static files | `static_file_server` |
+| Static files | `static_file_server`, `file_download` |
 | TLS | `https_hello_world` |
 
 Each example README contains a `curl` command and its observable result.
@@ -26,6 +26,7 @@ server<> http_server({.ip = "0.0.0.0", .port = "8080"});
 http_server.start();
 ```
 
-Engine policies are optional and follow the transport policies.
+Engine policies are optional and follow the transport policies. The
+[request limits example](request_limits/README.md) configures one explicitly.
 The [TLS example](https_hello_world/README.md) uses `DOBA_ENABLE_TLS=ON` and
 requires an OpenSSL certificate and private key.

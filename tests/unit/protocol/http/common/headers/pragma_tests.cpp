@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::pragma;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "no-cache",          "foo",
@@ -48,9 +48,10 @@ DOBA_TEST("check accepts valid values") {
         pragma::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",     " ",        ",",        ", ,",     "=bar",
@@ -60,9 +61,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!pragma::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!pragma::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!pragma::check(std::string_view{"a\0", 2}));
@@ -86,9 +88,10 @@ DOBA_TEST("check handles string view boundaries") {
   padded += "suffix";
   DOBA_EXPECT(pragma::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check accepts quoted directive boundaries               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts quoted directive boundaries") {
   constexpr std::string_view cases[] = {
       "extension=\"\"",
@@ -101,17 +104,14 @@ DOBA_TEST("check accepts quoted directive boundaries") {
     DOBA_EXPECT(pragma::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects quoted directive boundaries               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects quoted directive boundaries") {
   constexpr std::string_view cases[] = {
-      "extension=\"a\"b",
-      "extension=\"a\\",
-      "extension =v",
-      "extension= v",
-      "extension=v;other=x",
-      "extension=v,other=",
+      "extension=\"a\"b", "extension=\"a\\",     "extension =v",
+      "extension= v",     "extension=v;other=x", "extension=v,other=",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);

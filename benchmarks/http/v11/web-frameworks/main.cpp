@@ -33,22 +33,19 @@ int main(int argc, char* argv[]) {
   server http_server({.ip = "0.0.0.0", .port = "3000"});
   http_server.add_route(
       "GET", "/",
-      [](const request& req) {
-        response res = response::ok_200();
-        return res;
+      [](const request& req, response& res) {
+        res.ok_200();
       });
   http_server.add_route(
       "GET", "/user/:id",
-      [](const request& req, std::string_view id) {
-        response res = response::ok_200();
+      [](const request& req, response& res, std::string_view id) {
+        res.ok_200();
         res.set_body(id);
-        return res;
       });
   http_server.add_route(
       "POST", "/user",
-      [](const request& req) {
-        response res = response::ok_200();
-        return res;
+      [](const request& req, response& res) {
+        res.ok_200();
       });
   http_server.start();
   std::promise<void> shutdown;

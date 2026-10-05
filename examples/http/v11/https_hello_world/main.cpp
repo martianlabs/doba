@@ -28,28 +28,40 @@
 #include "protocol/http/v11/server.h"
 #include "transport/server/tls.h"
 
-namespace http = martianlabs::doba::protocol::http;
-namespace transport = martianlabs::doba::transport::server;
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the application. It creates an HTTPS server    |
+// | that listens on all interfaces (0.0.0.0) and port 8443.                   |
+// | It defines a resource handler for the "/hello" endpoint that responds to  |
+// | GET requests with a simple "hello from doba" message. The server is       |
+// | started, and the application waits for termination signals.               |
+// | This example requires a certificate and private key to be provided as     |
+// | command-line arguments.                                                   |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
   if (argc != 3) {
     std::cerr << "Usage: https_hello_world <certificate> <private-key>\n";
     return 1;
   }
-  transport::tls_policies configuration;
+  martianlabs::doba::transport::server::tls_policies configuration;
   configuration.ip = "0.0.0.0";
   configuration.port = "8443";
   configuration.certificate_file = argv[1];
   configuration.private_key_file = argv[2];
-  server<request, response, http::router<request, response>,
-         engine<request, response>, transport::tls> http_server(
-             configuration);
-  http_server.add_route("GET", "/hello", [](const request&) {
-    response res = response::ok_200();
+  server<request, response,
+         martianlabs::doba::protocol::http::router<request, response>,
+         engine<request, response>, martianlabs::doba::transport::server::tls>
+      http_server(configuration);
+  http_server.add_route("GET", "/hello", [](const request&, response& res) {
+    res.ok_200();
     res.set_body("hello from doba");
-    return res;
+    return;
   });
   http_server.start();
   signaler::wait();

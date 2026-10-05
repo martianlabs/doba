@@ -26,7 +26,9 @@
 #define martianlabs_doba_protocol_http_v11_body_reader_h
 
 #include <cstddef>
+#include <optional>
 #include <span>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -40,7 +42,7 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] reader                                                      ( class ) |
 // +---------------------------------------------------------------------------+
-// | Owns the wire-level common::reader source together with the body decoder  |
+// | Holds a borrowed buffer or an owned file with the body decoder.           |
 // | (reader_chunked or reader_raw) matching the encoding actually used by the |
 // | request (Transfer-Encoding: chunked vs Content-Length). This lets callers |
 // | pull already-decoded payload bytes via read() without ever having to know |
@@ -51,18 +53,32 @@ class reader {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
-  // +=========================================================================+
-  static reader chunked(common::reader source) {
-    return reader(std::move(source), reader_chunked());
+  // +-------------------------------------------------------------------------+
+  static reader chunked(std::span<const std::byte> source) {
+    if (source.empty()) throw std::invalid_argument("Empty body source");
+    return reader(common::reader::borrowed(source), reader_chunked());
   }
-  static reader raw(common::reader source, std::size_t content_length) {
-    return reader(std::move(source), reader_raw(content_length));
+  static reader chunked(common::filesystem_file&& source) {
+    if (!source.is_open()) throw std::invalid_argument("Body file is not open");
+    return reader(common::reader(std::move(source)), reader_chunked());
+  }
+  static reader raw(std::span<const std::byte> source,
+                    std::size_t content_length) {
+    if (source.empty()) throw std::invalid_argument("Empty body source");
+    return reader(common::reader::borrowed(source), reader_raw(content_length),
+                  source);
+  }
+  static reader raw(common::filesystem_file&& source,
+                    std::size_t content_length) {
+    if (!source.is_open()) throw std::invalid_argument("Body file is not open");
+    return reader(common::reader(std::move(source)),
+                  reader_raw(content_length));
   }
   reader(const reader&) = delete;
   reader(reader&&) noexcept = default;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   reader& operator=(const reader&) = delete;
   reader& operator=(reader&&) noexcept = default;
   // +=========================================================================+
@@ -71,25 +87,38 @@ class reader {
   // | Pulls wire bytes from the owned source, decodes them using the encoding |
   // | selected at construction time, and writes the decoded payload into      |
   // | output. See reader_chunked::read/reader_raw::read for semantics.        |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   reader_state read(std::span<std::byte> output) {
     return std::visit(
         [this, output](auto& decoder) { return decoder.read(source_, output); },
         decoder_);
   }
+  // +=========================================================================+
+  // | [>] take_borrowed_raw                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::optional<std::span<const std::byte>> take_borrowed_raw(
+      std::size_t maximum) {
+    if (borrowed_raw_.empty()) return std::nullopt;
+    auto* decoder = std::get_if<reader_raw>(&decoder_);
+    return decoder ? decoder->take_view(borrowed_raw_, maximum) : std::nullopt;
+  }
 
  private:
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                            ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   reader(common::reader source,
-         std::variant<reader_chunked, reader_raw> decoder)
-      : source_(std::move(source)), decoder_(std::move(decoder)) {}
+         std::variant<reader_chunked, reader_raw> decoder,
+         std::span<const std::byte> borrowed_raw = {})
+      : source_(std::move(source)),
+        decoder_(std::move(decoder)),
+        borrowed_raw_(borrowed_raw) {}
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   common::reader source_;
   std::variant<reader_chunked, reader_raw> decoder_;
+  std::span<const std::byte> borrowed_raw_;
 };
 }  // namespace martianlabs::doba::protocol::http::v11::body
 

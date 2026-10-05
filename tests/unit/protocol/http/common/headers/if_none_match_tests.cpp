@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::if_none_match;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "",
@@ -53,9 +53,10 @@ DOBA_TEST("check accepts valid values") {
         std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       " ",           "*, \"a\"", "abc", "w/\"a\"", "\"unterminated",
@@ -65,9 +66,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!if_none_match::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!if_none_match::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!if_none_match::check(std::string_view{"a\0", 2}));
@@ -89,19 +91,20 @@ DOBA_TEST("check handles string view boundaries") {
   std::string padded(seed);
   padded.push_back('\0');
   padded += "suffix";
-  DOBA_EXPECT(if_none_match::check(
-      std::string_view(padded.data(), seed.size())));
+  DOBA_EXPECT(
+      if_none_match::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check applies the entity tag byte grammar               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check applies the entity tag byte grammar") {
   for (unsigned int byte = 0; byte <= 255; ++byte) {
     std::string source = "\"";
     source += static_cast<char>(byte);
     source += '"';
-    const bool expected = byte == 0x21 ||
-                          (byte >= 0x23 && byte <= 0x7e) || byte >= 0x80;
+    const bool expected =
+        byte == 0x21 || (byte >= 0x23 && byte <= 0x7e) || byte >= 0x80;
     martianlabs::doba::tests::unit::test_helper::set_context(
         "byte " + std::to_string(byte));
     martianlabs::doba::tests::unit::test_helper::expect(
@@ -112,9 +115,10 @@ DOBA_TEST("check applies the entity tag byte grammar") {
         __FILE__, __LINE__);
   }
 }
+
 // +===========================================================================+
 // | [>] check accepts tag list boundaries                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts tag list boundaries") {
   constexpr std::string_view cases[] = {
       "\"\", W/\"\", \"a,b\", W/\"c;d\"",
@@ -127,21 +131,14 @@ DOBA_TEST("check accepts tag list boundaries") {
     DOBA_EXPECT(if_none_match::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects tag list boundaries                       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects tag list boundaries") {
   constexpr std::string_view cases[] = {
-      "*,\"a\"",
-      "\"a\",*",
-      "W/ \"a\"",
-      "\"a\"junk",
-      "\"a\",W/",
-      "\"a\",W/\"b",
-      "\"a\" ",
-      " \"a\"",
-      "\"a\", \"b\" ",
-      "\"a\\\"b\"",
+      "*,\"a\"",     "\"a\",*", "W/ \"a\"", "\"a\"junk",     "\"a\",W/",
+      "\"a\",W/\"b", "\"a\" ",  " \"a\"",   "\"a\", \"b\" ", "\"a\\\"b\"",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);

@@ -24,44 +24,99 @@
 
 #include <array>
 #include <cstddef>
+#include <chrono>
+#include <filesystem>
+#include <fstream>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <type_traits>
 
 #include "common/reader.h"
 #include "protocol/http/v11/body/reader.h"
+#include "body_bytes.h"
 #include "test_helper.h"
 
 namespace {
-using common_reader = martianlabs::doba::common::reader;
+using martianlabs::doba::common::filesystem_file;
 using martianlabs::doba::protocol::http::v11::body::reader;
-
-std::span<const std::byte> bytes(std::string_view value) {
-  return {reinterpret_cast<const std::byte*>(value.data()), value.size()};
-}
+using martianlabs::doba::tests::unit::bytes;
 }  // namespace
 
 // +===========================================================================+
 // | [>] reader is movable but not copyable                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("reader is movable but not copyable") {
   static_assert(!std::is_copy_constructible_v<reader>);
   static_assert(!std::is_copy_assignable_v<reader>);
+  static_assert(!std::is_default_constructible_v<reader>);
   static_assert(std::is_move_constructible_v<reader>);
   static_assert(std::is_move_assignable_v<reader>);
   DOBA_EXPECT(true);
 }
+
+// +===========================================================================+
+// | [>] readers require an actual source                       ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("readers reject empty buffers and unopened files") {
+  bool empty_rejected = false;
+  try {
+    reader::raw(std::span<const std::byte>{}, 1);
+  } catch (const std::invalid_argument&) {
+    empty_rejected = true;
+  }
+  DOBA_EXPECT(empty_rejected);
+  bool file_rejected = false;
+  try {
+    reader::chunked(filesystem_file{});
+  } catch (const std::invalid_argument&) {
+    file_rejected = true;
+  }
+  DOBA_EXPECT(file_rejected);
+}
+
+// +===========================================================================+
+// | [>] chunked file source yields decoded payload              ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("chunked file source yields decoded payload") {
+  namespace fs = std::filesystem;
+  const auto stamp =
+      std::chrono::steady_clock::now().time_since_epoch().count();
+  const fs::path path =
+      fs::temp_directory_path() / ("doba_body_reader_" + std::to_string(stamp));
+  {
+    std::ofstream output(path, std::ios::binary);
+    output << "5\r\nhello\r\n0\r\n\r\n";
+  }
+  std::error_code error;
+  {
+    filesystem_file file;
+    DOBA_EXPECT(file.open(path.parent_path(), path.filename().string(), error));
+    DOBA_EXPECT(file.is_open());
+    auto value = reader::chunked(std::move(file));
+    std::array<std::byte, 8> output{};
+    const auto state = value.read(output);
+    DOBA_EXPECT(!state.has_error);
+    DOBA_EXPECT(state.complete);
+    DOBA_EXPECT_EQUAL(state.produced, 5);
+    DOBA_EXPECT_EQUAL(
+        std::string_view(reinterpret_cast<const char*>(output.data()), 5),
+        "hello");
+  }
+  fs::remove(path, error);
+}
+
 // +===========================================================================+
 // | [>] raw factory decodes only the declared body              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("raw factory decodes only the declared body") {
-  auto value = reader::raw(common_reader::borrowed(bytes("payloadNEXT")), 7);
+  auto value = reader::raw(bytes("payloadNEXT"), 7);
   std::array<std::byte, 3> output{};
   std::string decoded;
   bool complete = false;
-  for (std::size_t iteration = 0; !complete && iteration <= 11;
-       iteration++) {
+  for (std::size_t iteration = 0; !complete && iteration <= 11; iteration++) {
     const auto state = value.read(output);
     DOBA_EXPECT(!state.has_error);
     decoded.append(reinterpret_cast<const char*>(output.data()),
@@ -71,13 +126,14 @@ DOBA_TEST("raw factory decodes only the declared body") {
   DOBA_EXPECT(complete);
   DOBA_EXPECT_EQUAL(decoded, "payload");
 }
+
 // +===========================================================================+
 // | [>] chunked factory removes wire framing and trailers       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("chunked factory removes wire framing and trailers") {
   constexpr std::string_view wire =
       "5\r\nhello\r\n6;ext=yes\r\n world\r\n0\r\nX-Test: value\r\n\r\n";
-  auto value = reader::chunked(common_reader::borrowed(bytes(wire)));
+  auto value = reader::chunked(bytes(wire));
   std::array<std::byte, 2> output{};
   std::string decoded;
   bool complete = false;
@@ -92,22 +148,22 @@ DOBA_TEST("chunked factory removes wire framing and trailers") {
   DOBA_EXPECT(complete);
   DOBA_EXPECT_EQUAL(decoded, "hello world");
 }
+
 // +===========================================================================+
 // | [>] moves preserve partially consumed body states           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("moves preserve partially consumed raw and chunked states") {
   for (const bool chunked : {false, true}) {
     constexpr std::string_view raw = "abc";
     constexpr std::string_view wire = "3\r\nabc\r\n0\r\n\r\n";
-    auto value = chunked
-                     ? reader::chunked(common_reader::borrowed(bytes(wire)))
-                     : reader::raw(common_reader::borrowed(bytes(raw)), 3);
+    auto value =
+        chunked ? reader::chunked(bytes(wire)) : reader::raw(bytes(raw), 3);
     std::array<std::byte, 2> output{};
     auto first = value.read(std::span(output).first(1));
     DOBA_EXPECT_EQUAL(first.produced, 1);
     DOBA_EXPECT(!first.complete);
     reader moved(std::move(value));
-    auto target = reader::raw(common_reader::borrowed(bytes("old")), 3);
+    auto target = reader::raw(bytes("old"), 3);
     target = std::move(moved);
     const auto state = target.read(output);
     DOBA_EXPECT(!state.has_error);

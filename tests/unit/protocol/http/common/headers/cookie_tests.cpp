@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::cookie;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "a=b",     "a=",       "a=abc123",     "a=!#$%&'()*+-./:<=>?@[]^_`{|}~",
@@ -47,9 +47,10 @@ DOBA_TEST("check accepts valid values") {
         cookie::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",          " ",         "=b",    "a",        "a b=c",
@@ -60,9 +61,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!cookie::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!cookie::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!cookie::check(std::string_view{"a\0", 2}));
@@ -88,9 +90,10 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(cookie::check("a=b"));
   DOBA_EXPECT(!cookie::check("a=" + std::string(1, static_cast<char>(0x80))));
 }
+
 // +===========================================================================+
 // | [>] check accepts pair and separator boundaries             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts pair and separator boundaries") {
   constexpr std::string_view cases[] = {
       "a=\"\"",
@@ -103,23 +106,47 @@ DOBA_TEST("check accepts pair and separator boundaries") {
     DOBA_EXPECT(cookie::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects pair and separator boundaries             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects pair and separator boundaries") {
   constexpr std::string_view cases[] = {
-      "a=\"b\\c\"",
-      "a=\"b,c\"",
-      "a=\"b;c\"",
-      "a=b;\tc=d",
-      "a=b; c",
-      "a=b; =d",
-      "a=b; c=\"d\"junk",
-      "a=\"b\"junk",
-      "a=b\nSet-Cookie: c=d",
+      "a=\"b\\c\"",       "a=\"b,c\"",   "a=\"b;c\"",
+      "a=b;\tc=d",        "a=b; c",      "a=b; =d",
+      "a=b; c=\"d\"junk", "a=\"b\"junk", "a=b\nSet-Cookie: c=d",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
     DOBA_EXPECT(!cookie::check(source));
+  }
+}
+
+// +===========================================================================+
+// | [>] check accepts only cookie-octet bytes in values         ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check accepts only cookie-octet bytes in values") {
+  // RFC 6265 S4.1.1: semicolon separates pairs; it is not a cookie-octet value.
+  for (unsigned int byte = 0; byte <= 255; ++byte) {
+    if (byte == ';') {
+      DOBA_EXPECT(cookie::check("a=x; y=z"));
+      DOBA_EXPECT(!cookie::check("a=x;y=z"));
+      DOBA_EXPECT(!cookie::check("a=\"x;y\""));
+      continue;
+    }
+    const bool octet = byte == 0x21 || (byte >= 0x23 && byte <= 0x2b) ||
+                       (byte >= 0x2d && byte <= 0x3a) ||
+                       (byte >= 0x3c && byte <= 0x5b) ||
+                       (byte >= 0x5d && byte <= 0x7e);
+    std::string plain = "a=x";
+    plain += static_cast<char>(byte);
+    plain += "y";
+    std::string quoted = "a=\"x";
+    quoted += static_cast<char>(byte);
+    quoted += "y\"";
+    martianlabs::doba::tests::unit::test_helper::set_context(
+        "byte " + std::to_string(byte));
+    DOBA_EXPECT_EQUAL(cookie::check(plain), octet);
+    DOBA_EXPECT_EQUAL(cookie::check(quoted), octet);
   }
 }

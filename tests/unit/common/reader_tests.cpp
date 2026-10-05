@@ -33,61 +33,26 @@
 #include <utility>
 
 #include "common/reader.h"
+#include "file_directory.h"
+#include "only_spill_file.h"
+#include "spill_directory.h"
 #include "test_helper.h"
 
 namespace {
+using martianlabs::doba::tests::spill_directory;
+using martianlabs::doba::tests::only_spill_file;
+using martianlabs::doba::tests::file_directory;
 using martianlabs::doba::common::byte_storage;
 using martianlabs::doba::common::byte_storage_options;
 using martianlabs::doba::common::reader;
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] spill_directory                                             ( class ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-class spill_directory {
- public:
-  // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
-  spill_directory() {
-    namespace fs = std::filesystem;
-    static std::atomic<std::size_t> sequence{0};
-    const auto stamp =
-        std::chrono::steady_clock::now().time_since_epoch().count();
-    path_ = fs::temp_directory_path() /
-            ("doba_reader_" + std::to_string(stamp) + "_" +
-             std::to_string(sequence.fetch_add(1)));
-    fs::create_directory(path_);
-  }
-  ~spill_directory() {
-    std::error_code error;
-    std::filesystem::remove_all(path_, error);
-  }
 
-  const std::filesystem::path& path() const { return path_; }
 
- private:
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
-  std::filesystem::path path_;
-};
-
-std::filesystem::path only_spill_file(const std::filesystem::path& directory) {
-  std::filesystem::path result;
-  for (const auto& entry : std::filesystem::directory_iterator(directory)) {
-    if (entry.path().filename() != "existing.tmp") result = entry.path();
-  }
-  return result;
-}
 }  // namespace
 
 // +===========================================================================+
 // | [>] empty readers report their size contract                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("empty readers report their size contract") {
   reader value;
   DOBA_EXPECT(value.ok());
@@ -103,9 +68,10 @@ DOBA_TEST("empty readers report their size contract") {
   DOBA_EXPECT_EQUAL(value.read({}), 0);
   DOBA_EXPECT_EQUAL(borrowed.read({}), 0);
 }
+
 // +===========================================================================+
 // | [>] read and fetch share the borrowed cursor                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("read and fetch share the borrowed cursor") {
   const std::string input("a\0b\xff", 4);
   auto value = reader::borrowed(std::as_bytes(std::span(input)));
@@ -127,9 +93,10 @@ DOBA_TEST("read and fetch share the borrowed cursor") {
   DOBA_EXPECT_EQUAL(value.read(output), 0);
   DOBA_EXPECT(!value.fetch(byte));
 }
+
 // +===========================================================================+
 // | [>] read all appends across its buffer boundary             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("read all appends across its buffer boundary") {
   for (const std::size_t size : {0, 1, 8191, 8192, 8193}) {
     const std::string input(size, '\x80');
@@ -137,9 +104,8 @@ DOBA_TEST("read all appends across its buffer boundary") {
       byte_storage storage;
       DOBA_EXPECT(storage.write(input.data(), input.size()));
       storage.finish(input.size());
-      auto value = borrowed
-                       ? reader::borrowed(std::as_bytes(std::span(input)))
-                       : reader(std::move(storage));
+      auto value = borrowed ? reader::borrowed(std::as_bytes(std::span(input)))
+                            : reader(std::move(storage));
       std::string output = "prefix";
       DOBA_EXPECT_EQUAL(value.read_all(output), size);
       DOBA_EXPECT_EQUAL(output, "prefix" + input);
@@ -149,9 +115,10 @@ DOBA_TEST("read all appends across its buffer boundary") {
     }
   }
 }
+
 // +===========================================================================+
 // | [>] moves retain the unread suffix across ownership modes   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("moves retain the unread suffix across ownership modes") {
   const std::string input = "abcdef";
   for (const bool borrowed_source : {false, true}) {
@@ -183,9 +150,10 @@ DOBA_TEST("moves retain the unread suffix across ownership modes") {
     }
   }
 }
+
 // +===========================================================================+
 // | [>] borrowed reads allow overlapping storage                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("borrowed reads allow overlapping storage") {
   std::array<char, 8> input{'a', 'b', 'c', 'd', 'e', 'f', '!', '!'};
   auto value = reader::borrowed(std::as_bytes(std::span(input).first(6)));
@@ -194,20 +162,21 @@ DOBA_TEST("borrowed reads allow overlapping storage") {
   DOBA_EXPECT_EQUAL(std::string_view(input.data(), input.size()), "aabcdef!");
   DOBA_EXPECT(value.eof());
 }
+
 // +===========================================================================+
 // | [>] truncated spill files fail the reader                  ( test-case )  |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("truncated spill files fail the reader") {
-  spill_directory directory;
+  spill_directory directory{"doba_reader_"};
   {
-    byte_storage storage(
-        byte_storage_options{.spill_threshold = 1,
-                             .spill_dir = directory.path().string()});
+    byte_storage storage(byte_storage_options{
+        .spill_threshold = 1, .spill_dir = directory.path().string()});
     DOBA_EXPECT(storage.write("abcdef", 6));
     storage.finish(6);
     DOBA_EXPECT_EQUAL(
         std::distance(std::filesystem::directory_iterator(directory.path()),
-                      std::filesystem::directory_iterator()), 1);
+                      std::filesystem::directory_iterator()),
+        1);
     const auto spill_file = only_spill_file(directory.path());
     DOBA_EXPECT(!spill_file.empty());
     std::filesystem::resize_file(spill_file, 2);
@@ -223,11 +192,12 @@ DOBA_TEST("truncated spill files fail the reader") {
   }
   DOBA_EXPECT(std::filesystem::is_empty(directory.path()));
 }
+
 // +===========================================================================+
 // | [>] reader owns moved storage                               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("reader owns storage after the moved source is destroyed") {
-  spill_directory directory;
+  spill_directory directory{"doba_reader_"};
   for (std::size_t threshold : {0, 1}) {
     {
       std::optional<reader> destination;
@@ -253,7 +223,7 @@ DOBA_TEST("reader owns storage after the moved source is destroyed") {
 
 // +===========================================================================+
 // | [>] borrowed reader move semantics                          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("moving a borrowed reader preserves the view and cursor") {
   std::string backing = "abcdef";
   auto source = reader::borrowed(std::as_bytes(std::span(backing)));
@@ -273,54 +243,13 @@ DOBA_TEST("moving a borrowed reader preserves the view and cursor") {
 namespace {
 namespace fs = std::filesystem;
 using martianlabs::doba::common::filesystem_file;
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] reader_file_directory                                       ( class ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-class reader_file_directory {
- public:
-  // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
-  reader_file_directory() {
-    static std::atomic<unsigned int> counter{0};
-    const auto stamp =
-        std::chrono::steady_clock::now().time_since_epoch().count();
-    do {
-      path_ = fs::temp_directory_path() /
-          ("doba_files_" + std::to_string(stamp) + "_" +
-           std::to_string(counter.fetch_add(1)));
-    } while (!fs::create_directory(path_));
-  }
-  ~reader_file_directory() {
-    std::error_code error;
-    fs::remove_all(path_, error);
-  }
-  const fs::path& path() const { return path_; }
-  void write(std::string_view name, std::string_view contents) {
-    const fs::path relative(std::u8string(name.begin(), name.end()));
-    std::ofstream output(path_ / relative, std::ios::binary);
-    output.write(contents.data(),
-                 static_cast<std::streamsize>(contents.size()));
-    if (!output) throw std::runtime_error("Unable to write fixture");
-  }
-
- private:
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
-  fs::path path_;
-};
 }  // namespace
 
 // +===========================================================================+
 // | [>] reader file ownership                                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("reader adopts and moves an open file with a shared read cursor") {
-  reader_file_directory directory;
+  file_directory directory;
   directory.write("file", "abcdef");
   filesystem_file file;
   std::error_code error;

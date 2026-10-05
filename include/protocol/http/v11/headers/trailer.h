@@ -59,7 +59,7 @@ class trailer {
  public:
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool check(std::string_view sv, parsed_token_list& out) {
     // The producer overload validates each field-name exactly as the pure
     // check() does and captures every non-empty element in order.
@@ -71,7 +71,7 @@ class trailer {
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr verdict interpret(const parsed_token_list& token_list,
                                      v11::connection& conn, const policies&) {
     for (const std::string_view name : token_list.elements) {
@@ -83,7 +83,7 @@ class trailer {
  private:
   // +=========================================================================+
   // | [>] consume_field_name                                      ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool consume_field_name(std::string_view sv) {
     return helpers::is_token(sv);
   }

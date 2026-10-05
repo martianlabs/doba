@@ -35,16 +35,17 @@ using martianlabs::doba::protocol::http::v11::headers::rules::directives;
 
 // +===========================================================================+
 // | [>] accepts empty and extension connection options          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("accepts empty and extension connection options") {
   context ctx;
   DOBA_EXPECT_EQUAL(directives::apply(ctx), verdict::kAccept);
   ctx.connection.options = {"close", "keep-alive", "X-Custom"};
   DOBA_EXPECT_EQUAL(directives::apply(ctx), verdict::kAccept);
 }
+
 // +===========================================================================+
 // | [>] upgrade option requires an offered protocol             ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("upgrade option requires an offered protocol") {
   constexpr std::string_view spellings[] = {
       "upgrade",
@@ -59,13 +60,13 @@ DOBA_TEST("upgrade option requires an offered protocol") {
     DOBA_EXPECT_EQUAL(directives::apply(ctx), verdict::kAccept);
   }
 }
+
 // +===========================================================================+
 // | [>] rejects nominated control fields case insensitively     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("rejects nominated control fields case insensitively") {
   constexpr std::string_view fields[] = {
-      "connection",        "HOST", "Content-Length",
-      "transfer-encoding", "TRAILER",
+      "connection", "HOST", "Content-Length", "transfer-encoding", "TRAILER",
   };
   for (const auto field : fields) {
     context ctx;
@@ -73,6 +74,7 @@ DOBA_TEST("rejects nominated control fields case insensitively") {
     DOBA_EXPECT_EQUAL(directives::apply(ctx), verdict::kReject);
   }
 }
+
 // +===========================================================================+
 // | [>] accepts the TE connection option                        ( test-case ) |
 // +===========================================================================+

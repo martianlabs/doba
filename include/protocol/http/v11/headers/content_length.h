@@ -71,7 +71,7 @@ class content_length {
  public:
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool check(std::string_view sv, std::size_t& out) {
     // The producer overload validates the same 1*DIGIT grammar and, on
     // success, yields the decimal value through the shared parse_size_t, which
@@ -80,7 +80,7 @@ class content_length {
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr verdict interpret(const std::size_t& len, v11::connection&,
                                      const policies& policies) {
     if (policies.max_content_length != 0 && len > policies.max_content_length) {

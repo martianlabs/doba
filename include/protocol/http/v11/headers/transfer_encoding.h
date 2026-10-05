@@ -63,7 +63,7 @@ class transfer_encoding {
  public:
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool check(std::string_view sv, parsed_parameter_list& out) {
     // The producer overload validates each transfer-coding exactly as the pure
     // check() does and captures every non-empty element (its token plus any
@@ -76,7 +76,7 @@ class transfer_encoding {
   }
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr verdict interpret(
       const parsed_parameter_list& parameters_list, v11::connection& conn,
       const policies& pol) {
@@ -102,7 +102,7 @@ class transfer_encoding {
  private:
   // +=========================================================================+
   // | [>] consume_transfer_coding                                 ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr bool consume_transfer_coding(std::string_view sv) {
     std::size_t off = 0;
     const std::string_view token = helpers::consume_token(sv);

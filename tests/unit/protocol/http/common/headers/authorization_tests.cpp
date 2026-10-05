@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::authorization;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "Basic",
@@ -54,9 +54,10 @@ DOBA_TEST("check accepts valid values") {
         std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",
@@ -71,9 +72,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!authorization::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!authorization::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!authorization::check(std::string_view{"a\0", 2}));
@@ -95,12 +97,13 @@ DOBA_TEST("check handles string view boundaries") {
   std::string padded(seed);
   padded.push_back('\0');
   padded += "suffix";
-  DOBA_EXPECT(authorization::check(
-      std::string_view(padded.data(), seed.size())));
+  DOBA_EXPECT(
+      authorization::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check accepts credential alternatives                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts credential alternatives") {
   constexpr std::string_view cases[] = {
       "Scheme   abc+/~._-==",
@@ -114,17 +117,14 @@ DOBA_TEST("check accepts credential alternatives") {
     DOBA_EXPECT(authorization::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects credential alternatives                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects credential alternatives") {
   constexpr std::string_view cases[] = {
-      "Scheme\tabc",
-      "Scheme abc==x",
-      "Scheme a=\"x\"z",
-      "Scheme a=\"x\\",
-      "Scheme a=b,Other token",
-      "Scheme a=b;c=d",
+      "Scheme\tabc",    "Scheme abc==x",          "Scheme a=\"x\"z",
+      "Scheme a=\"x\\", "Scheme a=b,Other token", "Scheme a=b;c=d",
       "Scheme a=b, c",
   };
   for (const auto source : cases) {

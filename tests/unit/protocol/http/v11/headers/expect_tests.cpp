@@ -38,7 +38,7 @@ using martianlabs::doba::protocol::http::v11::headers::expect;
 
 // +===========================================================================+
 // | [>] check accepts expectations                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts expectations") {
   constexpr std::string_view cases[] = {
       "",
@@ -62,9 +62,10 @@ DOBA_TEST("check accepts expectations") {
   DOBA_EXPECT_EQUAL(parsed.elements.size(), 2u);
   DOBA_EXPECT_EQUAL(parsed.elements[0], "100-continue");
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid expectations                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid expectations") {
   constexpr std::string_view cases[] = {
       " ",        "=bar", "foo=",        "foo =bar",
@@ -77,9 +78,10 @@ DOBA_TEST("check rejects invalid expectations") {
   parsed_parameter_list parsed;
   DOBA_EXPECT(!expect::check(std::string_view{"foo\0", 4}, parsed));
 }
+
 // +===========================================================================+
 // | [>] interpret recognizes only 100 continue                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("interpret recognizes only 100 continue") {
   policies policy;
   martianlabs::doba::protocol::http::v11::connection state;
@@ -89,9 +91,10 @@ DOBA_TEST("interpret recognizes only 100 continue") {
   parsed.elements.push_back("extension");
   DOBA_EXPECT_EQUAL(expect::interpret(parsed, state, policy), verdict::kReject);
 }
+
 // +===========================================================================+
 // | [>] check accepts expectation parameter boundaries          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts expectation parameter boundaries") {
   constexpr std::string_view cases[] = {
       "extension=\"a,b;c\";x=\"\"",
@@ -104,17 +107,14 @@ DOBA_TEST("check accepts expectation parameter boundaries") {
     DOBA_EXPECT(expect::check(source, parsed));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects expectation parameter boundaries          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects expectation parameter boundaries") {
   constexpr std::string_view cases[] = {
-      "foo=\"x\"junk",
-      "foo=\"x\\",
-      "foo=bar;p =v",
-      "foo=bar;p= v",
-      "foo=bar;p",
-      "100-continue;foo=bar",
+      "foo=\"x\"junk", "foo=\"x\\", "foo=bar;p =v",
+      "foo=bar;p= v",  "foo=bar;p", "100-continue;foo=bar",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
@@ -122,12 +122,13 @@ DOBA_TEST("check rejects expectation parameter boundaries") {
     DOBA_EXPECT(!expect::check(source, parsed));
   }
 }
+
 // +===========================================================================+
 // | [>] interpret separates extension syntax from support       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("interpret separates extension syntax from support") {
-  for (const std::string_view source : {"other", "100-continue=value",
-                                         "100-continue=\"\""}) {
+  for (const std::string_view source :
+       {"other", "100-continue=value", "100-continue=\"\""}) {
     parsed_parameter_list parsed;
     DOBA_EXPECT(expect::check(source, parsed));
     connection state;

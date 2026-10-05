@@ -53,7 +53,7 @@ class router {
  public:
   // +=========================================================================+
   // | [>] TYPEs                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   struct route_match {
     const router_handler_static<RQty, RSty>* handler{nullptr};
     const router_handler_parametrized<RQty, RSty>* parametrized_handler{
@@ -64,19 +64,19 @@ class router {
   };
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   router() = default;
   router(const router&) = delete;
   router(router&&) noexcept = delete;
   ~router() = default;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   router& operator=(const router&) = delete;
   router& operator=(router&&) noexcept = delete;
   // +=========================================================================+
   // | [>] add                                                      ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <typename Hty>
     requires router_handler_lambda<Hty>
   void add(std::string_view method, std::string_view route, Hty handler) {
@@ -85,10 +85,10 @@ class router {
     signature::template check<RQty, RSty>();
     constexpr std::size_t handler_parameter_count = signature::parameter_count;
     const std::size_t wildcard_position = route.find('*');
-    const bool is_wildcard =
-        wildcard_position != std::string_view::npos &&
-        wildcard_position == route.size() - 1 && wildcard_position > 0 &&
-        route[wildcard_position - 1] == '/';
+    const bool is_wildcard = wildcard_position != std::string_view::npos &&
+                             wildcard_position == route.size() - 1 &&
+                             wildcard_position > 0 &&
+                             route[wildcard_position - 1] == '/';
     if (wildcard_position != std::string_view::npos && !is_wildcard) {
       throw std::invalid_argument(
           "The wildcard must be the final route segment");
@@ -103,17 +103,15 @@ class router {
         throw std::invalid_argument(
             "A wildcard route handler cannot have typed parameters");
       } else {
-        route_data data{
-            std::string(route.substr(0, wildcard_position)),
-            router_handler_static<RQty, RSty>(std::move(handler))};
+        route_data data{std::string(route.substr(0, wildcard_position)),
+                        router_handler_static<RQty, RSty>(std::move(handler))};
         for (auto& [wildcard_method, handlers] : wildcard_handlers_) {
           if (wildcard_method == method) {
             handlers.push_back(std::move(data));
             return;
           }
         }
-        wildcard_handlers_.push_back(
-            {std::string(method), {std::move(data)}});
+        wildcard_handlers_.push_back({std::string(method), {std::move(data)}});
       }
       return;
     }
@@ -122,9 +120,8 @@ class router {
         throw std::invalid_argument(
             "The route parameters and handler arguments do not match");
       }
-      route_data data{
-          std::string(route),
-          router_handler_static<RQty, RSty>(std::move(handler))};
+      route_data data{std::string(route),
+                      router_handler_static<RQty, RSty>(std::move(handler))};
       for (auto& [static_method, handlers] : handlers_) {
         if (static_method == method) {
           handlers.push_back(std::move(data));
@@ -151,10 +148,10 @@ class router {
   }
   // +=========================================================================+
   // | [>] add_controller                                           ( public ) |
-  // +=========================================================================+
-  template <typename Cty, typename... Args>
+  // +-------------------------------------------------------------------------+
+  template <typename CTty, typename... Args>
   void add_controller(Args&&... args) {
-    auto instance = std::make_shared<Cty>(std::forward<Args>(args)...);
+    auto instance = std::make_shared<CTty>(std::forward<Args>(args)...);
     std::vector<std::size_t> static_sizes;
     std::vector<std::size_t> parametrized_sizes;
     std::vector<std::size_t> wildcard_sizes;
@@ -167,13 +164,13 @@ class router {
     for (const auto& entry : wildcard_handlers_) {
       wildcard_sizes.push_back(entry.second.size());
     }
-    detail::router_controller_routes<RQty, RSty, Cty> routes(
-        *this, std::move(instance));
+    detail::router_controller_routes<RQty, RSty, CTty> routes(instance);
     try {
-      routes.instance_->register_routes(routes);
-      if (!routes.count_) {
+      instance->register_routes(routes);
+      if (routes.empty()) {
         throw std::invalid_argument("The controller must register a route");
       }
+      routes.apply(*this);
     } catch (...) {
       restore_routes(handlers_, static_sizes);
       restore_routes(parametrized_handlers_, parametrized_sizes);
@@ -183,7 +180,7 @@ class router {
   }
   // +=========================================================================+
   // | [>] match                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   [[nodiscard]]
   route_match match(std::string_view method, std::string_view path) const {
     for (const auto& [static_method, handlers] : handlers_) {
@@ -192,8 +189,7 @@ class router {
         if (route.path == path) return {&route.handler, nullptr};
       }
     }
-    for (const auto& [parametrized_method, handlers] :
-         parametrized_handlers_) {
+    for (const auto& [parametrized_method, handlers] : parametrized_handlers_) {
       if (parametrized_method != method) continue;
       for (const auto& handler : handlers) {
         if (handler.matches(path)) return {nullptr, &handler};
@@ -209,7 +205,7 @@ class router {
   }
   // +=========================================================================+
   // | [>] allowed_methods                                          ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   [[nodiscard]]
   std::string allowed_methods(std::string_view path) const {
     std::vector<std::string_view> allowed;
@@ -261,22 +257,21 @@ class router {
  private:
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   struct route_data {
     std::string path;
     router_handler_static<RQty, RSty> handler;
   };
-  using handler_pair =
-      std::pair<std::string, std::vector<route_data>>;
+  using handler_pair = std::pair<std::string, std::vector<route_data>>;
   using parametrized_handler_pair =
       std::pair<std::string,
                 std::vector<router_handler_parametrized<RQty, RSty>>>;
   // +=========================================================================+
   // | [>] restore_routes                                          ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   template <typename Tty>
-  static void restore_routes(
-      std::vector<Tty>& entries, const std::vector<std::size_t>& sizes) {
+  static void restore_routes(std::vector<Tty>& entries,
+                             const std::vector<std::size_t>& sizes) {
     while (entries.size() > sizes.size()) entries.pop_back();
     for (std::size_t i = 0; i < sizes.size(); i++) {
       while (entries[i].second.size() > sizes[i]) {
@@ -285,8 +280,8 @@ class router {
     }
   }
   // +=========================================================================+
-  // | [>] count_parameters                                      ( private )   |
-  // +=========================================================================+
+  // | [>] count_parameters                                        ( private ) |
+  // +-------------------------------------------------------------------------+
   static std::size_t count_parameters(std::string_view route) {
     std::size_t count = 0;
     std::size_t pos = 0;
@@ -306,7 +301,7 @@ class router {
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   std::vector<handler_pair> handlers_;
   std::vector<parametrized_handler_pair> parametrized_handlers_;
   std::vector<handler_pair> wildcard_handlers_;

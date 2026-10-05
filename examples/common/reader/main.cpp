@@ -30,6 +30,16 @@
 
 using namespace martianlabs::doba::common;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is a simple example of using the reader class to read from a byte    |
+// | array and output the contents to the console. It demonstrates how to      |
+// | create a borrowed reader, read data in blocks, and handle                 |
+// | end-of-file conditions.                                                   |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   const std::array bytes{std::byte{'d'}, std::byte{'o'}, std::byte{'b'},
                          std::byte{'a'}};
@@ -41,4 +51,3 @@ int main() {
   std::cout << '\n';
   return input.eof() ? 0 : 1;
 }
-

@@ -26,44 +26,27 @@
 #include <functional>
 
 #include "protocol/http/common/router_handler_static.h"
+#include "router_empty_request.h"
+#include "router_empty_response.h"
 #include "test_helper.h"
 
 namespace {
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] request                                                    ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Test message representation.                                              |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct request {};
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] response                                                   ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Test message representation.                                              |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct response {};
+using request = martianlabs::doba::tests::unit::router_empty_request;
+using response = martianlabs::doba::tests::unit::router_empty_response;
 using martianlabs::doba::protocol::http::router_handler_static;
 }  // namespace
 
 // +===========================================================================+
 // | [>] alias accepts and invokes the documented callback       ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("alias accepts and invokes the documented callback") {
-  static_assert(
-      std::same_as<router_handler_static<request, response>,
-                   std::function<response(const request&)>>);
+  static_assert(std::same_as<router_handler_static<request, response>,
+                             std::function<void(const request&, response&)>>);
   bool invoked = false;
   router_handler_static<request, response> handler =
-      [&invoked](const request&) {
-        response res;
-        invoked = true;
-        return res;
-      };
+      [&invoked](const request&, response&) { invoked = true; };
   request req;
   response res;
-  res = handler(req);
+  handler(req, res);
   DOBA_EXPECT(invoked);
 }

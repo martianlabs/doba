@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::x_proxy_connection;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "",
@@ -52,9 +52,10 @@ DOBA_TEST("check accepts valid values") {
         std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       " ",
@@ -69,9 +70,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!x_proxy_connection::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!x_proxy_connection::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!x_proxy_connection::check(std::string_view{"a\0", 2}));
@@ -93,12 +95,13 @@ DOBA_TEST("check handles string view boundaries") {
   std::string padded(seed);
   padded.push_back('\0');
   padded += "suffix";
-  DOBA_EXPECT(x_proxy_connection::check(
-      std::string_view(padded.data(), seed.size())));
+  DOBA_EXPECT(
+      x_proxy_connection::check(std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check accepts extension options                         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts extension options") {
   constexpr std::string_view cases[] = {
       "X-Custom, CLOSE, keep-alive",
@@ -110,9 +113,10 @@ DOBA_TEST("check accepts extension options") {
     DOBA_EXPECT(x_proxy_connection::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects extension options                         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects extension options") {
   constexpr std::string_view cases[] = {
       "close;timeout=1",

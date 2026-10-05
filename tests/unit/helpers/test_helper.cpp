@@ -47,9 +47,15 @@ struct test_case {
   std::string_view name;
   test_helper::test_t test;
 };
-// +===========================================================================+
-// | [>] relative_test_path                                         ( method ) |
-// +===========================================================================+
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] relative_test_path                                       ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function returns a relative path for the given file, stripping the   |
+// | leading directories. It is used to make test output more readable.        |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 std::string_view relative_test_path(std::string_view file) {
   constexpr std::string_view windows_marker = "\\tests\\unit\\";
   constexpr std::string_view unix_marker = "/tests/unit/";
@@ -58,40 +64,80 @@ std::string_view relative_test_path(std::string_view file) {
   if (pos != std::string_view::npos) file.remove_prefix(pos + 1);
   return file;
 }
-// +===========================================================================+
-// | [>] tests                                                      ( method ) |
-// +===========================================================================+
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] tests                                                    ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function returns a reference to the static vector of test cases.     |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 std::vector<test_case>& tests() {
   static std::vector<test_case> value;
   return value;
 }
-// +===========================================================================+
-// | [>] failures                                                   ( method ) |
-// +===========================================================================+
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] failures                                                 ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function returns a reference to the static count of failed           |
+// | assertions. It is used to track the number of failed assertions across    |
+// | all test cases.                                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 std::size_t& failures() {
   static std::size_t value = 0;
   return value;
 }
-// +===========================================================================+
-// | [>] context                                                    ( method ) |
-// +===========================================================================+
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] context                                                  ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function returns a reference to the static string that holds the     |
+// | current test context. It is used to provide additional information about  |
+// | the test case being executed, especially when an assertion fails.         |
+// | The context can be set and retrieved using the set_context method of the  |
+// | test_helper class.                                                        |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 std::string& context() {
   static std::string value;
   return value;
 }
 }  // namespace
 
-// +===========================================================================+
-// | [>] add                                                        ( method ) |
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] add                                                      ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function adds a new test case to the static vector of test cases.    |
+// | It takes the file name, line number, test name, and a function pointer    |
+// | to the test function. The file name is converted to a relative path       |
+// | for better readability in test output. The function returns true to       |
+// | indicate that the test case was successfully added.                       |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 bool test_helper::add(std::string_view file, int line, std::string_view name,
                       test_t test) {
   tests().push_back({relative_test_path(file), line, name, test});
   return true;
 }
-// +===========================================================================+
-// | [>] expect                                                     ( method ) |
-// +===========================================================================+
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] expect                                                   ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function checks a condition and reports a failed assertion if the    |
+// | condition is false. It takes the condition to check, the expression as a  |
+// | string, the file name, and the line number. If the condition is false, it |
+// | increments the failure count, prints an error message to stderr with      |
+// | the file name, line number, and expression, and includes the current      |
+// | test context if available. The function returns true if the condition is  |
+// | true and false if it is false.                                            |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 bool test_helper::expect(bool condition, std::string_view expression,
                          std::string_view file, int line) {
   if (condition) return true;
@@ -106,15 +152,35 @@ bool test_helper::expect(bool condition, std::string_view expression,
   std::fflush(stderr);
   return false;
 }
-// +===========================================================================+
-// | [>] set_context                                                ( method ) |
-// +===========================================================================+
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] set_context                                              ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function sets the current test context to the provided value.        |
+// | The context is a string that can be used to provide additional            |
+// | information about the test case being executed, especially when an        |
+// | assertion fails. The context can be retrieved using the context function. |
+// | This function is typically called before running a test case to set the   |
+// | context for that specific test.                                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void test_helper::set_context(std::string_view value) {
   context().assign(value);
 }
-// +===========================================================================+
-// | [>] run                                                        ( method ) |
-// +===========================================================================+
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] run                                                      ( function ) |
+// +---------------------------------------------------------------------------+
+// | This function runs the unit tests based on the provided command-line      |
+// | arguments. It processes the arguments to determine which tests to run,    |
+// | whether to list them, and any exclusions. It then executes the selected   |
+// | tests, tracks failures, and outputs the results to the console.           |
+// | The function returns an integer status code indicating success or         |
+// | failure of the test run.                                                  |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int test_helper::run(int argc, char** argv) {
   bool list = false;
   std::string file;
@@ -125,7 +191,8 @@ int test_helper::run(int argc, char** argv) {
     if (argument == "--list") {
       list = true;
     } else if ((argument == "--file" || argument == "--name" ||
-                argument == "--exclude") && i + 1 < argc) {
+                argument == "--exclude") &&
+               i + 1 < argc) {
       const std::string_view value{argv[++i]};
       if (argument == "--file") file = value;
       if (argument == "--name") name = value;
@@ -215,9 +282,9 @@ int test_helper::run(int argc, char** argv) {
     }
     context().clear();
     const std::size_t failures_before = failures();
-    std::printf("running %.*s:%d - %.*s\n",
-                static_cast<int>(test.file.size()), test.file.data(), test.line,
-                static_cast<int>(test.name.size()), test.name.data());
+    std::printf("running %.*s:%d - %.*s\n", static_cast<int>(test.file.size()),
+                test.file.data(), test.line, static_cast<int>(test.name.size()),
+                test.name.data());
     std::fflush(stdout);
     try {
       test.test();
@@ -238,8 +305,7 @@ int test_helper::run(int argc, char** argv) {
     }
   }
   if (skipped_tests != 0) {
-    logger.info() << skipped_tests
-                  << " test(s) skipped by explicit exclusions";
+    logger.info() << skipped_tests << " test(s) skipped by explicit exclusions";
   }
   if (failed_tests != 0) {
     logger.error() << failed_tests << " test(s) failed";
@@ -249,9 +315,13 @@ int test_helper::run(int argc, char** argv) {
 }
 }  // namespace martianlabs::doba::tests::unit
 
-// +===========================================================================+
-// | [>] main                                                  ( entry-point ) |
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                   ( entry-pint ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the unit test framework.                       |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv) {
   return martianlabs::doba::tests::unit::test_helper::run(argc, argv);
 }

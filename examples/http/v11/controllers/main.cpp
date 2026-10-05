@@ -27,7 +27,6 @@
 #include <utility>
 
 #include "common/console_logger.h"
-#include "common/logo.h"
 #include "common/signaler.h"
 #include "protocol/http/common/method_names.h"
 #include "protocol/http/v11/server.h"
@@ -47,14 +46,12 @@ class counter_controller {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
-
+  // +-------------------------------------------------------------------------+
   explicit counter_controller(std::string prefix)
       : prefix_(std::move(prefix)) {}
   // +=========================================================================+
   // | [>] register_routes                                          ( public ) |
-  // +=========================================================================+
-
+  // +-------------------------------------------------------------------------+
   template <typename Rty>
   void register_routes(Rty& routes) {
     routes.add(method_names::kGet, prefix_ + "/count",
@@ -66,30 +63,40 @@ class counter_controller {
  private:
   // +=========================================================================+
   // | [>] count                                                   ( private ) |
-  // +=========================================================================+
-
-  response count(const request&) {
-    auto result = response::ok_200();
+  // +-------------------------------------------------------------------------+
+  void count(const request&, response& result) {
+    result.ok_200();
     result.set_body(++count_);
-    return result;
+    return;
   }
   // +=========================================================================+
   // | [>] echo                                                    ( private ) |
-  // +=========================================================================+
-
-  response echo(const request&, int id) const {
-    auto result = response::ok_200();
+  // +-------------------------------------------------------------------------+
+  void echo(const request&, response& result, int id) const {
+    result.ok_200();
     result.set_body(id);
-    return result;
+    return;
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
-
+  // +-------------------------------------------------------------------------+
   std::string prefix_;
   std::atomic<unsigned int> count_{0};
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the application. It creates an HTTP server     |
+// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
+// | The server has two controllers registered: one for the "/first" route     |
+// | and another for the "/second" route. Each controller is an instance of    |
+// | the counter_controller class, which maintains a count of requests and     |
+// | can echo back an ID provided in the request. The server runs until a      |
+// | termination signal is received, at which point it stops gracefully.       |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_controller<counter_controller>("/first")

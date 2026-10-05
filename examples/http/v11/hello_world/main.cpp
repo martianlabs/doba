@@ -23,26 +23,33 @@
 // permissions and limitations under the License.
 
 #include "common/console_logger.h"
-#include "common/logo.h"
 #include "common/signaler.h"
 #include "protocol/http/v11/server.h"
 
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the application. It creates an HTTP server     |
+// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
+// | It defines a resource handler for the "/hello" endpoint that responds to  |
+// | GET requests with a simple "ok" message. The server is started, and the   |
+// | application waits for termination signals.                                |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   // Routes are selected by both the HTTP method and the absolute path.
-  http_server.add_route(
-      "GET", "/pipeline",
-      [](const request&) {
-        response res = response::ok_200();
-        // Response mutators return response&, so they can be chained.
-        res.add_header("Server", "doba.")
-            .add_header("Content-Type", "text/plain; charset=utf-8")
-            .set_body("ok");
-        return res;
-      });
+  http_server.add_route("GET", "/hello", [](const request&, response& res) {
+    res.ok_200();
+    // Response mutators return response&, so they can be chained.
+    res.add_header("Server", "doba.")
+        .add_header("Content-Type", "text/plain; charset=utf-8")
+        .set_body("ok");
+  });
   http_server.start();
   // start() returns after opening the listener; wait for a shutdown signal.
   signaler::wait();

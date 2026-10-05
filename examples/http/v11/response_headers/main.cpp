@@ -28,21 +28,32 @@
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | This is the entry point of the application. It creates an HTTP server     |
+// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
+// | The server has a single route "/headers" that responds to GET requests.   |
+// | The lambda function demonstrates adding, replacing, and removing headers  |
+// | in the response. It sets the "X-Example" header to "first", then replaces |
+// | it with "replaced", adds an "X-Remove" header, and finally removes it.    |
+// | The response body is set to the value of the "X-Example" header.          |
+// | The server runs until a termination signal is received.                   |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  http_server.add_route(
-      "GET", "/headers",
-      [](const request&) {
-        response res = response::ok_200();
-        res.add_header("X-Example", "first")
-            .set_header("X-Example", "replaced")
-            .add_header("X-Remove", "value")
-            .remove_header("X-Remove");
-        res.set_body(res.get_header("X-Example").second);
-        return res;
-      });
+  http_server.add_route("GET", "/headers", [](const request&, response& res) {
+    res.ok_200();
+    res.add_header("X-Example", "first")
+        .set_header("X-Example", "replaced")
+        .add_header("X-Remove", "value")
+        .remove_header("X-Remove");
+    res.set_body(res.get_header("X-Example").second);
+    return;
+  });
   http_server.start();
   signaler::wait();
   return 0;
 }
-

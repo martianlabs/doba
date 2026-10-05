@@ -29,58 +29,43 @@
 #include <vector>
 
 #include "protocol/http/v11/server.h"
+#include "echo_body.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] general                                                    ( usings ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::protocol::http::v11::server;
+using martianlabs::doba::tests::integration::echo_body;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 
-response echo_body(const request& req) {
-  if (!req.has_body_reader()) return response::bad_request_400();
-  std::array<std::byte, 1024> buffer{};
-  std::string body;
-  for (;;) {
-    const auto state = req.get_body_reader()->read(buffer);
-    if (state.has_error) return response::bad_request_400();
-    body.append(reinterpret_cast<const char*>(buffer.data()), state.produced);
-    if (state.complete) {
-      response result = response::ok_200();
-      result.set_body(body);
-      return result;
-    }
-  }
-}
 }  // namespace
 
 // +===========================================================================+
 // | [>] hostile requests reject successors                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 rejects hostile requests without dispatching successors") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> dispatched = 0;
   server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/sentinel", [&](const request&) {
+  http_server.add_route("GET", "/sentinel", [&](const request&, response& res) {
     dispatched.fetch_add(1);
-    response res = response::ok_200();
+    res.ok_200();
     res.set_body("sentinel");
-    return res;
+    return;
   });
   http_server.start();
-
-  // +=========================================================================+
-// | [>] test_case                                                  ( struct ) |
-  // +=========================================================================+
   struct test_case {
-    // +=======================================================================+
-    // | [>] ATTRIBUTEs                                             ( public ) |
-    // +=======================================================================+
     std::string name;
     std::string request;
     std::string_view status;
@@ -89,22 +74,17 @@ DOBA_TEST("HTTP/1.1 rejects hostile requests without dispatching successors") {
       {"leading request whitespace",
        " GET /sentinel HTTP/1.1\r\nHost: a\r\n\r\n",
        "HTTP/1.1 400 Bad Request"},
-      {"tab after method",
-       "GET\t/sentinel HTTP/1.1\r\nHost: a\r\n\r\n",
+      {"tab after method", "GET\t/sentinel HTTP/1.1\r\nHost: a\r\n\r\n",
        "HTTP/1.1 400 Bad Request"},
-      {"tab before version",
-       "GET /sentinel\tHTTP/1.1\r\nHost: a\r\n\r\n",
+      {"tab before version", "GET /sentinel\tHTTP/1.1\r\nHost: a\r\n\r\n",
        "HTTP/1.1 400 Bad Request"},
-      {"lowercase protocol",
-       "GET /sentinel http/1.1\r\nHost: a\r\n\r\n",
+      {"lowercase protocol", "GET /sentinel http/1.1\r\nHost: a\r\n\r\n",
        "HTTP/1.1 400 Bad Request"},
-      {"malformed version",
-       "GET /sentinel HTTP/1.x\r\nHost: a\r\n\r\n",
+      {"malformed version", "GET /sentinel HTTP/1.x\r\nHost: a\r\n\r\n",
        "HTTP/1.1 400 Bad Request"},
       {"missing Host", "GET /sentinel HTTP/1.1\r\n\r\n",
        "HTTP/1.1 400 Bad Request"},
-      {"duplicate Host",
-       "GET /sentinel HTTP/1.1\r\nHost: a\r\nHost: a\r\n\r\n",
+      {"duplicate Host", "GET /sentinel HTTP/1.1\r\nHost: a\r\nHost: a\r\n\r\n",
        "HTTP/1.1 400 Bad Request"},
       {"duplicate Content-Length",
        "POST /sentinel HTTP/1.1\r\nHost: a\r\nContent-Length: 1\r\n"
@@ -146,8 +126,7 @@ DOBA_TEST("HTTP/1.1 rejects hostile requests without dispatching successors") {
       {"upgrade without protocol",
        "GET /sentinel HTTP/1.1\r\nHost: a\r\nConnection: upgrade\r\n\r\n",
        "HTTP/1.1 400 Bad Request"},
-      {"whitespace before colon",
-       "GET /sentinel HTTP/1.1\r\nHost : a\r\n\r\n",
+      {"whitespace before colon", "GET /sentinel HTTP/1.1\r\nHost : a\r\n\r\n",
        "HTTP/1.1 400 Bad Request"},
       {"empty field name",
        "GET /sentinel HTTP/1.1\r\nHost: a\r\n: value\r\n\r\n",
@@ -202,14 +181,12 @@ DOBA_TEST("HTTP/1.1 rejects hostile requests without dispatching successors") {
       {"invalid percent escape", "GET /%GG HTTP/1.1\r\nHost: a\r\n\r\n",
        "HTTP/1.1 400 Bad Request"},
   };
-  std::string embedded_null =
-      "GET /sentinel HTTP/1.1\r\nHost: a\r\nX-A: ok";
+  std::string embedded_null = "GET /sentinel HTTP/1.1\r\nHost: a\r\nX-A: ok";
   embedded_null.push_back('\0');
   embedded_null += "bad\r\n\r\n";
   cases.push_back({"embedded null field", std::move(embedded_null),
                    "HTTP/1.1 400 Bad Request"});
-  const std::string sentinel =
-      "GET /sentinel HTTP/1.1\r\nHost: a\r\n\r\n";
+  const std::string sentinel = "GET /sentinel HTTP/1.1\r\nHost: a\r\n\r\n";
   for (const auto& test : cases) {
     martianlabs::doba::tests::integration::test_helper::set_context(test.name);
     DOBA_EXPECT(client.connect(port));
@@ -226,29 +203,22 @@ DOBA_TEST("HTTP/1.1 rejects hostile requests without dispatching successors") {
 
 // +===========================================================================+
 // | [>] case insensitive framing and target forms               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 accepts case insensitive framing and valid target forms") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("POST", "/echo", [](const request& req) {
-    return echo_body(req);
+  http_server.add_route("POST", "/echo", [](const request& req, response& res) {
+    echo_body(req, res);
   });
-  http_server.add_route("GET", "/ok", [](const request&) {
-    response res = response::ok_200();
+  http_server.add_route("GET", "/ok", [](const request&, response& res) {
+    res.ok_200();
     res.set_body("ok");
-    return res;
+    return;
   });
   http_server.start();
-
-  // +=========================================================================+
-// | [>] test_case                                                  ( struct ) |
-  // +=========================================================================+
   struct test_case {
-    // +=======================================================================+
-    // | [>] ATTRIBUTEs                                             ( public ) |
-    // +=======================================================================+
     std::string_view request;
     std::string_view status;
     std::string_view body;
@@ -265,8 +235,7 @@ DOBA_TEST("HTTP/1.1 accepts case insensitive framing and valid target forms") {
       {"CONNECT target.example:443 HTTP/1.1\r\n"
        "Host: target.example:443\r\n\r\n",
        "HTTP/1.1 501 Not Implemented", ""},
-      {"OPTIONS * HTTP/1.1\r\nHost: a\r\n\r\n",
-       "HTTP/1.1 200 OK", ""},
+      {"OPTIONS * HTTP/1.1\r\nHost: a\r\n\r\n", "HTTP/1.1 200 OK", ""},
   };
   for (const auto& test : cases) {
     martianlabs::doba::tests::integration::test_helper::set_context(
@@ -286,29 +255,24 @@ DOBA_TEST("HTTP/1.1 accepts case insensitive framing and valid target forms") {
 
 // +===========================================================================+
 // | [>] absolute authority preserves the received Host          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 absolute authority preserves the received Host") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/authority", [](const request& req) {
-    response res = response::ok_200();
-    res.set_body(std::string(req.get_target_authority_host()) + "|" +
-                 std::string(req.get_target_authority_port()) + "|" +
-                 std::string(req.get_host()) + "|" +
-                 std::string(req.get_host_port()) + "|" +
-                 std::string(req.get_header("Host").second));
-    return res;
-  });
+  http_server.add_route(
+      "GET", "/authority", [](const request& req, response& res) {
+        res.ok_200();
+        res.set_body(std::string(req.get_target_authority_host()) + "|" +
+                     std::string(req.get_target_authority_port()) + "|" +
+                     std::string(req.get_host()) + "|" +
+                     std::string(req.get_host_port()) + "|" +
+                     std::string(req.get_header("Host").second));
+        return;
+      });
   http_server.start();
-  // +=========================================================================+
-// | [>] test_case                                                  ( struct ) |
-  // +=========================================================================+
   struct test_case {
-    // +=======================================================================+
-    // | [>] ATTRIBUTEs                                             ( public ) |
-    // +=======================================================================+
     std::string_view target;
     std::string_view host;
     std::string_view expected;
@@ -339,7 +303,7 @@ DOBA_TEST("HTTP/1.1 absolute authority preserves the received Host") {
 
 // +===========================================================================+
 // | [>] slow inputs do not starve complete clients              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST(
     "HTTP/1.1 isolates incomplete heads and bodies from healthy clients") {
   tcpip_client slow_head;
@@ -348,19 +312,17 @@ DOBA_TEST(
   const uint16_t port = healthy.find_available_port();
   DOBA_EXPECT(port != 0);
   server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/ok", [](const request&) {
-    response result = response::ok_200();
-    result.set_body("ok");
-    return result;
+  http_server.add_route("GET", "/ok", [](const request&, response& res) {
+    res.ok_200();
+    res.set_body("ok");
+    return;
   });
-  http_server.add_route("POST", "/echo", [](const request& req) {
-    return echo_body(req);
+  http_server.add_route("POST", "/echo", [](const request& req, response& res) {
+    echo_body(req, res);
   });
   http_server.start();
-
   DOBA_EXPECT(slow_head.connect(port));
-  DOBA_EXPECT(slow_head.send_all(
-      "GET /ok HTTP/1.1\r\nHost: a\r\nX-Pad:"));
+  DOBA_EXPECT(slow_head.send_all("GET /ok HTTP/1.1\r\nHost: a\r\nX-Pad:"));
   DOBA_EXPECT(slow_body.connect(port));
   DOBA_EXPECT(slow_body.send_all(
       "POST /echo HTTP/1.1\r\nHost: a\r\nContent-Length: 4\r\n\r\nab"));
@@ -372,7 +334,6 @@ DOBA_TEST(
     DOBA_EXPECT_EQUAL(healthy_response->status, "HTTP/1.1 200 OK");
     DOBA_EXPECT_EQUAL(healthy_response->body, "ok");
   }
-
   DOBA_EXPECT(slow_head.send_all(" value\r\n\r\n"));
   const auto head_response = receive_http_response(slow_head);
   DOBA_EXPECT(head_response.has_value());

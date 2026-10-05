@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::accept;
 
 // +===========================================================================+
 // | [>] check accepts media ranges                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts media ranges") {
   constexpr std::string_view cases[] = {
       "*/*",
@@ -51,9 +51,10 @@ DOBA_TEST("check accepts media ranges") {
         accept::check(std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check accepts parameters                                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts parameters") {
   constexpr std::string_view cases[] = {
       "text/html;charset=utf-8",
@@ -76,9 +77,10 @@ DOBA_TEST("check accepts parameters") {
   obs_text += '"';
   DOBA_EXPECT(accept::check(obs_text));
 }
+
 // +===========================================================================+
 // | [>] check accepts quality values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts quality values") {
   constexpr std::string_view cases[] = {
       "text/plain;q=0",
@@ -98,9 +100,10 @@ DOBA_TEST("check accepts quality values") {
     DOBA_EXPECT(accept::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check accepts lists                                     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts lists") {
   constexpr std::string_view cases[] = {
       "",
@@ -118,9 +121,10 @@ DOBA_TEST("check accepts lists") {
   }
   DOBA_EXPECT(accept::check(std::string_view{}));
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid media ranges                      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid media ranges") {
   constexpr std::string_view cases[] = {
       " ",
@@ -141,9 +145,10 @@ DOBA_TEST("check rejects invalid media ranges") {
     DOBA_EXPECT(!accept::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid parameters                        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid parameters") {
   constexpr std::string_view cases[] = {
       "text/plain charset=utf-8",
@@ -172,9 +177,10 @@ DOBA_TEST("check rejects invalid parameters") {
   escaped_nul += "b\"";
   DOBA_EXPECT(!accept::check(escaped_nul));
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid quality values                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid quality values") {
   constexpr std::string_view cases[] = {
       "text/plain;q=",          "text/plain;q=.5",
@@ -191,9 +197,10 @@ DOBA_TEST("check rejects invalid quality values") {
     DOBA_EXPECT(!accept::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   std::string long_type(4096, 'a');
   long_type += "/plain";
@@ -223,9 +230,10 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(accept::check("text/plain;note=\"" + obs_text + "\""));
   DOBA_EXPECT(!accept::check("text/" + obs_text + "plain"));
 }
+
 // +===========================================================================+
 // | [>] check accepts weight and parameter boundaries           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts weight and parameter boundaries") {
   constexpr std::string_view cases[] = {
       "text/a;q=0.001;x=\"a,b;c\"",
@@ -238,20 +246,15 @@ DOBA_TEST("check accepts weight and parameter boundaries") {
     DOBA_EXPECT(accept::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects weight and parameter boundaries           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects weight and parameter boundaries") {
   constexpr std::string_view cases[] = {
-      "text/a;q=0;q=1",
-      "text/a;Q=1;q=0",
-      "text/a;q=0.5x",
-      "text/a;q=1.0000",
-      "text/a;q= 1",
-      "text/a;p=",
-      "text/a;p=\"a\"junk",
-      "text/a;p=\"a\\",
-      "text/a;=v",
+      "text/a;q=0;q=1",     "text/a;Q=1;q=0", "text/a;q=0.5x",
+      "text/a;q=1.0000",    "text/a;q= 1",    "text/a;p=",
+      "text/a;p=\"a\"junk", "text/a;p=\"a\\", "text/a;=v",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);

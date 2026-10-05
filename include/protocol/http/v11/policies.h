@@ -28,7 +28,7 @@
 #include <cstddef>
 
 #include "common/byte_storage.h"
-#include "transport/server/policies.h"
+#include "transport/server/tcp_policies.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -46,15 +46,24 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct policies {
+  // +=========================================================================+
+  // | [>] CONSTANTs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  // Maximum query parameter pairs per request.
   static constexpr std::size_t kMaxQueryParameters = 128;
+  // Maximum chunk extension bytes per chunk.
   static constexpr std::size_t kMaxChunkedExtensionSize = 1024;
+  // Maximum trailer section bytes per chunked body.
   static constexpr std::size_t kMaxChunkedTrailerSize = 4096;
+  // Request head bytes retained by the decoder.
   static constexpr std::size_t kMaxRequestHeadSizeInMemory =
-      transport::server::policies::kDefaultRecvBufferSize;
+      transport::server::tcp_policies::kDefaultRecvBufferSize;
+  // Request body wire bytes retained before spilling to disk.
   static constexpr std::size_t kMaxRequestBodySizeInMemory =
       common::byte_storage_options::kDefaultSpillThreshold;
-  static constexpr std::size_t kMaxResponseHeadSizeInMemory =
-      transport::server::policies::kDefaultRecvBufferSize;
+  // Response head bytes in the decoder's reusable storage.
+  static constexpr std::size_t kMaxResponseHeadSizeInMemory = 4 * 1024;
+  // Response body bytes kept inline before using a writer.
   static constexpr std::size_t kMaxResponseBodySizeInMemory =
       common::byte_storage_options::kDefaultSpillThreshold;
   // Maximum accepted body size, in octets (0 means unlimited).

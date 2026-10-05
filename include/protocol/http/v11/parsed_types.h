@@ -56,6 +56,7 @@ struct parsed_host_port {
   helpers::host_type type = helpers::host_type::kUnknown;
   std::string_view scheme;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] parsed_token_list                                          ( struct ) |
@@ -71,6 +72,7 @@ struct parsed_host_port {
 struct parsed_token_list {
   std::vector<std::string_view> elements;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] parsed_parameter_list                                      ( struct ) |
@@ -86,6 +88,7 @@ struct parsed_token_list {
 struct parsed_parameter_list {
   std::vector<std::string_view> elements;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] parsed_scalar                                              ( struct ) |
@@ -98,6 +101,7 @@ struct parsed_parameter_list {
 struct parsed_scalar {
   std::string_view value;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] parsed_via_element                                         ( struct ) |
@@ -117,6 +121,7 @@ struct parsed_via_element {
   std::string_view received_by;
   std::string_view comment;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] parsed_via_list                                            ( struct ) |
@@ -129,6 +134,7 @@ struct parsed_via_element {
 struct parsed_via_list {
   std::vector<parsed_via_element> elements;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] parsed_forwarded_pair                                      ( struct ) |
@@ -144,6 +150,7 @@ struct parsed_forwarded_pair {
   std::string_view name;
   std::string_view value;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] parsed_forwarded_element                                   ( struct ) |
@@ -157,6 +164,7 @@ struct parsed_forwarded_pair {
 struct parsed_forwarded_element {
   std::vector<parsed_forwarded_pair> pairs;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] parsed_forwarded_list                                      ( struct ) |
@@ -169,6 +177,7 @@ struct parsed_forwarded_element {
 struct parsed_forwarded_list {
   std::vector<parsed_forwarded_element> elements;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] parsed_host_port_list                                      ( struct ) |

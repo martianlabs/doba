@@ -38,7 +38,7 @@ using martianlabs::doba::protocol::http::v11::headers::x_forwarded_proto;
 
 // +===========================================================================+
 // | [>] check parses schemes                                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check parses schemes") {
   parsed_token_list parsed;
   DOBA_EXPECT(
@@ -53,9 +53,10 @@ DOBA_TEST("check parses schemes") {
   parsed_token_list empty;
   DOBA_EXPECT(x_forwarded_proto::check("", empty));
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid schemes                           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid schemes") {
   constexpr std::string_view cases[] = {
       " ", "1http", "+http", "http:", "http/1", "http scheme", "\"http\"",
@@ -67,9 +68,10 @@ DOBA_TEST("check rejects invalid schemes") {
   parsed_token_list parsed;
   DOBA_EXPECT(!x_forwarded_proto::check(std::string_view{"http\0", 5}, parsed));
 }
+
 // +===========================================================================+
 // | [>] interpret accepts parsed schemes                        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("interpret accepts parsed schemes") {
   parsed_token_list parsed;
   DOBA_EXPECT(x_forwarded_proto::check("http, https", parsed));
@@ -78,9 +80,10 @@ DOBA_TEST("interpret accepts parsed schemes") {
   DOBA_EXPECT_EQUAL(x_forwarded_proto::interpret(parsed, state, policy),
                     verdict::kAccept);
 }
+
 // +===========================================================================+
 // | [>] check appends ordered views from repeated fields        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check appends ordered views from repeated fields") {
   const std::string first = "https";
   const std::string second = "custom+secure";
@@ -95,9 +98,10 @@ DOBA_TEST("check appends ordered views from repeated fields") {
   DOBA_EXPECT(x_forwarded_proto::check(",,", parsed));
   DOBA_EXPECT_EQUAL(parsed.elements.size(), 2);
 }
+
 // +===========================================================================+
 // | [>] check accepts scheme boundaries                         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts scheme boundaries") {
   constexpr std::string_view cases[] = {
       "a",
@@ -110,9 +114,10 @@ DOBA_TEST("check accepts scheme boundaries") {
     DOBA_EXPECT(x_forwarded_proto::check(source, parsed));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects scheme boundaries                         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects scheme boundaries") {
   constexpr std::string_view cases[] = {
       "https://",

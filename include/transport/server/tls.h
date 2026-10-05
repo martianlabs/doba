@@ -27,8 +27,13 @@
 
 #include "platform.h"
 #include "transport/server/contracts.h"
-#include "transport/server/policies.h"
+#include "transport/server/tls_policies.h"
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] PLATFORM-DEPENDENT-INCLUDEs                               ( section ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 #ifdef _WIN32
 #include "transport/server/tls_windows.h"
 #elif __linux__

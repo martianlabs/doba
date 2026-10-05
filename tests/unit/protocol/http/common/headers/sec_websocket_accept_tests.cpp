@@ -34,7 +34,7 @@ using martianlabs::doba::protocol::http::headers::sec_websocket_accept;
 
 // +===========================================================================+
 // | [>] check accepts valid values                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts valid values") {
   constexpr std::string_view cases[] = {
       "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=",
@@ -49,9 +49,10 @@ DOBA_TEST("check accepts valid values") {
         std::string_view(padded).substr(1, source.size())));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid values                            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid values") {
   constexpr std::string_view cases[] = {
       "",      " ",     "A",      "A===",  "A=BC",
@@ -61,9 +62,10 @@ DOBA_TEST("check rejects invalid values") {
     DOBA_EXPECT(!sec_websocket_accept::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check handles string view boundaries                    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(!sec_websocket_accept::check(std::string_view{"\0", 1}));
   DOBA_EXPECT(!sec_websocket_accept::check(std::string_view{"a\0", 2}));
@@ -88,41 +90,27 @@ DOBA_TEST("check handles string view boundaries") {
   DOBA_EXPECT(sec_websocket_accept::check(
       std::string_view(padded.data(), seed.size())));
 }
+
 // +===========================================================================+
 // | [>] check accepts base64 group boundaries                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts base64 group boundaries") {
   constexpr std::string_view cases[] = {
-      "AA==",
-      "AAA=",
-      "AAAA",
-      "+/+/",
-      "AAAAAA==",
-      "AAAAAAA=",
-      "AAAAAAAA",
+      "AA==", "AAA=", "AAAA", "+/+/", "AAAAAA==", "AAAAAAA=", "AAAAAAAA",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
     DOBA_EXPECT(sec_websocket_accept::check(source));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects base64 group boundaries                   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects base64 group boundaries") {
   constexpr std::string_view cases[] = {
-      "=AAA",
-      "A=AA",
-      "AA=A",
-      "AAAA=AAA",
-      "AAAAA===",
-      "AA==AAAA",
-      "AAA=AAAA",
-      "AAAAAA=A",
-      "AAAAAAA-",
-      "AAAAAAA_",
-      "AAAAAAA",
-      "AAAAAAAAA",
+      "=AAA",     "A=AA",     "AA=A",     "AAAA=AAA", "AAAAA===", "AA==AAAA",
+      "AAA=AAAA", "AAAAAA=A", "AAAAAAA-", "AAAAAAA_", "AAAAAAA",  "AAAAAAAAA",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);

@@ -33,7 +33,7 @@ using martianlabs::doba::protocol::http::v11::headers::rules::framing;
 
 // +===========================================================================+
 // | [>] accepts unambiguous framing combinations                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("accepts unambiguous framing combinations") {
   context ctx;
   DOBA_EXPECT_EQUAL(framing::apply(ctx), verdict::kAccept);
@@ -44,9 +44,10 @@ DOBA_TEST("accepts unambiguous framing combinations") {
   ctx.connection.transfer_codings = {"gzip", "CHUNKED"};
   DOBA_EXPECT_EQUAL(framing::apply(ctx), verdict::kAccept);
 }
+
 // +===========================================================================+
 // | [>] rejects multiple content length fields                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("rejects multiple content length fields") {
   context ctx;
   ctx.multiple_content_length = true;
@@ -54,9 +55,10 @@ DOBA_TEST("rejects multiple content length fields") {
   ctx.has_content_length = true;
   DOBA_EXPECT_EQUAL(framing::apply(ctx), verdict::kReject);
 }
+
 // +===========================================================================+
 // | [>] rejects transfer encoding with content length           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("rejects simultaneous transfer encoding and content length") {
   context ctx;
   ctx.has_content_length = true;
@@ -64,9 +66,10 @@ DOBA_TEST("rejects simultaneous transfer encoding and content length") {
   ctx.connection.transfer_codings = {"chunked"};
   DOBA_EXPECT_EQUAL(framing::apply(ctx), verdict::kReject);
 }
+
 // +===========================================================================+
 // | [>] rejects chunked unless it is the final coding           ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("rejects chunked unless it is the final coding") {
   constexpr std::string_view spellings[] = {
       "chunked",
@@ -88,9 +91,10 @@ DOBA_TEST("rejects chunked unless it is the final coding") {
   ctx.connection.transfer_codings.clear();
   DOBA_EXPECT_EQUAL(framing::apply(ctx), verdict::kReject);
 }
+
 // +===========================================================================+
 // | [>] rejects chunked repeated in any coding position         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("rejects chunked repeated in any coding position") {
   context ctx;
   ctx.has_transfer_encoding = true;

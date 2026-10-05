@@ -29,21 +29,19 @@
 
 #include "common/reader.h"
 #include "protocol/http/v11/body/reader_raw.h"
+#include "body_bytes.h"
 #include "test_helper.h"
 
 namespace {
 using martianlabs::doba::common::reader;
 using martianlabs::doba::protocol::http::v11::body::reader_error;
 using martianlabs::doba::protocol::http::v11::body::reader_raw;
-
-std::span<const std::byte> bytes(std::string_view value) {
-  return {reinterpret_cast<const std::byte*>(value.data()), value.size()};
-}
+using martianlabs::doba::tests::unit::bytes;
 }  // namespace
 
 // +===========================================================================+
 // | [>] zero length completes without reading source            ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("zero length completes without reading source") {
   reader source = reader::borrowed(bytes("next"));
   reader_raw value(0);
@@ -53,9 +51,10 @@ DOBA_TEST("zero length completes without reading source") {
   DOBA_EXPECT(!state.has_error);
   DOBA_EXPECT(!source.eof());
 }
+
 // +===========================================================================+
 // | [>] reads exactly content length for every output size      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("reads exactly content length for every output size") {
   constexpr std::string_view input = "payloadNEXT";
   for (std::size_t size = 1; size <= input.size(); size++) {
@@ -74,7 +73,7 @@ DOBA_TEST("reads exactly content length for every output size") {
       complete = state.complete;
     }
     DOBA_EXPECT(complete);
-  DOBA_EXPECT_EQUAL(decoded, "payload");
+    DOBA_EXPECT_EQUAL(decoded, "payload");
     DOBA_EXPECT(!source.eof());
     std::array<std::byte, 5> next{};
     DOBA_EXPECT_EQUAL(source.read(next), 4);
@@ -84,9 +83,10 @@ DOBA_TEST("reads exactly content length for every output size") {
     DOBA_EXPECT(source.eof());
   }
 }
+
 // +===========================================================================+
 // | [>] empty output makes no progress                          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("empty output makes no progress") {
   reader source = reader::borrowed(bytes("a"));
   reader_raw value(1);
@@ -96,9 +96,10 @@ DOBA_TEST("empty output makes no progress") {
   DOBA_EXPECT(!state.has_error);
   DOBA_EXPECT(!source.eof());
 }
+
 // +===========================================================================+
 // | [>] truncated source reports and latches raw incomplete     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("truncated source reports and latches raw incomplete") {
   reader source = reader::borrowed(bytes("ab"));
   reader_raw value(3);
@@ -115,9 +116,10 @@ DOBA_TEST("truncated source reports and latches raw incomplete") {
   DOBA_EXPECT_EQUAL(state.error, reader_error::raw_incomplete);
   DOBA_EXPECT_EQUAL(state.produced, 0);
 }
+
 // +===========================================================================+
 // | [>] partial reads preserve output guards and completion     ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("partial reads preserve output guards and completion") {
   auto source = reader::borrowed(bytes("abcNEXT"));
   reader_raw value(3);
@@ -141,3 +143,4 @@ DOBA_TEST("partial reads preserve output guards and completion") {
   DOBA_EXPECT(source.fetch(next));
   DOBA_EXPECT_EQUAL(next, std::byte{'N'});
 }
+

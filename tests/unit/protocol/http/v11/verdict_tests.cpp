@@ -33,7 +33,7 @@ using martianlabs::doba::protocol::http::v11::verdict;
 
 // +===========================================================================+
 // | [>] accept and reject are distinct enum values              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("accept and reject are distinct enum values") {
   static_assert(std::is_enum_v<verdict>);
   DOBA_EXPECT(verdict::kAccept != verdict::kReject);

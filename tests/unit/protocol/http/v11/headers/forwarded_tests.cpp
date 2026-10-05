@@ -38,7 +38,7 @@ using martianlabs::doba::protocol::http::v11::headers::forwarded;
 
 // +===========================================================================+
 // | [>] check parses forwarded elements                         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check parses forwarded elements") {
   parsed_forwarded_list parsed;
   DOBA_EXPECT(forwarded::check(
@@ -56,9 +56,10 @@ DOBA_TEST("check parses forwarded elements") {
   parsed_forwarded_list trailing;
   DOBA_EXPECT(forwarded::check("for=host;", trailing));
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid forwarded values                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid forwarded values") {
   constexpr std::string_view cases[] = {
       "",           ",",          " ",
@@ -72,9 +73,10 @@ DOBA_TEST("check rejects invalid forwarded values") {
   parsed_forwarded_list parsed;
   DOBA_EXPECT(!forwarded::check(std::string_view{"for=a\0", 6}, parsed));
 }
+
 // +===========================================================================+
 // | [>] interpret limits forwarding hops                        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("interpret limits forwarding hops") {
   parsed_forwarded_list parsed;
   DOBA_EXPECT(forwarded::check("for=a, for=b", parsed));
@@ -89,9 +91,10 @@ DOBA_TEST("interpret limits forwarding hops") {
   DOBA_EXPECT_EQUAL(forwarded::interpret(parsed, state, policy),
                     verdict::kReject);
 }
+
 // +===========================================================================+
 // | [>] check accepts pair delimiter boundaries                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts pair delimiter boundaries") {
   constexpr std::string_view cases[] = {
       "for=\"a,b;c\";by=\"a\\\"b\"",
@@ -104,18 +107,14 @@ DOBA_TEST("check accepts pair delimiter boundaries") {
     DOBA_EXPECT(forwarded::check(source, parsed));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects pair delimiter boundaries                 ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects pair delimiter boundaries") {
   constexpr std::string_view cases[] = {
-      "for=a;by",
-      "for=a;by=",
-      "for=a;by =x",
-      "for=a;by= x",
-      "for=\"a\"junk",
-      "for=\"a\\",
-      "for=a,by=",
+      "for=a;by",      "for=a;by=", "for=a;by =x", "for=a;by= x",
+      "for=\"a\"junk", "for=\"a\\", "for=a,by=",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
@@ -123,9 +122,10 @@ DOBA_TEST("check rejects pair delimiter boundaries") {
     DOBA_EXPECT(!forwarded::check(source, parsed));
   }
 }
+
 // +===========================================================================+
 // | [>] check preserves quoted pairs and accumulated order      ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check preserves quoted pairs and accumulated order") {
   const std::string source = "for=\"a,b;c\";BY=\"x\\\"y\"";
   parsed_forwarded_list parsed;

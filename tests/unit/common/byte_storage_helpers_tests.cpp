@@ -22,23 +22,164 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <type_traits>
+
+#include <array>
+#include <atomic>
+#include <chrono>
+#include <filesystem>
+#include <string>
+#include <utility>
 
 #include "common/byte_storage_helpers.h"
+#include "spill_directory.h"
 #include "test_helper.h"
 
+namespace {
+using martianlabs::doba::tests::spill_directory;
+using martianlabs::doba::common::byte_storage_file;
+
+}  // namespace
+
 // +===========================================================================+
-// | [>] byte_storage_helpers selects its platform               ( test-case ) |
+// | [>] closed files reject nonempty reads and writes           ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("closed files reject nonempty reads and writes") {
+  byte_storage_file value;
+  char output = '!';
+  std::size_t read = 99;
+  DOBA_EXPECT(!value.write("x", 1));
+  DOBA_EXPECT(!value.read(0, &output, 1, read));
+  DOBA_EXPECT_EQUAL(read, 0);
+  DOBA_EXPECT_EQUAL(output, '!');
+  value.close();
+  value.close();
+  DOBA_EXPECT(!value.write("x", 1));
+}
+
 // +===========================================================================+
-DOBA_TEST("byte_storage_helpers selects the platform implementation") {
-#ifdef _WIN32
-#ifndef martianlabs_doba_common_byte_storage_helpers_windows_h
-#error Windows implementation was not selected
-#endif
-#elif __linux__
-#ifndef martianlabs_doba_common_byte_storage_helpers_linux_h
-#error Linux implementation was not selected
-#endif
-#endif
-  static_assert(std::is_class_v<martianlabs::doba::common::byte_storage_file>);
+// | [>] file writes preserve every byte and positional reads    ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("file writes preserve every byte and positional reads") {
+  spill_directory directory{"doba_byte_storage_file_"};
+  byte_storage_file value;
+  std::filesystem::path path;
+  DOBA_EXPECT(value.open(directory.path(), path));
+  DOBA_EXPECT_EQUAL(path.parent_path(), directory.path());
+  DOBA_EXPECT(std::filesystem::exists(path));
+  std::string input(256, '\0');
+  for (std::size_t i = 0; i < input.size(); i++) {
+    input[i] = static_cast<char>(i);
+  }
+  DOBA_EXPECT(value.write(input.data(), 63));
+  DOBA_EXPECT(value.write(input.data() + 63, input.size() - 63));
+  DOBA_EXPECT(value.flush());
+  for (std::size_t position : {0, 1, 63, 64, 255, 256, 257}) {
+    std::array<char, 258> output;
+    output.fill('!');
+    std::size_t read = 99;
+    DOBA_EXPECT(value.read(position, output.data(), 256, read));
+    const std::size_t expected = position < 256 ? 256 - position : 0;
+    DOBA_EXPECT_EQUAL(read, expected);
+    DOBA_EXPECT_EQUAL(
+        std::string_view(output.data(), read),
+        std::string_view(input).substr(position < 256 ? position : 256));
+    for (std::size_t i = read; i < output.size(); i++) {
+      DOBA_EXPECT_EQUAL(output[i], '!');
+    }
+  }
+  value.close();
+  DOBA_EXPECT(std::filesystem::exists(path));
+}
+
+// +===========================================================================+
+// | [>] empty file operations preserve the supplied buffer      ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("empty file operations preserve the supplied buffer") {
+  spill_directory directory{"doba_byte_storage_file_"};
+  byte_storage_file value;
+  std::filesystem::path path;
+  DOBA_EXPECT(value.open(directory.path(), path));
+  DOBA_EXPECT(value.write(nullptr, 0));
+  DOBA_EXPECT(value.flush());
+  char output = '!';
+  std::size_t read = 99;
+  DOBA_EXPECT(value.read(0, &output, 1, read));
+  DOBA_EXPECT_EQUAL(read, 0);
+  DOBA_EXPECT_EQUAL(output, '!');
+  read = 99;
+  DOBA_EXPECT(value.read(0, nullptr, 0, read));
+  DOBA_EXPECT_EQUAL(read, 0);
+  DOBA_EXPECT_EQUAL(std::filesystem::file_size(path), 0);
+}
+
+// +===========================================================================+
+// | [>] file open failure permits a later valid open            ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("file open failure permits a later valid open") {
+  spill_directory directory{"doba_byte_storage_file_"};
+  byte_storage_file value;
+  std::filesystem::path path;
+  DOBA_EXPECT(!value.open(directory.path() / "missing", path));
+  DOBA_EXPECT(std::filesystem::is_empty(directory.path()));
+  DOBA_EXPECT(!value.write("x", 1));
+  DOBA_EXPECT(value.open(directory.path(), path));
+  DOBA_EXPECT(value.write("ok", 2));
+  value.close();
+  DOBA_EXPECT_EQUAL(std::filesystem::file_size(path), 2);
+}
+
+// +===========================================================================+
+// | [>] independent files keep distinct paths and contents      ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("independent files keep distinct paths and contents") {
+  spill_directory directory{"doba_byte_storage_file_"};
+  byte_storage_file first;
+  byte_storage_file second;
+  std::filesystem::path first_path;
+  std::filesystem::path second_path;
+  DOBA_EXPECT(first.open(directory.path(), first_path));
+  DOBA_EXPECT(first.write("first", 5));
+  DOBA_EXPECT(second.open(directory.path(), second_path));
+  DOBA_EXPECT(second.write("other", 5));
+  DOBA_EXPECT(first_path != second_path);
+  std::array<char, 5> output{};
+  std::size_t read = 0;
+  DOBA_EXPECT(first.read(0, output.data(), output.size(), read));
+  DOBA_EXPECT_EQUAL(read, 5);
+  DOBA_EXPECT_EQUAL(std::string_view(output.data(), read), "first");
+  DOBA_EXPECT(second.read(0, output.data(), output.size(), read));
+  DOBA_EXPECT_EQUAL(read, 5);
+  DOBA_EXPECT_EQUAL(std::string_view(output.data(), read), "other");
+}
+
+// +===========================================================================+
+// | [>] file moves transfer ownership and preserve contents     ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("file moves transfer ownership and preserve contents") {
+  spill_directory directory{"doba_byte_storage_file_"};
+  byte_storage_file destination;
+  std::filesystem::path previous_path;
+  std::filesystem::path source_path;
+  {
+    byte_storage_file source;
+    DOBA_EXPECT(source.open(directory.path(), source_path));
+    DOBA_EXPECT(source.write("abcdef", 6));
+    byte_storage_file moved(std::move(source));
+    DOBA_EXPECT(!source.write("x", 1));
+    DOBA_EXPECT(destination.open(directory.path(), previous_path));
+    DOBA_EXPECT(destination.write("old", 3));
+    destination = std::move(moved);
+    DOBA_EXPECT(!moved.write("x", 1));
+  }
+  byte_storage_file& same = destination;
+  destination = std::move(same);
+  std::array<char, 4> output{};
+  std::size_t read = 0;
+  DOBA_EXPECT(destination.read(2, output.data(), output.size(), read));
+  DOBA_EXPECT_EQUAL(read, 4);
+  DOBA_EXPECT_EQUAL(std::string_view(output.data(), read), "cdef");
+  destination.close();
+  DOBA_EXPECT(!destination.write("x", 1));
+  DOBA_EXPECT(std::filesystem::exists(source_path));
+  DOBA_EXPECT_EQUAL(std::filesystem::file_size(previous_path), 3);
 }

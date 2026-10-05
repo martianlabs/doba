@@ -56,7 +56,7 @@ class routing {
  public:
   // +=========================================================================+
   // | [>] apply                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static constexpr verdict apply(const context& ctx) {
     // Exactly one Host header is mandatory in HTTP/1.1.
     if (!ctx.has_host || ctx.multiple_host) return verdict::kReject;

@@ -38,7 +38,7 @@ using martianlabs::doba::protocol::http::v11::headers::te;
 
 // +===========================================================================+
 // | [>] check accepts transfer codings                          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts transfer codings") {
   constexpr std::string_view cases[] = {
       "",
@@ -60,9 +60,10 @@ DOBA_TEST("check accepts transfer codings") {
         te::check(std::string_view(padded).substr(1, source.size()), bounded));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects invalid transfer codings                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects invalid transfer codings") {
   constexpr std::string_view cases[] = {
       " ",
@@ -80,9 +81,10 @@ DOBA_TEST("check rejects invalid transfer codings") {
   parsed_parameter_list parsed;
   DOBA_EXPECT(!te::check(std::string_view{"gzip\0", 5}, parsed));
 }
+
 // +===========================================================================+
 // | [>] interpret records codings and trailers                  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("interpret records codings and trailers") {
   parsed_parameter_list parsed;
   DOBA_EXPECT(te::check("gzip;q=0.5, TRAILERS, deflate", parsed));
@@ -94,9 +96,10 @@ DOBA_TEST("interpret records codings and trailers") {
   DOBA_EXPECT_EQUAL(state.te_codings[0], "gzip");
   DOBA_EXPECT_EQUAL(state.te_codings[1], "deflate");
 }
+
 // +===========================================================================+
 // | [>] check accepts quality and quoted parameter boundaries   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts quality and quoted parameter boundaries") {
   constexpr std::string_view cases[] = {
       "gzip;p=\"a,b;c\";q=0.001",
@@ -110,19 +113,14 @@ DOBA_TEST("check accepts quality and quoted parameter boundaries") {
     DOBA_EXPECT(te::check(source, parsed));
   }
 }
+
 // +===========================================================================+
 // | [>] check rejects quality and quoted parameter boundaries   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects quality and quoted parameter boundaries") {
   constexpr std::string_view cases[] = {
-      "gzip;q=1.0000",
-      "gzip;q=00.5",
-      "gzip;q= 1",
-      "gzip;q =1",
-      "gzip;q=\"1\"",
-      "gzip;q=0.5x",
-      "gzip;p=\"x\\",
-      "gzip;;p=v",
+      "gzip;q=1.0000", "gzip;q=00.5", "gzip;q= 1",    "gzip;q =1",
+      "gzip;q=\"1\"",  "gzip;q=0.5x", "gzip;p=\"x\\", "gzip;;p=v",
   };
   for (const auto source : cases) {
     martianlabs::doba::tests::unit::test_helper::set_context(source);
@@ -130,9 +128,10 @@ DOBA_TEST("check rejects quality and quoted parameter boundaries") {
     DOBA_EXPECT(!te::check(source, parsed));
   }
 }
+
 // +===========================================================================+
 // | [>] interpret accumulates codings without losing trailers   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("interpret accumulates codings without losing trailers") {
   connection state;
   policies policy;

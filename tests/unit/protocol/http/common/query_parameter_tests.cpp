@@ -37,7 +37,7 @@ using martianlabs::doba::protocol::http::query_parameter_view;
 
 // +===========================================================================+
 // | [>] aliases preserve owning and view semantics              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("aliases preserve owning and view semantics") {
   static_assert(
       std::same_as<query_parameter, std::pair<std::string, std::string>>);

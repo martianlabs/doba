@@ -46,13 +46,13 @@ class writer_raw {
   // | [>] write                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   // | Writes the given raw payload bytes into dst, unchanged.                 |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool write(std::span<const std::byte> payload, common::writer& dst) {
     return dst.write(payload);
   }
   // +=========================================================================+
   // | [>] write                                                    ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool write(std::string_view payload, common::writer& dst) {
     return dst.write(payload);
   }
@@ -61,7 +61,7 @@ class writer_raw {
   // +-------------------------------------------------------------------------+
   // | Raw (Content-Length) framing has no terminating sequence; provided for  |
   // | API symmetry with writer_chunked so callers can treat both uniformly.   |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
   static bool end(common::writer&) { return true; }
 };
 }  // namespace martianlabs::doba::protocol::http::v11::body

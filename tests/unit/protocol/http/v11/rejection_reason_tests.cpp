@@ -31,7 +31,7 @@ using martianlabs::doba::protocol::http::v11::rejection_reason;
 
 // +===========================================================================+
 // | [>] reasons are stable distinct protocol codes              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("reasons are stable distinct protocol codes") {
   constexpr rejection_reason values[] = {
       rejection_reason::kNone,

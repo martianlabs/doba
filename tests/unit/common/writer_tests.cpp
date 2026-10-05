@@ -37,7 +37,7 @@ using martianlabs::doba::common::writer;
 
 // +===========================================================================+
 // | [>] finishing seals the writer                              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("finishing seals the writer") {
   writer value;
   DOBA_EXPECT(value.write("body"));
@@ -51,9 +51,10 @@ DOBA_TEST("finishing seals the writer") {
   DOBA_EXPECT_EQUAL(source.read_all(output), 4);
   DOBA_EXPECT_EQUAL(output, "body");
 }
+
 // +===========================================================================+
 // | [>] write overloads preserve binary bytes and total size    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("write overloads preserve binary bytes and total size") {
   writer value;
   const std::string bytes("a\0b\xff", 4);
@@ -67,9 +68,10 @@ DOBA_TEST("write overloads preserve binary bytes and total size") {
   DOBA_EXPECT_EQUAL(source.read_all(output), bytes.size());
   DOBA_EXPECT_EQUAL(output, bytes);
 }
+
 // +===========================================================================+
 // | [>] moving a writer preserves unfinished byte accounting    ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("moving a writer preserves unfinished byte accounting") {
   writer source;
   DOBA_EXPECT(source.write("ab"));

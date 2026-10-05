@@ -35,6 +35,8 @@ Big throughput numbers are fun. Waiting for a response isn't. Let's look at both
 Measured locally with the official HttpArena suite: **512 connections**,
 **lite mode**, **one run per server and profile**.
 [Full results](resources/benchmarks/benchmark-results.txt). `ntex/pipelined` was skipped.
+These results predate the removal of HTTP/1.1 pipelining in doba; the
+`pipelined` chart is historical and does not describe the current engine.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/benchmark-throughput-baseline-dark.svg">
@@ -110,16 +112,15 @@ using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
 int main() {
-  server srv;
+  server srv({.ip = "0.0.0.0", .port = "8080"});
   srv.add_route(
       "GET", "/hello",
-      [](const request&) {
-        response res = response::ok_200();
+      [](const request&, response& res) {
+        res.ok_200();
         res.add_header("Content-Type", "text/plain")
             .set_body("hello from doba");
-        return res;
       });
-  srv.start("8080");
+  srv.start();
   signaler::wait();
 }
 ```

@@ -35,7 +35,7 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // | Error codes shared by framer_raw and framer_chunked.                      |
 // |                                                                           |
 // | Actively produced by these classes:                                       |
-// |   io_error, invalid_chunk_size, chunk_size_overflow, invalid_chunk_crlf,  |
+// |   invalid_chunk_size, chunk_size_overflow, invalid_chunk_crlf,            |
 // |   invalid_trailer, chunk_extension_size_limit_exceeded,                   |
 // |   trailer_size_limit_exceeded, chunked_size_limit_exceeded.               |
 // |                                                                           |
@@ -52,7 +52,6 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // /////////////////////////////////////////////////////////////////////////////
 enum class framer_error : std::uint8_t {
   none,
-  io_error,
   invalid_chunk_size,
   chunk_size_overflow,
   invalid_chunk_crlf,

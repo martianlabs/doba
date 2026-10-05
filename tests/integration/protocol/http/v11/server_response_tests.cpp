@@ -34,16 +34,28 @@
 #include "protocol/http/v11/server.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
+#include "file_directory.h"
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::protocol::http::v11::body::body_writer;
+using martianlabs::doba::tests::file_directory;
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] general                                                 ( constants ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+constexpr std::size_t max_response_body_size_in_memory = martianlabs::doba::
+    protocol::http::v11::policies::kMaxResponseBodySizeInMemory;
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] general                                                    ( usings ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::protocol::http::v11::server;
-using martianlabs::doba::protocol::http::v11::policies;
-constexpr std::size_t max_response_body_size_in_memory =
-    policies::kMaxResponseBodySizeInMemory;
+using martianlabs::doba::protocol::http::v11::body::body_writer;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 using martianlabs::doba::tests::integration::wait_for_http_count;
@@ -51,33 +63,32 @@ using martianlabs::doba::tests::integration::wait_for_http_count;
 
 // +===========================================================================+
 // | [>] outgoing chunk boundaries survive the transport         ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 transmits and terminates every outgoing chunk") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/chunks", [](const request&) {
+  http_server.add_route("GET", "/chunks", [](const request&, response& res) {
     auto writer = body_writer::chunked();
-    if (!writer.write("a") || !writer.write("bc") ||
-        !writer.write("def")) {
-      return response::internal_server_error_500();
+    if (!writer.write("a") || !writer.write("bc") || !writer.write("def")) {
+      {
+        res.internal_server_error_500();
+        return;
+      }
     }
-    response result = response::ok_200();
-    result.set_body(std::move(writer));
-    return result;
+    res.ok_200();
+    res.set_body(std::move(writer));
+    return;
   });
-  http_server.add_route("GET", "/next", [](const request&) {
-    response result = response::ok_200();
-    result.set_body("next");
-    return result;
+  http_server.add_route("GET", "/next", [](const request&, response& res) {
+    res.ok_200();
+    res.set_body("next");
+    return;
   });
   http_server.start();
-
   DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(client.send_all(
-      "GET /chunks HTTP/1.1\r\nHost: a\r\n\r\n"
-      "GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
+  DOBA_EXPECT(client.send_all("GET /chunks HTTP/1.1\r\nHost: a\r\n\r\n"));
   const auto chunks = receive_http_response(client);
   DOBA_EXPECT(chunks.has_value());
   if (chunks.has_value()) {
@@ -87,6 +98,7 @@ DOBA_TEST("HTTP/1.1 transmits and terminates every outgoing chunk") {
     DOBA_EXPECT_EQUAL(chunks->wire_body,
                       "1\r\na\r\n2\r\nbc\r\n3\r\ndef\r\n0\r\n\r\n");
   }
+  DOBA_EXPECT(client.send_all("GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
   const auto next = receive_http_response(client);
   DOBA_EXPECT(next.has_value());
   if (next.has_value()) DOBA_EXPECT_EQUAL(next->body, "next");
@@ -96,27 +108,27 @@ DOBA_TEST("HTTP/1.1 transmits and terminates every outgoing chunk") {
 
 // +===========================================================================+
 // | [>] inline and streamed response body boundary              ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 preserves binary responses across the spill boundary") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/body/:size",
-                        [](const request&, std::size_t size) {
-    std::string body(size, '\0');
-    for (std::size_t index = 0; index < body.size(); index++) {
-      body[index] = static_cast<char>((index * 71 + index / 17) % 256);
-    }
-    response result = response::ok_200();
-    result.set_body(body);
-    return result;
-  });
+  http_server.add_route(
+      "GET", "/body/:size",
+      [](const request&, response& res, std::size_t size) {
+        std::string body(size, '\0');
+        for (std::size_t index = 0; index < body.size(); index++) {
+          body[index] = static_cast<char>((index * 71 + index / 17) % 256);
+        }
+        res.ok_200();
+        res.set_body(body);
+        return;
+      });
   http_server.start();
-
-  for (const std::size_t size : {max_response_body_size_in_memory - 1,
-                                 max_response_body_size_in_memory,
-                                 max_response_body_size_in_memory + 1}) {
+  for (const std::size_t size :
+       {max_response_body_size_in_memory - 1, max_response_body_size_in_memory,
+        max_response_body_size_in_memory + 1}) {
     std::string expected(size, '\0');
     for (std::size_t index = 0; index < expected.size(); index++) {
       expected[index] = static_cast<char>((index * 71 + index / 17) % 256);
@@ -137,79 +149,68 @@ DOBA_TEST("HTTP/1.1 preserves binary responses across the spill boundary") {
 
 // +===========================================================================+
 // | [>] cleared responses delimit persistent connections        ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 delimits cleared bodies on persistent connections") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/clear", [](const request&) {
-    response result = response::ok_200();
-    result.set_body("x").clear_body().clear_body();
-    return result;
+  http_server.add_route("GET", "/clear", [](const request&, response& res) {
+    res.ok_200();
+    res.set_body("x").clear_body().clear_body();
+    return;
   });
-  http_server.add_route("GET", "/next", [](const request&) {
-    response result = response::ok_200();
-    result.set_body("next");
-    return result;
+  http_server.add_route("GET", "/next", [](const request&, response& res) {
+    res.ok_200();
+    res.set_body("next");
+    return;
   });
   http_server.start();
-
-  for (bool pipelined : {false, true}) {
-    DOBA_EXPECT(client.connect(port));
-    std::string requests = "GET /clear HTTP/1.1\r\nHost: a\r\n\r\n";
-    if (pipelined) requests += "GET /next HTTP/1.1\r\nHost: a\r\n\r\n";
-    DOBA_EXPECT(client.send_all(requests));
-    const auto cleared = receive_http_response(client);
-    DOBA_EXPECT(cleared.has_value());
-    DOBA_EXPECT_EQUAL(cleared->status, "HTTP/1.1 200 OK");
-    DOBA_EXPECT_EQUAL(cleared->header("Content-Length").value(), "0");
-    DOBA_EXPECT(!cleared->header("Transfer-Encoding").has_value());
-    DOBA_EXPECT(cleared->body.empty());
-    DOBA_EXPECT(cleared->wire_body.empty());
-    if (!pipelined) {
-      DOBA_EXPECT(client.send_all("GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
-    }
-    const auto next = receive_http_response(client);
-    DOBA_EXPECT(next.has_value());
-    DOBA_EXPECT_EQUAL(next->status, "HTTP/1.1 200 OK");
-    DOBA_EXPECT_EQUAL(next->body, "next");
-    DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(100)));
-    client.close();
-  }
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("GET /clear HTTP/1.1\r\nHost: a\r\n\r\n"));
+  const auto cleared = receive_http_response(client);
+  DOBA_EXPECT(cleared.has_value());
+  DOBA_EXPECT_EQUAL(cleared->status, "HTTP/1.1 200 OK");
+  DOBA_EXPECT_EQUAL(cleared->header("Content-Length").value(), "0");
+  DOBA_EXPECT(!cleared->header("Transfer-Encoding").has_value());
+  DOBA_EXPECT(cleared->body.empty());
+  DOBA_EXPECT(cleared->wire_body.empty());
+  DOBA_EXPECT(client.send_all("GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
+  const auto next = receive_http_response(client);
+  DOBA_EXPECT(next.has_value());
+  DOBA_EXPECT_EQUAL(next->status, "HTTP/1.1 200 OK");
+  DOBA_EXPECT_EQUAL(next->body, "next");
+  DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(100)));
+  client.close();
   http_server.stop();
 }
 
 // +===========================================================================+
-// | [>] all bodyless final statuses delimit a pipeline          ( test-case ) |
-// +===========================================================================+
+// | [>] bodyless statuses delimit sequential responses          ( test-case ) |
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 suppresses 205 and 304 bodies before successors") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/reset", [](const request&) {
-    response result = response::reset_content_205();
-    result.set_body("hidden");
-    return result;
+  http_server.add_route("GET", "/reset", [](const request&, response& res) {
+    res.reset_content_205();
+    res.set_body("hidden");
+    return;
   });
-  http_server.add_route("GET", "/cached", [](const request&) {
-    response result = response::not_modified_304();
-    result.set_body("hidden");
-    return result;
+  http_server.add_route("GET", "/cached", [](const request&, response& res) {
+    res.not_modified_304();
+    res.set_body("hidden");
+    return;
   });
-  http_server.add_route("GET", "/next", [](const request&) {
-    response result = response::ok_200();
-    result.set_body("next");
-    return result;
+  http_server.add_route("GET", "/next", [](const request&, response& res) {
+    res.ok_200();
+    res.set_body("next");
+    return;
   });
   http_server.start();
-
   DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(client.send_all(
-      "GET /reset HTTP/1.1\r\nHost: a\r\n\r\n"
-      "GET /cached HTTP/1.1\r\nHost: a\r\n\r\n"
-      "GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
+  DOBA_EXPECT(client.send_all("GET /reset HTTP/1.1\r\nHost: a\r\n\r\n"));
   const auto reset = receive_http_response(client);
   DOBA_EXPECT(reset.has_value());
   if (reset.has_value()) {
@@ -217,6 +218,7 @@ DOBA_TEST("HTTP/1.1 suppresses 205 and 304 bodies before successors") {
     DOBA_EXPECT_EQUAL(reset->body, "");
     DOBA_EXPECT_EQUAL(reset->header("Content-Length").value(), "0");
   }
+  DOBA_EXPECT(client.send_all("GET /cached HTTP/1.1\r\nHost: a\r\n\r\n"));
   const auto cached = receive_http_response(client);
   DOBA_EXPECT(cached.has_value());
   if (cached.has_value()) {
@@ -224,6 +226,7 @@ DOBA_TEST("HTTP/1.1 suppresses 205 and 304 bodies before successors") {
     DOBA_EXPECT_EQUAL(cached->body, "");
     DOBA_EXPECT_EQUAL(cached->header("Content-Length").value(), "6");
   }
+  DOBA_EXPECT(client.send_all("GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
   const auto next = receive_http_response(client);
   DOBA_EXPECT(next.has_value());
   if (next.has_value()) DOBA_EXPECT_EQUAL(next->body, "next");
@@ -233,38 +236,31 @@ DOBA_TEST("HTTP/1.1 suppresses 205 and 304 bodies before successors") {
 
 // +===========================================================================+
 // | [>] handler and serializer failures isolate their channels  ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/throw", [](const request&) -> response {
-    throw std::runtime_error("doba-private-sync-token");
+  http_server.add_route("GET", "/throw",
+                        [](const request&, response&) -> void {
+                          throw std::runtime_error("doba-private-sync-token");
+                        });
+  http_server.add_route("GET", "/unknown",
+                        [](const request&, response&) -> void { throw 1; });
+  http_server.add_route("GET", "/framing", [](const request&, response& res) {
+    res.ok_200();
+    res.set_header("Transfer-Encoding", "chunked");
+    res.set_header("Content-Length", "1");
+    return;
   });
-  http_server.add_route("GET", "/unknown", [](const request&) -> response {
-    throw 1;
-  });
-  http_server.add_route("GET", "/framing", [](const request&) {
-    response result = response::ok_200();
-    result.set_header("Transfer-Encoding", "chunked");
-    result.set_header("Content-Length", "1");
-    return result;
-  });
-  http_server.add_route("GET", "/ok", [](const request&) {
-    response result = response::ok_200();
-    result.set_body("ok");
-    return result;
+  http_server.add_route("GET", "/ok", [](const request&, response& res) {
+    res.ok_200();
+    res.set_body("ok");
+    return;
   });
   http_server.start();
-
-  // +=========================================================================+
-// | [>] failure_case                                               ( struct ) |
-  // +=========================================================================+
   struct failure_case {
-    // +=======================================================================+
-    // | [>] ATTRIBUTEs                                             ( public ) |
-    // +=======================================================================+
     std::string_view path;
     std::string_view detail;
   };
@@ -281,8 +277,7 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
     const auto result = receive_http_response(client);
     DOBA_EXPECT(result.has_value());
     if (result.has_value()) {
-      DOBA_EXPECT_EQUAL(result->status,
-                        "HTTP/1.1 500 Internal Server Error");
+      DOBA_EXPECT_EQUAL(result->status, "HTTP/1.1 500 Internal Server Error");
       DOBA_EXPECT_EQUAL(result->body, "Internal Server Error");
       DOBA_EXPECT_EQUAL(result->wire_body, "Internal Server Error");
       DOBA_EXPECT_EQUAL(result->header("Content-Length").value(), "21");
@@ -305,7 +300,7 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
 
 // +===========================================================================+
 // | [>] HEAD errors terminate after their headers               ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 suppresses synchronous HEAD error bodies") {
   for (std::string_view scenario : {"throw", "unknown", "framing"}) {
     martianlabs::doba::tests::integration::test_helper::set_context(scenario);
@@ -314,32 +309,31 @@ DOBA_TEST("HTTP/1.1 suppresses synchronous HEAD error bodies") {
     DOBA_EXPECT(port != 0);
     std::atomic<std::size_t> get_calls = 0;
     server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-    http_server.add_route("HEAD", "/fail", [scenario](const request&)
-        -> response {
-      if (scenario == "throw") throw std::runtime_error("HEAD handler error!");
-      if (scenario == "unknown") throw 1;
-      response result = response::ok_200();
-      result.set_header("Transfer-Encoding", "chunked");
-      result.set_header("Content-Length", "1");
-      return result;
-    });
-    http_server.add_route("GET", "/ok", [&get_calls](const request&) {
-      get_calls.fetch_add(1);
-      response result = response::ok_200();
-      result.set_body("ok");
-      return result;
-    });
+    http_server.add_route("HEAD", "/fail",
+                          [scenario](const request&, response& res) -> void {
+                            if (scenario == "throw")
+                              throw std::runtime_error("HEAD handler error!");
+                            if (scenario == "unknown") throw 1;
+                            res.ok_200();
+                            res.set_header("Transfer-Encoding", "chunked");
+                            res.set_header("Content-Length", "1");
+                            return;
+                          });
+    http_server.add_route("GET", "/ok",
+                          [&get_calls](const request&, response& res) {
+                            get_calls.fetch_add(1);
+                            res.ok_200();
+                            res.set_body("ok");
+                            return;
+                          });
     http_server.start();
-
     DOBA_EXPECT(client.connect(port));
-    DOBA_EXPECT(client.send_all(
-        "GET /ok HTTP/1.1\r\nHost: a\r\n\r\n"
-        "HEAD /fail HTTP/1.1\r\nHost: a\r\n\r\n"
-        "GET /ok HTTP/1.1\r\nHost: a\r\n\r\n"));
+    DOBA_EXPECT(client.send_all("GET /ok HTTP/1.1\r\nHost: a\r\n\r\n"));
     const auto before = receive_http_response(client);
     DOBA_EXPECT(before.has_value());
     DOBA_EXPECT_EQUAL(before->status, "HTTP/1.1 200 OK");
     DOBA_EXPECT_EQUAL(before->body, "ok");
+    DOBA_EXPECT(client.send_all("HEAD /fail HTTP/1.1\r\nHost: a\r\n\r\n"));
     const auto head = receive_http_response(client, true);
     DOBA_EXPECT(head.has_value());
     DOBA_EXPECT_EQUAL(head->status, "HTTP/1.1 500 Internal Server Error");
@@ -353,96 +347,57 @@ DOBA_TEST("HTTP/1.1 suppresses synchronous HEAD error bodies") {
 }
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] general                                                    ( usings ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 namespace fs = std::filesystem;
 using martianlabs::doba::common::filesystem_file;
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] response_file_directory                                     ( class ) |
-// +---------------------------------------------------------------------------+
-// | Internal implementation detail.                                           |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-class response_file_directory {
- public:
-  // +=========================================================================+
-  // | [>] METHODs                                                  ( public ) |
-  // +=========================================================================+
-  response_file_directory() {
-    static std::atomic<unsigned int> counter{0};
-    const auto stamp =
-        std::chrono::steady_clock::now().time_since_epoch().count();
-    do {
-      path_ = fs::temp_directory_path() /
-          ("doba_files_" + std::to_string(stamp) + "_" +
-           std::to_string(counter.fetch_add(1)));
-    } while (!fs::create_directory(path_));
-  }
-  ~response_file_directory() {
-    std::error_code error;
-    fs::remove_all(path_, error);
-  }
-  const fs::path& path() const { return path_; }
-  void write(std::string_view name, std::string_view contents) {
-    const fs::path relative(std::u8string(name.begin(), name.end()));
-    std::ofstream output(path_ / relative, std::ios::binary);
-    output.write(contents.data(),
-                 static_cast<std::streamsize>(contents.size()));
-    if (!output) throw std::runtime_error("Unable to write fixture");
-  }
 
- private:
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( private ) |
-  // +=========================================================================+
-  fs::path path_;
-};
 }  // namespace
 
 // +===========================================================================+
 // | [>] incomplete file response                                ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP closes incomplete file responses before subsequent bytes") {
-  response_file_directory directory;
+  file_directory directory;
   directory.write("file", "abcdef");
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
-  value.add_route("GET", "/file", [&](const request&) {
+  value.add_route("GET", "/file", [&](const request&, response& res) {
     filesystem_file file;
     std::error_code error;
     if (!file.open(directory.path(), "file", error)) {
       throw std::runtime_error("Unable to open file");
     }
-    auto result = response::ok_200();
+    res.ok_200();
     const auto length = file.size();
-    result.set_body(martianlabs::doba::common::reader(std::move(file)), length);
+    res.set_body(martianlabs::doba::common::reader(std::move(file)), length);
     fs::resize_file(directory.path() / "file", 1);
-    return result;
+    return;
   });
-  value.add_route("GET", "/next", [](const request&) {
-    auto result = response::ok_200();
-    result.set_body("must-not-be-transmitted");
-    return result;
+  value.add_route("GET", "/next", [](const request&, response& res) {
+    res.ok_200();
+    res.set_body("must-not-be-transmitted");
+    return;
   });
   value.start();
   DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(client.send_all(
-      "GET /file HTTP/1.1\r\nHost: a\r\n\r\n"
-      "GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
+  DOBA_EXPECT(
+      client.send_all("GET /file HTTP/1.1\r\nHost: a\r\n\r\n"
+                      "GET /next HTTP/1.1\r\nHost: a\r\n\r\n"));
   std::string wire;
   while (wire.size() < 8192) {
     auto byte = client.receive(1);
     if (!byte) break;
     wire += *byte;
   }
-#ifdef _WIN32
-  const int reset = WSAECONNRESET;
-#else
-  const int reset = ECONNRESET;
-#endif
+
   DOBA_EXPECT(client.error() == "eof" ||
-              (client.error() == "socket" && client.native_error() == reset));
+              (client.error() == "socket" && client.connection_reset()));
   DOBA_EXPECT(wire.find("must-not-be-transmitted") == wire.npos);
   DOBA_EXPECT(wire.find("abcdef") == wire.npos);
   value.stop();
@@ -450,51 +405,52 @@ DOBA_TEST("HTTP closes incomplete file responses before subsequent bytes") {
 
 // +===========================================================================+
 // | [>] response close drains each body representation          ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 response close drains each body representation") {
   for (const std::string_view body : {"inline", "reader", "chunked"}) {
-    martianlabs::doba::tests::integration::test_helper::set_context(
-        body);
+    martianlabs::doba::tests::integration::test_helper::set_context(body);
     tcpip_client client;
     const auto port = client.find_available_port();
     DOBA_EXPECT(port != 0);
     std::atomic<int> later{0};
     const std::string expected(body == "inline" ? 31 : 24001, 'c');
-    auto closing = [body, expected]() {
-      auto result = response::ok_200();
-      result.set_header("Connection", "close");
+    auto closing = [body, expected](response& res) {
+      res.ok_200();
+      res.set_header("Connection", "close");
       if (body == "chunked") {
         auto writer = body_writer::chunked();
         if (!writer.write(expected)) throw std::runtime_error("Body failed");
-        result.set_body(std::move(writer));
+        res.set_body(std::move(writer));
       } else {
-        result.set_body(expected);
+        res.set_body(expected);
       }
-      return result;
+      return;
     };
-    server<> http_server({.worker_count = 2, .ip = "127.0.0.1",
-                          .port = std::to_string(port)});
-    http_server.add_route("GET", "/before", [](const request&) {
-      auto result = response::ok_200();
-      result.set_body("before");
-      return result;
+    server<> http_server(
+        {.worker_count = 2, .ip = "127.0.0.1", .port = std::to_string(port)});
+    http_server.add_route("GET", "/before", [](const request&, response& res) {
+      res.ok_200();
+      res.set_body("before");
+      return;
     });
-    http_server.add_route("POST", "/last",
-                          [closing](const request&) { return closing(); });
-
-    http_server.add_route("GET", "/later", [&](const request&) {
+    http_server.add_route(
+        "POST", "/last",
+        [closing](const request&, response& res) { closing(res); });
+    http_server.add_route("GET", "/later", [&](const request&, response& res) {
       later++;
-      return response::ok_200();
+      {
+        res.ok_200();
+        return;
+      }
     });
     http_server.start();
     DOBA_EXPECT(client.connect(port));
-    DOBA_EXPECT(client.send_all(
-        "GET /before HTTP/1.1\r\nHost: a\r\n\r\n"
-        "POST /last HTTP/1.1\r\nHost: a\r\nContent-Length: 0\r\n\r\n"
-        "GET /later HTTP/1.1\r\nHost: a\r\n\r\n"));
+    DOBA_EXPECT(client.send_all("GET /before HTTP/1.1\r\nHost: a\r\n\r\n"));
     const auto before = receive_http_response(client);
     DOBA_EXPECT(before.has_value());
     if (before) DOBA_EXPECT_EQUAL(before->body, "before");
+    DOBA_EXPECT(client.send_all(
+        "POST /last HTTP/1.1\r\nHost: a\r\nContent-Length: 0\r\n\r\n"));
     const auto last = receive_http_response(client);
     DOBA_EXPECT(last.has_value());
     if (last) {
@@ -516,4 +472,3 @@ DOBA_TEST("HTTP/1.1 response close drains each body representation") {
     DOBA_EXPECT_EQUAL(later.load(), 0);
   }
 }
-

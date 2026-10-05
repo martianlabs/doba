@@ -32,7 +32,7 @@ using martianlabs::doba::protocol::http::v11::body::writer_state;
 
 // +===========================================================================+
 // | [>] default state reports no progress completion or error   ( test-case ) |
-// +===========================================================================+
+// +---------------------------------------------------------------------------+
 DOBA_TEST("default state reports no progress completion or error") {
   const writer_state state;
   DOBA_EXPECT_EQUAL(state.consumed, 0);

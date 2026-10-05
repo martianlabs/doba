@@ -9,11 +9,11 @@ preloading the file or copying it to temporary storage.
 Build the `common_filesystem` target. From the repository root, run:
 
 ```sh
-common_filesystem examples/http/v11/static_file_server/public hello.txt
+common_filesystem examples/common/filesystem README.md
 ```
 
-The example prints `Hello from doba.`. A missing file, an absolute request path,
-`..`, a symbolic link, or a Windows reparse point fails with a nonzero exit code.
+The example prints this README. A missing file, an absolute request path, `..`,
+a symbolic link, or a Windows reparse point fails with a nonzero exit code.
 
 `filesystem_root(path, error)` resolves the trusted root once during setup.
 `filesystem_file::open(root, relative, error)` expects that absolute root and a
