@@ -586,6 +586,42 @@ DOBA_TEST("tcpip survives failing connection callbacks") {
 }
 
 // +===========================================================================+
+// | [>] tcpip recovers after an engine factory failure          ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("tcpip recovers after an engine factory failure") {
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  auto state = std::make_shared<byte_state>();
+  std::atomic<int> attempts{0};
+  auto factory = [state, &attempts]() -> byte_engine {
+    if (attempts++ == 0) throw std::runtime_error("factory failed");
+    return byte_engine{state, {}, {}};
+  };
+  tr::tcp_policies configuration;
+  configuration.ip = "127.0.0.1";
+  configuration.port = std::to_string(port);
+  configuration.worker_count = 2;
+  tr::tcp<byte_engine, decltype(factory)> server(configuration, factory);
+  server.set_on_connection([state]() { state->connected++; });
+  server.set_on_disconnection([state]() { state->disconnected++; });
+  server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.wait_for_close(3s));
+  client.close();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("ok"));
+  const auto bytes = client.receive(2);
+  DOBA_EXPECT(bytes.has_value());
+  if (bytes) DOBA_EXPECT_EQUAL(*bytes, "ok");
+  client.close();
+  server.stop();
+  DOBA_EXPECT_EQUAL(attempts.load(), 2);
+  DOBA_EXPECT_EQUAL(state->connected.load(), 1);
+  DOBA_EXPECT_EQUAL(state->disconnected.load(), 1);
+}
+
+// +===========================================================================+
 // | [>] tcpip survives failing disconnection callbacks          ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip survives failing disconnection callbacks") {
