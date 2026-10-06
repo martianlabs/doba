@@ -115,6 +115,10 @@ DOBA_TEST("HTTP/1.1 orders mixed routes over one connection") {
     DOBA_EXPECT_EQUAL(first->body, "slow");
     DOBA_EXPECT_EQUAL(second->body, "fast");
   }
+  DOBA_EXPECT(client.send_all("GET /fast HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+  const auto third = receive_http_response(client);
+  DOBA_EXPECT(third.has_value());
+  if (third) DOBA_EXPECT_EQUAL(third->body, "fast");
   http_server.stop();
 }
 

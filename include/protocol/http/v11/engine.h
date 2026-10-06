@@ -63,11 +63,7 @@ class engine {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   engine(policies_type configuration, const ROty& router)
-      : router_{router}, decoder_{configuration} {
-    if constexpr (requires(const ROty& routes) { routes.has_async(); }) {
-      has_async_routes_ = router_.has_async();
-    }
-  }
+      : router_{router}, decoder_{configuration} {}
   // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
@@ -87,81 +83,135 @@ class engine {
   // +-------------------------------------------------------------------------+
   std::size_t on_bytes_received(const char* buffer, const std::size_t size,
                                 const std::size_t capacity) {
-    if (closed_ || (async_ && !async_->accepting())) return size;
+    if (closed_) return size;
     if (!size) return 0;
     std::size_t total = 0;
-    while (total < size && !closed_ &&
-           (!async_ || async_->accepting())) {
-      std::size_t consumed = 0;
-      try {
-        deserialization_result result = decoder_.deserialize(
-            buffer + total, size - total, capacity, consumed);
-        if (async_ && async_->idle()) async_.reset();
-        switch (result.code) {
-          case deserialization_status::kSucceeded: {
-            const RQty& request = *result.request;
-            bool close = request.wants_connection_close();
-            if (has_async_routes_ &&
-                (request.get_target() == target::kOriginForm ||
-                 request.get_target() == target::kAbsoluteForm)) {
-              const std::string_view path = request.get_absolute_path();
-              const typename ROty::route_match match =
-                  router_.match(request.get_method(), path);
+    while (total < size && !closed_) {
+      if (!async_) {
+        while (total < size && !closed_) {
+          std::size_t consumed = 0;
+          try {
+            deserialization_result result = decoder_.deserialize(
+                buffer + total, size - total, capacity, consumed);
+            if (result.code == deserialization_status::kSucceeded) {
+              const RQty& request = *result.request;
+              bool close = request.wants_connection_close();
+              typename ROty::route_match match{};
+              std::string_view path;
+              if (request.get_target() == target::kOriginForm ||
+                  request.get_target() == target::kAbsoluteForm) {
+                path = request.get_absolute_path();
+                match = router_.match(request.get_method(), path);
+              }
               if constexpr (requires { match.async_handler; }) {
                 if (match.async_handler || match.async_parametrized_handler) {
-                  if (!async_) {
-                    async_ = std::make_shared<engine_async>(
-                        decoder_.configuration().max_pending_requests);
-                    async_->set_on_send(on_send_);
-                    async_->set_on_close(on_close_);
-                  }
+                  async_ = std::make_shared<engine_async>(
+                      decoder_.configuration().max_pending_requests);
+                  async_->set_on_send(on_send_);
+                  async_->set_on_close(on_close_);
                   const auto position = request_position();
                   if (!position) return size;
+                  dispatch_async(std::move(*result.request), match, path,
+                                 *position, close);
+                  if (close) closed_ = true;
+                  total += consumed;
+                  break;
+                }
+              }
+              RSty response = decoder_.make_response();
+              sync_type::execute(router_, request, response, close, &match);
+              auto serialized = sync_type::serialize(request, response, close);
+              on_send_(serialized.head, serialized.body,
+                       std::move(serialized.source));
+              if (close) query_for_close();
+              total += consumed;
+              continue;
+            }
+            if (result.code == deserialization_status::kInvalidSource) {
+              if (result.response) {
+                auto serialized = sync_type::serialize(*result.response, true);
+                on_send_(serialized.head, serialized.body,
+                         std::move(serialized.source));
+                query_for_close();
+              }
+              return size;
+            }
+            if (result.response) {
+              auto serialized = sync_type::serialize(*result.response, false);
+              on_send_(serialized.head, serialized.body,
+                       std::move(serialized.source));
+            }
+            return total + consumed;
+          } catch (...) {
+            query_for_close();
+            return total + consumed;
+          }
+        }
+        continue;
+      }
+      if (!async_->accepting()) return size;
+      if (async_->idle()) {
+        async_.reset();
+        continue;
+      }
+      while (total < size && !closed_ && async_->accepting()) {
+        if (async_->idle()) {
+          async_.reset();
+          break;
+        }
+        std::size_t consumed = 0;
+        try {
+          deserialization_result result = decoder_.deserialize(
+              buffer + total, size - total, capacity, consumed);
+          switch (result.code) {
+            case deserialization_status::kSucceeded: {
+              const RQty& request = *result.request;
+              bool close = request.wants_connection_close();
+              typename ROty::route_match match{};
+              std::string_view path;
+              if (request.get_target() == target::kOriginForm ||
+                  request.get_target() == target::kAbsoluteForm) {
+                path = request.get_absolute_path();
+                match = router_.match(request.get_method(), path);
+              }
+              const auto position = request_position();
+              if (!position) return size;
+              if constexpr (requires { match.async_handler; }) {
+                if (match.async_handler || match.async_parametrized_handler) {
                   dispatch_async(std::move(*result.request), match, path,
                                  *position, close);
                   if (close) closed_ = true;
                   break;
                 }
               }
-              const auto position =
-                  async_ ? request_position() : std::optional<std::size_t>{0};
-              if (!position) return size;
               RSty response = decoder_.make_response();
               sync_type::execute(router_, request, response, close, &match);
               enqueue_response(request, response, close, *position);
               break;
             }
-            const auto position =
-                async_ ? request_position() : std::optional<std::size_t>{0};
-            if (!position) return size;
-            RSty response = decoder_.make_response();
-            sync_type::execute(router_, request, response, close);
-            enqueue_response(request, response, close, *position);
-            break;
-          }
-          case deserialization_status::kInvalidSource:
-            if (result.response) {
-              const auto position = async_ ? request_position()
-                                           : std::optional<std::size_t>{0};
-              if (!position) return size;
-              enqueue_response(*result.response, true, *position);
-            }
-            return size;
-          case deserialization_status::kMoreBytesNeeded:
-            if (result.response) {
-              if (async_ && !interim_position_) {
-                interim_position_ = async_->reserve();
-                if (!interim_position_) return size;
+            case deserialization_status::kInvalidSource:
+              if (result.response) {
+                const auto position = request_position();
+                if (!position) return size;
+                enqueue_response(*result.response, true, *position);
               }
-              enqueue_response(*result.response, false,
-                               interim_position_.value_or(0), false);
-            }
-            return total + consumed;
+              return size;
+            case deserialization_status::kMoreBytesNeeded:
+              if (result.response) {
+                if (!interim_position_) {
+                  interim_position_ = async_->reserve();
+                  if (!interim_position_) return size;
+                }
+                enqueue_response(*result.response, false,
+                                 *interim_position_, false);
+              }
+              return total + consumed;
+          }
+          total += consumed;
+        } catch (...) {
+          query_for_close();
+          return total + consumed;
         }
-        total += consumed;
-      } catch (...) {
-        query_for_close();
-        return total + consumed;
       }
     }
     return total;
@@ -260,13 +310,8 @@ class engine {
   void enqueue_response(RSty& response, bool close, std::size_t position,
                         bool final = true) {
     auto serialized = sync_type::serialize(response, close);
-    if (async_) {
-      async_->submit(position, std::move(serialized), final, close);
-      if (close) closed_ = true;
-    } else {
-      on_send_(serialized.head, serialized.body, std::move(serialized.source));
-      if (close) query_for_close();
-    }
+    async_->submit(position, std::move(serialized), final, close);
+    if (close) closed_ = true;
   }
   // +=========================================================================+
   // | [>] enqueue_response                                        ( private ) |
@@ -274,20 +319,14 @@ class engine {
   void enqueue_response(const RQty& request, RSty& response, bool close,
                         std::size_t position) {
     auto serialized = sync_type::serialize(request, response, close);
-    if (async_) {
-      async_->submit(position, std::move(serialized), true, close);
-      if (close) closed_ = true;
-    } else {
-      on_send_(serialized.head, serialized.body, std::move(serialized.source));
-      if (close) query_for_close();
-    }
+    async_->submit(position, std::move(serialized), true, close);
+    if (close) closed_ = true;
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   const ROty& router_;  // Reference to the router for handling requests.
   decoder<RQty, RSty> decoder_;  // Decoder for processing incoming requests.
-  bool has_async_routes_{false};
   std::shared_ptr<engine_async> async_;
   std::optional<std::size_t> interim_position_;
   protocol::send_delegate on_send_;

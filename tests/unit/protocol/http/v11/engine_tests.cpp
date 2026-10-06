@@ -180,6 +180,33 @@ DOBA_TEST("engine returns to synchronous delivery after asynchronous work") {
   DOBA_EXPECT_EQUAL(current.closes, 0);
 }
 
+DOBA_TEST("engine resumes synchronous delivery in a coalesced batch") {
+  router<request, response> routes;
+  routes.add("GET", "/instant", [](const request&, response& res)
+                 -> task<void> {
+    make_response(res, "instant");
+    co_return;
+  });
+  routes.add("GET", "/fast", [](const request&, response& res) {
+    make_response(res, "fast");
+  });
+  connection current(routes);
+  const std::string instant =
+      "GET /instant HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  const std::string fast = "GET /fast HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  DOBA_EXPECT_EQUAL(current.receive(instant + fast + fast),
+                    instant.size() + fast.size() * 2);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 3U);
+  const auto second = current.wire.find("HTTP/1.1", 1);
+  DOBA_EXPECT(second != std::string::npos);
+  const auto third = current.wire.find("HTTP/1.1", second + 1);
+  DOBA_EXPECT(third != std::string::npos);
+  DOBA_EXPECT(current.wire.substr(0, second).ends_with("\r\n\r\ninstant"));
+  DOBA_EXPECT(current.wire.substr(second, third - second)
+                  .ends_with("\r\n\r\nfast"));
+  DOBA_EXPECT(current.wire.substr(third).ends_with("\r\n\r\nfast"));
+}
+
 DOBA_TEST("engine orders two asynchronous completions") {
   router<request, response> routes;
   std::coroutine_handle<> first;
