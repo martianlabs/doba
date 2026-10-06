@@ -25,23 +25,31 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <condition_variable>
+#include <coroutine>
 #include <fstream>
 #include <future>
 #include <iostream>
 #include <iterator>
+#include <mutex>
+#include <queue>
 #include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <thread>
+#include <vector>
 
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <zlib.h>
 
+#include "common/task.h"
 #include "protocol/http/v11/server.h"
 #include "protocol/http/v11/static_file_server.h"
 #include "transport/server/tls.h"
@@ -49,6 +57,77 @@
 using namespace martianlabs::doba::protocol::http::v11;
 
 namespace {
+class timer {
+ public:
+  struct awaiter {
+    timer& owner;
+    std::chrono::steady_clock::time_point due;
+
+    bool await_ready() const noexcept { return false; }
+    void await_suspend(std::coroutine_handle<> handle) const {
+      owner.schedule(due, handle);
+    }
+    void await_resume() const noexcept {}
+  };
+
+  timer() : worker_([this](std::stop_token stop) { run(stop); }) {}
+  ~timer() {
+    worker_.request_stop();
+    wake_.notify_one();
+  }
+
+  awaiter after(std::chrono::milliseconds duration) {
+    return {*this, std::chrono::steady_clock::now() + duration};
+  }
+
+ private:
+  struct pending {
+    std::chrono::steady_clock::time_point due;
+    std::coroutine_handle<> handle;
+
+    bool operator<(const pending& other) const noexcept {
+      return due > other.due;
+    }
+  };
+
+  void schedule(std::chrono::steady_clock::time_point due,
+                std::coroutine_handle<> handle) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    const bool wake = pending_.empty() || due < pending_.top().due;
+    pending_.push({due, handle});
+    if (wake) wake_.notify_one();
+  }
+
+  void run(std::stop_token stop) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    std::vector<std::coroutine_handle<>> ready;
+    while (!stop.stop_requested()) {
+      wake_.wait(lock, [this, &stop]() {
+        return stop.stop_requested() || !pending_.empty();
+      });
+      if (stop.stop_requested()) break;
+      const auto due = pending_.top().due;
+      if (wake_.wait_until(lock, due) == std::cv_status::no_timeout) {
+        continue;
+      }
+      const auto now = std::chrono::steady_clock::now();
+      while (!pending_.empty() && pending_.top().due <= now) {
+        ready.push_back(pending_.top().handle);
+        pending_.pop();
+      }
+      lock.unlock();
+      for (auto handle : ready) handle.resume();
+      lock.lock();
+      ready.clear();
+    }
+  }
+
+  std::mutex mutex_;
+  std::condition_variable wake_;
+  std::priority_queue<pending> pending_;
+  std::jthread worker_;
+};
+
 bool parse_integer(std::string_view source, std::int64_t& value) {
   if (source.empty()) return false;
   const char* first = source.data();
@@ -106,8 +185,20 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   policies http_configuration;
+  timer delays;
   server http_server({.ip = "0.0.0.0", .port = "8080"},
                      http_configuration);
+  http_server.add_route(
+      "GET", "/delay/:ms",
+      [&delays](const request&, response& res, std::uint32_t ms)
+          -> martianlabs::doba::common::task<void> {
+        if (ms != 0) {
+          co_await delays.after(std::chrono::milliseconds(ms));
+        }
+        res.ok_200();
+        res.add_header("Content-Type", "text/plain")
+            .set_body(std::to_string(ms));
+      });
   // Parse every baseline value; HttpArena randomizes them to detect shortcuts.
   http_server.add_route(
       "GET", "/baseline11",
