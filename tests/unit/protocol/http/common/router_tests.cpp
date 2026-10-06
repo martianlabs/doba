@@ -23,6 +23,8 @@
 // permissions and limitations under the License.
 
 #include <memory>
+#include <exception>
+#include <coroutine>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -30,6 +32,7 @@
 #include <utility>
 
 #include "protocol/http/common/router.h"
+#include "common/task.h"
 #include "router_value_response.h"
 #include "test_helper.h"
 
@@ -50,7 +53,99 @@ struct request {
 
 using response = martianlabs::doba::tests::unit::router_value_response;
 using martianlabs::doba::protocol::http::router;
+using martianlabs::doba::common::task;
+
+struct pause {
+  std::coroutine_handle<>& next;
+  bool await_ready() const noexcept { return false; }
+  void await_suspend(std::coroutine_handle<> handle) const noexcept {
+    next = handle;
+  }
+  void await_resume() const noexcept {}
+};
 }  // namespace
+
+DOBA_TEST("router selects asynchronous route forms") {
+  router<request, response> value;
+  value.add("GET", "/items/*", [](const request&, response& res)
+                -> task<void> {
+    res.value = "wildcard";
+    co_return;
+  });
+  value.add("GET", "/items/:id",
+            [](const request&, response& res, int id) -> task<void> {
+              res.value = std::to_string(id);
+              co_return;
+            });
+  value.add("GET", "/items/42", [](const request&, response& res)
+                -> task<void> {
+    res.value = "static";
+    co_return;
+  });
+  DOBA_EXPECT(value.has_async());
+  request req;
+  response res;
+  auto match = value.match("GET", "/items/42");
+  DOBA_EXPECT(match.async_handler != nullptr);
+  auto selected = (*match.async_handler)(req, res);
+  selected.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  DOBA_EXPECT_EQUAL(res.value, "static");
+  match = value.match("GET", "/items/7");
+  DOBA_EXPECT(match.async_parametrized_handler != nullptr);
+  std::shared_ptr<void> parameters;
+  auto parametrized = match.async_parametrized_handler->invoke(
+      req, res, "/items/7", parameters);
+  parametrized.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  DOBA_EXPECT_EQUAL(res.value, "7");
+  match = value.match("GET", "/items/name/extra");
+  DOBA_EXPECT(match.async_handler != nullptr);
+  auto wildcard = (*match.async_handler)(req, res);
+  wildcard.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  DOBA_EXPECT_EQUAL(res.value, "wildcard");
+}
+
+DOBA_TEST("asynchronous route parameters survive suspension") {
+  router<request, response> value;
+  std::coroutine_handle<> next;
+  value.add("GET", "/items/:name",
+            [&next](const request&, response& res,
+                    const std::string& name) -> task<void> {
+              co_await pause{next};
+              res.value = name;
+            });
+  request req;
+  response res;
+  std::shared_ptr<void> parameters;
+  auto match = value.match("GET", "/items/example");
+  DOBA_EXPECT(match.async_parametrized_handler != nullptr);
+  auto work = match.async_parametrized_handler->invoke(
+      req, res, "/items/example", parameters);
+  work.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  DOBA_EXPECT(res.value.empty());
+  next.resume();
+  DOBA_EXPECT_EQUAL(res.value, "example");
+}
+
+DOBA_TEST("router preserves precedence across execution models") {
+  router<request, response> value;
+  value.add("GET", "/items/*", [](const request&, response& res) {
+    res.value = "wildcard";
+  });
+  value.add("GET", "/items/:id",
+            [](const request&, response& res, int id) -> task<void> {
+              res.value = std::to_string(id);
+              co_return;
+            });
+  value.add("GET", "/items/42", [](const request&, response& res) {
+    res.value = "static";
+  });
+  value.add("POST", "/items/:id", [](const request&, response&, int) {});
+  DOBA_EXPECT(value.match("GET", "/items/42").handler != nullptr);
+  DOBA_EXPECT(value.match("GET", "/items/7").async_parametrized_handler !=
+              nullptr);
+  DOBA_EXPECT(value.match("GET", "/items/name").handler != nullptr);
+  DOBA_EXPECT_EQUAL(value.allowed_methods("/items/7"), "GET, POST");
+}
 
 // +===========================================================================+
 // | [>] router type is neither copyable nor movable             ( test-case ) |
@@ -533,6 +628,17 @@ struct staged_controller {
   // +-------------------------------------------------------------------------+
   void get(const request&, response&) {}
 };
+
+struct async_controller {
+  template <typename Rty>
+  void register_routes(Rty& routes) {
+    routes.add("GET", "/async/:id", &async_controller::get);
+  }
+  task<void> get(const request&, response& res, int id) {
+    res.value = std::to_string(id);
+    co_return;
+  }
+};
 }  // namespace
 
 // +===========================================================================+
@@ -560,6 +666,21 @@ DOBA_TEST("controllers share one instance per registration") {
     DOBA_EXPECT_EQUAL(res.value, "/a");
   }
   DOBA_EXPECT_EQUAL(alive, 0);
+}
+
+DOBA_TEST("controller registers an asynchronous parametrized route") {
+  router<request, response> value;
+  value.add_controller<async_controller>();
+  DOBA_EXPECT(value.has_async());
+  auto match = value.match("GET", "/async/7");
+  DOBA_EXPECT(match.async_parametrized_handler != nullptr);
+  request req;
+  response res;
+  std::shared_ptr<void> parameters;
+  auto work = match.async_parametrized_handler->invoke(
+      req, res, "/async/7", parameters);
+  work.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  DOBA_EXPECT_EQUAL(res.value, "7");
 }
 
 // +===========================================================================+

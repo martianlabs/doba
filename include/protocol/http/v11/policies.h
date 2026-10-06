@@ -35,14 +35,9 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] policies                                                   ( struct ) |
 // +---------------------------------------------------------------------------+
-// | The inbound configuration the semantic layer consults when deciding       |
-// | whether a syntactically valid message should be served. Where the         |
-// | syntactic checkers only answer "is this well-formed?", policy rules turn  |
-// | these limits and switches into an accept/reject verdict (for example, a   |
-// | Content-Length above max_content_length, or more forwarding hops than     |
-// | max_forwarding_hops).                                                     |
-// |                                                                           |
-// | A limit of 0 means "unlimited" unless noted.                              |
+// | HTTP/1.1 resource limits, storage capacities and feature switches.        |
+// | The defaults below preserve the standard server behavior.                 |
+// | A limit of 0 means unlimited unless noted.                                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct policies {
@@ -84,6 +79,22 @@ struct policies {
   // server to ignore Upgrade); false rejects the request outright. Honouring
   // an upgrade is deferred to a future release.
   bool allow_upgrade = true;
+  // Maximum requests awaiting ordered response delivery (0 means unlimited).
+  std::size_t max_pending_requests = 32;
+  // Maximum query parameter pairs (0 means unlimited).
+  std::size_t max_query_parameters = kMaxQueryParameters;
+  // Maximum chunk extension bytes (0 means unlimited).
+  std::size_t max_chunk_extension_size = kMaxChunkedExtensionSize;
+  // Maximum trailer section bytes (0 means unlimited).
+  std::size_t max_trailer_section_size = kMaxChunkedTrailerSize;
+  // Maximum request head bytes (must be positive).
+  std::size_t max_request_head_size = kMaxRequestHeadSizeInMemory;
+  // Request body bytes kept in memory (0 spills immediately).
+  std::size_t request_body_memory_threshold = kMaxRequestBodySizeInMemory;
+  // Response head capacity (must be positive).
+  std::size_t max_response_head_size = kMaxResponseHeadSizeInMemory;
+  // Response body bytes kept inline (0 disables inline storage).
+  std::size_t response_body_inline_capacity = kMaxResponseBodySizeInMemory;
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

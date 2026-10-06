@@ -37,6 +37,7 @@
 #include <new>
 #include <span>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include "platform.h"
@@ -64,13 +65,26 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
           types::on_client_connected_delegate on_connection,
           types::on_client_disconnected_delegate on_disconnection,
           std::function<void(context*)> on_retirement,
-          typename CNty::shared_state shared_state)
+          typename CNty::shared_state shared_state,
+          std::size_t encrypted_receive_buffer_size = 0,
+          std::size_t network_bio_buffer_size = 0)
       : socket_{in_socket},
         on_connection_{on_connection},
         on_disconnection_{on_disconnection},
         on_retirement_{on_retirement},
-        input_{recv_buffer_size, send_buffer_size, create_engine,
-               shared_state},
+        input_{[&]() -> CNty {
+          if constexpr (std::is_constructible_v<
+                            CNty, std::size_t, std::size_t, const FAty&,
+                            typename CNty::shared_state, std::size_t,
+                            std::size_t>) {
+            return CNty(recv_buffer_size, send_buffer_size, create_engine,
+                        shared_state, encrypted_receive_buffer_size,
+                        network_bio_buffer_size);
+          } else {
+            return CNty(recv_buffer_size, send_buffer_size, create_engine,
+                        shared_state);
+          }
+        }()},
         stopping_{stopping},
         output_{send_buffer_size} {}
   context(const context&) = delete;

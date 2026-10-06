@@ -28,6 +28,8 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
+#include <optional>
+#include <span>
 #include <string_view>
 #include <utility>
 
@@ -38,6 +40,8 @@
 #include "protocol/http/common/method_names.h"
 #include "protocol/http/common/router.h"
 #include "protocol/http/v11/decoder.h"
+#include "protocol/http/v11/engine_async.h"
+#include "protocol/http/v11/engine_sync.h"
 #include "protocol/http/v11/policies.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
@@ -59,28 +63,38 @@ class engine {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   engine(policies_type configuration, const ROty& router)
-      : router_{router}, decoder_{configuration} {}
+      : router_{router}, decoder_{configuration} {
+    if constexpr (requires(const ROty& routes) { routes.has_async(); }) {
+      if (router_.has_async()) {
+        async_ = std::make_shared<engine_async>(
+            configuration.max_pending_requests);
+      }
+    }
+  }
   // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
   void set_on_send(protocol::send_delegate output) {
     on_send_ = std::move(output);
+    if (async_) async_->set_on_send(on_send_);
   }
   // +=========================================================================+
   // | [>] set_on_close                                             ( public ) |
   // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()> close) {
     on_close_ = std::move(close);
+    if (async_) async_->set_on_close(on_close_);
   }
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
   std::size_t on_bytes_received(const char* buffer, const std::size_t size,
                                 const std::size_t capacity) {
-    if (closed_) return size;
+    if (closed_ || (async_ && !async_->accepting())) return size;
     if (!size) return 0;
     std::size_t total = 0;
-    while (total < size && !closed_) {
+    while (total < size && !closed_ &&
+           (!async_ || async_->accepting())) {
       std::size_t consumed = 0;
       try {
         deserialization_result result = decoder_.deserialize(
@@ -89,16 +103,49 @@ class engine {
           case deserialization_status::kSucceeded: {
             const RQty& request = *result.request;
             bool close = request.wants_connection_close();
-            RSty response(decoder_.response_storage());
-            execute_request(request, response, close);
-            enqueue_response(request, response, close);
+            const auto position =
+                async_ ? request_position() : std::optional<std::size_t>{0};
+            if (!position) return size;
+            if (async_ && (request.get_target() == target::kOriginForm ||
+                           request.get_target() == target::kAbsoluteForm)) {
+              const std::string_view path = request.get_absolute_path();
+              const typename ROty::route_match match =
+                  router_.match(request.get_method(), path);
+              if constexpr (requires { match.async_handler; }) {
+                if (match.async_handler || match.async_parametrized_handler) {
+                  dispatch_async(std::move(*result.request), match, path,
+                                 *position, close);
+                  if (close) closed_ = true;
+                  break;
+                }
+              }
+              RSty response = decoder_.make_response();
+              sync_type::execute(router_, request, response, close, &match);
+              enqueue_response(request, response, close, *position);
+              break;
+            }
+            RSty response = decoder_.make_response();
+            sync_type::execute(router_, request, response, close);
+            enqueue_response(request, response, close, *position);
             break;
           }
           case deserialization_status::kInvalidSource:
-            if (result.response) enqueue_response(*result.response, true);
+            if (result.response) {
+              const auto position = async_ ? request_position()
+                                           : std::optional<std::size_t>{0};
+              if (!position) return size;
+              enqueue_response(*result.response, true, *position);
+            }
             return size;
           case deserialization_status::kMoreBytesNeeded:
-            if (result.response) enqueue_response(*result.response, false);
+            if (result.response) {
+              if (async_ && !interim_position_) {
+                interim_position_ = async_->reserve();
+                if (!interim_position_) return size;
+              }
+              enqueue_response(*result.response, false,
+                               interim_position_.value_or(0), false);
+            }
             return total + consumed;
         }
         total += consumed;
@@ -111,48 +158,82 @@ class engine {
   }
 
  private:
-  // +=========================================================================+
-  // | [>] execute_request                                         ( private ) |
-  // +-------------------------------------------------------------------------+
-  void execute_request(const RQty& request, RSty& response, bool& close) {
+  using sync_type = engine_sync<RQty, RSty, ROty>;
+
+  std::optional<std::size_t> request_position() {
+    if (interim_position_) {
+      const std::size_t position = *interim_position_;
+      interim_position_.reset();
+      return position;
+    }
+    return async_->reserve();
+  }
+
+  struct async_request {
+    std::unique_ptr<char[]> request_storage;
+    RQty request;
+    std::unique_ptr<char[]> response_storage;
+    std::shared_ptr<void> parameters;
+    RSty response;
+
+    async_request(decoder<RQty, RSty>& owner,
+                  std::unique_ptr<char[]> storage, RQty value)
+        : request_storage(std::move(storage)),
+          request(std::move(value)),
+          response_storage(std::make_unique_for_overwrite<char[]>(
+              owner.configuration().max_response_head_size +
+              owner.configuration().response_body_inline_capacity)),
+          response(owner.make_response(std::span<char>(
+              response_storage.get(),
+              owner.configuration().max_response_head_size +
+                  owner.configuration().response_body_inline_capacity))) {}
+  };
+
+  void dispatch_async(RQty request, const typename ROty::route_match& match,
+                      std::string_view path, std::size_t position, bool close) {
+    auto entry = std::make_shared<async_request>(
+        decoder_, decoder_.take_request_storage(), std::move(request));
+    auto state = async_;
     try {
-      switch (request.get_target()) {
-        case target::kOriginForm:
-        case target::kAbsoluteForm: {
-          const std::string_view path = request.get_absolute_path();
-          const typename ROty::route_match match =
-              router_.match(request.get_method(), path);
-          if (match.handler) {
-            (*match.handler)(request, response);
-            return;
+      common::task<void> work =
+          match.async_handler
+              ? (*match.async_handler)(entry->request, entry->response)
+              : match.async_parametrized_handler->invoke(
+                    entry->request, entry->response, path,
+                    entry->parameters);
+      router_.begin_async();
+      state->begin();
+      try {
+        work.start([entry, state, routes = &router_, position, close](
+                       std::exception_ptr error) mutable {
+          try {
+            if (error) {
+              close = true;
+              sync_type::build_error_response(entry->response);
+            }
+            auto serialized = sync_type::serialize(
+                entry->request, entry->response, close);
+            state->submit(position, std::move(serialized), true, close);
+          } catch (...) {
+            try {
+              state->close_now();
+            } catch (...) {
+            }
           }
-          if (match.parametrized_handler) {
-            match.parametrized_handler->invoke(request, response, path);
-            return;
-          }
-          const std::string allowed = router_.allowed_methods(path);
-          if (allowed.empty()) {
-            response.not_found_404();
-            return;
-          }
-          // RFC 9110 S15.5.6: a 405 response must advertise allowed methods.
-          response.method_not_allowed_405();
-          response.set_header(header_names::kAllow, allowed);
-          return;
-        }
-        case target::kAuthorityForm:
-          response.not_implemented_501();
-          return;
-        case target::kAsteriskForm:
-          response.ok_200();
-          return;
-        default:
-          response.bad_request_400();
-          return;
+          state->end();
+          routes->end_async();
+        });
+      } catch (...) {
+        state->end();
+        router_.end_async();
+        throw;
       }
     } catch (...) {
       close = true;
-      build_error_response(response);
+      sync_type::build_error_response(entry->response);
+      auto serialized = sync_type::serialize(entry->request, entry->response,
+                                             close);
+      state->submit(position, std::move(serialized), true, close);
     }
   }
   // +=========================================================================+
@@ -164,56 +245,40 @@ class engine {
     on_close_();
   }
   // +=========================================================================+
-  // | [>] build_error_response                                    ( private ) |
-  // +-------------------------------------------------------------------------+
-  static void build_error_response(RSty& response) {
-    response.internal_server_error_500();
-    response.set_body("Internal Server Error");
-  }
-  // +=========================================================================+
   // | [>] enqueue_response                                        ( private ) |
   // +-------------------------------------------------------------------------+
-  void enqueue_response(RSty& response, bool close) {
-    if (close) response.set_header(header_names::kConnection, "close");
-    auto serialized = response.serialize();
-    on_send_(serialized.head, serialized.body, std::move(serialized.source));
-    if (close) query_for_close();
-  }
-  // +=========================================================================+
-  // | [>] enqueue_response                                        ( private ) |
-  // +-------------------------------------------------------------------------+
-  void enqueue_response(const RQty& request, RSty& response, bool close) {
-    protocol::serialization_result serialized;
-    try {
-      if (response.is_continue_100()) {
-        // A handler should never set a 100 Continue response. If it does, we
-        // treat it as an error.
-        close = true;
-        build_error_response(response);
-      }
-      if (close) {
-        response.set_header(header_names::kConnection, "close");
-      } else if (response.wants_connection_close()) {
-        close = true;
-      }
-      // RFC 9110 S9.3.2: HEAD preserves framing but never sends body bytes.
-      if (request.get_method() == method_names::kHead) response.suppress_body();
-      serialized = response.serialize();
-    } catch (...) {
-      close = true;
-      build_error_response(response);
-      response.set_header(header_names::kConnection, "close");
-      if (request.get_method() == method_names::kHead) response.suppress_body();
-      serialized = response.serialize();
+  void enqueue_response(RSty& response, bool close, std::size_t position,
+                        bool final = true) {
+    auto serialized = sync_type::serialize(response, close);
+    if (async_) {
+      async_->submit(position, std::move(serialized), final, close);
+      if (close) closed_ = true;
+    } else {
+      on_send_(serialized.head, serialized.body, std::move(serialized.source));
+      if (close) query_for_close();
     }
-    on_send_(serialized.head, serialized.body, std::move(serialized.source));
-    if (close) query_for_close();
+  }
+  // +=========================================================================+
+  // | [>] enqueue_response                                        ( private ) |
+  // +-------------------------------------------------------------------------+
+  void enqueue_response(const RQty& request, RSty& response, bool close,
+                        std::size_t position) {
+    auto serialized = sync_type::serialize(request, response, close);
+    if (async_) {
+      async_->submit(position, std::move(serialized), true, close);
+      if (close) closed_ = true;
+    } else {
+      on_send_(serialized.head, serialized.body, std::move(serialized.source));
+      if (close) query_for_close();
+    }
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   const ROty& router_;  // Reference to the router for handling requests.
   decoder<RQty, RSty> decoder_;  // Decoder for processing incoming requests.
+  std::shared_ptr<engine_async> async_;
+  std::optional<std::size_t> interim_position_;
   protocol::send_delegate on_send_;
   std::function<void()> on_close_;
   bool closed_{false};

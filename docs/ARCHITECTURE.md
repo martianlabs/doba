@@ -96,14 +96,13 @@ even when Host differs ([RFC 9112 S3.2.2](https://www.rfc-editor.org/rfc/rfc9112
 authority. The raw Host header remains available. Host syntax and
 multiplicity checks and CONNECT/authority-form behavior are preserved.
 
-The decoder rejects more than 128 non-empty query pairs before mounting a
-request. Empty pairs between '&' separators do not count. It also rejects
-an incomplete head immediately when its 5120-byte buffer fills. Complete
-heads of exactly that size remain accepted, and bodies can span multiple
-buffers. Both capacity failures return `kInvalidSource` with the existing
-generic reason, which the standard server maps to 400 Bad Request.
-These internal capacities are distinct from configurable resource policies
-and transport inactivity timeouts.
+The decoder rejects more than `max_query_parameters` non-empty query pairs
+before mounting a request. Empty pairs between '&' separators do not count.
+It also rejects an incomplete head when `max_request_head_size` is reached.
+Complete heads at that size remain accepted, and bodies can span multiple
+buffers. Both limits are set through `http::v11::policies` and default to
+128 pairs and 4096 bytes. Exceeding either returns `kInvalidSource`, which
+the standard server maps to 400 Bad Request.
 
 <a name="keep-the-common-path-direct"></a>
 <h2>

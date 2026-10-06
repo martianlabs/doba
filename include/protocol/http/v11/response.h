@@ -64,14 +64,17 @@ class response {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   response(const response&) = delete;
-  explicit response(std::span<char> storage) {
-    if (storage.size() < policies::kMaxResponseHeadSizeInMemory +
-                             policies::kMaxResponseBodySizeInMemory) {
+  explicit response(std::span<char> storage)
+      : response(storage, policies::kMaxResponseHeadSizeInMemory,
+                 policies::kMaxResponseBodySizeInMemory) {}
+  response(std::span<char> storage, std::size_t head_capacity,
+           std::size_t body_capacity) {
+    if (!head_capacity || head_capacity > storage.size() ||
+        body_capacity > storage.size() - head_capacity) {
       throw std::invalid_argument("response storage is too small!");
     }
-    head_ = storage.first(policies::kMaxResponseHeadSizeInMemory);
-    body_ = storage.subspan(policies::kMaxResponseHeadSizeInMemory,
-                            policies::kMaxResponseBodySizeInMemory);
+    head_ = storage.first(head_capacity);
+    body_ = storage.subspan(head_capacity, body_capacity);
   }
   response(response&& in) noexcept
       : head_(in.head_),
@@ -187,8 +190,7 @@ class response {
     }
     std::size_t sln_plus_hdr_len = sln_len_ + hdr_len_;
     std::size_t crlf_bytes = hdr_len_ ? 2 : 4;
-    if (sln_plus_hdr_len + crlf_bytes >
-        policies::kMaxResponseHeadSizeInMemory) {
+    if (sln_plus_hdr_len + crlf_bytes > head_.size()) {
       throw std::out_of_range("not enough space to serialize response!");
     }
     protocol::serialization_result result;
@@ -233,7 +235,7 @@ class response {
     std::size_t k_size = k.size();
     std::size_t v_size = v.size();
     std::size_t space_left =
-        policies::kMaxResponseHeadSizeInMemory - sln_len_ - hdr_len_;
+        head_.size() - sln_len_ - hdr_len_;
     // Bytes written by this call: key + ':' + ' ' + value + '\r' + '\n' = k + v
     // + 4. Reserve the 2 bytes of the header-terminating CRLF.
     if (k_size + v_size + 4 + 2 > space_left) {
@@ -286,7 +288,7 @@ class response {
     if (new_v_size > val_len) {
       std::size_t grow = new_v_size - val_len;
       std::size_t space_left =
-          policies::kMaxResponseHeadSizeInMemory - sln_len_ - hdr_len_;
+          head_.size() - sln_len_ - hdr_len_;
       if (grow + 2 > space_left) {
         throw std::out_of_range("not enough space to set header!");
       }
@@ -434,7 +436,7 @@ class response {
   response& set_body(std::string_view sv) {
     std::size_t body_size = sv.size();
     reset_body();
-    if (body_size <= policies::kMaxResponseBodySizeInMemory) {
+    if (body_size <= body_.size()) {
       if (body_size) std::memcpy(body_.data(), sv.data(), body_size);
       body_size_ = body_size;
       content_length_ = body_size;
@@ -834,7 +836,7 @@ class response {
   // +-------------------------------------------------------------------------+
   void add_date_header() {
     std::size_t space_left =
-        policies::kMaxResponseHeadSizeInMemory - sln_len_ - hdr_len_;
+        head_.size() - sln_len_ - hdr_len_;
     if (kDateLineLength + 2 > space_left) {
       throw std::out_of_range("not enough space to add header!");
     }
@@ -866,7 +868,7 @@ class response {
     }
     if (has_content_length_header_ || has_transfer_encoding_header_) return;
     std::size_t space_left =
-        policies::kMaxResponseHeadSizeInMemory - sln_len_ - hdr_len_;
+        head_.size() - sln_len_ - hdr_len_;
     if (chunked_) {
       constexpr std::string_view line = "Transfer-Encoding: chunked\r\n";
       if (line.size() + 2 > space_left) {

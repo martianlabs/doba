@@ -34,6 +34,7 @@
 #include <utility>
 
 #include "protocol/http/common/router_handler_parametrized.h"
+#include "protocol/http/common/router_handler_async.h"
 
 namespace martianlabs::doba::protocol::http {
 // /////////////////////////////////////////////////////////////////////////////
@@ -113,6 +114,12 @@ struct router_handler_signature_base {
     return make_router_handler_parametrized<RQty, RSty, Args...>(
         pattern, std::forward<Hty>(handler));
   }
+  template <typename RQty, typename RSty, typename Hty>
+  static auto make_async_parametrized(std::string_view pattern,
+                                      Hty&& handler) {
+    return make_router_handler_async_parametrized<RQty, RSty, Args...>(
+        pattern, std::forward<Hty>(handler));
+  }
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
   // +-------------------------------------------------------------------------+
@@ -123,8 +130,9 @@ struct router_handler_signature_base {
   // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty>
   static void check() {
-    static_assert(std::same_as<LOty, void>,
-                  "The route handler must return void");
+    static_assert(std::same_as<LOty, void> ||
+                      std::same_as<LOty, common::task<void>>,
+                  "The route handler must return void or task<void>");
     static_assert(std::same_as<std::decay_t<LQty>, RQty>,
                   "The first route handler argument must be const RQty&");
     static_assert(std::is_lvalue_reference_v<LQty> &&
@@ -194,8 +202,14 @@ concept router_handler_lambda = requires {
   requires std::is_const_v<
       std::remove_reference_t<typename router_handler_signature<
           decltype(&std::decay_t<Hty>::operator())>::request_type>>;
-  requires std::is_void_v<typename router_handler_signature<
-      decltype(&std::decay_t<Hty>::operator())>::return_type>;
+  requires std::same_as<
+               typename router_handler_signature<
+                   decltype(&std::decay_t<Hty>::operator())>::return_type,
+                         void> ||
+           std::same_as<
+               typename router_handler_signature<
+                   decltype(&std::decay_t<Hty>::operator())>::return_type,
+                         common::task<void>>;
   requires std::is_lvalue_reference_v<typename router_handler_signature<
       decltype(&std::decay_t<Hty>::operator())>::response_type>;
   requires !std::is_const_v<std::remove_reference_t<

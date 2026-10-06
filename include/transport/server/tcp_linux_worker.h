@@ -264,10 +264,21 @@ struct worker {
   // | [>] register_context                                        ( private ) |
   // +-------------------------------------------------------------------------+
   void register_context(int socket) {
+    std::size_t encrypted_receive_buffer_size = 0;
+    std::size_t network_bio_buffer_size = 0;
+    if constexpr (requires(const PTy& value) {
+                    value.encrypted_receive_buffer_size;
+                    value.network_bio_buffer_size;
+                  }) {
+      encrypted_receive_buffer_size =
+          configuration_.encrypted_receive_buffer_size;
+      network_bio_buffer_size = configuration_.network_bio_buffer_size;
+    }
     auto ctx = std::make_shared<context<ENty, CNty>>(
         socket, configuration_.recv_buffer_size,
         configuration_.max_send_buffer_size, create_engine_, on_connection_,
-        on_disconnection_, shared_state_);
+        on_disconnection_, shared_state_, encrypted_receive_buffer_size,
+        network_bio_buffer_size);
     auto ctx_ptr = ctx.get();
     if (!contexts_.emplace(ctx_ptr, std::move(ctx)).second) {
       throw std::runtime_error("Context could not be registered!");

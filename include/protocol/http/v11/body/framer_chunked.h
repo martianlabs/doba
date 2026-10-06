@@ -91,8 +91,13 @@ class framer_chunked {
   // | [>] CONSTRUCTORs                                             ( public ) |
   // +-------------------------------------------------------------------------+
   framer_chunked() = default;
-  explicit framer_chunked(std::size_t payload_limit)
-      : payload_limit_(payload_limit) {}
+  explicit framer_chunked(
+      std::size_t payload_limit,
+      std::size_t extension_limit = kMaxChunkedExtensionSize,
+      std::size_t trailer_limit = kMaxChunkedTrailerSize)
+      : payload_limit_(payload_limit),
+        extension_limit_(extension_limit),
+        trailer_limit_(trailer_limit) {}
   // +=========================================================================+
   // | [>] consume                                                  ( public ) |
   // +-------------------------------------------------------------------------+
@@ -115,12 +120,12 @@ class framer_chunked {
       const char c = static_cast<char>(input[i]);
       if (state_ >= state::extension_before_semicolon &&
           state_ <= state::extension_after_value &&
-          ++extension_size_ > kMaxChunkedExtensionSize) {
+          extension_limit_ && ++extension_size_ > extension_limit_) {
         return fail(result, framer_error::chunk_extension_size_limit_exceeded);
       }
       if (state_ >= state::trailer_line_start &&
           state_ <= state::trailer_end_lf &&
-          ++trailer_size_ > kMaxChunkedTrailerSize) {
+          trailer_limit_ && ++trailer_size_ > trailer_limit_) {
         return fail(result, framer_error::trailer_size_limit_exceeded);
       }
       switch (state_) {
@@ -467,6 +472,8 @@ class framer_chunked {
   std::size_t chunk_remaining_{0};
   std::size_t payload_size_{0};
   std::size_t payload_limit_{0};
+  std::size_t extension_limit_{kMaxChunkedExtensionSize};
+  std::size_t trailer_limit_{kMaxChunkedTrailerSize};
   std::size_t extension_size_{0};
   std::size_t trailer_size_{0};
   bool chunk_size_started_{false};

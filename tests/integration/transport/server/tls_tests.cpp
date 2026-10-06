@@ -247,6 +247,33 @@ DOBA_TEST("tls receives binary data beyond one encrypted buffer") {
   server.stop();
 }
 
+DOBA_TEST("tls uses configured encrypted and BIO capacities") {
+  auto configuration = server_policies(8443);
+  configuration.encrypted_receive_buffer_size = 8192;
+  configuration.network_bio_buffer_size = 4096;
+  auto factory = []() { return byte_engine{}; };
+  tr::tls_connection<byte_engine> connection(
+      4096, 65536, factory, tr::make_tls_context(configuration),
+      configuration.encrypted_receive_buffer_size,
+      configuration.network_bio_buffer_size);
+  DOBA_EXPECT_EQUAL(connection.capacity, 8192);
+  for (const bool encrypted : {false, true}) {
+    auto invalid = configuration;
+    if (encrypted) {
+      invalid.encrypted_receive_buffer_size = 0;
+    } else {
+      invalid.network_bio_buffer_size = 0;
+    }
+    bool rejected = false;
+    try {
+      tr::make_tls_context(invalid);
+    } catch (const std::runtime_error&) {
+      rejected = true;
+    }
+    DOBA_EXPECT(rejected);
+  }
+}
+
 // +===========================================================================+
 // | [>] tls closes when unconsumed plaintext fills the buffer   ( test-case ) |
 // +---------------------------------------------------------------------------+

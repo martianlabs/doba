@@ -46,6 +46,14 @@ DOBA_TEST("defaults are bounded and allow supported features") {
   DOBA_EXPECT_EQUAL(policies::kMaxChunkedTrailerSize, 4096);
   DOBA_EXPECT(value.allow_chunked);
   DOBA_EXPECT(value.allow_upgrade);
+  DOBA_EXPECT_EQUAL(value.max_pending_requests, 32);
+  DOBA_EXPECT_EQUAL(value.max_query_parameters, 128);
+  DOBA_EXPECT_EQUAL(value.max_chunk_extension_size, 1024);
+  DOBA_EXPECT_EQUAL(value.max_trailer_section_size, 4096);
+  DOBA_EXPECT_EQUAL(value.max_request_head_size, 4 * 1024);
+  DOBA_EXPECT_EQUAL(value.request_body_memory_threshold, 16 * 1024);
+  DOBA_EXPECT_EQUAL(value.max_response_head_size, 4 * 1024);
+  DOBA_EXPECT_EQUAL(value.response_body_inline_capacity, 16 * 1024);
 }
 
 // +===========================================================================+
@@ -56,10 +64,26 @@ DOBA_TEST("fields retain configured boundaries and switches") {
                        .max_forwarding_hops = 2,
                        .max_transfer_codings = 3,
                        .allow_chunked = false,
-                       .allow_upgrade = false};
+                       .allow_upgrade = false,
+                       .max_pending_requests = 2,
+                       .max_query_parameters = 1,
+                       .max_chunk_extension_size = 5,
+                       .max_trailer_section_size = 6,
+                       .max_request_head_size = 512,
+                       .request_body_memory_threshold = 7,
+                       .max_response_head_size = 512,
+                       .response_body_inline_capacity = 8};
   DOBA_EXPECT_EQUAL(value.max_content_length, 1);
   DOBA_EXPECT_EQUAL(value.max_forwarding_hops, 2);
   DOBA_EXPECT_EQUAL(value.max_transfer_codings, 3);
   DOBA_EXPECT(!value.allow_chunked);
   DOBA_EXPECT(!value.allow_upgrade);
+  DOBA_EXPECT_EQUAL(value.max_pending_requests, 2);
+  DOBA_EXPECT_EQUAL(value.max_query_parameters, 1);
+  DOBA_EXPECT_EQUAL(value.max_chunk_extension_size, 5);
+  DOBA_EXPECT_EQUAL(value.max_trailer_section_size, 6);
+  DOBA_EXPECT_EQUAL(value.max_request_head_size, 512);
+  DOBA_EXPECT_EQUAL(value.request_body_memory_threshold, 7);
+  DOBA_EXPECT_EQUAL(value.max_response_head_size, 512);
+  DOBA_EXPECT_EQUAL(value.response_body_inline_capacity, 8);
 }

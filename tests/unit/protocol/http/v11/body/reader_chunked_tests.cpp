@@ -66,6 +66,22 @@ DOBA_TEST("decodes chunks extensions and trailers") {
   }
 }
 
+DOBA_TEST("reader uses configured extension and trailer limits") {
+  for (const bool extension : {false, true}) {
+    const std::string_view wire = extension ? "1;a=b\r\nx\r\n0\r\n\r\n"
+                                            : "0\r\nX: y\r\n\r\n";
+    for (const std::size_t limit : {std::size_t{2}, std::size_t{0}}) {
+      reader source = reader::borrowed(bytes(wire));
+      reader_chunked value(extension ? limit : 1024,
+                           extension ? 4096 : limit);
+      std::array<std::byte, 2> output{};
+      const auto state = value.read(source, output);
+      DOBA_EXPECT_EQUAL(state.has_error, limit != 0);
+      DOBA_EXPECT_EQUAL(state.complete, limit == 0);
+    }
+  }
+}
+
 // +===========================================================================+
 // | [>] empty output consumes framing but not payload           ( test-case ) |
 // +---------------------------------------------------------------------------+

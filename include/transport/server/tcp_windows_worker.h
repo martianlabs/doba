@@ -448,12 +448,23 @@ struct worker {
     }
     std::shared_ptr<context<ENty, CNty>> ctx;
     try {
+      std::size_t encrypted_receive_buffer_size = 0;
+      std::size_t network_bio_buffer_size = 0;
+      if constexpr (requires(const PTy& value) {
+                      value.encrypted_receive_buffer_size;
+                      value.network_bio_buffer_size;
+                    }) {
+        encrypted_receive_buffer_size =
+            configuration_.encrypted_receive_buffer_size;
+        network_bio_buffer_size = configuration_.network_bio_buffer_size;
+      }
       ctx = std::make_shared<context<ENty, CNty>>(
           ova->socket, configuration_.recv_buffer_size,
           configuration_.max_send_buffer_size, create_engine_, stopping_,
           on_connection_, on_disconnection_,
           [this](context<ENty, CNty>* context) { retire_context(context); },
-          shared_state_);
+          shared_state_, encrypted_receive_buffer_size,
+          network_bio_buffer_size);
     } catch (...) {
       closesocket(ova->socket);
       finish_accept();

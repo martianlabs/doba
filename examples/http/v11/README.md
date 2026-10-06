@@ -8,7 +8,7 @@ with Ctrl+C.
 
 | Area | Examples |
 | --- | --- |
-| Routing | `hello_world`, `static_routes`, `parametrized_routes`, `wildcard_routes` |
+| Routing | `hello_world`, `async_routes`, `static_routes`, `parametrized_routes`, `wildcard_routes` |
 | Request data | `request_information`, `query_parameters`, `request_headers`, `cookies` |
 | Request body | `request_body_text`, `request_body_binary`, `request_limits` |
 | Response construction | `response_statuses`, `response_headers`, `response_body_values`, `response_body_writers`, `large_response_bodies` |
