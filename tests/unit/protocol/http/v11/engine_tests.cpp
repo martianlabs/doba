@@ -143,6 +143,43 @@ DOBA_TEST("engine orders asynchronous and synchronous responses") {
   DOBA_EXPECT(current.wire.substr(second).ends_with("\r\n\r\nfast"));
 }
 
+DOBA_TEST("engine returns to synchronous delivery after asynchronous work") {
+  router<request, response> routes;
+  std::coroutine_handle<> pending;
+  routes.add("GET", "/slow", [&pending](const request&, response& res)
+                 -> task<void> {
+    co_await pause{pending};
+    make_response(res, "slow");
+  });
+  routes.add("GET", "/fast", [](const request&, response& res) {
+    make_response(res, "fast");
+  });
+  connection current(routes);
+  const std::string fast = "GET /fast HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  const std::string slow = "GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  current.receive(fast);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 1);
+  DOBA_EXPECT(current.wire.ends_with("\r\n\r\nfast"));
+  current.receive(slow);
+  current.receive(fast);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 1);
+  connection independent(routes);
+  independent.receive(fast);
+  DOBA_EXPECT_EQUAL(independent.blocks.size(), 1);
+  pending.resume();
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 3);
+  DOBA_EXPECT(current.wire.ends_with("\r\n\r\nfast"));
+  current.receive(fast);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 4);
+  DOBA_EXPECT(current.wire.ends_with("\r\n\r\nfast"));
+  current.receive(slow);
+  current.receive(fast);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 4);
+  pending.resume();
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 6);
+  DOBA_EXPECT_EQUAL(current.closes, 0);
+}
+
 DOBA_TEST("engine orders two asynchronous completions") {
   router<request, response> routes;
   std::coroutine_handle<> first;

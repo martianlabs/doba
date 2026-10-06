@@ -69,6 +69,11 @@ class engine_async {
   bool accepting() const noexcept {
     return accepting_.load(std::memory_order_acquire);
   }
+  bool idle() const noexcept {
+    return accepting() &&
+           active_.load(std::memory_order_acquire) == 0 &&
+           next_request_ == next_send_.load(std::memory_order_acquire);
+  }
 
   void submit(std::size_t position, protocol::serialization_result result,
               bool final, bool close) {
