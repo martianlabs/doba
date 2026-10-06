@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <charconv>
 #include <chrono>
 #include <cstddef>
@@ -31,6 +32,7 @@
 #include <cstdlib>
 #include <condition_variable>
 #include <coroutine>
+#include <deque>
 #include <fstream>
 #include <future>
 #include <iostream>
@@ -185,15 +187,23 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   policies http_configuration;
-  timer delays;
+  const std::size_t workers =
+      std::max<std::size_t>(1, std::thread::hardware_concurrency());
+  std::deque<timer> delays;
+  for (std::size_t i = 0; i < workers; ++i) delays.emplace_back();
+  std::atomic<std::size_t> next_timer{0};
   server http_server({.ip = "0.0.0.0", .port = "8080"},
                      http_configuration);
   http_server.add_route(
       "GET", "/delay/:ms",
-      [&delays](const request&, response& res, std::uint32_t ms)
+      [&delays, &next_timer](const request&, response& res,
+                             std::uint32_t ms)
           -> martianlabs::doba::common::task<void> {
         if (ms != 0) {
-          co_await delays.after(std::chrono::milliseconds(ms));
+          static thread_local const std::size_t timer_index =
+              next_timer.fetch_add(1, std::memory_order_relaxed) %
+              delays.size();
+          co_await delays[timer_index].after(std::chrono::milliseconds(ms));
         }
         res.ok_200();
         res.add_header("Content-Type", "text/plain")
