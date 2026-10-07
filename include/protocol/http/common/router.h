@@ -25,9 +25,8 @@
 #ifndef martianlabs_doba_protocol_http_router_h
 #define martianlabs_doba_protocol_http_router_h
 
-#include <condition_variable>
+#include <atomic>
 #include <memory>
-#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -326,17 +325,19 @@ class router {
     return false;
   }
   void begin_async() const {
-    std::lock_guard<std::mutex> lock(async_mutex_);
-    active_async_++;
+    active_async_.fetch_add(1, std::memory_order_relaxed);
   }
   void end_async() const {
-    std::lock_guard<std::mutex> lock(async_mutex_);
-    active_async_--;
-    async_cv_.notify_all();
+    if (active_async_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      active_async_.notify_all();
+    }
   }
   void wait_async() const {
-    std::unique_lock<std::mutex> lock(async_mutex_);
-    async_cv_.wait(lock, [this]() { return active_async_ == 0; });
+    std::size_t active = active_async_.load(std::memory_order_acquire);
+    while (active != 0) {
+      active_async_.wait(active, std::memory_order_acquire);
+      active = active_async_.load(std::memory_order_acquire);
+    }
   }
 
  private:
@@ -395,9 +396,7 @@ class router {
   std::vector<handler_pair> handlers_;
   std::vector<parametrized_handler_pair> parametrized_handlers_;
   std::vector<handler_pair> wildcard_handlers_;
-  mutable std::mutex async_mutex_;
-  mutable std::condition_variable async_cv_;
-  mutable std::size_t active_async_{0};
+  mutable std::atomic<std::size_t> active_async_{0};
 };
 }  // namespace martianlabs::doba::protocol::http
 

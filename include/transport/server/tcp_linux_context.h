@@ -38,6 +38,7 @@
 #include <sys/socket.h>
 #include <utility>
 
+#include "common/task.h"
 #include "platform.h"
 #include "transport/server/tcp_connection.h"
 
@@ -129,10 +130,13 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] connected                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  void connected(int epoll_fd) {
+  void connected(int epoll_fd, common::task_scheduler scheduler = {}) {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
       epoll_fd_ = epoll_fd;
+    }
+    if constexpr (requires { input_.engine.set_async_scheduler(scheduler); }) {
+      input_.engine.set_async_scheduler(scheduler);
     }
     input_.engine.set_on_close([weak = this->weak_from_this()]() {
       if (auto ctx = weak.lock()) ctx->close();

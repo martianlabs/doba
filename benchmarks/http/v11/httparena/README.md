@@ -25,6 +25,7 @@ The adapter listens on port 8080 for HTTP/1.1 and port 8081 for HTTP/1.1 over
 TLS. It implements `GET /baseline11`, `POST /baseline11`, `GET /delay/:ms`,
 `GET /json/:count`, `GET /static/*` and `POST /echo`. The delay route suspends
 until the requested milliseconds elapse, then returns the number as plain text.
+It resumes on the transport I/O worker without a driver timer thread.
 Its `meta.json` enables `baseline`, `limited-conn`, `async`, `json-comp`,
 `json-tls`, `latency-1m`, `latency-10k`, `latency-500k-8cpu`, `8gbit` and
 `static-tls`.

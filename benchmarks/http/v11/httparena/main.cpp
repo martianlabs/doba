@@ -24,21 +24,15 @@
 
 #include <algorithm>
 #include <array>
-#include <atomic>
 #include <charconv>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <condition_variable>
-#include <coroutine>
-#include <deque>
 #include <fstream>
 #include <future>
 #include <iostream>
 #include <iterator>
-#include <mutex>
-#include <queue>
 #include <span>
 #include <string>
 #include <string_view>
@@ -59,77 +53,6 @@
 using namespace martianlabs::doba::protocol::http::v11;
 
 namespace {
-class timer {
- public:
-  struct awaiter {
-    timer& owner;
-    std::chrono::steady_clock::time_point due;
-
-    bool await_ready() const noexcept { return false; }
-    void await_suspend(std::coroutine_handle<> handle) const {
-      owner.schedule(due, handle);
-    }
-    void await_resume() const noexcept {}
-  };
-
-  timer() : worker_([this](std::stop_token stop) { run(stop); }) {}
-  ~timer() {
-    worker_.request_stop();
-    wake_.notify_one();
-  }
-
-  awaiter after(std::chrono::milliseconds duration) {
-    return {*this, std::chrono::steady_clock::now() + duration};
-  }
-
- private:
-  struct pending {
-    std::chrono::steady_clock::time_point due;
-    std::coroutine_handle<> handle;
-
-    bool operator<(const pending& other) const noexcept {
-      return due > other.due;
-    }
-  };
-
-  void schedule(std::chrono::steady_clock::time_point due,
-                std::coroutine_handle<> handle) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    const bool wake = pending_.empty() || due < pending_.top().due;
-    pending_.push({due, handle});
-    if (wake) wake_.notify_one();
-  }
-
-  void run(std::stop_token stop) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    std::vector<std::coroutine_handle<>> ready;
-    while (!stop.stop_requested()) {
-      wake_.wait(lock, [this, &stop]() {
-        return stop.stop_requested() || !pending_.empty();
-      });
-      if (stop.stop_requested()) break;
-      const auto due = pending_.top().due;
-      if (wake_.wait_until(lock, due) == std::cv_status::no_timeout) {
-        continue;
-      }
-      const auto now = std::chrono::steady_clock::now();
-      while (!pending_.empty() && pending_.top().due <= now) {
-        ready.push_back(pending_.top().handle);
-        pending_.pop();
-      }
-      lock.unlock();
-      for (auto handle : ready) handle.resume();
-      lock.lock();
-      ready.clear();
-    }
-  }
-
-  std::mutex mutex_;
-  std::condition_variable wake_;
-  std::priority_queue<pending> pending_;
-  std::jthread worker_;
-};
-
 bool parse_integer(std::string_view source, std::int64_t& value) {
   if (source.empty()) return false;
   const char* first = source.data();
@@ -187,23 +110,15 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   policies http_configuration;
-  const std::size_t workers =
-      std::max<std::size_t>(1, std::thread::hardware_concurrency());
-  std::deque<timer> delays;
-  for (std::size_t i = 0; i < workers; ++i) delays.emplace_back();
-  std::atomic<std::size_t> next_timer{0};
   server http_server({.ip = "0.0.0.0", .port = "8080"},
                      http_configuration);
   http_server.add_route(
       "GET", "/delay/:ms",
-      [&delays, &next_timer](const request&, response& res,
-                             std::uint32_t ms)
+      [](const request&, response& res, std::uint32_t ms)
           -> martianlabs::doba::common::task<void> {
         if (ms != 0) {
-          static thread_local const std::size_t timer_index =
-              next_timer.fetch_add(1, std::memory_order_relaxed) %
-              delays.size();
-          co_await delays[timer_index].after(std::chrono::milliseconds(ms));
+          co_await martianlabs::doba::common::sleep_for(
+              std::chrono::milliseconds(ms));
         }
         res.ok_200();
         res.add_header("Content-Type", "text/plain")

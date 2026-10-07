@@ -22,6 +22,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <chrono>
 #include <coroutine>
 #include <exception>
 #include <memory>
@@ -35,6 +36,7 @@
 
 namespace {
 using martianlabs::doba::common::task;
+using martianlabs::doba::common::task_scheduler;
 
 struct pause {
   std::coroutine_handle<>& next;
@@ -65,6 +67,21 @@ task<void> fail_after(std::coroutine_handle<>& next) {
   co_await pause{next};
   throw std::runtime_error("after suspension");
 }
+
+task<void> use_scheduler(int& steps) {
+  steps++;
+  co_await martianlabs::doba::common::yield();
+  steps++;
+  co_await martianlabs::doba::common::sleep_for(
+      std::chrono::milliseconds(10));
+  steps++;
+}
+
+struct scheduled_handles {
+  std::coroutine_handle<> ready;
+  std::coroutine_handle<> timed;
+  std::chrono::steady_clock::time_point due;
+};
 }  // namespace
 
 DOBA_TEST("task starts lazily and completes after resumption") {
@@ -131,4 +148,36 @@ DOBA_TEST("task completes once on a different resuming thread") {
   worker.join();
   DOBA_EXPECT_EQUAL(completions, 1);
   DOBA_EXPECT(completed_on == worker_id);
+}
+
+DOBA_TEST("task yields and sleeps through its scheduler") {
+  scheduled_handles handles;
+  task_scheduler scheduler{
+      &handles,
+      [](void* owner, std::coroutine_handle<> handle) {
+        static_cast<scheduled_handles*>(owner)->ready = handle;
+      },
+      [](void* owner, std::chrono::steady_clock::time_point due,
+         std::coroutine_handle<> handle) {
+        auto& state = *static_cast<scheduled_handles*>(owner);
+        state.due = due;
+        state.timed = handle;
+      }};
+  int steps = 0;
+  bool completed = false;
+  auto value = use_scheduler(steps);
+  value.start([&](std::exception_ptr error) {
+    DOBA_EXPECT(!error);
+    completed = true;
+  }, scheduler);
+  DOBA_EXPECT_EQUAL(steps, 1);
+  DOBA_EXPECT(static_cast<bool>(handles.ready));
+  const auto before = std::chrono::steady_clock::now();
+  handles.ready.resume();
+  DOBA_EXPECT_EQUAL(steps, 2);
+  DOBA_EXPECT(static_cast<bool>(handles.timed));
+  DOBA_EXPECT(handles.due > before);
+  handles.timed.resume();
+  DOBA_EXPECT_EQUAL(steps, 3);
+  DOBA_EXPECT(completed);
 }

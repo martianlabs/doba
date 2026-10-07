@@ -101,9 +101,16 @@ class server {
   void stop() {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     if (!locked_) return;
-    transport_.stop();
+    if constexpr (requires { transport_.quiesce(); }) {
+      transport_.quiesce();
+    } else {
+      transport_.stop();
+    }
     if constexpr (requires(const ROty& routes) { routes.wait_async(); }) {
       router_.wait_async();
+    }
+    if constexpr (requires { transport_.quiesce(); }) {
+      transport_.stop();
     }
     common::date_server::get().stop();
     locked_ = false;

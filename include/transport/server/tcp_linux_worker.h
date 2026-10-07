@@ -25,17 +25,25 @@
 #ifndef martianlabs_doba_transport_server_tcp_linux_worker_h
 #define martianlabs_doba_transport_server_tcp_linux_worker_h
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cerrno>
+#include <chrono>
+#include <climits>
+#include <coroutine>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <limits>
 #include <memory>
+#include <mutex>
+#include <queue>
 #include <stdexcept>
 #include <thread>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "platform.h"
 #include "transport/server/tcp_linux_context.h"
@@ -47,6 +55,7 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 static constexpr uint64_t kStopEventId = 0;
+static constexpr uint64_t kAsyncEventId = 1;
 static constexpr uint64_t kListenerEventId =
     std::numeric_limits<uint64_t>::max();
 
@@ -95,6 +104,11 @@ struct worker {
       close_resources();
       throw std::runtime_error("Stop event could not be created!");
     }
+    async_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    if (async_fd_ == -1) {
+      close_resources();
+      throw std::runtime_error("Async event could not be created!");
+    }
     listener_fd_ = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
                             IPPROTO_TCP);
     if (listener_fd_ == -1) {
@@ -124,10 +138,14 @@ struct worker {
     epoll_event stop_event{};
     stop_event.events = EPOLLIN;
     stop_event.data.u64 = kStopEventId;
+    epoll_event async_event{};
+    async_event.events = EPOLLIN;
+    async_event.data.u64 = kAsyncEventId;
     epoll_event listener_event{};
     listener_event.events = EPOLLIN;
     listener_event.data.u64 = kListenerEventId;
     if (::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, stop_fd_, &stop_event) == -1 ||
+        ::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, async_fd_, &async_event) == -1 ||
         ::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, listener_fd_, &listener_event) ==
             -1) {
       close_resources();
@@ -176,6 +194,21 @@ struct worker {
       written = ::write(stop_fd_, &stop, sizeof(stop));
     } while (written == -1 && errno == EINTR);
   }
+  // +=========================================================================+
+  // | [>] request_quiesce                                         ( public ) |
+  // +-------------------------------------------------------------------------+
+  void request_quiesce() {
+    quiescing_.store(true);
+    uint64_t signal = 1;
+    while (::write(stop_fd_, &signal, sizeof(signal)) == -1 &&
+           errno == EINTR) {}
+  }
+  // +=========================================================================+
+  // | [>] wait_quiesced                                           ( public ) |
+  // +-------------------------------------------------------------------------+
+  void wait_quiesced() const {
+    while (!quiesced_.load()) quiesced_.wait(false);
+  }
 
  private:
   // +=========================================================================+
@@ -184,7 +217,24 @@ struct worker {
   void run() {
     std::array<epoll_event, 64> events{};
     for (;;) {
-      int ready = ::epoll_wait(epoll_fd_, events.data(), events.size(), -1);
+      int timeout = -1;
+      if (!ready_.empty()) {
+        timeout = 0;
+      } else if (!timers_.empty()) {
+        auto remaining = timers_.top().first -
+                         std::chrono::steady_clock::now();
+        auto milliseconds =
+            std::chrono::duration_cast<std::chrono::milliseconds>(remaining);
+        if (remaining <= std::chrono::steady_clock::duration::zero()) {
+          timeout = 0;
+        } else if (milliseconds.count() >= INT_MAX) {
+          timeout = INT_MAX;
+        } else {
+          timeout = static_cast<int>(milliseconds.count() + 1);
+        }
+      }
+      int ready = ::epoll_wait(epoll_fd_, events.data(), events.size(),
+                               timeout);
       if (ready == -1) {
         if (errno == EINTR) continue;
         break;
@@ -192,8 +242,10 @@ struct worker {
       for (std::size_t i = 0; i < static_cast<std::size_t>(ready); i++) {
         if (events[i].data.u64 == kStopEventId) {
           handle_stop();
+        } else if (events[i].data.u64 == kAsyncEventId) {
+          handle_async();
         } else if (events[i].data.u64 == kListenerEventId) {
-          if (!stopping_.load()) handle_listener();
+          if (!quiescing_.load() && !stopping_.load()) handle_listener();
         } else {
           auto ctx = static_cast<context<ENty, CNty>*>(events[i].data.ptr);
           if (!ctx->is_closed()) {
@@ -204,6 +256,19 @@ struct worker {
             }
           }
         }
+      }
+      if (!timers_.empty()) {
+        const auto now = std::chrono::steady_clock::now();
+        while (!timers_.empty() && timers_.top().first <= now) {
+          ready_.push_back(timers_.top().second);
+          timers_.pop();
+        }
+      }
+      std::size_t count = ready_.size();
+      while (count--) {
+        auto handle = ready_.front();
+        ready_.pop_front();
+        handle.resume();
       }
       retire_contexts();
       if (stopping_.load() && contexts_.empty()) break;
@@ -219,7 +284,7 @@ struct worker {
     do {
       received = ::read(stop_fd_, &stop, sizeof(stop));
     } while (received == -1 && errno == EINTR);
-    if (!stopping_.load()) return;
+    if (!stopping_.load() && !quiescing_.load()) return;
     if (listener_fd_ != -1) {
       ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, listener_fd_, nullptr);
       ::close(listener_fd_);
@@ -235,16 +300,71 @@ struct worker {
         close_context(ctx);
       }
     }
+    quiesced_.store(true);
+    quiesced_.notify_all();
+  }
+  // +=========================================================================+
+  // | [>] handle_async                                           ( private ) |
+  // +-------------------------------------------------------------------------+
+  void handle_async() {
+    uint64_t signal = 0;
+    while (::read(async_fd_, &signal, sizeof(signal)) == -1 &&
+           errno == EINTR) {}
+    std::lock_guard<std::mutex> lock(async_mutex_);
+    while (!incoming_.empty()) {
+      auto item = incoming_.front();
+      incoming_.pop_front();
+      if (item.first == std::chrono::steady_clock::time_point::min()) {
+        ready_.push_back(item.second);
+      } else {
+        timers_.push(item);
+      }
+    }
+  }
+  // +=========================================================================+
+  // | [>] scheduler                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  common::task_scheduler scheduler() {
+    return {this,
+            [](void* owner, std::coroutine_handle<> handle) {
+              static_cast<worker*>(owner)->enqueue(
+                  std::chrono::steady_clock::time_point::min(), handle);
+            },
+            [](void* owner, std::chrono::steady_clock::time_point due,
+               std::coroutine_handle<> handle) {
+              static_cast<worker*>(owner)->enqueue(due, handle);
+            }};
+  }
+  // +=========================================================================+
+  // | [>] enqueue                                                ( private ) |
+  // +-------------------------------------------------------------------------+
+  void enqueue(std::chrono::steady_clock::time_point due,
+               std::coroutine_handle<> handle) {
+    if (is_current_thread()) {
+      if (due == std::chrono::steady_clock::time_point::min()) {
+        ready_.push_back(handle);
+      } else {
+        timers_.push({due, handle});
+      }
+      return;
+    }
+    {
+      std::lock_guard<std::mutex> lock(async_mutex_);
+      incoming_.push_back({due, handle});
+    }
+    uint64_t signal = 1;
+    while (::write(async_fd_, &signal, sizeof(signal)) == -1 &&
+           errno == EINTR) {}
   }
   // +=========================================================================+
   // | [>] handle_listener                                         ( private ) |
   // +-------------------------------------------------------------------------+
   void handle_listener() {
-    if (stopping_.load()) return;
+    if (stopping_.load() || quiescing_.load()) return;
     int socket = ::accept4(listener_fd_, nullptr, nullptr,
                            SOCK_NONBLOCK | SOCK_CLOEXEC);
     if (socket == -1) return;
-    if (stopping_.load()) {
+    if (stopping_.load() || quiescing_.load()) {
       ::close(socket);
       return;
     }
@@ -291,7 +411,7 @@ struct worker {
       return;
     }
     try {
-      ctx_ptr->connected(epoll_fd_);
+      ctx_ptr->connected(epoll_fd_, scheduler());
       ctx_ptr->notify_connection();
     } catch (...) {
       close_context(ctx_ptr);
@@ -306,10 +426,10 @@ struct worker {
       close_context(ctx);
       return;
     }
-    if (stopping_.load()) ctx->stop(true);
+    if (stopping_.load() || quiescing_.load()) ctx->stop(true);
     bool should_send = (events & EPOLLOUT) != 0;
     if (ctx->can_receive() && (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP))) {
-      if (stopping_.load()) {
+      if (stopping_.load() || quiescing_.load()) {
         ctx->stop(true);
       } else {
         const ssize_t received = ctx->receive();
@@ -371,9 +491,11 @@ struct worker {
   void close_resources() {
     if (listener_fd_ != -1) ::close(listener_fd_);
     if (stop_fd_ != -1) ::close(stop_fd_);
+    if (async_fd_ != -1) ::close(async_fd_);
     if (epoll_fd_ != -1) ::close(epoll_fd_);
     listener_fd_ = -1;
     stop_fd_ = -1;
+    async_fd_ = -1;
     epoll_fd_ = -1;
   }
   // +=========================================================================+
@@ -384,8 +506,24 @@ struct worker {
   const typename CNty::shared_state shared_state_;
   int epoll_fd_{-1};
   int stop_fd_{-1};
+  int async_fd_{-1};
   int listener_fd_{-1};
   std::atomic<bool> stopping_{false};
+  std::atomic<bool> quiescing_{false};
+  std::atomic<bool> quiesced_{false};
+  using async_entry = std::pair<std::chrono::steady_clock::time_point,
+                                std::coroutine_handle<>>;
+  struct later_async {
+    bool operator()(const async_entry& left,
+                    const async_entry& right) const {
+      return left.first > right.first;
+    }
+  };
+  std::deque<std::coroutine_handle<>> ready_;
+  std::priority_queue<async_entry, std::vector<async_entry>, later_async>
+      timers_;
+  std::deque<async_entry> incoming_;
+  std::mutex async_mutex_;
   std::jthread thread_;
   inline static thread_local const worker* current_worker_{nullptr};
   std::unordered_map<context<ENty, CNty>*, std::shared_ptr<context<ENty, CNty>>>

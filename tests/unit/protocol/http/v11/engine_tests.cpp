@@ -101,7 +101,7 @@ struct connection {
   int closes{0};
 };
 
-struct pause {
+struct suspend_once {
   std::coroutine_handle<>& next;
 
   bool await_ready() const noexcept { return false; }
@@ -117,7 +117,7 @@ DOBA_TEST("engine orders asynchronous and synchronous responses") {
   std::coroutine_handle<> next;
   routes.add("POST", "/slow", [&next](const request& req, response& res)
                  -> task<void> {
-    co_await pause{next};
+    co_await suspend_once{next};
     std::array<std::byte, 4> body{};
     const auto state = req.get_body_reader()->read(body);
     if (!state.complete || state.produced != 4) {
@@ -148,7 +148,7 @@ DOBA_TEST("engine returns to synchronous delivery after asynchronous work") {
   std::coroutine_handle<> pending;
   routes.add("GET", "/slow", [&pending](const request&, response& res)
                  -> task<void> {
-    co_await pause{pending};
+    co_await suspend_once{pending};
     make_response(res, "slow");
   });
   routes.add("GET", "/fast", [](const request&, response& res) {
@@ -213,12 +213,12 @@ DOBA_TEST("engine orders two asynchronous completions") {
   std::coroutine_handle<> second;
   routes.add("GET", "/first", [&first](const request&, response& res)
                  -> task<void> {
-    co_await pause{first};
+    co_await suspend_once{first};
     make_response(res, "first");
   });
   routes.add("GET", "/second", [&second](const request&, response& res)
                  -> task<void> {
-    co_await pause{second};
+    co_await suspend_once{second};
     make_response(res, "second");
   });
   connection current(routes);
@@ -241,7 +241,7 @@ DOBA_TEST("engine stops dispatch after a queued asynchronous error") {
   int later_calls = 0;
   routes.add("GET", "/slow", [&slow](const request&, response& res)
                  -> task<void> {
-    co_await pause{slow};
+    co_await suspend_once{slow};
     make_response(res, "slow");
   });
   routes.add("GET", "/fail", [](const request&, response&)
@@ -270,7 +270,7 @@ DOBA_TEST("engine bounds positions behind a suspended request") {
   int later_calls = 0;
   routes.add("GET", "/slow", [&slow](const request&, response& res)
                  -> task<void> {
-    co_await pause{slow};
+    co_await suspend_once{slow};
     make_response(res, "slow");
   });
   routes.add("GET", "/later", [&later_calls](const request&, response& res) {
@@ -294,7 +294,7 @@ DOBA_TEST("engine uses the configured pending request limit") {
   int later_calls = 0;
   routes.add("GET", "/slow", [&slow](const request&, response& res)
                  -> task<void> {
-    co_await pause{slow};
+    co_await suspend_once{slow};
     make_response(res, "slow");
   });
   routes.add("GET", "/later", [&later_calls](const request&, response& res) {
@@ -320,7 +320,7 @@ DOBA_TEST("engine allows unlimited pending requests when configured") {
   int later_calls = 0;
   routes.add("GET", "/slow", [&slow](const request&, response& res)
                  -> task<void> {
-    co_await pause{slow};
+    co_await suspend_once{slow};
     make_response(res, "slow");
   });
   routes.add("GET", "/later", [&later_calls](const request&, response& res) {
@@ -381,7 +381,7 @@ DOBA_TEST("engine stops dispatch after a queued close response") {
   int later_calls = 0;
   routes.add("GET", "/slow", [&slow](const request&, response& res)
                  -> task<void> {
-    co_await pause{slow};
+    co_await suspend_once{slow};
     make_response(res, "slow");
   });
   routes.add("GET", "/close", [](const request&, response& res)
@@ -410,7 +410,7 @@ DOBA_TEST("engine keeps an asynchronous response written before suspension") {
   routes.add("GET", "/slow", [&slow](const request&, response& res)
                  -> task<void> {
     make_response(res, "before");
-    co_await pause{slow};
+    co_await suspend_once{slow};
   });
   routes.add("GET", "/later", [](const request&, response& res) {
     make_response(res, "later");
@@ -432,12 +432,12 @@ DOBA_TEST("engine serializes concurrent asynchronous sends") {
   std::coroutine_handle<> second;
   routes.add("GET", "/first", [&first](const request&, response& res)
                  -> task<void> {
-    co_await pause{first};
+    co_await suspend_once{first};
     make_response(res, "first");
   });
   routes.add("GET", "/second", [&second](const request&, response& res)
                  -> task<void> {
-    co_await pause{second};
+    co_await suspend_once{second};
     make_response(res, "second");
   });
   connection current(routes);
@@ -478,7 +478,7 @@ DOBA_TEST("engine closes after an asynchronous handler error") {
   std::coroutine_handle<> next;
   routes.add("GET", "/fail", [&next](const request&, response&)
                  -> task<void> {
-    co_await pause{next};
+    co_await suspend_once{next};
     throw std::runtime_error("handler failure");
   });
   routes.add("GET", "/later", [](const request&, response& res) {
@@ -502,7 +502,7 @@ DOBA_TEST("engine orders 100 Continue after an asynchronous response") {
   std::coroutine_handle<> next;
   routes.add("GET", "/slow", [&next](const request&, response& res)
                  -> task<void> {
-    co_await pause{next};
+    co_await suspend_once{next};
     make_response(res, "slow");
   });
   routes.add("POST", "/upload", [](const request&, response& res) {
@@ -548,7 +548,7 @@ DOBA_TEST("engine honors close on an asynchronous request") {
   int later_calls = 0;
   routes.add("GET", "/slow", [&next](const request&, response& res)
                  -> task<void> {
-    co_await pause{next};
+    co_await suspend_once{next};
     make_response(res, "slow");
   });
   routes.add("GET", "/later", [&later_calls](const request&, response& res) {

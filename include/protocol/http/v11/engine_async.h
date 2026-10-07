@@ -93,6 +93,13 @@ class engine_async {
     }
     std::lock_guard<std::mutex> lock(mutex_);
     if (closing()) return;
+    if (final && position == next_send_.load(std::memory_order_relaxed) &&
+        pending_.empty()) {
+      on_send_(result.head, result.body, std::move(result.source));
+      next_send_++;
+      if (close) close_now();
+      return;
+    }
     auto& slot = pending_[position];
     slot.outputs.push_back({std::string(result.head), std::string(result.body),
                             std::move(result.source)});

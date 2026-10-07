@@ -79,6 +79,12 @@ class engine {
     if (async_) async_->set_on_close(on_close_);
   }
   // +=========================================================================+
+  // | [>] set_async_scheduler                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  void set_async_scheduler(common::task_scheduler scheduler) noexcept {
+    scheduler_ = scheduler;
+  }
+  // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
   std::size_t on_bytes_received(const char* buffer, const std::size_t size,
@@ -282,7 +288,7 @@ class engine {
           }
           state->end();
           routes->end_async();
-        });
+        }, scheduler_);
       } catch (...) {
         state->end();
         router_.end_async();
@@ -328,6 +334,7 @@ class engine {
   const ROty& router_;  // Reference to the router for handling requests.
   decoder<RQty, RSty> decoder_;  // Decoder for processing incoming requests.
   std::shared_ptr<engine_async> async_;
+  common::task_scheduler scheduler_;
   std::optional<std::size_t> interim_position_;
   protocol::send_delegate on_send_;
   std::function<void()> on_close_;

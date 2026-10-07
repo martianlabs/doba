@@ -22,6 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <chrono>
+#include <future>
 #include <memory>
 #include <exception>
 #include <coroutine>
@@ -29,6 +31,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <thread>
 #include <utility>
 
 #include "protocol/http/common/router.h"
@@ -55,7 +58,7 @@ using response = martianlabs::doba::tests::unit::router_value_response;
 using martianlabs::doba::protocol::http::router;
 using martianlabs::doba::common::task;
 
-struct pause {
+struct suspend_once {
   std::coroutine_handle<>& next;
   bool await_ready() const noexcept { return false; }
   void await_suspend(std::coroutine_handle<> handle) const noexcept {
@@ -104,13 +107,31 @@ DOBA_TEST("router selects asynchronous route forms") {
   DOBA_EXPECT_EQUAL(res.value, "wildcard");
 }
 
+DOBA_TEST("router waits until every asynchronous request completes") {
+  router<request, response> value;
+  value.begin_async();
+  value.begin_async();
+  std::promise<void> finished;
+  auto waiting = finished.get_future();
+  std::jthread waiter([&]() {
+    value.wait_async();
+    finished.set_value();
+  });
+  value.end_async();
+  DOBA_EXPECT(waiting.wait_for(std::chrono::milliseconds(20)) ==
+              std::future_status::timeout);
+  value.end_async();
+  DOBA_EXPECT(waiting.wait_for(std::chrono::seconds(2)) ==
+              std::future_status::ready);
+}
+
 DOBA_TEST("asynchronous route parameters survive suspension") {
   router<request, response> value;
   std::coroutine_handle<> next;
   value.add("GET", "/items/:name",
             [&next](const request&, response& res,
                     const std::string& name) -> task<void> {
-              co_await pause{next};
+              co_await suspend_once{next};
               res.value = name;
             });
   request req;

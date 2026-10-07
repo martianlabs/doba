@@ -23,6 +23,7 @@
 // permissions and limitations under the License.
 
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <coroutine>
 #include <future>
@@ -120,6 +121,70 @@ DOBA_TEST("HTTP/1.1 orders mixed routes over one connection") {
   DOBA_EXPECT(third.has_value());
   if (third) DOBA_EXPECT_EQUAL(third->body, "fast");
   http_server.stop();
+}
+
+DOBA_TEST("HTTP/1.1 resumes timed routes on its transport worker") {
+  tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  std::atomic<bool> same_worker{false};
+  server<> http_server({.worker_count = 1, .ip = "127.0.0.1",
+                        .port = std::to_string(port)});
+  http_server.add_route(
+      "GET", "/slow",
+      [&same_worker](const request&, response& res) -> task<void> {
+        const auto worker = std::this_thread::get_id();
+        co_await martianlabs::doba::common::yield();
+        co_await martianlabs::doba::common::sleep_for(
+            std::chrono::milliseconds(10));
+        same_worker = std::this_thread::get_id() == worker;
+        text_response(res, "slow");
+      });
+  http_server.add_route("GET", "/fast", [](const request&, response& res) {
+    text_response(res, "fast");
+  });
+  http_server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all(
+      "GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n"
+      "GET /fast HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+  const auto first = receive_http_response(client);
+  const auto second = receive_http_response(client);
+  DOBA_EXPECT(first.has_value());
+  DOBA_EXPECT(second.has_value());
+  if (first && second) {
+    DOBA_EXPECT_EQUAL(first->body, "slow");
+    DOBA_EXPECT_EQUAL(second->body, "fast");
+  }
+  DOBA_EXPECT(same_worker.load());
+  http_server.stop();
+}
+
+DOBA_TEST("HTTP/1.1 drains a timed route before stopping workers") {
+  tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  std::promise<void> started;
+  auto waiting = started.get_future();
+  std::atomic<bool> completed{false};
+  server<> http_server({.worker_count = 1, .ip = "127.0.0.1",
+                        .port = std::to_string(port)});
+  http_server.add_route(
+      "GET", "/slow",
+      [&started, &completed](const request&, response& res) -> task<void> {
+        started.set_value();
+        co_await martianlabs::doba::common::sleep_for(
+            std::chrono::milliseconds(30));
+        completed = true;
+        text_response(res, "done");
+      });
+  http_server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+  DOBA_EXPECT(waiting.wait_for(std::chrono::seconds(2)) ==
+              std::future_status::ready);
+  http_server.stop();
+  DOBA_EXPECT(completed.load());
 }
 
 DOBA_TEST("HTTP/1.1 waits for an asynchronous route during stop") {

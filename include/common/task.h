@@ -25,13 +25,56 @@
 #ifndef martianlabs_doba_common_task_h
 #define martianlabs_doba_common_task_h
 
+#include <chrono>
 #include <coroutine>
 #include <exception>
 #include <functional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 
 namespace martianlabs::doba::common {
+struct task_scheduler {
+  void* owner{nullptr};
+  void (*post)(void*, std::coroutine_handle<>){nullptr};
+  void (*schedule)(void*, std::chrono::steady_clock::time_point,
+                   std::coroutine_handle<>){nullptr};
+};
+
+struct yield_awaiter {
+  bool await_ready() const noexcept { return false; }
+  template <typename Pty>
+  void await_suspend(std::coroutine_handle<Pty> handle) const {
+    const auto scheduler = handle.promise().scheduler;
+    if (!scheduler.post) throw std::runtime_error("No task scheduler");
+    scheduler.post(scheduler.owner, handle);
+  }
+  void await_resume() const noexcept {}
+};
+
+inline yield_awaiter yield() noexcept { return {}; }
+
+struct sleep_awaiter {
+  std::chrono::steady_clock::duration duration;
+
+  bool await_ready() const noexcept {
+    return duration <= std::chrono::steady_clock::duration::zero();
+  }
+  template <typename Pty>
+  void await_suspend(std::coroutine_handle<Pty> handle) const {
+    const auto scheduler = handle.promise().scheduler;
+    if (!scheduler.schedule) throw std::runtime_error("No task scheduler");
+    scheduler.schedule(scheduler.owner,
+                       std::chrono::steady_clock::now() + duration, handle);
+  }
+  void await_resume() const noexcept {}
+};
+
+inline sleep_awaiter sleep_for(
+    std::chrono::steady_clock::duration duration) noexcept {
+  return {duration};
+}
+
 template <typename Tty = void>
 class task {
   static_assert(std::is_void_v<Tty>);
@@ -64,6 +107,7 @@ class task {
 
     std::function<void(std::exception_ptr)> completion;
     std::exception_ptr error;
+    task_scheduler scheduler;
   };
 
   using handle_type = std::coroutine_handle<promise_type>;
@@ -84,8 +128,13 @@ class task {
   }
 
   void start(std::function<void(std::exception_ptr)> completion) {
+    start(std::move(completion), {});
+  }
+  void start(std::function<void(std::exception_ptr)> completion,
+             task_scheduler scheduler) {
     auto handle = std::exchange(handle_, {});
     handle.promise().completion = std::move(completion);
+    handle.promise().scheduler = scheduler;
     handle.resume();
   }
 
