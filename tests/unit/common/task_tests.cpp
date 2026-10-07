@@ -59,7 +59,7 @@ task<void> fail() {
   co_return;
 }
 
-task<void> retain(std::shared_ptr<int> value) {
+task<void> retain(std::shared_ptr<int>) {
   co_return;
 }
 
