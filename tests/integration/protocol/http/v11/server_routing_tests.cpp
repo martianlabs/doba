@@ -160,6 +160,105 @@ DOBA_TEST("HTTP/1.1 resumes timed routes on its transport worker") {
   http_server.stop();
 }
 
+DOBA_TEST("HTTP/1.1 orders responses after different timer deadlines") {
+  tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  std::atomic<int> completed{0};
+  std::atomic<int> first_order{0};
+  std::atomic<int> second_order{0};
+  std::atomic<int> third_order{0};
+  server<> http_server({.worker_count = 1, .ip = "127.0.0.1",
+                        .port = std::to_string(port)});
+  http_server.add_route(
+      "GET", "/wait/:id/:ms",
+      [&](const request&, response& res, int id, int ms) -> task<void> {
+        co_await martianlabs::doba::common::sleep_for(
+            std::chrono::milliseconds(ms));
+        const int order = completed.fetch_add(1) + 1;
+        if (id == 1) first_order = order;
+        if (id == 2) second_order = order;
+        if (id == 3) third_order = order;
+        text_response(res, std::to_string(id));
+      });
+  http_server.add_route("GET", "/fast", [](const request&, response& res) {
+    text_response(res, "fast");
+  });
+  http_server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all(
+      "GET /wait/1/80 HTTP/1.1\r\nHost: localhost\r\n\r\n"
+      "GET /wait/2/5 HTTP/1.1\r\nHost: localhost\r\n\r\n"
+      "GET /wait/3/20 HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+  const auto first = receive_http_response(client);
+  const auto second = receive_http_response(client);
+  const auto third = receive_http_response(client);
+  DOBA_EXPECT(first.has_value());
+  DOBA_EXPECT(second.has_value());
+  DOBA_EXPECT(third.has_value());
+  if (first && second && third) {
+    DOBA_EXPECT_EQUAL(first->body, "1");
+    DOBA_EXPECT_EQUAL(second->body, "2");
+    DOBA_EXPECT_EQUAL(third->body, "3");
+  }
+  DOBA_EXPECT(second_order.load() < third_order.load());
+  DOBA_EXPECT(third_order.load() < first_order.load());
+  DOBA_EXPECT(client.send_all("GET /fast HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+  const auto fast = receive_http_response(client);
+  DOBA_EXPECT(fast.has_value());
+  if (fast) DOBA_EXPECT_EQUAL(fast->body, "fast");
+  http_server.stop();
+}
+
+#ifdef _WIN32
+DOBA_TEST("HTTP/1.1 runs asynchronous routes with multiple IOCP workers") {
+  tcpip_client probe;
+  const uint16_t port = probe.find_available_port();
+  DOBA_EXPECT(port != 0);
+  server<> http_server({.worker_count = 2, .ip = "127.0.0.1",
+                        .port = std::to_string(port)});
+  http_server.add_route("GET", "/wait",
+                        [](const request&, response& res) -> task<void> {
+                          co_await martianlabs::doba::common::yield();
+                          co_await martianlabs::doba::common::sleep_for(
+                              std::chrono::milliseconds(1));
+                          text_response(res, "ready");
+                        });
+  http_server.start();
+  std::atomic<int> connected{0};
+  std::atomic<int> sent{0};
+  std::atomic<int> received{0};
+  std::atomic<int> server_errors{0};
+  std::atomic<int> passed{0};
+  std::vector<std::jthread> clients;
+  for (int i = 0; i < 32; i++) {
+    clients.emplace_back([&]() {
+      tcpip_client client;
+      if (!client.connect(port)) return;
+      connected++;
+      if (!client.send_all("GET /wait HTTP/1.1\r\nHost: localhost\r\n\r\n")) {
+        return;
+      }
+      sent++;
+      const auto result = receive_http_response(client);
+      if (!result) return;
+      received++;
+      if (result->status.starts_with("HTTP/1.1 500 ")) server_errors++;
+      if (result->status.starts_with("HTTP/1.1 200 ") &&
+          result->body == "ready") {
+        passed++;
+      }
+    });
+  }
+  for (auto& client : clients) client.join();
+  DOBA_EXPECT_EQUAL(connected.load(), 32);
+  DOBA_EXPECT_EQUAL(sent.load(), 32);
+  DOBA_EXPECT_EQUAL(received.load(), 32);
+  DOBA_EXPECT_EQUAL(server_errors.load(), 0);
+  DOBA_EXPECT_EQUAL(passed.load(), 32);
+  http_server.stop();
+}
+#endif
 DOBA_TEST("HTTP/1.1 drains a timed route before stopping workers") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();

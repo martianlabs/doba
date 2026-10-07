@@ -451,7 +451,8 @@ the [example](../examples/http/v11/async_routes/README.md) demonstrates both
 models. A two-run local HttpArena baseline comparison with `main` showed no
 throughput regression, but does not establish a release performance baseline.
 
-**Limit.** Doba provides no scheduler or cancellation of suspended awaitables.
+**Limit.** Doba schedules `yield()` and `sleep_for()` on transport workers but
+does not cancel externally suspended awaitables.
 `server.stop()` waits for their completion, so an awaitable must eventually
 resume. B19's transport completion notifications were not restored.
 

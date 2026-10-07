@@ -192,19 +192,21 @@ struct worker {
   // | [>] scheduler                                              ( private ) |
   // +-------------------------------------------------------------------------+
   common::task_scheduler scheduler() {
-    return {current_async_,
+    return {this,
             [](void* owner, std::coroutine_handle<> handle) {
-              if (current_async_ != owner) {
+              if (current_worker_ != static_cast<worker*>(owner) ||
+                  !current_async_) {
                 throw std::runtime_error("Task resumed outside I/O worker!");
               }
-              static_cast<async_state*>(owner)->ready.push_back(handle);
+              current_async_->ready.push_back(handle);
             },
             [](void* owner, std::chrono::steady_clock::time_point due,
                std::coroutine_handle<> handle) {
-              if (current_async_ != owner) {
+              if (current_worker_ != static_cast<worker*>(owner) ||
+                  !current_async_) {
                 throw std::runtime_error("Task resumed outside I/O worker!");
               }
-              static_cast<async_state*>(owner)->timers.push({due, handle});
+              current_async_->timers.push({due, handle});
             }};
   }
   // +=========================================================================+

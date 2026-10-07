@@ -292,3 +292,39 @@ DOBA_TEST("tls orders asynchronous and synchronous HTTP responses") {
   client.socket.close();
   http_server.stop();
 }
+DOBA_TEST("tls resumes timed asynchronous HTTP routes") {
+  tls_client client;
+  const auto port = client.socket.find_available_port();
+  DOBA_EXPECT(port != 0);
+  auto configuration = server_policies(port);
+  configuration.worker_count = 1;
+  server<request, response,
+         martianlabs::doba::protocol::http::router<request, response>,
+         martianlabs::doba::protocol::http::v11::engine<request, response>, tls>
+      http_server(configuration);
+  http_server.add_route("GET", "/slow",
+                        [](const request&, response& res) -> task<void> {
+                          co_await martianlabs::doba::common::yield();
+                          co_await martianlabs::doba::common::sleep_for(10ms);
+                          res.ok_200().set_body("slow");
+                        });
+  http_server.add_route("GET", "/fast", [](const request&, response& res) {
+    res.ok_200().set_body("fast");
+  });
+  http_server.start();
+  DOBA_EXPECT(client.socket.connect(port));
+  DOBA_EXPECT(client.negotiate());
+  DOBA_EXPECT(client.send_outgoing(
+      "GET /slow HTTP/1.1\r\nHost: example.com\r\n\r\n"
+      "GET /fast HTTP/1.1\r\nHost: example.com\r\n\r\n"));
+  const auto first = receive_response(client);
+  const auto second = receive_response(client);
+  DOBA_EXPECT(first.has_value());
+  DOBA_EXPECT(second.has_value());
+  if (first && second) {
+    DOBA_EXPECT_EQUAL(*first, "slow");
+    DOBA_EXPECT_EQUAL(*second, "fast");
+  }
+  client.socket.close();
+  http_server.stop();
+}

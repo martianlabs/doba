@@ -27,6 +27,7 @@
 #include <exception>
 #include <memory>
 #include <stdexcept>
+#include <string_view>
 #include <thread>
 #include <type_traits>
 #include <utility>
@@ -77,6 +78,21 @@ task<void> use_scheduler(int& steps) {
   steps++;
 }
 
+task<void> immediate_sleep(int& steps) {
+  steps++;
+  co_await martianlabs::doba::common::sleep_for(
+      std::chrono::steady_clock::duration::zero());
+  steps++;
+}
+
+task<void> without_scheduler(bool timed) {
+  if (timed) {
+    co_await martianlabs::doba::common::sleep_for(
+        std::chrono::milliseconds(1));
+  } else {
+    co_await martianlabs::doba::common::yield();
+  }
+}
 struct scheduled_handles {
   std::coroutine_handle<> ready;
   std::coroutine_handle<> timed;
@@ -180,4 +196,34 @@ DOBA_TEST("task yields and sleeps through its scheduler") {
   handles.timed.resume();
   DOBA_EXPECT_EQUAL(steps, 3);
   DOBA_EXPECT(completed);
+}
+
+DOBA_TEST("task skips zero sleep without a scheduler") {
+  int steps = 0;
+  int completions = 0;
+  auto value = immediate_sleep(steps);
+  value.start([&](std::exception_ptr error) {
+    DOBA_EXPECT(!error);
+    completions++;
+  });
+  DOBA_EXPECT_EQUAL(steps, 2);
+  DOBA_EXPECT_EQUAL(completions, 1);
+}
+
+DOBA_TEST("task reports a missing scheduler for yield and sleep") {
+  for (bool timed : {false, true}) {
+    int completions = 0;
+    auto value = without_scheduler(timed);
+    value.start([&](std::exception_ptr error) {
+      DOBA_EXPECT(static_cast<bool>(error));
+      try {
+        std::rethrow_exception(error);
+      } catch (const std::runtime_error& failure) {
+        DOBA_EXPECT_EQUAL(std::string_view(failure.what()),
+                          "No task scheduler");
+      }
+      completions++;
+    });
+    DOBA_EXPECT_EQUAL(completions, 1);
+  }
 }
