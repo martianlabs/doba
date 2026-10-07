@@ -42,10 +42,15 @@ test's metric. Scores retain normalization across all **21 measured servers**.
 The total includes eight scored profiles and the upstream completeness factor;
 `pipelined`, `latency-500k-8cpu` and `static-tls` are reference-only profiles.
 
-Tested revisions: HttpArena `3b2450e061c2` /
-doba `0e90df945cc1`. The pipelined result describes that tested revision.
-[Full results and measurement warnings](resources/benchmarks/scaleway-test-005/summary.txt) /
-[Parsed data](resources/benchmarks/scaleway-test-005/data.json).
+**Test machine**
+
+| Component | Specification |
+| --- | --- |
+| CPU | AMD EPYC 8534P, 2.30 GHz, 64 cores / 128 threads |
+| RAM | 576 GiB DDR5 |
+| Storage | 2 x 3.84 TB NVMe |
+| Private network | 25 Gbps |
+| Public network | 1 Gbps, upgradable to 25 Gbps |
 
 <a href="resources/benchmarks/scaleway-test-005/benchmark-overall.svg" title="Open full-size light chart">
   <picture>
