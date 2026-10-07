@@ -90,9 +90,9 @@ class task {
       promise_type& promise;
 
       bool await_ready() noexcept {
-        auto completion = std::move(promise.completion);
+        auto callback = std::move(promise.completion);
         try {
-          if (completion) completion(promise.error);
+          if (callback) callback(promise.error);
         } catch (...) {
         }
         return true;
