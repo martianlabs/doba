@@ -37,8 +37,10 @@
 #include <new>
 #include <span>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
+#include "common/task.h"
 #include "platform.h"
 #include "transport/server/tcp_connection.h"
 #include "transport/server/tcp_windows_overlapped_receive.h"
@@ -64,13 +66,26 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
           types::on_client_connected_delegate on_connection,
           types::on_client_disconnected_delegate on_disconnection,
           std::function<void(context*)> on_retirement,
-          typename CNty::shared_state shared_state)
+          typename CNty::shared_state shared_state,
+          std::size_t encrypted_receive_buffer_size = 0,
+          std::size_t network_bio_buffer_size = 0)
       : socket_{in_socket},
         on_connection_{on_connection},
         on_disconnection_{on_disconnection},
         on_retirement_{on_retirement},
-        input_{recv_buffer_size, send_buffer_size, create_engine,
-               shared_state},
+        input_{[&]() -> CNty {
+          if constexpr (std::is_constructible_v<
+                            CNty, std::size_t, std::size_t, const FAty&,
+                            typename CNty::shared_state, std::size_t,
+                            std::size_t>) {
+            return CNty(recv_buffer_size, send_buffer_size, create_engine,
+                        shared_state, encrypted_receive_buffer_size,
+                        network_bio_buffer_size);
+          } else {
+            return CNty(recv_buffer_size, send_buffer_size, create_engine,
+                        shared_state);
+          }
+        }()},
         stopping_{stopping},
         output_{send_buffer_size} {}
   context(const context&) = delete;
@@ -129,6 +144,10 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   bool arm_next_receive_operation() {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     processing_receive_ = false;
+    if (quiescing_) {
+      abort_();
+      return false;
+    }
     if (stopping_.load()) {
       closing_ = true;
       if (!input_.close_output()) abort_();
@@ -152,6 +171,10 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
       receiving_ = false;
+      if (quiescing_) {
+        abort_();
+        return false;
+      }
       if (!size) receive_closed_ = true;
       if (stopping_.load()) {
         closing_ = true;
@@ -220,10 +243,14 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] connected                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  void connected(HANDLE completion_port) {
+  void connected(HANDLE completion_port,
+                 common::task_scheduler scheduler = {}) {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
       io_h_ = completion_port;
+    }
+    if constexpr (requires { input_.engine.set_async_scheduler(scheduler); }) {
+      input_.engine.set_async_scheduler(scheduler);
     }
     input_.engine.set_on_close([weak = this->weak_from_this()]() {
       if (auto ctx = weak.lock()) ctx->close();
@@ -264,6 +291,14 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       cleanup_resources_();
     }
     notify_disconnection();
+  }
+  // +=========================================================================+
+  // | [>] quiesce                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  void quiesce() {
+    std::lock_guard<std::mutex> receive_lock(receive_mutex_);
+    std::lock_guard<std::mutex> lock(sending_mutex_);
+    quiescing_ = true;
   }
   // +=========================================================================+
   // | [>] notify_disconnection                                     ( public ) |
@@ -449,6 +484,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   HANDLE io_h_{nullptr};
   CNty input_;
   const std::atomic<bool>& stopping_;
+  bool quiescing_{false};
   std::mutex receive_mutex_;
   std::mutex sending_mutex_;
   send_state output_;

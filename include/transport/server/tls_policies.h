@@ -45,6 +45,10 @@ struct tls_policies : tcp_policies {
   std::string certificate_file;
   // Path to the matching private key in PEM format.
   std::string private_key_file;
+  // Encrypted receive capacity per connection (must be positive).
+  std::size_t encrypted_receive_buffer_size = kEncryptedReceiveBufferSize;
+  // Network BIO capacity per connection (must be positive).
+  std::size_t network_bio_buffer_size = kBioBufferSize;
 };
 }  // namespace martianlabs::doba::transport::server
 

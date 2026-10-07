@@ -132,6 +132,17 @@ class basic_transport {
   // +-------------------------------------------------------------------------+
   void stop() { stop_(false); }
   // +=========================================================================+
+  // | [>] quiesce                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  void quiesce() {
+    if (worker<ENty, FAty, CNty, PTy>::is_current_thread(create_engine_)) {
+      throw std::runtime_error("Transport cannot quiesce from a worker!");
+    }
+    std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
+    for (const auto& entry : workers_) entry->request_quiesce();
+    for (const auto& entry : workers_) entry->wait_quiesced();
+  }
+  // +=========================================================================+
   // | [>] set_on_connection                                        ( public ) |
   // +-------------------------------------------------------------------------+
   template <typename FNty>

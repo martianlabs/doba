@@ -7,7 +7,7 @@ The checked upstream revision is:
 
 ```text
 https://github.com/MDA2AV/HttpArena.git
-484dea628f4fe29de88dc16530b125cc1d169a41
+5b111b8889fee61076f1d7dd14fdb3dfd12c8492
 ```
 
 Install RapidJSON, zlib and OpenSSL development headers, then build locally.
@@ -22,10 +22,13 @@ cmake --build build/http/v11/httparena --config Release
 ```
 
 The adapter listens on port 8080 for HTTP/1.1 and port 8081 for HTTP/1.1 over
-TLS. It implements `GET /baseline11`, `POST /baseline11`, `GET /json/:count`,
-`GET /static/*` and `POST /echo`. Its `meta.json` enables
-`baseline`, `limited-conn`, `json-comp`, `json-tls`, `latency-1m`,
-`latency-10k`, `latency-500k-8cpu`, `8gbit` and `static-tls`.
+TLS. It implements `GET /baseline11`, `POST /baseline11`, `GET /delay/:ms`,
+`GET /json/:count`, `GET /static/*` and `POST /echo`. The delay route suspends
+until the requested milliseconds elapse, then returns the number as plain text.
+It resumes on the transport I/O worker without a driver timer thread.
+Its `meta.json` enables `baseline`, `limited-conn`, `async`, `json-comp`,
+`json-tls`, `latency-1m`, `latency-10k`, `latency-500k-8cpu`, `8gbit` and
+`static-tls`.
 
 Build and start the submission container:
 
@@ -39,7 +42,7 @@ docker run --rm --publish 8080:8080 --publish 8081:8081 \
 ```
 
 The Dockerfile accepts `DOBA_REF` as a build argument and defaults to the
-published TLS commit `a5667f843736838b3d66169a91df07ca1fd554a0`.
+published async commit `ae9f736d29a3b6b31c0d1d35f6280cbb40b52783`.
 Use another published tag or commit to test a different doba revision:
 
 ```text
@@ -52,7 +55,7 @@ In another working directory, clone the pinned HttpArena revision:
 
 ```text
 git clone https://github.com/MDA2AV/HttpArena.git
-git -C HttpArena checkout 484dea628f4fe29de88dc16530b125cc1d169a41
+git -C HttpArena checkout 5b111b8889fee61076f1d7dd14fdb3dfd12c8492
 ```
 
 Copy this directory to `HttpArena/frameworks/doba`, then run the complete

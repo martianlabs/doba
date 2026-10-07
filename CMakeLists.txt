@@ -298,6 +298,9 @@ if(
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/hello_world
   )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/async_routes
+  )
   if(
     DOBA_ENABLE_TLS
   )

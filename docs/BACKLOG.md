@@ -47,43 +47,43 @@ a selected value are marked "Not set"; complexity estimates are separate.
 
 The frozen target is `0.1.0-beta1`, a beta for adoption and evaluation in
 controlled deployments. This section is the authoritative release scope.
-B15-B18 migration bugs are resolved. B14 and B19 were withdrawn with coroutine
-execution and completion notifications; their records remain below.
+B14-B18 migration work is implemented; B19's completion-notification contract
+remains withdrawn. Their records remain below.
 Other outstanding work outside the release scope remains future work and
 does not block this beta.
 
 Implementation order:
 
-1. B15-B18: completed; synchronous migration regressions remain active.
+1. B14-B18: implemented; retain synchronous and asynchronous regressions.
 2. B9: completed; response-driven closure verified on both platforms.
-3. F1 and F2: implement TLS and GZIP response compression.
-4. C1, C2, C3 and C7: implement and verify all operational limits.
+3. F1: finish TLS validation; F2: implement GZIP response compression.
+4. C1 and C3: implement; C2 and C7: finish their remaining limits and tests.
 5. RE1: complete minimum documentation, the full existing CI and CMake consumer
    validations, and coherent versioning and publication.
 
 **Required capabilities.** F1 (TLS) and F2 (GZIP) are mandatory for the
-selected HttpArena participation scope. They take priority over C1/C2/C3/C7
-and RE1. Dependency choices and public APIs require separate implementation
-plans; this scope decision does not select them.
+selected HttpArena participation scope. TLS uses optional OpenSSL support;
+equivalent Windows verification remains. GZIP is not implemented. Complete
+both gates before C1/C2/C3/C7 and RE1.
 
 **Operational policies.** C1, C2, C3 and C7 are mandatory for this release.
-Policies will be injected when the corresponding modules are created.
-A later design stage, before implementation and publication, will define
-policy contracts, module responsibilities, injection APIs, ownership,
-defaults, and boundary behavior. No concrete policy types or signatures are
-selected here. HTTP request limits belong to the protocol layer; connection,
-inactivity and pending-work limits belong to their responsible modules.
+`http::v11::policies`, `tcp_policies` and `tls_policies` already expose
+request, response-storage, TLS-buffer, transport and asynchronous
+pending-request limits at module creation. C1 and C3 still need inactivity
+and connection-admission policies; C2 needs the remaining request-head rules
+and boundary tests; C7 needs a budget for retained transport work and queued
+response sources. Define the remaining contracts before implementing them.
 
 **Exit criteria.**
 
 - B9 verified: synchronous response-driven closure
   passes on Windows and Linux, including complete bodies before EOF and the
   pipelined close boundary. No production change was needed.
-- Implement F1 and F2 with focused unit and real-socket tests on Windows
-  and Linux. Verify TLS handshake, encrypted HTTP delivery, closure and
-  errors; verify GZIP negotiation, response framing and decoded payloads
-  for empty, binary and large bodies.
-- Implement C1, C2, C3 and C7 with focused boundary and real-socket tests on
+- Complete F1's Windows and Linux verification and implement F2 with focused
+  unit and real-socket tests. Verify TLS handshake, encrypted HTTP delivery,
+  closure and errors; verify GZIP negotiation, response framing and decoded
+  payloads for empty, binary and large bodies.
+- Complete C1, C2, C3 and C7 with focused boundary and real-socket tests on
   IOCP and epoll. Include slow clients, resource release, ordering and
   cancellation where relevant. Assessing or documenting a limit is not a
   substitute for implementing it.
@@ -94,16 +94,17 @@ inactivity and pending-work limits belong to their responsible modules.
   notes, a working vulnerability-reporting channel, and a version and tag
   that consistently identify `0.1.0-beta1`.
 
-**Future work.** B13, P2-P8, QA1-QA3, QA5-QA6, DT1-DT3, DOC1-DOC2 and F3-F7
-remain outside this release. RE1 also retains the full contribution guide
-as future work. Minimum usage documentation is part of RE1; completing the
-broader documentation or API work in DT2/DT3/DOC1/DOC2 is not required.
+**Future work.** B13, P2-P8, QA1-QA3, QA5-QA6, DT1-DT3, DOC1-DOC2,
+F3-F5 and F7 remain outside this release. RE1 also retains the full
+contribution guide as future work. Minimum usage documentation is part of
+RE1; completing the broader documentation or API work in
+DT2/DT3/DOC1/DOC2 is not required.
 Focused tests for release items remain mandatory without requiring the
 exhaustive coverage, fuzzing, benchmarks, soak campaigns or external-tool
 automation described by the future QA entries.
 
 **Scope control.** Until publication, work is limited to the listed release
-items, their tests, the minimum release closure, and B14-B19 migration fixes.
+items, their tests, the minimum release closure, and B14-B18 regressions.
 Optional functionality, refactoring and broader quality programs remain
 future work. Any addition
 requires an explicit release-scope decision, supported by concrete evidence
@@ -117,12 +118,12 @@ when a newly reproduced defect affects the supported behavior.
   </picture>
 </h2>
 
-30 outstanding entries across eight categories: seven entries with release
-scope and twenty-three future entries. No critical migration bug remains.
-B14-B19 originally recorded 31 failing tests on 2026-09-21. After the
-2026-09-23 B19 fix, all tests pass on Windows and WSL.
-Resolved B9 and B15-B18, plus withdrawn B14/B19, are retained below and excluded from
-the outstanding totals.
+29 outstanding entries across eight categories: seven entries with release
+scope and twenty-two future entries. No critical migration bug remains.
+B14-B19 originally recorded 31 failing tests on 2026-09-21. The
+2026-09-23 synchronous-only revision passed its Windows and WSL suites.
+Resolved B9, B14-B18 and F6, plus withdrawn B19, are retained below and
+excluded from the outstanding totals.
 Verification pending means that the focused regressions or runtime
 measurements described by an entry remain to be run. Category totals count
 entries, not individual failing tests; RE1 separates its minimum release
@@ -137,24 +138,24 @@ work from the future contribution guide.
 | Release engineering | RE1 | 0 | 1 | 0 | 1 |
 | C++ maintainability | DT1-DT3 | 0 | 0 | 3 | 3 |
 | Public documentation | DOC1-DOC2 | 0 | 0 | 2 | 2 |
-| Beyond the first release | F3-F7 | 0 | 0 | 5 | 5 |
-| **Total** | | **0** | **7** | **23** | **30** |
+| Beyond the first release | F3-F5, F7 | 0 | 0 | 4 | 4 |
+| **Total** | | **0** | **7** | **22** | **29** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
-| [B14](#b14-asynchronous-handler-execution) | Withdrawn feature | Removed by design | Not applicable | Outside current scope |
+| [B14](#b14-asynchronous-handler-execution) | Migration feature | Implemented; supported contract verified | P0 (maximum) | Current migration |
 | [B15](#b15-missing-100-continue) | Critical bug | Resolved; verified 2026-09-22 | P0 (maximum) | Current migration |
 | [B16](#b16-missing-http-rejection-responses) | Critical bug | Resolved; verified 2026-09-23 | P0 (maximum) | Current migration |
 | [B17](#b17-http-error-response-content) | Critical bug | Resolved; verified 2026-09-22 | P0 (maximum) | Current migration |
 | [B18](#b18-empty-delivery-contract) | Critical bug | Resolved; verified 2026-09-23 | P0 (maximum) | Current migration |
 | [B19](#b19-send-limit-failure-notification) | Withdrawn contract | Notifications removed | Not applicable | Outside current scope |
 | [C1](#c1-single-inactivity-timeout) | Hardening | Pending | Release gate | 0.1.0-beta1 |
-| [C2](#c2-effective-per-request-limits) | Hardening | Pending | Release gate | 0.1.0-beta1 |
+| [C2](#c2-effective-per-request-limits) | Hardening | Partially implemented | Release gate | 0.1.0-beta1 |
 | [C3](#c3-global-active-connection-limit) | Hardening | Pending | Release gate | 0.1.0-beta1 |
-| [C7](#c7-pending-response-and-work-budget) | Hardening | Design and validation pending | Release gate | 0.1.0-beta1 |
+| [C7](#c7-pending-response-and-work-budget) | Hardening | Async request limit implemented; transport budget pending | Release gate | 0.1.0-beta1 |
 | [B9](#b9-response-driven-connection-close) | Bug | Resolved; verified 2026-09-23 | Release gate | 0.1.0-beta1 |
 | [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark bug | Verification pending | Medium | Future work |
-| [F1](#f1-tls) | Product | Design and implementation pending | Release gate | 0.1.0-beta1 |
+| [F1](#f1-tls) | Product | Implemented; cross-platform validation pending | Release gate | 0.1.0-beta1 |
 | [F2](#f2-compression-and-gzip) | Product | Design and implementation pending | Release gate | 0.1.0-beta1 |
 | [P2](#p2-access-logging) | Product | Pending | Not set | Future work |
 | [P3](#p3-middleware-chain) | Product | Pending | Not set | Future work |
@@ -177,7 +178,7 @@ work from the future contribution guide.
 | [F3](#f3-progressive-streaming-and-sse) | Future | Deferred | Not set | Future work |
 | [F4](#f4-ordered-upgrade-barrier) | Future | Deferred | Not set | Future work |
 | [F5](#f5-websockets) | Future | Deferred | Not set | Future work |
-| [F6](#f6-listener-and-worker-configuration) | Future | Deferred | Not set | Future work |
+| [F6](#f6-listener-and-worker-configuration) | Product | Implemented; existing tests passed | Not applicable | Current implementation |
 | [F7](#f7-shutdown-with-draining) | Future | Deferred | Not set | Future work |
 
 <a name="operational-hardening"></a>
@@ -190,8 +191,9 @@ work from the future contribution guide.
   </picture>
 </h2>
 
-C1, C2, C3 and C7 are all required for `0.1.0-beta1`. Their policies will
-be defined in the later design stage described in the release target.
+C1, C2, C3 and C7 are all required for `0.1.0-beta1`. Request and transport
+policies exist; the remaining admission and resource-budget contracts still
+need decisions before implementation.
 
 <a name="c1-single-inactivity-timeout"></a>
 <h3>
@@ -223,9 +225,9 @@ On expiry, the transport closes safely.
 - Check timing, lifetime, ordering, and exactly one callback per closure.
 - Run equivalent scenarios in IOCP and epoll.
 
-**Dependencies and decisions.** Follow the policy design stage shared by
-C1, C2, C3 and C7. Determine the injection contract, default value, possible
-disabling behavior, and test timing tolerance before implementation.
+**Dependencies and decisions.** Reuse the existing transport-policy
+injection pattern. Determine the default value, possible disabling behavior,
+and test timing tolerance before implementation.
 
 **Delivery.** Required for `0.1.0-beta1`.
 
@@ -242,66 +244,67 @@ dynamic configuration, and automatic `408` responses.
   </picture>
 </h3>
 
-**Remaining work.** Define request policies injected at module creation and
-how the standard server supplies them to its decoder. Select defaults and
-enforce the selected budget for chunked bodies, whose final size is not
-known from the headers.
+**Current implementation.** The standard server accepts
+[HTTP policies](../include/protocol/http/v11/policies.h) at construction and
+passes them to the decoder. `max_content_length` defaults to 16 MiB and
+bounds declared and cumulative chunked payload bytes. Query pairs, chunk
+extensions, trailers, request-head bytes and the body memory threshold also
+have configurable defaults. The body can spill to disk independently of the
+request-head capacity. Response head and inline body capacities are also
+configurable; they are distinct from per-request acceptance limits.
 
-**Evidence.** [policies.h](../include/protocol/http/v11/policies.h) defaults
-its five size/count limits to zero (unlimited), and the standard server has
-no policy configuration API. The
-[Content-Length interpreter](../include/protocol/http/v11/headers/content_length.h)
-already rejects a value above a supplied policy limit. Reuse the existing
-field checks; the missing work is configuration, effective defaults, and
-cumulative body accounting. The internal head buffer does not bound body
-storage, which can spill to disk.
+**Remaining work.** Define separate header-field count, per-field size and
+request-target limits, with precise rejection status and configured-server
+boundary tests. Verify the existing limits through the server at zero,
+limit-1, limit and limit+1, including cumulative chunked bodies.
 
 **Components.** Policies, limits, context, decoder, server composition, and
 their tests.
 
 **Acceptance and tests.**
 
-- Define what each limit counts, including encoded and decoded body bytes.
+- Document what each limit counts, including encoded and decoded body bytes.
 - Verify zero, limit-1, limit, and limit+1 through configured server requests.
 - Check rejection before consuming an excessive Content-Length body and
   the corresponding rejection reason; cover chunked bodies separately.
 - Verify that configuration cannot change unsafely during use.
 - Measure whether the change affects the hot path.
 
-**Request head limits (found 2026-09-29).** The decoder bounds the head only
-by the receive capacity. There is no header field count limit and no
-per-field size limit, and an oversized head or request-target is rejected
-with 400: `kHeaderFieldsTooLarge` (431) and `kUriTooLong` (414) are mapped
-in [decoder.h](../include/protocol/http/v11/decoder.h) but never assigned.
+**Request head limits (updated 2026-10-06).** `max_request_head_size` now
+bounds the complete head independently of receive capacity. A complete head
+over that limit sets `kHeaderFieldsTooLarge` (431); an incomplete head that
+fills the limit still gets the generic 400. There is no separate header-field
+count, per-field size or request-target limit, and `kUriTooLong` (414) is
+mapped but not assigned.
 
-- Risk: a client can send thousands of small fields within one receive
-  buffer, multiplying per-field parsing and storage work, and clients and
-  proxies cannot tell an oversized head from malformed syntax.
+- Risk: many small fields within the configured head can multiply per-field
+  work, and clients cannot distinguish every size failure from bad syntax.
 - Impact: CPU and memory amplification per request; incorrect status codes
   for well-formed but oversized requests (RFC 6585 S5, RFC 9110 S15.5.15).
-- Components: decoder head parsing, policies, rejection reasons, tests.
+- Components: decoder head parsing, policies, rejection reasons and tests.
 - Verification: header count and single-field size at limit-1, limit and
   limit+1 must return 431; a request-target over capacity must return 414.
-  The current behaviour is pinned by `request head size is bounded by receive
-  capacity` and `header field count is bounded only by head size` in
-  [decoder_tests.cpp](../tests/unit/protocol/http/v11/decoder_tests.cpp);
-  update both when the limits land.
+  Existing [decoder tests](../tests/unit/protocol/http/v11/decoder_tests.cpp)
+  cover the configured whole-head boundary; add distinct field and target
+  cases when those policies are defined.
 
-**TLS session tests not exercised (found 2026-09-29).** The default
-`msvc-debug` configuration builds with `DOBA_ENABLE_TLS=OFF`, so
+**TLS verification gap (updated 2026-10-06).** The default `msvc-debug`
+configuration builds with `DOBA_ENABLE_TLS=OFF`, so
 [tls_session_tests.cpp](../tests/unit/transport/server/tls_session_tests.cpp)
-is compiled out and the full unit run executes no TLS test.
+is compiled out there. Linux TLS integration tests pass; equivalent Windows
+TLS validation and execution of the existing malformed-record unit tests in
+the release matrix remain open under F1.
 
 - Risk: regressions in record parsing, handshake failure handling or
-  post-failure state go undetected; hostile ClientHello bytes are untested.
+  post-failure state go undetected in builds that exclude TLS tests.
 - Impact: a TLS deployment may accept, hang on or mishandle malformed
   records without any unit signal.
 - Components: `tls_session`, TLS context/policies, CMake presets and CI.
-- Verification: build and run the suite with `DOBA_ENABLE_TLS=ON`; add a
-  malformed-record test covering an impossible record length, a fatal alert
-  and application data before the handshake, an SSLv2 ClientHello and a
-  truncated handshake. Each must end in `status::failed`, keep `failed()`
-  true and make `read`/`write` fail.
+- Verification: build and run the suite with `DOBA_ENABLE_TLS=ON` on both
+  platforms. The existing malformed-record test covers an impossible record
+  length, a fatal alert, application data before the handshake, an SSLv2
+  ClientHello and a truncated handshake; verify its results in the release
+  matrix.
 
 **Date field ranges (found 2026-09-29).** `date::check` validates syntax
 only and accepts out-of-range days, hours, minutes and seconds.
@@ -313,9 +316,9 @@ only and accepts out-of-range days, hours, minutes and seconds.
   behaviour is pinned by `check is syntactic for out of range date fields`
   in [date_tests.cpp](../tests/unit/protocol/http/common/headers/date_tests.cpp).
 
-**Dependencies and decisions.** Injection API shape, defaults, and body
-accounting will be defined in the C1/C2/C3/C7 policy design stage. C2 controls
-resources per request; C3 separately limits active connections.
+**Dependencies and decisions.** Preserve the existing policy injection and
+body accounting. C2 controls resources per request; C3 separately limits
+active connections and C7 limits work retained by a connection.
 
 **Delivery.** Required for `0.1.0-beta1`, including cumulative chunked-body
 limits and their focused boundary tests.
@@ -349,8 +352,8 @@ the connection counter, and TCP/IP tests.
 - A new connection can enter once capacity is available again.
 - Verify equivalent behavior on Windows and Linux.
 
-**Dependencies and decisions.** Follow the C1/C2/C3/C7 policy design stage;
-determine defaults and the semantics of any unlimited value. C3 controls
+**Dependencies and decisions.** Reuse the existing transport-policy
+injection pattern; determine defaults and any unlimited value. C3 controls
 connections; C2 controls resources per request and C7 controls pending work.
 
 **Delivery.** Required for `0.1.0-beta1`.
@@ -368,23 +371,26 @@ new callbacks, and HTTP rejection responses.
   </picture>
 </h3>
 
-**Status and evidence.** Implementation and validation are required for
-`0.1.0-beta1`. Source inspection found no per-connection budget at response
-insertion.
-A socket send buffer limit does not bound queued response bodies or work.
-Resource exhaustion has not been reproduced in a stress campaign.
+**Status and evidence.** `max_pending_requests` in HTTP policies now limits
+reserved response positions on connections with asynchronous routes, and
+the engine delivers complete responses in request order. The TCP
+`max_send_buffer_size` limits queued send reservations and the active batch,
+but excludes source-owned storage. Neither bound is a complete budget for
+retained work and response sources. Resource exhaustion has not been
+reproduced in a stress campaign.
 
-**Risk.** A pipelining client that does not consume responses, may accumulate source storage while more requests are accepted.
+**Risk.** A pipelining client that does not consume responses may retain
+source storage while more requests are accepted.
 
 **Components.** send queues, body sources and receive scheduling in
 [tcp_linux.h](../include/transport/server/tcp_linux.h) and
 [tcp_windows.h](../include/transport/server/tcp_windows.h).
 
-**Scope.** Implement limits on retained work and queued response bytes
-through policies injected at module creation. Define accounting, defaults,
-and admission/resume or rejection behavior in the C1/C2/C3/C7 policy design
-stage. Preserve ordered byte delivery and ownership without prescribing a
-new queue abstraction or an HTTP-specific transport.
+**Remaining scope.** Bound retained work and queued response sources through
+the responsible policies. Define accounting, defaults, and admission/resume
+or rejection behavior for the remaining budget. Preserve ordered byte
+delivery and ownership without prescribing a new queue abstraction or an
+HTTP-specific transport.
 
 **Acceptance and tests.** Use a non-reading peer and a delayed first handler
 with pipelined successors on both platforms. Check the configured work and
@@ -405,25 +411,50 @@ to C7 and does not depend on completing the future QA1/QA5 campaigns.
   </picture>
 </h2>
 
-B14-B19 were Critical severity and P0 migration work. The previous full-suite
-results describe the implementation before removal of coroutine execution.
-B14 and the B19 completion-notification contract have since been withdrawn;
-the remaining synchronous behavior and its tests are retained. Tests exclusive
-to the removed execution model are no longer part of the suite.
+B14-B19 were Critical severity and P0 migration work. The historical results
+below describe earlier revisions. B14 has since been reimplemented with
+separate synchronous and asynchronous engine paths; B19's notification
+contract remains withdrawn.
 
-**Synchronous-only verification (2026-09-23).** Examples and tests build on
-Windows and WSL. Windows passes 835 unit and 107 integration tests; WSL passes
-833 unit and 107 integration tests. Both platforms also pass the 16 unit and
-11 integration helper checks. Clang ASan/UBSan with leak detection passes
-66 affected unit and 79 integration tests on Linux. No benchmark was run.
+**Historical synchronous-only verification (2026-09-23).** Examples and tests
+build on Windows and WSL. Windows passes 835 unit and 107 integration tests;
+WSL passes 833 unit and 107 integration tests. Both platforms also pass
+16 unit and 11 integration helper checks. Clang ASan/UBSan with leak
+detection passes 66 affected unit and 79 integration tests on Linux.
+No benchmark was run.
+
+**Current verification (2026-10-06).** Windows passes 926 unit and 121
+integration tests; Linux passes 144 integration tests with TLS enabled. The
+`async_routes` example builds. These runs do not replace the full release
+matrix, including Windows TLS and sanitizers on the current revision.
 
 <a name="b14-asynchronous-handler-execution"></a>
 <h3>B14: Asynchronous handler execution and lifecycle</h3>
 
-**Status.** Withdrawn by design on 2026-09-23. Doba now supports synchronous
-handlers only. Coroutine tasks, suspension, resumption, cancellation, pending
-request limits and engine wake/completion callbacks have been removed together
-with their tests and example. B14 is no longer a release requirement.
+**Status.** Implemented for the current supported contract. The earlier
+withdrawal on 2026-09-23 no longer describes this branch.
+
+`common::task<void>` supports coroutine handlers registered alongside
+synchronous routes. [engine_sync.h](../include/protocol/http/v11/engine_sync.h)
+keeps synchronous execution separate; the engine creates
+[asynchronous order state](../include/protocol/http/v11/engine_async.h) only
+when the router has asynchronous routes. It assigns response positions before
+handler execution and serializes completed responses in request order.
+The decoder transfers owned request storage to suspended handlers and replaces
+its receive storage for later requests. The configured
+`max_pending_requests` bounds outstanding positions by default at 32.
+
+**Verification.** Task, router and engine unit tests cover suspension,
+resumption, response order, failure, body and parameter lifetime, and the
+pending limit. TCP and TLS integration tests cover mixed route ordering;
+the [example](../examples/http/v11/async_routes/README.md) demonstrates both
+models. A two-run local HttpArena baseline comparison with `main` showed no
+throughput regression, but does not establish a release performance baseline.
+
+**Limit.** Doba schedules `yield()` and `sleep_for()` on transport workers but
+does not cancel externally suspended awaitables.
+`server.stop()` waits for their completion, so an awaitable must eventually
+resume. B19's transport completion notifications were not restored.
 
 <a name="b15-missing-100-continue"></a>
 <h3>B15: Missing 100 Continue before request bodies</h3>
@@ -438,16 +469,16 @@ the engine. Clients waiting for an interim response could not send the body.
 **Implemented behavior.** `deserialization_result<RQty, RSty>` carries an
 optional response. After validating the complete head, the decoder returns
 `kMoreBytesNeeded` with `RSty::continue_100()` once if body decoding is
-incomplete. The synchronous engine transfers that response immediately;
-earlier request responses have already been handed to the transport.
+incomplete. The engine orders that interim response behind any preceding
+asynchronous response on the same connection.
 
 RFC 9110 S10.1.1 permits omitting 100 when content has already arrived or
 framing indicates no content. The serializer omits body bytes, Content-Length
 and Transfer-Encoding for 100 responses. Current coverage retains fragmented
 raw/chunked input, invalid heads, completed/empty bodies and delivery failure.
 
-**Performance verification.** The same WSL mixed-request benchmark used
-8 workers, 4096 connections, pipeline 1 and 133-byte responses with runtime
+**Historical performance verification.** The WSL mixed-request benchmark
+used 8 workers, 4096 connections, pipeline 1 and 133-byte responses with runtime
 Date. Three-round medians were 573,650 RPS before B15, 536,780 with optional
 and 430,530 for Actix. Additional paired runs also measured lower throughput
 than the pre-B15 reference. Results varied substantially between runs; zero
@@ -480,10 +511,11 @@ syscall trace reproduced the 400 response followed by ECONNRESET.
 **Implemented behavior.** The decoder supplies 400/413/414/417/431/501/505
 responses through the existing optional deserialization response. Known
 HEAD requests retain Content-Length but omit content, including failures
-in a fragmented body (RFC 9110 S9.3.2 and S8.6). The engine submits responses in request order and stops dispatch at the
-rejection boundary. Interim and rejection
-responses share serialization; handler and router responses retain their
-existing path. No new response wrapper or queue was added.
+in a fragmented body (RFC 9110 S9.3.2 and S8.6). The engine submits
+responses in request order and stops dispatch at the rejection boundary.
+Interim and rejection responses share serialization; handler and router
+responses retain their existing path. That B16 fix added no queue; later
+asynchronous routing added separate response-order state in the engine.
 
 Both TCP transports drain output, shut down the write side, then discard
 input until peer EOF (RFC 9112 S9.6). Windows keeps the receive buffer
@@ -500,7 +532,7 @@ the transport fix and passes after it. Full-suite results are recorded above.
 Clang AddressSanitizer and UndefinedBehaviorSanitizer pass 202 unit and 23
 integration cases on Linux, with leak detection enabled.
 
-**Performance.** Three rotated WSL rounds use the existing HttpArena
+**Historical performance.** Three rotated WSL rounds use the existing HttpArena
 comparison: 8 workers, 4096 connections, pipeline 1, separate server/client
 CPU affinity, 5-second warmup and 15-second samples. Both Doba revisions use
 identical adapters/compiler flags and real 133-byte responses with runtime
@@ -512,7 +544,8 @@ establish zero overhead or isolate the cause of the observed difference.
 **Limits.** Normal graceful closure retains connection resources until peer
 EOF; stop releases them after draining output. No timeout was introduced.
 Aborted connections and transport stop do not promise graceful delivery
-when the peer continues sending. The current B18/B19 contracts are recorded below.
+when the peer continues sending. The current B18/B19 contracts are recorded
+below.
 
 | Suite | Test | Source | Windows / WSL |
 | --- | --- | --- | --- |
@@ -572,8 +605,9 @@ distinguishes an active empty delivery from an empty queue. Tests retain
 isolated/consecutive empties, null buffers, byte limits and drain behavior
 between body sources. Engine completion notifications have been removed.
 
-**Performance.** Three rotated WSL rounds use 8 workers, 4096 connections,
-pipeline 1, separate CPU affinity, 5-second warmup and 15-second samples.
+**Historical performance.** Three rotated WSL rounds used 8 workers, 4096
+connections, pipeline 1, separate CPU affinity, 5-second warmup and
+15-second samples.
 Both Doba builds use the same adapter/compiler flags and real 133-byte
 responses with runtime Date. Median RPS: pre-B18 504,170, current
 515,100, Actix 396,210. Current vs pre-B18: +2.17%;
@@ -585,7 +619,7 @@ consume no byte budget; no new queue-entry limit was introduced.
 
 **Components.** [Linux transport](../include/transport/server/tcp_linux.h),
 [Windows transport](../include/transport/server/tcp_windows.h) and the
-[output contract](../include/common/output.h).
+[send contract](../include/protocol/send_delegate.h).
 
 | Suite | Test | Source | Windows / WSL |
 | --- | --- | --- | --- |
@@ -594,8 +628,8 @@ consume no byte budget; no new queue-entry limit was introduced.
 <a name="b19-send-limit-failure-notification"></a>
 <h3>B19: Missing completion notification for a rejected send</h3>
 
-**Status.** Notification contract withdrawn on 2026-09-23. The synchronous
-engine does not receive delivery completions. The transports still close on
+**Status.** Notification contract withdrawn on 2026-09-23. The engine does
+not receive delivery completions. The transports still close on
 invalid or oversized output, ignore later submissions and preserve buffers
 until pending native I/O retires. Wire-level rejection and source-failure
 tests remain in the transport suites.
@@ -623,14 +657,15 @@ contracts and build configuration were left unchanged.
 **Acceptance.** RFC 9112 S9.6 requires completion of the closing response
 before closure and no further request processing after that boundary.
 Synchronous tests cover inline, reader and chunked bodies, complete payloads,
-final chunk framing and EOF without successor bytes.
+final chunk framing and EOF without successor bytes. Mixed-route tests also
+cover response ordering when an asynchronous handler completes later.
 
 **Current coverage.** Engine tests retain exact close-token matching,
 request-close precedence and stopping dispatch. Server/factory tests retain
 policy forwarding and independent decoder state. Transport tests retain
 partial receive consumption, source/prefix FIFO, send limits, source failure,
-concurrent stop and draining on close, stop and destruction. Cases involving
-withdrawn coroutine execution or engine completion callbacks were removed.
+concurrent stop and draining on close, stop and destruction. Asynchronous
+ordering tests have been restored; engine completion callbacks remain absent.
 
 <a name="b13-signed-overflow-in-the-httparena-adapter"></a>
 <h3>
@@ -680,15 +715,18 @@ release engineering. P2-P8 remain future work, outside this beta.
   </picture>
 </h3>
 
-**Release scope.** Integrate native TLS for `0.1.0-beta1` while preserving
-the protocol-transport boundary. Original estimate: A.
+**Current implementation.** Native TLS uses optional OpenSSL support behind
+the existing protocol-transport boundary. `DOBA_ENABLE_TLS=ON` adds the
+`doba_tls` target. `tls_policies` configures certificates, encrypted receive
+capacity and network BIO capacity; the
+[HTTPS example](../examples/http/v11/https_hello_world/README.md) shows its
+use. Original estimate: A.
 
-**Decisions.** Select the TLS provider, dependency policy, configuration API
-and ownership model in a separate implementation plan before coding.
-
-**Acceptance and verification.** Focused unit and real-socket tests for
-handshake, encrypted HTTP delivery, closure and errors, with equivalent
-coverage on Windows and Linux.
+**Remaining release work.** Linux real-socket integration tests cover
+handshake, encrypted HTTP delivery, ordering, closure and error paths.
+Complete equivalent Windows TLS validation, run the existing malformed-record
+unit tests in the enabled-TLS release matrix, and complete that matrix before
+treating F1 as closed.
 
 **Delivery.** Mandatory release gate, ahead of C1/C2/C3/C7 and RE1.
 
@@ -707,8 +745,8 @@ coverage on Windows and Linux.
 Other compression formats are outside this release scope.
 
 **Decisions.** Select the compression library and API in a separate
-implementation plan. Resolve the dependency policy and its impact on the
-current zero-dependency claim before implementation.
+implementation plan. Resolve the dependency policy: core TCP needs no
+external library, while optional TLS already depends on OpenSSL.
 
 **Acceptance and verification.** Focused unit and real-socket tests for
 negotiation, uncompressed responses when identity is selected, consistent
@@ -761,7 +799,7 @@ by default or expose HTTP semantics inside the transport.
 in handlers. The design must respect the framework's lightweight approach.
 
 **Scope to define.** First resolve concrete composition use cases and their
-interaction with synchronous handlers.
+interaction with synchronous and asynchronous handlers.
 
 **Components.** Route registration API, handler contracts, and tests.
 
@@ -998,6 +1036,8 @@ rather than a commit.
 record runner and doba revisions, throughput, latency, CPU, and memory for
 baseline and pipelined profiles, with one repetition. These measurements do
 not establish run-to-run variability, allocation counts, or scaling limits.
+The local two-run comparison of the current branch with `main` is additional
+regression evidence, but its artifacts are not a versioned release baseline.
 
 **Scope.** Record hardware, toolchain, revisions, scenarios, and conditions
 for minimal requests, large headers, inline/streaming bodies, pipelining,
@@ -1085,9 +1125,10 @@ modify the workflow only if the selected mechanism requires it.
   release revision. Include every required source, test and example in that
   revision; local untracked files are not part of a published release.
 - Document current indexed-getter preconditions, request/view and borrowed
-  storage lifetimes, manual response-framing responsibilities and header
-  capacity, and allowed lifecycle/callback operations. This minimum does not
-  require completing DT2/DT3/DOC1/DOC2 or changing their APIs.
+  storage lifetimes across coroutine suspension, manual response-framing
+  responsibilities, configured header capacity, and allowed lifecycle and
+  callback operations. This minimum does not require completing
+  DT2/DT3/DOC1/DOC2 or changing their APIs.
 - Describe the controlled-deployment scope, TLS and GZIP configuration,
   effective operational policies, known limitations and omitted capabilities.
   Publish only channels and procedures that are actually available.
@@ -1192,10 +1233,10 @@ wire output. Preserve the
 lengths, conflicting Content-Length/Transfer-Encoding, HEAD/bodyless responses,
 and exact capacity with a fixed Date and deferred Content-Length.
 
-**Capacity follow-up.** Document the fixed status/header budget and the space
-needed for generated fields. Add exact-fit and over-capacity cases combining
-automatic Date with deferred framing, and verify recovery cannot publish a
-partial malformed response. Preserve method-aware error recovery;
+**Capacity follow-up.** Document the configured status/header budget and the
+space needed for generated fields. Add exact-fit and over-capacity cases
+combining automatic Date with deferred framing, and verify recovery cannot
+publish a partial malformed response. Preserve method-aware error recovery;
 keep header capacity distinct from body storage and progressive streaming.
 
 **Delivery and limits.** Future work. RE1 documents current response
@@ -1247,8 +1288,9 @@ from architecture and validate examples against the
 </h3>
 
 **Outstanding work.** Extend the architecture's ownership overview with
-concrete examples of retaining request views safely, destruction-related
-invalidation, borrowed-reader lifetime, and indexed getter preconditions.
+concrete examples of retaining request views safely across coroutine
+suspension, destruction-related invalidation, borrowed-reader lifetime, and
+indexed getter preconditions.
 
 **Acceptance.** Show valid uses and explain why views cannot outlive their
 owning request or external storage. Document the indexed-access contract
@@ -1266,7 +1308,8 @@ tests, and link the contract from the corresponding examples.
   </picture>
 </h2>
 
-F3-F7 are future work, outside `0.1.0-beta1`. F1/F2 are release gates.
+F3-F5 and F7 are future work, outside `0.1.0-beta1`. F6 is implemented;
+F1/F2 are release gates.
 C1/C2/C3/C7 and their focused slow-client and resource-limit tests remain
 required for the beta. The broader QA3 performance baseline and QA5 stress
 campaigns remain future work.
@@ -1347,23 +1390,17 @@ noncompliant with HTTP/1.1.
   </picture>
 </h3>
 
-**Context.** The current TCP backends bind the IPv4 wildcard address and
-derive worker count from hardware concurrency. Applications cannot select
-a narrower listening address or a worker budget through the normal server
-configuration API.
+**Status.** Implemented.
+[tcp_policies](../include/transport/server/tcp_policies.h) exposes the IPv4
+bind address and port, `worker_count` (zero selects automatically), and
+`listen_backlog` (zero uses the system default). The standard server accepts
+transport policies at construction. Both backends use these settings; unit
+and real-socket integration tests exercise policy
+validation, loopback binding, worker counts, startup failure and stop.
 
-**Future scope.** Decide whether deployment requirements justify minimal
-bind-address and worker-count options, following the module-creation policy
-contracts selected for C1/C2/C3/C7. Do not introduce a general networking
-abstraction or expand supported address families by default.
-
-**Components and acceptance.** Server configuration and both TCP backends.
-Test loopback-only binding, invalid or unavailable addresses, default behavior,
-worker validation, startup failure cleanup and stop on both platforms.
-
-**Delivery.** Future work; record current deployment constraints without
-presenting these options as existing features. This is separate from C3's
-connection admission budget and requires no changes to that release target.
+**Limit.** The transport remains IPv4-only. C3's global connection admission
+budget is separate and still outstanding. Additional release-matrix checks
+belong to RE1 rather than reopening this implemented feature.
 
 <a name="f7-shutdown-with-draining"></a>
 <h3>
@@ -1376,8 +1413,9 @@ connection admission budget and requires no changes to that release target.
 </h3>
 
 **Context.** The current stop lifecycle is not a public bounded-drain API
-for completing all accepted work during deployment shutdown. Graceful closure
-of an individual connection is not the same guarantee as server-wide draining.
+for completing all accepted work during deployment shutdown. It waits for
+suspended asynchronous handlers to finish without a cancellation deadline.
+Graceful closure of one connection does not guarantee server-wide draining.
 
 **Future scope.** Specify when acceptance and new request admission stop,
 what happens to active handlers, and how a drain deadline ends

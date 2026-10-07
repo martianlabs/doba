@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -36,12 +37,15 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <thread>
+#include <vector>
 
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <zlib.h>
 
+#include "common/task.h"
 #include "protocol/http/v11/server.h"
 #include "protocol/http/v11/static_file_server.h"
 #include "transport/server/tls.h"
@@ -108,6 +112,18 @@ int main(int argc, char* argv[]) {
   policies http_configuration;
   server http_server({.ip = "0.0.0.0", .port = "8080"},
                      http_configuration);
+  http_server.add_route(
+      "GET", "/delay/:ms",
+      [](const request&, response& res, std::uint32_t ms)
+          -> martianlabs::doba::common::task<void> {
+        if (ms != 0) {
+          co_await martianlabs::doba::common::sleep_for(
+              std::chrono::milliseconds(ms));
+        }
+        res.ok_200();
+        res.add_header("Content-Type", "text/plain")
+            .set_body(std::to_string(ms));
+      });
   // Parse every baseline value; HttpArena randomizes them to detect shortcuts.
   http_server.add_route(
       "GET", "/baseline11",

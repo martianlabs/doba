@@ -50,6 +50,10 @@ using tls_context = std::shared_ptr<SSL_CTX>;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline tls_context make_tls_context(const tls_policies& configuration) {
+  if (!configuration.encrypted_receive_buffer_size ||
+      !configuration.network_bio_buffer_size) {
+    throw std::runtime_error("TLS buffer capacities must be positive!");
+  }
   if (configuration.certificate_file.empty() ||
       configuration.private_key_file.empty()) {
     throw std::runtime_error("TLS certificate and key are required!");
@@ -90,19 +94,20 @@ class tls_session {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  tls_session(tls_context context, std::size_t send_capacity)
+  tls_session(tls_context context, std::size_t send_capacity,
+              std::size_t network_bio_capacity = tls_policies::kBioBufferSize)
       : context_{std::move(context)},
         ssl_{context_ ? SSL_new(context_.get()) : nullptr, SSL_free},
         network_{nullptr, BIO_free} {
-    if (!ssl_ || !send_capacity) {
+    if (!ssl_ || !send_capacity || !network_bio_capacity) {
       throw std::runtime_error("TLS session could not be created!");
     }
     BIO* internal = nullptr;
     BIO* network = nullptr;
     const std::size_t bio_capacity =
-        (std::min)(send_capacity, tls_policies::kBioBufferSize);
+        (std::min)(send_capacity, network_bio_capacity);
     if (BIO_new_bio_pair(&internal, bio_capacity, &network,
-                         tls_policies::kBioBufferSize) != 1) {
+                         network_bio_capacity) != 1) {
       throw std::runtime_error("TLS buffers could not be created!");
     }
     SSL_set_bio(ssl_.get(), internal, internal);

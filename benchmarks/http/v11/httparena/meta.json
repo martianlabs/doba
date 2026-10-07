@@ -7,7 +7,7 @@
   "description": "A high-performance, transport- and protocol-agnostic C++20 server framework.",
   "repo": "https://github.com/martianlabs/doba",
   "enabled": true,
-  "tests": ["baseline", "limited-conn", "json-comp", "json-tls",
+  "tests": ["baseline", "limited-conn", "async", "json-comp", "json-tls",
             "latency-1m", "latency-10k", "latency-500k-8cpu",
             "8gbit",
             "static-tls"],

@@ -57,11 +57,20 @@ struct tls_connection {
   template <protocol::contracts::engine_factory<ENty> FAty>
   tls_connection(std::size_t recv_buffer_size, std::size_t send_buffer_size,
                  const FAty& create_engine, shared_state context)
+      : tls_connection(recv_buffer_size, send_buffer_size, create_engine,
+                       std::move(context),
+                       tls_policies::kEncryptedReceiveBufferSize,
+                       tls_policies::kBioBufferSize) {}
+  template <protocol::contracts::engine_factory<ENty> FAty>
+  tls_connection(std::size_t recv_buffer_size, std::size_t send_buffer_size,
+                 const FAty& create_engine, shared_state context,
+                 std::size_t encrypted_receive_buffer_size,
+                 std::size_t network_bio_buffer_size)
       : engine{create_engine()},
-        buffer{std::make_unique<char[]>(
-            tls_policies::kEncryptedReceiveBufferSize)},
-        capacity{tls_policies::kEncryptedReceiveBufferSize},
-        session_{std::move(context), send_buffer_size},
+        buffer{std::make_unique<char[]>(encrypted_receive_buffer_size)},
+        capacity{encrypted_receive_buffer_size},
+        session_{std::move(context), send_buffer_size,
+                 network_bio_buffer_size},
         plaintext_{std::make_unique<char[]>(recv_buffer_size)},
         plaintext_capacity_{recv_buffer_size} {}
   // +=========================================================================+

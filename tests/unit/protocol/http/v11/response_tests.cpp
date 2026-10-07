@@ -97,6 +97,26 @@ DOBA_TEST("response identifies 100 Continue") {
   DOBA_EXPECT(!value.ok_200().is_continue_100());
 }
 
+DOBA_TEST("response uses configured head and inline capacities") {
+  std::array<char, 72> storage{};
+  response value(storage, 64, 8);
+  value.ok_200().set_header("Date", "fixed").set_body("123456789");
+  auto serialized = value.serialize();
+  DOBA_EXPECT(serialized.source != nullptr);
+  DOBA_EXPECT_EQUAL(read_source(*serialized.source), "123456789");
+
+  std::array<char, 72> limited_storage{};
+  response limited(limited_storage, 64, 8);
+  limited.ok_200();
+  bool rejected = false;
+  try {
+    limited.add_header("X-Pad", std::string(64, 'x'));
+  } catch (const std::out_of_range&) {
+    rejected = true;
+  }
+  DOBA_EXPECT(rejected);
+}
+
 // +===========================================================================+
 // | [>] moving preserves response state and owned body writers  ( test-case ) |
 // +---------------------------------------------------------------------------+

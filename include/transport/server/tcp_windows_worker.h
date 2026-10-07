@@ -28,15 +28,19 @@
 #include <algorithm>
 #include <atomic>
 #include <charconv>
+#include <chrono>
 #include <condition_variable>
+#include <coroutine>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <deque>
 #include <exception>
 #include <limits>
 #include <memory>
 #include <mutex>
 #include <new>
+#include <queue>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -131,6 +135,27 @@ struct worker {
   // +-------------------------------------------------------------------------+
   void stop() { stop_(false); }
   // +=========================================================================+
+  // | [>] quiesce                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  void quiesce() {
+    if (current_worker_ == this) {
+      throw std::runtime_error("Transport cannot quiesce from a worker!");
+    }
+    SOCKET listener = INVALID_SOCKET;
+    std::vector<std::shared_ptr<context<ENty, CNty>>> contexts;
+    {
+      std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+      if (io_h_ == nullptr || quiescing_) return;
+      contexts.reserve(contexts_.size());
+      for (const auto& item : contexts_) contexts.push_back(item.second);
+      quiescing_ = true;
+      listener = accept_socket_;
+      accept_socket_ = INVALID_SOCKET;
+    }
+    if (listener != INVALID_SOCKET) closesocket(listener);
+    for (const auto& ctx : contexts) ctx->quiesce();
+  }
+  // +=========================================================================+
   // | [>] set_on_connection                                        ( public ) |
   // +-------------------------------------------------------------------------+
   template <typename FNty>
@@ -150,6 +175,40 @@ struct worker {
   }
 
  private:
+  using async_entry = std::pair<std::chrono::steady_clock::time_point,
+                                std::coroutine_handle<>>;
+  struct later_async {
+    bool operator()(const async_entry& left,
+                    const async_entry& right) const {
+      return left.first > right.first;
+    }
+  };
+  struct async_state {
+    std::deque<std::coroutine_handle<>> ready;
+    std::priority_queue<async_entry, std::vector<async_entry>, later_async>
+        timers;
+  };
+  // +=========================================================================+
+  // | [>] scheduler                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  common::task_scheduler scheduler() {
+    return {this,
+            [](void* owner, std::coroutine_handle<> handle) {
+              if (current_worker_ != static_cast<worker*>(owner) ||
+                  !current_async_) {
+                throw std::runtime_error("Task resumed outside I/O worker!");
+              }
+              current_async_->ready.push_back(handle);
+            },
+            [](void* owner, std::chrono::steady_clock::time_point due,
+               std::coroutine_handle<> handle) {
+              if (current_worker_ != static_cast<worker*>(owner) ||
+                  !current_async_) {
+                throw std::runtime_error("Task resumed outside I/O worker!");
+              }
+              current_async_->timers.push({due, handle});
+            }};
+  }
   // +=========================================================================+
   // | [>] stop_                                                   ( private ) |
   // +-------------------------------------------------------------------------+
@@ -214,6 +273,7 @@ struct worker {
       accept_depth_ = 0;
       pending_accepts_ = 0;
       stopping_ = false;
+      quiescing_ = false;
       stopping_thread_ = {};
     }
     lifecycle_cv_.notify_all();
@@ -326,15 +386,34 @@ struct worker {
     for (std::size_t i = 0; i < number_of_workers; i++) {
       workers_.emplace_back(std::jthread([this]() {
         current_worker_ = this;
+        async_state async;
+        current_async_ = &async;
         bool stopping = false;
         while (!stopping) {
           ULONG_PTR key = NULL;
           LPOVERLAPPED lpo = NULL;
           DWORD bytes = 0;  // bytes transfered..
           DWORD tout = INFINITE;
+          if (!async.ready.empty()) {
+            tout = 0;
+          } else if (!async.timers.empty()) {
+            auto remaining = async.timers.top().first -
+                             std::chrono::steady_clock::now();
+            auto milliseconds = std::chrono::duration_cast<
+                std::chrono::milliseconds>(remaining);
+            if (remaining <= std::chrono::steady_clock::duration::zero()) {
+              tout = 0;
+            } else if (milliseconds.count() >= INFINITE - 1) {
+              tout = INFINITE - 1;
+            } else {
+              tout = static_cast<DWORD>(milliseconds.count() + 1);
+            }
+          }
           BOOL st = GetQueuedCompletionStatus(io_h_, &bytes, &key, &lpo, tout);
           overlapped_base* ovb = reinterpret_cast<overlapped_base*>(lpo);
-          if (st == TRUE && ovb == nullptr) {
+          if (st == FALSE && ovb == nullptr &&
+              GetLastError() == WAIT_TIMEOUT) {
+          } else if (st == TRUE && ovb == nullptr) {
             stopping = true;
           } else if (st == TRUE) {
             if (ovb->get_type() == io_type::kAccept) {
@@ -362,7 +441,22 @@ struct worker {
             // overlapped structure if it was dynamically allocated.
             handle_overlapped(ovb);
           }
+          if (!async.timers.empty()) {
+            const auto now = std::chrono::steady_clock::now();
+            while (!async.timers.empty() &&
+                   async.timers.top().first <= now) {
+              async.ready.push_back(async.timers.top().second);
+              async.timers.pop();
+            }
+          }
+          std::size_t count = async.ready.size();
+          while (count--) {
+            auto handle = async.ready.front();
+            async.ready.pop_front();
+            handle.resume();
+          }
         }
+        current_async_ = nullptr;
         current_worker_ = nullptr;
       }));
     }
@@ -373,7 +467,7 @@ struct worker {
   // +-------------------------------------------------------------------------+
   SOCKET get_accept_socket() {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-    if (stopping_) return INVALID_SOCKET;
+    if (stopping_ || quiescing_) return INVALID_SOCKET;
     return accept_socket_;
   }
   // +=========================================================================+
@@ -384,7 +478,8 @@ struct worker {
     {
       std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
       if (pending_accepts_) pending_accepts_--;
-      replenish = !stopping_ && accept_socket_ != INVALID_SOCKET;
+      replenish = !stopping_ && !quiescing_ &&
+                  accept_socket_ != INVALID_SOCKET;
     }
     lifecycle_cv_.notify_all();
     if (replenish) replenish_accept_pipeline();
@@ -394,7 +489,7 @@ struct worker {
   // +-------------------------------------------------------------------------+
   bool register_context(const std::shared_ptr<context<ENty, CNty>>& ctx) {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-    if (stopping_) return false;
+    if (stopping_ || quiescing_) return false;
     try {
       return contexts_.emplace(ctx.get(), ctx).second;
     } catch (...) {
@@ -448,12 +543,23 @@ struct worker {
     }
     std::shared_ptr<context<ENty, CNty>> ctx;
     try {
+      std::size_t encrypted_receive_buffer_size = 0;
+      std::size_t network_bio_buffer_size = 0;
+      if constexpr (requires(const PTy& value) {
+                      value.encrypted_receive_buffer_size;
+                      value.network_bio_buffer_size;
+                    }) {
+        encrypted_receive_buffer_size =
+            configuration_.encrypted_receive_buffer_size;
+        network_bio_buffer_size = configuration_.network_bio_buffer_size;
+      }
       ctx = std::make_shared<context<ENty, CNty>>(
           ova->socket, configuration_.recv_buffer_size,
           configuration_.max_send_buffer_size, create_engine_, stopping_,
           on_connection_, on_disconnection_,
           [this](context<ENty, CNty>* context) { retire_context(context); },
-          shared_state_);
+          shared_state_, encrypted_receive_buffer_size,
+          network_bio_buffer_size);
     } catch (...) {
       closesocket(ova->socket);
       finish_accept();
@@ -472,7 +578,7 @@ struct worker {
     }
     // Let's call user's callback to notify for new connection!
     try {
-      ctx->connected(io_h_);
+      ctx->connected(io_h_, scheduler());
       ctx->notify_connection();
     } catch (const std::exception&) {
       ctx->stop();
@@ -570,7 +676,8 @@ struct worker {
     for (;;) {
       {
         std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-        if (stopping_ || accept_socket_ == INVALID_SOCKET) return false;
+        if (stopping_ || quiescing_ ||
+            accept_socket_ == INVALID_SOCKET) return false;
         if (pending_accepts_ >= accept_depth_) return true;
       }
       if (!post_accept(false)) return false;
@@ -590,7 +697,7 @@ struct worker {
     }
     DWORD received = 0;
     std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
-    if (stopping_ || accept_socket_ == INVALID_SOCKET) {
+    if (stopping_ || quiescing_ || accept_socket_ == INVALID_SOCKET) {
       lifecycle_lock.unlock();
       closesocket(soc);
       delete ova;
@@ -633,9 +740,11 @@ struct worker {
   std::size_t pending_accepts_ = 0;
   bool starting_ = false;
   std::atomic<bool> stopping_{false};
+  std::atomic<bool> quiescing_{false};
   std::thread::id stopping_thread_{};
   std::vector<std::jthread> workers_;
   inline static thread_local const worker* current_worker_{nullptr};
+  inline static thread_local async_state* current_async_{nullptr};
   std::unordered_map<context<ENty, CNty>*,
                      std::shared_ptr<context<ENty, CNty>>> contexts_;
   types::on_client_connected_delegate on_connection_;
