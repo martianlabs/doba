@@ -119,13 +119,13 @@ class framer_chunked {
     while (i < input.size()) {
       const char c = static_cast<char>(input[i]);
       if (state_ >= state::extension_before_semicolon &&
-          state_ <= state::extension_after_value &&
-          extension_limit_ && ++extension_size_ > extension_limit_) {
+          state_ <= state::extension_after_value && extension_limit_ &&
+          ++extension_size_ > extension_limit_) {
         return fail(result, framer_error::chunk_extension_size_limit_exceeded);
       }
       if (state_ >= state::trailer_line_start &&
-          state_ <= state::trailer_end_lf &&
-          trailer_limit_ && ++trailer_size_ > trailer_limit_) {
+          state_ <= state::trailer_end_lf && trailer_limit_ &&
+          ++trailer_size_ > trailer_limit_) {
         return fail(result, framer_error::trailer_size_limit_exceeded);
       }
       switch (state_) {

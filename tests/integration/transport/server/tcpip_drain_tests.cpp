@@ -699,6 +699,230 @@ DOBA_TEST("stop retires an accept burst") {
 }
 
 // +===========================================================================+
+// | [>] quiesce waits for an accepting callback                ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("quiesce waits for an accepting callback") {
+  auto state = std::make_shared<drain_state>();
+  auto factory = [state]() -> drain_engine { return drain_engine{state}; };
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  tr::tcp_policies configuration;
+  configuration.ip = "127.0.0.1";
+  configuration.port = std::to_string(port);
+  configuration.worker_count = 2;
+  tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
+  std::promise<void> entered;
+  std::promise<void> release;
+  auto active = entered.get_future();
+  auto ready = release.get_future().share();
+  transport.set_on_connection([&]() {
+    entered.set_value();
+    ready.wait();
+  });
+  transport.set_on_disconnection([]() {});
+  transport.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(active.wait_for(5s) == std::future_status::ready);
+  auto quiescing =
+      std::async(std::launch::async, [&]() { transport.quiesce(); });
+  const bool waited = quiescing.wait_for(200ms) == std::future_status::timeout;
+  release.set_value();
+  quiescing.get();
+  client.close();
+  transport.stop();
+  DOBA_EXPECT(waited);
+}
+
+// +===========================================================================+
+// | [>] stop preserves accepting callback order                ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("stop preserves accepting callback order") {
+  auto state = std::make_shared<drain_state>();
+  auto factory = [state]() -> drain_engine { return drain_engine{state}; };
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  tr::tcp_policies configuration;
+  configuration.ip = "127.0.0.1";
+  configuration.port = std::to_string(port);
+  configuration.worker_count = 2;
+  tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
+  std::promise<void> entered;
+  std::promise<void> release;
+  auto active = entered.get_future();
+  auto ready = release.get_future().share();
+  std::atomic<int> disconnected{0};
+  transport.set_on_connection([&]() {
+    entered.set_value();
+    ready.wait();
+  });
+  transport.set_on_disconnection([&]() { disconnected++; });
+  transport.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(active.wait_for(5s) == std::future_status::ready);
+  auto stopping = std::async(std::launch::async, [&]() { transport.stop(); });
+  const bool pending = stopping.wait_for(200ms) == std::future_status::timeout;
+  const bool ordered = disconnected.load() == 0;
+  release.set_value();
+  stopping.get();
+  client.close();
+  DOBA_EXPECT(pending);
+  DOBA_EXPECT(ordered);
+  DOBA_EXPECT_EQUAL(disconnected.load(), 1);
+}
+
+#ifdef __linux__
+// +===========================================================================+
+// | [>] quiesce waits for linux startup                       ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("quiesce waits for linux startup") {
+  struct copy_gate {
+    std::promise<void> entered;
+    std::shared_future<void> release;
+    std::atomic<bool> enabled{false};
+    std::atomic<bool> once{false};
+  };
+  struct gated_callback {
+    std::shared_ptr<copy_gate> gate;
+
+    explicit gated_callback(std::shared_ptr<copy_gate> value)
+        : gate(std::move(value)) {}
+    gated_callback(const gated_callback& other) : gate(other.gate) {
+      if (gate->enabled && !gate->once.exchange(true)) {
+        gate->entered.set_value();
+        gate->release.wait();
+      }
+    }
+    void operator()() const {}
+  };
+
+  auto state = std::make_shared<drain_state>();
+  auto gate = std::make_shared<copy_gate>();
+  auto copying = gate->entered.get_future();
+  std::promise<void> release;
+  gate->release = release.get_future().share();
+  auto factory = [state]() -> drain_engine { return drain_engine{state}; };
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  tr::tcp_policies configuration;
+  configuration.ip = "127.0.0.1";
+  configuration.port = std::to_string(port);
+  configuration.worker_count = 2;
+  tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
+  transport.set_on_connection(gated_callback{gate});
+  transport.set_on_disconnection([]() {});
+  gate->enabled = true;
+  auto starting = std::async(std::launch::async, [&]() { transport.start(); });
+  DOBA_EXPECT(copying.wait_for(5s) == std::future_status::ready);
+  auto quiescing =
+      std::async(std::launch::async, [&]() { transport.quiesce(); });
+  const bool waited = quiescing.wait_for(200ms) == std::future_status::timeout;
+  release.set_value();
+  starting.get();
+  quiescing.get();
+  transport.stop();
+  DOBA_EXPECT(waited);
+}
+
+// +===========================================================================+
+// | [>] quiesce permits callback updates to fail promptly     ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("quiesce permits callback updates to fail promptly") {
+  auto state = std::make_shared<drain_state>();
+  auto factory = [state]() -> drain_engine { return drain_engine{state}; };
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  tr::tcp_policies configuration;
+  configuration.ip = "127.0.0.1";
+  configuration.port = std::to_string(port);
+  configuration.worker_count = 2;
+  tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
+  std::atomic<int> connected{0};
+  std::atomic<bool> prompt{false};
+  std::promise<void> attempt;
+  std::promise<void> done;
+  auto requested = attempt.get_future().share();
+  auto completed = done.get_future().share();
+  transport.set_on_connection([&]() { connected++; });
+  transport.set_on_disconnection([&]() {
+    attempt.set_value();
+    prompt = completed.wait_for(1s) == std::future_status::ready;
+  });
+  std::jthread setter([&]() {
+    requested.wait();
+    try {
+      transport.set_on_connection([]() {});
+    } catch (const std::runtime_error&) {
+    }
+    done.set_value();
+  });
+  transport.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(wait_count(connected, 1));
+  transport.quiesce();
+  setter.join();
+  client.close();
+  transport.stop();
+  DOBA_EXPECT(prompt.load());
+}
+#endif
+
+// +===========================================================================+
+// | [>] concurrent start and quiesce permit restart           ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("concurrent start and quiesce permit restart") {
+  auto state = std::make_shared<drain_state>();
+  auto factory = [state]() -> drain_engine { return drain_engine{state}; };
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  tr::tcp_policies configuration;
+  configuration.ip = "127.0.0.1";
+  configuration.port = std::to_string(port);
+  configuration.worker_count = 8;
+  std::atomic<int> connected{0};
+  std::atomic<int> disconnected{0};
+  tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
+  transport.set_on_connection([&]() { connected++; });
+  transport.set_on_disconnection([&]() { disconnected++; });
+  for (int iteration = 0; iteration < 8; iteration++) {
+    std::promise<void> release;
+    auto ready = release.get_future().share();
+    std::atomic<int> failures{0};
+    std::jthread starting([&]() {
+      ready.wait();
+      try {
+        transport.start();
+      } catch (...) {
+        failures++;
+      }
+    });
+    std::jthread quiescing([&]() {
+      ready.wait();
+      try {
+        transport.quiesce();
+      } catch (...) {
+        failures++;
+      }
+    });
+    release.set_value();
+    starting.join();
+    quiescing.join();
+    transport.stop();
+    DOBA_EXPECT_EQUAL(failures.load(), 0);
+    transport.start();
+    DOBA_EXPECT(client.connect(port));
+    DOBA_EXPECT(wait_count(connected, iteration + 1));
+    client.close();
+    transport.stop();
+    DOBA_EXPECT_EQUAL(connected.load(), disconnected.load());
+  }
+}
+
+// +===========================================================================+
 // | [>] concurrent start and stop permit restart                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("concurrent start and stop permit restart") {

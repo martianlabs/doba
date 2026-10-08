@@ -19,8 +19,7 @@ for more.
 **Native IOCP on Windows. Native epoll on Linux.**
 The TCP transport needs no external libraries; optional TLS uses OpenSSL.
 
-[Try the examples](examples/README.md) /
-[Peek under the hood](docs/ARCHITECTURE.md)
+[Try the examples](examples/README.md)
 
 <a name="okay-how-fast"></a>
 <h2>
@@ -32,46 +31,116 @@ The TCP transport needs no external libraries; optional TLS uses OpenSSL.
 
 Big throughput numbers are fun. Waiting for a response isn't. Let's look at both.
 
-Measured locally with the official HttpArena suite: **512 connections**,
-**lite mode**, **one run per server and profile**.
-[Full results](resources/benchmarks/benchmark-results.txt). `ntex/pipelined` was skipped.
-These results predate the removal of HTTP/1.1 pipelining in doba; the
-`pipelined` chart is historical and does not describe the current engine.
+Measured on **Scaleway, 2026-10-07**, using the official HttpArena suite
+and its **reference execution model**: native `gcannon` and `wrk`, with `zrk`
+and servers in Docker, following upstream CPU affinity and host tuning.
+**RUNS=3**. Results are selected by upstream from its repetitions,
+not averaged across runs.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/benchmark-throughput-baseline-dark.svg">
-  <img src="resources/benchmarks/benchmark-throughput-baseline.svg" alt="HttpArena baseline throughput: requests per second, higher is better." width="100%">
-</picture>
+Every chart shows the **same top 10 from the overall ranking**, ordered by each
+test's metric. Scores retain normalization across all **21 measured servers**.
+The total includes eight scored profiles and the upstream completeness factor;
+`pipelined`, `latency-500k-8cpu` and `static-tls` are reference-only profiles.
+
+The test machine uses an **AMD EPYC 8534P at 2.30 GHz**
+(**64 cores / 128 threads**), **576 GiB of DDR5 RAM** and
+**2 x 3.84 TB NVMe** storage. It provides a **25 Gbps private network**
+and a **1 Gbps public connection**, upgradable to **25 Gbps**.
+
+<a href="resources/benchmarks/scaleway-test-006/benchmark-overall.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-006/benchmark-overall-dark.svg">
+    <img src="resources/benchmarks/scaleway-test-006/benchmark-overall.svg" alt="HttpArena overall top 10: total points including completeness; higher is better." width="100%">
+  </picture>
+</a>
 <br><br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/benchmark-throughput-pipelined-dark.svg">
-  <img src="resources/benchmarks/benchmark-throughput-pipelined.svg" alt="HttpArena pipelined throughput: requests per second, higher is better." width="100%">
-</picture>
+<a href="resources/benchmarks/scaleway-test-006/benchmark-baseline.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-006/benchmark-baseline-dark.svg">
+    <img src="resources/benchmarks/scaleway-test-006/benchmark-baseline.svg" alt="HttpArena baseline: selected requests per second; higher is better." width="100%">
+  </picture>
+</a>
 <br><br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/benchmark-latency-dark.svg">
-  <img src="resources/benchmarks/benchmark-latency.svg" alt="HttpArena p50, p99, and p99.9 latency for both profiles: milliseconds, lower is better." width="100%">
-</picture>
+<a href="resources/benchmarks/scaleway-test-006/benchmark-pipelined.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-006/benchmark-pipelined-dark.svg">
+    <img src="resources/benchmarks/scaleway-test-006/benchmark-pipelined.svg" alt="HttpArena pipelined: selected requests per second; higher is better." width="100%">
+  </picture>
+</a>
 <br><br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/benchmark-memory-dark.svg">
-  <img src="resources/benchmarks/benchmark-memory.svg" alt="HttpArena average memory for both profiles: lower is better." width="100%">
-</picture>
+<a href="resources/benchmarks/scaleway-test-006/benchmark-limited-conn.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-006/benchmark-limited-conn-dark.svg">
+    <img src="resources/benchmarks/scaleway-test-006/benchmark-limited-conn.svg" alt="HttpArena limited-conn: selected requests per second; higher is better." width="100%">
+  </picture>
+</a>
 <br><br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/benchmark-cpu-efficiency-dark.svg">
-  <img src="resources/benchmarks/benchmark-cpu-efficiency.svg" alt="HttpArena requests per second per 100 percent of reported CPU usage: higher is better." width="100%">
-</picture>
+<a href="resources/benchmarks/scaleway-test-006/benchmark-latency-10k.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-006/benchmark-latency-10k-dark.svg">
+    <img src="resources/benchmarks/scaleway-test-006/benchmark-latency-10k.svg" alt="HttpArena latency-10k: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
+  </picture>
+</a>
 <br><br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/benchmark-overall-dark.svg">
-  <img src="resources/benchmarks/benchmark-overall.svg" alt="HttpArena overall score: normalized throughput contributions from both profiles, out of 200 points." width="100%">
-</picture>
+<a href="resources/benchmarks/scaleway-test-006/benchmark-latency-1m.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-006/benchmark-latency-1m-dark.svg">
+    <img src="resources/benchmarks/scaleway-test-006/benchmark-latency-1m.svg" alt="HttpArena latency-1m: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
+  </picture>
+</a>
+<br><br>
+
+<a href="resources/benchmarks/scaleway-test-006/benchmark-latency-500k-8cpu.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-006/benchmark-latency-500k-8cpu-dark.svg">
+    <img src="resources/benchmarks/scaleway-test-006/benchmark-latency-500k-8cpu.svg" alt="HttpArena latency-500k-8cpu: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
+  </picture>
+</a>
+<br><br>
+
+<a href="resources/benchmarks/scaleway-test-006/benchmark-async.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-006/benchmark-async-dark.svg">
+    <img src="resources/benchmarks/scaleway-test-006/benchmark-async.svg" alt="HttpArena async: selected requests per second; higher is better." width="100%">
+  </picture>
+</a>
+<br><br>
+
+<a href="resources/benchmarks/scaleway-test-006/benchmark-json-comp.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-006/benchmark-json-comp-dark.svg">
+    <img src="resources/benchmarks/scaleway-test-006/benchmark-json-comp.svg" alt="HttpArena json-comp: compression-adjusted requests per second; higher is better." width="100%">
+  </picture>
+</a>
+<br><br>
+
+<a href="resources/benchmarks/scaleway-test-006/benchmark-json-tls.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-006/benchmark-json-tls-dark.svg">
+    <img src="resources/benchmarks/scaleway-test-006/benchmark-json-tls.svg" alt="HttpArena json-tls: selected requests per second; higher is better." width="100%">
+  </picture>
+</a>
+<br><br>
+
+<a href="resources/benchmarks/scaleway-test-006/benchmark-8gbit.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-006/benchmark-8gbit-dark.svg">
+    <img src="resources/benchmarks/scaleway-test-006/benchmark-8gbit.svg" alt="HttpArena 8gbit: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
+  </picture>
+</a>
+<br><br>
+
+<a href="resources/benchmarks/scaleway-test-006/benchmark-static-tls.svg" title="Open full-size light chart">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-006/benchmark-static-tls-dark.svg">
+    <img src="resources/benchmarks/scaleway-test-006/benchmark-static-tls.svg" alt="HttpArena static-tls: selected requests per second; higher is better." width="100%">
+  </picture>
+</a>
 <br><br>
 
 <a name="no-magic-a-few-deliberate-choices"></a>
@@ -127,7 +196,7 @@ int main() {
 
 Once running: `curl http://localhost:8080/hello`
 
-[Build & integrate](docs/DEVELOPMENT.md)
+**Build & integrate**
 
 <details>
 <summary>Build, install, and use with CMake</summary>
@@ -156,9 +225,6 @@ Set `CMAKE_PREFIX_PATH` to the installation prefix when it is not in a
 standard system location. The exported target provides the include directory,
 C++20 requirement, and system threading dependency.
 
-For compiler setup, presets, build options, and test commands, see
-[Development](docs/DEVELOPMENT.md).
-
 </details>
 
 <a name="fast-is-nice-correct-is-non-negotiable"></a>
@@ -183,5 +249,5 @@ Here's [what's left to do](docs/BACKLOG.md).
 
 Bring a compiler. Curiosity helps.
 
-[Quality rules](docs/QUALITY.md) / [Apache 2.0](LICENSE)
+[Apache 2.0](LICENSE)
 

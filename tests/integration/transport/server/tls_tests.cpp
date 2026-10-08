@@ -161,6 +161,37 @@ DOBA_TEST("tls exchanges encrypted bytes on loopback") {
 }
 
 // +===========================================================================+
+// | [>] tls quiesces and restarts on the same port              ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("tls quiesces and restarts on the same port") {
+  tcpip_client probe;
+  const auto port = probe.find_available_port();
+  DOBA_EXPECT(port != 0);
+  auto factory = []() { return byte_engine{}; };
+  tr::tls<byte_engine, decltype(factory)> server(server_policies(port),
+                                                 factory);
+  std::atomic<int> connected{0};
+  std::atomic<int> disconnected{0};
+  server.set_on_connection([&]() { connected++; });
+  server.set_on_disconnection([&]() { disconnected++; });
+  for (int iteration = 1; iteration <= 2; iteration++) {
+    tls_client client;
+    server.start();
+    DOBA_EXPECT(client.socket.connect(port));
+    DOBA_EXPECT(client.negotiate());
+    DOBA_EXPECT(client.send("ready"));
+    const auto response = client.receive(5);
+    DOBA_EXPECT(response.has_value());
+    if (response) DOBA_EXPECT_EQUAL(*response, "ready");
+    server.quiesce();
+    client.socket.close();
+    server.stop();
+    DOBA_EXPECT_EQUAL(connected.load(), iteration);
+    DOBA_EXPECT_EQUAL(disconnected.load(), iteration);
+  }
+}
+
+// +===========================================================================+
 // | [>] tls accepts fragmented handshake and request            ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tls accepts fragmented handshake and request") {

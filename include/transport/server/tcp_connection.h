@@ -35,119 +35,28 @@
 #include <string_view>
 #include <utility>
 
+#include "send_state.h"
 #include "common/reader.h"
 #include "protocol/contracts.h"
 
 namespace martianlabs::doba::transport::server {
-struct send_state {
-  struct source_entry {
-    std::string prefix;
-    std::unique_ptr<common::reader> source;
-  };
-
-  explicit send_state(std::size_t capacity) : capacity_{capacity} {}
-
-  bool push(std::string_view head, std::string_view body,
-            std::unique_ptr<common::reader> source) {
-    const std::size_t size = head.size() + body.size();
-    if (size > capacity_ - inline_bytes_ - source_reservation_) {
-      return false;
-    }
-    if (source) {
-      if (sources_.empty() && !active_from_source_) {
-        source_reservation_ = std::min<std::size_t>(
-            8192, capacity_ - inline_bytes_ - size);
-      }
-      pending_.append(head);
-      pending_.append(body);
-      inline_bytes_ += size;
-      sources_.push_back({std::move(pending_), std::move(source)});
-      pending_.clear();
-    } else {
-      pending_.append(head);
-      pending_.append(body);
-      inline_bytes_ += size;
-    }
-    return true;
-  }
-
-  bool fill() {
-    buffer.clear();
-    offset = 0;
-    active_from_source_ = false;
-    for (;;) {
-      if (sources_.empty()) {
-        buffer.swap(pending_);
-        return true;
-      }
-      auto& entry = sources_.front();
-      if (!entry.prefix.empty()) {
-        buffer.swap(entry.prefix);
-        return true;
-      }
-      if (entry.source->failed()) return false;
-      if (entry.source->eof()) {
-        sources_.pop_front();
-        if (sources_.empty()) source_reservation_ = 0;
-        continue;
-      }
-      const std::size_t available = std::min<std::size_t>(8192, capacity_);
-      buffer.resize(available);
-      const std::size_t count = entry.source->read(
-          std::span<std::byte>(reinterpret_cast<std::byte*>(buffer.data()),
-                               available));
-      buffer.resize(count);
-      if (entry.source->failed() || (!count && !entry.source->eof())) {
-        return false;
-      }
-      if (count) {
-        active_from_source_ = true;
-        return true;
-      }
-    }
-  }
-
-  bool consume(std::size_t sent) {
-    if (sent > buffer.size() - offset) return false;
-    offset += sent;
-    if (!active_from_source_) inline_bytes_ -= sent;
-    return true;
-  }
-
-  bool queued() const { return !pending_.empty() || !sources_.empty(); }
-
-  void clear() {
-    buffer.clear();
-    pending_.clear();
-    sources_.clear();
-    offset = 0;
-    inline_bytes_ = 0;
-    source_reservation_ = 0;
-    active_from_source_ = false;
-  }
-
-  std::string buffer;
-  std::size_t offset{0};
-
- private:
-  std::string pending_;
-  std::deque<source_entry> sources_;
-  std::size_t capacity_;
-  std::size_t inline_bytes_{0};
-  std::size_t source_reservation_{0};
-  bool active_from_source_{false};
-};
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tcp_connection                                             ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Adapts a TCP byte stream to an HTTP engine.                               |
+// | This struct keeps track of a TCP connection used by an engine.            |
+// | It stores the engine and an input buffer, and handles incoming data,      |
+// | consumed bytes, and outgoing data. It also lets you check the connection  |
+// | status and manage the output buffers.                                     |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   ENty - engine type being used.                                          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
 struct tcp_connection {
   // +=========================================================================+
-  // | [>] TYPEs                                                    ( public ) |
+  // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   using shared_state = std::nullptr_t;
   // +=========================================================================+
@@ -165,11 +74,15 @@ struct tcp_connection {
   // +=========================================================================+
   // | [>] process                                                  ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Processes the received bytes in the input buffer using the engine.      |
+  // +-------------------------------------------------------------------------+
   std::size_t process() {
     return engine.on_bytes_received(buffer.get(), size, capacity);
   }
   // +=========================================================================+
   // | [>] consume                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Removes the specified number of processed bytes from the input buffer.  |
   // +-------------------------------------------------------------------------+
   bool consume(std::size_t processed) {
     if (processed > size) return false;
@@ -182,14 +95,27 @@ struct tcp_connection {
   // +=========================================================================+
   // | [>] prepare_output                                           ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Gets the output buffer ready to send data.                              |
+  // | If it already contains unsent bytes, or the engine can add more data    |
+  // | to it, the method returns true. Otherwise, it returns false.            |
+  // +-------------------------------------------------------------------------+
   bool prepare_output(send_state& output) {
     return output.offset != output.buffer.size() || output.fill();
   }
+  // +=========================================================================+
+  // | [>] output_bytes                                             ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Returns a span of the unsent bytes in the output buffer.                |
+  // | If there are no unsent bytes, it returns an empty span.                 |
+  // +-------------------------------------------------------------------------+
   std::span<char> output_bytes(send_state& output) {
     return std::span(output.buffer).subspan(output.offset);
   }
   // +=========================================================================+
   // | [>] output_buffers                                           ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Fills the provided array of buffers with the unsent bytes               |
+  // | in the output buffer.                                                   |
   // +-------------------------------------------------------------------------+
   std::size_t output_buffers(send_state& output,
                              std::span<std::span<char>> buffers) {
@@ -200,11 +126,15 @@ struct tcp_connection {
   // +=========================================================================+
   // | [>] output_sent                                              ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Updates the output buffer after sending the specified number of bytes.  |
+  // +-------------------------------------------------------------------------+
   bool output_sent(send_state& output, std::size_t sent) {
     return output.consume(sent);
   }
   // +=========================================================================+
   // | [>] output_pending                                           ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Checks if there are any unsent bytes in the output buffer.              |
   // +-------------------------------------------------------------------------+
   bool output_pending(const send_state& output) const {
     return output.queued() || output.offset != output.buffer.size();

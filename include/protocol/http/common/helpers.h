@@ -65,6 +65,9 @@ static constexpr std::uint16_t kF_atext = 0x0400;
 static constexpr std::uint16_t kF_dtext = 0x0800;
 static constexpr std::uint16_t kF_hexdig = 0x1000;
 static constexpr std::uint16_t kF_unreserv = 0x2000;
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] build_char_flags                                         ( function ) |
 // +---------------------------------------------------------------------------+
 // | The table is built at compile time, so the compiler can                   |
 // | optimize it into a static data segment.                                   |

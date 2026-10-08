@@ -32,20 +32,30 @@
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] basic_transport [windowsTM]                                 ( class ) |
+// | [>] basic_transport                                             ( class ) |
 // +---------------------------------------------------------------------------+
-// | This specification holds for the WindowsTM server transport.              |
+// | This class provides a basic transport for an engine.                      |
+// | It’s a template that takes the engine, engine factory, connection, and    |
+// | policies types as parameters. It manages the worker that handles the      |
+// | transport, including starting, stopping, and quiescing it.                |
+// | You can also set callbacks for connection and disconnection events.       |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   ENty - engine type being used.                                          |
+// |   FAty - engine factory type being used.                                  |
+// |   CNty - connection type being used.                                      |
+// |   POty - policies type being used.                                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,
           protocol::contracts::engine_factory<ENty> FAty, typename CNty,
-          typename PTy>
+          typename POty>
 class basic_transport {
  public:
   // +=========================================================================+
-  // | [>] TYPEs                                                    ( public ) |
+  // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
-  using policies_type = PTy;
+  using policies_type = POty;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
@@ -70,7 +80,7 @@ class basic_transport {
   // +-------------------------------------------------------------------------+
   void stop() { worker_.stop(); }
   // +=========================================================================+
-  // | [>] quiesce                                                 ( public ) |
+  // | [>] quiesce                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   void quiesce() { worker_.quiesce(); }
   // +=========================================================================+
@@ -92,9 +102,8 @@ class basic_transport {
   // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  worker<ENty, FAty, CNty, PTy> worker_;
+  worker<ENty, FAty, CNty, POty> worker_;
 };
-
 }  // namespace martianlabs::doba::transport::server
 
 #endif

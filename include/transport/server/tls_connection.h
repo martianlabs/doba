@@ -42,13 +42,20 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // | [>] tls_connection                                             ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Adapts a TLS session to an HTTP engine.                                   |
+// | This struct wraps an engine and a TLS session to handle an encrypted      |
+// | connection. It manages the encrypted and plaintext buffers, handles       |
+// | the TLS handshake, and processes incoming and outgoing data. It also      |
+// | lets you process received data, prepare output, and check the             |
+// | connection state.                                                         |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   ENty - engine type being used.                                          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
 struct tls_connection {
   // +=========================================================================+
-  // | [>] TYPEs                                                    ( public ) |
+  // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   using shared_state = tls_context;
   // +=========================================================================+
@@ -69,12 +76,15 @@ struct tls_connection {
       : engine{create_engine()},
         buffer{std::make_unique<char[]>(encrypted_receive_buffer_size)},
         capacity{encrypted_receive_buffer_size},
-        session_{std::move(context), send_buffer_size,
-                 network_bio_buffer_size},
+        session_{std::move(context), send_buffer_size, network_bio_buffer_size},
         plaintext_{std::make_unique<char[]>(recv_buffer_size)},
         plaintext_capacity_{recv_buffer_size} {}
   // +=========================================================================+
   // | [>] process                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Reads data from the encrypted buffer and passes it to the engine.       |
+  // | It returns the number of bytes processed. If the TLS handshake fails or |
+  // | the connection closes, it throws an exception.                          |
   // +-------------------------------------------------------------------------+
   std::size_t process() {
     std::size_t received = 0;
@@ -92,6 +102,11 @@ struct tls_connection {
   // +=========================================================================+
   // | [>] consume                                                  ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Removes the given number of bytes from the encrypted buffer.            |
+  // | It returns false if that’s more bytes than the buffer currently holds.  |
+  // | If there are bytes left afterward, it moves them to the start of the    |
+  // | buffer. Otherwise, it returns true.                                     |
+  // +-------------------------------------------------------------------------+
   bool consume(std::size_t processed) {
     if (processed > size) return false;
     size -= processed;
@@ -102,6 +117,11 @@ struct tls_connection {
   }
   // +=========================================================================+
   // | [>] prepare_output                                           ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Gets the output buffer ready to send. It processes any pending TLS      |
+  // | data, handles a requested TLS shutdown, and fills the buffer with       |
+  // | encrypted data. It returns false if anything goes wrong; otherwise,     |
+  // | it returns true.                                                        |
   // +-------------------------------------------------------------------------+
   bool prepare_output(send_state& output) {
     for (;;) {
@@ -136,9 +156,18 @@ struct tls_connection {
   // +=========================================================================+
   // | [>] output_bytes                                             ( public ) |
   // +-------------------------------------------------------------------------+
-  std::span<char> output_bytes(send_state&) {
-    return session_.output_bytes();
-  }
+  // | Returns a span of encrypted data that’s ready to send.                  |
+  // | It uses `send_state` to find the current output buffer and offset.      |
+  // +-------------------------------------------------------------------------+
+  std::span<char> output_bytes(send_state&) { return session_.output_bytes(); }
+  // +=========================================================================+
+  // | [>] output_buffers                                           ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Fills the given buffers with encrypted data that’s ready to send.       |
+  // | It returns the number of buffers filled, or 0 if there’s nothing        |
+  // | to send. It uses `send_state` to find the current output                |
+  // | buffer and offset.                                                      |
+  // +-------------------------------------------------------------------------+
   std::size_t output_buffers(send_state& output,
                              std::span<std::span<char>> buffers) {
     if (buffers.empty()) return 0;
@@ -148,6 +177,9 @@ struct tls_connection {
   // +=========================================================================+
   // | [>] output_sent                                              ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Tells the connection how many bytes were sent. It updates the TLS       |
+  // | session and returns true.                                               |
+  // +-------------------------------------------------------------------------+
   bool output_sent(send_state&, std::size_t sent) {
     session_.output_sent(sent);
     return true;
@@ -155,25 +187,29 @@ struct tls_connection {
   // +=========================================================================+
   // | [>] output_pending                                           ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Returns true if there’s still data to send in either the TLS session    |
+  // | or the output buffer. It uses `send_state` to find the current          |
+  // | output buffer and offset.                                               |
+  // +-------------------------------------------------------------------------+
   bool output_pending(const send_state& output) const {
     return session_.pending() || output.queued() ||
            output.offset != output.buffer.size() ||
            (close_requested_ && !shutdown_complete_);
   }
   // +=========================================================================+
-  // | [>] established                                             ( public )  |
+  // | [>] established                                              ( public ) |
   // +-------------------------------------------------------------------------+
   bool established() const { return session_.established(); }
   // +=========================================================================+
-  // | [>] peer_closed                                             ( public )  |
+  // | [>] peer_closed                                              ( public ) |
   // +-------------------------------------------------------------------------+
   bool peer_closed() const { return peer_closed_; }
   // +=========================================================================+
-  // | [>] eof                                                     ( public )  |
+  // | [>] eof                                                      ( public ) |
   // +-------------------------------------------------------------------------+
   bool eof() const { return peer_closed_; }
   // +=========================================================================+
-  // | [>] close_output                                            ( public )  |
+  // | [>] close_output                                             ( public ) |
   // +-------------------------------------------------------------------------+
   bool close_output() {
     if (!session_.established()) return false;
@@ -196,8 +232,9 @@ struct tls_connection {
     if (!session_.established()) {
       const auto state = session_.handshake();
       if (state == tls_session::status::failed ||
-          state == tls_session::status::closed)
+          state == tls_session::status::closed) {
         return false;
+      }
     }
     if (!session_.established()) return true;
     for (;;) {

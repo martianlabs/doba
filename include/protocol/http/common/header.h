@@ -40,6 +40,6 @@ namespace martianlabs::doba::protocol::http {
 // /////////////////////////////////////////////////////////////////////////////
 using header = std::pair<std::string, std::string>;
 using header_view = std::pair<std::string_view, std::string_view>;
-}  // namespace martianlabs::doba::protocol::http
+} // namespace martianlabs::doba::protocol::http
 
 #endif

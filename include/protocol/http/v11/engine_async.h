@@ -40,17 +40,33 @@
 #include "protocol/serialization.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] engine_async                                                ( class ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class engine_async {
  public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   explicit engine_async(std::size_t max_pending_requests)
       : max_pending_requests_{max_pending_requests} {}
-
+  // +=========================================================================+
+  // | [>] set_on_send                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_send(protocol::send_delegate output) {
     on_send_ = std::move(output);
   }
+  // +=========================================================================+
+  // | [>] set_on_close                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()> close) {
     on_close_ = std::move(close);
   }
+  // +=========================================================================+
+  // | [>] reserve                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   std::optional<std::size_t> reserve() {
     if (!accepting()) return std::nullopt;
     if (max_pending_requests_ &&
@@ -61,20 +77,36 @@ class engine_async {
     }
     return next_request_++;
   }
+  // +=========================================================================+
+  // | [>] begin                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void begin() noexcept { active_.fetch_add(1, std::memory_order_release); }
+  // +=========================================================================+
+  // | [>] end                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   void end() noexcept { active_.fetch_sub(1, std::memory_order_release); }
+  // +=========================================================================+
+  // | [>] closing                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   bool closing() const noexcept {
     return closing_.load(std::memory_order_acquire);
   }
+  // +=========================================================================+
+  // | [>] accepting                                                ( public ) |
+  // +-------------------------------------------------------------------------+
   bool accepting() const noexcept {
     return accepting_.load(std::memory_order_acquire);
   }
+  // +=========================================================================+
+  // | [>] idle                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   bool idle() const noexcept {
-    return accepting() &&
-           active_.load(std::memory_order_acquire) == 0 &&
+    return accepting() && active_.load(std::memory_order_acquire) == 0 &&
            next_request_ == next_send_.load(std::memory_order_acquire);
   }
-
+  // +=========================================================================+
+  // | [>] submit                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   void submit(std::size_t position, protocol::serialization_result result,
               bool final, bool close) {
     if (close) accepting_.store(false, std::memory_order_release);
@@ -124,7 +156,9 @@ class engine_async {
       }
     }
   }
-
+  // +=========================================================================+
+  // | [>] close_now                                                ( public ) |
+  // +-------------------------------------------------------------------------+
   void close_now() {
     accepting_.store(false, std::memory_order_release);
     if (closing_.exchange(true)) return;
@@ -132,6 +166,9 @@ class engine_async {
   }
 
  private:
+  // +=========================================================================+
+  // | [>] TYPEs                                                   ( private ) |
+  // +-------------------------------------------------------------------------+
   struct output {
     std::string head;
     std::string body;
@@ -142,7 +179,9 @@ class engine_async {
     bool complete{false};
     bool close{false};
   };
-
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +-------------------------------------------------------------------------+
   protocol::send_delegate on_send_;
   std::function<void()> on_close_;
   const std::size_t max_pending_requests_;

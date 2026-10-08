@@ -46,7 +46,7 @@ using tls_context = std::shared_ptr<SSL_CTX>;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] make_tls_context                                           ( method ) |
+// | [>] make_tls_context                                         ( function ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline tls_context make_tls_context(const tls_policies& configuration) {
@@ -79,6 +79,11 @@ inline tls_context make_tls_context(const tls_policies& configuration) {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tls_session                                                 ( class ) |
+// +---------------------------------------------------------------------------+
+// | This class manages the TLS session for a single connection.               |
+// | It handles the handshake, encrypts and decrypts data, and manages the     |
+// | encrypted and plaintext buffers. It also lets you read and write data,    |
+// | check the session state, and shut it down cleanly.                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class tls_session {
@@ -118,6 +123,11 @@ class tls_session {
   // +=========================================================================+
   // | [>] handshake                                                ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Runs the TLS handshake and returns the session status. If it fails, it  |
+  // | returns `failed`. If it needs more data to read or send, it returns     |
+  // | `need_input` or `need_output`.                                          |
+  // | If the handshake succeeds, it returns `ready`.                          |
+  // +-------------------------------------------------------------------------+
   status handshake() {
     std::lock_guard lock(mutex_);
     if (phase_ == phase::failed) return status::failed;
@@ -132,6 +142,10 @@ class tls_session {
   // +=========================================================================+
   // | [>] receive                                                  ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Receives encrypted data from the network and passes it to the TLS       |
+  // | session. Returns the number of bytes received,                          |
+  // | or 0 if the session fails.                                              |
+  // +-------------------------------------------------------------------------+
   std::size_t receive(std::span<const char> bytes) {
     std::lock_guard lock(mutex_);
     if (phase_ == phase::failed || bytes.empty()) return 0;
@@ -145,6 +159,12 @@ class tls_session {
   }
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Reads decrypted data from the TLS session into the given buffer.        |
+  // | It returns a `result` with the session status and number of bytes read. |
+  // | If the session fails, it returns `failed`. If it needs more data to     |
+  // | read or send, it returns `need_input` or `need_output`. If all goes     |
+  // | well, it returns `ready`.                                               |
   // +-------------------------------------------------------------------------+
   result read(std::span<char> bytes) {
     std::lock_guard lock(mutex_);
@@ -163,6 +183,12 @@ class tls_session {
   }
   // +=========================================================================+
   // | [>] write                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Writes plaintext data to the TLS session to be encrypted.               |
+  // | It returns a `result` with the session status and number of             |
+  // | bytes written. If the session fails, it returns `failed`.               |
+  // | If it needs more data to read or send, it returns `need_input`          |
+  // | or `need_output`. Otherwise, it returns `ready`.                        |
   // +-------------------------------------------------------------------------+
   result write(std::span<const char> bytes) {
     std::lock_guard lock(mutex_);
@@ -201,6 +227,10 @@ class tls_session {
   // +=========================================================================+
   // | [>] shutdown                                                 ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Shuts down the TLS session cleanly. Returns `ready` when it’s done,     |
+  // | `need_output` if there’s more data to send, or `failed` if shutdown     |
+  // | doesn’t work.                                                           |
+  // +-------------------------------------------------------------------------+
   status shutdown() {
     std::lock_guard lock(mutex_);
     if (phase_ != phase::active) return status::failed;
@@ -218,6 +248,10 @@ class tls_session {
   // +=========================================================================+
   // | [>] drain                                                    ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Shuts down the TLS session cleanly. Returns `ready`                     |
+  // | when it’s done, `need_output` if there’s more data to send,             |
+  // | or `failed` if shutdown doesn’t work.                                   |
+  // +-------------------------------------------------------------------------+
   std::size_t drain(std::span<char> bytes) {
     std::lock_guard lock(mutex_);
     if (phase_ == phase::failed || bytes.empty()) return 0;
@@ -231,7 +265,10 @@ class tls_session {
   }
   // +=========================================================================+
   // | [>] output_bytes                                             ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
+  // | Returns a span of encrypted data that’s ready to send.                  |
+  // | It uses the network BIO to find the current output buffer and offset.   |
+  // +-------------------------------------------------------------------------+
   std::span<char> output_bytes() {
     std::lock_guard lock(mutex_);
     char* bytes = nullptr;
@@ -242,6 +279,9 @@ class tls_session {
   // +=========================================================================+
   // | [>] output_sent                                              ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Tells the session how many bytes were sent.                             |
+  // | It updates the network BIO and returns true.                            |
+  // +-------------------------------------------------------------------------+
   void output_sent(std::size_t size) {
     std::lock_guard lock(mutex_);
     char* bytes = nullptr;
@@ -250,6 +290,8 @@ class tls_session {
   // +=========================================================================+
   // | [>] pending                                                  ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Returns the number of bytes pending in the network BIO.                 |
+  // +-------------------------------------------------------------------------+
   std::size_t pending() const {
     std::lock_guard lock(mutex_);
     return BIO_ctrl_pending(network_.get());
@@ -257,13 +299,17 @@ class tls_session {
   // +=========================================================================+
   // | [>] established                                              ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Returns true if the TLS session is established and ready for data.      |
+  // +-------------------------------------------------------------------------+
   bool established() const {
     std::lock_guard lock(mutex_);
     return phase_ == phase::active;
   }
   // +=========================================================================+
   // | [>] failed                                                   ( public ) |
-  // +=========================================================================+
+  // +-------------------------------------------------------------------------+
+  // | Returns true if the TLS session has failed.                             |
+  // +-------------------------------------------------------------------------+
   bool failed() const {
     std::lock_guard lock(mutex_);
     return phase_ == phase::failed;
@@ -276,6 +322,9 @@ class tls_session {
   enum class phase { handshaking, active, failed };
   // +=========================================================================+
   // | [>] classify                                                ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Checks the result of an OpenSSL operation and returns the session       |
+  // | status. If the operation failed, it sets the phase to `failed`.         |
   // +-------------------------------------------------------------------------+
   status classify(int result) {
     const int error = SSL_get_error(ssl_.get(), result);

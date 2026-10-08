@@ -37,6 +37,7 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct tcp_policies {
+  // Default receive buffer size, in bytes.
   static constexpr std::size_t kDefaultRecvBufferSize = 4 * 1024;
   // Receive capacity per connection, in bytes (must be positive).
   // Engines retain incomplete cores here; bodies may span multiple receives.

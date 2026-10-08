@@ -37,7 +37,7 @@ namespace martianlabs::doba::protocol {
 // | [>] serialization_result                                       ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Borrows head and body bytes and owns an optional source.                  |
-// | The transport copies both views before the call returns.                 |
+// | The transport copies both views before the call returns.                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct serialization_result {

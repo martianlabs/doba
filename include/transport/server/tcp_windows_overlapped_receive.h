@@ -48,11 +48,16 @@ struct context;
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty, typename CNty>
 struct overlapped_receive : overlapped_base {
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   overlapped_receive(std::shared_ptr<context<ENty, CNty>> context)
       : overlapped_base(io_type::kReceive), ctx{context} {}
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   std::shared_ptr<context<ENty, CNty>> ctx;
 };
-
 }  // namespace martianlabs::doba::transport::server
 
 #endif

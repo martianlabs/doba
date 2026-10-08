@@ -26,9 +26,11 @@
 #define martianlabs_doba_transport_server_tcp_h
 
 #include <functional>
+#include <utility>
 
 #include "platform.h"
 #include "transport/server/contracts.h"
+#include "transport/server/tcp_connection.h"
 #include "transport/server/tcp_policies.h"
 
 namespace martianlabs::doba::transport::server {
@@ -40,10 +42,12 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct types {
+  // On client connected delegate type
   using on_client_connected_delegate = std::function<void()>;
+  // On client disconnected delegate type
   using on_client_disconnected_delegate = std::function<void()>;
 };
-}  // namespace martianlabs::doba::transport::server
+} // namespace martianlabs::doba::transport::server
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -51,9 +55,37 @@ struct types {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 #ifdef _WIN32
-#include "transport/server/tcp_windows.h"
+#include "transport/server/tcp_windows_transport.h"
 #elif __linux__
-#include "transport/server/tcp_linux.h"
+#include "transport/server/tcp_linux_transport.h"
 #endif
+
+namespace martianlabs::doba::transport::server {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] tcp                                                         ( class ) |
+// +---------------------------------------------------------------------------+
+// | This class provides a TCP transport for an engine. It inherits from       |
+// | `basic_transport` and takes a `tcp_policies` configuration and an engine  |
+// | factory when it is created.                                               |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   ENty - engine type being used.                                          |
+// |   FAty - engine factory type being used.                                  |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <protocol::contracts::engine ENty,
+          protocol::contracts::engine_factory<ENty> FAty>
+class tcp
+    : public basic_transport<ENty, FAty, tcp_connection<ENty>, tcp_policies> {
+ public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  explicit tcp(tcp_policies configuration, FAty create_engine)
+      : basic_transport<ENty, FAty, tcp_connection<ENty>, tcp_policies>(
+            std::move(configuration), std::move(create_engine), nullptr) {}
+};
+}  // namespace martianlabs::doba::transport::server
 
 #endif

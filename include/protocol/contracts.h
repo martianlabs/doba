@@ -54,6 +54,7 @@ concept engine = requires(ENty& engine, const char* buf, std::size_t sze,
   { engine.set_on_close(std::move(close)) } -> std::same_as<void>;
   { engine.on_bytes_received(buf, sze, capacity) } -> std::same_as<std::size_t>;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] engine_factory                                              (concept) |

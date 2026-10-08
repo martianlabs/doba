@@ -54,6 +54,21 @@ class reader {
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
   // +-------------------------------------------------------------------------+
+  reader(const reader&) = delete;
+  reader(reader&&) noexcept = default;
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  reader& operator=(const reader&) = delete;
+  reader& operator=(reader&&) noexcept = default;
+  // +=========================================================================+
+  // | [>] chunked                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Creates a reader for a chunked Transfer-Encoding from a borrowed        |
+  // | span source. The extension_limit and trailer_limit parameters set the   |
+  // | maximum number of bytes allowed for chunk extensions and trailers,      |
+  // | respectively. A limit of zero means no limit.                           |
+  // +-------------------------------------------------------------------------+
   static reader chunked(
       std::span<const std::byte> source,
       std::size_t extension_limit = reader_chunked::kMaxChunkedExtensionSize,
@@ -62,6 +77,14 @@ class reader {
     return reader(common::reader::borrowed(source),
                   reader_chunked(extension_limit, trailer_limit));
   }
+  // +=========================================================================+
+  // | [>] chunked                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Creates a reader for a chunked Transfer-Encoding from a file source.    |
+  // | The extension_limit and trailer_limit parameters set the                |
+  // | maximum number of bytes allowed for chunk extensions and trailers,      |
+  // | respectively. A limit of zero means no limit.                           |
+  // +-------------------------------------------------------------------------+
   static reader chunked(
       common::filesystem_file&& source,
       std::size_t extension_limit = reader_chunked::kMaxChunkedExtensionSize,
@@ -70,25 +93,32 @@ class reader {
     return reader(common::reader(std::move(source)),
                   reader_chunked(extension_limit, trailer_limit));
   }
+  // +=========================================================================+
+  // | [>] raw                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Creates a reader for a raw Transfer-Encoding from a borrowed            |
+  // | span source. The content_length parameter sets the                      |
+  // | maximum number of bytes allowed for the raw content.                    |
+  // +-------------------------------------------------------------------------+
   static reader raw(std::span<const std::byte> source,
                     std::size_t content_length) {
     if (source.empty()) throw std::invalid_argument("Empty body source");
     return reader(common::reader::borrowed(source), reader_raw(content_length),
                   source);
   }
+  // +=========================================================================+
+  // | [>] raw                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Creates a reader for a raw Transfer-Encoding from a file source.        |
+  // | The content_length parameter sets the                                   |
+  // | maximum number of bytes allowed for the raw content.                    |
+  // +-------------------------------------------------------------------------+
   static reader raw(common::filesystem_file&& source,
                     std::size_t content_length) {
     if (!source.is_open()) throw std::invalid_argument("Body file is not open");
     return reader(common::reader(std::move(source)),
                   reader_raw(content_length));
   }
-  reader(const reader&) = delete;
-  reader(reader&&) noexcept = default;
-  // +=========================================================================+
-  // | [>] OPERATORs                                                ( public ) |
-  // +-------------------------------------------------------------------------+
-  reader& operator=(const reader&) = delete;
-  reader& operator=(reader&&) noexcept = default;
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
   // +-------------------------------------------------------------------------+
@@ -102,7 +132,7 @@ class reader {
         decoder_);
   }
   // +=========================================================================+
-  // | [>] take_borrowed_raw                                       ( public ) |
+  // | [>] take_borrowed_raw                                        ( public ) |
   // +-------------------------------------------------------------------------+
   std::optional<std::span<const std::byte>> take_borrowed_raw(
       std::size_t maximum) {

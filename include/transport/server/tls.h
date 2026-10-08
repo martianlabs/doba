@@ -25,19 +25,38 @@
 #ifndef martianlabs_doba_transport_server_tls_h
 #define martianlabs_doba_transport_server_tls_h
 
-#include "platform.h"
-#include "transport/server/contracts.h"
-#include "transport/server/tls_policies.h"
+#include <utility>
 
+#include "transport/server/tcp.h"
+#include "transport/server/tls_connection.h"
+
+namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] PLATFORM-DEPENDENT-INCLUDEs                               ( section ) |
+// | [>] tls                                                         ( class ) |
+// +---------------------------------------------------------------------------+
+// | This class provides a TLS transport for an engine. It inherits from       |
+// | `basic_transport` and takes a `tls_policies` configuration and an engine  |
+// | factory when it is created.                                               |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   ENty - engine type being used.                                          |
+// |   FAty - engine factory type being used.                                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-#ifdef _WIN32
-#include "transport/server/tls_windows.h"
-#elif __linux__
-#include "transport/server/tls_linux.h"
-#endif
+template <protocol::contracts::engine ENty,
+          protocol::contracts::engine_factory<ENty> FAty>
+class tls
+    : public basic_transport<ENty, FAty, tls_connection<ENty>, tls_policies> {
+ public:
+  // +=========================================================================+
+  // | CONSTRUCTORs/DESTRUCTORs                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  explicit tls(tls_policies configuration, FAty create_engine)
+      : basic_transport<ENty, FAty, tls_connection<ENty>, tls_policies>(
+            configuration, std::move(create_engine),
+            make_tls_context(configuration)) {}
+};
+}  // namespace martianlabs::doba::transport::server
 
 #endif

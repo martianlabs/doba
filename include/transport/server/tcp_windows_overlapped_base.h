@@ -45,7 +45,13 @@ enum class io_type : uint8_t { kAccept, kSend, kReceive, kOutput };
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct overlapped_base : OVERLAPPED {
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   overlapped_base(io_type in_type) : OVERLAPPED{}, type{in_type} {}
+  // +=========================================================================+
+  // | [>] get_type                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   io_type get_type() const { return type; }
 
  private:
@@ -54,7 +60,6 @@ struct overlapped_base : OVERLAPPED {
   // +-------------------------------------------------------------------------+
   const io_type type;
 };
-
-}  // namespace martianlabs::doba::transport::server
+} // namespace martianlabs::doba::transport::server
 
 #endif

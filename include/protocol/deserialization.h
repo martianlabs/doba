@@ -40,6 +40,7 @@ enum class deserialization_status {
   kInvalidSource,    // source data is invalid.
   kMoreBytesNeeded,  // more bytes are needed to perform de-serialization.
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] deserialization_result                                     ( struct ) |
