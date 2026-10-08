@@ -6,13 +6,9 @@
   </picture>
 </h1>
 
-[Index](HANDOFF.md)
-
 Source of truth for doba's outstanding implementation, verification, and
 contract decisions. Identifiers remain stable when entries are removed;
 numbering does not express priority or implementation order.
-Engineering and verification requirements are defined in
-[QUALITY.md](QUALITY.md).
 
 An outstanding item does not imply that its design has been decided.
 Open decisions and deferred scope are stated explicitly. Priorities without
@@ -87,9 +83,9 @@ response sources. Define the remaining contracts before implementing them.
   IOCP and epoll. Include slow clients, resource release, ordering and
   cancellation where relevant. Assessing or documenting a limit is not a
   substitute for implementing it.
-- Pass every existing gate in [QUALITY.md](QUALITY.md) on the exact release
-  revision: compiler/configuration matrix, strict warnings, sanitizers,
-  minimum CMake, and isolated package and source consumers.
+- Pass the compiler/configuration matrix, strict warnings, sanitizers,
+  minimum CMake, and isolated package and source consumer checks on the exact
+  release revision.
 - Publish minimum usage preconditions and deployment limitations, release
   notes, a working vulnerability-reporting channel, and a version and tag
   that consistently identify `0.1.0-beta1`.

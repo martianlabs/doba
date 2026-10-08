@@ -19,8 +19,7 @@ for more.
 **Native IOCP on Windows. Native epoll on Linux.**
 The TCP transport needs no external libraries; optional TLS uses OpenSSL.
 
-[Try the examples](examples/README.md) /
-[Peek under the hood](docs/ARCHITECTURE.md)
+[Try the examples](examples/README.md)
 
 <a name="okay-how-fast"></a>
 <h2>
@@ -196,7 +195,7 @@ int main() {
 
 Once running: `curl http://localhost:8080/hello`
 
-[Build & integrate](docs/DEVELOPMENT.md)
+**Build & integrate**
 
 <details>
 <summary>Build, install, and use with CMake</summary>
@@ -225,9 +224,6 @@ Set `CMAKE_PREFIX_PATH` to the installation prefix when it is not in a
 standard system location. The exported target provides the include directory,
 C++20 requirement, and system threading dependency.
 
-For compiler setup, presets, build options, and test commands, see
-[Development](docs/DEVELOPMENT.md).
-
 </details>
 
 <a name="fast-is-nice-correct-is-non-negotiable"></a>
@@ -252,5 +248,5 @@ Here's [what's left to do](docs/BACKLOG.md).
 
 Bring a compiler. Curiosity helps.
 
-[Quality rules](docs/QUALITY.md) / [Apache 2.0](LICENSE)
+[Apache 2.0](LICENSE)
 
