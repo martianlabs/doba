@@ -29,22 +29,29 @@
 
 using namespace martianlabs::doba::protocol::http::v11;
 
-int main(int argc, char* argv[]) {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | Runs the Web Frameworks benchmark routes on port 3000.                    |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+int main() {
   server http_server({.ip = "0.0.0.0", .port = "3000"});
   http_server.add_route(
       "GET", "/",
-      [](const request& req, response& res) {
+      [](const request&, response& res) {
         res.ok_200();
       });
   http_server.add_route(
       "GET", "/user/:id",
-      [](const request& req, response& res, std::string_view id) {
+      [](const request&, response& res, std::string_view id) {
         res.ok_200();
         res.set_body(id);
       });
   http_server.add_route(
       "POST", "/user",
-      [](const request& req, response& res) {
+      [](const request&, response& res) {
         res.ok_200();
       });
   http_server.start();

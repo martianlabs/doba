@@ -278,6 +278,12 @@ if(
   DOBA_BUILD_EXAMPLES
 )
   add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/protocol/custom_protocol
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/transport/server/custom_transport
+  )
+  add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/common/byte_storage
   )
   add_subdirectory(

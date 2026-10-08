@@ -45,12 +45,17 @@ static constexpr DWORD kAcceptAddressBytes =
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct overlapped_accept : overlapped_base {
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   overlapped_accept(SOCKET in_socket)
       : overlapped_base(io_type::kAccept), socket{in_socket} {}
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   SOCKET socket{INVALID_SOCKET};
   CHAR addresses[(kAcceptAddressBytes * 2)]{0};
 };
-
 }  // namespace martianlabs::doba::transport::server
 
 #endif

@@ -35,10 +35,18 @@
 #include "protocol/http/common/router.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] engine_sync                                                ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename ROty>
 struct engine_sync {
-  static void execute(const ROty& router, const RQty& request,
-                      RSty& response, bool& close,
+  // +=========================================================================+
+  // | [>] execute                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  static void execute(const ROty& router, const RQty& request, RSty& response,
+                      bool& close,
                       const typename ROty::route_match* selected = nullptr) {
     try {
       switch (request.get_target()) {
@@ -80,20 +88,25 @@ struct engine_sync {
       build_error_response(response);
     }
   }
-
+  // +=========================================================================+
+  // | [>] build_error_response                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   static void build_error_response(RSty& response) {
     response.internal_server_error_500();
     response.set_body("Internal Server Error");
   }
-
+  // +=========================================================================+
+  // | [>] serialize                                                ( public ) |
+  // +-------------------------------------------------------------------------+
   static protocol::serialization_result serialize(RSty& response, bool close) {
     if (close) response.set_header(header_names::kConnection, "close");
     return response.serialize();
   }
-
+  // +=========================================================================+
+  // | [>] serialize                                                ( public ) |
+  // +-------------------------------------------------------------------------+
   static protocol::serialization_result serialize(const RQty& request,
-                                                   RSty& response,
-                                                   bool& close) {
+                                                  RSty& response, bool& close) {
     protocol::serialization_result serialized;
     try {
       if (response.is_continue_100()) {

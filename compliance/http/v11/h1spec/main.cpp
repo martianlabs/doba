@@ -1,12 +1,12 @@
 //                              _       _
 //                           __| | ___ | |__   __ _
-//                          / _` |/ _ \| '_ \ / _`
+//                          / _` |/ _ \| '_ \ / _` |
 //                         | (_| | (_) | |_) | (_| |
 //                          \__,_|\___/|_.__/ \__,_|
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/LICENSE-2.0
+//                     http://www.apache.org/licenses/
 //
 // Copyright 2025 martianLabs
 //
@@ -31,19 +31,26 @@
 
 using namespace martianlabs::doba::protocol::http::v11;
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | Runs the h1spec compliance routes on port 8080.                           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main() {
   server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   // h1spec expects successful routes to echo the decoded request body.
-  const auto echo_body = [](const request& req) {
-    response res = response::ok_200();
+  const auto echo_body = [](const request& req, response& res) {
+    res.ok_200();
     std::string body;
     if (req.has_body_reader()) {
       std::array<std::byte, 4096> buffer{};
       for (;;) {
         const auto state = req.get_body_reader()->read(buffer);
         if (state.has_error) {
-          res = response::bad_request_400();
-          return res;
+          res.bad_request_400();
+          return;
         }
         body.append(reinterpret_cast<const char*>(buffer.data()),
                     state.produced);
@@ -51,7 +58,6 @@ int main() {
       }
     }
     res.add_header("Content-Type", "text/plain").set_body(body);
-    return res;
   };
   for (const auto method : {"GET", "HEAD", "POST", "PUT", "PATCH",
                             "DELETE", "OPTIONS", "TRACE"}) {

@@ -120,6 +120,6 @@ struct header_names {
   static constexpr char kETag[] = "ETAG";
   static constexpr char kLastModified[] = "Last-Modified";
 };
-}  // namespace martianlabs::doba::protocol::http
+} // namespace martianlabs::doba::protocol::http
 
 #endif

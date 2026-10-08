@@ -53,6 +53,11 @@
 using namespace martianlabs::doba::protocol::http::v11;
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] parse_integer                                            ( function ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 bool parse_integer(std::string_view source, std::int64_t& value) {
   if (source.empty()) return false;
   const char* first = source.data();
@@ -61,6 +66,11 @@ bool parse_integer(std::string_view source, std::int64_t& value) {
   return error == std::errc() && end == last;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] read_query_sum                                           ( function ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 bool read_query_sum(const request& req, std::int64_t& value) {
   const auto a = req.get_query_parameter("a");
   const auto b = req.get_query_parameter("b");
@@ -74,7 +84,13 @@ bool read_query_sum(const request& req, std::int64_t& value) {
   return true;
 }
 
-// The body reader exposes decoded bytes for Content-Length and chunked bodies.
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] read_body_integer                                        ( function ) |
+// +---------------------------------------------------------------------------+
+// | Reads decoded bytes for Content-Length and chunked bodies.                |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 bool read_body_integer(const request& req, std::int64_t& value) {
   if (!req.has_body_reader()) return false;
   std::array<std::byte, 64> buffer{};
@@ -93,7 +109,14 @@ bool read_body_integer(const request& req, std::int64_t& value) {
 }
 }  // namespace
 
-int main(int argc, char* argv[]) {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | Runs the HttpArena benchmark routes on TCP and TLS.                       |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+int main() {
   const char* dataset_path = std::getenv("DATASET_PATH");
   std::ifstream dataset_file(dataset_path ? dataset_path
                                           : "/data/dataset.json");

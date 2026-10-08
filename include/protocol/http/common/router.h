@@ -35,9 +35,10 @@
 #include <vector>
 
 #include "protocol/http/common/router_controller_routes.h"
-#include "protocol/http/common/router_handler_async.h"
+#include "protocol/http/common/router_handler_parametrized_async.h"
 #include "protocol/http/common/router_handler_signature.h"
 #include "protocol/http/common/router_handler_static.h"
+#include "protocol/http/common/router_handler_static_async.h"
 
 namespace martianlabs::doba::protocol::http {
 // /////////////////////////////////////////////////////////////////////////////
@@ -61,8 +62,8 @@ class router {
     const router_handler_static<RQty, RSty>* handler{nullptr};
     const router_handler_parametrized<RQty, RSty>* parametrized_handler{
         nullptr};
-    const router_handler_async_static<RQty, RSty>* async_handler{nullptr};
-    const router_handler_async_parametrized<RQty, RSty>*
+    const router_handler_static_async<RQty, RSty>* async_handler{nullptr};
+    const router_handler_parametrized_async<RQty, RSty>*
         async_parametrized_handler{nullptr};
     [[nodiscard]] explicit operator bool() const {
       return handler != nullptr || parametrized_handler != nullptr ||
@@ -114,7 +115,7 @@ class router {
       } else {
         route_data data{
             std::string(route.substr(0, wildcard_position)),
-            handler_type(std::in_place_index<asynchronous ? 1 : 0>,
+            handler_type(std::in_place_index < asynchronous ? 1 : 0 >,
                          std::move(handler))};
         for (auto& [wildcard_method, handlers] : wildcard_handlers_) {
           if (wildcard_method == method) {
@@ -131,10 +132,9 @@ class router {
         throw std::invalid_argument(
             "The route parameters and handler arguments do not match");
       }
-      route_data data{
-          std::string(route),
-          handler_type(std::in_place_index<asynchronous ? 1 : 0>,
-                       std::move(handler))};
+      route_data data{std::string(route),
+                      handler_type(std::in_place_index < asynchronous ? 1 : 0 >,
+                                   std::move(handler))};
       for (auto& [static_method, handlers] : handlers_) {
         if (static_method == method) {
           handlers.push_back(std::move(data));
@@ -149,7 +149,7 @@ class router {
       }
       parametrized_handler_type data = [&]() -> parametrized_handler_type {
         if constexpr (asynchronous) {
-          return signature::template make_async_parametrized<RQty, RSty>(
+          return signature::template make_parametrized_async<RQty, RSty>(
               route, std::move(handler));
         } else {
           return signature::template make_parametrized<RQty, RSty>(
@@ -212,7 +212,7 @@ class router {
           return {handler, nullptr, nullptr, nullptr};
         }
         return {nullptr, nullptr,
-                std::get_if<router_handler_async_static<RQty, RSty>>(
+                std::get_if<router_handler_static_async<RQty, RSty>>(
                     &route.handler),
                 nullptr};
       }
@@ -229,7 +229,7 @@ class router {
           return {nullptr, selected, nullptr, nullptr};
         }
         return {nullptr, nullptr, nullptr,
-                std::get_if<router_handler_async_parametrized<RQty, RSty>>(
+                std::get_if<router_handler_parametrized_async<RQty, RSty>>(
                     &handler)};
       }
     }
@@ -242,7 +242,7 @@ class router {
           return {handler, nullptr, nullptr, nullptr};
         }
         return {nullptr, nullptr,
-                std::get_if<router_handler_async_static<RQty, RSty>>(
+                std::get_if<router_handler_static_async<RQty, RSty>>(
                     &route.handler),
                 nullptr};
       }
@@ -304,22 +304,24 @@ class router {
   bool has_async() const noexcept {
     for (const auto& [method, handlers] : handlers_) {
       for (const auto& route : handlers) {
-        if (std::holds_alternative<router_handler_async_static<RQty, RSty>>(
-                route.handler)) return true;
+        if (std::holds_alternative<router_handler_static_async<RQty, RSty>>(
+                route.handler))
+          return true;
       }
     }
     for (const auto& [method, handlers] : parametrized_handlers_) {
       for (const auto& handler : handlers) {
         if (std::holds_alternative<
-                router_handler_async_parametrized<RQty, RSty>>(handler)) {
+                router_handler_parametrized_async<RQty, RSty>>(handler)) {
           return true;
         }
       }
     }
     for (const auto& [method, handlers] : wildcard_handlers_) {
       for (const auto& route : handlers) {
-        if (std::holds_alternative<router_handler_async_static<RQty, RSty>>(
-                route.handler)) return true;
+        if (std::holds_alternative<router_handler_static_async<RQty, RSty>>(
+                route.handler))
+          return true;
       }
     }
     return false;
@@ -342,18 +344,23 @@ class router {
 
  private:
   // +=========================================================================+
-  // | [>] TYPEs                                                   ( private ) |
+  // | [>] USINGs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  using handler_type =
-      std::variant<router_handler_static<RQty, RSty>,
-                   router_handler_async_static<RQty, RSty>>;
+  using handler_type = std::variant<router_handler_static<RQty, RSty>,
+                                    router_handler_static_async<RQty, RSty>>;
   using parametrized_handler_type =
       std::variant<router_handler_parametrized<RQty, RSty>,
-                   router_handler_async_parametrized<RQty, RSty>>;
+                   router_handler_parametrized_async<RQty, RSty>>;
+  // +=========================================================================+
+  // | [>] TYPEs                                                   ( private ) |
+  // +-------------------------------------------------------------------------+
   struct route_data {
     std::string path;
     handler_type handler;
   };
+  // +=========================================================================+
+  // | [>] USINGs                                                  ( private ) |
+  // +-------------------------------------------------------------------------+
   using handler_pair = std::pair<std::string, std::vector<route_data>>;
   using parametrized_handler_pair =
       std::pair<std::string, std::vector<parametrized_handler_type>>;

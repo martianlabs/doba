@@ -50,15 +50,20 @@ struct context;
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty, typename CNty>
 struct overlapped_send : overlapped_base {
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   overlapped_send(std::shared_ptr<context<ENty, CNty>> context,
                   io_type type = io_type::kSend)
       : overlapped_base(type), ctx{context} {}
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   std::shared_ptr<context<ENty, CNty>> ctx;
   std::array<WSABUF, 1> buffers{};
   DWORD buffer_count{0};
   std::size_t submitted_size{0};
 };
-
 }  // namespace martianlabs::doba::transport::server
 
 #endif

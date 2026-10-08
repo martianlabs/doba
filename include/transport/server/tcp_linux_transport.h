@@ -47,20 +47,30 @@
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] basic_transport [linux]                                     ( class ) |
+// | [>] basic_transport                                             ( class ) |
 // +---------------------------------------------------------------------------+
-// | This specification holds for the Linux server transport.                  |
+// | This class provides a basic TCP transport for Linux. It manages the       |
+// | worker threads that handle incoming and outgoing connections, and lets    |
+// | you set callbacks for connection and disconnection events. Before         |
+// | starting the transport, it also sets up the buffer sizes and listen       |
+// | backlog.                                                                  |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   ENty - engine type being used.                                          |
+// |   FAty - engine factory type being used.                                  |
+// |   CNty - connection type being used.                                      |
+// |   POty - policies type being used.                                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,
           protocol::contracts::engine_factory<ENty> FAty, typename CNty,
-          typename PTy>
+          typename POty>
 class basic_transport {
  public:
   // +=========================================================================+
-  // | [>] TYPEs                                                    ( public ) |
+  // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
-  using policies_type = PTy;
+  using policies_type = POty;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
@@ -92,6 +102,13 @@ class basic_transport {
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Starts the transport, sets up the listening socket, and starts the      |
+  // | worker threads. It also checks that the IP address and port are valid.  |
+  // | If it’s already starting or stopping, or has active workers, it returns |
+  // | without doing anything. Once everything is up and running, it lets any  |
+  // | waiting threads know that startup is complete. If setup fails, it       |
+  // | stops the transport and throws the error again.                         |
+  // +-------------------------------------------------------------------------+
   void start() {
     {
       std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
@@ -110,11 +127,14 @@ class basic_transport {
             std::max<std::size_t>(1, std::thread::hardware_concurrency());
       }
       for (std::size_t i = 0; i < number_of_workers; i++) {
-        auto entry = std::make_unique<worker<ENty, FAty, CNty, PTy>>(
+        auto entry = std::make_unique<worker<ENty, FAty, CNty, POty>>(
             configuration_, create_engine_, on_connection_, on_disconnection_,
             shared_state_);
         entry->setup(ip_address, port_number);
-        workers_.emplace_back(std::move(entry));
+        {
+          std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
+          workers_.emplace_back(std::move(entry));
+        }
       }
       for (const auto& entry : workers_) entry->start();
     } catch (...) {
@@ -132,15 +152,29 @@ class basic_transport {
   // +-------------------------------------------------------------------------+
   void stop() { stop_(false); }
   // +=========================================================================+
-  // | [>] quiesce                                                 ( public ) |
+  // | [>] quiesce                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Asks all workers to quiesce: they stop accepting new connections and    |
+  // | finish handling the ones they already have. The method waits until      |
+  // | all workers are done. If called from a worker thread, it throws an      |
+  // | exception to avoid a deadlock.                                          |
   // +-------------------------------------------------------------------------+
   void quiesce() {
-    if (worker<ENty, FAty, CNty, PTy>::is_current_thread(create_engine_)) {
+    if (worker<ENty, FAty, CNty, POty>::is_current_thread(create_engine_)) {
       throw std::runtime_error("Transport cannot quiesce from a worker!");
     }
-    std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
+    std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
+    lifecycle_condition_.wait(lifecycle_lock,
+                              [this]() { return !starting_ && !quiescing_; });
+    if (stopping_ || workers_.empty()) return;
+    quiescing_ = true;
+    lifecycle_lock.unlock();
     for (const auto& entry : workers_) entry->request_quiesce();
     for (const auto& entry : workers_) entry->wait_quiesced();
+    lifecycle_lock.lock();
+    quiescing_ = false;
+    lifecycle_lock.unlock();
+    lifecycle_condition_.notify_all();
   }
   // +=========================================================================+
   // | [>] set_on_connection                                        ( public ) |
@@ -166,18 +200,19 @@ class basic_transport {
   // | [>] stop_                                                   ( private ) |
   // +-------------------------------------------------------------------------+
   void stop_(bool starting_failure) {
-    if (worker<ENty, FAty, CNty, PTy>::is_current_thread(create_engine_)) {
+    if (worker<ENty, FAty, CNty, POty>::is_current_thread(create_engine_)) {
       throw std::runtime_error("Transport cannot be stopped from a worker!");
     }
-    std::vector<std::unique_ptr<worker<ENty, FAty, CNty, PTy>>> workers;
+    std::vector<std::unique_ptr<worker<ENty, FAty, CNty, POty>>> workers;
     {
       std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
       if (starting_failure) {
         starting_ = false;
         lifecycle_condition_.notify_all();
       } else {
-        lifecycle_condition_.wait(lifecycle_lock,
-                                  [this]() { return !starting_; });
+        lifecycle_condition_.wait(lifecycle_lock, [this]() {
+          return !starting_ && !quiescing_;
+        });
       }
       if (stopping_) {
         if (stopping_thread_ == std::this_thread::get_id()) return;
@@ -238,10 +273,11 @@ class basic_transport {
   const policies_type configuration_;
   const FAty create_engine_;
   const typename CNty::shared_state shared_state_;
-  std::vector<std::unique_ptr<worker<ENty, FAty, CNty, PTy>>> workers_;
+  std::vector<std::unique_ptr<worker<ENty, FAty, CNty, POty>>> workers_;
   std::mutex lifecycle_mutex_;
   std::condition_variable lifecycle_condition_;
   bool starting_{false};
+  bool quiescing_{false};
   bool stopping_{false};
   std::thread::id stopping_thread_{};
   types::on_client_connected_delegate on_connection_;

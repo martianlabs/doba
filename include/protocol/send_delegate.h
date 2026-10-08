@@ -33,10 +33,15 @@
 #include "common/reader.h"
 
 namespace martianlabs::doba::protocol {
-// The transport copies both views before returning and owns the moved source.
-// Engines determine protocol order; the transport preserves submission order.
-using send_delegate = std::function<void(
-    std::string_view, std::string_view, std::unique_ptr<common::reader>)>;
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] USINGs                                                     ( public ) |
+// +---------------------------------------------------------------------------+
+// | A function that takes the head and body data, plus an optional source.    |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+using send_delegate = std::function<void(std::string_view, std::string_view,
+                                         std::unique_ptr<common::reader>)>;
 }  // namespace martianlabs::doba::protocol
 
 #endif

@@ -56,25 +56,34 @@ namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
 static constexpr uint64_t kStopEventId = 0;
 static constexpr uint64_t kAsyncEventId = 1;
-static constexpr uint64_t kListenerEventId =
-    std::numeric_limits<uint64_t>::max();
+static constexpr uint64_t kLstnrEventId = std::numeric_limits<uint64_t>::max();
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] worker [linux]                                             ( struct ) |
+// | [>] worker                                                     ( struct ) |
 // +---------------------------------------------------------------------------+
-// | This specification holds for a Linux server transport worker.             |
+// | This struct represents a worker thread that handles TCP connections for   |
+// | an engine. It manages the `epoll` instance, listener socket, and          |
+// | event file descriptors. It also sets up, starts, and stops the worker,    |
+// | runs its thread, checks whether the current thread is that worker, and    |
+// | handles connection events.                                                |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   ENty - engine type being used.                                          |
+// |   FAty - engine factory type being used.                                  |
+// |   CNty - connection type being used.                                      |
+// |   POty - policies type being used.                                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,
           protocol::contracts::engine_factory<ENty> FAty, typename CNty,
-          typename PTy>
+          typename POty>
 struct worker {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  worker(PTy configuration, const FAty& create_engine,
+  worker(POty configuration, const FAty& create_engine,
          types::on_client_connected_delegate on_connection,
          types::on_client_disconnected_delegate on_disconnection,
          typename CNty::shared_state shared_state)
@@ -93,6 +102,12 @@ struct worker {
   worker& operator=(worker&&) noexcept = delete;
   // +=========================================================================+
   // | [>] setup                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Sets up the worker by creating the `epoll` instance, event file         |
+  // | descriptors, and listener socket. It configures the listener, binds it  |
+  // | to the given IP address and port, and registers its events with         |
+  // | `epoll`. If anything goes wrong, it cleans up the resources and         |
+  // | throws a runtime error.                                                 |
   // +-------------------------------------------------------------------------+
   void setup(in_addr ip, uint16_t port) {
     epoll_fd_ = ::epoll_create1(EPOLL_CLOEXEC);
@@ -141,13 +156,12 @@ struct worker {
     epoll_event async_event{};
     async_event.events = EPOLLIN;
     async_event.data.u64 = kAsyncEventId;
-    epoll_event listener_event{};
-    listener_event.events = EPOLLIN;
-    listener_event.data.u64 = kListenerEventId;
+    epoll_event lsn_event{};
+    lsn_event.events = EPOLLIN;
+    lsn_event.data.u64 = kLstnrEventId;
     if (::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, stop_fd_, &stop_event) == -1 ||
         ::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, async_fd_, &async_event) == -1 ||
-        ::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, listener_fd_, &listener_event) ==
-            -1) {
+        ::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, listener_fd_, &lsn_event) == -1) {
       close_resources();
       throw std::runtime_error("Listener could not be registered!");
     }
@@ -166,9 +180,11 @@ struct worker {
   // | [>] is_current_thread                                        ( public ) |
   // +-------------------------------------------------------------------------+
   bool is_current_thread() const { return current_worker_ == this; }
-  static bool is_current_thread(const FAty& create_engine) {
-    return current_worker_ &&
-           &current_worker_->create_engine_ == &create_engine;
+  // +=========================================================================+
+  // | [>] is_current_thread                                        ( public ) |
+  // +-------------------------------------------------------------------------+
+  static bool is_current_thread(const FAty& cr_engine) {
+    return current_worker_ && &current_worker_->create_engine_ == &cr_engine;
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
@@ -186,6 +202,11 @@ struct worker {
   // +=========================================================================+
   // | [>] request_stop                                             ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Asks the worker to stop by setting the `stopping_` flag and writing to  |
+  // | the stop event file descriptor. If it’s already stopping, it returns    |
+  // | right away. The method is thread-safe and can be called from any        |
+  // | thread.                                                                 |
+  // +-------------------------------------------------------------------------+
   void request_stop() {
     if (stopping_.exchange(true)) return;
     uint64_t stop = 1;
@@ -195,16 +216,23 @@ struct worker {
     } while (written == -1 && errno == EINTR);
   }
   // +=========================================================================+
-  // | [>] request_quiesce                                         ( public ) |
+  // | [>] request_quiesce                                          ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Requests quiescence and signals the worker's stop event descriptor.     |
+  // | Call while the worker is active and coordinate with `stop()`.           |
+  // | Use `wait_quiesced()` to wait for the request to be handled.            |
   // +-------------------------------------------------------------------------+
   void request_quiesce() {
     quiescing_.store(true);
-    uint64_t signal = 1;
-    while (::write(stop_fd_, &signal, sizeof(signal)) == -1 &&
-           errno == EINTR) {}
+    uint64_t sgn = 1;
+    while (::write(stop_fd_, &sgn, sizeof(sgn)) == -1 && errno == EINTR) {
+    }
   }
   // +=========================================================================+
-  // | [>] wait_quiesced                                           ( public ) |
+  // | [>] wait_quiesced                                            ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Waits on `quiesced_` until the worker handles the request.              |
+  // | Call `request_quiesce()` first.                                         |
   // +-------------------------------------------------------------------------+
   void wait_quiesced() const {
     while (!quiesced_.load()) quiesced_.wait(false);
@@ -214,27 +242,31 @@ struct worker {
   // +=========================================================================+
   // | [>] run                                                     ( private ) |
   // +-------------------------------------------------------------------------+
+  // | Runs the worker thread’s main loop. It waits for events from `epoll`    |
+  // | and handles stop, async, listener, and context events as they come in.  |
+  // | It also manages timers and ready coroutines, and cleans up contexts     |
+  // | when needed. The loop keeps running until the worker is stopping and    |
+  // | all its contexts are closed.                                            |
+  // +-------------------------------------------------------------------------+
   void run() {
     std::array<epoll_event, 64> events{};
     for (;;) {
-      int timeout = -1;
+      int tout = -1;
       if (!ready_.empty()) {
-        timeout = 0;
+        tout = 0;
       } else if (!timers_.empty()) {
-        auto remaining = timers_.top().first -
-                         std::chrono::steady_clock::now();
+        auto remaining = timers_.top().first - std::chrono::steady_clock::now();
         auto milliseconds =
             std::chrono::duration_cast<std::chrono::milliseconds>(remaining);
         if (remaining <= std::chrono::steady_clock::duration::zero()) {
-          timeout = 0;
+          tout = 0;
         } else if (milliseconds.count() >= INT_MAX) {
-          timeout = INT_MAX;
+          tout = INT_MAX;
         } else {
-          timeout = static_cast<int>(milliseconds.count() + 1);
+          tout = static_cast<int>(milliseconds.count() + 1);
         }
       }
-      int ready = ::epoll_wait(epoll_fd_, events.data(), events.size(),
-                               timeout);
+      int ready = ::epoll_wait(epoll_fd_, events.data(), events.size(), tout);
       if (ready == -1) {
         if (errno == EINTR) continue;
         break;
@@ -244,7 +276,7 @@ struct worker {
           handle_stop();
         } else if (events[i].data.u64 == kAsyncEventId) {
           handle_async();
-        } else if (events[i].data.u64 == kListenerEventId) {
+        } else if (events[i].data.u64 == kLstnrEventId) {
           if (!quiescing_.load() && !stopping_.load()) handle_listener();
         } else {
           auto ctx = static_cast<context<ENty, CNty>*>(events[i].data.ptr);
@@ -278,6 +310,12 @@ struct worker {
   // +=========================================================================+
   // | [>] handle_stop                                             ( private ) |
   // +-------------------------------------------------------------------------+
+  // | Handles a stop event by reading from the stop event file descriptor and |
+  // | checking whether the worker is stopping or quiescing. If it is, the     |
+  // | method removes the listener from `epoll`, closes it, and stops all      |
+  // | contexts. It then sets the `quiesced_` flag and notifies any waiting    |
+  // | threads. This runs on the worker thread when it receives a stop event.  |
+  // +-------------------------------------------------------------------------+
   void handle_stop() {
     uint64_t stop = 0;
     ssize_t received = 0;
@@ -304,12 +342,18 @@ struct worker {
     quiesced_.notify_all();
   }
   // +=========================================================================+
-  // | [>] handle_async                                           ( private ) |
+  // | [>] handle_async                                            ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Handles an async event by reading from the async event file descriptor. |
+  // | It locks `async_mutex_` and processes any coroutines queued by other    |
+  // | threads. If a coroutine is ready to run, it adds it to the `ready_`     |
+  // | queue. Otherwise, it adds it to the `timers_` priority queue. This      |
+  // | runs on the worker thread when an async event comes in.                 |
   // +-------------------------------------------------------------------------+
   void handle_async() {
-    uint64_t signal = 0;
-    while (::read(async_fd_, &signal, sizeof(signal)) == -1 &&
-           errno == EINTR) {}
+    uint64_t sig = 0;
+    while (::read(async_fd_, &sig, sizeof(sig)) == -1 && errno == EINTR) {
+    }
     std::lock_guard<std::mutex> lock(async_mutex_);
     while (!incoming_.empty()) {
       auto item = incoming_.front();
@@ -322,7 +366,12 @@ struct worker {
     }
   }
   // +=========================================================================+
-  // | [>] scheduler                                              ( private ) |
+  // | [>] scheduler                                               ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Returns a `task_scheduler` for scheduling coroutines on this worker. It |
+  // | provides one callback for scheduling a coroutine right away and another |
+  // | for scheduling it later. Both callbacks add the coroutine to the        |
+  // | worker’s queues. The engine uses this to run tasks on the worker thread.|
   // +-------------------------------------------------------------------------+
   common::task_scheduler scheduler() {
     return {this,
@@ -336,7 +385,14 @@ struct worker {
             }};
   }
   // +=========================================================================+
-  // | [>] enqueue                                                ( private ) |
+  // | [>] enqueue                                                 ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Adds a coroutine to this worker’s queue. If it’s called from the worker |
+  // | thread, the coroutine goes straight into `ready_` if it’s ready to run  |
+  // | or into the `timers_` queue if it has a due time. If it’s called from   |
+  // | another thread, it locks `async_mutex_`, adds the coroutine to          |
+  // | `incoming_`, and signals the async event file descriptor to wake the    |
+  // | worker. That way, other threads can safely schedule coroutines here.    |
   // +-------------------------------------------------------------------------+
   void enqueue(std::chrono::steady_clock::time_point due,
                std::coroutine_handle<> handle) {
@@ -352,17 +408,23 @@ struct worker {
       std::lock_guard<std::mutex> lock(async_mutex_);
       incoming_.push_back({due, handle});
     }
-    uint64_t signal = 1;
-    while (::write(async_fd_, &signal, sizeof(signal)) == -1 &&
-           errno == EINTR) {}
+    uint64_t sig = 1;
+    while (::write(async_fd_, &sig, sizeof(sig)) == -1 && errno == EINTR) {
+    }
   }
   // +=========================================================================+
   // | [>] handle_listener                                         ( private ) |
   // +-------------------------------------------------------------------------+
+  // | Handles a listener event by accepting a new connection. If the worker   |
+  // | is stopping or quiescing, it skips the connection. Otherwise, it        |
+  // | accepts it, sets `TCP_NODELAY`, and creates a context for it. If        |
+  // | anything goes wrong, it closes the socket. This runs on the worker      |
+  // | thread when a listener event comes in.                                  |
+  // +-------------------------------------------------------------------------+
   void handle_listener() {
     if (stopping_.load() || quiescing_.load()) return;
-    int socket = ::accept4(listener_fd_, nullptr, nullptr,
-                           SOCK_NONBLOCK | SOCK_CLOEXEC);
+    int socket =
+        ::accept4(listener_fd_, nullptr, nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
     if (socket == -1) return;
     if (stopping_.load() || quiescing_.load()) {
       ::close(socket);
@@ -383,10 +445,16 @@ struct worker {
   // +=========================================================================+
   // | [>] register_context                                        ( private ) |
   // +-------------------------------------------------------------------------+
+  // | Sets up a new context for the socket. It adds the context to the        |
+  // | `contexts_` map, registers it with `epoll`, then calls `connected()`    |
+  // | and `notify_connection()`. If anything goes wrong, it closes the        |
+  // | socket and cleans up. This runs on the worker thread when a new         |
+  // | connection is accepted.                                                 |
+  // +-------------------------------------------------------------------------+
   void register_context(int socket) {
     std::size_t encrypted_receive_buffer_size = 0;
     std::size_t network_bio_buffer_size = 0;
-    if constexpr (requires(const PTy& value) {
+    if constexpr (requires(const POty& value) {
                     value.encrypted_receive_buffer_size;
                     value.network_bio_buffer_size;
                   }) {
@@ -421,6 +489,13 @@ struct worker {
   // +=========================================================================+
   // | [>] handle_context                                          ( private ) |
   // +-------------------------------------------------------------------------+
+  // | Handles a context event by checking its flags and calling the           |
+  // | appropriate methods. If the worker is stopping or quiescing, it stops   |
+  // | the context. If the context can receive data, it calls `receive()`.     |
+  // | If it can send or has data waiting, it calls `send_pending()`. If       |
+  // | anything goes wrong, it closes the context. This runs on the worker     |
+  // | thread when a context event comes in.                                   |
+  // +-------------------------------------------------------------------------+
   void handle_context(context<ENty, CNty>* ctx, uint32_t events) {
     if (events & EPOLLERR) {
       close_context(ctx);
@@ -441,8 +516,7 @@ struct worker {
             return;
           }
           ctx->stop();
-        } else if (errno != EINTR && errno != EAGAIN &&
-                   errno != EWOULDBLOCK) {
+        } else if (errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK) {
           close_context(ctx);
           return;
         }
@@ -454,6 +528,11 @@ struct worker {
   }
   // +=========================================================================+
   // | [>] close_context                                           ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Closes a context by retiring its socket, removing it from `epoll`, and  |
+  // | moving it to the `retired_contexts_` list. It also calls                |
+  // | `notify_disconnection()` to let the owner know. This runs on the        |
+  // | worker thread when a context needs to be closed.                        |
   // +-------------------------------------------------------------------------+
   void close_context(context<ENty, CNty>* ctx) {
     int socket = ctx->retire_socket();
@@ -467,6 +546,10 @@ struct worker {
   // +=========================================================================+
   // | [>] retire_contexts                                         ( private ) |
   // +-------------------------------------------------------------------------+
+  // | Cleans up all contexts in `retired_contexts_` by removing them from     |
+  // | the `contexts_` map and deleting them. This runs on the worker thread   |
+  // | after the contexts have been closed.                                    |
+  // +-------------------------------------------------------------------------+
   void retire_contexts() {
     while (retired_contexts_) {
       context<ENty, CNty>* ctx = retired_contexts_;
@@ -476,6 +559,9 @@ struct worker {
   }
   // +=========================================================================+
   // | [>] close_contexts                                          ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Closes all contexts by iterating through the `contexts_` map and        |
+  // | calling `close_context()` on each one. This runs on the worker thread.  |
   // +-------------------------------------------------------------------------+
   void close_contexts() {
     for (auto& item : contexts_) {
@@ -488,6 +574,10 @@ struct worker {
   // +=========================================================================+
   // | [>] close_resources                                         ( private ) |
   // +-------------------------------------------------------------------------+
+  // | Closes all the worker’s file descriptors: the listener, stop, async,    |
+  // | and `epoll` descriptors. It sets each one to -1 to mark it as closed.   |
+  // | This runs on the worker thread while the worker is stopping.            |
+  // +-------------------------------------------------------------------------+
   void close_resources() {
     if (listener_fd_ != -1) ::close(listener_fd_);
     if (stop_fd_ != -1) ::close(stop_fd_);
@@ -499,9 +589,29 @@ struct worker {
     epoll_fd_ = -1;
   }
   // +=========================================================================+
+  // | USINGs                                                      ( private ) |
+  // +-------------------------------------------------------------------------+
+  using async_entry =
+      std::pair<std::chrono::steady_clock::time_point, std::coroutine_handle<>>;
+  // +=========================================================================+
+  // | TYPEs                                                       ( private ) |
+  // +-------------------------------------------------------------------------+
+  struct later_async {
+    bool operator()(const async_entry& left, const async_entry& right) const {
+      return left.first > right.first;
+    }
+  };
+  // +=========================================================================+
+  // | USINGs                                                      ( private ) |
+  // +-------------------------------------------------------------------------+
+  using internal_queue =
+      std::priority_queue<async_entry, std::vector<async_entry>, later_async>;
+  using contexts_map = std::unordered_map<context<ENty, CNty>*,
+                                          std::shared_ptr<context<ENty, CNty>>>;
+  // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  const PTy configuration_;
+  const POty configuration_;
   const FAty& create_engine_;
   const typename CNty::shared_state shared_state_;
   int epoll_fd_{-1};
@@ -511,28 +621,17 @@ struct worker {
   std::atomic<bool> stopping_{false};
   std::atomic<bool> quiescing_{false};
   std::atomic<bool> quiesced_{false};
-  using async_entry = std::pair<std::chrono::steady_clock::time_point,
-                                std::coroutine_handle<>>;
-  struct later_async {
-    bool operator()(const async_entry& left,
-                    const async_entry& right) const {
-      return left.first > right.first;
-    }
-  };
   std::deque<std::coroutine_handle<>> ready_;
-  std::priority_queue<async_entry, std::vector<async_entry>, later_async>
-      timers_;
+  internal_queue timers_;
   std::deque<async_entry> incoming_;
   std::mutex async_mutex_;
   std::jthread thread_;
   inline static thread_local const worker* current_worker_{nullptr};
-  std::unordered_map<context<ENty, CNty>*, std::shared_ptr<context<ENty, CNty>>>
-      contexts_;
+  contexts_map contexts_;
   context<ENty, CNty>* retired_contexts_{nullptr};
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
 };
-
 }  // namespace martianlabs::doba::transport::server
 
 #endif

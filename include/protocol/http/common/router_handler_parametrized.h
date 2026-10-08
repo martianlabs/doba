@@ -238,11 +238,9 @@ void invoke_route_handler(Hty& handler, const RQty& req, RSty& res,
                                         std::index_sequence_for<Args...>{})) {
     throw std::runtime_error("The route parameters could not be parsed");
   }
-  std::apply(
-      [&handler, &req, &res](auto&... value) {
-        std::invoke(handler, req, res, value...);
-      },
-      values);
+  std::apply([&handler, &req, &res](
+                 auto&... value) { std::invoke(handler, req, res, value...); },
+             values);
 }
 
 }  // namespace detail
@@ -263,8 +261,8 @@ class router_handler_parametrized {
   // | [>] TYPEs                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   using matcher_type = bool (*)(std::string_view, std::string_view);
-  using callback_type = std::function<void(const RQty&, RSty&,
-                                           std::string_view, std::string_view)>;
+  using callback_type = std::function<void(const RQty&, RSty&, std::string_view,
+                                           std::string_view)>;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
@@ -323,7 +321,6 @@ auto make_router_handler_parametrized(std::string_view pattern, Hty&& handler) {
             handler, req, res, route_pattern, path);
       });
 }
-
 }  // namespace martianlabs::doba::protocol::http
 
 #endif

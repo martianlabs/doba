@@ -34,25 +34,29 @@
 namespace martianlabs::doba::transport::server::contracts {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] transport                                                   (concept) |
+// | [>] transport                                                 ( concept ) |
 // +---------------------------------------------------------------------------+
-// | Server transport contract.                                                |
+// | This concept defines the requirements for a transport type. It requires   |
+// | that the transport type is constructible from its policies and an engine  |
+// | factory, and that it provides methods for setting callbacks for           |
+// | connection and disconnection events, as well as starting and              |
+// | stopping the transport.                                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename TRty, typename ENty, typename FNty>
 concept transport =
     protocol::contracts::engine_factory<FNty, ENty> &&
     std::constructible_from<TRty, typename TRty::policies_type, FNty> &&
-    requires(TRty& transport, std::function<void()> callback) {
+    requires(TRty& tr, std::function<void()> callback) {
       typename TRty::policies_type;
-      {
-        transport.set_on_connection(std::move(callback))
-      } -> std::same_as<void>;
-      {
-        transport.set_on_disconnection(std::move(callback))
-      } -> std::same_as<void>;
-      { transport.start() } -> std::same_as<void>;
-      { transport.stop() } -> std::same_as<void>;
+      // Set the callback for when a connection is established
+      { tr.set_on_connection(std::move(callback)) } -> std::same_as<void>;
+      // Set the callback for when a connection is disconnected
+      { tr.set_on_disconnection(std::move(callback)) } -> std::same_as<void>;
+      // Start the transport
+      { tr.start() } -> std::same_as<void>;
+      // Stop the transport
+      { tr.stop() } -> std::same_as<void>;
     };
 }  // namespace martianlabs::doba::transport::server::contracts
 

@@ -49,9 +49,16 @@
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] context [windowsTM]                                        ( struct ) |
+// | [>] context                                                    ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Windows server transport connection state.                                |
+// | This struct keeps track of an engine's TCP connection. It manages         |
+// | the socket and input and output buffers, and handles sending and          |
+// | receiving data. It also lets you connect, stop, close, and abort the      |
+// | connection.                                                               |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   ENty - engine type being used.                                          |
+// |   CNty - connection type being used.                                      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty, typename CNty>
@@ -74,10 +81,10 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
         on_disconnection_{on_disconnection},
         on_retirement_{on_retirement},
         input_{[&]() -> CNty {
-          if constexpr (std::is_constructible_v<
-                            CNty, std::size_t, std::size_t, const FAty&,
-                            typename CNty::shared_state, std::size_t,
-                            std::size_t>) {
+          if constexpr (std::is_constructible_v<CNty, std::size_t, std::size_t,
+                                                const FAty&,
+                                                typename CNty::shared_state,
+                                                std::size_t, std::size_t>) {
             return CNty(recv_buffer_size, send_buffer_size, create_engine,
                         shared_state, encrypted_receive_buffer_size,
                         network_bio_buffer_size);
@@ -99,6 +106,12 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] send_completed                                           ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Called when a send operation finishes. It takes the number of bytes     |
+  // | sent and the total number submitted, then updates the send state and    |
+  // | checks the output buffer. If the socket is invalid or something goes    |
+  // | wrong, it aborts the connection. Otherwise, it keeps sending any        |
+  // | data that’s still waiting.                                              |
+  // +-------------------------------------------------------------------------+
   void send_completed(std::size_t size, std::size_t submitted_size) {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     send_state_ = send_status::kIdle;
@@ -106,8 +119,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       retire_();
       return;
     }
-    if (!size || size > submitted_size ||
-        !input_.output_sent(output_, size)) {
+    if (!size || size > submitted_size || !input_.output_sent(output_, size)) {
       abort_();
       return;
     }
@@ -116,6 +128,11 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] output_ready                                             ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Called when the output buffer is ready to send more data. It resets     |
+  // | the send state to idle and checks whether anything else is waiting.     |
+  // | If the socket is invalid or something goes wrong, it aborts the         |
+  // | connection. Otherwise, it keeps sending the remaining data.             |
+  // +-------------------------------------------------------------------------+
   void output_ready() {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     send_state_ = send_status::kIdle;
@@ -123,6 +140,13 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] send                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Sends data over the connection using a head, body, and optional source  |
+  // | reader. It locks the send mutex to keep things thread-safe, then        |
+  // | checks that the connection isn’t closing and the socket is valid.       |
+  // | If there’s room, it adds the data to the output buffer and asks for it  |
+  // | to be sent. If the data won’t fit, it marks the connection as aborted   |
+  // | and shuts down the socket.                                              |
   // +-------------------------------------------------------------------------+
   void send(std::string_view head, std::string_view body,
             std::unique_ptr<common::reader> source) {
@@ -140,6 +164,12 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] arm_next_receive_operation                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Gets the next receive operation ready. It locks the send mutex to keep  |
+  // | things thread-safe, then checks whether the connection is quiescing     |
+  // | or stopping. If so, it aborts the connection or closes the input.       |
+  // | It also aborts if the socket is invalid or the input buffer is full.    |
+  // | Otherwise, it starts another receive operation and returns true.        |
   // +-------------------------------------------------------------------------+
   bool arm_next_receive_operation() {
     std::lock_guard<std::mutex> lock(sending_mutex_);
@@ -165,6 +195,15 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] receive_completed                                        ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Called when a receive operation finishes. It takes the number of bytes  |
+  // | received and updates the input buffer. It locks the receive mutex to    |
+  // | keep things thread-safe, then checks whether the connection is          |
+  // | quiescing or stopping. If so, it aborts the connection or closes the    |
+  // | input. It also aborts if the socket is invalid or the input buffer is   |
+  // | full. Otherwise, it processes the data and returns true. If no bytes    |
+  // | were received, it marks receiving as closed and returns true. If        |
+  // | anything goes wrong, it aborts the connection and returns false.        |
   // +-------------------------------------------------------------------------+
   bool receive_completed(std::size_t size) {
     std::lock_guard<std::mutex> receive_lock(receive_mutex_);
@@ -220,6 +259,9 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] receive_failed                                           ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Called when a receive operation fails. It locks the send mutex, marks   |
+  // | receiving as closed, and aborts the connection.                         |
+  // +-------------------------------------------------------------------------+
   void receive_failed() {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     receiving_ = false;
@@ -227,6 +269,9 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] send_failed                                              ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Called when a send operation fails. It locks the send mutex, resets     |
+  // | the send state to idle, and aborts the connection.                      |
   // +-------------------------------------------------------------------------+
   void send_failed() {
     std::lock_guard<std::mutex> lock(sending_mutex_);
@@ -243,21 +288,25 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] connected                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  void connected(HANDLE completion_port,
-                 common::task_scheduler scheduler = {}) {
+  // | Called when the connection is established. It takes a completion port   |
+  // | handle and an optional task scheduler. It locks the send mutex, sets    |
+  // | the completion port handle, and configures the engine with the          |
+  // | scheduler and callbacks for closing and sending.                        |
+  // +-------------------------------------------------------------------------+
+  void connected(HANDLE completion_port, common::task_scheduler sched = {}) {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
       io_h_ = completion_port;
     }
-    if constexpr (requires { input_.engine.set_async_scheduler(scheduler); }) {
-      input_.engine.set_async_scheduler(scheduler);
+    if constexpr (requires { input_.engine.set_async_scheduler(sched); }) {
+      input_.engine.set_async_scheduler(sched);
     }
     input_.engine.set_on_close([weak = this->weak_from_this()]() {
       if (auto ctx = weak.lock()) ctx->close();
     });
     input_.engine.set_on_send([weak = this->weak_from_this()](
-        std::string_view head, std::string_view body,
-        std::unique_ptr<common::reader> source) {
+                                  std::string_view head, std::string_view body,
+                                  std::unique_ptr<common::reader> source) {
       if (auto ctx = weak.lock()) {
         ctx->send(head, body, std::move(source));
       }
@@ -265,6 +314,9 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] close                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Closes the connection and its output by setting `closing_` and calling  |
+  // | `close_output()` on the input. If that fails, it aborts the connection. |
   // +-------------------------------------------------------------------------+
   void close() {
     std::lock_guard<std::mutex> lock(sending_mutex_);
@@ -278,6 +330,10 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Stops the connection and closes the output. It locks the send mutex,    |
+  // | sets `stopping_` and `closing_`, then calls `close_output()` on the     |
+  // | input.                                                                  |
   // +-------------------------------------------------------------------------+
   void stop() {
     // Wait for the active handler before closing the connection.
@@ -293,7 +349,11 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     notify_disconnection();
   }
   // +=========================================================================+
-  // | [>] quiesce                                                 ( public ) |
+  // | [>] quiesce                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Quiesces the connection by locking both the receive and send mutexes    |
+  // | and setting `quiescing_` to `true`. This stops any new send or receive  |
+  // | operations from starting.                                               |
   // +-------------------------------------------------------------------------+
   void quiesce() {
     std::lock_guard<std::mutex> receive_lock(receive_mutex_);
@@ -302,6 +362,11 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] notify_disconnection                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Lets the owner know the connection has been disconnected by calling     |
+  // | `on_disconnection_`. It locks the send mutex to check whether this      |
+  // | has already been reported. If not, it sets `disconnected_` to `true`    |
+  // | and calls the callback, ignoring any exceptions it throws.              |
   // +-------------------------------------------------------------------------+
   void notify_disconnection() {
     {
@@ -321,6 +386,11 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] notify_connection                                       ( public )  |
   // +-------------------------------------------------------------------------+
+  // | Lets the owner know the connection is up by calling `on_connection_`.   |
+  // | It locks the send mutex to check whether the connection has already     |
+  // | been reported or is still being set up. If it hasn’t been reported      |
+  // | yet, it sets `notified_` to `true` and calls the callback.              |
+  // +-------------------------------------------------------------------------+
   void notify_connection() {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
@@ -337,6 +407,12 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
  private:
   // +=========================================================================+
   // | [>] receive_                                                ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Starts receiving data by creating an overlapped receive object and      |
+  // | calling `WSARecv()`. It sets up the buffer and its size, then checks    |
+  // | the result. If `WSARecv()` fails with an error other than               |
+  // | `WSA_IO_PENDING`, it deletes the object and returns false. Otherwise,   |
+  // | it marks receiving as active and returns true.                          |
   // +-------------------------------------------------------------------------+
   bool receive_() {
     DWORD f = 0, r = 0;
@@ -356,10 +432,17 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] request_output_                                         ( private ) |
   // +-------------------------------------------------------------------------+
+  // | Starts a send operation by creating an overlapped send object and       |
+  // | posting it to the completion port with `PostQueuedCompletionStatus()`.  |
+  // | If a receive is already in progress or the send state isn’t idle, it    |
+  // | returns without doing anything. If posting the operation fails, it      |
+  // | deletes the object, marks the connection as closing and aborted, and    |
+  // | shuts down the socket.                                                  |
+  // +-------------------------------------------------------------------------+
   void request_output_() {
     if (processing_receive_ || send_state_ != send_status::kIdle) return;
-    auto output = new (std::nothrow) overlapped_send<ENty, CNty>(
-        this->shared_from_this(), io_type::kOutput);
+    auto output = new (std::nothrow)
+        overlapped_send<ENty, CNty>(this->shared_from_this(), io_type::kOutput);
     if (output && PostQueuedCompletionStatus(io_h_, 0, 0, output)) {
       send_state_ = send_status::kQueued;
     } else {
@@ -371,6 +454,16 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   }
   // +=========================================================================+
   // | [>] send_pending_                                           ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Starts sending any data that’s waiting by preparing the output buffer   |
+  // | and calling `WSASend()`. It checks that the connection isn’t aborted,   |
+  // | the send state is idle, and the socket is valid. If any of those        |
+  // | checks fail, it aborts or retires the connection. It also checks        |
+  // | whether a receive is in progress and whether there’s data ready to      |
+  // | send. If everything looks good, it sets up an overlapped send object    |
+  // | and the buffers, then calls `WSASend()`. If that fails with an error    |
+  // | other than `WSA_IO_PENDING`, it deletes the object and aborts the       |
+  // | connection. Otherwise, it marks the send as pending.                    |
   // +-------------------------------------------------------------------------+
   void send_pending_() {
     if (aborted_) {
@@ -393,8 +486,8 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       cleanup_resources_();
       return;
     }
-    auto ovs = new (std::nothrow) overlapped_send<ENty, CNty>(
-        this->shared_from_this());
+    auto ovs = new (std::nothrow)
+        overlapped_send<ENty, CNty>(this->shared_from_this());
     if (!ovs) {
       abort_();
       return;
@@ -408,8 +501,8 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       ovs->buffer_count++;
       ovs->submitted_size += size;
     }
-    const int result = WSASend(socket_, ovs->buffers.data(),
-                               ovs->buffer_count, nullptr, 0, ovs, nullptr);
+    const int result = WSASend(socket_, ovs->buffers.data(), ovs->buffer_count,
+                               nullptr, 0, ovs, nullptr);
     if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
       delete ovs;
       abort_();
@@ -425,9 +518,10 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       retire_();
       return;
     }
-    if (!closing_ || processing_receive_ ||
-        send_state_ != send_status::kIdle ||
-        input_.output_pending(output_)) return;
+    if (!closing_ || processing_receive_ || send_state_ != send_status::kIdle ||
+        input_.output_pending(output_)) {
+      return;
+    }
     if (!socket_shutdown_) {
       if (::shutdown(socket_, SD_SEND) == SOCKET_ERROR) {
         abort_();
@@ -467,9 +561,17 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] retire_                                                 ( private ) |
   // +-------------------------------------------------------------------------+
+  // | Retires the connection and calls the retirement callback if it hasn’t   |
+  // | already been called. It returns without doing anything if the           |
+  // | connection is already retired, the socket is invalid, a receive is      |
+  // | in progress, or a send is still running. Otherwise, it sets             |
+  // | `retired_` to `true` and calls `on_retirement_` with `this`.            |
+  // +-------------------------------------------------------------------------+
   void retire_() {
     if (retired_ || socket_ != INVALID_SOCKET || receiving_ ||
-        processing_receive_ || send_state_ != send_status::kIdle) return;
+        processing_receive_ || send_state_ != send_status::kIdle) {
+      return;
+    }
     retired_ = true;
     if (on_retirement_) on_retirement_(this);
   }
@@ -500,7 +602,6 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   bool retired_{false};
   WSABUF ovr_wsa_{0};
 };
-
 }  // namespace martianlabs::doba::transport::server
 
 #endif

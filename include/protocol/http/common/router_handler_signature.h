@@ -34,7 +34,7 @@
 #include <utility>
 
 #include "protocol/http/common/router_handler_parametrized.h"
-#include "protocol/http/common/router_handler_async.h"
+#include "protocol/http/common/router_handler_parametrized_async.h"
 
 namespace martianlabs::doba::protocol::http {
 // /////////////////////////////////////////////////////////////////////////////
@@ -91,8 +91,8 @@ struct router_handler_signature_base {
     return
         [instance = std::move(instance), method](
             LQty req, LSty res,
-            Args... args) noexcept(std::is_nothrow_invocable_v<
-                Mty, Cty&, LQty, LSty, Args...>)
+            Args... args) noexcept(std::is_nothrow_invocable_v<Mty, Cty&, LQty,
+                                                               LSty, Args...>)
             -> LOty {
           return std::invoke(method, *instance, std::forward<LQty>(req),
                              std::forward<LSty>(res),
@@ -115,9 +115,8 @@ struct router_handler_signature_base {
         pattern, std::forward<Hty>(handler));
   }
   template <typename RQty, typename RSty, typename Hty>
-  static auto make_async_parametrized(std::string_view pattern,
-                                      Hty&& handler) {
-    return make_router_handler_async_parametrized<RQty, RSty, Args...>(
+  static auto make_parametrized_async(std::string_view pattern, Hty&& handler) {
+    return make_router_handler_parametrized_async<RQty, RSty, Args...>(
         pattern, std::forward<Hty>(handler));
   }
   // +=========================================================================+
@@ -130,9 +129,9 @@ struct router_handler_signature_base {
   // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty>
   static void check() {
-    static_assert(std::same_as<LOty, void> ||
-                      std::same_as<LOty, common::task<void>>,
-                  "The route handler must return void or task<void>");
+    static_assert(
+        std::same_as<LOty, void> || std::same_as<LOty, common::task<void>>,
+        "The route handler must return void or task<void>");
     static_assert(std::same_as<std::decay_t<LQty>, RQty>,
                   "The first route handler argument must be const RQty&");
     static_assert(std::is_lvalue_reference_v<LQty> &&
@@ -168,8 +167,8 @@ struct router_handler_signature<Retty (Cty::*)(Reqty, Resty, Args...) const>
     : router_handler_signature_base<Retty, Reqty, Resty, Args...> {};
 template <typename Cty, typename Retty, typename Reqty, typename Resty,
           typename... Args>
-struct router_handler_signature<
-    Retty (Cty::*)(Reqty, Resty, Args...) const noexcept>
+struct router_handler_signature<Retty (Cty::*)(Reqty, Resty, Args...)
+                                    const noexcept>
     : router_handler_signature_base<Retty, Reqty, Resty, Args...> {};
 template <typename Cty, typename Retty, typename Reqty, typename Resty,
           typename... Args>
@@ -205,18 +204,17 @@ concept router_handler_lambda = requires {
   requires std::same_as<
                typename router_handler_signature<
                    decltype(&std::decay_t<Hty>::operator())>::return_type,
-                         void> ||
-           std::same_as<
-               typename router_handler_signature<
-                   decltype(&std::decay_t<Hty>::operator())>::return_type,
-                         common::task<void>>;
+               void> ||
+               std::same_as<
+                   typename router_handler_signature<
+                       decltype(&std::decay_t<Hty>::operator())>::return_type,
+                   common::task<void>>;
   requires std::is_lvalue_reference_v<typename router_handler_signature<
       decltype(&std::decay_t<Hty>::operator())>::response_type>;
-  requires !std::is_const_v<std::remove_reference_t<
-      typename router_handler_signature<
+  requires !std::is_const_v<
+      std::remove_reference_t<typename router_handler_signature<
           decltype(&std::decay_t<Hty>::operator())>::response_type>>;
 };
-
 }  // namespace martianlabs::doba::protocol::http
 
 #endif

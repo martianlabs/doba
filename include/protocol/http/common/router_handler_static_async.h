@@ -22,30 +22,26 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_transport_server_tcp_windows_h
-#define martianlabs_doba_transport_server_tcp_windows_h
+#ifndef martianlabs_doba_protocol_http_router_handler_static_async_h
+#define martianlabs_doba_protocol_http_router_handler_static_async_h
 
-#include <utility>
+#include <functional>
 
-#include "transport/server/cmn_windows.h"
-#include "transport/server/tcp_connection.h"
-#include "transport/server/tcp_policies.h"
+#include "common/task.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::protocol::http {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] tcp [windowsTM]                                             ( class ) |
+// | [>] router_handler_static_async                                 ( using ) |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   RQty - request being used                                               |
+// |   RSty - response being used                                              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <protocol::contracts::engine ENty,
-          protocol::contracts::engine_factory<ENty> FAty>
-class tcp
-    : public basic_transport<ENty, FAty, tcp_connection<ENty>, tcp_policies> {
- public:
-  explicit tcp(tcp_policies configuration, FAty create_engine)
-      : basic_transport<ENty, FAty, tcp_connection<ENty>, tcp_policies>(
-            std::move(configuration), std::move(create_engine), nullptr) {}
-};
-}  // namespace martianlabs::doba::transport::server
+template <typename RQty, typename RSty>
+using router_handler_static_async =
+    std::function<common::task<void>(const RQty&, RSty&)>;
+}  // namespace martianlabs::doba::protocol::http
 
 #endif

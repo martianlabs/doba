@@ -234,8 +234,7 @@ class response {
     }
     std::size_t k_size = k.size();
     std::size_t v_size = v.size();
-    std::size_t space_left =
-        head_.size() - sln_len_ - hdr_len_;
+    std::size_t space_left = head_.size() - sln_len_ - hdr_len_;
     // Bytes written by this call: key + ':' + ' ' + value + '\r' + '\n' = k + v
     // + 4. Reserve the 2 bytes of the header-terminating CRLF.
     if (k_size + v_size + 4 + 2 > space_left) {
@@ -287,8 +286,7 @@ class response {
     std::size_t new_v_size = v.size();
     if (new_v_size > val_len) {
       std::size_t grow = new_v_size - val_len;
-      std::size_t space_left =
-          head_.size() - sln_len_ - hdr_len_;
+      std::size_t space_left = head_.size() - sln_len_ - hdr_len_;
       if (grow + 2 > space_left) {
         throw std::out_of_range("not enough space to set header!");
       }
@@ -505,8 +503,7 @@ class response {
       if (!state.produced && !state.complete) {
         throw std::runtime_error("unable to read body!");
       }
-      if (state.produced &&
-          !writer.write(std::span(buffer, state.produced))) {
+      if (state.produced && !writer.write(std::span(buffer, state.produced))) {
         throw std::runtime_error("unable to write body!");
       }
     }
@@ -835,8 +832,7 @@ class response {
   // | [>] add_date_header                                         ( private ) |
   // +-------------------------------------------------------------------------+
   void add_date_header() {
-    std::size_t space_left =
-        head_.size() - sln_len_ - hdr_len_;
+    std::size_t space_left = head_.size() - sln_len_ - hdr_len_;
     if (kDateLineLength + 2 > space_left) {
       throw std::out_of_range("not enough space to add header!");
     }
@@ -867,8 +863,7 @@ class response {
       throw std::invalid_argument("conflicting response framing headers!");
     }
     if (has_content_length_header_ || has_transfer_encoding_header_) return;
-    std::size_t space_left =
-        head_.size() - sln_len_ - hdr_len_;
+    std::size_t space_left = head_.size() - sln_len_ - hdr_len_;
     if (chunked_) {
       constexpr std::string_view line = "Transfer-Encoding: chunked\r\n";
       if (line.size() + 2 > space_left) {
