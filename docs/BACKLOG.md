@@ -30,7 +30,6 @@ a selected value are marked "Not set".
 - [Quality and validation](#quality-and-validation)
 - [Release engineering](#release-engineering)
 - [C++ maintainability](#c-maintainability)
-- [Public documentation](#public-documentation)
 - [Beyond the first release](#beyond-the-first-release)
 
 <a name="release-target"></a>
@@ -42,15 +41,15 @@ a selected value are marked "Not set".
 </h2>
 
 The frozen target is `0.1.0-beta1`, a beta for controlled
-deployments. Seven open items gate it: C1-C3, C7, F1-F2, and RE1.
+deployments. Six open items gate it: C1-C3, C7, F2, and RE1.
 
-**Implementation order.** Finish TLS validation and GZIP compression (F1/F2);
+**Implementation order.** Finish GZIP compression (F2);
 complete inactivity, per-request, connection, and pending-work limits
 (C1/C2/C3/C7); then finish release engineering (RE1).
 
 **Exit criteria.**
 
-- Verify F1/F2 and C1/C2/C3/C7 with focused unit and real-socket tests on
+- Verify F2 and C1/C2/C3/C7 with focused unit and real-socket tests on
   Windows and Linux where applicable. Include slow clients, ordering,
   resource release, and cancellation where relevant.
 - Pass the compiler/configuration matrix, strict warnings, sanitizers,
@@ -71,21 +70,20 @@ an explicit scope decision supported by evidence.
   </picture>
 </h2>
 
-29 open items across eight categories: seven release gates and
-twenty-two future items. Closed identifiers remain in Git history.
+24 open items across seven categories: six release gates and
+eighteen future items. Closed identifiers remain in Git history.
 "Verification pending" requires a run on the relevant revision.
 
 | Category | Identifiers | Release | Future work | Total |
 | --- | --- | --- | --- | --- |
 | Operational hardening | C1-C3, C7 | 4 | 0 | 4 |
 | Bugs | B13 | 0 | 1 | 1 |
-| Product and convenience | F1-F2, P2-P8 | 2 | 7 | 9 |
-| Quality and validation | QA1-QA3, QA5-QA6 | 0 | 5 | 5 |
+| Product and convenience | F2, P2-P8 | 1 | 7 | 8 |
+| Quality and validation | QA1-QA2, QA6 | 0 | 3 | 3 |
 | Release engineering | RE1 | 1 | 0 | 1 |
 | C++ maintainability | DT1-DT3 | 0 | 3 | 3 |
-| Public documentation | DOC1-DOC2 | 0 | 2 | 2 |
 | Beyond the first release | F3-F5, F7 | 0 | 4 | 4 |
-| **Total** | | **7** | **22** | **29** |
+| **Total** | | **6** | **18** | **24** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
@@ -94,7 +92,6 @@ twenty-two future items. Closed identifiers remain in Git history.
 | [C3](#c3-global-active-connection-limit) | Hardening | Pending | Release gate | 0.1.0-beta1 |
 | [C7](#c7-pending-response-and-work-budget) | Hardening | Partial; transport budget pending | Release gate | 0.1.0-beta1 |
 | [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark bug | Verification pending | Medium | Future work |
-| [F1](#f1-tls) | Product | Implemented; release validation pending | Release gate | 0.1.0-beta1 |
 | [F2](#f2-compression-and-gzip) | Product | Design and implementation pending | Release gate | 0.1.0-beta1 |
 | [P2](#p2-access-logging) | Product | Decision pending | Not set | Future work |
 | [P3](#p3-middleware-chain) | Product | Decision pending | Not set | Future work |
@@ -105,15 +102,11 @@ twenty-two future items. Closed identifiers remain in Git history.
 | [P8](#p8-429-response-construction) | Product | Pending | Low | Future work |
 | [QA1](#qa1-exhaustive-compliance-suite) | QA | Pending | Not set | Future work |
 | [QA2](#qa2-fuzzing) | QA | Deferred | High | Future work |
-| [QA3](#qa3-performance-baseline) | QA | Pending | Medium | Future work |
-| [QA5](#qa5-stress-campaigns) | QA | Pending | Not set | Future work |
 | [QA6](#qa6-external-compliance-automation) | QA | Deferred | Not set | Future work |
 | [RE1](#re1-release-governance-and-traceability) | Release | Pending | Release gate | 0.1.0-beta1 |
 | [DT1](#dt1-platformh-dependencies-and-global-effects) | C++ | Pending | Medium | Future work |
 | [DT2](#dt2-indexed-getter-contract) | C++ | Decision pending | Low/Medium | Future work |
 | [DT3](#dt3-response-framing-and-capacity-contract) | C++ | Decision pending | Medium | Future work |
-| [DOC1](#doc1-transport-lifecycle) | Documentation | Pending | Not set | Future work |
-| [DOC2](#doc2-request-views-and-getters) | Documentation | Pending | Not set | Future work |
 | [F3](#f3-progressive-streaming-and-sse) | Future | Deferred | Not set | Future work |
 | [F4](#f4-ordered-upgrade-barrier) | Future | Deferred | Not set | Future work |
 | [F5](#f5-websockets) | Future | Deferred | Not set | Future work |
@@ -271,26 +264,8 @@ local to the adapter.
   </picture>
 </h2>
 
-F1 and F2 are required for `0.1.0-beta1`, before operational hardening and
+F2 is required for `0.1.0-beta1`, before operational hardening and
 release engineering. P2-P8 remain future work, outside this beta.
-
-<a name="f1-tls"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f1-tls-dark.svg">
-    <img src="../resources/docs/backlog/h3-f1-tls.svg" alt="F1: TLS">
-  </picture>
-</h3>
-
-**Status.** Implemented; release validation remains open.
-`DOBA_ENABLE_TLS=ON` builds `doba_tls` with optional OpenSSL support.
-Linux real-socket tests exist. CI is configured to build and test TLS on
-Windows Release; a passing result for the target revision is not established
-by that configuration alone.
-
-**Close when.** Run the enabled-TLS unit and real-socket suites on Windows
-and Linux, including malformed records, handshake, encrypted HTTP delivery,
-ordering, closure, and errors. Complete the release matrix before closing F1.
 
 <a name="f2-compression-and-gzip"></a>
 <h3>
@@ -457,8 +432,8 @@ Retry-After, framing, and HEAD behavior without changing other factories.
   </picture>
 </h2>
 
-QA1-QA3 and QA5-QA6 are future work. Existing CI gates and focused
-regressions for response closure, F1/F2, and C1/C2/C3/C7 remain required
+QA1-QA2 and QA6 are future work. Existing CI gates and focused
+regressions for response closure, F2, and C1/C2/C3/C7 remain required
 for `0.1.0-beta1`.
 
 <a name="qa1-exhaustive-compliance-suite"></a>
@@ -471,7 +446,8 @@ for `0.1.0-beta1`.
   </picture>
 </h3>
 
-**Status.** Future QA work; not a beta gate.
+**Status.** Existing unit and integration coverage is extensive; the
+focused evidence gaps below remain future work, not a beta gate.
 
 **Open evidence gaps.** Force a collision with an actual spill filename;
 prove one client's send remains pending while another is served and test the
@@ -498,43 +474,6 @@ Choose infrastructure before adding dependencies.
 
 **Close when selected.** Define corpus, budgets, sanitizer use, and failure
 reproduction; turn confirmed failures into deterministic regressions.
-
-<a name="qa3-performance-baseline"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-qa3-performance-baseline-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-qa3-performance-baseline-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-qa3-performance-baseline-dark.svg">
-    <img src="../resources/docs/backlog/h3-qa3-performance-baseline.svg" alt="QA3: Performance baseline">
-  </picture>
-</h3>
-
-**Status.** Future QA work. Published HttpArena baseline and pipelined
-results contain one repetition, so they do not establish variability or
-regression tolerances. The Web Frameworks adapter already fetches a pinned
-commit.
-
-**Remaining work.** Define representative scenarios, hardware, toolchain,
-revisions, resource metrics, repeated samples, and tolerances. Preserve the
-inputs and results needed to compare a release candidate. Keep measurement
-separate from optimization.
-
-<a name="qa5-stress-campaigns"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-qa5-stress-campaigns-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-qa5-stress-campaigns-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-qa5-stress-campaigns-dark.svg">
-    <img src="../resources/docs/backlog/h3-qa5-stress-campaigns.svg" alt="QA5: Stress campaigns">
-  </picture>
-</h3>
-
-**Status.** Future QA work. Functional integration and concurrency cases
-exist; longer soak runs and controlled worker interleavings remain undefined.
-
-**Close when selected.** Specify duration, load, observed resources, and
-failure reproduction before adding tests. Relate scenarios to C1, C3, and
-QA3.
 
 <a name="qa6-external-compliance-automation"></a>
 <h3>
@@ -580,7 +519,7 @@ only `vMAJOR.MINOR.PATCH` from `include/version.h`.
 channel, minimum usage and deployment documentation, coherent versioning,
 and prerelease publication. The full contribution guide remains future work.
 
-**Close when.** F1/F2 and C1/C2/C3/C7 pass focused tests; the exact release
+**Close when.** F2 and C1/C2/C3/C7 pass focused tests; the exact release
 revision passes CI and CMake consumer checks. Document indexed-getter and
 view lifetimes, response framing and capacity, transport lifecycle, IPv4-only
 scope, TLS/GZIP configuration, and known limitations. Align the tested
@@ -638,9 +577,8 @@ without evidence.
 need valid indices.
 
 **Close when selected.** Decide between a documented precondition and a
-checked API, then test its boundaries and preserve compatibility. Coordinate
-the documentation with DOC2; inconsistency alone does not require an API
-change.
+checked API, then test its boundaries and preserve compatibility. Document
+the selected contract; inconsistency alone does not require an API change.
 
 <a name="dt3-response-framing-and-capacity-contract"></a>
 <h3>
@@ -662,58 +600,6 @@ supported combinations, operation order, and failure behavior.
 Transfer-Encoding, generated Date and framing at exact and exceeded header
 capacity, and recovery without partial malformed output. Keep header
 capacity distinct from body storage; avoid an unrelated serializer redesign.
-
-<a name="public-documentation"></a>
-<h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-public-documentation-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-public-documentation-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-public-documentation-dark.svg">
-    <img src="../resources/docs/backlog/h2-public-documentation.svg" alt="Public documentation">
-  </picture>
-</h2>
-
-DOC1-DOC2 are future work for extended guides and examples. Minimum usage
-preconditions and deployment limitations belong to the RE1 release closure.
-
-<a name="doc1-transport-lifecycle"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-doc1-transport-lifecycle-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-doc1-transport-lifecycle-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-doc1-transport-lifecycle-dark.svg">
-    <img src="../resources/docs/backlog/h3-doc1-transport-lifecycle.svg" alt="DOC1: Transport lifecycle">
-  </picture>
-</h3>
-
-**Status.** Future documentation work beyond RE1's minimum.
-
-**Scope.** Explain direct transport use in README or examples: callback
-setup, start/stop order, worker-thread restrictions, restart, and startup
-errors. Distinguish per-connection closure from F7's proposed server-wide
-bounded drain.
-
-**Close when selected.** Validate examples against transport lifecycle tests
-and link them from the public usage material.
-
-<a name="doc2-request-views-and-getters"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-doc2-request-views-and-getters-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-doc2-request-views-and-getters-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-doc2-request-views-and-getters-dark.svg">
-    <img src="../resources/docs/backlog/h3-doc2-request-views-and-getters.svg" alt="DOC2: Request views and getters">
-  </picture>
-</h3>
-
-**Status.** Future documentation work beyond RE1's minimum.
-
-**Scope.** Use README or examples to show safe request views across
-coroutine suspension, invalidation on destruction, borrowed-reader lifetime,
-and indexed-getter preconditions.
-
-**Close when selected.** Cross-check request and reader tests, document the
-DT2 decision, and link the examples from public usage material.
 
 <a name="beyond-the-first-release"></a>
 <h2>
@@ -803,4 +689,3 @@ changing existing `stop()` semantics.
 
 **Close when selected.** Test active sends, idle keep-alive, pipelining,
 pending output, expiry, repeated stop, and single cleanup on both backends.
-Coordinate user-facing lifecycle guidance with DOC1.
