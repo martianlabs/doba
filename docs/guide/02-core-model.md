@@ -81,11 +81,12 @@ only implements the protocol contract; it does not need socket code.
   </picture>
 </h2>
 
-The **custom_transport** demo keeps doba's HTTP/1.1 engine but trades TCP for
-an in-memory transport. Start with its
-[README](../../examples/transport/server/custom_transport/README.md); the
+The [custom_transport example][custom-transport] keeps doba's HTTP/1.1 engine
+but trades TCP for an in-memory transport. Its
 [source](../../examples/transport/server/custom_transport/main.cpp) supplies
 that transport to the HTTP server:
+
+[custom-transport]: ../../examples/transport/server/custom_transport/README.md
 
 ```cpp
 using routes_type =
