@@ -40,8 +40,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "common/task.h"
 #include "platform.h"
+#include "transport/server/contracts.h"
 #include "transport/server/tcp_connection.h"
 #include "transport/server/tcp_windows_overlapped_receive.h"
 #include "transport/server/tcp_windows_overlapped_send.h"
@@ -289,17 +289,17 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // | [>] connected                                                ( public ) |
   // +-------------------------------------------------------------------------+
   // | Called when the connection is established. It takes a completion port   |
-  // | handle and an optional task scheduler. It locks the send mutex, sets    |
+  // | handle and an optional execution capacity. It locks the send mutex,     |
   // | the completion port handle, and configures the engine with the          |
-  // | scheduler and callbacks for closing and sending.                        |
+  // | capacity and callbacks for closing and sending.                         |
   // +-------------------------------------------------------------------------+
-  void connected(HANDLE completion_port, common::task_scheduler sched = {}) {
+  void connected(HANDLE completion_port, execution_capacity execution = {}) {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
       io_h_ = completion_port;
     }
-    if constexpr (requires { input_.engine.set_async_scheduler(sched); }) {
-      input_.engine.set_async_scheduler(sched);
+    if constexpr (contracts::execution_receiver<ENty>) {
+      input_.engine.set_execution_capacity(execution);
     }
     input_.engine.set_on_close([weak = this->weak_from_this()]() {
       if (auto ctx = weak.lock()) ctx->close();

@@ -30,7 +30,6 @@
 #include <charconv>
 #include <chrono>
 #include <condition_variable>
-#include <coroutine>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -213,52 +212,54 @@ struct worker {
   // +=========================================================================+
   // | [>] USINGs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  using async_entry =
-      std::pair<std::chrono::steady_clock::time_point, std::coroutine_handle<>>;
+  using work_entry =
+      std::pair<std::chrono::steady_clock::time_point, execution_work>;
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  struct later_async {
-    bool operator()(const async_entry& left, const async_entry& right) const {
+  struct later_work {
+    bool operator()(const work_entry& left, const work_entry& right) const {
       return left.first > right.first;
     }
   };
   // +=========================================================================+
   // | [>] USINGs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  using async_priority_queue =
-      std::priority_queue<async_entry, std::vector<async_entry>, later_async>;
+  using work_priority_queue =
+      std::priority_queue<work_entry, std::vector<work_entry>, later_work>;
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  struct async_state {
-    std::deque<std::coroutine_handle<>> ready;
-    async_priority_queue timers;
+  struct work_state {
+    std::deque<execution_work> ready;
+    work_priority_queue timers;
   };
+  static constexpr ULONG_PTR kWorkKey = 1;
   // +=========================================================================+
-  // | [>] scheduler                                               ( private ) |
+  // | [>] execution                                               ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Returns a task scheduler for running tasks on the current worker thread.|
-  // | It checks that the current worker is the owner and that the async state |
-  // | isn’t null. If either check fails, it throws a runtime error. Otherwise,|
-  // | it returns a scheduler that can queue tasks on that worker.             |
+  // | Accepts opaque work from any thread for execution by an I/O worker.    |
   // +-------------------------------------------------------------------------+
-  common::task_scheduler scheduler() {
+  execution_capacity execution() {
     return {this,
-            [](void* owner, std::coroutine_handle<> handle) {
-              if (current_worker_ != static_cast<worker*>(owner) ||
-                  !current_async_) {
-                throw std::runtime_error("Task resumed outside I/O worker!");
-              }
-              current_async_->ready.push_back(handle);
-            },
             [](void* owner, std::chrono::steady_clock::time_point due,
-               std::coroutine_handle<> handle) {
-              if (current_worker_ != static_cast<worker*>(owner) ||
-                  !current_async_) {
-                throw std::runtime_error("Task resumed outside I/O worker!");
+               execution_work work) {
+              auto* output = static_cast<worker*>(owner);
+              if (current_worker_ == output && current_work_) {
+                if (due == std::chrono::steady_clock::time_point::min()) {
+                  current_work_->ready.push_back(work);
+                } else {
+                  current_work_->timers.push({due, work});
+                }
+                return;
               }
-              current_async_->timers.push({due, handle});
+              std::lock_guard<std::mutex> lock(output->work_mutex_);
+              output->incoming_.push_back({due, work});
+              if (!PostQueuedCompletionStatus(output->io_h_, 0, kWorkKey,
+                                              nullptr)) {
+                output->incoming_.pop_back();
+                throw std::runtime_error("Work could not be queued!");
+              }
             }};
   }
   // +=========================================================================+
@@ -466,19 +467,19 @@ struct worker {
     for (std::size_t i = 0; i < number_of_workers; i++) {
       workers_.emplace_back([this]() {
         current_worker_ = this;
-        async_state async;
-        current_async_ = &async;
+        work_state work;
+        current_work_ = &work;
         bool stopping = false;
         while (!stopping) {
           ULONG_PTR key = NULL;
           LPOVERLAPPED lpo = NULL;
           DWORD bytes = 0;  // bytes transfered..
           DWORD tout = INFINITE;
-          if (!async.ready.empty()) {
+          if (!work.ready.empty()) {
             tout = 0;
-          } else if (!async.timers.empty()) {
+          } else if (!work.timers.empty()) {
             auto remaining =
-                async.timers.top().first - std::chrono::steady_clock::now();
+                work.timers.top().first - std::chrono::steady_clock::now();
             auto milliseconds =
                 std::chrono::duration_cast<std::chrono::milliseconds>(
                     remaining);
@@ -494,7 +495,21 @@ struct worker {
           overlapped_base* ovb = reinterpret_cast<overlapped_base*>(lpo);
           if (st == FALSE && ovb == nullptr && GetLastError() == WAIT_TIMEOUT) {
           } else if (st == TRUE && ovb == nullptr) {
-            stopping = true;
+            if (key == kWorkKey) {
+              std::lock_guard<std::mutex> lock(work_mutex_);
+              while (!incoming_.empty()) {
+                auto entry = incoming_.front();
+                incoming_.pop_front();
+                if (entry.first ==
+                    std::chrono::steady_clock::time_point::min()) {
+                  work.ready.push_back(entry.second);
+                } else {
+                  work.timers.push(entry);
+                }
+              }
+            } else {
+              stopping = true;
+            }
           } else if (st == TRUE) {
             if (ovb->get_type() == io_type::kAccept) {
               auto ova = (overlapped_accept*)ovb;
@@ -521,21 +536,21 @@ struct worker {
             // overlapped structure if it was dynamically allocated.
             handle_overlapped(ovb);
           }
-          if (!async.timers.empty()) {
+          if (!work.timers.empty()) {
             const auto now = std::chrono::steady_clock::now();
-            while (!async.timers.empty() && async.timers.top().first <= now) {
-              async.ready.push_back(async.timers.top().second);
-              async.timers.pop();
+            while (!work.timers.empty() && work.timers.top().first <= now) {
+              work.ready.push_back(work.timers.top().second);
+              work.timers.pop();
             }
           }
-          std::size_t count = async.ready.size();
+          std::size_t count = work.ready.size();
           while (count--) {
-            auto handle = async.ready.front();
-            async.ready.pop_front();
-            handle.resume();
+            auto entry = work.ready.front();
+            work.ready.pop_front();
+            entry.run(entry.context);
           }
         }
-        current_async_ = nullptr;
+        current_work_ = nullptr;
         current_worker_ = nullptr;
       });
     }
@@ -681,7 +696,7 @@ struct worker {
     }
     // Let's call user's callback to notify for new connection!
     try {
-      ctx->connected(io_h_, scheduler());
+      ctx->connected(io_h_, execution());
       ctx->notify_connection();
     } catch (const std::exception&) {
       ctx->stop();
@@ -884,7 +899,9 @@ struct worker {
   std::thread::id stopping_thread_{};
   std::vector<std::jthread> workers_;
   inline static thread_local const worker* current_worker_{nullptr};
-  inline static thread_local async_state* current_async_{nullptr};
+  inline static thread_local work_state* current_work_{nullptr};
+  std::deque<work_entry> incoming_;
+  std::mutex work_mutex_;
   contexts_maps contexts_;
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;

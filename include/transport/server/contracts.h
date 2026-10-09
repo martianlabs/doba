@@ -25,13 +25,50 @@
 #ifndef martianlabs_doba_transport_server_contracts_h
 #define martianlabs_doba_transport_server_contracts_h
 
+#include <chrono>
 #include <concepts>
 #include <functional>
 #include <utility>
 
 #include "protocol/contracts.h"
 
+namespace martianlabs::doba::transport::server {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] execution_work                                             ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct execution_work {
+  void* context{nullptr};
+  void (*run)(void*) noexcept{nullptr};
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] execution_capacity                                         ( struct ) |
+// +---------------------------------------------------------------------------+
+// | While active, accepted work runs once, no earlier than its threshold.     |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct execution_capacity {
+  void* owner{nullptr};
+  void (*submit)(void*, std::chrono::steady_clock::time_point,
+                 execution_work){nullptr};
+};
+}  // namespace martianlabs::doba::transport::server
+
 namespace martianlabs::doba::transport::server::contracts {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] execution_receiver                                      ( concept ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename ENty>
+concept execution_receiver =
+    requires(ENty& engine, execution_capacity execution) {
+      { engine.set_execution_capacity(execution) } -> std::same_as<void>;
+    };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] transport                                                 ( concept ) |

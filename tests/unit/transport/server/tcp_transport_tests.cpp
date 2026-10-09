@@ -48,6 +48,7 @@ struct policy_engine {
     return size;
   }
 };
+static_assert(!tr::contracts::execution_receiver<policy_engine>);
 }  // namespace
 
 // +===========================================================================+

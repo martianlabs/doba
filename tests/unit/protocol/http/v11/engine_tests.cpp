@@ -112,6 +112,56 @@ struct suspend_once {
 };
 }  // namespace
 
+DOBA_TEST("engine submits opaque work with execution thresholds") {
+  router<request, response> routes;
+  routes.add("GET", "/wait", [](const request&, response& res)
+                 -> task<void> {
+    co_await martianlabs::doba::common::yield();
+    co_await martianlabs::doba::common::sleep_for(
+        std::chrono::milliseconds(10));
+    make_response(res, "done");
+  });
+  connection current(routes);
+  using namespace martianlabs::doba::transport::server;
+  std::vector<std::pair<std::chrono::steady_clock::time_point, execution_work>>
+      queued;
+  current.value.set_execution_capacity(
+      {&queued, [](void* owner, std::chrono::steady_clock::time_point due,
+                   execution_work work) {
+         auto& entries = *static_cast<decltype(queued)*>(owner);
+         entries.push_back({due, work});
+       }});
+  current.receive("GET /wait HTTP/1.1\r\nHost: localhost\r\n\r\n");
+  DOBA_EXPECT_EQUAL(queued.size(), 1U);
+  DOBA_EXPECT(queued[0].first ==
+              std::chrono::steady_clock::time_point::min());
+  auto work = queued[0].second;
+  const auto before = std::chrono::steady_clock::now();
+  work.run(work.context);
+  DOBA_EXPECT_EQUAL(queued.size(), 2U);
+  DOBA_EXPECT(queued[1].first > before);
+  DOBA_EXPECT(current.wire.empty());
+  work = queued[1].second;
+  work.run(work.context);
+  DOBA_EXPECT(current.wire.ends_with("\r\n\r\ndone"));
+}
+
+DOBA_TEST("engine closes when execution rejects a continuation") {
+  router<request, response> routes;
+  routes.add("GET", "/wait", [](const request&, response&) -> task<void> {
+    co_await martianlabs::doba::common::yield();
+  });
+  connection current(routes);
+  current.value.set_execution_capacity(
+      {nullptr, [](void*, std::chrono::steady_clock::time_point,
+                   martianlabs::doba::transport::server::execution_work) {
+         throw std::runtime_error("execution rejected");
+       }});
+  current.receive("GET /wait HTTP/1.1\r\nHost: localhost\r\n\r\n");
+  DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 500 "));
+  DOBA_EXPECT_EQUAL(current.closes, 1);
+}
+
 DOBA_TEST("engine orders asynchronous and synchronous responses") {
   router<request, response> routes;
   std::coroutine_handle<> next;
