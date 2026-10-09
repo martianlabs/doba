@@ -6,35 +6,55 @@
   </picture>
 </h1>
 
-This chapter builds the bundled `hello_world` example and sends a request to
-it. Run the commands from the repository root. Its source is
-[main.cpp](../../examples/http/v11/hello_world/main.cpp).
+Let's get doba to say hello. We'll build the bundled `hello_world` example,
+run it, and send it a request with `curl`. Start from the repository root; the
+source is [main.cpp](../../examples/http/v11/hello_world/main.cpp).
 
-## Requirements
+<a name="before-you-start"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-before-you-start-dark.svg">
+    <img src="../../resources/docs/guide/h2-before-you-start.svg" alt="Before you start">
+  </picture>
+</h2>
 
-- Windows or Linux with a C++20 compiler.
+You only need:
+
+- A C++20 compiler on Windows or Linux.
 - CMake 3.20 or later.
-- `curl` to make the test request.
+- `curl` for the test request.
 
-The TCP example does not require OpenSSL.
+No OpenSSL setup this time - this example uses plain TCP.
 
-## Build the example
+<a name="build-it"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-build-it-dark.svg">
+    <img src="../../resources/docs/guide/h2-build-it.svg" alt="Build it">
+  </picture>
+</h2>
 
-Configure a build directory and build only the `hello_world` target:
+Two commands:
 
 ```sh
 cmake -S . -B out/build/guide
 cmake --build out/build/guide --config Release --target hello_world
 ```
 
-The top-level build enables examples by default. Building this target does
-not build the other examples or tests. `--config Release` applies to
-multi-configuration generators.
+Examples are enabled by default when you build doba from the repository root.
+The `hello_world` target keeps the build focused on this example.
+`--config Release` applies to multi-configuration generators.
 
-## Run the server
+<a name="run-it"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-run-it-dark.svg">
+    <img src="../../resources/docs/guide/h2-run-it.svg" alt="Run it">
+  </picture>
+</h2>
 
-Run the `hello_world` executable produced in the build tree. For example, with
-a single-configuration generator on Linux:
+Start the executable from the build tree. With a single-configuration generator
+on Linux, that looks like this:
 
 ```sh
 ./out/build/guide/examples/http/v11/hello_world/hello_world
@@ -42,19 +62,26 @@ a single-configuration generator on Linux:
 
 With Visual Studio on Windows, the Release executable is normally at
 `out\build\guide\examples\http\v11\hello_world\Release\hello_world.exe`.
-Leave the server running while you make the request in another terminal.
+Keep it running and open another terminal. Then ask for `/hello`:
 
 ```sh
 curl -i http://localhost:8080/hello
 ```
 
-The route returns `200 OK`, the `Server: doba.` and
+You should get `200 OK`, the `Server: doba.` and
 `Content-Type: text/plain; charset=utf-8` headers, and the body `ok`.
-Stop the server with Ctrl+C.
+Stop the server with Ctrl+C when you're done.
 
-## Understand the example
+<a name="under-the-hood"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-under-the-hood-dark.svg">
+    <img src="../../resources/docs/guide/h2-under-the-hood.svg" alt="Under the hood">
+  </picture>
+</h2>
 
-The core of [main.cpp](../../examples/http/v11/hello_world/main.cpp) is short:
+Here is the bit doing the work in
+[main.cpp](../../examples/http/v11/hello_world/main.cpp):
 
 ```cpp
 server<> http_server({.ip = "0.0.0.0", .port = "8080"});
@@ -68,8 +95,10 @@ http_server.start();
 signaler::wait();
 ```
 
-`server<>` combines doba's HTTP/1.1 engine with its default TCP transport.
-The route matches `GET /hello`. `start()` opens the listener; `signaler::wait()`
-keeps this example running until a termination signal arrives.
+`server<>` pairs doba's HTTP/1.1 engine with its default TCP transport.
+`add_route` matches `GET /hello`; the response sets its status, headers, and
+body. `start()` opens the listener, and `signaler::wait()` keeps this example
+alive until Ctrl+C.
 
-Return to the [guide index](README.md) for the remaining chapters.
+That's your first doba server. Head back to the [guide index](README.md) when
+you're ready for more.

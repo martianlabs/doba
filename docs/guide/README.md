@@ -6,13 +6,12 @@
   </picture>
 </h1>
 
-Learn doba by building with it. Read the chapters in order or jump to the task
-you need. Chapters without links are still being written.
+Want to see doba do something? Start at chapter 1, or jump straight to the bit
+you came for. The first chapter is ready; the others are on their way.
 
-1. [Getting started](01-getting-started.md) - build and run your first
-   HTTP/1.1 server.
-2. Core model - understand how protocols and transports work together.
-3. HTTP/1.1 - handle routes, requests, and responses.
-4. Transports and TLS - use TCP and optional TLS.
-5. Extending doba - create a protocol or a transport.
-6. Limits and operation - configure limits and handle operational concerns.
+1. [Getting started](01-getting-started.md) - get an HTTP/1.1 server talking.
+2. Core model - see how protocols and transports fit together.
+3. HTTP/1.1 - work with routes, requests, and responses.
+4. Transports and TLS - use TCP, then add TLS when you need it.
+5. Extending doba - bring your own protocol or transport.
+6. Limits and operation - set boundaries and keep the server in shape.
