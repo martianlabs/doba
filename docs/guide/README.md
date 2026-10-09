@@ -17,4 +17,5 @@ you came for. Chapters with links are ready; the rest are on their way.
    when you need it.
 5. [Extending doba](05-extending-doba.md) - bring your own protocol or
    transport.
-6. Limits and operation - set boundaries and keep the server in shape.
+6. [Limits and operation](06-limits-and-operation.md) - set boundaries and
+   keep the server in shape.
