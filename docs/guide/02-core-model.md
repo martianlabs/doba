@@ -50,6 +50,62 @@ The empty template argument list picks the HTTP/1.1 engine and TCP transport.
 The server ties them together. You register routes and start the listener. You
 write the handler; the engine speaks HTTP, and TCP moves the bytes.
 
+<a name="protocol-contract"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-protocol-contract-dark.svg">
+    <img src="../../resources/docs/guide/h2-protocol-contract.svg" alt="Protocol contract">
+  </picture>
+</h2>
+
+No base class to inherit from here. The
+[engine contract](../../include/protocol/contracts.h) is a C++ concept: your
+protocol type needs a `policies_type`, plus these calls:
+
+```cpp
+{ engine.set_on_send(std::move(output)) } -> std::same_as<void>;
+{ engine.set_on_close(std::move(close)) } -> std::same_as<void>;
+{ engine.on_bytes_received(buf, sze, capacity) } -> std::same_as<std::size_t>;
+```
+
+The [send delegate](../../include/protocol/send_delegate.h) takes two byte
+views (head and body) and an optional body reader. The engine submits output
+through that delegate and asks for closure through the close callback. Its
+input method receives the available bytes and total buffer capacity, then
+returns how many bytes it consumed. TCP keeps any unconsumed bytes for the
+next read.
+
+An engine factory must be movable and callable without arguments; it returns
+an engine value. TCP uses it to make one engine per connection. Input calls
+for a connection are serialized and stop when closing begins. Output may be
+submitted from different threads, so the transport must accept it safely and
+own it while sending.
+
+<a name="transport-contract"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-transport-contract-dark.svg">
+    <img src="../../resources/docs/guide/h2-transport-contract.svg" alt="Transport contract">
+  </picture>
+</h2>
+
+The [transport contract](../../include/transport/server/contracts.h) checks
+that the transport accepts its policies and an engine factory, exposes a
+`policies_type`, and provides these calls:
+
+```cpp
+{ tr.set_on_connection(std::move(callback)) } -> std::same_as<void>;
+{ tr.set_on_disconnection(std::move(callback)) } -> std::same_as<void>;
+{ tr.start() } -> std::same_as<void>;
+{ tr.stop() } -> std::same_as<void>;
+```
+
+Those callbacks announce connection and disconnection events. A working
+transport also creates an engine for each connection, wires up its send and
+close callbacks, feeds it input, and handles its output. The concept checks
+the required C++ shape; it cannot check that bytes stay alive long enough or
+that those runtime steps happen in the right order.
+
 <a name="bring-a-protocol"></a>
 <h2>
   <picture>
