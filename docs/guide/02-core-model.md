@@ -98,10 +98,16 @@ The transport owns and drains submitted output. The two views do not own
 their bytes, so the transport must preserve their contents if it sends them
 later.
 
-An engine factory must be movable and callable without arguments; it returns
-an engine value. TCP uses it to make one engine per connection. Input calls
-for a connection are serialized and stop when closing begins. Output may be
-submitted from different threads, so the transport must accept it safely.
+The transport needs a fresh engine for each connection. An **engine factory**
+is the callable you give it to create that engine. TCP calls the factory when
+a connection opens, so you choose how to build the engine without putting
+that setup in TCP. The [factory contract](../../include/protocol/contracts.h)
+requires a move-constructible callable that takes no arguments even when const
+and returns the engine type.
+
+Input calls for a connection are serialized and stop when closing begins.
+Output may be submitted from different threads, so the transport must accept
+it safely.
 
 <a name="transport-contract"></a>
 <h2>
@@ -114,8 +120,10 @@ submitted from different threads, so the transport must accept it safely.
 The [transport contract](../../include/transport/server/contracts.h) checks
 how a transport is created and controlled:
 
-- **Policies and factory.** *policies_type* names the transport's policy type.
-  The transport is constructed from those policies and an engine factory.
+- **Policies.** *policies_type* names the transport's policy type. A value of
+  that type is the first constructor argument.
+- **Engine factory.** The factory is the second constructor argument and lets
+  the transport create an engine for each connection.
 - **Connection events.** *set_on_connection* and *set_on_disconnection* take
   callbacks to announce when a connection opens or closes.
 - **Lifecycle.** *start* begins transport work; *stop* ends it.
