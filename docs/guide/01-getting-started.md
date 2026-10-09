@@ -7,8 +7,11 @@
 </h1>
 
 Let's get doba to say hello. We'll build the bundled **hello_world** example,
-run it, and send it a request with **curl**. Start from the repository root; the
-source is [main.cpp](../../examples/http/v11/hello_world/main.cpp).
+run it, and send it a request with **curl**. Start from the repository root.
+
+Want the full example? Open the
+[hello_world README](../../examples/http/v11/hello_world/README.md) or jump
+straight to [main.cpp](../../examples/http/v11/hello_world/main.cpp).
 
 <a name="before-you-start"></a>
 <h2>
