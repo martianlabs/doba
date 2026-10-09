@@ -7,10 +7,11 @@
 </h1>
 
 Want to see doba do something? Start at chapter 1, or jump straight to the bit
-you came for. The first chapter is ready; the others are on their way.
+you came for. Chapters with links are ready; the rest are on their way.
 
 1. [Getting started](01-getting-started.md) - get an HTTP/1.1 server talking.
-2. Core model - see how protocols and transports fit together.
+2. [Core model](02-core-model.md) - see how protocols and transports fit
+   together.
 3. HTTP/1.1 - work with routes, requests, and responses.
 4. Transports and TLS - use TCP, then add TLS when you need it.
 5. Extending doba - bring your own protocol or transport.
