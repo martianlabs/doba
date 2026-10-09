@@ -62,13 +62,13 @@ A protocol engine understands the bytes for one connection. The
 [engine contract](../../include/protocol/contracts.h) is a C++ concept that
 checks four pieces:
 
-- **Policies.** `policies_type` names the engine's policy type. It can be empty
-  when the engine needs no options.
-- **Output.** `set_on_send` receives a callback from the transport. The engine
+- **Policies.** **policies_type** names the engine's policy type. It can be
+  empty when the engine needs no options.
+- **Output.** **set_on_send** receives a callback from the transport. The engine
   calls it when it has bytes to send.
-- **Closure.** `set_on_close` receives a callback the engine can use to ask
+- **Closure.** **set_on_close** receives a callback the engine can use to ask
   the transport to close the connection.
-- **Input.** `on_bytes_received` gets a buffer pointer, the number of bytes
+- **Input.** **on_bytes_received** gets a buffer pointer, the number of bytes
   available, and the buffer's total capacity. It returns the number of bytes
   consumed. TCP keeps the rest for the next read.
 
@@ -83,7 +83,7 @@ Here are the three calls as the concept checks them:
 The [send delegate](../../include/protocol/send_delegate.h) is that output
 callback. The engine gives it three things:
 
-- **Head and body:** two `std::string_view` chunks to send in that order.
+- **Head and body:** two **std::string_view** chunks to send in that order.
 - **Source:** an optional [reader](../../include/common/reader.h) for more
   body bytes. The transport takes ownership of the reader.
 
@@ -114,11 +114,11 @@ submitted from different threads, so the transport must accept it safely.
 The [transport contract](../../include/transport/server/contracts.h) checks
 how a transport is created and controlled:
 
-- **Policies and factory.** `policies_type` names the transport's policy type.
+- **Policies and factory.** **policies_type** names the transport's policy type.
   The transport is constructed from those policies and an engine factory.
-- **Connection events.** `set_on_connection` and `set_on_disconnection` take
+- **Connection events.** **set_on_connection** and **set_on_disconnection** take
   callbacks to announce when a connection opens or closes.
-- **Lifecycle.** `start` begins transport work; `stop` ends it.
+- **Lifecycle.** **start** begins transport work; **stop** ends it.
 
 These are the callback and lifecycle calls the concept checks:
 
