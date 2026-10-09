@@ -6,8 +6,8 @@
   </picture>
 </h1>
 
-Let's get doba to say hello. We'll build the bundled `hello_world` example,
-run it, and send it a request with `curl`. Start from the repository root; the
+Let's get doba to say hello. We'll build the bundled **hello_world** example,
+run it, and send it a request with **curl**. Start from the repository root; the
 source is [main.cpp](../../examples/http/v11/hello_world/main.cpp).
 
 <a name="before-you-start"></a>
@@ -22,7 +22,7 @@ You only need:
 
 - A C++20 compiler on Windows or Linux.
 - CMake 3.20 or later.
-- `curl` for the test request.
+- **curl** for the test request.
 
 No OpenSSL setup this time - this example uses plain TCP.
 
@@ -42,8 +42,8 @@ cmake --build out/build/guide --config Release --target hello_world
 ```
 
 Examples are enabled by default when you build doba from the repository root.
-The `hello_world` target keeps the build focused on this example.
-`--config Release` applies to multi-configuration generators.
+The **hello_world** target keeps the build focused on this example.
+The *--config Release* option applies to multi-configuration generators.
 
 <a name="run-it"></a>
 <h2>
@@ -60,16 +60,20 @@ on Linux, that looks like this:
 ./out/build/guide/examples/http/v11/hello_world/hello_world
 ```
 
-With Visual Studio on Windows, the Release executable is normally at
-`out\build\guide\examples\http\v11\hello_world\Release\hello_world.exe`.
-Keep it running and open another terminal. Then ask for `/hello`:
+With Visual Studio on Windows, the Release executable is normally here:
+
+```powershell
+.\out\build\guide\examples\http\v11\hello_world\Release\hello_world.exe
+```
+
+Keep it running and open another terminal. Then ask for **/hello**:
 
 ```sh
 curl -i http://localhost:8080/hello
 ```
 
-You should get `200 OK`, the `Server: doba.` and
-`Content-Type: text/plain; charset=utf-8` headers, and the body `ok`.
+You should get **200 OK**, the **Server: doba.** and
+**Content-Type: text/plain; charset=utf-8** headers, and the body **ok**.
 Stop the server with Ctrl+C when you're done.
 
 <a name="under-the-hood"></a>
@@ -95,10 +99,10 @@ http_server.start();
 signaler::wait();
 ```
 
-`server<>` pairs doba's HTTP/1.1 engine with its default TCP transport.
-`add_route` matches `GET /hello`; the response sets its status, headers, and
-body. `start()` opens the listener, and `signaler::wait()` keeps this example
-alive until Ctrl+C.
+**server<>** pairs doba's HTTP/1.1 engine with its default TCP transport.
+**add_route** matches **GET /hello**; the response sets its status, headers,
+and body. **start()** opens the listener; **signaler::wait()** keeps it alive
+until Ctrl+C.
 
 That's your first doba server. Head back to the [guide index](README.md) when
 you're ready for more.

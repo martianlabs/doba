@@ -6,11 +6,11 @@
   </picture>
 </h1>
 
-Find your way through doba:
+New to doba? Pick a path:
 
-- [Guide](guide/README.md) - task-oriented walkthroughs, from a first server to
-  combining protocols and transports.
-- [Reference](#reference) - exact API and behavior details for the release.
+- [Guide](guide/README.md) - get a server talking, then see how protocols and
+  transports fit together.
+- [Reference](#reference) - exact API and behavior details, coming later.
 
 <a name="guide"></a>
 <h2>
@@ -20,8 +20,9 @@ Find your way through doba:
   </picture>
 </h2>
 
-Start with [Getting started](guide/01-getting-started.md) to build and run your
-first server. The [guide index](guide/README.md) lists the full path ahead.
+Want to make doba answer a request? Start with
+[Getting started](guide/01-getting-started.md). It gets your first HTTP/1.1
+server running. The [guide index](guide/README.md) shows where to go next.
 
 <a name="reference"></a>
 <h2>
@@ -31,5 +32,5 @@ first server. The [guide index](guide/README.md) lists the full path ahead.
   </picture>
 </h2>
 
-The reference will document the public API, configuration, ownership, lifetime,
-and error behavior.
+Need to check a contract? The reference is still in the works. It will cover
+public APIs, configuration, ownership, lifetimes, and errors.
