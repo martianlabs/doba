@@ -8,7 +8,7 @@
 
 Find your way through doba:
 
-- [Guide](#guide) - task-oriented walkthroughs, from a first server to
+- [Guide](guide/README.md) - task-oriented walkthroughs, from a first server to
   combining protocols and transports.
 - [Reference](#reference) - exact API and behavior details for the release.
 
@@ -20,8 +20,8 @@ Find your way through doba:
   </picture>
 </h2>
 
-The guide will cover the common steps for building with doba. Until its pages
-are ready, start with the [runnable examples](../examples/README.md).
+Start with [Getting started](guide/01-getting-started.md) to build and run your
+first server. The [guide index](guide/README.md) lists the full path ahead.
 
 <a name="reference"></a>
 <h2>
