@@ -58,9 +58,21 @@ write the handler; the engine speaks HTTP, and TCP moves the bytes.
   </picture>
 </h2>
 
-No base class to inherit from here. The
-[engine contract](../../include/protocol/contracts.h) is a C++ concept: your
-protocol type needs a `policies_type`, plus these calls:
+A protocol engine understands the bytes for one connection. The
+[engine contract](../../include/protocol/contracts.h) is a C++ concept that
+checks four pieces:
+
+- **Policies.** `policies_type` names the engine's policy type. It can be empty
+  when the engine needs no options.
+- **Output.** `set_on_send` receives a callback from the transport. The engine
+  calls it when it has bytes to send.
+- **Closure.** `set_on_close` receives a callback the engine can use to ask
+  the transport to close the connection.
+- **Input.** `on_bytes_received` gets a buffer pointer, the number of bytes
+  available, and the buffer's total capacity. It returns the number of bytes
+  consumed. TCP keeps the rest for the next read.
+
+Here are the three calls as the concept checks them:
 
 ```cpp
 { engine.set_on_send(std::move(output)) } -> std::same_as<void>;
@@ -68,18 +80,28 @@ protocol type needs a `policies_type`, plus these calls:
 { engine.on_bytes_received(buf, sze, capacity) } -> std::same_as<std::size_t>;
 ```
 
-The [send delegate](../../include/protocol/send_delegate.h) takes two byte
-views (head and body) and an optional body reader. The engine submits output
-through that delegate and asks for closure through the close callback. Its
-input method receives the available bytes and total buffer capacity, then
-returns how many bytes it consumed. TCP keeps any unconsumed bytes for the
-next read.
+The [send delegate](../../include/protocol/send_delegate.h) is that output
+callback. The engine gives it three things:
+
+- **Head and body:** two `std::string_view` chunks to send in that order.
+- **Source:** an optional [reader](../../include/common/reader.h) for more
+  body bytes. The transport takes ownership of the reader.
+
+Its type is:
+
+```cpp
+using send_delegate = std::function<void(std::string_view, std::string_view,
+                                         std::unique_ptr<common::reader>)>;
+```
+
+The transport owns and drains submitted output. The two views do not own
+their bytes, so the transport must preserve their contents if it sends them
+later.
 
 An engine factory must be movable and callable without arguments; it returns
 an engine value. TCP uses it to make one engine per connection. Input calls
 for a connection are serialized and stop when closing begins. Output may be
-submitted from different threads, so the transport must accept it safely and
-own it while sending.
+submitted from different threads, so the transport must accept it safely.
 
 <a name="transport-contract"></a>
 <h2>
@@ -90,8 +112,15 @@ own it while sending.
 </h2>
 
 The [transport contract](../../include/transport/server/contracts.h) checks
-that the transport accepts its policies and an engine factory, exposes a
-`policies_type`, and provides these calls:
+how a transport is created and controlled:
+
+- **Policies and factory.** `policies_type` names the transport's policy type.
+  The transport is constructed from those policies and an engine factory.
+- **Connection events.** `set_on_connection` and `set_on_disconnection` take
+  callbacks to announce when a connection opens or closes.
+- **Lifecycle.** `start` begins transport work; `stop` ends it.
+
+These are the callback and lifecycle calls the concept checks:
 
 ```cpp
 { tr.set_on_connection(std::move(callback)) } -> std::same_as<void>;
@@ -100,11 +129,10 @@ that the transport accepts its policies and an engine factory, exposes a
 { tr.stop() } -> std::same_as<void>;
 ```
 
-Those callbacks announce connection and disconnection events. A working
-transport also creates an engine for each connection, wires up its send and
-close callbacks, feeds it input, and handles its output. The concept checks
-the required C++ shape; it cannot check that bytes stay alive long enough or
-that those runtime steps happen in the right order.
+A working transport creates an engine for each connection, wires up its send
+and close callbacks, feeds it input, and handles its output. The concept
+checks the required C++ shape; it cannot check that bytes stay alive long
+enough or that those runtime steps happen in the right order.
 
 <a name="bring-a-protocol"></a>
 <h2>
