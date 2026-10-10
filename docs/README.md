@@ -10,7 +10,7 @@ New to doba? Pick a path:
 
 - [Guide](guide/README.md) - get a server talking, then see how protocols and
   transports fit together.
-- [Reference](#reference) - exact API and behavior details, coming later.
+- [Reference](reference/README.md) - exact API and behavior details.
 
 <a name="guide"></a>
 <h2>
@@ -32,5 +32,6 @@ server running. The [guide index](guide/README.md) shows where to go next.
   </picture>
 </h2>
 
-Need to check a contract? The reference is still in the works. It will cover
-public APIs, configuration, ownership, lifetimes, and errors.
+Need an exact signature or lifecycle rule? Start with
+[HTTP server](reference/http/server.md), or browse the
+[reference index](reference/README.md) as more pages arrive.
