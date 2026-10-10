@@ -67,8 +67,16 @@ explicit server(
     typename ENty::policies_type engine_configuration = {});
 ```
 
-Both arguments have defaults. With TCP, set an IPv4 bind address and port
-before calling *start*. The [hello_world source][hello-source] uses:
+**Parameters:**
+
+- **transport_configuration.** Policies for the selected transport; defaults
+  to an empty policy object. With TCP, set an IPv4 bind address and port
+  before calling *start*.
+- **engine_configuration.** Policies passed to each new HTTP engine; also
+  defaults to an empty policy object.
+
+The constructor creates a server object; it has no return value. The
+[hello_world source][hello-source] uses:
 
 [hello-source]: ../../../examples/http/v11/hello_world/main.cpp
 
@@ -84,6 +92,10 @@ explains the two policy layers.
 
 [request-limits]: ../../../examples/http/v11/request_limits/README.md
 
+Invalid transport configuration, including TLS certificates, can make
+construction fail. An engine configuration error may surface later, when a
+connection creates its engine.
+
 <a name="lifecycle"></a>
 <h2>
   <picture>
@@ -92,25 +104,63 @@ explains the two policy layers.
   </picture>
 </h2>
 
+<a name="start"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/h3-start-dark.svg">
+    <img src="../../../resources/docs/reference/h3-start.svg" alt="Start">
+  </picture>
+</h3>
+
 ```cpp
 void start();
+```
+
+**Parameters:** None. **Returns:** Nothing (*void*).
+
+Starts the date service and transport. Calling *start* again while the server
+is running has no effect. If transport startup throws, the date service is
+stopped and the exception reaches the caller. For TCP or TLS, this includes
+listener startup failures.
+
+<a name="stop"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/h3-stop-dark.svg">
+    <img src="../../../resources/docs/reference/h3-stop.svg" alt="Stop">
+  </picture>
+</h3>
+
+```cpp
 void stop();
+```
+
+**Parameters:** None. **Returns:** Nothing (*void*).
+
+Returns immediately if already stopped. With TCP or TLS, *stop* quiesces the
+transport, waits for pending async route handlers, then stops the transport
+and date service. Call it from a control thread: the bundled transports
+reject quiescing from one of their workers.
+
+<a name="destructor"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/h3-destructor-dark.svg">
+    <img src="../../../resources/docs/reference/h3-destructor.svg" alt="Destructor">
+  </picture>
+</h3>
+
+```cpp
 ~server();
 ```
 
-- **start.** Starts the date service and transport. Calling it again while
-  the server is running has no effect. A transport startup failure is
-  propagated after the date service is stopped.
-- **stop.** Returns immediately if already stopped. With TCP or TLS, it
-  quiesces the transport, waits for pending async route handlers, then stops
-  the transport and date service. Call it from a control thread, since the
-  bundled transports reject quiescing from one of their workers.
-- **Destructor.** Calls *stop*.
+**Parameters:** None. **Returns:** No value; destructors have no return type.
+The destructor calls *stop*. Explicitly calling *stop* keeps the shutdown
+point and any shutdown errors under your control.
 
 The [HTTPS example](../../../examples/http/v11/https_hello_world/README.md)
-shows *start*, a signal wait, and an explicit *stop*. Its
-[source](../../../examples/http/v11/https_hello_world/main.cpp) keeps the
-shutdown point visible.
+shows *start*, a signal wait, and an explicit *stop*. See its
+[source](../../../examples/http/v11/https_hello_world/main.cpp).
 
 <a name="registration"></a>
 <h2>
@@ -122,25 +172,60 @@ shutdown point visible.
 
 Register routes and controllers before *start*:
 
+<a name="add-route"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/h3-add-route-dark.svg">
+    <img src="../../../resources/docs/reference/h3-add-route.svg" alt="Add route">
+  </picture>
+</h3>
+
 ```cpp
 template <typename Hty>
+  requires router_handler_lambda<Hty>
 server& add_route(std::string_view method, std::string_view route,
                   Hty handler);
+```
 
+**Parameters and template arguments:**
+
+- **Hty.** Deduced from *handler*; it must satisfy *router_handler_lambda*.
+- **method.** The HTTP method to match, such as *GET*.
+- **route.** The path pattern to match. See the
+  [HTTP guide](../../guide/03-http-1-1.md) for supported route shapes.
+- **handler.** A compatible handler; the router stores it by moving it from
+  this argument.
+
+**Returns:** A reference to this server, so registrations can be chained.
+**Errors:** Throws *std::runtime_error* if the server is running. The router
+throws *std::invalid_argument* for invalid wildcard placement or a mismatch
+between route parameters and handler arguments.
+
+<a name="add-controller"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/h3-add-controller-dark.svg">
+    <img src="../../../resources/docs/reference/h3-add-controller.svg" alt="Add controller">
+  </picture>
+</h3>
+
+```cpp
 template <typename CTty, typename... Args>
 server& add_controller(Args&&... args);
 ```
 
-- **add_route.** Registers a method, path, and handler with the router.
-  The handler is moved into the router. The call returns *server&* so
-  registrations can be chained.
-- **add_controller.** Constructs a controller from forwarded arguments and
-  asks it to register routes. Bound handlers keep that instance alive. The
-  call also returns *server&*.
+**Parameters and template arguments:**
 
-Both calls throw *std::runtime_error* while the server is running. The
-router can reject an invalid route or controller registration; see the
-[HTTP guide](../../guide/03-http-1-1.md) for supported route shapes.
+- **CTty.** The controller type. It must provide *register_routes*.
+- **Args and args.** The deduced argument types and values forwarded to the
+  controller constructor.
+
+The router owns the new controller instance, and bound handlers keep it
+alive. **Returns:** A reference to this server, so registrations can be
+chained. **Errors:** Throws *std::runtime_error* if the server is running or
+*std::invalid_argument* if the controller registers no routes. Exceptions
+from construction or route registration propagate; failed registration rolls
+back routes added by that call.
 
 <a name="ownership-and-errors"></a>
 <h2>
@@ -154,12 +239,8 @@ The server owns its router and transport. It cannot be copied or moved.
 Handlers stored by the router may still capture outside objects; keep any
 captured references valid while requests can use them.
 
-Construction can fail for transport configuration, including TLS
-certificates. *start* can fail when the listener cannot open. An engine
-configuration error may surface when a connection creates its engine.
-Route and controller registration may throw for invalid inputs, and both
-reject registration after *start*. The server does not convert these setup
-failures into HTTP responses.
+Setup failures reach the caller; the server does not convert them into HTTP
+responses.
 
 Back to the [reference index](../README.md), or follow the
 [getting started guide](../../guide/01-getting-started.md) for a complete
