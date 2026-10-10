@@ -75,8 +75,9 @@ explicit server(
 - **engine_configuration.** Policies passed to each new HTTP engine; also
   defaults to an empty policy object.
 
-The constructor creates a server object; it has no return value. The
-[hello_world source][hello-source] uses:
+**Returns:** No value; construction creates the server object.
+
+The [hello_world source][hello-source] uses:
 
 [hello-source]: ../../../examples/http/v11/hello_world/main.cpp
 
@@ -116,7 +117,9 @@ connection creates its engine.
 void start();
 ```
 
-**Parameters:** None. **Returns:** Nothing (*void*).
+**Parameters:** None.
+
+**Returns:** Nothing (*void*).
 
 Starts the date service and transport. Calling *start* again while the server
 is running has no effect. If transport startup throws, the date service is
@@ -135,7 +138,9 @@ listener startup failures.
 void stop();
 ```
 
-**Parameters:** None. **Returns:** Nothing (*void*).
+**Parameters:** None.
+
+**Returns:** Nothing (*void*).
 
 Returns immediately if already stopped. With TCP or TLS, *stop* quiesces the
 transport, waits for pending async route handlers, then stops the transport
@@ -154,7 +159,10 @@ reject quiescing from one of their workers.
 ~server();
 ```
 
-**Parameters:** None. **Returns:** No value; destructors have no return type.
+**Parameters:** None.
+
+**Returns:** No value; destructors have no return type.
+
 The destructor calls *stop*. Explicitly calling *stop* keeps the shutdown
 point and any shutdown errors under your control.
 
@@ -197,6 +205,7 @@ server& add_route(std::string_view method, std::string_view route,
   this argument.
 
 **Returns:** A reference to this server, so registrations can be chained.
+
 **Errors:** Throws *std::runtime_error* if the server is running. The router
 throws *std::invalid_argument* for invalid wildcard placement or a mismatch
 between route parameters and handler arguments.
@@ -221,8 +230,11 @@ server& add_controller(Args&&... args);
   controller constructor.
 
 The router owns the new controller instance, and bound handlers keep it
-alive. **Returns:** A reference to this server, so registrations can be
-chained. **Errors:** Throws *std::runtime_error* if the server is running or
+alive.
+
+**Returns:** A reference to this server, so registrations can be chained.
+
+**Errors:** Throws *std::runtime_error* if the server is running or
 *std::invalid_argument* if the controller registers no routes. Exceptions
 from construction or route registration propagate; failed registration rolls
 back routes added by that call.
