@@ -123,21 +123,22 @@ DOBA_TEST("HTTP/1.1 orders mixed routes over one connection") {
   http_server.stop();
 }
 
-DOBA_TEST("HTTP/1.1 resumes timed routes on its transport worker") {
+DOBA_TEST("HTTP/1.1 resumes timed routes through transport execution") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  std::atomic<bool> same_worker{false};
+  std::atomic<bool> not_early{false};
   server<> http_server({.worker_count = 1, .ip = "127.0.0.1",
                         .port = std::to_string(port)});
   http_server.add_route(
       "GET", "/slow",
-      [&same_worker](const request&, response& res) -> task<void> {
-        const auto worker = std::this_thread::get_id();
+      [&not_early](const request&, response& res) -> task<void> {
         co_await martianlabs::doba::common::yield();
+        const auto start = std::chrono::steady_clock::now();
         co_await martianlabs::doba::common::sleep_for(
             std::chrono::milliseconds(10));
-        same_worker = std::this_thread::get_id() == worker;
+        not_early = std::chrono::steady_clock::now() - start >=
+                    std::chrono::milliseconds(10);
         text_response(res, "slow");
       });
   http_server.add_route("GET", "/fast", [](const request&, response& res) {
@@ -156,7 +157,39 @@ DOBA_TEST("HTTP/1.1 resumes timed routes on its transport worker") {
     DOBA_EXPECT_EQUAL(first->body, "slow");
     DOBA_EXPECT_EQUAL(second->body, "fast");
   }
-  DOBA_EXPECT(same_worker.load());
+  DOBA_EXPECT(not_early.load());
+  http_server.stop();
+}
+
+DOBA_TEST("HTTP/1.1 accepts a continuation from another thread") {
+  tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  std::promise<std::coroutine_handle<>> pending;
+  auto suspended = pending.get_future();
+  server<> http_server({.worker_count = 2, .ip = "127.0.0.1",
+                        .port = std::to_string(port)});
+  http_server.add_route("GET", "/wait",
+                        [&pending](const request&, response& res)
+                            -> task<void> {
+                          co_await pause_awaiter{pending};
+                          co_await martianlabs::doba::common::yield();
+                          co_await martianlabs::doba::common::sleep_for(
+                              std::chrono::milliseconds(1));
+                          text_response(res, "ready");
+                        });
+  http_server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("GET /wait HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+  if (suspended.wait_for(std::chrono::seconds(2)) !=
+      std::future_status::ready) {
+    throw std::runtime_error("asynchronous route did not suspend");
+  }
+  std::jthread resumer([handle = suspended.get()]() { handle.resume(); });
+  resumer.join();
+  const auto result = receive_http_response(client);
+  DOBA_EXPECT(result.has_value());
+  if (result) DOBA_EXPECT_EQUAL(result->body, "ready");
   http_server.stop();
 }
 

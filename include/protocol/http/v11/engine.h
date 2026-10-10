@@ -25,7 +25,9 @@
 #ifndef martianlabs_doba_protocol_http_v11_engine_h
 #define martianlabs_doba_protocol_http_v11_engine_h
 
+#include <chrono>
 #include <cstddef>
+#include <coroutine>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -43,6 +45,7 @@
 #include "protocol/http/v11/engine_async.h"
 #include "protocol/http/v11/engine_sync.h"
 #include "protocol/http/v11/policies.h"
+#include "transport/server/contracts.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -79,10 +82,11 @@ class engine {
     if (async_) async_->set_on_close(on_close_);
   }
   // +=========================================================================+
-  // | [>] set_async_scheduler                                      ( public ) |
+  // | [>] set_execution_capacity                                   ( public ) |
   // +-------------------------------------------------------------------------+
-  void set_async_scheduler(common::task_scheduler scheduler) noexcept {
-    scheduler_ = scheduler;
+  void set_execution_capacity(
+      transport::server::execution_capacity execution) noexcept {
+    execution_ = execution;
   }
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
@@ -263,6 +267,7 @@ class engine {
     std::unique_ptr<char[]> response_storage;
     std::shared_ptr<void> parameters;
     RSty response;
+    transport::server::execution_capacity execution;
     async_request(decoder<RQty, RSty>& owner, std::unique_ptr<char[]> storage,
                   RQty value)
         : request_storage(std::move(storage)),
@@ -285,6 +290,7 @@ class engine {
                       std::string_view path, std::size_t position, bool close) {
     auto entry = std::make_shared<async_request>(
         decoder_, decoder_.take_request_storage(), std::move(request));
+    entry->execution = execution_;
     auto state = async_;
     try {
       common::task<void> work =
@@ -295,6 +301,31 @@ class engine {
       router_.begin_async();
       state->begin();
       try {
+        common::task_scheduler scheduler;
+        if (entry->execution.submit) {
+          scheduler = {
+              entry.get(),
+              [](void* owner, std::coroutine_handle<> handle) {
+                const auto execution =
+                    static_cast<async_request*>(owner)->execution;
+                execution.submit(
+                    execution.owner,
+                    std::chrono::steady_clock::time_point::min(),
+                    {handle.address(), [](void* context) noexcept {
+                       std::coroutine_handle<>::from_address(context).resume();
+                     }});
+              },
+              [](void* owner, std::chrono::steady_clock::time_point due,
+                 std::coroutine_handle<> handle) {
+                const auto execution =
+                    static_cast<async_request*>(owner)->execution;
+                execution.submit(
+                    execution.owner, due,
+                    {handle.address(), [](void* context) noexcept {
+                       std::coroutine_handle<>::from_address(context).resume();
+                     }});
+              }};
+        }
         work.start(
             [entry, state, routes = &router_, position,
              close](std::exception_ptr error) mutable {
@@ -315,7 +346,7 @@ class engine {
               state->end();
               routes->end_async();
             },
-            scheduler_);
+            scheduler);
       } catch (...) {
         state->end();
         router_.end_async();
@@ -370,7 +401,7 @@ class engine {
   const ROty& router_;  // Reference to the router for handling requests.
   decoder<RQty, RSty> decoder_;  // Decoder for processing incoming requests.
   std::shared_ptr<engine_async> async_;
-  common::task_scheduler scheduler_;
+  transport::server::execution_capacity execution_;
   std::optional<std::size_t> interim_position_;
   protocol::send_delegate on_send_;
   std::function<void()> on_close_;

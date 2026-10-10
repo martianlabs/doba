@@ -38,8 +38,8 @@
 #include <sys/socket.h>
 #include <utility>
 
-#include "common/task.h"
 #include "platform.h"
+#include "transport/server/contracts.h"
 #include "transport/server/tcp_connection.h"
 
 namespace martianlabs::doba::transport::server {
@@ -142,19 +142,19 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] connected                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Sets the epoll file descriptor and async scheduler on the engine, along |
+  // | Sets the epoll file descriptor and execution capacity on the engine,    |
   // | with its `on_close` and `on_send` callbacks. When the engine closes,    |
   // | `on_close` calls this context’s `close()` method. When the engine wants |
   // | to send data, `on_send` calls this context’s `send()` method with the   |
   // | head, body, and source it provides.                                     |
   // +-------------------------------------------------------------------------+
-  void connected(int epoll_fd, common::task_scheduler scheduler = {}) {
+  void connected(int epoll_fd, execution_capacity execution = {}) {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
       epoll_fd_ = epoll_fd;
     }
-    if constexpr (requires { input_.engine.set_async_scheduler(scheduler); }) {
-      input_.engine.set_async_scheduler(scheduler);
+    if constexpr (contracts::execution_receiver<ENty>) {
+      input_.engine.set_execution_capacity(execution);
     }
     input_.engine.set_on_close([weak = this->weak_from_this()]() {
       if (auto ctx = weak.lock()) ctx->close();

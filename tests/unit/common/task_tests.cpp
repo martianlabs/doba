@@ -33,6 +33,8 @@
 #include <utility>
 
 #include "common/task.h"
+#include "common/task_awaiters.h"
+#include "common/task_scheduler.h"
 #include "test_helper.h"
 
 namespace {

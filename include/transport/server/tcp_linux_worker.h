@@ -31,7 +31,6 @@
 #include <cerrno>
 #include <chrono>
 #include <climits>
-#include <coroutine>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -55,7 +54,7 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 static constexpr uint64_t kStopEventId = 0;
-static constexpr uint64_t kAsyncEventId = 1;
+static constexpr uint64_t kWorkEventId = 1;
 static constexpr uint64_t kLstnrEventId = std::numeric_limits<uint64_t>::max();
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -119,10 +118,10 @@ struct worker {
       close_resources();
       throw std::runtime_error("Stop event could not be created!");
     }
-    async_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-    if (async_fd_ == -1) {
+    work_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    if (work_fd_ == -1) {
       close_resources();
-      throw std::runtime_error("Async event could not be created!");
+      throw std::runtime_error("Work event could not be created!");
     }
     listener_fd_ = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
                             IPPROTO_TCP);
@@ -153,14 +152,14 @@ struct worker {
     epoll_event stop_event{};
     stop_event.events = EPOLLIN;
     stop_event.data.u64 = kStopEventId;
-    epoll_event async_event{};
-    async_event.events = EPOLLIN;
-    async_event.data.u64 = kAsyncEventId;
+    epoll_event work_event{};
+    work_event.events = EPOLLIN;
+    work_event.data.u64 = kWorkEventId;
     epoll_event lsn_event{};
     lsn_event.events = EPOLLIN;
     lsn_event.data.u64 = kLstnrEventId;
     if (::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, stop_fd_, &stop_event) == -1 ||
-        ::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, async_fd_, &async_event) == -1 ||
+        ::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, work_fd_, &work_event) == -1 ||
         ::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, listener_fd_, &lsn_event) == -1) {
       close_resources();
       throw std::runtime_error("Listener could not be registered!");
@@ -243,8 +242,8 @@ struct worker {
   // | [>] run                                                     ( private ) |
   // +-------------------------------------------------------------------------+
   // | Runs the worker thread’s main loop. It waits for events from `epoll`    |
-  // | and handles stop, async, listener, and context events as they come in.  |
-  // | It also manages timers and ready coroutines, and cleans up contexts     |
+  // | and handles stop, work, listener, and context events as they come in.   |
+  // | It also manages timed and ready work, and cleans up contexts            |
   // | when needed. The loop keeps running until the worker is stopping and    |
   // | all its contexts are closed.                                            |
   // +-------------------------------------------------------------------------+
@@ -274,8 +273,8 @@ struct worker {
       for (std::size_t i = 0; i < static_cast<std::size_t>(ready); i++) {
         if (events[i].data.u64 == kStopEventId) {
           handle_stop();
-        } else if (events[i].data.u64 == kAsyncEventId) {
-          handle_async();
+        } else if (events[i].data.u64 == kWorkEventId) {
+          handle_work();
         } else if (events[i].data.u64 == kLstnrEventId) {
           if (!quiescing_.load() && !stopping_.load()) handle_listener();
         } else {
@@ -298,9 +297,9 @@ struct worker {
       }
       std::size_t count = ready_.size();
       while (count--) {
-        auto handle = ready_.front();
+        auto work = ready_.front();
         ready_.pop_front();
-        handle.resume();
+        work.run(work.context);
       }
       retire_contexts();
       if (stopping_.load() && contexts_.empty()) break;
@@ -342,19 +341,15 @@ struct worker {
     quiesced_.notify_all();
   }
   // +=========================================================================+
-  // | [>] handle_async                                            ( private ) |
+  // | [>] handle_work                                             ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Handles an async event by reading from the async event file descriptor. |
-  // | It locks `async_mutex_` and processes any coroutines queued by other    |
-  // | threads. If a coroutine is ready to run, it adds it to the `ready_`     |
-  // | queue. Otherwise, it adds it to the `timers_` priority queue. This      |
-  // | runs on the worker thread when an async event comes in.                 |
+  // | Moves work submitted by other threads to the worker's queues.          |
   // +-------------------------------------------------------------------------+
-  void handle_async() {
+  void handle_work() {
     uint64_t sig = 0;
-    while (::read(async_fd_, &sig, sizeof(sig)) == -1 && errno == EINTR) {
+    while (::read(work_fd_, &sig, sizeof(sig)) == -1 && errno == EINTR) {
     }
-    std::lock_guard<std::mutex> lock(async_mutex_);
+    std::lock_guard<std::mutex> lock(work_mutex_);
     while (!incoming_.empty()) {
       auto item = incoming_.front();
       incoming_.pop_front();
@@ -366,50 +361,43 @@ struct worker {
     }
   }
   // +=========================================================================+
-  // | [>] scheduler                                               ( private ) |
+  // | [>] execution                                               ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Returns a `task_scheduler` for scheduling coroutines on this worker. It |
-  // | provides one callback for scheduling a coroutine right away and another |
-  // | for scheduling it later. Both callbacks add the coroutine to the        |
-  // | worker’s queues. The engine uses this to run tasks on the worker thread.|
+  // | Returns this worker's capacity for executing opaque work.              |
   // +-------------------------------------------------------------------------+
-  common::task_scheduler scheduler() {
+  execution_capacity execution() {
     return {this,
-            [](void* owner, std::coroutine_handle<> handle) {
-              static_cast<worker*>(owner)->enqueue(
-                  std::chrono::steady_clock::time_point::min(), handle);
-            },
             [](void* owner, std::chrono::steady_clock::time_point due,
-               std::coroutine_handle<> handle) {
-              static_cast<worker*>(owner)->enqueue(due, handle);
+               execution_work work) {
+              static_cast<worker*>(owner)->enqueue(due, work);
             }};
   }
   // +=========================================================================+
   // | [>] enqueue                                                 ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Adds a coroutine to this worker’s queue. If it’s called from the worker |
-  // | thread, the coroutine goes straight into `ready_` if it’s ready to run  |
-  // | or into the `timers_` queue if it has a due time. If it’s called from   |
-  // | another thread, it locks `async_mutex_`, adds the coroutine to          |
-  // | `incoming_`, and signals the async event file descriptor to wake the    |
-  // | worker. That way, other threads can safely schedule coroutines here.    |
+  // | Adds work to this worker's queue and wakes it when needed.             |
   // +-------------------------------------------------------------------------+
   void enqueue(std::chrono::steady_clock::time_point due,
-               std::coroutine_handle<> handle) {
+               execution_work work) {
     if (is_current_thread()) {
       if (due == std::chrono::steady_clock::time_point::min()) {
-        ready_.push_back(handle);
+        ready_.push_back(work);
       } else {
-        timers_.push({due, handle});
+        timers_.push({due, work});
       }
       return;
     }
-    {
-      std::lock_guard<std::mutex> lock(async_mutex_);
-      incoming_.push_back({due, handle});
-    }
+    std::lock_guard<std::mutex> lock(work_mutex_);
+    incoming_.push_back({due, work});
     uint64_t sig = 1;
-    while (::write(async_fd_, &sig, sizeof(sig)) == -1 && errno == EINTR) {
+    ssize_t written;
+    do {
+      written = ::write(work_fd_, &sig, sizeof(sig));
+    } while (written == -1 && errno == EINTR);
+    if (written != static_cast<ssize_t>(sizeof(sig)) &&
+        !(written == -1 && errno == EAGAIN)) {
+      incoming_.pop_back();
+      throw std::runtime_error("Work could not be queued!");
     }
   }
   // +=========================================================================+
@@ -479,7 +467,7 @@ struct worker {
       return;
     }
     try {
-      ctx_ptr->connected(epoll_fd_, scheduler());
+      ctx_ptr->connected(epoll_fd_, execution());
       ctx_ptr->notify_connection();
     } catch (...) {
       close_context(ctx_ptr);
@@ -574,30 +562,28 @@ struct worker {
   // +=========================================================================+
   // | [>] close_resources                                         ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Closes all the worker’s file descriptors: the listener, stop, async,    |
-  // | and `epoll` descriptors. It sets each one to -1 to mark it as closed.   |
-  // | This runs on the worker thread while the worker is stopping.            |
+  // | Closes the listener, stop, work, and epoll descriptors.                 |
   // +-------------------------------------------------------------------------+
   void close_resources() {
     if (listener_fd_ != -1) ::close(listener_fd_);
     if (stop_fd_ != -1) ::close(stop_fd_);
-    if (async_fd_ != -1) ::close(async_fd_);
+    if (work_fd_ != -1) ::close(work_fd_);
     if (epoll_fd_ != -1) ::close(epoll_fd_);
     listener_fd_ = -1;
     stop_fd_ = -1;
-    async_fd_ = -1;
+    work_fd_ = -1;
     epoll_fd_ = -1;
   }
   // +=========================================================================+
   // | USINGs                                                      ( private ) |
   // +-------------------------------------------------------------------------+
-  using async_entry =
-      std::pair<std::chrono::steady_clock::time_point, std::coroutine_handle<>>;
+  using work_entry =
+      std::pair<std::chrono::steady_clock::time_point, execution_work>;
   // +=========================================================================+
   // | TYPEs                                                       ( private ) |
   // +-------------------------------------------------------------------------+
-  struct later_async {
-    bool operator()(const async_entry& left, const async_entry& right) const {
+  struct later_work {
+    bool operator()(const work_entry& left, const work_entry& right) const {
       return left.first > right.first;
     }
   };
@@ -605,7 +591,7 @@ struct worker {
   // | USINGs                                                      ( private ) |
   // +-------------------------------------------------------------------------+
   using internal_queue =
-      std::priority_queue<async_entry, std::vector<async_entry>, later_async>;
+      std::priority_queue<work_entry, std::vector<work_entry>, later_work>;
   using contexts_map = std::unordered_map<context<ENty, CNty>*,
                                           std::shared_ptr<context<ENty, CNty>>>;
   // +=========================================================================+
@@ -616,15 +602,15 @@ struct worker {
   const typename CNty::shared_state shared_state_;
   int epoll_fd_{-1};
   int stop_fd_{-1};
-  int async_fd_{-1};
+  int work_fd_{-1};
   int listener_fd_{-1};
   std::atomic<bool> stopping_{false};
   std::atomic<bool> quiescing_{false};
   std::atomic<bool> quiesced_{false};
-  std::deque<std::coroutine_handle<>> ready_;
+  std::deque<execution_work> ready_;
   internal_queue timers_;
-  std::deque<async_entry> incoming_;
-  std::mutex async_mutex_;
+  std::deque<work_entry> incoming_;
+  std::mutex work_mutex_;
   std::jthread thread_;
   inline static thread_local const worker* current_worker_{nullptr};
   contexts_map contexts_;
