@@ -28,7 +28,7 @@
 #include <memory>
 #include <string>
 
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
@@ -41,7 +41,7 @@ namespace {
 // /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
-using martianlabs::doba::protocol::http::v11::server;
+using martianlabs::doba::http_server;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 using martianlabs::doba::tests::integration::wait_for_http_count;
@@ -85,7 +85,7 @@ DOBA_TEST("HTTP/1.1 server starts on a wildcard address") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "0.0.0.0", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "0.0.0.0", .port = std::to_string(port)});
   http_server.add_route("GET", "/baseline11",
                         [](const request&, response& res) {
                           res.ok_200();
@@ -111,7 +111,7 @@ DOBA_TEST("HTTP/1.1 echoes a body after 100 Continue") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo", [](const request& req, response& res) {
     res.ok_200();
     echo_request(req, res);
@@ -143,7 +143,7 @@ DOBA_TEST("HTTP/1.1 ignores invalid If-Modified-Since") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/resource", [](const request&, response& res) {
     res.ok_200();
     res.set_body("resource");
@@ -168,7 +168,7 @@ DOBA_TEST("HTTP/1.1 ignores invalid If-Unmodified-Since") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/resource", [](const request&, response& res) {
     res.ok_200();
     res.set_body("resource");
@@ -193,7 +193,7 @@ DOBA_TEST("HTTP/1.1 reports the allowed method") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/resource", [](const request&, response& res) {
     res.ok_200();
     res.set_body("resource");
@@ -219,7 +219,7 @@ DOBA_TEST("HTTP/1.1 reuses a connection for sequential requests") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/one", [](const request&, response& res) {
     res.ok_200();
     res.set_body("one");
@@ -259,7 +259,7 @@ DOBA_TEST("HTTP/1.1 serves coalesced requests before a partial successor") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/one", [](const request& req, response& res) {
     echo_request(req, res);
   });
@@ -295,7 +295,7 @@ DOBA_TEST("HTTP/1.1 serves three sequential requests") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/one", [](const request&, response& res) {
     res.ok_200();
     res.set_body("one");
@@ -342,7 +342,7 @@ DOBA_TEST("HTTP/1.1 preserves framing after a raw body") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo",
                         [&](const request& req, response& res) {
                           res.ok_200();
@@ -383,7 +383,7 @@ DOBA_TEST("HTTP/1.1 preserves framing after a chunked body") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo",
                         [&](const request& req, response& res) {
                           res.ok_200();
@@ -424,7 +424,7 @@ DOBA_TEST("HTTP/1.1 waits for the final head delimiter") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/resource", [&](const request&, response& res) {
     res.ok_200();
     calls.fetch_add(1);
@@ -456,7 +456,7 @@ DOBA_TEST("HTTP/1.1 waits for a complete fragmented raw body") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo",
                         [&](const request& req, response& res) {
                           res.ok_200();
@@ -497,7 +497,7 @@ DOBA_TEST("HTTP/1.1 waits for a complete fragmented chunked body") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo",
                         [&](const request& req, response& res) {
                           res.ok_200();
@@ -536,7 +536,7 @@ DOBA_TEST("HTTP/1.1 echoes raw bodies across the spill threshold") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo",
                         [&](const request& req, response& res) {
                           res.ok_200();
@@ -575,7 +575,7 @@ DOBA_TEST("HTTP/1.1 raw echo survives decoder buffer reuse") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo",
                         [](const request& req, response& res) {
                           res.ok_200().set_body(req.get_body_reader());
@@ -604,7 +604,7 @@ DOBA_TEST("HTTP/1.1 echoes chunked bodies across the spill threshold") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo",
                         [&](const request& req, response& res) {
                           res.ok_200();
@@ -650,7 +650,7 @@ DOBA_TEST("HTTP/1.1 emits no HEAD body before the following GET") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/resource", [](const request&, response& res) {
     res.ok_200();
     res.set_body("resource");
@@ -687,7 +687,8 @@ DOBA_TEST("HTTP/1.1 preserves streamed HEAD framing before another reply") {
     tcpip_client client;
     const uint16_t port = client.find_available_port();
     DOBA_EXPECT(port != 0);
-    server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+    http_server<> http_server(
+        {.ip = "127.0.0.1", .port = std::to_string(port)});
     http_server.add_route(
         "HEAD", "/resource", [chunked](const request&, response& res) {
           using martianlabs::doba::protocol::http::v11::body::body_writer;
@@ -750,7 +751,7 @@ DOBA_TEST("HTTP/1.1 delimits a 204 before a following response") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/empty", [](const request&, response& res) {
     res.no_content_204();
     res.set_body("hidden");
@@ -787,7 +788,7 @@ DOBA_TEST("HTTP/1.1 rejects invalid header syntax and its successor") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/resource", [&](const request&, response& res) {
     res.ok_200();
     calls.fetch_add(1);
@@ -818,7 +819,7 @@ DOBA_TEST(
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/resource", [&](const request&, response& res) {
     res.ok_200();
     calls.fetch_add(1);
@@ -848,7 +849,7 @@ DOBA_TEST("HTTP/1.1 drains a complete request after a half close") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo",
                         [&](const request& req, response& res) {
                           res.ok_200();
@@ -879,7 +880,7 @@ DOBA_TEST("HTTP/1.1 closes incomplete raw input without dispatch") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo",
                         [&](const request& req, response& res) {
                           res.ok_200();
@@ -909,7 +910,7 @@ DOBA_TEST("HTTP/1.1 closes incomplete chunked input without dispatch") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo",
                         [&](const request& req, response& res) {
                           res.ok_200();
@@ -939,7 +940,7 @@ DOBA_TEST("HTTP/1.1 preserves binary raw payload bytes") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo",
                         [&](const request& req, response& res) {
                           res.ok_200();
@@ -975,7 +976,7 @@ DOBA_TEST(
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo",
                         [&](const request& req, response& res) {
                           res.ok_200();
@@ -1004,7 +1005,7 @@ DOBA_TEST("HTTP/1.1 sends one interim while a fragmented body is pending") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo",
                         [&](const request& req, response& res) {
                           res.ok_200();
@@ -1047,7 +1048,7 @@ DOBA_TEST("HTTP/1.1 completes a large response before a short successor") {
   for (std::size_t i = 0; i < payload.size(); i++) {
     payload[i] = static_cast<char>((i * 53 + i / 131) % 256);
   }
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/large", [&](const request&, response& res) {
     res.ok_200();
     res.set_body(payload);

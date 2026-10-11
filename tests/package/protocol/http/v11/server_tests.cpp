@@ -24,10 +24,11 @@
 
 #include "common/filesystem.h"
 #include "common/reader.h"
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 #include "protocol/http/v11/static_file_server.h"
 
 namespace {
+using martianlabs::doba::http_server;
 using namespace martianlabs::doba::protocol::http::v11;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -72,7 +73,7 @@ int main() {
   if (error) return 1;
   martianlabs::doba::common::filesystem_file file;
   martianlabs::doba::common::reader input(std::move(file));
-  server<> value;
+  http_server<> value;
   value.add_controller<package_controller>().add_controller<static_file_server>(
       "/files", root);
   return 0;

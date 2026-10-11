@@ -46,10 +46,12 @@
 #include <zlib.h>
 
 #include "common/task.h"
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
+#include "https_server.h"
 #include "protocol/http/v11/static_file_server.h"
 #include "transport/server/tls.h"
 
+using martianlabs::doba::http_server;
 using namespace martianlabs::doba::protocol::http::v11;
 
 namespace {
@@ -133,7 +135,7 @@ int main() {
     return 1;
   }
   policies http_configuration;
-  server http_server({.ip = "0.0.0.0", .port = "8080"},
+  http_server<> http_server({.ip = "0.0.0.0", .port = "8080"},
                      http_configuration);
   http_server.add_route(
       "GET", "/delay/:ms",
@@ -270,11 +272,8 @@ int main() {
   tls_configuration.port = "8081";
   tls_configuration.certificate_file = "/certs/server.crt";
   tls_configuration.private_key_file = "/certs/server.key";
-  server<request, response,
-         martianlabs::doba::protocol::http::router<request, response>,
-         engine<request, response>,
-         martianlabs::doba::transport::server::tls>
-      tls_server(tls_configuration, http_configuration);
+  martianlabs::doba::https_server<> tls_server(tls_configuration,
+                                               http_configuration);
   tls_server.add_route("GET", "/json/:count", json_handler);
   tls_server.add_controller<static_file_server>("/static", "/data/static");
   tls_server.add_route(

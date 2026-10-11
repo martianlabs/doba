@@ -43,12 +43,14 @@ You already used this pairing in the
 [source](../../examples/http/v11/hello_world/main.cpp) uses this line:
 
 ```cpp
-server<> http_server({.ip = "0.0.0.0", .port = "8080"});
+http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
 ```
 
 The empty template argument list picks the HTTP/1.1 engine and TCP transport.
-The server ties them together. You register routes and start the listener. You
-write the handler; the engine speaks HTTP, and TCP moves the bytes.
+**http_server** adds routes to the [core server](../reference/server.md), which
+joins an engine and a transport without requiring HTTP types. You register
+routes and start the listener. You write the handler; the engine speaks HTTP,
+and TCP moves the bytes.
 
 <a name="protocol-contract"></a>
 <h2>
@@ -157,7 +159,9 @@ for each connection:
 
 ```cpp
 auto create_engine = []() { return custom_protocol{}; };
-transport::tcp<custom_protocol, decltype(create_engine)> server(
+using transport_type = transport::tcp<custom_protocol,
+                                      decltype(create_engine)>;
+martianlabs::doba::server<custom_protocol, transport_type> server(
     {.ip = "0.0.0.0", .port = "8080"}, create_engine);
 ```
 
@@ -186,8 +190,8 @@ using routes_type =
 using engine_type = http::engine<http::request, http::response>;
 
 std::string output;
-http::server<http::request, http::response, routes_type, engine_type,
-             custom_transport>
+martianlabs::doba::http_server<http::request, http::response, routes_type,
+                               engine_type, custom_transport>
     server(&output);
 ```
 

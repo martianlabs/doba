@@ -30,7 +30,7 @@
 #include <utility>
 
 #include "common/reader.h"
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 
 namespace {
 // /////////////////////////////////////////////////////////////////////////////
@@ -127,8 +127,8 @@ int main() {
   using engine_type = http::engine<http::request, http::response>;
 
   std::string output;
-  http::server<http::request, http::response, routes_type, engine_type,
-               custom_transport>
+  martianlabs::doba::http_server<http::request, http::response, routes_type,
+                                 engine_type, custom_transport>
       server(&output);
   server.add_route("GET", "/hello",
                    [](const http::request&, http::response& response) {

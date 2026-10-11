@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -22,53 +22,34 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_protocol_http_v11_server_h
-#define martianlabs_doba_protocol_http_v11_server_h
+#ifndef martianlabs_doba_server_h
+#define martianlabs_doba_server_h
 
 #include <mutex>
-#include <stdexcept>
-#include <string_view>
 #include <utility>
 
-#include "common/date_server.h"
-#include "transport/server/tcp.h"
-#include "protocol/http/common/router.h"
-#include "protocol/http/v11/contracts.h"
-#include "protocol/http/v11/engine.h"
-#include "protocol/http/v11/request.h"
-#include "protocol/http/v11/response.h"
+#include "protocol/contracts.h"
+#include "transport/server/contracts.h"
 
-namespace martianlabs::doba::protocol::http::v11 {
+namespace martianlabs::doba {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] server                                                      ( class ) |
 // +---------------------------------------------------------------------------+
-// | Composes the protocol engine and server transport.                        |
-// +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// |   RQty - request being used (HTTP/1.1 by default).                        |
-// |   RSty - response being used (HTTP/1.1 by default).                       |
-// |   ROty - router being used.                                               |
-// |   ENty - engine being used (HTTP/1.1 by default).                         |
-// |   TRty - transport being used (tcp/ip by default).                        |
+// | Composes a protocol engine and server transport.                          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <typename RQty = request, typename RSty = response,
-          typename ROty = router<RQty, RSty>,
-          protocol::contracts::engine ENty = engine<RQty, RSty, ROty>,
-          template <typename, typename> class TRty = transport::server::tcp>
-  requires contracts::server<ROty, ENty, TRty>
+template <protocol::contracts::engine ENty, typename TRty>
 class server {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  explicit server(typename TRty<ENty, engine_factory<ENty, ROty>>::policies_type
-                      transport_configuration = {},
-                  typename ENty::policies_type engine_configuration = {})
-      : transport_{std::move(transport_configuration),
-                   make_engine_factory<ENty>(std::move(engine_configuration),
-                                             router_)} {
+  template <protocol::contracts::engine_factory<ENty> FNty>
+    requires transport::server::contracts::transport<TRty, ENty, FNty>
+  explicit server(typename TRty::policies_type configuration,
+                  FNty create_engine)
+      : transport_{std::move(configuration), std::move(create_engine)} {
     transport_.set_on_connection([]() {});
     transport_.set_on_disconnection([]() {});
   }
@@ -83,22 +64,34 @@ class server {
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  void start() {
+  void start() { start([]() {}, []() {}); }
+  // +=========================================================================+
+  // | [>] stop                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  void stop() { stop([]() {}, []() {}); }
+
+ protected:
+  // +=========================================================================+
+  // | [>] start                                                 ( protected ) |
+  // +-------------------------------------------------------------------------+
+  template <typename BFty, typename FFty>
+  void start(BFty before_start, FFty on_failure) {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     if (locked_) return;
-    common::date_server::get().start();
+    before_start();
     try {
       transport_.start();
     } catch (...) {
-      common::date_server::get().stop();
+      on_failure();
       throw;
     }
     locked_ = true;
   }
   // +=========================================================================+
-  // | [>] stop                                                     ( public ) |
+  // | [>] stop                                                  ( protected ) |
   // +-------------------------------------------------------------------------+
-  void stop() {
+  template <typename WFty, typename AFty>
+  void stop(WFty wait, AFty after_stop) {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     if (!locked_) return;
     if constexpr (requires { transport_.quiesce(); }) {
@@ -106,52 +99,25 @@ class server {
     } else {
       transport_.stop();
     }
-    if constexpr (requires(const ROty& routes) { routes.wait_async(); }) {
-      router_.wait_async();
-    }
+    wait();
     if constexpr (requires { transport_.quiesce(); }) {
       transport_.stop();
     }
-    common::date_server::get().stop();
+    after_stop();
     locked_ = false;
   }
   // +=========================================================================+
-  // | [>] add_route                                                ( public ) |
+  // | [>] ATTRIBUTEs                                            ( protected ) |
   // +-------------------------------------------------------------------------+
-  template <typename Hty>
-    requires router_handler_lambda<Hty>
-  server& add_route(std::string_view method, std::string_view route,
-                    Hty handler) {
-    std::lock_guard<std::mutex> lock(locked_mutex_);
-    if (locked_) {
-      throw std::runtime_error("Cannot add route when the server is running");
-    }
-    router_.add(method, route, std::move(handler));
-    return *this;
-  }
-  // +=========================================================================+
-  // | [>] add_controller                                           ( public ) |
-  // +-------------------------------------------------------------------------+
-  template <typename CTty, typename... Args>
-  server& add_controller(Args&&... args) {
-    std::lock_guard<std::mutex> lock(locked_mutex_);
-    if (locked_) {
-      throw std::runtime_error(
-          "Cannot add controller when the server is running");
-    }
-    router_.template add_controller<CTty>(std::forward<Args>(args)...);
-    return *this;
-  }
+  bool locked_{false};
+  std::mutex locked_mutex_;
 
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  ROty router_;
-  bool locked_{false};
-  std::mutex locked_mutex_;
-  TRty<ENty, engine_factory<ENty, ROty>> transport_;
+  TRty transport_;
 };
-}  // namespace martianlabs::doba::protocol::http::v11
+}  // namespace martianlabs::doba
 
 #endif

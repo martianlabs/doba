@@ -29,7 +29,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 #include "test_helper.h"
 
 namespace {
@@ -114,8 +114,8 @@ struct memory_transport {
 // | [>] usings                                                     ( public ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-using test_server = http::server<http::request, http::response, routes_type,
-                                 engine_type, memory_transport>;
+using test_server = martianlabs::doba::http_server<
+    http::request, http::response, routes_type, engine_type, memory_transport>;
 using test_transport =
     memory_transport<engine_type,
                      http::engine_factory<engine_type, routes_type>>;

@@ -36,7 +36,7 @@
 #include <utility>
 #include <vector>
 
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 #include "common/task.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
@@ -50,7 +50,7 @@ namespace {
 // /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
-using martianlabs::doba::protocol::http::v11::server;
+using martianlabs::doba::http_server;
 using martianlabs::doba::common::task;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
@@ -86,7 +86,7 @@ DOBA_TEST("HTTP/1.1 orders mixed routes over one connection") {
   DOBA_EXPECT(port != 0);
   std::promise<std::coroutine_handle<>> pending;
   auto suspended = pending.get_future();
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/slow",
                         [&pending](const request&, response& res)
                             -> task<void> {
@@ -128,7 +128,7 @@ DOBA_TEST("HTTP/1.1 resumes timed routes through transport execution") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<bool> not_early{false};
-  server<> http_server({.worker_count = 1, .ip = "127.0.0.1",
+  http_server<> http_server({.worker_count = 1, .ip = "127.0.0.1",
                         .port = std::to_string(port)});
   http_server.add_route(
       "GET", "/slow",
@@ -167,7 +167,7 @@ DOBA_TEST("HTTP/1.1 accepts a continuation from another thread") {
   DOBA_EXPECT(port != 0);
   std::promise<std::coroutine_handle<>> pending;
   auto suspended = pending.get_future();
-  server<> http_server({.worker_count = 2, .ip = "127.0.0.1",
+  http_server<> http_server({.worker_count = 2, .ip = "127.0.0.1",
                         .port = std::to_string(port)});
   http_server.add_route("GET", "/wait",
                         [&pending](const request&, response& res)
@@ -201,7 +201,7 @@ DOBA_TEST("HTTP/1.1 orders responses after different timer deadlines") {
   std::atomic<int> first_order{0};
   std::atomic<int> second_order{0};
   std::atomic<int> third_order{0};
-  server<> http_server({.worker_count = 1, .ip = "127.0.0.1",
+  http_server<> http_server({.worker_count = 1, .ip = "127.0.0.1",
                         .port = std::to_string(port)});
   http_server.add_route(
       "GET", "/wait/:id/:ms",
@@ -248,7 +248,7 @@ DOBA_TEST("HTTP/1.1 runs asynchronous routes with multiple IOCP workers") {
   tcpip_client probe;
   const uint16_t port = probe.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.worker_count = 2, .ip = "127.0.0.1",
+  http_server<> http_server({.worker_count = 2, .ip = "127.0.0.1",
                         .port = std::to_string(port)});
   http_server.add_route("GET", "/wait",
                         [](const request&, response& res) -> task<void> {
@@ -299,7 +299,7 @@ DOBA_TEST("HTTP/1.1 drains a timed route before stopping workers") {
   std::promise<void> started;
   auto waiting = started.get_future();
   std::atomic<bool> completed{false};
-  server<> http_server({.worker_count = 1, .ip = "127.0.0.1",
+  http_server<> http_server({.worker_count = 1, .ip = "127.0.0.1",
                         .port = std::to_string(port)});
   http_server.add_route(
       "GET", "/slow",
@@ -325,7 +325,7 @@ DOBA_TEST("HTTP/1.1 waits for an asynchronous route during stop") {
   DOBA_EXPECT(port != 0);
   std::promise<std::coroutine_handle<>> pending;
   auto suspended = pending.get_future();
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/slow",
                         [&pending](const request&, response& res)
                             -> task<void> {
@@ -358,7 +358,7 @@ DOBA_TEST("HTTP/1.1 retains a spilled asynchronous body and parameter") {
   DOBA_EXPECT(port != 0);
   std::promise<std::coroutine_handle<>> pending;
   auto suspended = pending.get_future();
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route(
       "POST", "/upload/:name",
       [&pending](const request& req, response& res,
@@ -407,7 +407,7 @@ DOBA_TEST("HTTP/1.1 completes after a suspended client disconnects") {
   std::promise<std::coroutine_handle<>> pending;
   auto suspended = pending.get_future();
   std::atomic<bool> finished{false};
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/slow",
                         [&pending, &finished](const request&, response& res)
                             -> task<void> {
@@ -435,7 +435,7 @@ DOBA_TEST("HTTP/1.1 applies static parametrized and wildcard precedence") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/items/*", [](const request&, response& res) {
     text_response(res, "wildcard");
   });
@@ -472,7 +472,7 @@ DOBA_TEST("HTTP/1.1 routes typed parameter boundaries without partial parses") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route(
       "GET", "/signed/:value",
       [&calls](const request&, response& res, std::int64_t value) {
@@ -533,7 +533,7 @@ DOBA_TEST("HTTP/1.1 exposes decoded path query headers and cookies to routes") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/a b", [](const request& req, response& res) {
     const auto query = req.get_query_parameter("key");
     const auto empty = req.get_query_parameter("empty");
@@ -566,7 +566,7 @@ DOBA_TEST("HTTP/1.1 reports allowed methods across all matching route kinds") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route(
       "GET", "/assets/logo",
       [](const request&, response& res) { text_response(res, "get"); });
@@ -596,7 +596,7 @@ DOBA_TEST(
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/first", [](const request&, response& res) {
     text_response(res, "first");
   });

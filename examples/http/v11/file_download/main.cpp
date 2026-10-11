@@ -30,9 +30,10 @@
 #include "common/filesystem.h"
 #include "common/reader.h"
 #include "common/signaler.h"
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 
 using namespace martianlabs::doba::common;
+using martianlabs::doba::http_server;
 using namespace martianlabs::doba::protocol::http::v11;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -54,7 +55,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   const std::string relative_file(argv[2]);
-  server<> http_server({.ip = "0.0.0.0", .port = "8080"});
+  http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
       "GET", "/download",
       [root, relative_file](const request&, response& res) {

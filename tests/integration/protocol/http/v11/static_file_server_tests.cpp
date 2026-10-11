@@ -33,7 +33,7 @@
 
 #include "common/filesystem.h"
 #include "common/reader.h"
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 #include "protocol/http/v11/static_file_server.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
@@ -47,6 +47,7 @@ using martianlabs::doba::common::filesystem_file;
 }  // namespace
 
 namespace {
+using martianlabs::doba::http_server;
 using namespace martianlabs::doba::protocol::http::v11;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
@@ -65,7 +66,7 @@ DOBA_TEST("HTTP static files preserve binary framing and HEAD") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_controller<static_file_server>("/assets", first.path());
   value.add_controller<static_file_server>("/other", second.path());
   value.add_route("GET", "/assets/override", [](const request&, response& res) {
@@ -111,7 +112,7 @@ DOBA_TEST("HTTP static files reject escapes and expose current file contents") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_controller<static_file_server>("/", directory.path());
   value.start();
   DOBA_EXPECT(client.connect(port));
@@ -159,7 +160,7 @@ DOBA_TEST("HTTP static files handle concurrent and abandoned downloads") {
   tcpip_client port_probe;
   const auto port = port_probe.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_controller<static_file_server>("/", directory.path());
   value.start();
   {

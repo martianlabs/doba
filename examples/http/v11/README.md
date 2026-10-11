@@ -22,8 +22,8 @@ Each example README contains a `curl` command and its observable result.
 The transport is configured when constructing the server:
 
 ```cpp
-server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-http_server.start();
+http_server<> server({.ip = "0.0.0.0", .port = "8080"});
+server.start();
 ```
 
 Engine policies are optional and follow the transport policies. The

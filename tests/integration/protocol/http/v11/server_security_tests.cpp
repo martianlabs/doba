@@ -28,7 +28,7 @@
 #include <string_view>
 #include <vector>
 
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 #include "echo_body.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
@@ -42,7 +42,7 @@ namespace {
 // /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
-using martianlabs::doba::protocol::http::v11::server;
+using martianlabs::doba::http_server;
 using martianlabs::doba::tests::integration::echo_body;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
@@ -57,7 +57,7 @@ DOBA_TEST("HTTP/1.1 rejects hostile requests without dispatching successors") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> dispatched = 0;
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/sentinel", [&](const request&, response& res) {
     dispatched.fetch_add(1);
     res.ok_200();
@@ -208,7 +208,7 @@ DOBA_TEST("HTTP/1.1 accepts case insensitive framing and valid target forms") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("POST", "/echo", [](const request& req, response& res) {
     echo_body(req, res);
   });
@@ -260,7 +260,7 @@ DOBA_TEST("HTTP/1.1 absolute authority preserves the received Host") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route(
       "GET", "/authority", [](const request& req, response& res) {
         res.ok_200();
@@ -311,7 +311,7 @@ DOBA_TEST(
   tcpip_client healthy;
   const uint16_t port = healthy.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/ok", [](const request&, response& res) {
     res.ok_200();
     res.set_body("ok");

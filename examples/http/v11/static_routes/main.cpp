@@ -25,10 +25,11 @@
 #include "common/console_logger.h"
 #include "common/signaler.h"
 #include "protocol/http/common/method_names.h"
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http;
+using martianlabs::doba::http_server;
 using namespace martianlabs::doba::protocol::http::v11;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -45,7 +46,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
-  server<> http_server({.ip = "0.0.0.0", .port = "8080"});
+  http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   // A path can expose an independent handler for each HTTP method.
   http_server.add_route(
       method_names::kGet, "/resources", [](const request&, response& res) {

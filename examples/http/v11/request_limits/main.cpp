@@ -23,9 +23,10 @@
 // permissions and limitations under the License.
 
 #include "common/signaler.h"
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 
 using namespace martianlabs::doba::common;
+using martianlabs::doba::http_server;
 using namespace martianlabs::doba::protocol::http::v11;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -38,7 +39,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 int main() {
   policies limits;
   limits.max_content_length = 5;
-  server<> http_server({.ip = "0.0.0.0", .port = "8080"}, limits);
+  http_server<> http_server({.ip = "0.0.0.0", .port = "8080"}, limits);
   http_server.add_route("POST", "/upload",
                         [](const request&, response& res) {
                           res.ok_200().set_body("accepted");
