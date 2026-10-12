@@ -90,7 +90,10 @@ class custom_transport {
         "Connection: close\r\n\r\n";
     connection_->on_bytes_received(request.data(), request.size(),
                                    request.size());
-    if (close_requested_) stop();
+    if (close_requested_) {
+      connection_.reset();
+      on_disconnection_();
+    }
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |

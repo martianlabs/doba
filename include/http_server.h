@@ -31,6 +31,7 @@
 #include <utility>
 
 #include "common/date_server.h"
+#include "contracts.h"
 #include "transport/server/tcp.h"
 #include "protocol/http/common/router.h"
 #include "protocol/http/v11/contracts.h"
@@ -40,19 +41,11 @@
 #include "server.h"
 
 namespace martianlabs::doba {
-namespace detail {
-template <typename ROty>
-class http_router_storage {
- protected:
-  ROty router_;
-};
-}  // namespace detail
-
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] http_server                                                 ( class ) |
 // +---------------------------------------------------------------------------+
-// | Composes HTTP/1.1 routing with a protocol engine and transport.           |
+// | Composes a TCP HTTP/1.1 routing with a protocol engine and transport.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty = protocol::http::v11::request,
@@ -61,61 +54,74 @@ template <typename RQty = protocol::http::v11::request,
           protocol::contracts::engine ENty =
               protocol::http::v11::engine<RQty, RSty, ROty>,
           template <typename, typename> class TRty = transport::server::tcp>
-  requires protocol::http::v11::contracts::server<ROty, ENty, TRty>
+  requires contracts::http_server<RQty, RSty, ROty, ENty, TRty>
 class http_server
-    : private detail::http_router_storage<ROty>,
-      public server<ENty, TRty<ENty,
-                               protocol::http::v11::engine_factory<ENty,
-                                                                    ROty>>> {
- private:
-  // +=========================================================================+
-  // | [>] USINGs                                                  ( private ) |
-  // +-------------------------------------------------------------------------+
-  using base_type = server<ENty, TRty<ENty,
-                                      protocol::http::v11::engine_factory<
-                                          ENty, ROty>>>;
-
+    : public server<
+          ENty, TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>> {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   explicit http_server(
-      typename TRty<ENty, protocol::http::v11::engine_factory<
-                              ENty, ROty>>::policies_type
-          transport_configuration = {},
+      typename TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>::
+          policies_type transport_configuration = {},
       typename ENty::policies_type engine_configuration = {})
-      : base_type{std::move(transport_configuration),
-                  protocol::http::v11::make_engine_factory<ENty>(
-                      std::move(engine_configuration), this->router_)} {}
-  ~http_server() { stop(); }
-  // +=========================================================================+
-  // | [>] start                                                    ( public ) |
-  // +-------------------------------------------------------------------------+
-  void start() {
-    base_type::start([]() { common::date_server::get().start(); },
-                     []() { common::date_server::get().stop(); });
+      : server<ENty,
+               TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>>{
+            std::move(transport_configuration),
+            protocol::http::v11::make_engine_factory<ENty>(
+                std::move(engine_configuration), this->router_)} {
+    // +-----------------------------------------------------------------------+
+    // | Let's set 'on_starting' callback that will be used to start the date  |
+    // | server when the HTTP server starts.                                   |
+    // +-----------------------------------------------------------------------+
+    this->set_on_starting([this]() {
+      {
+        std::lock_guard<std::mutex> lock(registration_mutex_);
+        registration_closed_ = true;
+      }
+      common::date_server::get().start();
+    });
+    // +-----------------------------------------------------------------------+
+    // | Let's set 'on_start_failed' callback that will be used to stop the    |
+    // | date server when the HTTP server fails to start.                      |
+    // +-----------------------------------------------------------------------+
+    this->set_on_start_failed([this]() {
+      common::date_server::get().stop();
+      std::lock_guard<std::mutex> lock(registration_mutex_);
+      registration_closed_ = false;
+    });
+    // +-----------------------------------------------------------------------+
+    // | Let's set 'on_stopping' callback that will be used to stop the date   |
+    // | server when the HTTP server stops.                                    |
+    // +-----------------------------------------------------------------------+
+    this->set_on_stopping([this]() {
+      if constexpr (requires(const ROty& routes) { routes.wait_async(); }) {
+        this->router_.wait_async();
+      }
+    });
+    // +-----------------------------------------------------------------------+
+    // | Let's set 'on_stopped' callback that will be used to stop the date    |
+    // | server when the HTTP server stops.                                    |
+    // +-----------------------------------------------------------------------+
+    this->set_on_stopped([this]() {
+      common::date_server::get().stop();
+      std::lock_guard<std::mutex> lock(registration_mutex_);
+      registration_closed_ = false;
+    });
   }
-  // +=========================================================================+
-  // | [>] stop                                                     ( public ) |
-  // +-------------------------------------------------------------------------+
-  void stop() {
-    base_type::stop(
-        [this]() {
-          if constexpr (requires(const ROty& routes) { routes.wait_async(); }) {
-            this->router_.wait_async();
-          }
-        },
-        []() { common::date_server::get().stop(); });
-  }
+  ~http_server() { this->stop(); }
   // +=========================================================================+
   // | [>] add_route                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Adds a route to the server's router.                                    |
   // +-------------------------------------------------------------------------+
   template <typename Hty>
     requires protocol::http::router_handler_lambda<Hty>
   http_server& add_route(std::string_view method, std::string_view route,
                          Hty handler) {
-    std::lock_guard<std::mutex> lock(this->locked_mutex_);
-    if (this->locked_) {
+    std::lock_guard<std::mutex> lock(registration_mutex_);
+    if (registration_closed_) {
       throw std::runtime_error("Cannot add route when the server is running");
     }
     this->router_.add(method, route, std::move(handler));
@@ -124,16 +130,26 @@ class http_server
   // +=========================================================================+
   // | [>] add_controller                                           ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Adds a controller to the server's router.                               |
+  // +-------------------------------------------------------------------------+
   template <typename CTty, typename... Args>
   http_server& add_controller(Args&&... args) {
-    std::lock_guard<std::mutex> lock(this->locked_mutex_);
-    if (this->locked_) {
+    std::lock_guard<std::mutex> lock(registration_mutex_);
+    if (registration_closed_) {
       throw std::runtime_error(
           "Cannot add controller when the server is running");
     }
     this->router_.template add_controller<CTty>(std::forward<Args>(args)...);
     return *this;
   }
+
+ private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  ROty router_;
+  std::mutex registration_mutex_;
+  bool registration_closed_{false};
 };
 }  // namespace martianlabs::doba
 

@@ -28,7 +28,7 @@
 #include <utility>
 
 #include "common/signaler.h"
-#include "protocol/send_delegate.h"
+#include "protocol/contracts.h"
 #include "server.h"
 #include "transport/server/tcp.h"
 

@@ -29,7 +29,7 @@
 #include <string_view>
 #include <utility>
 
-#include "protocol/serialization.h"
+#include "protocol/http/v11/results.h"
 #include "protocol/http/common/header_names.h"
 #include "protocol/http/common/method_names.h"
 #include "protocol/http/common/router.h"
@@ -39,9 +39,26 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] engine_sync                                                ( struct ) |
 // +---------------------------------------------------------------------------+
+// | The synchronous engine handles the processing of a single request and     |
+// | response in a blocking manner. It is designed for environments where      |
+// | asynchronous processing is not required or desired. It provides methods   |
+// | for executing the request against the router, building error responses,   |
+// | and serializing the response.                                             |
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename ROty>
 struct engine_sync {
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  engine_sync() = default;
+  engine_sync(const engine_sync&) = delete;
+  engine_sync(engine_sync&&) noexcept = delete;
+  ~engine_sync() = default;
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  engine_sync& operator=(const engine_sync&) = delete;
+  engine_sync& operator=(engine_sync&&) noexcept = delete;
   // +=========================================================================+
   // | [>] execute                                                  ( public ) |
   // +-------------------------------------------------------------------------+
@@ -98,16 +115,16 @@ struct engine_sync {
   // +=========================================================================+
   // | [>] serialize                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  static protocol::serialization_result serialize(RSty& response, bool close) {
+  static serialization_result serialize(RSty& response, bool close) {
     if (close) response.set_header(header_names::kConnection, "close");
     return response.serialize();
   }
   // +=========================================================================+
   // | [>] serialize                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  static protocol::serialization_result serialize(const RQty& request,
-                                                  RSty& response, bool& close) {
-    protocol::serialization_result serialized;
+  static serialization_result serialize(const RQty& request, RSty& response,
+                                        bool& close) {
+    serialization_result serialized;
     try {
       if (response.is_continue_100()) {
         close = true;

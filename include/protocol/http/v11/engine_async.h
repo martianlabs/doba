@@ -36,14 +36,18 @@
 #include <string>
 #include <utility>
 
-#include "protocol/send_delegate.h"
-#include "protocol/serialization.h"
+#include "protocol/contracts.h"
+#include "protocol/http/v11/results.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] engine_async                                                ( class ) |
 // +---------------------------------------------------------------------------+
+// | The asynchronous engine manages the state of multiple concurrent requests |
+// | and responses. It ensures that responses are sent in the order of their   |
+// | corresponding requests, even if they complete out of order. It also       |
+// | handles connection closing and resource management for pending requests.  |
 // /////////////////////////////////////////////////////////////////////////////
 class engine_async {
  public:
@@ -52,6 +56,14 @@ class engine_async {
   // +-------------------------------------------------------------------------+
   explicit engine_async(std::size_t max_pending_requests)
       : max_pending_requests_{max_pending_requests} {}
+  engine_async(const engine_async&) = delete;
+  engine_async(engine_async&&) noexcept = delete;
+  ~engine_async() = default;
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  engine_async& operator=(const engine_async&) = delete;
+  engine_async& operator=(engine_async&&) noexcept = delete;
   // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
@@ -107,7 +119,7 @@ class engine_async {
   // +=========================================================================+
   // | [>] submit                                                   ( public ) |
   // +-------------------------------------------------------------------------+
-  void submit(std::size_t position, protocol::serialization_result result,
+  void submit(std::size_t position, serialization_result result,
               bool final, bool close) {
     if (close) accepting_.store(false, std::memory_order_release);
     if (active_.load(std::memory_order_acquire) == 0 &&

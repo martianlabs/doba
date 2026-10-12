@@ -35,16 +35,16 @@
 #include <string_view>
 #include <utility>
 
-#include "protocol/send_delegate.h"
-#include "protocol/serialization.h"
-#include "protocol/deserialization.h"
+#include "protocol/contracts.h"
 #include "protocol/http/common/header_names.h"
 #include "protocol/http/common/method_names.h"
 #include "protocol/http/common/router.h"
+#include "protocol/http/v11/contracts.h"
 #include "protocol/http/v11/decoder.h"
 #include "protocol/http/v11/engine_async.h"
 #include "protocol/http/v11/engine_sync.h"
 #include "protocol/http/v11/policies.h"
+#include "protocol/http/v11/results.h"
 #include "transport/server/contracts.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
@@ -54,8 +54,15 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | HTTP/1.1 protocol engine.                                                 |
 // +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// |   RQty - request being used.                                              |
+// |   RSty - response being used.                                             |
+// |   ROty - router being used.                                               |
+// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <typename RQty, typename RSty, typename ROty = router<RQty, RSty>>
+template <contracts::request RQty, contracts::response RSty,
+          typename ROty = router<RQty, RSty>>
+  requires contracts::router<ROty, RQty, RSty>
 class engine {
  public:
   // +=========================================================================+
@@ -67,8 +74,18 @@ class engine {
   // +-------------------------------------------------------------------------+
   engine(policies_type configuration, const ROty& router)
       : router_{router}, decoder_{configuration} {}
+  engine(const engine&) = delete;
+  engine(engine&&) noexcept = delete;
+  ~engine() = default;
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  engine& operator=(const engine&) = delete;
+  engine& operator=(engine&&) noexcept = delete;
   // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Let's set the 'on_send' callback to send data to the transport.         |
   // +-------------------------------------------------------------------------+
   void set_on_send(protocol::send_delegate output) {
     on_send_ = std::move(output);
@@ -77,6 +94,8 @@ class engine {
   // +=========================================================================+
   // | [>] set_on_close                                             ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Let's set the 'on_close' callback to close the transport.               |
+  // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()> close) {
     on_close_ = std::move(close);
     if (async_) async_->set_on_close(on_close_);
@@ -84,12 +103,16 @@ class engine {
   // +=========================================================================+
   // | [>] set_execution_capacity                                   ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Sets the execution capacity for the engine.                             |
+  // +-------------------------------------------------------------------------+
   void set_execution_capacity(
       transport::server::execution_capacity execution) noexcept {
     execution_ = execution;
   }
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Handles bytes received from the transport.                              |
   // +-------------------------------------------------------------------------+
   std::size_t on_bytes_received(const char* buffer, const std::size_t size,
                                 const std::size_t capacity) {
@@ -174,9 +197,12 @@ class engine {
   // +=========================================================================+
   // | [>] on_bytes_received_async                                 ( private ) |
   // +-------------------------------------------------------------------------+
-  std::optional<std::size_t> on_bytes_received_async(
-      const char* buffer, const std::size_t size, const std::size_t capacity,
-      std::size_t& total) {
+  // | Handles bytes received from the transport in async mode.                |
+  // +-------------------------------------------------------------------------+
+  std::optional<std::size_t> on_bytes_received_async(const char* buffer,
+                                                     const std::size_t size,
+                                                     const std::size_t capacity,
+                                                     std::size_t& total) {
     if (!async_->accepting()) return size;
     if (async_->idle()) {
       async_.reset();
@@ -398,8 +424,8 @@ class engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  const ROty& router_;  // Reference to the router for handling requests.
-  decoder<RQty, RSty> decoder_;  // Decoder for processing incoming requests.
+  const ROty& router_;
+  decoder<RQty, RSty> decoder_;
   std::shared_ptr<engine_async> async_;
   transport::server::execution_capacity execution_;
   std::optional<std::size_t> interim_position_;

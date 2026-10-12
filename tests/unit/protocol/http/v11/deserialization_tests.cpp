@@ -25,11 +25,11 @@
 #include <memory>
 #include <utility>
 
-#include "protocol/deserialization.h"
+#include "protocol/http/v11/results.h"
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::protocol::deserialization_result;
+using martianlabs::doba::protocol::http::v11::deserialization_result;
 using martianlabs::doba::protocol::deserialization_status;
 }  // namespace
 

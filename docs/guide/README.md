@@ -7,7 +7,7 @@
 </h1>
 
 Want to see doba do something? Start at chapter 1, or jump straight to the bit
-you came for. Chapters with links are ready; the rest are on their way.
+you came for.
 
 1. [Getting started](01-getting-started.md) - get an HTTP/1.1 server talking.
 2. [Core model](02-core-model.md) - see how protocols and transports fit

@@ -33,7 +33,7 @@ namespace martianlabs::doba {
 // +---------------------------------------------------------------------------+
 // | [>] https_server                                                ( class ) |
 // +---------------------------------------------------------------------------+
-// | HTTP/1.1 server using the TLS transport.                                  |
+// | Composes a TLS HTTP/1.1 routing with a protocol engine and transport.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty = protocol::http::v11::request,
@@ -43,18 +43,12 @@ template <typename RQty = protocol::http::v11::request,
               protocol::http::v11::engine<RQty, RSty, ROty>>
 class https_server
     : public http_server<RQty, RSty, ROty, ENty, transport::server::tls> {
- private:
-  // +=========================================================================+
-  // | [>] USINGs                                                  ( private ) |
-  // +-------------------------------------------------------------------------+
-  using base_type =
-      http_server<RQty, RSty, ROty, ENty, transport::server::tls>;
-
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  using base_type::base_type;
+  using http_server<RQty, RSty, ROty, ENty,
+                    transport::server::tls>::http_server;
 };
 }  // namespace martianlabs::doba
 

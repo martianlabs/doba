@@ -37,13 +37,10 @@ using engine_type = v11::engine<v11::request, v11::response, router_type>;
 using tls_server = martianlabs::doba::https_server<
     v11::request, v11::response, router_type, engine_type>;
 
-struct custom_request {};
-struct custom_response {};
-struct custom_router {};
 struct custom_engine {
   struct policies_type {};
 
-  custom_engine(const policies_type&, const custom_router&) {}
+  custom_engine(const policies_type&, const router_type&) {}
   void set_on_send(martianlabs::doba::protocol::send_delegate) {}
   void set_on_close(std::function<void()>) {}
   std::size_t on_bytes_received(const char*, std::size_t size,
@@ -72,8 +69,8 @@ int main() {
   value.add_route("GET", "/", [](const v11::request&, v11::response& res) {
     res.ok_200();
   });
-  martianlabs::doba::https_server<custom_request, custom_response,
-                                  custom_router, custom_engine>
+  martianlabs::doba::https_server<v11::request, v11::response, router_type,
+                                  custom_engine>
       custom(configuration);
   return 0;
 }

@@ -28,9 +28,23 @@
 #include <concepts>
 #include <cstddef>
 #include <functional>
+#include <memory>
+#include <string_view>
 #include <utility>
 
-#include "protocol/send_delegate.h"
+#include "common/reader.h"
+
+namespace martianlabs::doba::protocol {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] send_delegate                                              ( public ) |
+// +---------------------------------------------------------------------------+
+// | A function that takes the head and body data, plus an optional source.    |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+using send_delegate = std::function<void(std::string_view, std::string_view,
+                                         std::unique_ptr<common::reader>)>;
+}  // namespace martianlabs::doba::protocol
 
 namespace martianlabs::doba::protocol::contracts {
 // /////////////////////////////////////////////////////////////////////////////

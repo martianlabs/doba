@@ -96,16 +96,18 @@ configuration.ip = "0.0.0.0";
 configuration.port = "8443";
 configuration.certificate_file = argv[1];
 configuration.private_key_file = argv[2];
-https_server<> http_server(configuration);
+https_server<> https_server(configuration);
 ```
 
-Both server classes accept custom request, response, and router types.
-*http_server* also accepts a custom transport; *https_server* uses TLS.
+Both server classes accept custom request, response, and router types that
+satisfy the [HTTP/1.1 contracts](../../include/protocol/http/v11/contracts.h),
+even with a custom engine. *http_server* also accepts a custom transport;
+*https_server* uses TLS.
 
 *tls_policies* includes the TCP settings plus paths to a PEM certificate
 chain and its matching PEM private key. doba checks that both files load and
 the key matches the certificate when it creates the TLS transport. A bad
-pair fails server construction instead of waiting for the first request.
+pair makes the first *start* fail instead of waiting for the first request.
 
 <a name="try-https"></a>
 <h2>

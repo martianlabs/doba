@@ -25,7 +25,11 @@
 #ifndef martianlabs_doba_server_h
 #define martianlabs_doba_server_h
 
+#include <functional>
+#include <memory>
 #include <mutex>
+#include <optional>
+#include <stdexcept>
 #include <utility>
 
 #include "protocol/contracts.h"
@@ -36,7 +40,13 @@ namespace martianlabs::doba {
 // +---------------------------------------------------------------------------+
 // | [>] server                                                      ( class ) |
 // +---------------------------------------------------------------------------+
-// | Composes a protocol engine and server transport.                          |
+// | Server class that manages the lifecycle of a transport server and its     |
+// | associated protocol engine.                                               |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// +---------------------------------------------------------------------------+
+// | ENty: The protocol engine type.                                           |
+// | TRty: The server transport type.                                          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty, typename TRty>
@@ -45,13 +55,15 @@ class server {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  template <protocol::contracts::engine_factory<ENty> FNty>
-    requires transport::server::contracts::transport<TRty, ENty, FNty>
-  explicit server(typename TRty::policies_type configuration,
-                  FNty create_engine)
-      : transport_{std::move(configuration), std::move(create_engine)} {
-    transport_.set_on_connection([]() {});
-    transport_.set_on_disconnection([]() {});
+  template <protocol::contracts::engine_factory<ENty> EFy>
+    requires transport::server::contracts::transport<TRty, ENty, EFy>
+  explicit server(typename TRty::policies_type configuration, EFy factory) {
+    auto transport_arguments =
+        std::make_shared<std::pair<typename TRty::policies_type, EFy>>(
+            std::move(configuration), std::move(factory));
+    create_transport_ = [this, args = std::move(transport_arguments)]() {
+      transport_.emplace(std::move(args->first), std::move(args->second));
+    };
   }
   server(const server&) = delete;
   server(server&&) noexcept = delete;
@@ -64,59 +76,89 @@ class server {
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  void start() { start([]() {}, []() {}); }
-  // +=========================================================================+
-  // | [>] stop                                                     ( public ) |
+  // | Starts the server and begins accepting connections.                     |
   // +-------------------------------------------------------------------------+
-  void stop() { stop([]() {}, []() {}); }
-
- protected:
-  // +=========================================================================+
-  // | [>] start                                                 ( protected ) |
-  // +-------------------------------------------------------------------------+
-  template <typename BFty, typename FFty>
-  void start(BFty before_start, FFty on_failure) {
+  void start() {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     if (locked_) return;
-    before_start();
+    if (!transport_ && !create_transport_) {
+      throw std::runtime_error("Transport construction previously failed");
+    }
     try {
-      transport_.start();
+      if (on_starting_) on_starting_();
+      if (!transport_) {
+        auto create_transport = std::move(create_transport_);
+        create_transport_ = {};
+        create_transport();
+      }
+      transport_->set_on_connection([]() {});
+      transport_->set_on_disconnection([]() {});
+      transport_->start();
     } catch (...) {
-      on_failure();
+      if (on_start_failed_) on_start_failed_();
       throw;
     }
     locked_ = true;
   }
   // +=========================================================================+
-  // | [>] stop                                                  ( protected ) |
+  // | [>] stop                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  template <typename WFty, typename AFty>
-  void stop(WFty wait, AFty after_stop) {
+  // | Stops the server and closes all active connections.                     |
+  // +-------------------------------------------------------------------------+
+  void stop() {
     std::lock_guard<std::mutex> lock(locked_mutex_);
     if (!locked_) return;
-    if constexpr (requires { transport_.quiesce(); }) {
-      transport_.quiesce();
+    if constexpr (requires { transport_->quiesce(); }) {
+      transport_->quiesce();
     } else {
-      transport_.stop();
+      transport_->stop();
     }
-    wait();
-    if constexpr (requires { transport_.quiesce(); }) {
-      transport_.stop();
+    if (on_stopping_) on_stopping_();
+    if constexpr (requires { transport_->quiesce(); }) {
+      transport_->stop();
     }
-    after_stop();
     locked_ = false;
+    if (on_stopped_) on_stopped_();
+  }
+
+ protected:
+  // +=========================================================================+
+  // | [>] set_on_starting                                       ( protected ) |
+  // +-------------------------------------------------------------------------+
+  void set_on_starting(std::function<void()> callback) {
+    on_starting_ = std::move(callback);
   }
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                            ( protected ) |
+  // | [>] set_on_start_failed                                   ( protected ) |
   // +-------------------------------------------------------------------------+
-  bool locked_{false};
-  std::mutex locked_mutex_;
+  void set_on_start_failed(std::function<void()> callback) {
+    on_start_failed_ = std::move(callback);
+  }
+  // +=========================================================================+
+  // | [>] set_on_stopping                                       ( protected ) |
+  // +-------------------------------------------------------------------------+
+  void set_on_stopping(std::function<void()> callback) {
+    on_stopping_ = std::move(callback);
+  }
+  // +=========================================================================+
+  // | [>] set_on_stopped                                        ( protected ) |
+  // +-------------------------------------------------------------------------+
+  void set_on_stopped(std::function<void()> callback) {
+    on_stopped_ = std::move(callback);
+  }
 
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  TRty transport_;
+  std::function<void()> on_starting_;
+  std::function<void()> on_start_failed_;
+  std::function<void()> on_stopping_;
+  std::function<void()> on_stopped_;
+  bool locked_{false};
+  std::mutex locked_mutex_;
+  std::function<void()> create_transport_;
+  std::optional<TRty> transport_;
 };
 }  // namespace martianlabs::doba
 

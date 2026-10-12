@@ -42,7 +42,7 @@
 #include "protocol/http/v11/body/writer.h"
 #include "protocol/http/v11/policies.h"
 #include "protocol/http/common/header_names.h"
-#include "protocol/serialization.h"
+#include "protocol/http/v11/results.h"
 #include "protocol/http/common/status_codes.h"
 #include "status_lines.h"
 
@@ -59,7 +59,7 @@ class response {
   // +=========================================================================+
   // | [>] TYPEs                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  using serialized_type = protocol::serialization_result;
+  using serialized_type = serialization_result;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
@@ -108,6 +108,13 @@ class response {
   }
   ~response() = default;
   // +=========================================================================+
+  // | [>] from                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  static response from(std::span<char> storage, std::size_t head_capacity,
+                       std::size_t body_capacity) {
+    return response(storage, head_capacity, body_capacity);
+  }
+  // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+
   response& operator=(const response&) = delete;
@@ -148,7 +155,7 @@ class response {
   // +-------------------------------------------------------------------------+
   // | Borrows head and body until on_send copies them; moves the source.      |
   // +-------------------------------------------------------------------------+
-  [[nodiscard]] protocol::serialization_result serialize() {
+  [[nodiscard]] serialization_result serialize() {
     if (!head_size_) throw std::logic_error("response has no status!");
     // +-----------------------------------------------------------------------+
     // | RFC 9110 S8.6/S15.3.5/S15.3.6/S15.4.5: 1xx, 204, 205 and 304          |
@@ -193,7 +200,7 @@ class response {
     if (sln_plus_hdr_len + crlf_bytes > head_.size()) {
       throw std::out_of_range("not enough space to serialize response!");
     }
-    protocol::serialization_result result;
+    serialization_result result;
     if (bdy_writer_.has_value()) {
       if (!must_omit_body) {
         // Finalizes the framing and transfers the accumulated bytes to the

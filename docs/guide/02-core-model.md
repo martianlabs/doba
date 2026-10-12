@@ -82,7 +82,7 @@ Here are the three calls as the concept checks them:
 { engine.on_bytes_received(buf, sze, capacity) } -> std::same_as<std::size_t>;
 ```
 
-The [send delegate](../../include/protocol/send_delegate.h) is that output
+The [send delegate](../../include/protocol/contracts.h) is that output
 callback. The engine gives it three things:
 
 - **Head and body:** two *std::string_view* chunks to send in that order.

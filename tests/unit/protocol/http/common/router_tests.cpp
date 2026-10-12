@@ -35,6 +35,7 @@
 #include <utility>
 
 #include "protocol/http/common/router.h"
+#include "protocol/http/v11/contracts.h"
 #include "common/task.h"
 #include "router_value_response.h"
 #include "test_helper.h"
@@ -57,6 +58,11 @@ struct request {
 using response = martianlabs::doba::tests::unit::router_value_response;
 using martianlabs::doba::protocol::http::router;
 using martianlabs::doba::common::task;
+
+static_assert(martianlabs::doba::protocol::http::v11::contracts::router<
+              router<request, response>, request, response>);
+static_assert(!martianlabs::doba::protocol::http::v11::contracts::router<
+              int, request, response>);
 
 struct suspend_once {
   std::coroutine_handle<>& next;

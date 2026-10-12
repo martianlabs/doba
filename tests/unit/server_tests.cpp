@@ -63,11 +63,14 @@ struct line_engine {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct observation {
+  int constructions{0};
   int starts{0};
   int quiesces{0};
   int stops{0};
   int engines{0};
   bool fail_start{false};
+  bool fail_construct{false};
+  std::string events;
   std::string output;
 };
 
@@ -81,7 +84,11 @@ struct memory_transport {
   using policies_type = observation*;
 
   memory_transport(policies_type state, FNty factory)
-      : state(state), factory(std::move(factory)) {}
+      : state(state), factory(std::move(factory)) {
+    state->constructions++;
+    state->events += 'c';
+    if (state->fail_construct) throw std::runtime_error("construction failed");
+  }
   void set_on_connection(std::function<void()> callback) {
     on_connection = std::move(callback);
   }
@@ -89,6 +96,7 @@ struct memory_transport {
     on_disconnection = std::move(callback);
   }
   void start() {
+    state->events += 't';
     if (state->fail_start) throw std::runtime_error("start failed");
     state->starts++;
     on_connection();
@@ -102,8 +110,12 @@ struct memory_transport {
     constexpr char input[] = "line\n";
     engine.on_bytes_received(input, sizeof(input) - 1, 64);
   }
-  void quiesce() { state->quiesces++; }
+  void quiesce() {
+    state->events += 'q';
+    state->quiesces++;
+  }
   void stop() {
+    state->events += 'x';
     state->stops++;
     on_disconnection();
   }
@@ -112,6 +124,20 @@ struct memory_transport {
   FNty factory;
   std::function<void()> on_connection;
   std::function<void()> on_disconnection;
+};
+
+using observed_factory = std::function<line_engine()>;
+using observed_transport = memory_transport<line_engine, observed_factory>;
+class observed_server
+    : public martianlabs::doba::server<line_engine, observed_transport> {
+ public:
+  explicit observed_server(observation* state)
+      : server(state, observed_factory([]() { return line_engine{}; })) {
+    this->set_on_starting([state]() { state->events += 'a'; });
+    this->set_on_start_failed([state]() { state->events += 'f'; });
+    this->set_on_stopping([state]() { state->events += 'd'; });
+    this->set_on_stopped([state]() { state->events += 'p'; });
+  }
 };
 }  // namespace
 
@@ -131,9 +157,11 @@ DOBA_TEST("server composes a non-HTTP engine") {
   static_assert(!std::is_move_constructible_v<server_type>);
   {
     server_type value(&observed, create_engine);
+    DOBA_EXPECT_EQUAL(observed.constructions, 0);
     value.start();
     value.start();
     DOBA_EXPECT_EQUAL(observed.starts, 1);
+    DOBA_EXPECT_EQUAL(observed.constructions, 1);
     DOBA_EXPECT_EQUAL(observed.engines, 1);
     DOBA_EXPECT_EQUAL(observed.output, "echo: line\n");
     value.stop();
@@ -142,6 +170,7 @@ DOBA_TEST("server composes a non-HTTP engine") {
     DOBA_EXPECT_EQUAL(observed.stops, 1);
     value.start();
     DOBA_EXPECT_EQUAL(observed.starts, 2);
+    DOBA_EXPECT_EQUAL(observed.constructions, 1);
   }
   DOBA_EXPECT_EQUAL(observed.quiesces, 2);
   DOBA_EXPECT_EQUAL(observed.stops, 2);
@@ -171,4 +200,73 @@ DOBA_TEST("server retries after transport startup failure") {
   DOBA_EXPECT_EQUAL(observed.starts, 1);
   value.stop();
   DOBA_EXPECT_EQUAL(observed.stops, 1);
+}
+
+// +===========================================================================+
+// | [>] server emits lifecycle events in order                 ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("server emits lifecycle events in order") {
+  observation observed;
+  observed.fail_start = true;
+  observed_server value(&observed);
+  bool failed = false;
+  try {
+    value.start();
+  } catch (const std::runtime_error&) {
+    failed = true;
+  }
+  DOBA_EXPECT(failed);
+  DOBA_EXPECT_EQUAL(observed.events, "actf");
+  observed.fail_start = false;
+  value.start();
+  value.start();
+  value.stop();
+  value.stop();
+  DOBA_EXPECT_EQUAL(observed.events, "actfatqdxp");
+}
+
+// +===========================================================================+
+// | [>] server reports deferred transport construction failure ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("server reports deferred transport construction failure") {
+  observation observed;
+  observed.fail_construct = true;
+  observed_server value(&observed);
+  bool failed = false;
+  try {
+    value.start();
+  } catch (const std::runtime_error&) {
+    failed = true;
+  }
+  DOBA_EXPECT(failed);
+  DOBA_EXPECT_EQUAL(observed.constructions, 1);
+  DOBA_EXPECT_EQUAL(observed.starts, 0);
+  DOBA_EXPECT_EQUAL(observed.events, "acf");
+  observed.fail_construct = false;
+  failed = false;
+  try {
+    value.start();
+  } catch (const std::runtime_error&) {
+    failed = true;
+  }
+  DOBA_EXPECT(failed);
+  DOBA_EXPECT_EQUAL(observed.constructions, 1);
+}
+
+// +===========================================================================+
+// | [>] server retains move-only engine factory                ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("server retains move-only engine factory") {
+  observation observed;
+  auto create_engine = [owner = std::make_unique<int>(1)]() {
+    return line_engine{};
+  };
+  using transport_type = memory_transport<line_engine,
+                                          decltype(create_engine)>;
+  martianlabs::doba::server<line_engine, transport_type> value(
+      &observed, std::move(create_engine));
+  DOBA_EXPECT_EQUAL(observed.constructions, 0);
+  value.start();
+  DOBA_EXPECT_EQUAL(observed.constructions, 1);
+  value.stop();
 }

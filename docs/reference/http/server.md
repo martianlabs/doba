@@ -38,7 +38,7 @@ template <typename RQty = protocol::http::v11::request,
           protocol::contracts::engine ENty =
               protocol::http::v11::engine<RQty, RSty, ROty>,
           template <typename, typename> class TRty = transport::server::tcp>
-  requires protocol::http::v11::contracts::server<ROty, ENty, TRty>
+  requires contracts::http_server<RQty, RSty, ROty, ENty, TRty>
 class http_server;
 
 template <typename RQty = protocol::http::v11::request,
@@ -55,9 +55,21 @@ class https_server;
 - **ENty.** Protocol engine type; defaults to *engine<RQty, RSty, ROty>*.
 - **TRty.** Transport template; defaults to TCP.
 
+The [HTTP server contract](../../../include/contracts.h) checks that the
+request, response, and router meet their HTTP/1.1 contracts and that the
+engine and transport can be composed.
+
 **http_server<>** selects doba's HTTP/1.1 types and TCP transport.
 **https_server<>** selects the same HTTP types and the TLS transport. Both
 accept custom request, response, and router types.
+Those types must satisfy the
+[HTTP/1.1 contracts](../../../include/protocol/http/v11/contracts.h)
+for request, response, and router.
+Requests and responses provide *from* factories; the router provides route
+registration, matching, and async lifetime methods. Each contract checks the
+public API of the corresponding doba type. These requirements also apply when
+you provide a custom engine.
+
 The [core model](../../guide/02-core-model.md) explains how the engine and
 transport meet; the [extending guide](../../guide/05-extending-doba.md)
 shows how to replace either side.
@@ -113,9 +125,10 @@ explains the two policy layers.
 
 [request-limits]: ../../../examples/http/v11/request_limits/README.md
 
-Invalid transport configuration, including TLS certificates, can make
-construction fail. An engine configuration error may surface later, when a
-connection creates its engine.
+The constructor creates the router but not the transport. Invalid transport
+configuration, including TLS certificates, can make the first *start* fail.
+An engine configuration error may surface later, when a connection creates
+its engine.
 
 <a name="lifecycle"></a>
 <h2>
@@ -141,10 +154,12 @@ void start();
 
 **Returns:** Nothing (*void*).
 
-Starts the date service and transport. Calling *start* again while the server
-is running has no effect. If transport startup throws, the date service is
-stopped and the exception reaches the caller. For TCP or TLS, this includes
-listener startup failures.
+Starts the date service, creates the transport on the first call, and starts
+it. Calling *start* again while the server is running has no effect. If
+transport construction or startup throws, the date service is stopped and the
+exception reaches the caller. For TCP or TLS, this includes listener startup
+failures. A transport construction failure cannot be retried on that server
+instance.
 
 <a name="stop"></a>
 <h3>
