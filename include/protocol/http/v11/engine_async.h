@@ -67,9 +67,9 @@ class engine_async {
   explicit engine_async(std::size_t max_pending_requests,
                         const std::function<void()>& on_async_started,
                         const std::function<void()>& on_async_finished)
-      : on_async_started_{on_async_started},
-        on_async_finished_{on_async_finished},
-        max_pending_requests_{max_pending_requests} {}
+      : max_pending_requests_{max_pending_requests},
+        on_async_started_{on_async_started},
+        on_async_finished_{on_async_finished} {}
   engine_async(const engine_async&) = delete;
   engine_async(engine_async&&) noexcept = delete;
   ~engine_async() = default;
