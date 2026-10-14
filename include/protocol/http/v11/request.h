@@ -26,7 +26,9 @@
 #define martianlabs_doba_protocol_http_v11_request_h
 
 #include <cstddef>
+#include <cstring>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -356,6 +358,12 @@ class request {
           std::optional<body::reader> body_reader) {
     method_ = method;
     abs_path_ = abs_path;
+    if (abs_path.find('%') != std::string_view::npos) {
+      abs_path_storage_ =
+          std::make_unique_for_overwrite<char[]>(abs_path.size());
+      std::memcpy(abs_path_storage_.get(), abs_path.data(), abs_path.size());
+      abs_path_ = std::string_view(abs_path_storage_.get(), abs_path.size());
+    }
     helpers::percent_decode_in_place(abs_path_);
     target_ = target_form;
     headers_ = std::move(headers);
@@ -374,6 +382,7 @@ class request {
   // +-------------------------------------------------------------------------+
   std::string_view method_;           // HTTP method (e.g., GET, POST, etc.)
   std::string_view abs_path_;         // absolute path from the request-target
+  std::unique_ptr<char[]> abs_path_storage_;
   target target_ = target::kUnknown;  // request-target form
   std::string_view host_;             // host from the Host header
   std::string_view host_port_;        // port from the Host header

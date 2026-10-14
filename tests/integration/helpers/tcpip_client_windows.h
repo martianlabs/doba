@@ -59,7 +59,7 @@ class tcpip_client {
   // | [>] find_available_port                                      ( public ) |
   // +-------------------------------------------------------------------------+
   uint16_t find_available_port() const {
-    socket_type socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    SOCKET socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (socket == invalid_socket()) return 0;
     sockaddr_in address{};
     address.sin_family = AF_INET;
@@ -326,9 +326,8 @@ class tcpip_client {
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  using socket_type = SOCKET;
-  static socket_type invalid_socket() { return INVALID_SOCKET; }
-  static void close_socket(socket_type socket) { ::closesocket(socket); }
+  static SOCKET invalid_socket() { return INVALID_SOCKET; }
+  static void close_socket(SOCKET socket) { ::closesocket(socket); }
   // +=========================================================================+
   // | [>] socket_error                                            ( private ) |
   // +-------------------------------------------------------------------------+
@@ -387,7 +386,7 @@ class tcpip_client {
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   [[maybe_unused]] network::detail::environment environment_;
-  socket_type socket_{invalid_socket()};
+  SOCKET socket_{invalid_socket()};
   int receive_buffer_size_ = 0;
   std::string_view operation_;
   std::string_view error_;

@@ -268,14 +268,15 @@ DOBA_TEST("IP address validators cover canonical forms") {
 // | [>] host validators classify every URI host alternative     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("host validators classify every URI host alternative") {
-  using host_type = helpers::host_type;
-  DOBA_EXPECT_EQUAL(helpers::check_uri_host(""), host_type::kRegName);
+  DOBA_EXPECT_EQUAL(helpers::check_uri_host(""), helpers::host_type::kRegName);
   DOBA_EXPECT_EQUAL(helpers::check_uri_host("example.com"),
-                    host_type::kRegName);
+                    helpers::host_type::kRegName);
   DOBA_EXPECT_EQUAL(helpers::check_uri_host("127.0.0.1"),
-                    host_type::kIpV4Address);
-  DOBA_EXPECT_EQUAL(helpers::check_uri_host("[::1]"), host_type::kIpLiteral);
-  DOBA_EXPECT_EQUAL(helpers::check_uri_host("bad host"), host_type::kUnknown);
+                    helpers::host_type::kIpV4Address);
+  DOBA_EXPECT_EQUAL(helpers::check_uri_host("[::1]"),
+                    helpers::host_type::kIpLiteral);
+  DOBA_EXPECT_EQUAL(helpers::check_uri_host("bad host"),
+                    helpers::host_type::kUnknown);
   constexpr std::string_view reg_names[] = {
       "", "example.com", "a-b_c~d", "a%20b", "!$&'()*+,;=",
   };
@@ -290,20 +291,20 @@ DOBA_TEST("host validators classify every URI host alternative") {
     std::string_view source;
     std::string_view host;
     std::string_view port;
-    host_type type;
+    helpers::host_type type;
   };
   constexpr test_case valid[] = {
-      {"", "", "", host_type::kRegName},
-      {"example.com", "example.com", "", host_type::kRegName},
-      {"example.com:80", "example.com", "80", host_type::kRegName},
-      {"127.0.0.1:0", "127.0.0.1", "0", host_type::kIpV4Address},
-      {"[::1]:443", "[::1]", "443", host_type::kIpLiteral},
-      {"host:", "host", "", host_type::kRegName},
+      {"", "", "", helpers::host_type::kRegName},
+      {"example.com", "example.com", "", helpers::host_type::kRegName},
+      {"example.com:80", "example.com", "80", helpers::host_type::kRegName},
+      {"127.0.0.1:0", "127.0.0.1", "0", helpers::host_type::kIpV4Address},
+      {"[::1]:443", "[::1]", "443", helpers::host_type::kIpLiteral},
+      {"host:", "host", "", helpers::host_type::kRegName},
   };
   for (const auto& test : valid) {
     std::string_view host;
     std::string_view port;
-    host_type type = host_type::kUnknown;
+    helpers::host_type type = helpers::host_type::kUnknown;
     DOBA_EXPECT(helpers::check_host_port(test.source, host, port, type));
     DOBA_EXPECT_EQUAL(host, test.host);
     DOBA_EXPECT_EQUAL(port, test.port);
@@ -633,17 +634,16 @@ DOBA_TEST("URI references cover relative absolute query and fragment") {
 // | [>] request target deserializers report precise consumption ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("request target deserializers report precise consumption") {
-  using host_type = helpers::host_type;
   std::string_view host;
   std::string_view port;
-  host_type type = host_type::kUnknown;
+  helpers::host_type type = helpers::host_type::kUnknown;
   std::size_t used = 99;
   DOBA_EXPECT_EQUAL(helpers::try_to_deserialize_as_authority_form(
                         "example.com:443 rest", host, port, type, used),
                     deserialization_status::kSucceeded);
   DOBA_EXPECT_EQUAL(host, "example.com");
   DOBA_EXPECT_EQUAL(port, "443");
-  DOBA_EXPECT_EQUAL(type, host_type::kRegName);
+  DOBA_EXPECT_EQUAL(type, helpers::host_type::kRegName);
   DOBA_EXPECT_EQUAL(used, 15);
   DOBA_EXPECT_EQUAL(
       helpers::try_to_deserialize_as_authority_form("", host, port, type, used),

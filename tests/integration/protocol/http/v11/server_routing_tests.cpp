@@ -662,20 +662,23 @@ DOBA_TEST(
 DOBA_TEST("HTTP/1.1 authenticates Basic and Bearer over persistent TCP") {
   namespace doba = martianlabs::doba;
   namespace auth = doba::protocol::http::auth;
-  using routes_type = doba::protocol::http::router<request, response>;
-  using engine_type = doba::protocol::http::v11::engine<request, response>;
-  using server_type = doba::http_server<request, response, routes_type,
-      engine_type, doba::transport::server::tcp, auth::basic, auth::bearer>;
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<int> calls{0};
-  server_type server({.ip = "127.0.0.1", .port = std::to_string(port)}, {},
-      std::tuple{auth::basic{"demo", [](auto user, auto password) {
-        return user == "alice" && password == "secret";
-      }}, auth::bearer{"demo", [](auto token) {
-        return token == "demo-token";
-      }}});
+  doba::http_server<request, response,
+                    doba::protocol::http::router<request, response>,
+                    doba::protocol::http::v11::engine<request, response>,
+                    doba::transport::server::tcp, auth::basic, auth::bearer>
+      server({.ip = "127.0.0.1", .port = std::to_string(port)}, {},
+             std::tuple{auth::basic{"demo",
+                                    [](auto user, auto password) {
+                                      return user == "alice" &&
+                                             password == "secret";
+                                    }},
+                        auth::bearer{"demo", [](auto token) {
+                                       return token == "demo-token";
+                                     }}});
   server.add_route<auth::basic>("POST", "/basic",
       [&](const request&, response& res) {
         calls++;
@@ -735,16 +738,16 @@ DOBA_TEST("HTTP/1.1 authenticates Basic and Bearer over persistent TCP") {
 DOBA_TEST("HTTP/1.1 orders auth rejection behind suspended TCP response") {
   namespace doba = martianlabs::doba;
   namespace auth = doba::protocol::http::auth;
-  using routes_type = doba::protocol::http::router<request, response>;
-  using engine_type = doba::protocol::http::v11::engine<request, response>;
-  using server_type = doba::http_server<request, response, routes_type,
-      engine_type, doba::transport::server::tcp, auth::bearer>;
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   std::promise<std::coroutine_handle<>> pending;
   auto suspended = pending.get_future();
-  server_type server({.ip = "127.0.0.1", .port = std::to_string(port)}, {},
-      std::tuple{auth::bearer{"demo", [](auto) { return false; }}});
+  doba::http_server<request, response,
+                    doba::protocol::http::router<request, response>,
+                    doba::protocol::http::v11::engine<request, response>,
+                    doba::transport::server::tcp, auth::bearer>
+      server({.ip = "127.0.0.1", .port = std::to_string(port)}, {},
+             std::tuple{auth::bearer{"demo", [](auto) { return false; }}});
   server.add_route("GET", "/slow", [&](const request&, response& res)
                        -> task<void> {
     co_await pause_awaiter{pending};
@@ -775,20 +778,20 @@ DOBA_TEST("HTTP/1.1 orders auth rejection behind suspended TCP response") {
 DOBA_TEST("HTTP/1.1 shares a Bearer provider across concurrent connections") {
   namespace doba = martianlabs::doba;
   namespace auth = doba::protocol::http::auth;
-  using routes_type = doba::protocol::http::router<request, response>;
-  using engine_type = doba::protocol::http::v11::engine<request, response>;
-  using server_type = doba::http_server<request, response, routes_type,
-      engine_type, doba::transport::server::tcp, auth::bearer>;
   tcpip_client probe;
   const uint16_t port = probe.find_available_port();
   std::atomic<int> checks{0};
   std::atomic<int> received{0};
-  server_type server({.worker_count = 2, .ip = "127.0.0.1",
-                      .port = std::to_string(port)}, {},
-      std::tuple{auth::bearer{"demo", [&](auto token) {
-        checks++;
-        return token == "demo-token";
-      }}});
+  doba::http_server<request, response,
+                    doba::protocol::http::router<request, response>,
+                    doba::protocol::http::v11::engine<request, response>,
+                    doba::transport::server::tcp, auth::bearer>
+      server(
+          {.worker_count = 2, .ip = "127.0.0.1", .port = std::to_string(port)},
+          {}, std::tuple{auth::bearer{"demo", [&](auto token) {
+                                        checks++;
+                                        return token == "demo-token";
+                                      }}});
   server.add_route<auth::bearer>("GET", "/",
       [](const request&, response& res) { text_response(res, "accepted"); });
   server.start();

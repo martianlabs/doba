@@ -35,10 +35,6 @@ using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 namespace doba = martianlabs::doba;
 namespace auth = doba::protocol::http::auth;
-using routes_type = doba::protocol::http::router<request, response>;
-using engine_type = engine<request, response>;
-using server_type = doba::http_server<request, response, routes_type,
-    engine_type, doba::transport::server::tcp, auth::basic>;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -50,8 +46,11 @@ int main() {
                                  std::string_view password) {
     return user == "alice" && password == "secret";
   });
-  server_type server({.ip = "127.0.0.1", .port = "8080"}, {},
-                     std::tuple{std::move(provider)});
+  doba::http_server<
+      request, response, doba::protocol::http::router<request, response>,
+      engine<request, response>, doba::transport::server::tcp, auth::basic>
+      server({.ip = "127.0.0.1", .port = "8080"}, {},
+             std::tuple{std::move(provider)});
   server.add_route("GET", "/health", [](const request&, response& res) {
     res.ok_200().set_body("ok");
   });

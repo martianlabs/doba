@@ -42,6 +42,7 @@
 #include "protocol/http/common/router.h"
 
 namespace {
+using martianlabs::doba::protocol::http::router;
 using martianlabs::doba::tests::file_directory;
 namespace fs = std::filesystem;
 using martianlabs::doba::common::filesystem_file;
@@ -54,8 +55,6 @@ namespace {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 using namespace martianlabs::doba::protocol::http::v11;
-using file_router =
-    martianlabs::doba::protocol::http::router<request, response>;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -66,8 +65,9 @@ using file_router =
 // | and that the callback is called.                                          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-response file_request(file_router& routes, std::string_view method,
-                      std::string_view path, std::string_view headers = {}) {
+response file_request(router<request, response>& routes,
+                      std::string_view method, std::string_view path,
+                      std::string_view headers = {}) {
   std::string wire = std::string(method) + " " + std::string(path) +
                      " HTTP/1.1\r\nHost: example.com\r\n" +
                      std::string(headers) + "\r\n";
@@ -131,7 +131,7 @@ DOBA_TEST("static file server serves types binary empty files and HEAD") {
   directory.write("hello.TXT", "hello");
   directory.write("data.unknown", std::string_view("a\0b", 3));
   directory.write("empty", "");
-  file_router routes;
+  router<request, response> routes;
   routes.add_controller<static_file_server>("/assets/", directory.path());
   auto text = file_request(routes, "GET", "/assets/hello.TXT?version=1");
   DOBA_EXPECT_EQUAL(text.get_header("Content-Type").second, "text/plain");
@@ -172,7 +172,7 @@ DOBA_TEST("static file server rejects invalid prefixes roots and directories") {
     threw = true;
   }
   DOBA_EXPECT(threw);
-  file_router routes;
+  router<request, response> routes;
   routes.add_controller<static_file_server>("/assets", directory.path());
   for (std::string_view path :
        {"/assets/missing", "/assets/sub", "/assets/sub/", "/assets/", "/assets",
@@ -191,7 +191,7 @@ DOBA_TEST("static file server uses the already decoded request path") {
   directory.write("a b.txt", "space");
   directory.write("%2e%2e", "literal");
   directory.write("sub/file", "sub");
-  file_router routes;
+  router<request, response> routes;
   routes.add_controller<static_file_server>("/", directory.path());
   auto space = file_request(routes, "GET", "/a%20b.txt");
   DOBA_EXPECT_EQUAL(file_body(space), "space");
@@ -215,7 +215,7 @@ DOBA_TEST("static file server never escapes its root") {
   fs::create_directory(outer.path() / "root");
   fs::create_directory(outer.path() / "root" / "sub");
   outer.write("root/sub/file", "inside");
-  file_router routes;
+  router<request, response> routes;
   routes.add_controller<static_file_server>("/files/", outer.path() / "root");
   std::vector<std::string> vectors{"/files/../secret",
                                    "/files/sub/../../secret",
@@ -273,7 +273,7 @@ DOBA_TEST("static file server never escapes its root") {
 DOBA_TEST("static file server opens a fresh source without preloading") {
   file_directory directory;
   directory.write("file", "old");
-  file_router routes;
+  router<request, response> routes;
   routes.add_controller<static_file_server>("/", directory.path());
   auto first = file_request(routes, "GET", "/file");
   directory.write("file", "new");
@@ -289,7 +289,7 @@ DOBA_TEST("static file server opens a fresh source without preloading") {
 DOBA_TEST("static file server evaluates representation conditions") {
   file_directory directory;
   directory.write("file", "data");
-  file_router routes;
+  router<request, response> routes;
   routes.add_controller<static_file_server>("/", directory.path());
   struct condition_case {
     std::string_view fields;

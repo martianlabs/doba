@@ -108,15 +108,14 @@ class native_peer {
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  using socket_type = int;
-  static socket_type invalid_socket() { return -1; }
-  static void close_socket(socket_type socket) { ::close(socket); }
+  static int invalid_socket() { return -1; }
+  static void close_socket(int socket) { ::close(socket); }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   [[maybe_unused]] martianlabs::doba::network::detail::environment environment_;
-  socket_type listener_{invalid_socket()};
-  socket_type peer_{invalid_socket()};
+  int listener_{invalid_socket()};
+  int peer_{invalid_socket()};
   uint16_t port_ = 0;
 };
 }  // namespace

@@ -127,13 +127,14 @@ struct memory_transport {
   std::function<void()> on_disconnection;
 };
 
-using observed_factory = std::function<line_engine()>;
-using observed_transport = memory_transport<line_engine, observed_factory>;
 class observed_server
-    : public martianlabs::doba::server<line_engine, observed_transport> {
+    : public martianlabs::doba::server<
+          line_engine,
+          memory_transport<line_engine, std::function<line_engine()>>> {
  public:
   explicit observed_server(observation* state)
-      : server(state, observed_factory([]() { return line_engine{}; })) {
+      : server(state,
+               std::function<line_engine()>([]() { return line_engine{}; })) {
     this->set_on_starting([state]() { state->events += 'a'; });
     this->set_on_started([state]() {
       state->events += 's';
@@ -157,13 +158,16 @@ DOBA_TEST("server composes a non-HTTP engine") {
     observed.engines++;
     return line_engine{};
   };
-  using transport_type = memory_transport<line_engine,
-                                          decltype(create_engine)>;
-  using server_type = martianlabs::doba::server<line_engine, transport_type>;
-  static_assert(!std::is_copy_constructible_v<server_type>);
-  static_assert(!std::is_move_constructible_v<server_type>);
+  static_assert(!std::is_copy_constructible_v<martianlabs::doba::server<
+                    line_engine,
+                    memory_transport<line_engine, decltype(create_engine)>>>);
+  static_assert(!std::is_move_constructible_v<martianlabs::doba::server<
+                    line_engine,
+                    memory_transport<line_engine, decltype(create_engine)>>>);
   {
-    server_type value(&observed, create_engine);
+    martianlabs::doba::server<
+        line_engine, memory_transport<line_engine, decltype(create_engine)>>
+        value(&observed, create_engine);
     DOBA_EXPECT_EQUAL(observed.constructions, 0);
     value.start();
     value.start();
@@ -190,10 +194,9 @@ DOBA_TEST("server retries after transport startup failure") {
   observation observed;
   observed.fail_start = true;
   auto create_engine = []() { return line_engine{}; };
-  using transport_type = memory_transport<line_engine,
-                                          decltype(create_engine)>;
-  martianlabs::doba::server<line_engine, transport_type> value(
-      &observed, create_engine);
+  martianlabs::doba::server<
+      line_engine, memory_transport<line_engine, decltype(create_engine)>>
+      value(&observed, create_engine);
   bool failed = false;
   try {
     value.start();
@@ -292,10 +295,9 @@ DOBA_TEST("server retains move-only engine factory") {
   auto create_engine = [owner = std::make_unique<int>(1)]() {
     return line_engine{};
   };
-  using transport_type = memory_transport<line_engine,
-                                          decltype(create_engine)>;
-  martianlabs::doba::server<line_engine, transport_type> value(
-      &observed, std::move(create_engine));
+  martianlabs::doba::server<
+      line_engine, memory_transport<line_engine, decltype(create_engine)>>
+      value(&observed, std::move(create_engine));
   DOBA_EXPECT_EQUAL(observed.constructions, 0);
   value.start();
   DOBA_EXPECT_EQUAL(observed.constructions, 1);

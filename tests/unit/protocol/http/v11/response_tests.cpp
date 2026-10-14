@@ -446,6 +446,25 @@ DOBA_TEST("small bodies serialize inline including binary bytes") {
 }
 
 // +===========================================================================+
+// | [>] string view bodies copy caller storage                  ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("string view bodies copy caller storage") {
+  for (std::size_t size :
+       {std::size_t{3}, max_response_body_size_in_memory + 1}) {
+    std::string bytes(size, 'a');
+    std::array<char, max_response_size_in_memory> storage{};
+    response value(storage);
+    value.ok_200().set_header("Date", "fixed").set_body(
+        std::string_view(bytes));
+    bytes.assign(size, 'b');
+    auto serialized = value.serialize();
+    std::string actual(serialized.body);
+    if (serialized.source) actual += read_source(*serialized.source);
+    DOBA_EXPECT_EQUAL(actual, std::string(size, 'a'));
+  }
+}
+
+// +===========================================================================+
 // | [>] request reader echoes into inline response body         ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("request reader echoes into inline response body") {
@@ -777,8 +796,7 @@ DOBA_TEST("clearing bodies removes explicit framing") {
 // | [>] clearing bodies preserves status specific framing       ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("clearing bodies preserves status specific framing") {
-  using setter = response& (response::*)();
-  constexpr setter cases[] = {
+  constexpr response& (response::* cases[])() = {
       &response::continue_100,     &response::switching_protocols_101,
       &response::no_content_204,   &response::reset_content_205,
       &response::not_modified_304,
@@ -848,9 +866,8 @@ DOBA_TEST("suppression preserves metadata and permits replacement") {
 // | [>] every status method emits its registered status line    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("every status method emits its registered status line") {
-  using setter = response& (response::*)();
   struct test_case {
-    setter set;
+    response& (response::*set)();
     std::string_view line;
     bool content_length;
   };
@@ -948,8 +965,7 @@ DOBA_TEST("every status method emits its registered status line") {
 // | [>] bodyless statuses never serialize response bodies       ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("informational 204 205 and 304 responses never serialize bodies") {
-  using setter = response& (response::*)();
-  constexpr setter cases[] = {
+  constexpr response& (response::* cases[])() = {
       &response::continue_100,     &response::switching_protocols_101,
       &response::no_content_204,   &response::reset_content_205,
       &response::not_modified_304,

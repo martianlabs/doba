@@ -57,13 +57,12 @@ namespace {
 // /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::protocol::deserialization_status;
 using martianlabs::doba::protocol::http::target;
+using martianlabs::doba::protocol::http::v11::decoder;
 using martianlabs::doba::protocol::http::v11::policies;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::tests::unit::decoder_target_case;
 using martianlabs::doba::tests::unit::wire_prefix;
-using decoder_type =
-    martianlabs::doba::protocol::http::v11::decoder<request, response>;
 namespace contracts = martianlabs::doba::protocol::http::v11::contracts;
 
 static_assert(contracts::request<request>);
@@ -122,7 +121,7 @@ struct decoder_input {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  decoder_type decoder;
+  decoder<request, response> decoder;
   std::function<void(const request&)> on_request;
   bool request_seen = false;
   std::array<char, receive_capacity> buffer{};
@@ -253,7 +252,7 @@ void check_header(std::string_view name, std::string_view field_value,
 DOBA_TEST("detached decoder storage keeps an asynchronous request valid") {
   decoder_input value;
   const std::string first =
-      "POST /first?token=old HTTP/1.1\r\nHost: localhost\r\n"
+      "POST /fi%72st?token=old HTTP/1.1\r\nHost: localhost\r\n"
       "X-Id: retained\r\nContent-Length: 4\r\n"
       "\r\ndata";
   DOBA_EXPECT_EQUAL(value.append(first), first.size());
@@ -309,10 +308,10 @@ DOBA_TEST("detached request keeps a spilled body readable") {
 // | [>] decoder is neither copyable nor movable                 ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder is neither copyable nor movable") {
-  static_assert(!std::is_copy_constructible_v<decoder_type>);
-  static_assert(!std::is_copy_assignable_v<decoder_type>);
-  static_assert(!std::is_move_constructible_v<decoder_type>);
-  static_assert(!std::is_move_assignable_v<decoder_type>);
+  static_assert(!std::is_copy_constructible_v<decoder<request, response>>);
+  static_assert(!std::is_copy_assignable_v<decoder<request, response>>);
+  static_assert(!std::is_move_constructible_v<decoder<request, response>>);
+  static_assert(!std::is_move_assignable_v<decoder<request, response>>);
   DOBA_EXPECT(true);
 }
 
@@ -320,7 +319,7 @@ DOBA_TEST("decoder is neither copyable nor movable") {
 // | [>] empty input and full receive buffer                     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("empty input needs more bytes and full incomplete cores fail") {
-  decoder_type value;
+  decoder<request, response> value;
   std::size_t consumed = 42;
   const std::string source(receive_capacity, 'x');
   DOBA_EXPECT_EQUAL(value
@@ -348,7 +347,7 @@ DOBA_TEST("request head may fill default receive buffer") {
       std::string(prefix) +
       std::string(capacity - prefix.size() - suffix.size(), 'x') +
       std::string(suffix);
-  decoder_type value;
+  decoder<request, response> value;
   std::size_t consumed = 0;
   const auto result =
       value.deserialize(head.data(), head.size(), capacity, consumed);
@@ -365,7 +364,7 @@ DOBA_TEST("incomplete head fails at default receive capacity") {
   constexpr std::string_view prefix = "GET / HTTP/1.1\r\nHost: a\r\nX: ";
   const std::string head =
       std::string(prefix) + std::string(capacity - prefix.size(), 'x');
-  decoder_type value;
+  decoder<request, response> value;
   std::size_t consumed = 0;
   const auto result =
       value.deserialize(head.data(), head.size(), capacity, consumed);
@@ -398,7 +397,7 @@ DOBA_TEST("request head size is bounded by receive capacity") {
           std::string(size - test.prefix.size() - test.tail.size(), test.fill) +
           std::string(test.tail);
       DOBA_EXPECT_EQUAL(head.size(), size);
-      decoder_type value;
+      decoder<request, response> value;
       std::size_t consumed = 0;
       const std::size_t received = std::min(size, capacity);
       auto result =
@@ -435,7 +434,7 @@ DOBA_TEST("header field count is bounded only by head size") {
   head += "\r\n";
   DOBA_EXPECT(head.size() <= capacity);
   DOBA_EXPECT(fields > 100);
-  decoder_type value;
+  decoder<request, response> value;
   std::size_t consumed = 0;
   const auto result =
       value.deserialize(head.data(), head.size(), capacity, consumed);
@@ -453,7 +452,7 @@ DOBA_TEST("request body spans default receive buffers") {
   const std::string body(capacity + 1, 'x');
   const std::size_t first_body_size = capacity - head.size();
   const std::string first = head + body.substr(0, first_body_size);
-  decoder_type value;
+  decoder<request, response> value;
   std::size_t consumed = 0;
   auto result =
       value.deserialize(first.data(), first.size(), capacity, consumed);
@@ -3138,7 +3137,7 @@ DOBA_TEST("decoder returns responses for rejection reasons") {
        "501"},
       {"GET / HTTP/1.2\r\nHost: a\r\n\r\n", "505"}};
   for (const auto& [input, status] : cases) {
-    decoder_type value(configuration);
+    decoder<request, response> value(configuration);
     std::size_t consumed = 0;
     auto result =
         value.deserialize(input.data(), input.size(), 4096, consumed);
@@ -3485,7 +3484,7 @@ DOBA_TEST("decoder rejects zero head capacities") {
     }
     bool rejected = false;
     try {
-      decoder_type value(configuration);
+      decoder<request, response> value(configuration);
     } catch (const std::invalid_argument&) {
       rejected = true;
     }

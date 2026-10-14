@@ -242,6 +242,31 @@ DOBA_TEST("engine orders asynchronous and synchronous responses") {
   DOBA_EXPECT(current.wire.substr(second).ends_with("\r\n\r\nfast"));
 }
 
+DOBA_TEST("engine retains a borrowed request body across suspension") {
+  router<request, response> routes;
+  std::coroutine_handle<> next;
+  routes.add("POST", "/slow", [&next](const request& req, response& res)
+                 -> task<void> {
+    res.ok_200().set_header("Date", "fixed").set_body(req.get_body_reader());
+    co_await suspend_once{next};
+  });
+  routes.add("GET", "/fast", [](const request&, response& res) {
+    make_response(res, "fast");
+  });
+  connection current(routes);
+  const std::string slow =
+      "POST /slow HTTP/1.1\r\nHost: localhost\r\nContent-Length: 4\r\n"
+      "\r\ndata";
+  const std::string fast = "GET /fast HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  DOBA_EXPECT_EQUAL(current.receive(slow + fast), slow.size() + fast.size());
+  DOBA_EXPECT(current.wire.empty());
+  next.resume();
+  const auto second = current.wire.find("HTTP/1.1", 1);
+  DOBA_EXPECT(second != std::string::npos);
+  DOBA_EXPECT(current.wire.substr(0, second).ends_with("\r\n\r\ndata"));
+  DOBA_EXPECT(current.wire.substr(second).ends_with("\r\n\r\nfast"));
+}
+
 DOBA_TEST("engine returns to synchronous delivery after asynchronous work") {
   router<request, response> routes;
   std::coroutine_handle<> pending;

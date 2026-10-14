@@ -95,10 +95,9 @@ struct custom_protocol {
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   auto create_engine = []() { return custom_protocol{}; };
-  using transport_type = transport::tcp<custom_protocol,
-                                        decltype(create_engine)>;
-  martianlabs::doba::server<custom_protocol, transport_type> server(
-      {.ip = "0.0.0.0", .port = "8080"}, create_engine);
+  martianlabs::doba::server<
+      custom_protocol, transport::tcp<custom_protocol, decltype(create_engine)>>
+      server({.ip = "0.0.0.0", .port = "8080"}, create_engine);
   server.start();
   martianlabs::doba::common::signaler::wait();
   server.stop();

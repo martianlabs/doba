@@ -24,10 +24,12 @@
 
 #include <array>
 #include <cstddef>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 #include "protocol/http/v11/decoder.h"
 #include "protocol/http/v11/request.h"
@@ -268,4 +270,41 @@ DOBA_TEST("duplicate cookies retain the first exact name") {
         DOBA_EXPECT_EQUAL(cookies.size(), 3);
         DOBA_EXPECT_EQUAL(cookies[2].second, "last");
       });
+}
+
+// +===========================================================================+
+// | [>] decoded paths do not change caller storage             ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("decoded paths do not change caller storage") {
+  std::string path = "/a%20b";
+  auto value = request::from("GET", path, target::kOriginForm, {}, {}, {},
+                             {}, {}, {}, {}, {}, false, {});
+  DOBA_EXPECT_EQUAL(value.get_absolute_path(), "/a b");
+  DOBA_EXPECT_EQUAL(path, "/a%20b");
+}
+
+// +===========================================================================+
+// | [>] encoded literal path survives request moves            ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("encoded literal path survives request moves") {
+  auto value = request::from("GET", "/a%252F%2Fb", target::kOriginForm, {},
+                             {}, {}, {}, {}, {}, {}, {}, false, {});
+  auto moved = std::move(value);
+  auto assigned = request::from("GET", "/", target::kOriginForm, {}, {},
+                                {}, {}, {}, {}, {}, {}, false, {});
+  assigned = std::move(moved);
+  DOBA_EXPECT_EQUAL(assigned.get_absolute_path(), "/a%2F/b");
+}
+
+// +===========================================================================+
+// | [>] decoded path outlives caller storage                   ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("decoded path outlives caller storage") {
+  std::optional<request> retained;
+  {
+    std::string path = "/a%20b";
+    retained.emplace(request::from("GET", path, target::kOriginForm, {},
+                                   {}, {}, {}, {}, {}, {}, {}, false, {}));
+  }
+  DOBA_EXPECT_EQUAL(retained->get_absolute_path(), "/a b");
 }
