@@ -28,9 +28,23 @@
 #include <concepts>
 #include <cstddef>
 #include <functional>
+#include <memory>
+#include <string_view>
 #include <utility>
 
-#include "protocol/send_delegate.h"
+#include "common/reader.h"
+
+namespace martianlabs::doba::protocol {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] send_delegate                                              ( public ) |
+// +---------------------------------------------------------------------------+
+// | A function that takes the head and body data, plus an optional source.    |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+using send_delegate = std::function<void(std::string_view, std::string_view,
+                                         std::unique_ptr<common::reader>)>;
+}  // namespace martianlabs::doba::protocol
 
 namespace martianlabs::doba::protocol::contracts {
 // /////////////////////////////////////////////////////////////////////////////
@@ -54,6 +68,20 @@ concept engine = requires(ENty& engine, const char* buf, std::size_t sze,
   { engine.set_on_close(std::move(close)) } -> std::same_as<void>;
   { engine.on_bytes_received(buf, sze, capacity) } -> std::same_as<std::size_t>;
 };
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] completion_engine                                          (concept) |
+// +---------------------------------------------------------------------------+
+// | A stopped engine reports when all work accepted by it has completed.     |
+// | A false result means the callback will be called exactly once later.     |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename ENty>
+concept completion_engine =
+    engine<ENty> && requires(ENty& engine, std::function<void()> completed) {
+      { engine.stop(std::move(completed)) } -> std::same_as<bool>;
+    };
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

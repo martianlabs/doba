@@ -175,13 +175,13 @@ and a **1 Gbps public connection**, upgradable to **25 Gbps**.
 
 ```cpp
 #include "common/signaler.h"
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http::v11;
 
 int main() {
-  server srv({.ip = "0.0.0.0", .port = "8080"});
+  martianlabs::doba::http_server<> srv({.ip = "0.0.0.0", .port = "8080"});
   srv.add_route(
       "GET", "/hello",
       [](const request&, response& res) {

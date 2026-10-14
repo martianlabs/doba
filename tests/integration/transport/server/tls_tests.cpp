@@ -42,7 +42,7 @@
 #include "platform.h"
 #include <openssl/ssl.h>
 
-#include "protocol/send_delegate.h"
+#include "protocol/contracts.h"
 #include "tcpip_client.h"
 #include "tls_client.h"
 #include "tls_server_policies.h"

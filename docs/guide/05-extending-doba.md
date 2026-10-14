@@ -88,18 +88,20 @@ value matters as much as the parser.
   </picture>
 </h2>
 
-TCP needs a fresh engine for each connection, so the example gives it a
-factory. No HTTP server is involved:
+TCP needs a fresh engine for each connection, so the example gives the
+[core server](../reference/server.md) a factory and a concrete TCP transport.
+No HTTP server is involved:
 
 ```cpp
 auto create_engine = []() { return custom_protocol{}; };
-transport::tcp<custom_protocol, decltype(create_engine)> server(
+using transport_type = transport::tcp<custom_protocol,
+                                      decltype(create_engine)>;
+martianlabs::doba::server<custom_protocol, transport_type> server(
     {.ip = "0.0.0.0", .port = "8080"}, create_engine);
 ```
 
-The example registers connection callbacks, starts TCP, waits for a stop
-signal, and then stops it. On Linux with a single-configuration generator,
-run:
+The example starts the server, waits for a stop signal, and then stops it.
+On Linux with a single-configuration generator, run:
 
 ```sh
 ./out/build/guide/examples/protocol/custom_protocol/custom_protocol
@@ -165,8 +167,8 @@ transport policy:
 
 ```cpp
 std::string output;
-http::server<http::request, http::response, routes_type, engine_type,
-             custom_transport>
+martianlabs::doba::http_server<http::request, http::response, routes_type,
+                               engine_type, custom_transport>
     server(&output);
 ```
 

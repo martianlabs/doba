@@ -22,8 +22,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <chrono>
-#include <future>
+#include <concepts>
 #include <memory>
 #include <exception>
 #include <coroutine>
@@ -31,10 +30,11 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <thread>
 #include <utility>
 
+#include "protocol/http/common/router_match_result.h"
 #include "protocol/http/common/router.h"
+#include "protocol/http/v11/contracts.h"
 #include "common/task.h"
 #include "router_value_response.h"
 #include "test_helper.h"
@@ -56,7 +56,39 @@ struct request {
 
 using response = martianlabs::doba::tests::unit::router_value_response;
 using martianlabs::doba::protocol::http::router;
+using martianlabs::doba::protocol::http::router_match_result;
 using martianlabs::doba::common::task;
+
+static_assert(std::same_as<
+              decltype(router<request, response>{}.match("GET", "/")),
+              router_match_result<request, response>>);
+static_assert(martianlabs::doba::protocol::http::v11::contracts::router<
+              router<request, response>, request, response>);
+static_assert(!martianlabs::doba::protocol::http::v11::contracts::router<
+              int, request, response>);
+
+struct route_only_router {
+  template <typename Hty>
+  void add(std::string_view method, std::string_view path, Hty handler) {
+    routes_.add(method, path, std::move(handler));
+  }
+  template <typename CTty, typename... Args>
+  void add_controller(Args&&... args) {
+    routes_.template add_controller<CTty>(std::forward<Args>(args)...);
+  }
+  router_match_result<request, response> match(
+      std::string_view method, std::string_view path) const {
+    return routes_.match(method, path);
+  }
+  std::string allowed_methods(std::string_view path) const {
+    return routes_.allowed_methods(path);
+  }
+
+ private:
+  router<request, response> routes_;
+};
+static_assert(martianlabs::doba::protocol::http::v11::contracts::router<
+              route_only_router, request, response>);
 
 struct suspend_once {
   std::coroutine_handle<>& next;
@@ -85,7 +117,6 @@ DOBA_TEST("router selects asynchronous route forms") {
     res.value = "static";
     co_return;
   });
-  DOBA_EXPECT(value.has_async());
   request req;
   response res;
   auto match = value.match("GET", "/items/42");
@@ -105,24 +136,6 @@ DOBA_TEST("router selects asynchronous route forms") {
   auto wildcard = (*match.async_handler)(req, res);
   wildcard.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
   DOBA_EXPECT_EQUAL(res.value, "wildcard");
-}
-
-DOBA_TEST("router waits until every asynchronous request completes") {
-  router<request, response> value;
-  value.begin_async();
-  value.begin_async();
-  std::promise<void> finished;
-  auto waiting = finished.get_future();
-  std::jthread waiter([&]() {
-    value.wait_async();
-    finished.set_value();
-  });
-  value.end_async();
-  DOBA_EXPECT(waiting.wait_for(std::chrono::milliseconds(20)) ==
-              std::future_status::timeout);
-  value.end_async();
-  DOBA_EXPECT(waiting.wait_for(std::chrono::seconds(2)) ==
-              std::future_status::ready);
 }
 
 DOBA_TEST("asynchronous route parameters survive suspension") {
@@ -692,7 +705,6 @@ DOBA_TEST("controllers share one instance per registration") {
 DOBA_TEST("controller registers an asynchronous parametrized route") {
   router<request, response> value;
   value.add_controller<async_controller>();
-  DOBA_EXPECT(value.has_async());
   auto match = value.match("GET", "/async/7");
   DOBA_EXPECT(match.async_parametrized_handler != nullptr);
   request req;

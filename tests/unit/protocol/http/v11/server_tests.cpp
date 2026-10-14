@@ -22,14 +22,16 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <chrono>
 #include <functional>
+#include <future>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
 
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 #include "test_helper.h"
 
 namespace {
@@ -75,6 +77,7 @@ struct memory_transport {
   // | [>] start                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   void start() {
+    if (on_start) on_start();
     if (fail) throw std::runtime_error("start failed");
     connection.reset(new ENty(factory()));
     connection->set_on_send([this](std::string_view head, std::string_view body,
@@ -106,6 +109,7 @@ struct memory_transport {
   std::unique_ptr<ENty> connection;
   std::string bytes;
   bool closed{false};
+  static inline std::function<void()> on_start;
   static inline memory_transport* instance = nullptr;
 };
 
@@ -114,8 +118,8 @@ struct memory_transport {
 // | [>] usings                                                     ( public ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-using test_server = http::server<http::request, http::response, routes_type,
-                                 engine_type, memory_transport>;
+using test_server = martianlabs::doba::http_server<
+    http::request, http::response, routes_type, engine_type, memory_transport>;
 using test_transport =
     memory_transport<engine_type,
                      http::engine_factory<engine_type, routes_type>>;
@@ -172,6 +176,20 @@ DOBA_TEST("server is neither copyable nor movable") {
   static_assert(!std::is_copy_assignable_v<test_server>);
   static_assert(!std::is_move_assignable_v<test_server>);
   DOBA_EXPECT(true);
+}
+
+// +===========================================================================+
+// | [>] HTTP server builds transport after route registration  ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("HTTP server builds transport after route registration") {
+  test_server value;
+  DOBA_EXPECT_EQUAL(test_transport::instance, nullptr);
+  value.add_route("GET", "/", [](const http::request&, http::response& res) {
+    res.ok_200();
+  });
+  value.start();
+  DOBA_EXPECT(test_transport::instance != nullptr);
+  DOBA_EXPECT(send_request().starts_with("HTTP/1.1 200 "));
 }
 
 // +===========================================================================+
@@ -279,4 +297,58 @@ DOBA_TEST("server retains controllers and rejects live registration") {
   value.start();
   send_request();
   DOBA_EXPECT_EQUAL(calls, 2);
+}
+
+// +===========================================================================+
+// | [>] server rejects route registration during startup       ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("server rejects route registration during startup") {
+  test_server value;
+  std::promise<void> entered;
+  std::promise<void> resume;
+  auto entered_signal = entered.get_future();
+  auto resume_signal = resume.get_future().share();
+  test_transport::on_start = [&]() {
+    entered.set_value();
+    resume_signal.wait();
+  };
+  auto starter = std::async(std::launch::async, [&]() { value.start(); });
+  entered_signal.wait();
+  auto registration = std::async(std::launch::async, [&]() {
+    try {
+      value.add_route("GET", "/late",
+                      [](const http::request&, http::response& res) {
+                        res.ok_200();
+                      });
+    } catch (const std::runtime_error& error) {
+      return std::string_view(error.what()) ==
+             "Cannot add route when the server is running";
+    }
+    return false;
+  });
+  const bool rejected_during_start =
+      registration.wait_for(std::chrono::seconds(3)) ==
+      std::future_status::ready;
+  resume.set_value();
+  starter.get();
+  const bool rejected = registration.get();
+  test_transport::on_start = {};
+  value.stop();
+  DOBA_EXPECT(rejected_during_start);
+  DOBA_EXPECT(rejected);
+}
+
+// +===========================================================================+
+// | [>] server accepts route registration after stop           ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("server accepts route registration after stop") {
+  test_server value;
+  value.start();
+  value.stop();
+  value.add_route("GET", "/late",
+                  [](const http::request&, http::response& res) {
+                    res.ok_200().set_body("late");
+                  });
+  value.start();
+  DOBA_EXPECT(send_request("GET", "/late").ends_with("\r\n\r\nlate"));
 }

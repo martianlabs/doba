@@ -1,0 +1,83 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+#ifndef martianlabs_doba_protocol_http_v11_results_h
+#define martianlabs_doba_protocol_http_v11_results_h
+
+#include <memory>
+#include <optional>
+#include <string_view>
+
+#include "common/reader.h"
+#include "protocol/deserialization.h"
+
+namespace martianlabs::doba::protocol::http::v11 {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] deserialization_result                                     ( struct ) |
+// +---------------------------------------------------------------------------+
+// | HTTP/1.1 decoding result for the selected request and response types.     |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename RQty, typename RSty>
+struct deserialization_result {
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +=========================================================================+
+  deserialization_result() : code(deserialization_status::kInvalidSource) {}
+  deserialization_result(deserialization_status code) : code(code) {}
+  deserialization_result(const deserialization_result&) = default;
+  deserialization_result(deserialization_result&&) = default;
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +=========================================================================+
+  deserialization_result& operator=(const deserialization_result&) = default;
+  deserialization_result& operator=(deserialization_result&&) = default;
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +=========================================================================+
+  deserialization_status code = deserialization_status::kInvalidSource;
+  std::optional<RQty> request;
+  std::optional<RSty> response;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] serialization_result                                       ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Borrows head and body bytes and owns an optional source.                  |
+// | The transport copies both views before the call returns.                  |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct serialization_result {
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +=========================================================================+
+  std::string_view head;
+  std::string_view body;
+  std::unique_ptr<common::reader> source;
+};
+}  // namespace martianlabs::doba::protocol::http::v11
+
+#endif

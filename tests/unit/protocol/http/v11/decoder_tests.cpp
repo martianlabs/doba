@@ -40,6 +40,7 @@
 #include <vector>
 
 #include "common/byte_storage.h"
+#include "protocol/http/v11/contracts.h"
 #include "protocol/http/v11/decoder.h"
 #include "protocol/http/v11/request.h"
 #include "protocol/http/v11/response.h"
@@ -63,6 +64,12 @@ using martianlabs::doba::tests::unit::decoder_target_case;
 using martianlabs::doba::tests::unit::wire_prefix;
 using decoder_type =
     martianlabs::doba::protocol::http::v11::decoder<request, response>;
+namespace contracts = martianlabs::doba::protocol::http::v11::contracts;
+
+static_assert(contracts::request<request>);
+static_assert(contracts::response<response>);
+static_assert(!contracts::request<int>);
+static_assert(!contracts::response<int>);
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -2733,7 +2740,9 @@ DOBA_TEST("decoder returns 500 when temporary body cannot reopen") {
   DOBA_EXPECT(std::filesystem::remove(path, error));
   DOBA_EXPECT(!error);
   const std::string body(16385, 'x');
-  martianlabs::doba::protocol::deserialization_result<request, response> result;
+  martianlabs::doba::protocol::http::v11::deserialization_result<request,
+                                                                response>
+      result;
   for (std::size_t offset = 0; offset < body.size();) {
     const auto count =
         accumulate(value, std::string_view(body).substr(offset, 4096));

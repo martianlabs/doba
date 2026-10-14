@@ -38,7 +38,7 @@
 
 #include "common/byte_storage.h"
 #include "common/reader.h"
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "wait_count.h"

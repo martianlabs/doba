@@ -384,6 +384,14 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     }
   }
   // +=========================================================================+
+  // | [>] engine_completed                                         ( public ) |
+  // +-------------------------------------------------------------------------+
+  void engine_completed() {
+    std::lock_guard<std::mutex> lock(sending_mutex_);
+    engine_complete_ = true;
+    retire_();
+  }
+  // +=========================================================================+
   // | [>] notify_connection                                       ( public )  |
   // +-------------------------------------------------------------------------+
   // | Lets the owner know the connection is up by calling `on_connection_`.   |
@@ -572,6 +580,18 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
         processing_receive_ || send_state_ != send_status::kIdle) {
       return;
     }
+    if (!engine_stop_requested_) {
+      engine_stop_requested_ = true;
+      if constexpr (protocol::contracts::completion_engine<ENty>) {
+        engine_complete_ = input_.engine.stop([this]() {
+          auto ctx = this->shared_from_this();
+          ctx->engine_completed();
+        });
+      } else {
+        engine_complete_ = true;
+      }
+    }
+    if (!engine_complete_) return;
     retired_ = true;
     if (on_retirement_) on_retirement_(this);
   }
@@ -600,6 +620,8 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   bool processing_receive_{false};
   bool socket_shutdown_{false};
   bool retired_{false};
+  bool engine_stop_requested_{false};
+  bool engine_complete_{false};
   WSABUF ovr_wsa_{0};
 };
 }  // namespace martianlabs::doba::transport::server

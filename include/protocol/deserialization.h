@@ -25,8 +25,6 @@
 #ifndef martianlabs_doba_protocol_deserialization_h
 #define martianlabs_doba_protocol_deserialization_h
 
-#include <optional>
-
 namespace martianlabs::doba::protocol {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -39,39 +37,6 @@ enum class deserialization_status {
   kSucceeded,        // everything went fine.
   kInvalidSource,    // source data is invalid.
   kMoreBytesNeeded,  // more bytes are needed to perform de-serialization.
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] deserialization_result                                     ( struct ) |
-// +---------------------------------------------------------------------------+
-// | This struct holds the overall result on protocol deserialization.         |
-// +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// |   RQty - request being used.                                              |
-// |   RSty - response being used.                                             |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-template <typename RQty, typename RSty>
-struct deserialization_result {
-  // +=========================================================================+
-  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +=========================================================================+
-  deserialization_result() : code(deserialization_status::kInvalidSource) {}
-  deserialization_result(deserialization_status code) : code(code) {}
-  deserialization_result(const deserialization_result&) = default;
-  deserialization_result(deserialization_result&&) = default;
-  // +=========================================================================+
-  // | [>] OPERATORs                                                ( public ) |
-  // +=========================================================================+
-  deserialization_result& operator=(const deserialization_result&) = default;
-  deserialization_result& operator=(deserialization_result&&) = default;
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
-  // +=========================================================================+
-  deserialization_status code = deserialization_status::kInvalidSource;
-  std::optional<RQty> request;
-  std::optional<RSty> response;
 };
 }  // namespace martianlabs::doba::protocol
 

@@ -30,7 +30,7 @@
 #include <utility>
 
 #include "common/reader.h"
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 
 namespace {
 // /////////////////////////////////////////////////////////////////////////////
@@ -90,7 +90,10 @@ class custom_transport {
         "Connection: close\r\n\r\n";
     connection_->on_bytes_received(request.data(), request.size(),
                                    request.size());
-    if (close_requested_) stop();
+    if (close_requested_) {
+      connection_.reset();
+      on_disconnection_();
+    }
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
@@ -127,8 +130,8 @@ int main() {
   using engine_type = http::engine<http::request, http::response>;
 
   std::string output;
-  http::server<http::request, http::response, routes_type, engine_type,
-               custom_transport>
+  martianlabs::doba::http_server<http::request, http::response, routes_type,
+                                 engine_type, custom_transport>
       server(&output);
   server.add_route("GET", "/hello",
                    [](const http::request&, http::response& response) {

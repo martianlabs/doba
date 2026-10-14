@@ -26,10 +26,11 @@
 
 #include "common/console_logger.h"
 #include "common/signaler.h"
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 #include "protocol/http/v11/static_file_server.h"
 
 using namespace martianlabs::doba::common;
+using martianlabs::doba::http_server;
 using namespace martianlabs::doba::protocol::http::v11;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -51,7 +52,7 @@ int main(int argc, char* argv[]) {
     std::cerr << "Usage: static_file_server <root>\n";
     return 1;
   }
-  server<> http_server({.ip = "0.0.0.0", .port = "8080"});
+  http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_controller<static_file_server>("/assets", argv[1])
       .add_controller<static_file_server>("/downloads", argv[1]);
   http_server.start();

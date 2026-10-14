@@ -241,9 +241,8 @@ struct worker {
   // | Accepts opaque work from any thread for execution by an I/O worker.    |
   // +-------------------------------------------------------------------------+
   execution_capacity execution() {
-    return {this,
-            [](void* owner, std::chrono::steady_clock::time_point due,
-               execution_work work) {
+    return {this, [](void* owner, std::chrono::steady_clock::time_point due,
+                     execution_work work) {
               auto* output = static_cast<worker*>(owner);
               if (current_worker_ == output && current_work_) {
                 if (due == std::chrono::steady_clock::time_point::min()) {

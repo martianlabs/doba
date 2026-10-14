@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -22,32 +22,34 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_protocol_serialization_h
-#define martianlabs_doba_protocol_serialization_h
+#ifndef martianlabs_doba_https_server_h
+#define martianlabs_doba_https_server_h
 
-#include <cstddef>
-#include <memory>
-#include <string_view>
+#include "http_server.h"
+#include "transport/server/tls.h"
 
-#include "common/reader.h"
-
-namespace martianlabs::doba::protocol {
+namespace martianlabs::doba {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] serialization_result                                       ( struct ) |
+// | [>] https_server                                                ( class ) |
 // +---------------------------------------------------------------------------+
-// | Borrows head and body bytes and owns an optional source.                  |
-// | The transport copies both views before the call returns.                  |
+// | Composes a TLS HTTP/1.1 routing with a protocol engine and transport.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-struct serialization_result {
+template <typename RQty = protocol::http::v11::request,
+          typename RSty = protocol::http::v11::response,
+          typename ROty = protocol::http::router<RQty, RSty>,
+          protocol::contracts::engine ENty =
+              protocol::http::v11::engine<RQty, RSty, ROty>>
+class https_server
+    : public http_server<RQty, RSty, ROty, ENty, transport::server::tls> {
+ public:
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
-  // +=========================================================================+
-  std::string_view head;
-  std::string_view body;
-  std::unique_ptr<common::reader> source;
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  using http_server<RQty, RSty, ROty, ENty,
+                    transport::server::tls>::http_server;
 };
-}  // namespace martianlabs::doba::protocol
+}  // namespace martianlabs::doba
 
 #endif

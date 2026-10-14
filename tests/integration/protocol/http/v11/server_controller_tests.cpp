@@ -29,12 +29,13 @@
 #include <thread>
 #include <vector>
 
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 
 namespace {
+using martianlabs::doba::http_server;
 using namespace martianlabs::doba::protocol::http::v11;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
@@ -90,7 +91,7 @@ DOBA_TEST("HTTP controller state supports concurrent requests and failures") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_controller<socket_controller>("/a");
   value.start();
   std::atomic<unsigned int> total{0};

@@ -29,7 +29,7 @@
 #include <string>
 #include <string_view>
 
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 #include "echo_body.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
@@ -53,7 +53,7 @@ constexpr std::size_t max_chunked_trailer_size = 4096;
 // /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
-using martianlabs::doba::protocol::http::v11::server;
+using martianlabs::doba::http_server;
 using martianlabs::doba::tests::integration::echo_body;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
@@ -68,7 +68,7 @@ DOBA_TEST("HTTP/1.1 enforces the 4 KiB request head limit") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls{0};
-  server<> http_server({.recv_buffer_size = receive_capacity,
+  http_server<> http_server({.recv_buffer_size = receive_capacity,
                         .ip = "127.0.0.1",
                         .port = std::to_string(port)});
   http_server.add_route("GET", "/ok", [&calls](const request&, response& res) {
@@ -127,7 +127,7 @@ DOBA_TEST("HTTP/1.1 preserves every query parameter at supported boundaries") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls{0};
-  server<> http_server({.recv_buffer_size = receive_capacity,
+  http_server<> http_server({.recv_buffer_size = receive_capacity,
                         .ip = "127.0.0.1",
                         .port = std::to_string(port)});
   http_server.add_route("GET", "/query",
@@ -181,7 +181,7 @@ DOBA_TEST("HTTP/1.1 enforces chunk extension and trailer wire limits") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.recv_buffer_size = receive_capacity,
+  http_server<> http_server({.recv_buffer_size = receive_capacity,
                         .ip = "127.0.0.1",
                         .port = std::to_string(port)});
   http_server.add_route("POST", "/body", [](const request& req, response& res) {

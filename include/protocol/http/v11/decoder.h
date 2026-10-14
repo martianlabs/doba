@@ -36,7 +36,6 @@
 #include <span>
 #include <stdexcept>
 #include <string_view>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -44,7 +43,7 @@
 #include "common/byte_storage_helpers.h"
 #include "common/filesystem.h"
 #include "common/hash_map.h"
-#include "protocol/deserialization.h"
+#include "protocol/http/v11/results.h"
 #include "protocol/http/common/header.h"
 #include "protocol/http/common/helpers.h"
 #include "protocol/http/common/method_names.h"
@@ -106,6 +105,7 @@
 #include "protocol/http/v11/body/framer_chunked.h"
 #include "protocol/http/v11/body/reader.h"
 #include "protocol/http/v11/context.h"
+#include "protocol/http/v11/contracts.h"
 #include "protocol/http/v11/headers/connection.h"
 #include "protocol/http/v11/headers/content_length.h"
 #include "protocol/http/v11/headers/expect.h"
@@ -141,7 +141,7 @@ namespace martianlabs::doba::protocol::http::v11 {
 // |   RSty - response being used.                                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <typename RQty, typename RSty>
+template <contracts::request RQty, contracts::response RSty>
 class decoder {
   // +=========================================================================+
   // | [>] USINGs                                                  ( private ) |
@@ -174,31 +174,6 @@ class decoder {
   decoder(const decoder&) = delete;
   decoder(decoder&&) noexcept = delete;
   ~decoder() { cleanup_body_file(); }
-  std::span<char> response_storage() noexcept {
-    return {response_buffer_.get(),
-            context_.policies.max_response_head_size +
-                context_.policies.response_body_inline_capacity};
-  }
-  const policies& configuration() const noexcept {
-    return context_.policies;
-  }
-  RSty make_response(std::span<char> storage) {
-    if constexpr (std::is_constructible_v<RSty, std::span<char>, std::size_t,
-                                          std::size_t>) {
-      return RSty(storage, context_.policies.max_response_head_size,
-                  context_.policies.response_body_inline_capacity);
-    } else {
-      return RSty(storage);
-    }
-  }
-  RSty make_response() { return make_response(response_storage()); }
-  std::unique_ptr<char[]> take_request_storage() {
-    auto replacement = std::make_unique_for_overwrite<char[]>(
-        context_.policies.max_request_head_size +
-        context_.policies.request_body_memory_threshold);
-    buffer_.swap(replacement);
-    return replacement;
-  }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+
@@ -271,7 +246,7 @@ class decoder {
           }
         }
         if (result.code == deserialization_status::kSucceeded) {
-          RQty request(
+          RQty request = RQty::from(
               method_, absolute_path_, target_, headers_, query_parameters_,
               host_host, host_port, host_type, target_authority_host,
               target_authority_port, target_authority_type,
@@ -336,8 +311,52 @@ class decoder {
     }
     return result;
   }
+  // +=========================================================================+
+  // | [>] configuration                                            ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Returns the decoder's configuration.                                    |
+  // +-------------------------------------------------------------------------+
+  const policies& configuration() const noexcept { return context_.policies; }
+  // +=========================================================================+
+  // | [>] make_response                                            ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Creates a response object using the decoder's internal storage.         |
+  // +-------------------------------------------------------------------------+
+  RSty make_response() { return make_response(response_storage()); }
+  // +=========================================================================+
+  // | [>] take_request_storage                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Takes ownership of the decoder's internal request storage.              |
+  // +-------------------------------------------------------------------------+
+  std::unique_ptr<char[]> take_request_storage() {
+    auto replacement = std::make_unique_for_overwrite<char[]>(
+        context_.policies.max_request_head_size +
+        context_.policies.request_body_memory_threshold);
+    buffer_.swap(replacement);
+    return replacement;
+  }
+  // +=========================================================================+
+  // | [>] make_response                                            ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Creates a response object using the provided storage.                   |
+  // +-------------------------------------------------------------------------+
+  RSty make_response(std::span<char> storage) {
+    return RSty::from(storage, context_.policies.max_response_head_size,
+                     context_.policies.response_body_inline_capacity);
+  }
 
  private:
+  // +=========================================================================+
+  // | [>] response_storage                                         ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Returns a span of the response buffer, which is used to store the       |
+  // | response head and body.                                                 |
+  // +-------------------------------------------------------------------------+
+  std::span<char> response_storage() noexcept {
+    return {response_buffer_.get(),
+            context_.policies.max_response_head_size +
+                context_.policies.response_body_inline_capacity};
+  }
   // +=========================================================================+
   // | [>] parse_core                                               ( public ) |
   // +-------------------------------------------------------------------------+
@@ -826,7 +845,16 @@ class decoder {
   static constexpr verdict dispatch(std::string_view sv, context&) {
     return CHty::check(sv) ? verdict::kAccept : verdict::kReject;
   }
-  // RFC 9110 S13.1.3/S13.1.4: recipients ignore invalid conditional dates.
+  // +=========================================================================+
+  // | [>] dispatch_conditional_date                               ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | The dispatcher for every conditional date header the semantic layer     |
+  // | does not model. It runs the header's single syntactic checker and never |
+  // | touches the context: a value the checker rejects fails deserialization, |
+  // | otherwise it is accepted as-is. One template instantiation per checker  |
+  // | keeps each registry entry a direct, inlinable call. The semantic layer  |
+  // | ignores any invalid conditional date, as per RFC 9110 S13.1.3/S13.1.4.  |
+  // +-------------------------------------------------------------------------+
   static constexpr verdict dispatch_conditional_date(std::string_view,
                                                      context&) {
     return verdict::kAccept;

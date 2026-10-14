@@ -19,7 +19,7 @@ of head-scratching.
   </picture>
 </h2>
 
-The first **server<>** argument configures the transport. The second
+The first **http_server<>** argument configures the transport. The second
 configures the HTTP engine. The
 [request_limits example](../../examples/http/v11/request_limits/README.md)
 sets a five-byte body limit in its
@@ -28,7 +28,7 @@ sets a five-byte body limit in its
 ```cpp
 policies limits;
 limits.max_content_length = 5;
-server<> http_server({.ip = "0.0.0.0", .port = "8080"}, limits);
+http_server<> http_server({.ip = "0.0.0.0", .port = "8080"}, limits);
 ```
 
 The address belongs to TCP; *max_content_length* belongs to HTTP. You can

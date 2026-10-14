@@ -29,31 +29,86 @@
 #include <string_view>
 #include <utility>
 
-#include "protocol/serialization.h"
+#include "protocol/contracts.h"
+#include "protocol/http/v11/decoder.h"
+#include "protocol/http/v11/results.h"
 #include "protocol/http/common/header_names.h"
 #include "protocol/http/common/method_names.h"
 #include "protocol/http/common/router.h"
+#include "protocol/http/common/router_match_result.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] engine_sync                                                ( struct ) |
 // +---------------------------------------------------------------------------+
+// | The synchronous engine handles the processing of a single request and     |
+// | response in a blocking manner. It is designed for environments where      |
+// | asynchronous processing is not required or desired. It provides methods   |
+// | for executing the request against the router, building error responses,   |
+// | and serializing the response.                                             |
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename ROty>
 struct engine_sync {
   // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  engine_sync() = default;
+  engine_sync(const engine_sync&) = delete;
+  engine_sync(engine_sync&&) noexcept = delete;
+  ~engine_sync() = default;
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  engine_sync& operator=(const engine_sync&) = delete;
+  engine_sync& operator=(engine_sync&&) noexcept = delete;
+  // +=========================================================================+
+  // | [>] handle_request                                           ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Handles an incoming request synchronously. It executes the request      |
+  // | against the router, builds the response, serializes it, and submits     |
+  // | it to the transport. It returns true if the connection should be        |
+  // | closed after the response is sent.                                      |
+  // +-------------------------------------------------------------------------+
+  static bool handle_request(decoder<RQty, RSty>& owner, const ROty& router,
+                             const RQty& request,
+                             const router_match_result<RQty, RSty>& match,
+                             const protocol::send_delegate& on_send) {
+    bool close = request.wants_connection_close();
+    RSty response = owner.make_response();
+    execute(router, request, response, close, &match);
+    auto serialized = serialize(request, response, close);
+    on_send(serialized.head, serialized.body, std::move(serialized.source));
+    return close;
+  }
+  // +=========================================================================+
+  // | [>] handle_response                                          ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Handles a response synchronously. It serializes the response and        |
+  // | submits it to the transport. It returns true if the connection should   |
+  // | be closed after the response is sent.                                   |
+  // +-------------------------------------------------------------------------+
+  static void handle_response(RSty& response, bool close,
+                              const protocol::send_delegate& on_send) {
+    auto serialized = serialize(response, close);
+    on_send(serialized.head, serialized.body, std::move(serialized.source));
+  }
+  // +=========================================================================+
   // | [>] execute                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  static void execute(const ROty& router, const RQty& request, RSty& response,
-                      bool& close,
-                      const typename ROty::route_match* selected = nullptr) {
+  // | Executes the request against the router and builds the response. It     |
+  // | handles different request targets and sets the appropriate response.    |
+  // | If an exception occurs during execution, it builds an error response.   |
+  // +-------------------------------------------------------------------------+
+  static void execute(
+      const ROty& router, const RQty& request, RSty& response, bool& close,
+      const router_match_result<RQty, RSty>* selected = nullptr) {
     try {
       switch (request.get_target()) {
         case target::kOriginForm:
         case target::kAbsoluteForm: {
           const std::string_view path = request.get_absolute_path();
-          const typename ROty::route_match match =
+          const router_match_result<RQty, RSty> match =
               selected ? *selected : router.match(request.get_method(), path);
           if (match.handler) {
             (*match.handler)(request, response);
@@ -91,6 +146,10 @@ struct engine_sync {
   // +=========================================================================+
   // | [>] build_error_response                                     ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Builds a generic error response with a 500 Internal Server Error        |
+  // | status. It sets the response body to "Internal Server Error".           |
+  // | This is used when an exception occurs during request processing.        |
+  // +-------------------------------------------------------------------------+
   static void build_error_response(RSty& response) {
     response.internal_server_error_500();
     response.set_body("Internal Server Error");
@@ -98,16 +157,24 @@ struct engine_sync {
   // +=========================================================================+
   // | [>] serialize                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  static protocol::serialization_result serialize(RSty& response, bool close) {
+  // | Serializes the response. If the connection should be closed,            |
+  // | it sets the "Connection: close" header. It returns the                  |
+  // | serialized result.                                                      |
+  // +-------------------------------------------------------------------------+
+  static serialization_result serialize(RSty& response, bool close) {
     if (close) response.set_header(header_names::kConnection, "close");
     return response.serialize();
   }
   // +=========================================================================+
   // | [>] serialize                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  static protocol::serialization_result serialize(const RQty& request,
-                                                  RSty& response, bool& close) {
-    protocol::serialization_result serialized;
+  // | Serializes the response based on the request. If the connection should  |
+  // | be closed, it sets the "Connection: close" header. It returns the       |
+  // | serialized result.                                                      |
+  // +-------------------------------------------------------------------------+
+  static serialization_result serialize(const RQty& request, RSty& response,
+                                        bool& close) {
+    serialization_result serialized;
     try {
       if (response.is_continue_100()) {
         close = true;

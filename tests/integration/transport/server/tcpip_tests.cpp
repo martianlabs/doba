@@ -34,7 +34,7 @@
 #include <string>
 #include <thread>
 
-#include "protocol/send_delegate.h"
+#include "protocol/contracts.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "wait_count.h"

@@ -112,6 +112,55 @@ struct suspend_once {
 };
 }  // namespace
 
+DOBA_TEST("engine reports completion after pending work finishes") {
+  router<request, response> routes;
+  std::coroutine_handle<> pending;
+  routes.add("GET", "/wait", [&pending](const request&, response& res)
+                 -> task<void> {
+    co_await suspend_once{pending};
+    make_response(res, "done");
+  });
+  connection current(routes);
+  current.receive("GET /wait HTTP/1.1\r\nHost: localhost\r\n\r\n");
+  DOBA_EXPECT(static_cast<bool>(pending));
+  bool completed = false;
+  DOBA_EXPECT(!current.value.stop([&completed]() { completed = true; }));
+  DOBA_EXPECT(!completed);
+  pending.resume();
+  DOBA_EXPECT(completed);
+}
+
+DOBA_TEST("engine stops immediately without pending work") {
+  router<request, response> routes;
+  connection current(routes);
+  bool completed = false;
+  DOBA_EXPECT(current.value.stop([&completed]() { completed = true; }));
+  DOBA_EXPECT(!completed);
+}
+
+DOBA_TEST("engine completion follows asynchronous observers") {
+  router<request, response> routes;
+  std::coroutine_handle<> pending;
+  routes.add("GET", "/wait", [&pending](const request&, response& res)
+                 -> task<void> {
+    co_await suspend_once{pending};
+    make_response(res, "done");
+  });
+  bool finished = false;
+  bool completed_after_finish = false;
+  engine<request, response> value({}, routes, []() {},
+                                  [&finished]() { finished = true; });
+  value.set_on_send([](std::string_view, std::string_view,
+                       std::unique_ptr<reader>) {});
+  value.set_on_close([]() {});
+  const std::string_view wire = "GET /wait HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  value.on_bytes_received(wire.data(), wire.size(), 4096);
+  DOBA_EXPECT(static_cast<bool>(pending));
+  DOBA_EXPECT(!value.stop([&]() { completed_after_finish = finished; }));
+  pending.resume();
+  DOBA_EXPECT(completed_after_finish);
+}
+
 DOBA_TEST("engine submits opaque work with execution thresholds") {
   router<request, response> routes;
   routes.add("GET", "/wait", [](const request&, response& res)

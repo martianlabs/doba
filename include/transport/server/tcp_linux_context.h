@@ -26,9 +26,11 @@
 #define martianlabs_doba_transport_server_tcp_linux_context_h
 
 #include <algorithm>
+#include <atomic>
 #include <cerrno>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -342,6 +344,27 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     return socket;
   }
   // +=========================================================================+
+  // | [>] stop_engine                                              ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool stop_engine(std::function<void()> completed) {
+    if constexpr (protocol::contracts::completion_engine<ENty>) {
+      return input_.engine.stop(std::move(completed));
+    }
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] mark_engine_complete                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  void mark_engine_complete() noexcept {
+    engine_complete_.store(true, std::memory_order_release);
+  }
+  // +=========================================================================+
+  // | [>] engine_complete                                          ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool engine_complete() const noexcept {
+    return engine_complete_.load(std::memory_order_acquire);
+  }
+  // +=========================================================================+
   // | [>] notify_disconnection                                     ( public ) |
   // +-------------------------------------------------------------------------+
   // | Tells the owner the connection has been disconnected by calling         |
@@ -409,6 +432,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   bool socket_shutdown_{false};
   bool aborted_{false};
   bool notified_{false};
+  std::atomic<bool> engine_complete_{false};
 };
 }  // namespace martianlabs::doba::transport::server
 

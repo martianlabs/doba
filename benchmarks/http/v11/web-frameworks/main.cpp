@@ -25,8 +25,9 @@
 #include <future>
 #include <string_view>
 
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 
+using martianlabs::doba::http_server;
 using namespace martianlabs::doba::protocol::http::v11;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -37,7 +38,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
-  server http_server({.ip = "0.0.0.0", .port = "3000"});
+  http_server<> http_server({.ip = "0.0.0.0", .port = "3000"});
   http_server.add_route(
       "GET", "/",
       [](const request&, response& res) {

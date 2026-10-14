@@ -28,7 +28,7 @@
 #include <string>
 #include <utility>
 
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 #include "test_helper.h"
 
 namespace {
@@ -193,6 +193,23 @@ struct bad_send_engine : engine_type {
   void set_on_send(std::function<void(const char*, std::size_t)>);
 };
 
+struct custom_request {};
+struct custom_response {};
+struct custom_routes final {};
+
+struct custom_engine {
+  using policies_type = http::policies;
+
+  template <typename ROty>
+  custom_engine(const policies_type&, const ROty&) {}
+  void set_on_send(protocol::send_delegate) {}
+  void set_on_close(std::function<void()>) {}
+  std::size_t on_bytes_received(const char*, std::size_t size,
+                                std::size_t) {
+    return size;
+  }
+};
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] asserts                                                    ( static ) |
@@ -218,7 +235,14 @@ static_assert(!protocol::contracts::engine_factory<
 // /////////////////////////////////////////////////////////////////////////////
 template <typename ENty, template <typename, typename> class TRty>
 concept accepts_server = requires {
-  typename http::server<http::request, http::response, routes_type, ENty, TRty>;
+  typename martianlabs::doba::http_server<http::request, http::response,
+                                          routes_type, ENty, TRty>;
+};
+
+template <typename RQty, typename RSty, typename ROty>
+concept accepts_custom_http_server = requires {
+  typename martianlabs::doba::http_server<RQty, RSty, ROty, custom_engine,
+                                          fake_transport>;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -227,6 +251,8 @@ concept accepts_server = requires {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 static_assert(protocol::contracts::engine<engine_type>);
+static_assert(protocol::contracts::completion_engine<engine_type>);
+static_assert(!protocol::contracts::completion_engine<custom_engine>);
 static_assert(!std::constructible_from<engine_type, http::policies>);
 static_assert(accepts_server<engine_type, fake_transport>);
 static_assert(accepts_server<engine_type, tr::tcp>);
@@ -237,14 +263,22 @@ static_assert(!accepts_server<engine_type, private_policies_transport>);
 static_assert(protocol::contracts::engine<bad_engine>);
 static_assert(!accepts_server<bad_engine, fake_transport>);
 static_assert(!accepts_server<int, fake_transport>);
+static_assert(accepts_custom_http_server<http::request, http::response,
+                                         routes_type>);
+static_assert(!accepts_custom_http_server<custom_request, http::response,
+                                          routes_type>);
+static_assert(!accepts_custom_http_server<http::request, custom_response,
+                                          routes_type>);
+static_assert(!accepts_custom_http_server<http::request, http::response,
+                                          custom_routes>);
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] usings                                                     ( public ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-using server_type = http::server<http::request, http::response, routes_type,
-                                 engine_type, fake_transport>;
+using server_type = martianlabs::doba::http_server<
+    http::request, http::response, routes_type, engine_type, fake_transport>;
 using factory_type = http::engine_factory<engine_type, routes_type>;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -294,6 +328,21 @@ struct controller {
   int& calls_;
 };
 }  // namespace
+
+// +===========================================================================+
+// | [>] HTTP server accepts a custom engine                     ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("HTTP server accepts a custom engine") {
+  observed = {};
+  martianlabs::doba::http_server<http::request, http::response, routes_type,
+                                  custom_engine, fake_transport>
+      value(std::make_unique<int>(5));
+  value.start();
+  DOBA_EXPECT_EQUAL(observed.starts, 1);
+  DOBA_EXPECT_EQUAL(observed.configuration, 5);
+  value.stop();
+  DOBA_EXPECT_EQUAL(observed.stops, 1);
+}
 
 // +===========================================================================+
 // | [>] server shares its router between engines                ( test-case ) |

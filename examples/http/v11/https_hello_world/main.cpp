@@ -25,10 +25,11 @@
 #include <iostream>
 
 #include "common/signaler.h"
-#include "protocol/http/v11/server.h"
+#include "https_server.h"
 #include "transport/server/tls.h"
 
 using namespace martianlabs::doba::common;
+using martianlabs::doba::https_server;
 using namespace martianlabs::doba::protocol::http::v11;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -54,17 +55,14 @@ int main(int argc, char* argv[]) {
   configuration.port = "8443";
   configuration.certificate_file = argv[1];
   configuration.private_key_file = argv[2];
-  server<request, response,
-         martianlabs::doba::protocol::http::router<request, response>,
-         engine<request, response>, martianlabs::doba::transport::server::tls>
-      http_server(configuration);
-  http_server.add_route("GET", "/hello", [](const request&, response& res) {
+  https_server<> https_server(configuration);
+  https_server.add_route("GET", "/hello", [](const request&, response& res) {
     res.ok_200();
     res.set_body("hello from doba");
     return;
   });
-  http_server.start();
+  https_server.start();
   signaler::wait();
-  http_server.stop();
+  https_server.stop();
   return 0;
 }

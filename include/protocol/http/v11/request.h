@@ -127,9 +127,6 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class request {
-  template <typename RQty, typename RSty>
-  friend class decoder;
-
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
@@ -137,6 +134,26 @@ class request {
   request(const request&) = delete;
   request(request&&) noexcept = default;
   ~request() = default;
+  // +=========================================================================+
+  // | [>] from                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  static request from(
+      std::string_view method, std::string_view abs_path, target target_form,
+      std::vector<header_view> headers,
+      std::vector<query_parameter_view> query_parameters,
+      std::optional<std::string_view> host,
+      std::optional<std::string_view> port,
+      std::optional<helpers::host_type> type,
+      std::optional<std::string_view> target_authority_host,
+      std::optional<std::string_view> target_authority_port,
+      std::optional<helpers::host_type> target_authority_type,
+      bool wants_connection_close, std::optional<body::reader> body_reader) {
+    return request(method, abs_path, target_form, std::move(headers),
+                   std::move(query_parameters), host, port, type,
+                   target_authority_host, target_authority_port,
+                   target_authority_type, wants_connection_close,
+                   std::move(body_reader));
+  }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+

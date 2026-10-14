@@ -35,12 +35,13 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
 
 #include "platform.h"
 #include <openssl/ssl.h>
 
-#include "protocol/http/v11/server.h"
+#include "https_server.h"
 #include "common/task.h"
 #include "tcpip_client.h"
 #include "tls_client.h"
@@ -56,12 +57,11 @@ namespace {
 // /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
-using martianlabs::doba::protocol::http::v11::server;
+using martianlabs::doba::https_server;
 using martianlabs::doba::common::task;
 using martianlabs::doba::tests::integration::server_policies;
 using martianlabs::doba::tests::integration::tcpip_client;
 using martianlabs::doba::tests::integration::tls_client;
-using martianlabs::doba::transport::server::tls;
 using martianlabs::doba::transport::server::tls_policies;
 using namespace std::chrono_literals;
 
@@ -124,10 +124,7 @@ DOBA_TEST("tls serves HTTP with configured buffer capacities") {
   auto configuration = server_policies(port);
   configuration.encrypted_receive_buffer_size = 8192;
   configuration.network_bio_buffer_size = 4096;
-  server<request, response,
-         martianlabs::doba::protocol::http::router<request, response>,
-         martianlabs::doba::protocol::http::v11::engine<request, response>, tls>
-      http_server(configuration);
+  https_server<> http_server(configuration);
   http_server.add_route("GET", "/ready", [](const request&, response& res) {
     res.ok_200();
     res.set_body("ready");
@@ -152,10 +149,7 @@ DOBA_TEST("tls preserves a fragmented binary HTTP body") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<request, response,
-         martianlabs::doba::protocol::http::router<request, response>,
-         martianlabs::doba::protocol::http::v11::engine<request, response>, tls>
-      http_server(server_policies(port));
+  https_server<> http_server(server_policies(port));
   http_server.add_route("POST", "/echo", [](const request& req, response& res) {
     if (!req.has_body_reader()) {
       res.bad_request_400();
@@ -208,10 +202,7 @@ DOBA_TEST("tls serves sequential HTTP requests before closing") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<request, response,
-         martianlabs::doba::protocol::http::router<request, response>,
-         martianlabs::doba::protocol::http::v11::engine<request, response>, tls>
-      http_server(server_policies(port));
+  https_server<> http_server(server_policies(port));
   http_server.add_route("GET", "/one", [](const request&, response& res) {
     res.ok_200();
     res.set_body("one");
@@ -257,10 +248,7 @@ DOBA_TEST("tls orders asynchronous and synchronous HTTP responses") {
   DOBA_EXPECT(port != 0);
   std::promise<std::coroutine_handle<>> pending;
   auto suspended = pending.get_future();
-  server<request, response,
-         martianlabs::doba::protocol::http::router<request, response>,
-         martianlabs::doba::protocol::http::v11::engine<request, response>, tls>
-      http_server(server_policies(port));
+  https_server<> http_server(server_policies(port));
   http_server.add_route("GET", "/slow",
                         [&pending](const request&, response& res)
                             -> task<void> {
@@ -292,16 +280,51 @@ DOBA_TEST("tls orders asynchronous and synchronous HTTP responses") {
   client.socket.close();
   http_server.stop();
 }
+
+DOBA_TEST("tls waits for pending HTTP work after client disconnects") {
+  tls_client client;
+  const auto port = client.socket.find_available_port();
+  DOBA_EXPECT(port != 0);
+  std::promise<std::coroutine_handle<>> pending;
+  auto suspended = pending.get_future();
+  https_server<> http_server(server_policies(port));
+  http_server.add_route("GET", "/slow",
+                        [&pending](const request&, response& res)
+                            -> task<void> {
+                          co_await pause_awaiter{pending};
+                          res.ok_200();
+                          res.set_body("done");
+                        });
+  http_server.start();
+  DOBA_EXPECT(client.socket.connect(port));
+  DOBA_EXPECT(client.negotiate());
+  DOBA_EXPECT(client.send_outgoing(
+      "GET /slow HTTP/1.1\r\nHost: example.com\r\n\r\n"));
+  if (suspended.wait_for(std::chrono::seconds(2)) !=
+      std::future_status::ready) {
+    throw std::runtime_error("asynchronous route did not suspend");
+  }
+  client.socket.close();
+  std::promise<void> stopped;
+  auto stop_result = stopped.get_future();
+  std::jthread stopper([&]() {
+    http_server.stop();
+    stopped.set_value();
+  });
+  DOBA_EXPECT(stop_result.wait_for(std::chrono::milliseconds(100)) ==
+              std::future_status::timeout);
+  suspended.get().resume();
+  DOBA_EXPECT(stop_result.wait_for(std::chrono::seconds(2)) ==
+              std::future_status::ready);
+}
+
 DOBA_TEST("tls resumes timed asynchronous HTTP routes") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   auto configuration = server_policies(port);
   configuration.worker_count = 1;
-  server<request, response,
-         martianlabs::doba::protocol::http::router<request, response>,
-         martianlabs::doba::protocol::http::v11::engine<request, response>, tls>
-      http_server(configuration);
+  https_server<> http_server(configuration);
   http_server.add_route("GET", "/slow",
                         [](const request&, response& res) -> task<void> {
                           co_await martianlabs::doba::common::yield();

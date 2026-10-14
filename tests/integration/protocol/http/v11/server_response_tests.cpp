@@ -31,7 +31,7 @@
 #include <string_view>
 
 #include "protocol/http/v11/body/writer.h"
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
 #include "file_directory.h"
@@ -54,7 +54,7 @@ constexpr std::size_t max_response_body_size_in_memory = martianlabs::doba::
 // /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
-using martianlabs::doba::protocol::http::v11::server;
+using martianlabs::doba::http_server;
 using martianlabs::doba::protocol::http::v11::body::body_writer;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
@@ -68,7 +68,7 @@ DOBA_TEST("HTTP/1.1 transmits and terminates every outgoing chunk") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/chunks", [](const request&, response& res) {
     auto writer = body_writer::chunked();
     if (!writer.write("a") || !writer.write("bc") || !writer.write("def")) {
@@ -113,7 +113,7 @@ DOBA_TEST("HTTP/1.1 preserves binary responses across the spill boundary") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route(
       "GET", "/body/:size",
       [](const request&, response& res, std::size_t size) {
@@ -154,7 +154,7 @@ DOBA_TEST("HTTP/1.1 delimits cleared bodies on persistent connections") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/clear", [](const request&, response& res) {
     res.ok_200();
     res.set_body("x").clear_body().clear_body();
@@ -192,7 +192,7 @@ DOBA_TEST("HTTP/1.1 suppresses 205 and 304 bodies before successors") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/reset", [](const request&, response& res) {
     res.reset_content_205();
     res.set_body("hidden");
@@ -241,7 +241,7 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route("GET", "/throw",
                         [](const request&, response&) -> void {
                           throw std::runtime_error("doba-private-sync-token");
@@ -308,7 +308,8 @@ DOBA_TEST("HTTP/1.1 suppresses synchronous HEAD error bodies") {
     const uint16_t port = client.find_available_port();
     DOBA_EXPECT(port != 0);
     std::atomic<std::size_t> get_calls = 0;
-    server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
+    http_server<> http_server(
+        {.ip = "127.0.0.1", .port = std::to_string(port)});
     http_server.add_route("HEAD", "/fail",
                           [scenario](const request&, response& res) -> void {
                             if (scenario == "throw")
@@ -366,7 +367,7 @@ DOBA_TEST("HTTP closes incomplete file responses before subsequent bytes") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_route("GET", "/file", [&](const request&, response& res) {
     filesystem_file file;
     std::error_code error;
@@ -426,7 +427,7 @@ DOBA_TEST("HTTP/1.1 response close drains each body representation") {
       }
       return;
     };
-    server<> http_server(
+    http_server<> http_server(
         {.worker_count = 2, .ip = "127.0.0.1", .port = std::to_string(port)});
     http_server.add_route("GET", "/before", [](const request&, response& res) {
       res.ok_200();

@@ -25,7 +25,6 @@
 #ifndef martianlabs_doba_protocol_http_router_h
 #define martianlabs_doba_protocol_http_router_h
 
-#include <atomic>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -39,6 +38,7 @@
 #include "protocol/http/common/router_handler_signature.h"
 #include "protocol/http/common/router_handler_static.h"
 #include "protocol/http/common/router_handler_static_async.h"
+#include "protocol/http/common/router_match_result.h"
 
 namespace martianlabs::doba::protocol::http {
 // /////////////////////////////////////////////////////////////////////////////
@@ -56,21 +56,6 @@ template <typename RQty, typename RSty>
 class router {
  public:
   // +=========================================================================+
-  // | [>] TYPEs                                                    ( public ) |
-  // +-------------------------------------------------------------------------+
-  struct route_match {
-    const router_handler_static<RQty, RSty>* handler{nullptr};
-    const router_handler_parametrized<RQty, RSty>* parametrized_handler{
-        nullptr};
-    const router_handler_static_async<RQty, RSty>* async_handler{nullptr};
-    const router_handler_parametrized_async<RQty, RSty>*
-        async_parametrized_handler{nullptr};
-    [[nodiscard]] explicit operator bool() const {
-      return handler != nullptr || parametrized_handler != nullptr ||
-             async_handler != nullptr || async_parametrized_handler != nullptr;
-    }
-  };
-  // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   router() = default;
@@ -84,6 +69,9 @@ class router {
   router& operator=(router&&) noexcept = delete;
   // +=========================================================================+
   // | [>] add                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Adds a route to the router with the specified HTTP method, route path,  |
+  // | and handler.                                                            |
   // +-------------------------------------------------------------------------+
   template <typename Hty>
     requires router_handler_lambda<Hty>
@@ -169,6 +157,9 @@ class router {
   // +=========================================================================+
   // | [>] add_controller                                           ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Adds a controller to the router. The controller must implement          |
+  // | the 'register_routes' method to register its routes with the router.    |
+  // +-------------------------------------------------------------------------+
   template <typename CTty, typename... Args>
   void add_controller(Args&&... args) {
     auto instance = std::make_shared<CTty>(std::forward<Args>(args)...);
@@ -201,8 +192,11 @@ class router {
   // +=========================================================================+
   // | [>] match                                                    ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Matches the given HTTP method and path against the registered routes.   |
+  // +-------------------------------------------------------------------------+
   [[nodiscard]]
-  route_match match(std::string_view method, std::string_view path) const {
+  router_match_result<RQty, RSty> match(std::string_view method,
+                                        std::string_view path) const {
     for (const auto& [static_method, handlers] : handlers_) {
       if (static_method != method) continue;
       for (const auto& route : handlers) {
@@ -252,6 +246,9 @@ class router {
   // +=========================================================================+
   // | [>] allowed_methods                                          ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Returns a comma-separated string of allowed HTTP methods for the given  |
+  // | path.                                                                   |
+  // +-------------------------------------------------------------------------+
   [[nodiscard]]
   std::string allowed_methods(std::string_view path) const {
     std::vector<std::string_view> allowed;
@@ -300,46 +297,6 @@ class router {
       methods += method;
     }
     return methods;
-  }
-  bool has_async() const noexcept {
-    for (const auto& [method, handlers] : handlers_) {
-      for (const auto& route : handlers) {
-        if (std::holds_alternative<router_handler_static_async<RQty, RSty>>(
-                route.handler))
-          return true;
-      }
-    }
-    for (const auto& [method, handlers] : parametrized_handlers_) {
-      for (const auto& handler : handlers) {
-        if (std::holds_alternative<
-                router_handler_parametrized_async<RQty, RSty>>(handler)) {
-          return true;
-        }
-      }
-    }
-    for (const auto& [method, handlers] : wildcard_handlers_) {
-      for (const auto& route : handlers) {
-        if (std::holds_alternative<router_handler_static_async<RQty, RSty>>(
-                route.handler))
-          return true;
-      }
-    }
-    return false;
-  }
-  void begin_async() const {
-    active_async_.fetch_add(1, std::memory_order_relaxed);
-  }
-  void end_async() const {
-    if (active_async_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-      active_async_.notify_all();
-    }
-  }
-  void wait_async() const {
-    std::size_t active = active_async_.load(std::memory_order_acquire);
-    while (active != 0) {
-      active_async_.wait(active, std::memory_order_acquire);
-      active = active_async_.load(std::memory_order_acquire);
-    }
   }
 
  private:
@@ -403,7 +360,6 @@ class router {
   std::vector<handler_pair> handlers_;
   std::vector<parametrized_handler_pair> parametrized_handlers_;
   std::vector<handler_pair> wildcard_handlers_;
-  mutable std::atomic<std::size_t> active_async_{0};
 };
 }  // namespace martianlabs::doba::protocol::http
 

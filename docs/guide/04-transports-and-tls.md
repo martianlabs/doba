@@ -7,8 +7,8 @@
 </h1>
 
 Your HTTP handlers deal with requests and responses. The transport deals with
-the socket underneath them. Start with TCP; when the connection needs
-encryption, swap in TLS and keep the HTTP side as it is.
+the socket underneath them. Use *http_server* for TCP or *https_server* for
+TLS; both keep the same HTTP route API.
 
 <a name="tcp-by-default"></a>
 <h2>
@@ -18,13 +18,13 @@ encryption, swap in TLS and keep the HTTP side as it is.
   </picture>
 </h2>
 
-**server<>** uses the TCP transport unless you choose another one. The
+**http_server<>** uses the TCP transport unless you choose another one. The
 [hello_world example](../../examples/http/v11/hello_world/README.md) gives
 it an IPv4 address and port, then starts the listener. Here is the relevant
 bit of [main.cpp](../../examples/http/v11/hello_world/main.cpp):
 
 ```cpp
-server<> http_server({.ip = "0.0.0.0", .port = "8080"});
+http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
 http_server.add_route("GET", "/hello", [](const request&, response& res) {
   res.ok_200();
   res.add_header("Server", "doba.")
@@ -47,7 +47,7 @@ Linux, they use epoll. Your handlers do not need a platform-specific path.
   </picture>
 </h2>
 
-The first **server<>** constructor argument is a *tcp_policies* value. It
+The first **http_server<>** constructor argument is a *tcp_policies* value. It
 sets up the listener and its workers. The
 [policy definition](../../include/transport/server/tcp_policies.h) has the
 full list; the settings you are most likely to touch are:
@@ -70,7 +70,7 @@ martianlabs::doba::transport::server::tcp_policies configuration;
 configuration.ip = "127.0.0.1";
 configuration.port = "8080";
 configuration.worker_count = 2;
-martianlabs::doba::protocol::http::v11::server<> http_server(configuration);
+martianlabs::doba::http_server<> http_server(configuration);
 ```
 
 Keep the default buffer sizes until you have a concrete reason to change
@@ -87,8 +87,8 @@ them; the limits chapter covers resource boundaries in more detail.
 TLS is an optional transport backed by OpenSSL. The
 [https_hello_world example](../../examples/http/v11/https_hello_world/README.md)
 uses the same HTTP/1.1 request, response, and route APIs as the TCP example.
-Its [main.cpp](../../examples/http/v11/https_hello_world/main.cpp) selects
-the TLS transport explicitly:
+Its [main.cpp](../../examples/http/v11/https_hello_world/main.cpp) uses
+*https_server*, which selects the TLS transport:
 
 ```cpp
 martianlabs::doba::transport::server::tls_policies configuration;
@@ -96,16 +96,18 @@ configuration.ip = "0.0.0.0";
 configuration.port = "8443";
 configuration.certificate_file = argv[1];
 configuration.private_key_file = argv[2];
-server<request, response,
-       martianlabs::doba::protocol::http::router<request, response>,
-       engine<request, response>,
-       martianlabs::doba::transport::server::tls> http_server(configuration);
+https_server<> https_server(configuration);
 ```
+
+Both server classes accept custom request, response, and router types that
+satisfy the [HTTP/1.1 contracts](../../include/protocol/http/v11/contracts.h),
+even with a custom engine. *http_server* also accepts a custom transport;
+*https_server* uses TLS.
 
 *tls_policies* includes the TCP settings plus paths to a PEM certificate
 chain and its matching PEM private key. doba checks that both files load and
 the key matches the certificate when it creates the TLS transport. A bad
-pair fails server construction instead of waiting for the first request.
+pair makes the first *start* fail instead of waiting for the first request.
 
 <a name="try-https"></a>
 <h2>

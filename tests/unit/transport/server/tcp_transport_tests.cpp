@@ -27,7 +27,7 @@
 #include <limits>
 #include <stdexcept>
 
-#include "protocol/send_delegate.h"
+#include "protocol/contracts.h"
 #include "test_helper.h"
 #include "transport/server/tcp.h"
 

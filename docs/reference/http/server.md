@@ -6,13 +6,14 @@
   </picture>
 </h1>
 
-*server* composes an HTTP/1.1 router and protocol engine with a server
-transport. The declaration lives in
-[server.h](../../../include/protocol/http/v11/server.h), in the
-*martianlabs::doba::protocol::http::v11* namespace:
+*http_server* composes an HTTP/1.1 router and engine with TCP by default.
+*https_server* uses the same HTTP behavior with TLS. Both live in the
+*martianlabs::doba* namespace and build on the
+[core server](../server.md):
 
 ```cpp
-#include "protocol/http/v11/server.h"
+#include "http_server.h"
+#include "https_server.h"  // When TLS is enabled.
 ```
 
 For a runnable first use, open the
@@ -27,16 +28,25 @@ its [source](../../../examples/http/v11/hello_world/main.cpp).
   </picture>
 </h2>
 
-The template parameters choose the request, response, router, engine, and
-transport types:
+The template parameters choose the request, response, router, and engine.
+*http_server* also accepts a transport template for custom transports:
 
 ```cpp
-template <typename RQty = request, typename RSty = response,
-          typename ROty = router<RQty, RSty>,
-          protocol::contracts::engine ENty = engine<RQty, RSty, ROty>,
+template <typename RQty = protocol::http::v11::request,
+          typename RSty = protocol::http::v11::response,
+          typename ROty = protocol::http::router<RQty, RSty>,
+          protocol::contracts::engine ENty =
+              protocol::http::v11::engine<RQty, RSty, ROty>,
           template <typename, typename> class TRty = transport::server::tcp>
-  requires contracts::server<ROty, ENty, TRty>
-class server;
+  requires contracts::http_server<RQty, RSty, ROty, ENty, TRty>
+class http_server;
+
+template <typename RQty = protocol::http::v11::request,
+          typename RSty = protocol::http::v11::response,
+          typename ROty = protocol::http::router<RQty, RSty>,
+          protocol::contracts::engine ENty =
+              protocol::http::v11::engine<RQty, RSty, ROty>>
+class https_server;
 ```
 
 - **RQty.** Request type; defaults to *request*.
@@ -45,7 +55,28 @@ class server;
 - **ENty.** Protocol engine type; defaults to *engine<RQty, RSty, ROty>*.
 - **TRty.** Transport template; defaults to TCP.
 
-**server<>** therefore selects doba's HTTP/1.1 types and TCP transport.
+The [HTTP server contract](../../../include/contracts.h) checks that the
+request, response, and router meet their HTTP/1.1 contracts and that the
+engine and transport can be composed.
+
+**http_server<>** selects doba's HTTP/1.1 types and TCP transport.
+**https_server<>** selects the same HTTP types and the TLS transport. Both
+accept custom request, response, and router types.
+Those types must satisfy the
+[HTTP/1.1 contracts](../../../include/protocol/http/v11/contracts.h)
+for request, response, and router.
+Requests and responses provide *from* factories; the router registers and
+selects routes. Its *match* method returns
+[*router_match_result<RQty, RSty>*](../../../include/protocol/http/common/router_match_result.h).
+The result holds non-owning handler pointers. Keep selected handlers alive
+while the engine may use them, including pending async work. Each contract
+checks the public API of the corresponding doba type. These requirements also
+apply when you provide a custom engine. A custom engine used by *http_server*
+accepts its policies and router. If it leaves work pending after a connection
+closes, it must also implement the optional
+[*completion_engine* contract](../../../include/protocol/contracts.h) so the
+transport retains that connection until the work finishes.
+
 The [core model](../../guide/02-core-model.md) explains how the engine and
 transport meet; the [extending guide](../../guide/05-extending-doba.md)
 shows how to replace either side.
@@ -58,13 +89,16 @@ shows how to replace either side.
   </picture>
 </h2>
 
-The constructor takes transport policies first and engine policies second:
+Both constructors take transport policies first and engine policies second:
 
 ```cpp
-explicit server(
-    typename TRty<ENty, engine_factory<ENty, ROty>>::policies_type
+explicit http_server(
+    typename TRty<ENty,
+                  protocol::http::v11::engine_factory<ENty, ROty>>::policies_type
         transport_configuration = {},
     typename ENty::policies_type engine_configuration = {});
+
+// https_server inherits the constructor with TRty fixed to TLS.
 ```
 
 **Parameters:**
@@ -82,8 +116,13 @@ The [hello_world source][hello-source] uses:
 [hello-source]: ../../../examples/http/v11/hello_world/main.cpp
 
 ```cpp
-server<> http_server({.ip = "0.0.0.0", .port = "8080"});
+http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
 ```
+
+The [HTTPS example](../../../examples/http/v11/https_hello_world/README.md)
+passes TLS policies to *https_server<>*; its
+[source](../../../examples/http/v11/https_hello_world/main.cpp) supplies the
+certificate and private key.
 
 The [request_limits example][request-limits] passes HTTP policies as the
 second argument; its
@@ -93,9 +132,10 @@ explains the two policy layers.
 
 [request-limits]: ../../../examples/http/v11/request_limits/README.md
 
-Invalid transport configuration, including TLS certificates, can make
-construction fail. An engine configuration error may surface later, when a
-connection creates its engine.
+The constructor creates the router but not the transport. Invalid transport
+configuration, including TLS certificates, can make the first *start* fail.
+An engine configuration error may surface later, when a connection creates
+its engine.
 
 <a name="lifecycle"></a>
 <h2>
@@ -121,10 +161,12 @@ void start();
 
 **Returns:** Nothing (*void*).
 
-Starts the date service and transport. Calling *start* again while the server
-is running has no effect. If transport startup throws, the date service is
-stopped and the exception reaches the caller. For TCP or TLS, this includes
-listener startup failures.
+Starts the date service, creates the transport on the first call, and starts
+it. Calling *start* again while the server is running has no effect. If
+transport construction or startup throws, the date service is stopped and the
+exception reaches the caller. For TCP or TLS, this includes listener startup
+failures. A transport construction failure cannot be retried on that server
+instance.
 
 <a name="stop"></a>
 <h3>
@@ -143,9 +185,9 @@ void stop();
 **Returns:** Nothing (*void*).
 
 Returns immediately if already stopped. With TCP or TLS, *stop* quiesces the
-transport, waits for pending async route handlers, then stops the transport
-and date service. Call it from a control thread: the bundled transports
-reject quiescing from one of their workers.
+transport, waits for engines with pending work to complete, then stops the
+transport and date service. Call it from a control thread: the bundled
+transports reject quiescing from one of their workers.
 
 <a name="destructor"></a>
 <h3>
@@ -156,15 +198,16 @@ reject quiescing from one of their workers.
 </h3>
 
 ```cpp
-~server();
+~http_server();
 ```
 
 **Parameters:** None.
 
 **Returns:** No value; destructors have no return type.
 
-The destructor calls *stop*. Explicitly calling *stop* keeps the shutdown
-point and any shutdown errors under your control.
+The *http_server* destructor calls *stop* before destroying the router.
+*https_server* inherits this shutdown. Explicitly calling *stop* keeps the
+shutdown point and any shutdown errors under your control.
 
 The [HTTPS example](../../../examples/http/v11/https_hello_world/README.md)
 shows *start*, a signal wait, and an explicit *stop*. See its
@@ -191,8 +234,8 @@ Register routes and controllers before *start*:
 ```cpp
 template <typename Hty>
   requires router_handler_lambda<Hty>
-server& add_route(std::string_view method, std::string_view route,
-                  Hty handler);
+http_server& add_route(std::string_view method, std::string_view route,
+                       Hty handler);
 ```
 
 **Parameters and template arguments:**
@@ -220,7 +263,7 @@ between route parameters and handler arguments.
 
 ```cpp
 template <typename CTty, typename... Args>
-server& add_controller(Args&&... args);
+http_server& add_controller(Args&&... args);
 ```
 
 **Parameters and template arguments:**

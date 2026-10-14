@@ -27,13 +27,13 @@
 #include <string_view>
 #include <utility>
 
-#include "protocol/serialization.h"
+#include "protocol/http/v11/results.h"
 #include "test_helper.h"
 
 namespace {
 using martianlabs::doba::common::byte_storage;
 using martianlabs::doba::common::reader;
-using martianlabs::doba::protocol::serialization_result;
+using martianlabs::doba::protocol::http::v11::serialization_result;
 }  // namespace
 
 // +===========================================================================+

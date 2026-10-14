@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -22,26 +22,33 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_protocol_send_delegate_h
-#define martianlabs_doba_protocol_send_delegate_h
+#ifndef martianlabs_doba_contracts_h
+#define martianlabs_doba_contracts_h
 
-#include <cstddef>
-#include <functional>
-#include <memory>
-#include <string_view>
+#include <concepts>
 
-#include "common/reader.h"
+#include "protocol/http/v11/contracts.h"
+#include "transport/server/contracts.h"
 
-namespace martianlabs::doba::protocol {
+namespace martianlabs::doba::contracts {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] USINGs                                                     ( public ) |
+// | [>] http_server                                                 (concept) |
 // +---------------------------------------------------------------------------+
-// | A function that takes the head and body data, plus an optional source.    |
+// | HTTP/1.1 server composition contract.                                     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-using send_delegate = std::function<void(std::string_view, std::string_view,
-                                         std::unique_ptr<common::reader>)>;
-}  // namespace martianlabs::doba::protocol
+template <typename RQty, typename RSty, typename ROty, typename ENty,
+          template <typename, typename> class TRty>
+concept http_server =
+    protocol::http::v11::contracts::request<RQty> &&
+    protocol::http::v11::contracts::response<RSty> &&
+    protocol::http::v11::contracts::router<ROty, RQty, RSty> &&
+    std::constructible_from<ENty, const typename ENty::policies_type&,
+                            const ROty&> &&
+    transport::server::contracts::transport<
+        TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>, ENty,
+        protocol::http::v11::engine_factory<ENty, ROty>>;
+}  // namespace martianlabs::doba::contracts
 
 #endif
