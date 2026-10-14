@@ -81,12 +81,19 @@ class engine_async {
   // +=========================================================================+
   // | [>] handles                                                  ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Determines if the given router match result indicates that the request  |
+  // | should be handled asynchronously.                                       |
+  // +-------------------------------------------------------------------------+
   template <typename Match>
   static bool handles(const Match& match) {
     return match.async_handler || match.async_parametrized_handler;
   }
   // +=========================================================================+
   // | [>] handle_request                                           ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Handles an incoming request. If the request is to be handled            |
+  // | asynchronously, it dispatches it to the appropriate handler and manages |
+  // | the response.                                                           |
   // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty, typename ROty>
   bool handle_request(decoder<RQty, RSty>& owner, const ROty& router,
@@ -117,6 +124,9 @@ class engine_async {
   // +=========================================================================+
   // | [>] handle_error                                             ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Handles an error response. It serializes the response and submits it to |
+  // | the transport.                                                          |
+  // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty, typename ROty>
   bool handle_error(RSty& response, bool& closed) {
     const auto position = request_position();
@@ -128,6 +138,9 @@ class engine_async {
   }
   // +=========================================================================+
   // | [>] handle_interim                                           ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Handles an interim response. It serializes the response and submits it  |
+  // | to the transport.                                                       |
   // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty, typename ROty>
   bool handle_interim(RSty& response) {
@@ -154,6 +167,9 @@ class engine_async {
   // +=========================================================================+
   // | [>] reserve                                                  ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Reserves a position for a new request. If the maximum number of pending |
+  // | requests has been reached, it closes the connection and returns nullopt.|
+  // +-------------------------------------------------------------------------+
   std::optional<std::size_t> reserve() {
     if (!accepting()) return std::nullopt;
     if (max_pending_requests_ &&
@@ -167,9 +183,17 @@ class engine_async {
   // +=========================================================================+
   // | [>] begin                                                    ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Increments the count of active asynchronous operations. This should be  |
+  // | called when an asynchronous operation starts.                           |
+  // +-------------------------------------------------------------------------+
   void begin() noexcept { active_.fetch_add(1, std::memory_order_release); }
   // +=========================================================================+
   // | [>] end                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Decrements the count of active asynchronous operations. If this was the |
+  // | last active operation and the engine is stopping,                       |
+  // | it calls the 'on_completed_' callback. This should be called when an    |
+  // | asynchronous operation finishes.                                        |
   // +-------------------------------------------------------------------------+
   void end() {
     if (active_.fetch_sub(1, std::memory_order_acq_rel) != 1 ||
@@ -186,6 +210,10 @@ class engine_async {
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Initiates the stopping process for the engine. It sets the stopping     |
+  // | flag and, if there are no active asynchronous operations,               |
+  // | it calls the 'on_completed_' callback.                                  |
+  // +-------------------------------------------------------------------------+
   bool stop(std::function<void()> completed) {
     std::lock_guard<std::mutex> lock(completion_mutex_);
     on_completed_ = std::move(completed);
@@ -197,11 +225,16 @@ class engine_async {
   // +=========================================================================+
   // | [>] closing                                                  ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Returns whether the engine is in the process of closing the connection. |
+  // +-------------------------------------------------------------------------+
   bool closing() const noexcept {
     return closing_.load(std::memory_order_acquire);
   }
   // +=========================================================================+
   // | [>] accepting                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Returns whether the engine is in the process of accepting new           |
+  // | connections.                                                            |
   // +-------------------------------------------------------------------------+
   bool accepting() const noexcept {
     return accepting_.load(std::memory_order_acquire);
@@ -209,12 +242,19 @@ class engine_async {
   // +=========================================================================+
   // | [>] idle                                                     ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Returns whether the engine is idle, meaning it is accepting new         |
+  // | connections, has no active asynchronous operations, and all pending     |
+  // | requests have been sent.                                                |
+  // +-------------------------------------------------------------------------+
   bool idle() const noexcept {
     return accepting() && active_.load(std::memory_order_acquire) == 0 &&
            next_request_ == next_send_.load(std::memory_order_acquire);
   }
   // +=========================================================================+
   // | [>] submit                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Submits a serialized response to the transport. It ensures that         |
+  // | responses are sent in the order of their corresponding requests.        |
   // +-------------------------------------------------------------------------+
   void submit(std::size_t position, serialization_result result, bool final,
               bool close) {
@@ -268,6 +308,9 @@ class engine_async {
   // +=========================================================================+
   // | [>] close_now                                                ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Immediately closes the connection. It sets the accepting flag to false, |
+  // | sets the closing flag to true, and calls the 'on_close_' callback.      |
+  // +-------------------------------------------------------------------------+
   void close_now() {
     accepting_.store(false, std::memory_order_release);
     if (closing_.exchange(true)) return;
@@ -311,6 +354,10 @@ class engine_async {
   };
   // +=========================================================================+
   // | [>] dispatch                                                ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Dispatches an asynchronous request to the appropriate handler and       |
+  // | manages the response. It ensures that the response is submitted in the  |
+  // | correct order.                                                          |
   // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty, typename ROty>
   void dispatch(decoder<RQty, RSty>& owner, RQty request,

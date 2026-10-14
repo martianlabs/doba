@@ -65,6 +65,11 @@ struct engine_sync {
   // +=========================================================================+
   // | [>] handle_request                                           ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Handles an incoming request synchronously. It executes the request      |
+  // | against the router, builds the response, serializes it, and submits     |
+  // | it to the transport. It returns true if the connection should be        |
+  // | closed after the response is sent.                                      |
+  // +-------------------------------------------------------------------------+
   static bool handle_request(decoder<RQty, RSty>& owner, const ROty& router,
                              const RQty& request,
                              const router_match_result<RQty, RSty>& match,
@@ -79,6 +84,10 @@ struct engine_sync {
   // +=========================================================================+
   // | [>] handle_response                                          ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Handles a response synchronously. It serializes the response and        |
+  // | submits it to the transport. It returns true if the connection should   |
+  // | be closed after the response is sent.                                   |
+  // +-------------------------------------------------------------------------+
   static void handle_response(RSty& response, bool close,
                               const protocol::send_delegate& on_send) {
     auto serialized = serialize(response, close);
@@ -86,6 +95,10 @@ struct engine_sync {
   }
   // +=========================================================================+
   // | [>] execute                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Executes the request against the router and builds the response. It     |
+  // | handles different request targets and sets the appropriate response.    |
+  // | If an exception occurs during execution, it builds an error response.   |
   // +-------------------------------------------------------------------------+
   static void execute(
       const ROty& router, const RQty& request, RSty& response, bool& close,
@@ -133,6 +146,10 @@ struct engine_sync {
   // +=========================================================================+
   // | [>] build_error_response                                     ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Builds a generic error response with a 500 Internal Server Error        |
+  // | status. It sets the response body to "Internal Server Error".           |
+  // | This is used when an exception occurs during request processing.        |
+  // +-------------------------------------------------------------------------+
   static void build_error_response(RSty& response) {
     response.internal_server_error_500();
     response.set_body("Internal Server Error");
@@ -140,12 +157,20 @@ struct engine_sync {
   // +=========================================================================+
   // | [>] serialize                                                ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Serializes the response. If the connection should be closed,            |
+  // | it sets the "Connection: close" header. It returns the                  |
+  // | serialized result.                                                      |
+  // +-------------------------------------------------------------------------+
   static serialization_result serialize(RSty& response, bool close) {
     if (close) response.set_header(header_names::kConnection, "close");
     return response.serialize();
   }
   // +=========================================================================+
   // | [>] serialize                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Serializes the response based on the request. If the connection should  |
+  // | be closed, it sets the "Connection: close" header. It returns the       |
+  // | serialized result.                                                      |
   // +-------------------------------------------------------------------------+
   static serialization_result serialize(const RQty& request, RSty& response,
                                         bool& close) {
