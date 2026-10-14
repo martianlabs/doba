@@ -25,6 +25,7 @@
 #ifndef martianlabs_doba_protocol_http_router_h
 #define martianlabs_doba_protocol_http_router_h
 
+#include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -33,6 +34,7 @@
 #include <variant>
 #include <vector>
 
+#include "protocol/http/common/auth/authentication_result.h"
 #include "protocol/http/common/router_controller_routes.h"
 #include "protocol/http/common/router_handler_parametrized_async.h"
 #include "protocol/http/common/router_handler_signature.h"
@@ -76,6 +78,17 @@ class router {
   template <typename Hty>
     requires router_handler_lambda<Hty>
   void add(std::string_view method, std::string_view route, Hty handler) {
+    add(method, route, std::move(handler), {});
+  }
+
+  // +=========================================================================+
+  // | [>] add                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  template <typename Hty>
+    requires router_handler_lambda<Hty>
+  void add(std::string_view method, std::string_view route, Hty handler,
+           std::function<auth::authentication_result(const RQty&)>
+               authenticate) {
     using signature =
         router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
     signature::template check<RQty, RSty>();
@@ -104,7 +117,8 @@ class router {
         route_data data{
             std::string(route.substr(0, wildcard_position)),
             handler_type(std::in_place_index < asynchronous ? 1 : 0 >,
-                         std::move(handler))};
+                         std::move(handler)),
+            std::move(authenticate)};
         for (auto& [wildcard_method, handlers] : wildcard_handlers_) {
           if (wildcard_method == method) {
             handlers.push_back(std::move(data));
@@ -122,7 +136,8 @@ class router {
       }
       route_data data{std::string(route),
                       handler_type(std::in_place_index < asynchronous ? 1 : 0 >,
-                                   std::move(handler))};
+                                   std::move(handler)),
+                      std::move(authenticate)};
       for (auto& [static_method, handlers] : handlers_) {
         if (static_method == method) {
           handlers.push_back(std::move(data));
@@ -146,12 +161,13 @@ class router {
       }();
       for (auto& [parametrized_method, handlers] : parametrized_handlers_) {
         if (parametrized_method == method) {
-          handlers.push_back(std::move(data));
+          handlers.push_back({std::move(data), std::move(authenticate)});
           return;
         }
       }
       parametrized_handlers_.push_back(
-          {std::string(method), {std::move(data)}});
+          {std::string(method),
+           {{std::move(data), std::move(authenticate)}}});
     }
   }
   // +=========================================================================+
@@ -203,28 +219,29 @@ class router {
         if (route.path != path) continue;
         if (auto handler = std::get_if<router_handler_static<RQty, RSty>>(
                 &route.handler)) {
-          return {handler, nullptr, nullptr, nullptr};
+          return {handler, nullptr, nullptr, nullptr, &route.authenticate};
         }
         return {nullptr, nullptr,
                 std::get_if<router_handler_static_async<RQty, RSty>>(
                     &route.handler),
-                nullptr};
+                nullptr, &route.authenticate};
       }
     }
     for (const auto& [parametrized_method, handlers] : parametrized_handlers_) {
       if (parametrized_method != method) continue;
       for (const auto& handler : handlers) {
         const bool matches = std::visit(
-            [path](const auto& entry) { return entry.matches(path); }, handler);
+            [path](const auto& entry) { return entry.matches(path); },
+            handler.handler);
         if (!matches) continue;
         if (auto selected =
                 std::get_if<router_handler_parametrized<RQty, RSty>>(
-                    &handler)) {
-          return {nullptr, selected, nullptr, nullptr};
+                    &handler.handler)) {
+          return {nullptr, selected, nullptr, nullptr, &handler.authenticate};
         }
         return {nullptr, nullptr, nullptr,
                 std::get_if<router_handler_parametrized_async<RQty, RSty>>(
-                    &handler)};
+                    &handler.handler), &handler.authenticate};
       }
     }
     for (const auto& [wildcard_method, handlers] : wildcard_handlers_) {
@@ -233,12 +250,12 @@ class router {
         if (!path.starts_with(route.path)) continue;
         if (auto handler = std::get_if<router_handler_static<RQty, RSty>>(
                 &route.handler)) {
-          return {handler, nullptr, nullptr, nullptr};
+          return {handler, nullptr, nullptr, nullptr, &route.authenticate};
         }
         return {nullptr, nullptr,
                 std::get_if<router_handler_static_async<RQty, RSty>>(
                     &route.handler),
-                nullptr};
+                nullptr, &route.authenticate};
       }
     }
     return {};
@@ -270,7 +287,8 @@ class router {
       if (found) continue;
       for (const auto& handler : handlers) {
         const bool matches = std::visit(
-            [path](const auto& entry) { return entry.matches(path); }, handler);
+            [path](const auto& entry) { return entry.matches(path); },
+            handler.handler);
         if (!matches) continue;
         allowed.push_back(method);
         break;
@@ -314,13 +332,18 @@ class router {
   struct route_data {
     std::string path;
     handler_type handler;
+    std::function<auth::authentication_result(const RQty&)> authenticate;
+  };
+  struct parametrized_route_data {
+    parametrized_handler_type handler;
+    std::function<auth::authentication_result(const RQty&)> authenticate;
   };
   // +=========================================================================+
   // | [>] USINGs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
   using handler_pair = std::pair<std::string, std::vector<route_data>>;
   using parametrized_handler_pair =
-      std::pair<std::string, std::vector<parametrized_handler_type>>;
+      std::pair<std::string, std::vector<parametrized_route_data>>;
   // +=========================================================================+
   // | [>] restore_routes                                          ( private ) |
   // +-------------------------------------------------------------------------+

@@ -1376,3 +1376,154 @@ DOBA_TEST("engine matches only complete close options") {
   }
 }
 
+
+DOBA_TEST("engine authenticates all route forms before invoking handlers") {
+  namespace auth = martianlabs::doba::protocol::http::auth;
+  for (const bool asynchronous : {false, true}) {
+    for (const bool accepted : {false, true}) {
+      router<request, response> routes;
+      int checks = 0;
+      int calls = 0;
+      auto authenticate = [&](const request&) -> auth::authentication_result {
+        checks++;
+        return accepted
+            ? auth::authentication_result{
+                  auth::authentication_status::kAccepted,
+                                           {}}
+            : auth::authentication_result{
+                  auth::authentication_status::kUnauthenticated,
+                  "Custom realm=\"demo\""};
+      };
+      if (asynchronous) {
+        routes.add("GET", "/static", [&](const request&, response& res)
+                       -> task<void> {
+          calls++;
+          make_response(res, "ok");
+          co_return;
+        }, authenticate);
+        routes.add("GET", "/items/:id",
+                   [&](const request&, response& res, int) -> task<void> {
+          calls++;
+          make_response(res, "ok");
+          co_return;
+        }, authenticate);
+        routes.add("GET", "/files/*", [&](const request&, response& res)
+                       -> task<void> {
+          calls++;
+          make_response(res, "ok");
+          co_return;
+        }, authenticate);
+      } else {
+        routes.add("GET", "/static", [&](const request&, response& res) {
+          calls++;
+          make_response(res, "ok");
+        }, authenticate);
+        routes.add("GET", "/items/:id",
+                   [&](const request&, response& res, int) {
+          calls++;
+          make_response(res, "ok");
+        }, authenticate);
+        routes.add("GET", "/files/*", [&](const request&, response& res) {
+          calls++;
+          make_response(res, "ok");
+        }, authenticate);
+      }
+      routes.add("GET", "/public", [](const request&, response& res) {
+        make_response(res, "public");
+      });
+      connection current(routes);
+      for (const auto path : {"/static", "/items/42", "/files/a"}) {
+        current.wire.clear();
+        current.receive(std::string("GET ") + path +
+                        " HTTP/1.1\r\nHost: localhost\r\n\r\n");
+        DOBA_EXPECT(current.wire.starts_with(accepted ? "HTTP/1.1 200 "
+                                                     : "HTTP/1.1 401 "));
+        if (!accepted) {
+          DOBA_EXPECT(current.wire.find(
+              "WWW-Authenticate: Custom realm=\"demo\"") !=
+              std::string::npos);
+        }
+      }
+      DOBA_EXPECT_EQUAL(checks, 3);
+      DOBA_EXPECT_EQUAL(calls, accepted ? 3 : 0);
+      current.wire.clear();
+      current.receive("GET /public HTTP/1.1\r\nHost: localhost\r\n\r\n");
+      DOBA_EXPECT(current.wire.ends_with("public"));
+      DOBA_EXPECT_EQUAL(checks, 3);
+      DOBA_EXPECT_EQUAL(current.closes, 0);
+    }
+  }
+}
+
+DOBA_TEST("engine orders authentication rejection after suspended response") {
+  namespace auth = martianlabs::doba::protocol::http::auth;
+  router<request, response> routes;
+  std::coroutine_handle<> pending;
+  routes.add("GET", "/slow", [&](const request&, response& res)
+                 -> task<void> {
+    co_await suspend_once{pending};
+    make_response(res, "slow");
+  });
+  int calls = 0;
+  routes.add("GET", "/private", [&](const request&, response&) -> task<void> {
+    calls++;
+    co_return;
+  }, [](const request&) -> auth::authentication_result {
+    return {auth::authentication_status::kUnauthenticated, "Custom"};
+  });
+  connection current(routes);
+  current.receive("GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                  "GET /private HTTP/1.1\r\nHost: localhost\r\n\r\n");
+  DOBA_EXPECT(current.wire.empty());
+  pending.resume();
+  DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 200 "));
+  DOBA_EXPECT(current.wire.find("slowHTTP/1.1 401 ") != std::string::npos);
+  DOBA_EXPECT_EQUAL(calls, 0);
+}
+
+DOBA_TEST("engine handles provider exceptions and invalid challenges") {
+  namespace auth = martianlabs::doba::protocol::http::auth;
+  for (const bool asynchronous : {false, true}) {
+    for (const auto challenge :
+         {"", ", ,", "Custom\r\nInjected: yes", "Custom"}) {
+      router<request, response> routes;
+      auto authenticate = [challenge](const request&)
+          -> auth::authentication_result {
+        if (std::string_view(challenge) == "Custom") {
+          throw std::runtime_error("validator failed");
+        }
+        return {auth::authentication_status::kUnauthenticated, challenge};
+      };
+      if (asynchronous) {
+        routes.add("GET", "/", [](const request&, response&) -> task<void> {
+          co_return;
+        }, authenticate);
+      } else {
+        routes.add("GET", "/", [](const request&, response&) {}, authenticate);
+      }
+      connection current(routes);
+      current.receive("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n");
+      DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 500 "));
+      DOBA_EXPECT_EQUAL(current.closes, 1);
+      DOBA_EXPECT(current.wire.find("Injected:") == std::string::npos);
+    }
+  }
+}
+
+DOBA_TEST("engine maps custom rejection statuses and preserves HEAD") {
+  namespace auth = martianlabs::doba::protocol::http::auth;
+  for (const auto status : {auth::authentication_status::kInvalidRequest,
+                            auth::authentication_status::kForbidden}) {
+    router<request, response> routes;
+    routes.add("HEAD", "/", [](const request&, response&) {},
+               [status](const request&) -> auth::authentication_result {
+      return {status, {}};
+    });
+    connection current(routes);
+    current.receive("HEAD / HTTP/1.1\r\nHost: localhost\r\n\r\n");
+    DOBA_EXPECT(current.wire.starts_with(
+        status == auth::authentication_status::kInvalidRequest
+            ? "HTTP/1.1 400 " : "HTTP/1.1 403 "));
+    DOBA_EXPECT(current.wire.ends_with("\r\n\r\n"));
+  }
+}

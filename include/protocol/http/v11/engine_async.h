@@ -369,6 +369,13 @@ class engine_async {
         owner, owner.take_request_storage(), std::move(request));
     entry->execution = execution;
     try {
+      if (!engine_sync<RQty, RSty, ROty>::authenticate(
+              match, entry->request, entry->response)) {
+        auto serialized = engine_sync<RQty, RSty, ROty>::serialize(
+            entry->request, entry->response, close);
+        state->submit(position, std::move(serialized), true, close);
+        return;
+      }
       common::task<void> work =
           match.async_handler
               ? (*match.async_handler)(entry->request, entry->response)

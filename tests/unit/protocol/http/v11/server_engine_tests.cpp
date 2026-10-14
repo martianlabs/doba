@@ -29,7 +29,13 @@
 #include <utility>
 
 #include "http_server.h"
+#include "protocol/http/common/auth/basic.h"
+#include "protocol/http/common/auth/bearer.h"
 #include "test_helper.h"
+
+#ifdef DOBA_ENABLE_TLS
+#include "https_server.h"
+#endif
 
 namespace {
 // /////////////////////////////////////////////////////////////////////////////
@@ -279,6 +285,34 @@ static_assert(!accepts_custom_http_server<http::request, http::response,
 // /////////////////////////////////////////////////////////////////////////////
 using server_type = martianlabs::doba::http_server<
     http::request, http::response, routes_type, engine_type, fake_transport>;
+namespace auth = martianlabs::doba::protocol::http::auth;
+struct custom_auth {
+  int& checks;
+  auth::authentication_result authenticate(const http::request&) const {
+    checks++;
+    return {auth::authentication_status::kAccepted, {}};
+  }
+};
+struct invalid_auth {
+  bool authenticate(const http::request&) const { return true; }
+};
+static_assert(!auth::contracts::provider<invalid_auth, http::request>);
+using authenticated_server = martianlabs::doba::http_server<
+    http::request, http::response, routes_type, engine_type, fake_transport,
+    auth::basic, auth::bearer, custom_auth>;
+template <typename Aty>
+concept registered_auth = requires(authenticated_server& server) {
+  server.template add_route<Aty>("GET", "/",
+      [](const http::request&, http::response&) {});
+};
+static_assert(registered_auth<custom_auth>);
+static_assert(!registered_auth<invalid_auth>);
+#ifdef DOBA_ENABLE_TLS
+using authenticated_https_server = martianlabs::doba::https_server<
+    http::request, http::response, routes_type, engine_type, auth::bearer>;
+static_assert(std::constructible_from<authenticated_https_server,
+    tr::tls_policies, http::policies, std::tuple<auth::bearer>>);
+#endif
 using factory_type = http::engine_factory<engine_type, routes_type>;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -492,4 +526,29 @@ DOBA_TEST("server forwards engine policies to every connection") {
   DOBA_EXPECT(second != std::string::npos);
   value.stop();
   DOBA_EXPECT_EQUAL(observed.stops, 1);
+}
+
+DOBA_TEST("server owns and selects authentication providers across engines") {
+  observed = {};
+  int checks = 0;
+  authenticated_server value({}, {},
+      std::tuple{auth::basic{"demo", [](auto, auto) { return false; }},
+                 auth::bearer{"demo", [](auto) { return false; }},
+                 custom_auth{checks}});
+  value.add_route<custom_auth>("GET", "/",
+      [](const http::request&, http::response& res) { res.ok_200(); });
+  value.start();
+  DOBA_EXPECT_EQUAL(checks, 2);
+  bool rejected = false;
+  try {
+    value.add_route<custom_auth>("GET", "/late",
+        [](const http::request&, http::response&) {});
+  } catch (const std::runtime_error&) {
+    rejected = true;
+  }
+  DOBA_EXPECT(rejected);
+  value.stop();
+  value.start();
+  DOBA_EXPECT_EQUAL(checks, 4);
+  value.stop();
 }

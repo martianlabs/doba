@@ -28,11 +28,13 @@
 #include <mutex>
 #include <stdexcept>
 #include <string_view>
+#include <tuple>
 #include <utility>
 
 #include "common/date_server.h"
 #include "contracts.h"
 #include "transport/server/tcp.h"
+#include "protocol/http/common/auth/contracts.h"
 #include "protocol/http/common/router.h"
 #include "protocol/http/v11/contracts.h"
 #include "protocol/http/v11/engine.h"
@@ -53,8 +55,10 @@ template <typename RQty = protocol::http::v11::request,
           typename ROty = protocol::http::router<RQty, RSty>,
           protocol::contracts::engine ENty =
               protocol::http::v11::engine<RQty, RSty, ROty>,
-          template <typename, typename> class TRty = transport::server::tcp>
-  requires contracts::http_server<RQty, RSty, ROty, ENty, TRty>
+          template <typename, typename> class TRty = transport::server::tcp,
+          typename... AUty>
+  requires contracts::http_server<RQty, RSty, ROty, ENty, TRty> &&
+           (protocol::http::auth::contracts::provider<AUty, RQty> && ...)
 class http_server
     : public server<
           ENty, TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>> {
@@ -66,11 +70,21 @@ class http_server
       typename TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>::
           policies_type transport_configuration = {},
       typename ENty::policies_type engine_configuration = {})
+    requires(sizeof...(AUty) == 0)
+      : http_server(std::move(transport_configuration),
+                    std::move(engine_configuration), std::tuple<>{}) {}
+
+  explicit http_server(
+      typename TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>::
+          policies_type transport_configuration,
+      typename ENty::policies_type engine_configuration,
+      std::tuple<AUty...> authentication)
       : server<ENty,
                TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>>{
             std::move(transport_configuration),
             protocol::http::v11::make_engine_factory<ENty>(
-                std::move(engine_configuration), this->router_)} {
+                std::move(engine_configuration), this->router_)},
+        authentication_(std::move(authentication)) {
     // +-----------------------------------------------------------------------+
     // | Let's set 'on_starting' callback that will be used to start the date  |
     // | server when the HTTP server starts.                                   |
@@ -119,6 +133,28 @@ class http_server
     return *this;
   }
   // +=========================================================================+
+  // | [>] add_route                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  template <typename Aty, typename Hty>
+    requires protocol::http::router_handler_lambda<Hty> &&
+             (std::same_as<Aty, AUty> || ...)
+  http_server& add_route(std::string_view method, std::string_view route,
+                         Hty handler) {
+    static_assert((std::size_t{0} + ... +
+                   std::size_t{std::same_as<Aty, AUty>}) == 1,
+                  "An authentication provider type must be unique");
+    std::lock_guard<std::mutex> lock(registration_mutex_);
+    if (registration_closed_) {
+      throw std::runtime_error("Cannot add route when the server is running");
+    }
+    const auto& provider = std::get<Aty>(authentication_);
+    this->router_.add(method, route, std::move(handler),
+                     [&provider](const RQty& request) {
+                       return provider.authenticate(request);
+                     });
+    return *this;
+  }
+  // +=========================================================================+
   // | [>] add_controller                                           ( public ) |
   // +-------------------------------------------------------------------------+
   // | Adds a controller to the server's router.                               |
@@ -138,6 +174,7 @@ class http_server
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
+  std::tuple<AUty...> authentication_;
   ROty router_;
   std::mutex registration_mutex_;
   bool registration_closed_{false};

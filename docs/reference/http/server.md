@@ -37,15 +37,18 @@ template <typename RQty = protocol::http::v11::request,
           typename ROty = protocol::http::router<RQty, RSty>,
           protocol::contracts::engine ENty =
               protocol::http::v11::engine<RQty, RSty, ROty>,
-          template <typename, typename> class TRty = transport::server::tcp>
-  requires contracts::http_server<RQty, RSty, ROty, ENty, TRty>
+          template <typename, typename> class TRty = transport::server::tcp,
+          typename... AUty>
+  requires contracts::http_server<RQty, RSty, ROty, ENty, TRty> &&
+           (protocol::http::auth::contracts::provider<AUty, RQty> && ...)
 class http_server;
 
 template <typename RQty = protocol::http::v11::request,
           typename RSty = protocol::http::v11::response,
           typename ROty = protocol::http::router<RQty, RSty>,
           protocol::contracts::engine ENty =
-              protocol::http::v11::engine<RQty, RSty, ROty>>
+              protocol::http::v11::engine<RQty, RSty, ROty>,
+          typename... AUty>
 class https_server;
 ```
 
@@ -54,6 +57,8 @@ class https_server;
 - **ROty.** Router type; defaults to *router<RQty, RSty>*.
 - **ENty.** Protocol engine type; defaults to *engine<RQty, RSty, ROty>*.
 - **TRty.** Transport template; defaults to TCP.
+- **AUty.** Authentication provider types; empty by default. Each satisfies
+  **auth::contracts::provider<AUty, RQty>**.
 
 The [HTTP server contract](../../../include/contracts.h) checks that the
 request, response, and router meet their HTTP/1.1 contracts and that the
@@ -68,7 +73,7 @@ for request, response, and router.
 Requests and responses provide *from* factories; the router registers and
 selects routes. Its *match* method returns
 [*router_match_result<RQty, RSty>*](../../../include/protocol/http/common/router_match_result.h).
-The result holds non-owning handler pointers. Keep selected handlers alive
+The result holds non-owning handler and authentication callback pointers. Keep selected handlers alive
 while the engine may use them, including pending async work. Each contract
 checks the public API of the corresponding doba type. These requirements also
 apply when you provide a custom engine. A custom engine used by *http_server*
@@ -89,14 +94,16 @@ shows how to replace either side.
   </picture>
 </h2>
 
-Both constructors take transport policies first and engine policies second:
+Both server types take transport policies first and engine policies second.
+The existing constructor applies when the provider pack is empty:
 
 ```cpp
 explicit http_server(
     typename TRty<ENty,
                   protocol::http::v11::engine_factory<ENty, ROty>>::policies_type
         transport_configuration = {},
-    typename ENty::policies_type engine_configuration = {});
+    typename ENty::policies_type engine_configuration = {})
+  requires(sizeof...(AUty) == 0);
 
 // https_server inherits the constructor with TRty fixed to TLS.
 ```
@@ -236,22 +243,99 @@ template <typename Hty>
   requires router_handler_lambda<Hty>
 http_server& add_route(std::string_view method, std::string_view route,
                        Hty handler);
+
+template <typename Aty, typename Hty>
+  requires router_handler_lambda<Hty> && (std::same_as<Aty, AUty> || ...)
+http_server& add_route(std::string_view method, std::string_view route,
+                       Hty handler);
 ```
 
 **Parameters and template arguments:**
 
 - **Hty.** Deduced from *handler*; it must satisfy *router_handler_lambda*.
+- **Aty.** Optional explicit provider type, occurring exactly once in **AUty**.
+  Omit it for a public route.
 - **method.** The HTTP method to match, such as *GET*.
 - **route.** The path pattern to match. See the
   [HTTP guide](../../guide/03-http-1-1.md) for supported route shapes.
 - **handler.** A compatible handler; the router stores it by moving it from
   this argument.
 
+The authenticated overload calls the provider once before the handler.
+Only an accepted result runs it. Rejections use the engine's normal response
+ordering. Static, parametrized, and wildcard routes support authentication
+with synchronous or coroutine handlers; route precedence is unchanged.
+
 **Returns:** A reference to this server, so registrations can be chained.
 
 **Errors:** Throws *std::runtime_error* if the server is running. The router
 throws *std::invalid_argument* for invalid wildcard placement or a mismatch
 between route parameters and handler arguments.
+
+<a name="authentication"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/h2-authentication-dark.svg">
+    <img src="../../../resources/docs/reference/h2-authentication.svg" alt="Authentication">
+  </picture>
+</h2>
+
+The [authentication reference](authentication.md) describes Basic, Bearer,
+custom providers, rejection results, and concurrency requirements. The
+[Basic example](../../../examples/http/v11/basic_auth/README.md) and
+[Bearer example](../../../examples/http/v11/bearer_auth/README.md) run complete
+servers.
+
+The additional constructor accepts provider instances. HTTPS inherits it
+with the transport fixed to TLS:
+
+```cpp
+explicit http_server(
+    typename TRty<ENty,
+                  protocol::http::v11::engine_factory<ENty, ROty>>::policies_type
+        transport_configuration,
+    typename ENty::policies_type engine_configuration,
+    std::tuple<AUty...> authentication);
+```
+
+**Parameters:** Transport and engine policies follow the existing
+constructor. **authentication** supplies provider instances in template
+order, moved into the server. This constructor has no default arguments.
+
+**Returns:** No value. The server owns providers until it has stopped all
+pending requests. Captured dependencies must remain valid for that period.
+
+**Errors:** Providers must satisfy the method contract and be movable.
+Selecting an absent or repeated provider type for a route fails compilation.
+
+A server with Basic uses:
+
+```cpp
+#include <tuple>
+
+#include "http_server.h"
+#include "protocol/http/common/auth/basic.h"
+
+namespace doba = martianlabs::doba;
+namespace auth = doba::protocol::http::auth;
+using namespace doba::protocol::http::v11;
+using routes_type = doba::protocol::http::router<request, response>;
+using engine_type = engine<request, response>;
+using server_type = doba::http_server<request, response, routes_type,
+    engine_type, doba::transport::server::tcp, auth::basic>;
+
+server_type server({.ip = "127.0.0.1", .port = "8080"}, {},
+    std::tuple{auth::basic{"demo", [](auto user, auto password) {
+      return user == "alice" && password == "secret";
+    }}});
+```
+
+For HTTPS the pack follows the engine argument:
+**https_server<request, response, routes_type, engine_type, auth::basic>**.
+A custom router used for authenticated routes must also support
+**add(method, route, handler, authenticate)** and return a pointer to the
+stored callback in **router_match_result**. Existing custom routers used
+only for public routes retain their contract.
 
 <a name="add-controller"></a>
 <h3>

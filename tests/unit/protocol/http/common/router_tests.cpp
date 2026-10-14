@@ -759,3 +759,24 @@ DOBA_TEST("controller registration rolls back every route category") {
   }
 }
 
+
+DOBA_TEST("router associates authentication with selected route only") {
+  namespace auth = martianlabs::doba::protocol::http::auth;
+  router<request, response> routes;
+  int checks = 0;
+  routes.add("GET", "/items/*", [](const request&, response&) {},
+             [&](const request&) -> auth::authentication_result {
+    checks++;
+    return {auth::authentication_status::kUnauthenticated, "Custom"};
+  });
+  routes.add("GET", "/items/public", [](const request&, response&) {});
+  const auto selected = routes.match("GET", "/items/public");
+  DOBA_EXPECT(static_cast<bool>(selected));
+  DOBA_EXPECT(selected.authenticate && !*selected.authenticate);
+  const auto wildcard = routes.match("GET", "/items/private");
+  DOBA_EXPECT(wildcard.authenticate && *wildcard.authenticate);
+  DOBA_EXPECT_EQUAL(checks, 0);
+  DOBA_EXPECT((*wildcard.authenticate)(request{}).status ==
+              auth::authentication_status::kUnauthenticated);
+  DOBA_EXPECT_EQUAL(checks, 1);
+}
