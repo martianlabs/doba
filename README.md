@@ -47,99 +47,99 @@ The test machine uses an **AMD EPYC 8534P at 2.30 GHz**
 **2 x 3.84 TB NVMe** storage. It provides a **25 Gbps private network**
 and a **1 Gbps public connection**, upgradable to **25 Gbps**.
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-overall.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-overall-dark.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-overall.svg" alt="HttpArena overall top 10: total points including completeness; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-overall.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-overall.svg" alt="HttpArena overall top 10: total points including completeness; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-overall.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-overall-dark.svg" alt="HttpArena overall top 10: total points including completeness; higher is better." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-baseline.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-baseline-dark.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-baseline.svg" alt="HttpArena baseline: selected requests per second; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-baseline.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-baseline.svg" alt="HttpArena baseline: selected requests per second; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-baseline.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-baseline-dark.svg" alt="HttpArena baseline: selected requests per second; higher is better." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-pipelined.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-pipelined-dark.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-pipelined.svg" alt="HttpArena pipelined: selected requests per second; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-pipelined.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-pipelined.svg" alt="HttpArena pipelined: selected requests per second; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-pipelined.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-pipelined-dark.svg" alt="HttpArena pipelined: selected requests per second; higher is better." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-limited-conn.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-limited-conn-dark.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-limited-conn.svg" alt="HttpArena limited-conn: selected requests per second; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-limited-conn.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-limited-conn.svg" alt="HttpArena limited-conn: selected requests per second; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-limited-conn.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-limited-conn-dark.svg" alt="HttpArena limited-conn: selected requests per second; higher is better." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-10k.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-latency-10k-dark.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-10k.svg" alt="HttpArena latency-10k: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-10k.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-10k.svg" alt="HttpArena latency-10k: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-10k.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-10k-dark.svg" alt="HttpArena latency-10k: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-1m.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-latency-1m-dark.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-1m.svg" alt="HttpArena latency-1m: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-1m.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-1m.svg" alt="HttpArena latency-1m: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-1m.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-1m-dark.svg" alt="HttpArena latency-1m: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu-dark.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu.svg" alt="HttpArena latency-500k-8cpu: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu.svg" alt="HttpArena latency-500k-8cpu: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu-dark.svg" alt="HttpArena latency-500k-8cpu: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-async.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-async-dark.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-async.svg" alt="HttpArena async: selected requests per second; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-async.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-async.svg" alt="HttpArena async: selected requests per second; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-async.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-async-dark.svg" alt="HttpArena async: selected requests per second; higher is better." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-json-comp.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-json-comp-dark.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-json-comp.svg" alt="HttpArena json-comp: compression-adjusted requests per second; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-json-comp.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-json-comp.svg" alt="HttpArena json-comp: compression-adjusted requests per second; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-json-comp.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-json-comp-dark.svg" alt="HttpArena json-comp: compression-adjusted requests per second; higher is better." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-json-tls.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-json-tls-dark.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-json-tls.svg" alt="HttpArena json-tls: selected requests per second; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-json-tls.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-json-tls.svg" alt="HttpArena json-tls: selected requests per second; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-json-tls.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-json-tls-dark.svg" alt="HttpArena json-tls: selected requests per second; higher is better." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-8gbit.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-8gbit-dark.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-8gbit.svg" alt="HttpArena 8gbit: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-8gbit.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-8gbit.svg" alt="HttpArena 8gbit: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-8gbit.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-8gbit-dark.svg" alt="HttpArena 8gbit: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-static-tls.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-static-tls-dark.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-static-tls.svg" alt="HttpArena static-tls: selected requests per second; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-static-tls.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-static-tls.svg" alt="HttpArena static-tls: selected requests per second; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-static-tls.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-static-tls-dark.svg" alt="HttpArena static-tls: selected requests per second; higher is better." width="100%">
 </a>
 <br><br>
 
