@@ -60,7 +60,6 @@ class basic {
     }
     challenge_ = "Basic realm=\"" + quoted + "\"";
   }
-
   // +=========================================================================+
   // | [>] authenticate                                             ( public ) |
   // +-------------------------------------------------------------------------+
@@ -94,10 +93,11 @@ class basic {
     for (const char value : credentials) {
       if (value == '=') break;
       const unsigned int digit =
-          value >= 'A' && value <= 'Z' ? value - 'A' :
-          value >= 'a' && value <= 'z' ? value - 'a' + 26 :
-          value >= '0' && value <= '9' ? value - '0' + 52 :
-          value == '+' ? 62 : 63;
+          value >= 'A' && value <= 'Z'   ? value - 'A'
+          : value >= 'a' && value <= 'z' ? value - 'a' + 26
+          : value >= '0' && value <= '9' ? value - '0' + 52
+          : value == '+'                 ? 62
+                                         : 63;
       bits = (bits << 6) | digit;
       count += 6;
       if (count >= 8) {

@@ -59,7 +59,6 @@ class bearer {
     }
     challenge_ = "Bearer realm=\"" + quoted + "\"";
   }
-
   // +=========================================================================+
   // | [>] authenticate                                             ( public ) |
   // +-------------------------------------------------------------------------+
@@ -90,25 +89,7 @@ class bearer {
     } else {
       credentials = {};
     }
-    bool padding = false;
-    bool data = false;
-    bool valid = !credentials.empty();
-    for (const char value : credentials) {
-      if (value == '=') {
-        padding = true;
-        continue;
-      }
-      if (padding || !((value >= 'A' && value <= 'Z') ||
-                       (value >= 'a' && value <= 'z') ||
-                       (value >= '0' && value <= '9') ||
-                       value == '-' || value == '.' || value == '_' ||
-                       value == '~' || value == '+' || value == '/')) {
-        valid = false;
-        break;
-      }
-      data = true;
-    }
-    if (!valid || !data) {
+    if (!helpers::is_token68(credentials)) {
       return {authentication_status::kInvalidRequest,
               challenge_ + ", error=\"invalid_request\""};
     }
