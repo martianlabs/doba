@@ -1,13 +1,7 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/branding/doba-dark.png">
-  <img src="resources/branding/doba.png" alt="doba" width="640">
-</picture>
+<img src="resources/branding/doba.png" alt="doba" width="640">
 <br><br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-hero-dark.svg">
-  <img src="resources/readme/readme-hero.svg" alt="You write the handler. doba moves the bytes." width="540">
-</picture>
+<img src="resources/readme/readme-hero.svg" alt="You write the handler. doba moves the bytes." width="540">
 <br><br>
 
 [![Build & Test](https://github.com/martianlabs/doba/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/martianlabs/doba/actions/workflows/ci.yml?query=branch%3Amain)
@@ -23,10 +17,7 @@ The TCP transport needs no external libraries; optional TLS uses OpenSSL.
 
 <a name="okay-how-fast"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-performance-dark.svg">
-    <img src="resources/readme/readme-performance.svg" alt="Okay, how fast?" width="280">
-  </picture>
+  <img src="resources/readme/readme-performance.svg" alt="Okay, how fast?" width="280">
 </h2>
 
 Big throughput numbers are fun. Waiting for a response isn't. Let's look at both.
@@ -109,10 +100,7 @@ and a **1 Gbps public connection**, upgradable to **25 Gbps**.
 
 <a name="no-magic-a-few-deliberate-choices"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-design-dark.svg">
-    <img src="resources/readme/readme-design.svg" alt="No magic." width="175">
-  </picture>
+  <img src="resources/readme/readme-design.svg" alt="No magic." width="175">
 </h2>
 
 *A few deliberate choices.*
@@ -129,10 +117,7 @@ and a **1 Gbps public connection**, upgradable to **25 Gbps**.
 
 <a name="hello-world-lets-not-overcomplicate-it"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-hello-dark.svg">
-    <img src="resources/readme/readme-hello.svg" alt="Hello, world." width="220">
-  </picture>
+  <img src="resources/readme/readme-hello.svg" alt="Hello, world." width="220">
 </h2>
 
 *Let's not overcomplicate it.*
@@ -193,10 +178,7 @@ C++20 requirement, and system threading dependency.
 
 <a name="fast-is-nice-correct-is-non-negotiable"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-correctness-dark.svg">
-    <img src="resources/readme/readme-correctness.svg" alt="Fast is nice." width="203">
-  </picture>
+  <img src="resources/readme/readme-correctness.svg" alt="Fast is nice." width="203">
 </h2>
 
 *Correct is non-negotiable.*
