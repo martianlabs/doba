@@ -29,10 +29,13 @@
 #include <string_view>
 #include <utility>
 
+#include "protocol/contracts.h"
+#include "protocol/http/v11/decoder.h"
 #include "protocol/http/v11/results.h"
 #include "protocol/http/common/header_names.h"
 #include "protocol/http/common/method_names.h"
 #include "protocol/http/common/router.h"
+#include "protocol/http/common/router_match_result.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -60,17 +63,39 @@ struct engine_sync {
   engine_sync& operator=(const engine_sync&) = delete;
   engine_sync& operator=(engine_sync&&) noexcept = delete;
   // +=========================================================================+
+  // | [>] handle_request                                           ( public ) |
+  // +-------------------------------------------------------------------------+
+  static bool handle_request(decoder<RQty, RSty>& owner, const ROty& router,
+                             const RQty& request,
+                             const router_match_result<RQty, RSty>& match,
+                             const protocol::send_delegate& on_send) {
+    bool close = request.wants_connection_close();
+    RSty response = owner.make_response();
+    execute(router, request, response, close, &match);
+    auto serialized = serialize(request, response, close);
+    on_send(serialized.head, serialized.body, std::move(serialized.source));
+    return close;
+  }
+  // +=========================================================================+
+  // | [>] handle_response                                          ( public ) |
+  // +-------------------------------------------------------------------------+
+  static void handle_response(RSty& response, bool close,
+                              const protocol::send_delegate& on_send) {
+    auto serialized = serialize(response, close);
+    on_send(serialized.head, serialized.body, std::move(serialized.source));
+  }
+  // +=========================================================================+
   // | [>] execute                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  static void execute(const ROty& router, const RQty& request, RSty& response,
-                      bool& close,
-                      const typename ROty::route_match* selected = nullptr) {
+  static void execute(
+      const ROty& router, const RQty& request, RSty& response, bool& close,
+      const router_match_result<RQty, RSty>* selected = nullptr) {
     try {
       switch (request.get_target()) {
         case target::kOriginForm:
         case target::kAbsoluteForm: {
           const std::string_view path = request.get_absolute_path();
-          const typename ROty::route_match match =
+          const router_match_result<RQty, RSty> match =
               selected ? *selected : router.match(request.get_method(), path);
           if (match.handler) {
             (*match.handler)(request, response);

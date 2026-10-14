@@ -251,6 +251,8 @@ concept accepts_custom_http_server = requires {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 static_assert(protocol::contracts::engine<engine_type>);
+static_assert(protocol::contracts::completion_engine<engine_type>);
+static_assert(!protocol::contracts::completion_engine<custom_engine>);
 static_assert(!std::constructible_from<engine_type, http::policies>);
 static_assert(accepts_server<engine_type, fake_transport>);
 static_assert(accepts_server<engine_type, tr::tcp>);

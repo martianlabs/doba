@@ -65,10 +65,17 @@ accept custom request, response, and router types.
 Those types must satisfy the
 [HTTP/1.1 contracts](../../../include/protocol/http/v11/contracts.h)
 for request, response, and router.
-Requests and responses provide *from* factories; the router provides route
-registration, matching, and async lifetime methods. Each contract checks the
-public API of the corresponding doba type. These requirements also apply when
-you provide a custom engine.
+Requests and responses provide *from* factories; the router registers and
+selects routes. Its *match* method returns
+[*router_match_result<RQty, RSty>*](../../../include/protocol/http/common/router_match_result.h).
+The result holds non-owning handler pointers. Keep selected handlers alive
+while the engine may use them, including pending async work. Each contract
+checks the public API of the corresponding doba type. These requirements also
+apply when you provide a custom engine. A custom engine used by *http_server*
+accepts its policies and router. If it leaves work pending after a connection
+closes, it must also implement the optional
+[*completion_engine* contract](../../../include/protocol/contracts.h) so the
+transport retains that connection until the work finishes.
 
 The [core model](../../guide/02-core-model.md) explains how the engine and
 transport meet; the [extending guide](../../guide/05-extending-doba.md)
@@ -178,9 +185,9 @@ void stop();
 **Returns:** Nothing (*void*).
 
 Returns immediately if already stopped. With TCP or TLS, *stop* quiesces the
-transport, waits for pending async route handlers, then stops the transport
-and date service. Call it from a control thread: the bundled transports
-reject quiescing from one of their workers.
+transport, waits for engines with pending work to complete, then stops the
+transport and date service. Call it from a control thread: the bundled
+transports reject quiescing from one of their workers.
 
 <a name="destructor"></a>
 <h3>

@@ -70,6 +70,7 @@ struct observation {
   int engines{0};
   bool fail_start{false};
   bool fail_construct{false};
+  bool fail_started_callback{false};
   std::string events;
   std::string output;
 };
@@ -134,6 +135,12 @@ class observed_server
   explicit observed_server(observation* state)
       : server(state, observed_factory([]() { return line_engine{}; })) {
     this->set_on_starting([state]() { state->events += 'a'; });
+    this->set_on_started([state]() {
+      state->events += 's';
+      if (state->fail_started_callback) {
+        throw std::runtime_error("started callback failed");
+      }
+    });
     this->set_on_start_failed([state]() { state->events += 'f'; });
     this->set_on_stopping([state]() { state->events += 'd'; });
     this->set_on_stopped([state]() { state->events += 'p'; });
@@ -222,7 +229,31 @@ DOBA_TEST("server emits lifecycle events in order") {
   value.start();
   value.stop();
   value.stop();
-  DOBA_EXPECT_EQUAL(observed.events, "actfatqdxp");
+  DOBA_EXPECT_EQUAL(observed.events, "actfatsqdxp");
+}
+
+// +===========================================================================+
+// | [>] server stays running after started callback throws     ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("server stays running after started callback throws") {
+  observation observed;
+  observed.fail_started_callback = true;
+  observed_server value(&observed);
+  bool failed = false;
+  try {
+    value.start();
+  } catch (const std::runtime_error&) {
+    failed = true;
+  }
+  DOBA_EXPECT(failed);
+  DOBA_EXPECT_EQUAL(observed.events, "acts");
+  DOBA_EXPECT_EQUAL(observed.starts, 1);
+  observed.fail_started_callback = false;
+  value.start();
+  DOBA_EXPECT_EQUAL(observed.events, "acts");
+  DOBA_EXPECT_EQUAL(observed.starts, 1);
+  value.stop();
+  DOBA_EXPECT_EQUAL(observed.events, "actsqdxp");
 }
 
 // +===========================================================================+

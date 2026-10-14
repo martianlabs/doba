@@ -16,6 +16,9 @@ with Ctrl+C.
 | Controllers | `controllers` |
 | Static files | `static_file_server`, `file_download` |
 | TLS | `https_hello_world` |
+| Custom request | [custom_http_request](custom_http_request/README.md) |
+| Custom response | [custom_http_response](custom_http_response/README.md) |
+| Custom router | [custom_http_router](custom_http_router/README.md) |
 
 Each example README contains a `curl` command and its observable result.
 

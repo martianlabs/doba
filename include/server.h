@@ -99,6 +99,7 @@ class server {
       throw;
     }
     locked_ = true;
+    if (on_started_) on_started_();
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
@@ -129,6 +130,12 @@ class server {
     on_starting_ = std::move(callback);
   }
   // +=========================================================================+
+  // | [>] set_on_started                                        ( protected ) |
+  // +-------------------------------------------------------------------------+
+  void set_on_started(std::function<void()> callback) {
+    on_started_ = std::move(callback);
+  }
+  // +=========================================================================+
   // | [>] set_on_start_failed                                   ( protected ) |
   // +-------------------------------------------------------------------------+
   void set_on_start_failed(std::function<void()> callback) {
@@ -152,6 +159,7 @@ class server {
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   std::function<void()> on_starting_;
+  std::function<void()> on_started_;
   std::function<void()> on_start_failed_;
   std::function<void()> on_stopping_;
   std::function<void()> on_stopped_;

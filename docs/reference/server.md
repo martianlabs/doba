@@ -38,7 +38,12 @@ class server;
   [transport contract](../../include/transport/server/contracts.h).
 
 The engine factory creates each connection's engine. For TCP, its type is the
-second template argument of *transport::server::tcp*.
+second template argument of *transport::server::tcp*. An engine that leaves
+work pending after its connection closes implements the optional
+[*completion_engine* contract](../../include/protocol/contracts.h): *stop*
+returns *true* when that work is complete, or returns *false* and calls the
+completion callback once when it finishes. Other engines can be retired as
+soon as their connection closes.
 
 <a name="construction"></a>
 <h2>
@@ -106,7 +111,9 @@ void start();
 
 **Returns:** Nothing (*void*). A repeated call while running has no effect.
 
-**Errors:** Transport construction and startup exceptions reach the caller.
+**Errors:** Transport construction, startup, and *started* callback exceptions
+reach the caller.
+
 After a transport startup failure, the server permits another *start* call,
 but does not clean up the failed transport. A custom transport must restore
 its stopped state for a successful retry. If transport construction throws,
@@ -114,7 +121,8 @@ this server instance cannot retry it.
 
 A derived server subscribes during construction. *starting* fires before the
 transport is constructed or started. *start_failed* fires if that callback,
-transport construction, or transport startup throws. The transport is
+transport construction, or transport startup throws. *started* fires after
+transport startup succeeds and the server is marked running. The transport is
 constructed only on the first *start* and retained across *stop* and restart.
 Repeated *start* calls while running emit no events.
 
@@ -136,8 +144,10 @@ void stop();
 
 **Errors:** Transport and lifecycle callback exceptions reach the caller.
 
-The server quiesces transports that support it before stopping them. Call
-*stop* from a control thread: TCP and TLS reject quiescing from a worker.
+The server quiesces transports that support it before stopping them. TCP and
+TLS keep closed connections with pending engine work until completion, then
+retire them before their workers stop. Call *stop* from a control thread:
+TCP and TLS reject quiescing from a worker.
 *stopping* fires after quiescing, or after *stop* when the transport cannot
 quiesce. *stopped* fires after the transport stops. Lifecycle callbacks run
 under the server's mutex and must not call *start* or *stop* again.
@@ -168,6 +178,28 @@ void set_on_starting(std::function<void()> callback);
 
 Registers the callback invoked before transport construction. If it throws,
 *start* invokes *start_failed* and propagates the exception.
+
+<a name="set-on-started"></a>
+<h3>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/h3-set-on-started-dark.svg">
+    <img src="../../resources/docs/reference/h3-set-on-started.svg" alt="Set on started">
+  </picture>
+</h3>
+
+```cpp
+void set_on_started(std::function<void()> callback);
+```
+
+**Parameters:** **callback.** The function called when this event occurs.
+
+**Returns:** Nothing (*void*).
+
+**Errors:** Callback exceptions propagate from *start*; the server stays
+running.
+
+Registers the callback invoked after transport startup succeeds and the
+server is marked running. If it throws, *start_failed* does not fire.
 
 <a name="set-on-start-failed"></a>
 <h3>

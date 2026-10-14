@@ -35,6 +35,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
 
 #include "platform.h"
@@ -279,6 +280,44 @@ DOBA_TEST("tls orders asynchronous and synchronous HTTP responses") {
   client.socket.close();
   http_server.stop();
 }
+
+DOBA_TEST("tls waits for pending HTTP work after client disconnects") {
+  tls_client client;
+  const auto port = client.socket.find_available_port();
+  DOBA_EXPECT(port != 0);
+  std::promise<std::coroutine_handle<>> pending;
+  auto suspended = pending.get_future();
+  https_server<> http_server(server_policies(port));
+  http_server.add_route("GET", "/slow",
+                        [&pending](const request&, response& res)
+                            -> task<void> {
+                          co_await pause_awaiter{pending};
+                          res.ok_200();
+                          res.set_body("done");
+                        });
+  http_server.start();
+  DOBA_EXPECT(client.socket.connect(port));
+  DOBA_EXPECT(client.negotiate());
+  DOBA_EXPECT(client.send_outgoing(
+      "GET /slow HTTP/1.1\r\nHost: example.com\r\n\r\n"));
+  if (suspended.wait_for(std::chrono::seconds(2)) !=
+      std::future_status::ready) {
+    throw std::runtime_error("asynchronous route did not suspend");
+  }
+  client.socket.close();
+  std::promise<void> stopped;
+  auto stop_result = stopped.get_future();
+  std::jthread stopper([&]() {
+    http_server.stop();
+    stopped.set_value();
+  });
+  DOBA_EXPECT(stop_result.wait_for(std::chrono::milliseconds(100)) ==
+              std::future_status::timeout);
+  suspended.get().resume();
+  DOBA_EXPECT(stop_result.wait_for(std::chrono::seconds(2)) ==
+              std::future_status::ready);
+}
+
 DOBA_TEST("tls resumes timed asynchronous HTTP routes") {
   tls_client client;
   const auto port = client.socket.find_available_port();

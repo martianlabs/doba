@@ -27,7 +27,7 @@
 
 #include <concepts>
 #include <cstddef>
-#include <memory>
+#include <functional>
 #include <optional>
 #include <span>
 #include <string>
@@ -40,6 +40,7 @@
 #include "protocol/http/common/header.h"
 #include "protocol/http/common/helpers.h"
 #include "protocol/http/common/query_parameter.h"
+#include "protocol/http/common/router_match_result.h"
 #include "protocol/http/common/target.h"
 #include "protocol/http/v11/body/reader.h"
 #include "protocol/http/v11/body/writer.h"
@@ -51,7 +52,7 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] make_engine_factory                                      ( function ) |
 // +---------------------------------------------------------------------------+
-// | Creates a factory function for the engine.                                |
+// | Creates a factory function for engines.                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty, typename ROty>
@@ -59,6 +60,25 @@ auto make_engine_factory(typename ENty::policies_type configuration,
                          const ROty& routes) {
   return [configuration = std::move(configuration), &routes]() -> ENty {
     return ENty{configuration, routes};
+  };
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] make_engine_factory                                      ( function ) |
+// +---------------------------------------------------------------------------+
+// | Creates a factory function for engines providing asynchronous callbacks.  |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <protocol::contracts::engine ENty, typename ROty>
+auto make_engine_factory(typename ENty::policies_type configuration,
+                         const ROty& routes,
+                         std::function<void()> on_async_started,
+                         std::function<void()> on_async_finished) {
+  return [configuration = std::move(configuration), &routes,
+          on_async_started = std::move(on_async_started),
+          on_async_finished = std::move(on_async_finished)]() -> ENty {
+    return ENty{configuration, routes, on_async_started, on_async_finished};
   };
 }
 
@@ -229,30 +249,7 @@ concept response =
 template <typename ROty, typename RQty, typename RSty>
 concept router =
     std::default_initializable<ROty> &&
-    std::default_initializable<typename ROty::route_match> &&
-    std::assignable_from<typename ROty::route_match&,
-                         typename ROty::route_match> &&
-    requires(ROty& routes, const ROty& constant, std::string_view text,
-             typename ROty::route_match match, const RQty& request,
-             RSty& response, std::shared_ptr<void>& parameters) {
-      { static_cast<bool>(match) } -> std::same_as<bool>;
-      { static_cast<bool>(match.handler) } -> std::same_as<bool>;
-      { (*match.handler)(request, response) } -> std::same_as<void>;
-      { static_cast<bool>(match.parametrized_handler) } -> std::same_as<bool>;
-      {
-        match.parametrized_handler->invoke(request, response, text)
-      } -> std::same_as<void>;
-      { static_cast<bool>(match.async_handler) } -> std::same_as<bool>;
-      {
-        (*match.async_handler)(request, response)
-      } -> std::same_as<common::task<void>>;
-      {
-        static_cast<bool>(match.async_parametrized_handler)
-      } -> std::same_as<bool>;
-      {
-        match.async_parametrized_handler->invoke(request, response, text,
-                                                 parameters)
-      } -> std::same_as<common::task<void>>;
+    requires(ROty& routes, const ROty& constant, std::string_view text) {
       {
         routes.add(text, text, [](const RQty&, RSty&) {})
       } -> std::same_as<void>;
@@ -263,12 +260,8 @@ concept router =
       { routes.template add_controller<RQty>() } -> std::same_as<void>;
       {
         constant.match(text, text)
-      } -> std::same_as<typename ROty::route_match>;
+      } -> std::same_as<http::router_match_result<RQty, RSty>>;
       { constant.allowed_methods(text) } -> std::same_as<std::string>;
-      { constant.has_async() } noexcept -> std::same_as<bool>;
-      { constant.begin_async() } -> std::same_as<void>;
-      { constant.end_async() } -> std::same_as<void>;
-      { constant.wait_async() } -> std::same_as<void>;
     };
 
 }  // namespace contracts

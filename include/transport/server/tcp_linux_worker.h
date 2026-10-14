@@ -527,6 +527,16 @@ struct worker {
     if (socket == -1) return;
     ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket, nullptr);
     ::close(socket);
+    if (ctx->stop_engine([ctx, this]() {
+          std::lock_guard<std::mutex> lock(work_mutex_);
+          ctx->mark_engine_complete();
+          uint64_t signal = 1;
+          while (::write(work_fd_, &signal, sizeof(signal)) == -1 &&
+                 errno == EINTR) {
+          }
+        })) {
+      ctx->mark_engine_complete();
+    }
     ctx->retirement_next = retired_contexts_;
     retired_contexts_ = ctx;
     ctx->notify_disconnection();
@@ -539,11 +549,23 @@ struct worker {
   // | after the contexts have been closed.                                    |
   // +-------------------------------------------------------------------------+
   void retire_contexts() {
+    context<ENty, CNty>* pending = nullptr;
     while (retired_contexts_) {
       context<ENty, CNty>* ctx = retired_contexts_;
       retired_contexts_ = ctx->retirement_next;
-      contexts_.erase(ctx);
+      bool complete;
+      {
+        std::lock_guard<std::mutex> lock(work_mutex_);
+        complete = ctx->engine_complete();
+      }
+      if (complete) {
+        contexts_.erase(ctx);
+      } else {
+        ctx->retirement_next = pending;
+        pending = ctx;
+      }
     }
+    retired_contexts_ = pending;
   }
   // +=========================================================================+
   // | [>] close_contexts                                          ( private ) |

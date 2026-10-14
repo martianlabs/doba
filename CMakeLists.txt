@@ -305,6 +305,15 @@ if(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/hello_world
   )
   add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/custom_http_request
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/custom_http_response
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/custom_http_router
+  )
+  add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/async_routes
   )
   if(

@@ -14,4 +14,8 @@ cmake --build out/build/release
 - [Custom transport](transport/server/custom_transport/README.md) runs doba's
   HTTP/1.1 engine in memory.
 - [HTTP/1.1](http/v11/README.md) demonstrates the HTTP server API.
+- [Custom HTTP request](http/v11/custom_http_request/README.md),
+  [response](http/v11/custom_http_response/README.md), and
+  [router](http/v11/custom_http_router/README.md) demonstrate the three
+  HTTP composition types.
 

@@ -92,15 +92,6 @@ class http_server
       registration_closed_ = false;
     });
     // +-----------------------------------------------------------------------+
-    // | Let's set 'on_stopping' callback that will be used to stop the date   |
-    // | server when the HTTP server stops.                                    |
-    // +-----------------------------------------------------------------------+
-    this->set_on_stopping([this]() {
-      if constexpr (requires(const ROty& routes) { routes.wait_async(); }) {
-        this->router_.wait_async();
-      }
-    });
-    // +-----------------------------------------------------------------------+
     // | Let's set 'on_stopped' callback that will be used to stop the date    |
     // | server when the HTTP server stops.                                    |
     // +-----------------------------------------------------------------------+

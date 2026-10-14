@@ -319,24 +319,39 @@ DOBA_TEST("HTTP/1.1 drains a timed route before stopping workers") {
   DOBA_EXPECT(completed.load());
 }
 
-DOBA_TEST("HTTP/1.1 waits for an asynchronous route during stop") {
-  tcpip_client client;
-  const uint16_t port = client.find_available_port();
+DOBA_TEST("HTTP/1.1 waits for all asynchronous routes during stop") {
+  tcpip_client first_client;
+  tcpip_client second_client;
+  const uint16_t port = first_client.find_available_port();
   DOBA_EXPECT(port != 0);
-  std::promise<std::coroutine_handle<>> pending;
-  auto suspended = pending.get_future();
+  std::promise<std::coroutine_handle<>> first_pending;
+  std::promise<std::coroutine_handle<>> second_pending;
+  auto first_suspended = first_pending.get_future();
+  auto second_suspended = second_pending.get_future();
   http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/slow",
-                        [&pending](const request&, response& res)
+  http_server.add_route("GET", "/first",
+                        [&first_pending](const request&, response& res)
                             -> task<void> {
-                          co_await pause_awaiter{pending};
+                          co_await pause_awaiter{first_pending};
                           text_response(res, "done");
                         });
+  http_server.add_route("GET", "/second",
+                        [&second_pending](const request&, response&)
+                            -> task<void> {
+                          co_await pause_awaiter{second_pending};
+                          throw std::runtime_error("handler failed");
+                        });
   http_server.start();
-  DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(client.send_all("GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n"));
-  if (suspended.wait_for(std::chrono::seconds(2)) !=
-      std::future_status::ready) {
+  DOBA_EXPECT(first_client.connect(port));
+  DOBA_EXPECT(second_client.connect(port));
+  DOBA_EXPECT(first_client.send_all(
+      "GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+  DOBA_EXPECT(second_client.send_all(
+      "GET /second HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+  if (first_suspended.wait_for(std::chrono::seconds(2)) !=
+          std::future_status::ready ||
+      second_suspended.wait_for(std::chrono::seconds(2)) !=
+          std::future_status::ready) {
     throw std::runtime_error("asynchronous route did not suspend");
   }
   std::promise<void> stopped;
@@ -347,7 +362,10 @@ DOBA_TEST("HTTP/1.1 waits for an asynchronous route during stop") {
   });
   DOBA_EXPECT(stop_result.wait_for(std::chrono::milliseconds(100)) ==
               std::future_status::timeout);
-  suspended.get().resume();
+  first_suspended.get().resume();
+  DOBA_EXPECT(stop_result.wait_for(std::chrono::milliseconds(100)) ==
+              std::future_status::timeout);
+  second_suspended.get().resume();
   DOBA_EXPECT(stop_result.wait_for(std::chrono::seconds(2)) ==
               std::future_status::ready);
 }
@@ -423,9 +441,18 @@ DOBA_TEST("HTTP/1.1 completes after a suspended client disconnects") {
     throw std::runtime_error("asynchronous route did not suspend");
   }
   client.close();
+  std::promise<void> stopped;
+  auto stop_result = stopped.get_future();
+  std::jthread stopper([&]() {
+    http_server.stop();
+    stopped.set_value();
+  });
+  DOBA_EXPECT(stop_result.wait_for(std::chrono::milliseconds(100)) ==
+              std::future_status::timeout);
   suspended.get().resume();
+  DOBA_EXPECT(stop_result.wait_for(std::chrono::seconds(2)) ==
+              std::future_status::ready);
   DOBA_EXPECT(finished.load());
-  http_server.stop();
 }
 
 // +===========================================================================+

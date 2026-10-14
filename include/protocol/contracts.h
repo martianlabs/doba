@@ -71,6 +71,20 @@ concept engine = requires(ENty& engine, const char* buf, std::size_t sze,
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
+// | [>] completion_engine                                          (concept) |
+// +---------------------------------------------------------------------------+
+// | A stopped engine reports when all work accepted by it has completed.     |
+// | A false result means the callback will be called exactly once later.     |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename ENty>
+concept completion_engine =
+    engine<ENty> && requires(ENty& engine, std::function<void()> completed) {
+      { engine.stop(std::move(completed)) } -> std::same_as<bool>;
+    };
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] engine_factory                                              (concept) |
 // +---------------------------------------------------------------------------+
 // | Protocol engine factory contract.                                         |
