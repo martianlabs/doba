@@ -121,7 +121,7 @@ struct decoder_input {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  decoder<request, response> decoder;
+  martianlabs::doba::protocol::http::v11::decoder<request, response> decoder;
   std::function<void(const request&)> on_request;
   bool request_seen = false;
   std::array<char, receive_capacity> buffer{};
