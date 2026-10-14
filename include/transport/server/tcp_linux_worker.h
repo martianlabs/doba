@@ -366,9 +366,8 @@ struct worker {
   // | Returns this worker's capacity for executing opaque work.              |
   // +-------------------------------------------------------------------------+
   execution_capacity execution() {
-    return {this,
-            [](void* owner, std::chrono::steady_clock::time_point due,
-               execution_work work) {
+    return {this, [](void* owner, std::chrono::steady_clock::time_point due,
+                     execution_work work) {
               static_cast<worker*>(owner)->enqueue(due, work);
             }};
   }
@@ -377,8 +376,7 @@ struct worker {
   // +-------------------------------------------------------------------------+
   // | Adds work to this worker's queue and wakes it when needed.             |
   // +-------------------------------------------------------------------------+
-  void enqueue(std::chrono::steady_clock::time_point due,
-               execution_work work) {
+  void enqueue(std::chrono::steady_clock::time_point due, execution_work work) {
     if (is_current_thread()) {
       if (due == std::chrono::steady_clock::time_point::min()) {
         ready_.push_back(work);
