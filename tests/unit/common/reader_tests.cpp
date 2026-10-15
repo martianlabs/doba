@@ -170,7 +170,7 @@ DOBA_TEST("truncated spill files fail the reader") {
   spill_directory directory{"doba_reader_"};
   {
     byte_storage storage(byte_storage_options{
-        .spill_threshold = 1, .spill_dir = directory.path().string()});
+        .spill_to_disk_threshold = 1, .spill_dir = directory.path().string()});
     DOBA_EXPECT(storage.write("abcdef", 6));
     storage.finish(6);
     DOBA_EXPECT_EQUAL(
@@ -203,7 +203,7 @@ DOBA_TEST("reader owns storage after the moved source is destroyed") {
       std::optional<reader> destination;
       {
         byte_storage storage(
-            byte_storage_options{.spill_threshold = threshold,
+            byte_storage_options{.spill_to_disk_threshold = threshold,
                                  .spill_dir = directory.path().string()});
         DOBA_EXPECT(storage.write("abcdef", 6));
         storage.finish(6);

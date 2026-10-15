@@ -65,8 +65,8 @@ class response {
   // +-------------------------------------------------------------------------+
   response(const response&) = delete;
   explicit response(std::span<char> storage)
-      : response(storage, policies::kMaxResponseHeadSizeInMemory,
-                 policies::kMaxResponseBodySizeInMemory) {}
+      : response(storage, policies::kDefaultResponseHeadBufferCapacity,
+                 policies::kDefaultResponseBodyInlineCapacity) {}
   response(std::span<char> storage, std::size_t head_capacity,
            std::size_t body_capacity) {
     if (!head_capacity || head_capacity > storage.size() ||

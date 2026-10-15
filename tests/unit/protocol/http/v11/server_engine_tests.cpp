@@ -475,7 +475,7 @@ DOBA_TEST("server recovers from startup failure") {
   http_server<http::request, http::response,
               router<http::request, http::response>,
               http::engine<http::request, http::response>, fake_transport>
-      value({}, {.max_content_length = 1});
+      value({}, {.max_request_body_size = 1});
   bool failed = false;
   try {
     value.start();
@@ -508,11 +508,11 @@ DOBA_TEST("engine factories preserve policies and independence") {
     return;
   });
   http::policies configuration;
-  configuration.max_content_length = 1;
+  configuration.max_request_body_size = 1;
   auto factory =
       http::make_engine_factory<http::engine<http::request, http::response>>(
           configuration, routes);
-  configuration.max_content_length = 100;
+  configuration.max_request_body_size = 100;
   auto first = factory();
   auto second = factory();
   http::engine<http::request, http::response>* engines[] = {&first, &second};
@@ -563,7 +563,7 @@ DOBA_TEST("server forwards engine policies to every connection") {
   http_server<http::request, http::response,
               router<http::request, http::response>,
               http::engine<http::request, http::response>, fake_transport>
-      value(std::make_unique<int>(7), {.max_content_length = 1});
+      value(std::make_unique<int>(7), {.max_request_body_size = 1});
   value.add_route("GET", "/", [&](const http::request&, http::response& res) {
     calls++;
     res.ok_200();

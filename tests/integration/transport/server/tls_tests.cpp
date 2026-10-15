@@ -280,20 +280,20 @@ DOBA_TEST("tls receives binary data beyond one encrypted buffer") {
 
 DOBA_TEST("tls uses configured encrypted and BIO capacities") {
   auto configuration = server_policies(8443);
-  configuration.encrypted_receive_buffer_size = 8192;
-  configuration.network_bio_buffer_size = 4096;
+  configuration.encrypted_receive_buffer_capacity = 8192;
+  configuration.network_bio_buffer_capacity = 4096;
   auto factory = []() { return byte_engine{}; };
   tr::tls_connection<byte_engine> connection(
       4096, 65536, factory, tr::make_tls_context(configuration),
-      configuration.encrypted_receive_buffer_size,
-      configuration.network_bio_buffer_size);
+      configuration.encrypted_receive_buffer_capacity,
+      configuration.network_bio_buffer_capacity);
   DOBA_EXPECT_EQUAL(connection.capacity, 8192);
   for (const bool encrypted : {false, true}) {
     auto invalid = configuration;
     if (encrypted) {
-      invalid.encrypted_receive_buffer_size = 0;
+      invalid.encrypted_receive_buffer_capacity = 0;
     } else {
-      invalid.network_bio_buffer_size = 0;
+      invalid.network_bio_buffer_capacity = 0;
     }
     bool rejected = false;
     try {
@@ -320,7 +320,7 @@ DOBA_TEST("tls closes when unconsumed plaintext fills the buffer") {
     return engine;
   };
   auto configuration = server_policies(port);
-  configuration.recv_buffer_size = 16;
+  configuration.receive_buffer_capacity = 16;
   tr::tls<byte_engine, decltype(factory)> server(configuration, factory);
   std::atomic<int> connected{0};
   std::atomic<int> disconnected{0};
@@ -438,7 +438,7 @@ DOBA_TEST("tls streams a body beyond the send buffer") {
     return engine;
   };
   auto configuration = server_policies(port);
-  configuration.max_send_buffer_size = 4096;
+  configuration.max_buffered_send_bytes = 4096;
   tr::tls<byte_engine, decltype(factory)> server(configuration, factory);
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
@@ -731,7 +731,7 @@ DOBA_TEST("tls stop drains queued output") {
     return engine;
   };
   auto configuration = server_policies(port);
-  configuration.max_send_buffer_size = 65536;
+  configuration.max_buffered_send_bytes = 65536;
   tr::tls<byte_engine, decltype(factory)> server(configuration, factory);
   std::atomic<int> connected{0};
   std::atomic<int> disconnected{0};

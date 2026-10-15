@@ -53,7 +53,8 @@ int main() {
   http_server.add_route("GET", "/large", [](const request&, response& res) {
     res.ok_200();
     // Storage spills to a temporary file after this in-memory threshold.
-    byte_storage_options options{.spill_threshold = 1024, .spill_dir = {}};
+    byte_storage_options options{
+        .spill_to_disk_threshold = 1024, .spill_dir = {}};
     auto writer = body::body_writer::raw(options);
     const std::string block(1024, 'x');
     for (int i = 0; i < 8; i++) {

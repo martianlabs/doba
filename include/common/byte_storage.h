@@ -42,8 +42,8 @@ namespace martianlabs::doba::common {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct byte_storage_options {
-  static constexpr std::size_t kDefaultSpillThreshold = 16 * 1024;
-  std::size_t spill_threshold = kDefaultSpillThreshold;
+  static constexpr std::size_t kDefaultSpillToDiskThreshold = 128 * 1024;
+  std::size_t spill_to_disk_threshold = kDefaultSpillToDiskThreshold;
   std::string spill_dir;
 };
 
@@ -64,7 +64,7 @@ class byte_storage {
   // +-------------------------------------------------------------------------+
   byte_storage() = default;
   explicit byte_storage(byte_storage_options opts)
-      : spill_threshold_(opts.spill_threshold),
+      : spill_to_disk_threshold_(opts.spill_to_disk_threshold),
         spill_dir_(std::move(opts.spill_dir)) {}
   byte_storage(const byte_storage&) = delete;
   byte_storage(byte_storage&& in) noexcept { move_from(std::move(in)); }
@@ -96,8 +96,8 @@ class byte_storage {
   bool write(const char* ptr, std::size_t len) {
     if (finished_ || io_error_) return false;
     if (len == 0) return true;
-    if (!spilled_ && spill_threshold_ > 0 &&
-        mem_.size() + len > spill_threshold_ && !spill_to_file()) {
+    if (!spilled_ && spill_to_disk_threshold_ > 0 &&
+        mem_.size() + len > spill_to_disk_threshold_ && !spill_to_file()) {
       return false;
     }
     if (spilled_) {
@@ -172,7 +172,7 @@ class byte_storage {
     mem_ = std::move(in.mem_);
     file_ = std::move(in.file_);
     spill_path_ = std::move(in.spill_path_);
-    spill_threshold_ = in.spill_threshold_;
+    spill_to_disk_threshold_ = in.spill_to_disk_threshold_;
     spill_dir_ = std::move(in.spill_dir_);
     total_bytes_ = in.total_bytes_;
     read_pos_ = in.read_pos_;
@@ -180,7 +180,7 @@ class byte_storage {
     finished_ = in.finished_;
     io_error_ = in.io_error_;
     in.spill_path_.clear();
-    in.spill_threshold_ = 0;
+    in.spill_to_disk_threshold_ = 0;
     in.total_bytes_ = 0;
     in.read_pos_ = 0;
     in.spilled_ = false;
@@ -242,7 +242,8 @@ class byte_storage {
   std::string mem_;
   byte_storage_file file_;
   std::filesystem::path spill_path_;
-  std::size_t spill_threshold_{byte_storage_options::kDefaultSpillThreshold};
+  std::size_t spill_to_disk_threshold_{
+      byte_storage_options::kDefaultSpillToDiskThreshold};
   std::string spill_dir_;
   std::size_t total_bytes_{0};
   std::size_t read_pos_{0};

@@ -227,14 +227,31 @@ void serve_static(const request& req, response& result,
     return;
   }
   result.ok_200();
+  const auto length = file.size();
+  if (req.get_method() != "HEAD") {
+    std::string contents(length, '\0');
+    auto remaining = std::as_writable_bytes(std::span(contents));
+    while (!remaining.empty()) {
+      const auto count = file.read(remaining);
+      if (count == 0 || file.failed()) {
+        result.internal_server_error_500();
+        return;
+      }
+      remaining = remaining.subspan(count);
+    }
+    // Own this request's bytes in RAM; zero disables spill, not caching.
+    auto writer = body::body_writer::raw({.spill_to_disk_threshold = 0});
+    if (!writer.write(std::string_view(contents))) {
+      result.internal_server_error_500();
+      return;
+    }
+    result.set_body(std::move(writer));
+  }
   result.set_header("Content-Type", static_content_type(relative));
   result.set_header("Vary", "Accept-Encoding");
   if (selected != 2) result.set_header("Content-Encoding", encodings[selected]);
-  const auto length = file.size();
   if (req.get_method() == "HEAD") {
     result.set_header("Content-Length", std::to_string(length));
-  } else {
-    result.set_body(common::reader(std::move(file)), length);
   }
 }
 

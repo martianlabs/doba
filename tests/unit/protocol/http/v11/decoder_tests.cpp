@@ -340,7 +340,7 @@ DOBA_TEST("empty input needs more bytes and full incomplete cores fail") {
 // | [>] request head fills default receive buffer               ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("request head may fill default receive buffer") {
-  constexpr std::size_t capacity = policies::kMaxRequestHeadSizeInMemory;
+  constexpr std::size_t capacity = policies::kDefaultRequestHeadBufferCapacity;
   constexpr std::string_view prefix = "GET / HTTP/1.1\r\nHost: a\r\nX: ";
   constexpr std::string_view suffix = "\r\n\r\n";
   const std::string head =
@@ -360,7 +360,7 @@ DOBA_TEST("request head may fill default receive buffer") {
 // | [>] incomplete head fills default receive buffer            ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("incomplete head fails at default receive capacity") {
-  constexpr std::size_t capacity = policies::kMaxRequestHeadSizeInMemory;
+  constexpr std::size_t capacity = policies::kDefaultRequestHeadBufferCapacity;
   constexpr std::string_view prefix = "GET / HTTP/1.1\r\nHost: a\r\nX: ";
   const std::string head =
       std::string(prefix) + std::string(capacity - prefix.size(), 'x');
@@ -376,7 +376,7 @@ DOBA_TEST("incomplete head fails at default receive capacity") {
 // | [>] request head size is bounded by receive capacity        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("request head size is bounded by receive capacity") {
-  constexpr std::size_t capacity = policies::kMaxRequestHeadSizeInMemory;
+  constexpr std::size_t capacity = policies::kDefaultRequestHeadBufferCapacity;
   struct shape {
     std::string_view name;
     std::string_view prefix;
@@ -422,7 +422,7 @@ DOBA_TEST("request head size is bounded by receive capacity") {
 // | [>] header field count is bounded only by head size         ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("header field count is bounded only by head size") {
-  constexpr std::size_t capacity = policies::kMaxRequestHeadSizeInMemory;
+  constexpr std::size_t capacity = policies::kDefaultRequestHeadBufferCapacity;
   std::string head = "GET / HTTP/1.1\r\nHost: a\r\n";
   std::size_t fields = 0;
   while (head.size() + 8 + 2 <= capacity) {
@@ -446,7 +446,7 @@ DOBA_TEST("header field count is bounded only by head size") {
 // | [>] request body spans default receive buffers              ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("request body spans default receive buffers") {
-  constexpr std::size_t capacity = policies::kMaxRequestHeadSizeInMemory;
+  constexpr std::size_t capacity = policies::kDefaultRequestHeadBufferCapacity;
   const std::string head =
       "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 4097\r\n\r\n";
   const std::string body(capacity + 1, 'x');
@@ -2281,8 +2281,8 @@ DOBA_TEST("decoder accepts all conditional date formats") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder accepts complete heads at the buffer boundary") {
   const std::string prefix = "GET / HTTP/1.1\r\nHost: example.com\r\nX-Pad: ";
-  for (std::size_t size : {policies::kMaxRequestHeadSizeInMemory - 1,
-                           policies::kMaxRequestHeadSizeInMemory}) {
+  for (std::size_t size : {policies::kDefaultRequestHeadBufferCapacity - 1,
+                           policies::kDefaultRequestHeadBufferCapacity}) {
     const std::string padding(size - prefix.size() - 4, 'x');
     const std::string source = prefix + padding + "\r\n\r\n";
     for (const std::size_t split : {std::size_t{0}, size / 2, size - 1}) {
@@ -2853,7 +2853,7 @@ DOBA_TEST("rejects query parameter overflow without truncating") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("a full incomplete head terminates instead of stalling") {
   std::string source = "GET / HTTP/1.1\r\nHost: example.com\r\nX-Pad: ";
-  const auto limit = policies::kMaxRequestHeadSizeInMemory;
+  const auto limit = policies::kDefaultRequestHeadBufferCapacity;
   source.append(limit + 1 - source.size() - 4, 'a');
   source += "\r\n\r\n";
   for (const std::size_t split : {std::size_t{0}, limit / 2, limit - 1}) {
@@ -3127,7 +3127,7 @@ DOBA_TEST("decoder limits interim to accepted incomplete bodies") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder returns responses for rejection reasons") {
   martianlabs::doba::protocol::http::v11::policies configuration;
-  configuration.max_content_length = 1;
+  configuration.max_request_body_size = 1;
   configuration.allow_chunked = false;
   const std::vector<std::pair<std::string, std::string_view>> cases{
       {"GET / HTTP/1.1\r\nHost: a\r\nContent-Length: invalid\r\n\r\n", "400"},
@@ -3236,10 +3236,10 @@ DOBA_TEST("decoder retains HEAD while decoding body fragments") {
 // | [>] default Content-Length limit                            ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder enforces the configured Content-Length limit") {
-  DOBA_EXPECT_EQUAL(policies{}.max_content_length, 16 * 1024 * 1024);
+  DOBA_EXPECT_EQUAL(policies{}.max_request_body_size, 16 * 1024 * 1024);
   for (const std::size_t size :
-       {policies::kMaxRequestBodySizeInMemory,
-        policies::kMaxRequestBodySizeInMemory + 1,
+       {policies::kDefaultRequestBodyInlineCapacity,
+        policies::kDefaultRequestBodyInlineCapacity + 1,
         std::size_t{16 * 1024 * 1024}, std::size_t{16 * 1024 * 1024 + 1}}) {
     const std::string source =
         "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: " +
@@ -3248,10 +3248,10 @@ DOBA_TEST("decoder enforces the configured Content-Length limit") {
     DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
     auto result = value.decode();
     DOBA_EXPECT_EQUAL(result.code,
-                      size <= policies{}.max_content_length
+                      size <= policies{}.max_request_body_size
                           ? deserialization_status::kMoreBytesNeeded
                           : deserialization_status::kInvalidSource);
-    if (size > policies{}.max_content_length) {
+    if (size > policies{}.max_request_body_size) {
       auto wire = result.response->serialize();
       DOBA_EXPECT((wire_prefix(wire)).starts_with("HTTP/1.1 413 "));
     }
@@ -3263,7 +3263,7 @@ DOBA_TEST("decoder enforces the configured Content-Length limit") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder limits chunked payload across receives") {
   policies configuration;
-  configuration.max_content_length = 5;
+  configuration.max_request_body_size = 5;
   const std::string head =
       "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n";
   for (const bool fragmented : {false, true}) {
@@ -3294,7 +3294,7 @@ DOBA_TEST("decoder limits chunked payload across receives") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder accepts chunked payload with zero length limit") {
   policies configuration;
-  configuration.max_content_length = 0;
+  configuration.max_request_body_size = 0;
   decoder_input value(configuration);
   const std::string source =
       "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n"
@@ -3309,8 +3309,8 @@ DOBA_TEST("decoder accepts chunked payload with zero length limit") {
 // | [>] chunked wire spill across receives                      ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder spills chunked wire across receives") {
-  constexpr std::size_t limit = policies::kMaxRequestBodySizeInMemory;
-  DOBA_EXPECT_EQUAL(policies{}.max_content_length, 16 * 1024 * 1024);
+  constexpr std::size_t limit = policies::kDefaultRequestBodyInlineCapacity;
+  DOBA_EXPECT_EQUAL(policies{}.max_request_body_size, 16 * 1024 * 1024);
   for (const std::size_t second_chunk : {8171, 8172}) {
     std::string source =
         "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n"
@@ -3442,7 +3442,7 @@ DOBA_TEST("decoder applies the configured request head limit") {
   const std::string source = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
   for (const std::size_t limit : {source.size() - 1, source.size()}) {
     policies configuration;
-    configuration.max_request_head_size = limit;
+    configuration.request_head_buffer_capacity = limit;
     decoder_input value(configuration);
     DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
     DOBA_EXPECT_EQUAL(value.decode().code,
@@ -3457,7 +3457,7 @@ DOBA_TEST("decoder spills a body at the configured memory threshold") {
       "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 2\r\n\r\nxy";
   for (const std::size_t threshold : {std::size_t{0}, std::size_t{1}}) {
     policies configuration;
-    configuration.request_body_memory_threshold = threshold;
+    configuration.request_body_inline_capacity = threshold;
     decoder_input value(configuration);
     std::string body;
     value.on_request = [&](const request& req) {
@@ -3478,9 +3478,9 @@ DOBA_TEST("decoder rejects zero head capacities") {
   for (const bool request_head : {false, true}) {
     policies configuration;
     if (request_head) {
-      configuration.max_request_head_size = 0;
+      configuration.request_head_buffer_capacity = 0;
     } else {
-      configuration.max_response_head_size = 0;
+      configuration.response_head_buffer_capacity = 0;
     }
     bool rejected = false;
     try {

@@ -62,23 +62,26 @@ struct tls_connection {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   template <protocol::contracts::engine_factory<ENty> FAty>
-  tls_connection(std::size_t recv_buffer_size, std::size_t send_buffer_size,
+  tls_connection(std::size_t receive_buffer_capacity,
+                 std::size_t send_buffer_size,
                  const FAty& create_engine, shared_state context)
-      : tls_connection(recv_buffer_size, send_buffer_size, create_engine,
+      : tls_connection(receive_buffer_capacity, send_buffer_size, create_engine,
                        std::move(context),
-                       tls_policies::kEncryptedReceiveBufferSize,
-                       tls_policies::kBioBufferSize) {}
+                       tls_policies::kDefaultEncryptedReceiveBufferCapacity,
+                       tls_policies::kDefaultNetworkBioBufferCapacity) {}
   template <protocol::contracts::engine_factory<ENty> FAty>
-  tls_connection(std::size_t recv_buffer_size, std::size_t send_buffer_size,
+  tls_connection(std::size_t receive_buffer_capacity,
+                 std::size_t send_buffer_size,
                  const FAty& create_engine, shared_state context,
-                 std::size_t encrypted_receive_buffer_size,
-                 std::size_t network_bio_buffer_size)
+                 std::size_t encrypted_receive_buffer_capacity,
+                 std::size_t network_bio_buffer_capacity)
       : engine{create_engine()},
-        buffer{std::make_unique<char[]>(encrypted_receive_buffer_size)},
-        capacity{encrypted_receive_buffer_size},
-        session_{std::move(context), send_buffer_size, network_bio_buffer_size},
-        plaintext_{std::make_unique<char[]>(recv_buffer_size)},
-        plaintext_capacity_{recv_buffer_size} {}
+        buffer{std::make_unique<char[]>(encrypted_receive_buffer_capacity)},
+        capacity{encrypted_receive_buffer_capacity},
+        session_{std::move(context), send_buffer_size,
+                 network_bio_buffer_capacity},
+        plaintext_{std::make_unique<char[]>(receive_buffer_capacity)},
+        plaintext_capacity_{receive_buffer_capacity} {}
   // +=========================================================================+
   // | [>] process                                                  ( public ) |
   // +-------------------------------------------------------------------------+

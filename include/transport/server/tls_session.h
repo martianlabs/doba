@@ -50,8 +50,8 @@ using tls_context = std::shared_ptr<SSL_CTX>;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline tls_context make_tls_context(const tls_policies& configuration) {
-  if (!configuration.encrypted_receive_buffer_size ||
-      !configuration.network_bio_buffer_size) {
+  if (!configuration.encrypted_receive_buffer_capacity ||
+      !configuration.network_bio_buffer_capacity) {
     throw std::runtime_error("TLS buffer capacities must be positive!");
   }
   if (configuration.certificate_file.empty() ||
@@ -100,7 +100,8 @@ class tls_session {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   tls_session(tls_context context, std::size_t send_capacity,
-              std::size_t network_bio_capacity = tls_policies::kBioBufferSize)
+              std::size_t network_bio_capacity =
+                  tls_policies::kDefaultNetworkBioBufferCapacity)
       : context_{std::move(context)},
         ssl_{context_ ? SSL_new(context_.get()) : nullptr, SSL_free},
         network_{nullptr, BIO_free} {

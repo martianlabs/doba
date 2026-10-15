@@ -71,8 +71,10 @@ class reader {
   // +-------------------------------------------------------------------------+
   static reader chunked(
       std::span<const std::byte> source,
-      std::size_t extension_limit = reader_chunked::kMaxChunkedExtensionSize,
-      std::size_t trailer_limit = reader_chunked::kMaxChunkedTrailerSize) {
+      std::size_t extension_limit =
+          reader_chunked::kDefaultMaxChunkExtensionSize,
+      std::size_t trailer_limit =
+          reader_chunked::kDefaultMaxTrailerSectionSize) {
     if (source.empty()) throw std::invalid_argument("Empty body source");
     return reader(common::reader::borrowed(source),
                   reader_chunked(extension_limit, trailer_limit));
@@ -87,8 +89,10 @@ class reader {
   // +-------------------------------------------------------------------------+
   static reader chunked(
       common::filesystem_file&& source,
-      std::size_t extension_limit = reader_chunked::kMaxChunkedExtensionSize,
-      std::size_t trailer_limit = reader_chunked::kMaxChunkedTrailerSize) {
+      std::size_t extension_limit =
+          reader_chunked::kDefaultMaxChunkExtensionSize,
+      std::size_t trailer_limit =
+          reader_chunked::kDefaultMaxTrailerSectionSize) {
     if (!source.is_open()) throw std::invalid_argument("Body file is not open");
     return reader(common::reader(std::move(source)),
                   reader_chunked(extension_limit, trailer_limit));

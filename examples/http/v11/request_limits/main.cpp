@@ -38,7 +38,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   policies limits;
-  limits.max_content_length = 5;
+  limits.max_request_body_size = 5;
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"}, limits);
   http_server.add_route("POST", "/upload",
                         [](const request&, response& res) {

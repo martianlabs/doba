@@ -122,8 +122,8 @@ DOBA_TEST("tls serves HTTP with configured buffer capacities") {
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   auto configuration = server_policies(port);
-  configuration.encrypted_receive_buffer_size = 8192;
-  configuration.network_bio_buffer_size = 4096;
+  configuration.encrypted_receive_buffer_capacity = 8192;
+  configuration.network_bio_buffer_capacity = 4096;
   https_server<> http_server(configuration);
   http_server.add_route("GET", "/ready", [](const request&, response& res) {
     res.ok_200();

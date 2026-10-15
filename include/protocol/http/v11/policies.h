@@ -44,25 +44,22 @@ struct policies {
   // +=========================================================================+
   // | [>] CONSTANTs                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  // Maximum query parameter pairs per request.
-  static constexpr std::size_t kMaxQueryParameters = 128;
-  // Maximum chunk extension bytes per chunk.
-  static constexpr std::size_t kMaxChunkedExtensionSize = 1024;
-  // Maximum trailer section bytes per chunked body.
-  static constexpr std::size_t kMaxChunkedTrailerSize = 4096;
+  // Default maximum query parameter pairs per request.
+  static constexpr std::size_t kDefaultMaxQueryParameters = 128;
+  // Default maximum chunk extension bytes per chunk.
+  static constexpr std::size_t kDefaultMaxChunkExtensionSize = 1024;
+  // Default maximum trailer section bytes per chunked body.
+  static constexpr std::size_t kDefaultMaxTrailerSectionSize = 4096;
   // Request head bytes retained by the decoder.
-  static constexpr std::size_t kMaxRequestHeadSizeInMemory =
-      transport::server::tcp_policies::kDefaultRecvBufferSize;
+  static constexpr std::size_t kDefaultRequestHeadBufferCapacity = 4 * 1024;
   // Request body wire bytes retained before spilling to disk.
-  static constexpr std::size_t kMaxRequestBodySizeInMemory =
-      common::byte_storage_options::kDefaultSpillThreshold;
+  static constexpr std::size_t kDefaultRequestBodyInlineCapacity = 16 * 1024;
   // Response head bytes in the decoder's reusable storage.
-  static constexpr std::size_t kMaxResponseHeadSizeInMemory = 4 * 1024;
+  static constexpr std::size_t kDefaultResponseHeadBufferCapacity = 4 * 1024;
   // Response body bytes kept inline before using a writer.
-  static constexpr std::size_t kMaxResponseBodySizeInMemory =
-      common::byte_storage_options::kDefaultSpillThreshold;
+  static constexpr std::size_t kDefaultResponseBodyInlineCapacity = 16 * 1024;
   // Maximum accepted body size, in octets (0 means unlimited).
-  std::size_t max_content_length = 16 * 1024 * 1024;
+  std::size_t max_request_body_size = 16 * 1024 * 1024;
   // Maximum number of forwarding hops accepted across Via / Forwarded /
   // X-Forwarded-For (0 means unlimited).
   std::size_t max_forwarding_hops = 32;
@@ -82,19 +79,21 @@ struct policies {
   // Maximum requests awaiting ordered response delivery (0 means unlimited).
   std::size_t max_pending_requests = 32;
   // Maximum query parameter pairs (0 means unlimited).
-  std::size_t max_query_parameters = kMaxQueryParameters;
+  std::size_t max_query_parameters = kDefaultMaxQueryParameters;
   // Maximum chunk extension bytes (0 means unlimited).
-  std::size_t max_chunk_extension_size = kMaxChunkedExtensionSize;
+  std::size_t max_chunk_extension_size = kDefaultMaxChunkExtensionSize;
   // Maximum trailer section bytes (0 means unlimited).
-  std::size_t max_trailer_section_size = kMaxChunkedTrailerSize;
-  // Maximum request head bytes (must be positive).
-  std::size_t max_request_head_size = kMaxRequestHeadSizeInMemory;
-  // Request body bytes kept in memory (0 spills immediately).
-  std::size_t request_body_memory_threshold = kMaxRequestBodySizeInMemory;
-  // Response head capacity (must be positive).
-  std::size_t max_response_head_size = kMaxResponseHeadSizeInMemory;
-  // Response body bytes kept inline (0 disables inline storage).
-  std::size_t response_body_inline_capacity = kMaxResponseBodySizeInMemory;
+  std::size_t max_trailer_section_size = kDefaultMaxTrailerSectionSize;
+  // Request head buffer capacity and hard limit (must be positive).
+  std::size_t request_head_buffer_capacity = kDefaultRequestHeadBufferCapacity;
+  // Request body buffer capacity (0 spills immediately).
+  std::size_t request_body_inline_capacity = kDefaultRequestBodyInlineCapacity;
+  // Response head buffer capacity and hard limit (must be positive).
+  std::size_t response_head_buffer_capacity =
+      kDefaultResponseHeadBufferCapacity;
+  // Response body buffer capacity (0 disables inline storage).
+  std::size_t response_body_inline_capacity =
+      kDefaultResponseBodyInlineCapacity;
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

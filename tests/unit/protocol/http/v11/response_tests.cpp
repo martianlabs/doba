@@ -51,10 +51,10 @@ using martianlabs::doba::protocol::http::v11::body::body_writer;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 constexpr std::size_t max_response_size_in_memory =
-    policies::kMaxResponseHeadSizeInMemory +
-    policies::kMaxResponseBodySizeInMemory;
+    policies::kDefaultResponseHeadBufferCapacity +
+    policies::kDefaultResponseBodyInlineCapacity;
 constexpr std::size_t max_response_body_size_in_memory =
-    policies::kMaxResponseBodySizeInMemory;
+    policies::kDefaultResponseBodyInlineCapacity;
 
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -661,7 +661,8 @@ DOBA_TEST("response head and body limits are independent") {
   const std::string framing =
       "Content-Length: " + std::to_string(body.size()) + "\r\n";
   const std::string padding(
-      policies::kMaxResponseHeadSizeInMemory - head.size() - framing.size() - 4,
+      policies::kDefaultResponseHeadBufferCapacity - head.size() -
+          framing.size() - 4,
       'p');
   for (std::size_t excess : {0, 1}) {
     const std::string payload(body.size() + excess, 'x');
@@ -678,7 +679,7 @@ DOBA_TEST("response head and body limits are independent") {
         "\r\nContent-Length: " + std::to_string(payload.size()) + "\r\n\r\n";
     DOBA_EXPECT_EQUAL(actual, expected_head + payload);
     DOBA_EXPECT_EQUAL(serialized.head.size(),
-                      policies::kMaxResponseHeadSizeInMemory);
+                      policies::kDefaultResponseHeadBufferCapacity);
     DOBA_EXPECT_EQUAL(serialized.body.size(), excess ? 0 : body.size());
     DOBA_EXPECT_EQUAL(serialized.source != nullptr, excess != 0);
   }
@@ -1078,7 +1079,7 @@ DOBA_TEST("streamed body survives near-limit headers") {
   for (std::size_t i = 0; i < body.size(); i++) {
     body[i] = static_cast<char>(i % 256);
   }
-  const std::size_t head_limit = policies::kMaxResponseHeadSizeInMemory;
+  const std::size_t head_limit = policies::kDefaultResponseHeadBufferCapacity;
   const std::string head = "HTTP/1.1 200 OK\r\nDate: fixed\r\nX-Pad: ";
   const std::string framing =
       "Content-Length: " + std::to_string(body.size()) + "\r\n";

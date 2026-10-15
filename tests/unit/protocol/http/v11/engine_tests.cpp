@@ -390,6 +390,51 @@ DOBA_TEST("engine orders two asynchronous completions") {
   DOBA_EXPECT(current.wire.substr(next).ends_with("\r\n\r\nsecond"));
 }
 
+DOBA_TEST("engine drains queued responses after current completion") {
+  router<request, response> routes;
+  std::coroutine_handle<> first;
+  const std::string large(16385, 'x');
+  routes.add("GET", "/first", [&first](const request&, response& res)
+                 -> task<void> {
+    co_await suspend_once{first};
+    make_response(res, "first");
+  });
+  routes.add("GET", "/large", [&large](const request&, response& res)
+                 -> task<void> {
+    make_response(res, large);
+    co_return;
+  });
+  routes.add("GET", "/last", [](const request&, response& res) {
+    make_response(res, "last");
+  });
+  connection current(routes);
+  int sources = 0;
+  current.value.set_on_send(
+      [&](std::string_view head, std::string_view body,
+          std::unique_ptr<reader> source) {
+        current.wire.append(head).append(body);
+        if (source) {
+          sources++;
+          source->read_all(current.wire);
+        }
+      });
+  const std::string requests =
+      "GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n"
+      "GET /large HTTP/1.1\r\nHost: localhost\r\n\r\n"
+      "GET /last HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  DOBA_EXPECT_EQUAL(current.receive(requests), requests.size());
+  DOBA_EXPECT(current.wire.empty());
+  first.resume();
+  const auto second = current.wire.find("HTTP/1.1", 1);
+  DOBA_EXPECT(second != std::string::npos);
+  const auto third = current.wire.find("HTTP/1.1", second + 1);
+  DOBA_EXPECT(third != std::string::npos);
+  DOBA_EXPECT(current.wire.substr(0, second).ends_with("\r\n\r\nfirst"));
+  DOBA_EXPECT(current.wire.substr(second, third - second).ends_with(large));
+  DOBA_EXPECT(current.wire.substr(third).ends_with("\r\n\r\nlast"));
+  DOBA_EXPECT_EQUAL(sources, 1);
+}
+
 DOBA_TEST("engine stops dispatch after a queued asynchronous error") {
   router<request, response> routes;
   std::coroutine_handle<> slow;
@@ -506,7 +551,7 @@ DOBA_TEST("engine uses configured response head and inline capacities") {
     co_return;
   });
   policies configuration;
-  configuration.max_response_head_size = 128;
+  configuration.response_head_buffer_capacity = 128;
   configuration.response_body_inline_capacity = 0;
   engine<request, response> value(configuration, routes);
   int sources = 0;
@@ -993,7 +1038,7 @@ DOBA_TEST("engine rejects invalid and policy limited requests") {
   DOBA_EXPECT_EQUAL(invalid.blocks.size(), 1);
   DOBA_EXPECT(invalid.wire.starts_with("HTTP/1.1 400 Bad Request\r\n"));
   policies configuration;
-  configuration.max_content_length = 1;
+  configuration.max_request_body_size = 1;
   connection limited(routes, configuration);
   limited.receive("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n");
   limited.receive(

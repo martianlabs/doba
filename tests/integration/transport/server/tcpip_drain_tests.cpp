@@ -152,7 +152,7 @@ void check_drain(bool destroy, bool active_callback) {
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
-  configuration.max_send_buffer_size = 32 * 1024 * 1024;
+  configuration.max_buffered_send_bytes = 32 * 1024 * 1024;
   auto transport = std::make_unique<tr::tcp<drain_engine, decltype(factory)>>(
       configuration, std::move(factory));
   transport->set_on_connection([]() {});
@@ -258,7 +258,8 @@ struct reader_engine {
       source.read(std::span<std::byte>(&byte, 1));
       prefix_size = state_->size;
     } else {
-      common::byte_storage storage({.spill_threshold = 1, .spill_dir = {}});
+      common::byte_storage storage(
+          {.spill_to_disk_threshold = 1, .spill_dir = {}});
       const std::string body(state_->size, 'a');
       if (!storage.write(body.data(), body.size())) {
         throw std::runtime_error("Unable to prepare source");
@@ -322,7 +323,7 @@ void check_reader_drain(bool destroy, bool close, bool empty = false) {
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
-  configuration.max_send_buffer_size = 32 * 1024;
+  configuration.max_buffered_send_bytes = 32 * 1024;
   auto transport = std::make_unique<tr::tcp<reader_engine, decltype(factory)>>(
       configuration, std::move(factory));
   transport->set_on_connection([]() {});
@@ -390,7 +391,7 @@ DOBA_TEST("stop handles failed and overflowing sends") {
     configuration.ip = "127.0.0.1";
     configuration.port = std::to_string(port);
     configuration.worker_count = 2;
-    configuration.max_send_buffer_size = overflow ? 1024 : 32 * 1024 * 1024;
+    configuration.max_buffered_send_bytes = overflow ? 1024 : 32 * 1024 * 1024;
     tr::tcp<drain_engine, decltype(factory)> transport(configuration,
                                                        std::move(factory));
     transport.set_on_connection([]() {});
@@ -424,7 +425,7 @@ DOBA_TEST("stop rejects new engine input") {
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
-  configuration.max_send_buffer_size = 32 * 1024 * 1024;
+  configuration.max_buffered_send_bytes = 32 * 1024 * 1024;
   tr::tcp<drain_engine, decltype(factory)> transport(configuration,
                                                      std::move(factory));
   transport.set_on_connection([]() {});
@@ -487,7 +488,7 @@ DOBA_TEST("sources work with a small send buffer") {
       configuration.ip = "127.0.0.1";
       configuration.port = std::to_string(port);
       configuration.worker_count = 2;
-      configuration.max_send_buffer_size = capacity;
+      configuration.max_buffered_send_bytes = capacity;
       tr::tcp<reader_engine, decltype(factory)> transport(configuration,
                                                           std::move(factory));
       transport.set_on_connection([]() {});
@@ -521,7 +522,7 @@ DOBA_TEST("source failure cancels later deliveries") {
     configuration.ip = "127.0.0.1";
     configuration.port = std::to_string(port);
     configuration.worker_count = 2;
-    configuration.max_send_buffer_size = 16 * 1024 * 1024;
+    configuration.max_buffered_send_bytes = 16 * 1024 * 1024;
     tr::tcp<reader_engine, decltype(factory)> transport(configuration,
                                                         std::move(factory));
     transport.set_on_connection([]() {});
@@ -589,7 +590,7 @@ DOBA_TEST("source buffers respect the send limit") {
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
-  configuration.max_send_buffer_size = 8192;
+  configuration.max_buffered_send_bytes = 8192;
   tr::tcp<reader_engine, decltype(factory)> transport(configuration,
                                                       std::move(factory));
   transport.set_on_connection([]() {});
@@ -619,7 +620,7 @@ DOBA_TEST("concurrent stops drain before returning") {
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 8;
-  configuration.max_send_buffer_size = 32 * 1024 * 1024;
+  configuration.max_buffered_send_bytes = 32 * 1024 * 1024;
   tr::tcp<drain_engine, decltype(factory)> transport(configuration,
                                                      std::move(factory));
   transport.set_on_connection([]() {});
@@ -1152,8 +1153,8 @@ DOBA_TEST("close discards input after draining output") {
     configuration.ip = "127.0.0.1";
     configuration.port = std::to_string(port);
     configuration.worker_count = 2;
-    configuration.recv_buffer_size = 1;
-    configuration.max_send_buffer_size = 32768;
+    configuration.receive_buffer_capacity = 1;
+    configuration.max_buffered_send_bytes = 32768;
     tr::tcp<reader_engine, decltype(factory)> transport(configuration,
                                                         std::move(factory));
     std::atomic<int> disconnected{0};
@@ -1213,7 +1214,7 @@ DOBA_TEST("rejection discards a pending source and later output") {
   configuration.ip = "127.0.0.1";
   configuration.port = std::to_string(port);
   configuration.worker_count = 2;
-  configuration.max_send_buffer_size = 8192;
+  configuration.max_buffered_send_bytes = 8192;
   tr::tcp<reader_engine, decltype(factory)> transport(configuration,
                                                       std::move(factory));
   transport.set_on_connection([]() {});

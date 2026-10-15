@@ -254,9 +254,9 @@ DOBA_TEST("rejects chunk size overflow") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("enforces extension and trailer size limits") {
   for (bool extension : {true, false}) {
-    const std::size_t limit = extension
-                                  ? framer_chunked::kMaxChunkedExtensionSize
-                                  : framer_chunked::kMaxChunkedTrailerSize;
+    const std::size_t limit =
+        extension ? framer_chunked::kDefaultMaxChunkExtensionSize
+                  : framer_chunked::kDefaultMaxTrailerSectionSize;
     for (std::size_t length : {limit - 1, limit, limit + 1}) {
       const std::string wire =
           extension ? "1;" + std::string(length - 1, 'x') + "\r\na\r\n0\r\n\r\n"
@@ -407,7 +407,8 @@ DOBA_TEST("maximum chunk size is valid until the next hex digit") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("extension budget resets for each chunk") {
   const std::string chunk =
-      "1;" + std::string(framer_chunked::kMaxChunkedExtensionSize - 1, 'x') +
+      "1;" +
+      std::string(framer_chunked::kDefaultMaxChunkExtensionSize - 1, 'x') +
       "\r\na\r\n";
   const std::string wire = chunk + chunk + std::string(64, '0') + "\r\n\r\n";
   framer_chunked value;
@@ -421,7 +422,7 @@ DOBA_TEST("extension budget resets for each chunk") {
 // | [>] trailer budget includes all fields and the final line   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("trailer budget includes all fields and the final line") {
-  const auto limit = framer_chunked::kMaxChunkedTrailerSize;
+  const auto limit = framer_chunked::kDefaultMaxTrailerSectionSize;
   for (const std::size_t length : {limit - 1, limit, limit + 1}) {
     const std::string wire =
         "0\r\nA:\r\nB:" + std::string(length - 10, 'x') + "\r\n\r\n";
