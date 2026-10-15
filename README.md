@@ -1,15 +1,17 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/branding/doba-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="resources/branding/doba.png">
+<a href="resources/branding/doba.png#gh-light-mode-only">
   <img src="resources/branding/doba.png" alt="doba" width="640">
-</picture>
+</a>
+<a href="resources/branding/doba-dark.png#gh-dark-mode-only">
+  <img src="resources/branding/doba-dark.png" alt="doba" width="640">
+</a>
 <br><br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-hero-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="resources/readme/readme-hero.svg">
+<a href="resources/readme/readme-hero.svg#gh-light-mode-only">
   <img src="resources/readme/readme-hero.svg" alt="You write the handler. doba moves the bytes." width="540">
-</picture>
+</a>
+<a href="resources/readme/readme-hero-dark.svg#gh-dark-mode-only">
+  <img src="resources/readme/readme-hero-dark.svg" alt="You write the handler. doba moves the bytes." width="540">
+</a>
 <br><br>
 
 [![Build & Test](https://github.com/martianlabs/doba/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/martianlabs/doba/actions/workflows/ci.yml?query=branch%3Amain)
@@ -25,11 +27,12 @@ The TCP transport needs no external libraries; optional TLS uses OpenSSL.
 
 <a name="okay-how-fast"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-performance-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/readme/readme-performance.svg">
+  <a href="resources/readme/readme-performance.svg#gh-light-mode-only">
     <img src="resources/readme/readme-performance.svg" alt="Okay, how fast?" width="280">
-  </picture>
+  </a>
+  <a href="resources/readme/readme-performance-dark.svg#gh-dark-mode-only">
+    <img src="resources/readme/readme-performance-dark.svg" alt="Okay, how fast?" width="280">
+  </a>
 </h2>
 
 Big throughput numbers are fun. Waiting for a response isn't. Let's look at both.
@@ -50,121 +53,110 @@ The test machine uses an **AMD EPYC 8534P at 2.30 GHz**
 **2 x 3.84 TB NVMe** storage. It provides a **25 Gbps private network**
 and a **1 Gbps public connection**, upgradable to **25 Gbps**.
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-overall.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-overall-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/benchmarks/scaleway-test-008/benchmark-overall.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-overall.svg" alt="HttpArena overall top 10: total points including completeness; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-overall.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-overall.svg" alt="HttpArena overall top 10: total points including completeness; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-overall.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-overall-dark.svg" alt="HttpArena overall top 10: total points including completeness; higher is better." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-baseline.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-baseline-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/benchmarks/scaleway-test-008/benchmark-baseline.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-baseline.svg" alt="HttpArena baseline: selected requests per second; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-baseline.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-baseline.svg" alt="HttpArena baseline: selected requests per second; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-baseline.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-baseline-dark.svg" alt="HttpArena baseline: selected requests per second; higher is better." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-pipelined.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-pipelined-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/benchmarks/scaleway-test-008/benchmark-pipelined.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-pipelined.svg" alt="HttpArena pipelined: selected requests per second; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-pipelined.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-pipelined.svg" alt="HttpArena pipelined: selected requests per second; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-pipelined.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-pipelined-dark.svg" alt="HttpArena pipelined: selected requests per second; higher is better." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-limited-conn.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-limited-conn-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/benchmarks/scaleway-test-008/benchmark-limited-conn.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-limited-conn.svg" alt="HttpArena limited-conn: selected requests per second; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-limited-conn.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-limited-conn.svg" alt="HttpArena limited-conn: selected requests per second; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-limited-conn.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-limited-conn-dark.svg" alt="HttpArena limited-conn: selected requests per second; higher is better." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-10k.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-latency-10k-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/benchmarks/scaleway-test-008/benchmark-latency-10k.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-10k.svg" alt="HttpArena latency-10k: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-10k.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-10k.svg" alt="HttpArena latency-10k: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-10k.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-10k-dark.svg" alt="HttpArena latency-10k: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-1m.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-latency-1m-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/benchmarks/scaleway-test-008/benchmark-latency-1m.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-1m.svg" alt="HttpArena latency-1m: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-1m.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-1m.svg" alt="HttpArena latency-1m: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-1m.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-1m-dark.svg" alt="HttpArena latency-1m: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu.svg" alt="HttpArena latency-500k-8cpu: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu.svg" alt="HttpArena latency-500k-8cpu: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-latency-500k-8cpu-dark.svg" alt="HttpArena latency-500k-8cpu: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-async.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-async-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/benchmarks/scaleway-test-008/benchmark-async.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-async.svg" alt="HttpArena async: selected requests per second; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-async.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-async.svg" alt="HttpArena async: selected requests per second; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-async.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-async-dark.svg" alt="HttpArena async: selected requests per second; higher is better." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-json-comp.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-json-comp-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/benchmarks/scaleway-test-008/benchmark-json-comp.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-json-comp.svg" alt="HttpArena json-comp: compression-adjusted requests per second; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-json-comp.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-json-comp.svg" alt="HttpArena json-comp: compression-adjusted requests per second; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-json-comp.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-json-comp-dark.svg" alt="HttpArena json-comp: compression-adjusted requests per second; higher is better." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-json-tls.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-json-tls-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/benchmarks/scaleway-test-008/benchmark-json-tls.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-json-tls.svg" alt="HttpArena json-tls: selected requests per second; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-json-tls.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-json-tls.svg" alt="HttpArena json-tls: selected requests per second; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-json-tls.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-json-tls-dark.svg" alt="HttpArena json-tls: selected requests per second; higher is better." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-8gbit.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-8gbit-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/benchmarks/scaleway-test-008/benchmark-8gbit.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-8gbit.svg" alt="HttpArena 8gbit: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-8gbit.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-8gbit.svg" alt="HttpArena 8gbit: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-8gbit.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-8gbit-dark.svg" alt="HttpArena 8gbit: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
 </a>
 <br><br>
 
-<a href="resources/benchmarks/scaleway-test-008/benchmark-static-tls.svg" title="Open full-size light chart">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/benchmarks/scaleway-test-008/benchmark-static-tls-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/benchmarks/scaleway-test-008/benchmark-static-tls.svg">
-    <img src="resources/benchmarks/scaleway-test-008/benchmark-static-tls.svg" alt="HttpArena static-tls: selected requests per second; higher is better." width="100%">
-  </picture>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-static-tls.svg#gh-light-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-static-tls.svg" alt="HttpArena static-tls: selected requests per second; higher is better." width="100%">
+</a>
+<a href="resources/benchmarks/scaleway-test-008/benchmark-static-tls.svg#gh-dark-mode-only" title="Open full-size light chart">
+  <img src="resources/benchmarks/scaleway-test-008/benchmark-static-tls-dark.svg" alt="HttpArena static-tls: selected requests per second; higher is better." width="100%">
 </a>
 <br><br>
 
 <a name="no-magic-a-few-deliberate-choices"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-design-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/readme/readme-design.svg">
+  <a href="resources/readme/readme-design.svg#gh-light-mode-only">
     <img src="resources/readme/readme-design.svg" alt="No magic." width="175">
-  </picture>
+  </a>
+  <a href="resources/readme/readme-design-dark.svg#gh-dark-mode-only">
+    <img src="resources/readme/readme-design-dark.svg" alt="No magic." width="175">
+  </a>
 </h2>
 
 *A few deliberate choices.*
@@ -181,11 +173,12 @@ and a **1 Gbps public connection**, upgradable to **25 Gbps**.
 
 <a name="hello-world-lets-not-overcomplicate-it"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-hello-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/readme/readme-hello.svg">
+  <a href="resources/readme/readme-hello.svg#gh-light-mode-only">
     <img src="resources/readme/readme-hello.svg" alt="Hello, world." width="220">
-  </picture>
+  </a>
+  <a href="resources/readme/readme-hello-dark.svg#gh-dark-mode-only">
+    <img src="resources/readme/readme-hello-dark.svg" alt="Hello, world." width="220">
+  </a>
 </h2>
 
 *Let's not overcomplicate it.*
@@ -246,11 +239,12 @@ C++20 requirement, and system threading dependency.
 
 <a name="fast-is-nice-correct-is-non-negotiable"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="resources/readme/readme-correctness-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="resources/readme/readme-correctness.svg">
+  <a href="resources/readme/readme-correctness.svg#gh-light-mode-only">
     <img src="resources/readme/readme-correctness.svg" alt="Fast is nice." width="203">
-  </picture>
+  </a>
+  <a href="resources/readme/readme-correctness-dark.svg#gh-dark-mode-only">
+    <img src="resources/readme/readme-correctness-dark.svg" alt="Fast is nice." width="203">
+  </a>
 </h2>
 
 *Correct is non-negotiable.*
