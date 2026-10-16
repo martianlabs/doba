@@ -34,6 +34,28 @@ add_test(
 )
 
 add_executable(
+  doba_buffer_pool_allocation_tests
+  "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/protocol/http/v11/buffer_pool_allocation_probe.cpp"
+)
+
+target_include_directories(
+  doba_buffer_pool_allocation_tests
+  PRIVATE
+  "${CMAKE_CURRENT_LIST_DIR}/helpers"
+)
+
+target_link_libraries(
+  doba_buffer_pool_allocation_tests
+  PRIVATE
+  doba_headers
+)
+add_test(
+  NAME doba_buffer_pool_allocation_tests
+  COMMAND doba_buffer_pool_allocation_tests
+)
+
+add_executable(
   doba_unit_test_helper_probe
   "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper_probe.cpp"
@@ -68,6 +90,7 @@ add_test(
 )
 set_tests_properties(
   doba_unit_tests
+  doba_buffer_pool_allocation_tests
   doba_unit_test_helper
   PROPERTIES
   TIMEOUT 120

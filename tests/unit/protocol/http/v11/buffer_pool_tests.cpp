@@ -227,38 +227,6 @@ DOBA_TEST("buffer pool rejects overflowing capacities") {
 }
 
 // +===========================================================================+
-// | [>] preserves available pairs after allocation failure      ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("buffer pool preserves available pairs after allocation failure") {
-  const policies configuration;
-  for (const bool request : {false, true}) {
-    auto first = buffer_pool::acquire(configuration);
-    const auto* pair = first.get();
-    buffer_pool::release(std::move(first));
-    auto oversized = configuration;
-    if (request) {
-      oversized.request_head_buffer_capacity =
-          std::numeric_limits<std::size_t>::max();
-      oversized.request_body_inline_capacity = 0;
-    } else {
-      oversized.response_head_buffer_capacity =
-          std::numeric_limits<std::size_t>::max();
-      oversized.response_body_inline_capacity = 0;
-    }
-    bool failed = false;
-    try {
-      auto value = buffer_pool::acquire(oversized);
-    } catch (const std::bad_alloc&) {
-      failed = true;
-    }
-    DOBA_EXPECT(failed);
-    auto second = buffer_pool::acquire(configuration);
-    DOBA_EXPECT(second.get() == pair);
-    buffer_pool::release(std::move(second));
-  }
-}
-
-// +===========================================================================+
 // | [>] isolates available pairs between threads                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("buffer pool isolates available pairs between threads") {
