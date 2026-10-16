@@ -50,6 +50,15 @@ target_link_libraries(
   PRIVATE
   doba_headers
 )
+if(
+  CMAKE_SYSTEM_NAME STREQUAL "Linux"
+)
+  target_link_options(
+    doba_buffer_pool_allocation_tests
+    PRIVATE
+    "LINKER:--wrap=_Znam"
+  )
+endif()
 add_test(
   NAME doba_buffer_pool_allocation_tests
   COMMAND doba_buffer_pool_allocation_tests

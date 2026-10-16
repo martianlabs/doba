@@ -36,15 +36,27 @@ using martianlabs::doba::protocol::http::v11::detail::buffer_pool;
 using martianlabs::doba::protocol::http::v11::policies;
 
 thread_local int fail_array_after = -1;
-}  // namespace
 
-// Replacements are isolated from the main unit-test executable.
-void* operator new[](std::size_t size) {
+void check_array_allocation() {
   if (fail_array_after == 0) {
     fail_array_after = -1;
     throw std::bad_alloc();
   }
   if (fail_array_after > 0) fail_array_after--;
+}
+}  // namespace
+
+#ifdef __linux__
+// Keep sanitizer-owned allocation operators intact.
+extern "C" void* __real__Znam(std::size_t size);
+extern "C" void* __wrap__Znam(std::size_t size) {
+  check_array_allocation();
+  return __real__Znam(size);
+}
+#else
+// Replacements are isolated from the main unit-test executable.
+void* operator new[](std::size_t size) {
+  check_array_allocation();
   return ::operator new(size);
 }
 
@@ -67,6 +79,7 @@ void operator delete[](void* address, std::size_t) noexcept {
 void operator delete[](void* address, const std::nothrow_t&) noexcept {
   ::operator delete(address);
 }
+#endif
 
 // +===========================================================================+
 // | [>] preserves available pairs after allocation failure      ( test-case ) |

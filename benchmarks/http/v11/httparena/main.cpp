@@ -243,8 +243,7 @@ void serve_static(const request& req, response& result,
       }
       remaining = remaining.subspan(count);
     }
-    auto writer = body::body_writer::raw({
-        .spill_to_disk_threshold = 128 * 1024});
+    auto writer = body::body_writer::raw();
     if (!writer.write(std::string_view(contents))) {
       result.internal_server_error_500();
       return;
@@ -383,10 +382,6 @@ int main() {
     return 1;
   }
   policies http_configuration;
-  http_configuration.request_head_buffer_capacity = 1024;
-  http_configuration.request_body_inline_capacity = 1024;
-  http_configuration.response_head_buffer_capacity = 1024;
-  http_configuration.response_body_inline_capacity = 1024;
   std::error_code static_error;
   const auto static_root =
       common::filesystem_root("/data/static", static_error);
