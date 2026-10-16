@@ -362,27 +362,32 @@ int main() {
       });
   http_server.add_route(
       "GET", "/pipeline",
-      [](const request&, response& res) {
+      [](const request&, response& res)
+          -> martianlabs::doba::common::task<void> {
         res.ok_200();
         res.add_header("Content-Type", "text/plain").set_body("ok");
+        co_return;
       });
   // Parse every baseline value; HttpArena randomizes them to detect shortcuts.
   http_server.add_route(
       "GET", "/baseline11",
-      [](const request& req, response& res) {
+      [](const request& req, response& res)
+          -> martianlabs::doba::common::task<void> {
         res.ok_200();
         std::int64_t value = 0;
         if (!read_query_sum(req, value)) {
           res.bad_request_400();
           res.set_body("invalid request");
-          return;
+          co_return;
         }
         res.add_header("Content-Type", "text/plain")
             .set_body(std::to_string(value));
+        co_return;
       });
   http_server.add_route(
       "POST", "/baseline11",
-      [](const request& req, response& res) {
+      [](const request& req, response& res)
+          -> martianlabs::doba::common::task<void> {
         res.ok_200();
         std::int64_t value = 0;
         std::int64_t body_value = 0;
@@ -390,21 +395,23 @@ int main() {
             !read_body_integer(req, body_value)) {
           res.bad_request_400();
           res.set_body("invalid request");
-          return;
+          co_return;
         }
         res.add_header("Content-Type", "text/plain")
             .set_body(std::to_string(value + body_value));
+        co_return;
       });
   auto json_handler =
       [&dataset](const request& req, response& res,
-                 std::uint64_t requested_count) {
+                 std::uint64_t requested_count)
+          -> martianlabs::doba::common::task<void> {
         res.ok_200();
         std::int64_t multiplier = 1;
         const auto m = req.get_query_parameter("m");
         if (m && !parse_integer(m->second, multiplier)) {
           res.bad_request_400();
           res.set_body("invalid multiplier");
-          return;
+          co_return;
         }
         const auto count = std::min<std::uint64_t>(requested_count,
                                                    dataset.Size());
@@ -462,7 +469,7 @@ int main() {
                            MAX_WBITS + 16, MAX_MEM_LEVEL,
                            Z_DEFAULT_STRATEGY) != Z_OK) {
             res.internal_server_error_500();
-            return;
+            co_return;
           }
           std::string compressed(deflateBound(&stream, body.size()), '\0');
           stream.next_in = reinterpret_cast<Bytef*>(
@@ -474,7 +481,7 @@ int main() {
           deflateEnd(&stream);
           if (result != Z_STREAM_END) {
             res.internal_server_error_500();
-            return;
+            co_return;
           }
           compressed.resize(stream.total_out);
           res.add_header("Content-Encoding", "gzip");
@@ -482,6 +489,7 @@ int main() {
         } else {
           res.set_body(body);
         }
+        co_return;
       };
   http_server.add_route("GET", "/json/:count", json_handler);
   martianlabs::doba::transport::server::tls_policies tls_configuration;
@@ -493,17 +501,21 @@ int main() {
                                                http_configuration);
   tls_server.add_route("GET", "/json/:count", json_handler);
   const auto static_handler =
-      [static_root](const request& req, response& res) {
+      [static_root](const request& req, response& res)
+          -> martianlabs::doba::common::task<void> {
         serve_static(req, res, static_root);
+        co_return;
       };
   tls_server.add_route("GET", "/static/*", static_handler);
   tls_server.add_route("HEAD", "/static/*", static_handler);
   tls_server.add_route(
       "POST", "/echo",
-      [](const request& req, response& res) {
+      [](const request& req, response& res)
+          -> martianlabs::doba::common::task<void> {
         res.ok_200();
         res.add_header("Content-Type", "application/octet-stream")
             .set_body(req.get_body_reader());
+        co_return;
       });
   http_server.start();
   tls_server.start();
