@@ -100,11 +100,11 @@ HTTP reserves fixed head buffers: *request_head_buffer_capacity* and
 grow beyond its capacity.
 
 An accepted body does not have to stay inline. The fixed
-*request_body_inline_capacity* defaults to **16 KiB**; a larger incoming
+*request_body_inline_capacity* defaults to **4 KiB**; a larger incoming
 body moves to a temporary file. *max_request_body_size* still decides
 whether the body is accepted.
 
-The fixed *response_body_inline_capacity* also defaults to **16 KiB**.
+The fixed *response_body_inline_capacity* also defaults to **4 KiB**.
 An inline body that exceeds it uses a writer with separate storage options.
 Its *spill_to_disk_threshold* defaults to **128 KiB** and does not change
 either HTTP inline capacity. The

@@ -189,6 +189,19 @@ bool negotiate(tls_session& server, test_client& client, std::size_t fragment) {
 }  // namespace
 
 // +===========================================================================+
+// | [>] tls policies default buffer capacities                  ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("tls policies default buffer capacities") {
+  const tls_policies configuration;
+  DOBA_EXPECT_EQUAL(tls_policies::kDefaultEncryptedReceiveBufferCapacity,
+                    8 * 1024);
+  DOBA_EXPECT_EQUAL(tls_policies::kDefaultNetworkBioBufferCapacity, 8 * 1024);
+  DOBA_EXPECT_EQUAL(configuration.encrypted_receive_buffer_capacity,
+                    8 * 1024);
+  DOBA_EXPECT_EQUAL(configuration.network_bio_buffer_capacity, 8 * 1024);
+}
+
+// +===========================================================================+
 // | [>] tls context loads matching credentials                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tls context loads matching credentials") {
@@ -338,7 +351,8 @@ DOBA_TEST("tls session bounds encrypted input") {
   const std::string bytes(64 * 1024, 'x');
   const std::size_t received = server.receive(bytes);
   DOBA_EXPECT(received > 0);
-  DOBA_EXPECT(received <= 17 * 1024);
+  DOBA_EXPECT(
+      received <= tls_policies::kDefaultNetworkBioBufferCapacity);
   DOBA_EXPECT_EQUAL(server.receive(bytes), 0);
   DOBA_EXPECT(!server.failed());
 }
@@ -350,8 +364,9 @@ DOBA_TEST("tls session resumes after its encrypted input fills") {
   tls_session server(make_tls_context(server_policies()), 32768);
   test_client client;
   DOBA_EXPECT(negotiate(server, client, 1024));
-  const std::string body(16 * 1024, 'x');
-  const std::string last(16 * 1024, 'y');
+  const auto capacity = tls_policies::kDefaultNetworkBioBufferCapacity;
+  const std::string body(capacity / 2, 'x');
+  const std::string last(capacity / 2, 'y');
   std::size_t written = 0;
   DOBA_EXPECT(
       SSL_write_ex(client.ssl.get(), body.data(), body.size(), &written) == 1);
@@ -447,7 +462,8 @@ DOBA_TEST("tls session bounds default encrypted output") {
   for (int step = 0; step < 4; ++step) {
     const auto result = server.write(bytes);
     DOBA_EXPECT(result.state != tls_session::status::failed);
-    DOBA_EXPECT(server.pending() <= 17 * 1024);
+    DOBA_EXPECT(
+        server.pending() <= tls_policies::kDefaultNetworkBioBufferCapacity);
     if (result.state == tls_session::status::need_output) break;
   }
 }

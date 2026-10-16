@@ -41,6 +41,7 @@ namespace {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::common::task;
+using martianlabs::doba::protocol::http::v11::policies;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::http_server;
@@ -566,7 +567,8 @@ DOBA_TEST("HTTP/1.1 echoes raw bodies across the spill threshold") {
                           co_return;
                         });
   http_server.start();
-  for (std::size_t size : {16383, 16384, 16385}) {
+  const auto capacity = policies::kDefaultRequestBodyInlineCapacity;
+  for (std::size_t size : {capacity - 1, capacity, capacity + 1}) {
     DOBA_EXPECT(client.connect(port));
     std::string payload(size, '\0');
     for (std::size_t i = 0; i < payload.size(); i++) {
@@ -605,10 +607,11 @@ DOBA_TEST("HTTP/1.1 raw echo survives decoder buffer reuse") {
   http_server.start();
   DOBA_EXPECT(client.connect(port));
   for (char value : {'a', 'b'}) {
-    const std::string payload(10240, value);
+    const std::string payload(
+        policies::kDefaultRequestBodyInlineCapacity / 2, value);
     const std::string head =
         "POST /echo HTTP/1.1\r\nHost: example.com\r\n"
-        "Content-Length: 10240\r\n\r\n";
+        "Content-Length: " + std::to_string(payload.size()) + "\r\n\r\n";
     DOBA_EXPECT(client.send_all(head + payload));
     const auto result = receive_http_response(client);
     DOBA_EXPECT(result.has_value());
@@ -635,9 +638,15 @@ DOBA_TEST("HTTP/1.1 echoes chunked bodies across the spill threshold") {
                           co_return;
                         });
   http_server.start();
-  for (std::size_t size : {16383, 16384, 16385}) {
+  const auto capacity = policies::kDefaultRequestBodyInlineCapacity;
+  for (std::size_t size : {capacity - 1, capacity, capacity + 1}) {
     DOBA_EXPECT(client.connect(port));
-    std::string payload(size - 13, '\0');
+    std::size_t digits = 1;
+    for (std::size_t remaining = size - 10; remaining >= 16;
+         remaining /= 16) {
+      digits++;
+    }
+    std::string payload(size - 9 - digits, '\0');
     for (std::size_t i = 0; i < payload.size(); i++) {
       payload[i] = static_cast<char>((i * 47 + i / 127) % 256);
     }

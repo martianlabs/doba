@@ -2567,7 +2567,9 @@ DOBA_TEST("decoder keeps raw body below spill threshold") {
 // | [>] raw body spills past memory boundary                    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder reads raw bodies across the memory boundary") {
-  for (std::size_t size : {16383, 16384, 16385, 65536}) {
+  constexpr auto capacity = policies::kDefaultRequestBodyInlineCapacity;
+  for (std::size_t size :
+       {capacity - 1, capacity, capacity + 1, capacity * 4}) {
     const std::string payload(size, 'x');
     const std::string source =
         "POST / HTTP/1.1\r\nHost: example.com\r\nContent-Length: " +
@@ -2603,8 +2605,15 @@ DOBA_TEST("decoder reads raw bodies across the memory boundary") {
 // | [>] chunked body spills past memory boundary                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder reads chunked bodies across the wire memory boundary") {
-  for (std::size_t size : {16383, 16384, 16385, 65536}) {
-    const std::string payload(size - 13, 'x');
+  constexpr auto capacity = policies::kDefaultRequestBodyInlineCapacity;
+  for (std::size_t size :
+       {capacity - 1, capacity, capacity + 1, capacity * 4}) {
+    std::size_t digits = 1;
+    for (std::size_t remaining = size - 10; remaining >= 16;
+         remaining /= 16) {
+      digits++;
+    }
+    const std::string payload(size - 9 - digits, 'x');
     std::array<char, 16> chunk_size{};
     const auto encoded =
         std::to_chars(chunk_size.data(), chunk_size.data() + chunk_size.size(),
@@ -2649,9 +2658,11 @@ DOBA_TEST("decoder reads chunked bodies across the wire memory boundary") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder removes an unread temporary body before dispatch") {
   const auto before = body_temp_files();
-  const std::string payload(16385, 'x');
+  const std::string payload(
+      policies::kDefaultRequestBodyInlineCapacity + 1, 'x');
   const std::string source =
-      "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 16385\r\n\r\n" + payload;
+      "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: " +
+      std::to_string(payload.size()) + "\r\n\r\n" + payload;
   decoder_input value;
   value.on_request = [&](const request& request_value) {
     DOBA_EXPECT(request_value.has_body_reader());
@@ -2676,10 +2687,16 @@ DOBA_TEST("decoder removes an unread temporary body before dispatch") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder removes a temporary body after invalid framing") {
   const auto before = body_temp_files();
+  const std::string payload(
+      policies::kDefaultRequestBodyInlineCapacity + 1, 'x');
+  std::array<char, 2 * sizeof(std::size_t)> chunk_size{};
+  const auto encoded =
+      std::to_chars(chunk_size.data(), chunk_size.data() + chunk_size.size(),
+                    payload.size(), 16);
+  DOBA_EXPECT_EQUAL(encoded.ec, std::errc{});
   const std::string source =
-      "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n"
-      "4268\r\n" +
-      std::string(17000, 'x') + "\r\n";
+      "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n" +
+      std::string(chunk_size.data(), encoded.ptr) + "\r\n" + payload + "\r\n";
   decoder_input value;
   for (std::size_t offset = 0; offset < source.size();) {
     const auto count =
@@ -2707,8 +2724,10 @@ DOBA_TEST("decoder removes a temporary body after invalid framing") {
 DOBA_TEST("handler failure leaves no temporary body") {
   const auto before = body_temp_files();
   const std::string source =
-      "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 16385\r\n\r\n" +
-      std::string(16385, 'x');
+      "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: " +
+      std::to_string(policies::kDefaultRequestBodyInlineCapacity + 1) +
+      "\r\n\r\n" +
+      std::string(policies::kDefaultRequestBodyInlineCapacity + 1, 'x');
   decoder_input value;
   bool dispatched = false;
   value.on_request = [&](const request&) {
@@ -2748,7 +2767,9 @@ DOBA_TEST("decoder returns 500 when temporary body creation fails") {
   bool called = false;
   value.on_request = [&](const request&) { called = true; };
   const std::string source =
-      "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 16385\r\n\r\n";
+      "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: " +
+      std::to_string(policies::kDefaultRequestBodyInlineCapacity + 1) +
+      "\r\n\r\n";
   value.append(source);
   auto result = value.decode();
   const int restored = temp.restore();
@@ -2769,7 +2790,9 @@ DOBA_TEST("decoder returns 500 when temporary body cannot reopen") {
   bool called = false;
   value.on_request = [&](const request&) { called = true; };
   const std::string head =
-      "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 16385\r\n\r\n";
+      "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: " +
+      std::to_string(policies::kDefaultRequestBodyInlineCapacity + 1) +
+      "\r\n\r\n";
   value.append(head);
   DOBA_EXPECT_EQUAL(value.decode().code,
                     deserialization_status::kMoreBytesNeeded);
@@ -2779,7 +2802,8 @@ DOBA_TEST("decoder returns 500 when temporary body cannot reopen") {
   std::error_code error;
   DOBA_EXPECT(std::filesystem::remove(path, error));
   DOBA_EXPECT(!error);
-  const std::string body(16385, 'x');
+  const std::string body(
+      policies::kDefaultRequestBodyInlineCapacity + 1, 'x');
   martianlabs::doba::protocol::http::v11::deserialization_result<request,
                                                                 response>
       result;
@@ -3353,22 +3377,39 @@ DOBA_TEST("decoder accepts chunked payload with zero length limit") {
 DOBA_TEST("decoder spills chunked wire across receives") {
   constexpr std::size_t limit = policies::kDefaultRequestBodyInlineCapacity;
   DOBA_EXPECT_EQUAL(policies{}.max_request_body_size, 16 * 1024 * 1024);
-  for (const std::size_t second_chunk : {8171, 8172}) {
-    std::string source =
-        "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n"
-        "2000\r\n";
-    source.append(8192, 'a');
-    source += "\r\n";
-    source += second_chunk == 8171 ? "1feb\r\n" : "1fec\r\n";
-    source.append(second_chunk, 'b');
-    source += "\r\n0\r\n\r\n";
-    DOBA_EXPECT_EQUAL(source.size() - source.find("2000\r\n"),
-                      limit + (second_chunk - 8171));
+  for (const std::size_t size : {limit, limit + 1}) {
+    const std::size_t first_chunk = limit / 2;
+    std::string body;
+    for (std::size_t index = 0; index < 2; index++) {
+      std::size_t count = first_chunk;
+      if (index) {
+        const std::size_t remaining = size - body.size();
+        std::size_t digits = 1;
+        for (std::size_t value = remaining - 10; value >= 16; value /= 16) {
+          digits++;
+        }
+        count = remaining - 9 - digits;
+      }
+      std::array<char, 2 * sizeof(std::size_t)> chunk_size{};
+      const auto encoded =
+          std::to_chars(chunk_size.data(),
+                        chunk_size.data() + chunk_size.size(), count, 16);
+      DOBA_EXPECT_EQUAL(encoded.ec, std::errc{});
+      body.append(chunk_size.data(), encoded.ptr);
+      body += "\r\n";
+      body.append(count, index ? 'b' : 'a');
+      body += "\r\n";
+    }
+    body += "0\r\n\r\n";
+    DOBA_EXPECT_EQUAL(body.size(), size);
+    const std::string source =
+        "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n" +
+        body;
     decoder_input value;
     bool finished = false;
     for (std::size_t offset = 0; offset < source.size();) {
       const std::size_t count =
-          std::min(std::size_t{4096}, source.size() - offset);
+          std::min(limit / 2, source.size() - offset);
       DOBA_EXPECT_EQUAL(
           accumulate(value, std::string_view(source).substr(offset, count)),
           count);

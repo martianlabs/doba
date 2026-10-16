@@ -114,7 +114,7 @@ the key matches the certificate when it creates the TLS transport. A bad
 pair makes the first *start* fail instead of waiting for the first request.
 The TLS receive buffer and network BIO use the fixed capacities
 *encrypted_receive_buffer_capacity* and *network_bio_buffer_capacity*. Both
-default to **17 KiB** per connection.
+default to **8 KiB** per connection.
 
 <a name="try-https"></a>
 <h2>

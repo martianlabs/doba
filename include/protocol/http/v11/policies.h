@@ -53,11 +53,11 @@ struct policies {
   // Request head bytes retained by the decoder.
   static constexpr std::size_t kDefaultRequestHeadBufferCapacity = 4 * 1024;
   // Request body wire bytes retained before spilling to disk.
-  static constexpr std::size_t kDefaultRequestBodyInlineCapacity = 16 * 1024;
+  static constexpr std::size_t kDefaultRequestBodyInlineCapacity = 4 * 1024;
   // Response head bytes in the decoder's reusable storage.
   static constexpr std::size_t kDefaultResponseHeadBufferCapacity = 4 * 1024;
   // Response body bytes kept inline before using a writer.
-  static constexpr std::size_t kDefaultResponseBodyInlineCapacity = 16 * 1024;
+  static constexpr std::size_t kDefaultResponseBodyInlineCapacity = 4 * 1024;
   // Maximum accepted body size, in octets (0 means unlimited).
   std::size_t max_request_body_size = 16 * 1024 * 1024;
   // Maximum number of forwarding hops accepted across Via / Forwarded /

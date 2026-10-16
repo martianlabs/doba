@@ -22,6 +22,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <charconv>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -468,7 +469,7 @@ DOBA_TEST("string view bodies copy caller storage") {
 // | [>] request reader echoes into inline response body         ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("request reader echoes into inline response body") {
-  std::string payload(10240, '\0');
+  std::string payload(max_response_body_size_in_memory, '\0');
   for (std::size_t i = 0; i < payload.size(); i++) {
     payload[i] = static_cast<char>((i * 31 + i / 127) % 256);
   }
@@ -479,8 +480,9 @@ DOBA_TEST("request reader echoes into inline response body") {
   value.ok_200().set_header("Date", "fixed").set_body(&source);
   auto serialized = value.serialize();
   DOBA_EXPECT(!serialized.source);
-  DOBA_EXPECT(wire_prefix(serialized).find("Content-Length: 10240\r\n") !=
-              std::string_view::npos);
+  DOBA_EXPECT(wire_prefix(serialized).find(
+                  "Content-Length: " + std::to_string(payload.size()) +
+                  "\r\n") != std::string_view::npos);
   DOBA_EXPECT_EQUAL(serialized.body, payload);
   DOBA_EXPECT_EQUAL(serialized.body.data(), payload.data());
   std::array<std::byte, 1> remaining{};
@@ -513,7 +515,7 @@ DOBA_TEST("partially read raw body uses remaining borrowed bytes") {
 // | [>] borrowed raw body survives moves and replacement        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("borrowed raw body survives moves and replacement") {
-  std::string payload(10240, 'x');
+  std::string payload(max_response_body_size_in_memory, 'x');
   auto source = martianlabs::doba::protocol::http::v11::body::reader::raw(
       std::as_bytes(std::span(payload)), payload.size());
   std::array<char, max_response_size_in_memory> storage{};
@@ -566,9 +568,14 @@ DOBA_TEST("chunked request reader emits decoded raw response") {
   for (std::size_t size : {max_response_body_size_in_memory,
                            max_response_body_size_in_memory + 1}) {
     const std::string payload(size, 'x');
-    const std::string encoded =
-        (size == max_response_body_size_in_memory ? "4000" : "4001") +
-        std::string("\r\n") + payload + "\r\n0\r\nX-Test: a\r\n\r\n";
+    std::array<char, 2 * sizeof(std::size_t)> chunk_size{};
+    const auto converted =
+        std::to_chars(chunk_size.data(), chunk_size.data() + chunk_size.size(),
+                      payload.size(), 16);
+    DOBA_EXPECT_EQUAL(converted.ec, std::errc{});
+    const std::string encoded = std::string(chunk_size.data(), converted.ptr) +
+                                "\r\n" + payload +
+                                "\r\n0\r\nX-Test: a\r\n\r\n";
     auto source = martianlabs::doba::protocol::http::v11::body::reader::chunked(
         std::as_bytes(std::span(encoded)));
     std::array<char, max_response_size_in_memory> storage{};
