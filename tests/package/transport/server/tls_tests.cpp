@@ -26,8 +26,11 @@
 #include <filesystem>
 #include <functional>
 
+#include "common/task.h"
 #include "https_server.h"
 #include "transport/server/tls.h"
+
+using martianlabs::doba::common::task;
 
 namespace http = martianlabs::doba::protocol::http;
 namespace v11 = http::v11;
@@ -67,8 +70,10 @@ int main() {
       v11::engine<v11::request, v11::response,
                   http::router<v11::request, v11::response>>>
       value(configuration);
-  value.add_route("GET", "/", [](const v11::request&, v11::response& res) {
+  value.add_route("GET", "/", [](const v11::request&, v11::response& res)
+      -> task<void> {
     res.ok_200();
+    co_return;
   });
   martianlabs::doba::https_server<v11::request, v11::response,
                                   http::router<v11::request, v11::response>,

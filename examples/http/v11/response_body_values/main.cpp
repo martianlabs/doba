@@ -27,6 +27,7 @@
 
 #include "common/console_logger.h"
 #include "common/signaler.h"
+#include "common/task.h"
 #include "http_server.h"
 
 using namespace martianlabs::doba::common;
@@ -55,34 +56,38 @@ using namespace martianlabs::doba::protocol::http::v11;
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  http_server.add_route("GET", "/text", [](const request&, response& res) {
+  http_server.add_route("GET", "/text", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     const std::string text = "body stored in the response buffer";
     // set_body() copies the value; text need not outlive this handler.
     res.add_header("Content-Type", "text/plain; charset=utf-8").set_body(text);
-    return;
+    co_return;
   });
-  http_server.add_route("GET", "/binary", [](const request&, response& res) {
+  http_server.add_route("GET", "/binary", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     const char bytes[] = {'d', 'o', 'b', 'a', '\0'};
     // An explicit size preserves embedded zero bytes.
     res.add_header("Content-Type", "application/octet-stream")
         .set_body(std::string_view(bytes, sizeof(bytes)));
-    return;
+    co_return;
   });
-  http_server.add_route("GET", "/integer", [](const request&, response& res) {
+  http_server.add_route("GET", "/integer", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     // Arithmetic values use the constrained numeric set_body() overload.
     res.add_header("Content-Type", "text/plain; charset=utf-8").set_body(42);
-    return;
+    co_return;
   });
   http_server.add_route(
-      "GET", "/floating-point", [](const request&, response& res) {
+      "GET", "/floating-point", [](const request&, response& res)
+          -> task<void> {
         res.ok_200();
         // Numeric bodies follow std::to_string formatting.
         res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(3.14);
-        return;
+        co_return;
       });
   http_server.start();
   signaler::wait();

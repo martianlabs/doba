@@ -29,12 +29,14 @@
 #include <thread>
 #include <vector>
 
+#include "common/task.h"
 #include "http_server.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 
 namespace {
+using martianlabs::doba::common::task;
 using martianlabs::doba::http_server;
 using namespace martianlabs::doba::protocol::http::v11;
 using martianlabs::doba::tests::integration::receive_http_response;
@@ -63,16 +65,17 @@ class socket_controller {
   // +=========================================================================+
   // | [>] count                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  void count(const request&, response& res) {
+  task<void> count(const request&, response& res) {
     res.ok_200();
     res.set_body(++count_);
-    return;
+    co_return;
   }
   // +=========================================================================+
   // | [>] fail                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  void fail(const request&, response&) {
+  task<void> fail(const request&, response&) {
     throw std::runtime_error("controller");
+    co_return;
   }
 
  private:

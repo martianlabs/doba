@@ -4,7 +4,8 @@ Build the project from the repository root as described in the
 [examples index](../../README.md). The TCP examples listen on
 `0.0.0.0:8080`; the TLS example listens on `0.0.0.0:8443`. Build the target
 named by its directory, run that executable, one server at a time, and stop it
-with Ctrl+C.
+with Ctrl+C. All route handlers return `common::task<void>`; `co_return`
+completes an immediate handler, while `co_await` can suspend it.
 
 For the shortest path, run [hello_world](hello_world/README.md),
 [static_routes](static_routes/README.md),

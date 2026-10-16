@@ -27,6 +27,7 @@
 
 #include "common/console_logger.h"
 #include "common/signaler.h"
+#include "common/task.h"
 #include "protocol/http/common/method_names.h"
 #include "http_server.h"
 
@@ -53,13 +54,14 @@ int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
       method_names::kGet, "/resources/:id/:detailed",
-      [](const request&, response& res, std::uint64_t id, bool detailed) {
+      [](const request&, response& res, std::uint64_t id, bool detailed)
+          -> task<void> {
         res.ok_200();
         std::string body = "resource " + std::to_string(id);
         if (detailed) body += " with details";
         res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(std::move(body));
-        return;
+        co_return;
       });
   http_server.start();
   signaler::wait();

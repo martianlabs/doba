@@ -36,7 +36,9 @@
 #include <type_traits>
 #include <utility>
 
+#include "common/task.h"
 #include "protocol/http/common/helpers.h"
+#include "protocol/http/common/router_parameter_storage.h"
 
 namespace martianlabs::doba::protocol::http {
 namespace detail {
@@ -212,37 +214,6 @@ bool parse_route_parameters_(
   return (parse_route_parameter(parameters[I], std::get<I>(values)) && ...);
 }
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] invoke_route_handler                                     ( function ) |
-// +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// |   Hty - handler being used                                                |
-// |   RQty - request being used                                               |
-// |   RSty - response being used                                              |
-// |   Args - route parameters being used                                      |
-// +---------------------------------------------------------------------------+
-// | Invokes the handler with the request and parsed route parameters.         |
-// | Throws if the path or parameters do not match.                            |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-template <typename Hty, typename RQty, typename RSty, typename... Args>
-void invoke_route_handler(Hty& handler, const RQty& req, RSty& res,
-                          std::string_view pattern, std::string_view path) {
-  std::array<std::string_view, sizeof...(Args)> parameters;
-  if (!extract_route_parameters(pattern, path, parameters)) {
-    throw std::runtime_error("The route parameters could not be extracted");
-  }
-  std::tuple<std::decay_t<Args>...> values;
-  if (!parse_route_parameters_<Args...>(parameters, values,
-                                        std::index_sequence_for<Args...>{})) {
-    throw std::runtime_error("The route parameters could not be parsed");
-  }
-  std::apply([&handler, &req, &res](
-                 auto&... value) { std::invoke(handler, req, res, value...); },
-             values);
-}
-
 }  // namespace detail
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -261,8 +232,9 @@ class router_handler_parametrized {
   // | [>] TYPEs                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   using matcher_type = bool (*)(std::string_view, std::string_view);
-  using callback_type = std::function<void(const RQty&, RSty&, std::string_view,
-                                           std::string_view)>;
+  using callback_type = std::function<common::task<void>(
+      const RQty&, RSty&, std::string_view, std::string_view,
+      detail::router_parameter_storage&)>;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
@@ -280,8 +252,9 @@ class router_handler_parametrized {
   // +=========================================================================+
   // | [>] invoke                                                   ( public ) |
   // +-------------------------------------------------------------------------+
-  void invoke(const RQty& req, RSty& res, std::string_view path) const {
-    callback_(req, res, pattern_, path);
+  common::task<void> invoke(const RQty& req, RSty& res, std::string_view path,
+                           detail::router_parameter_storage& parameters) const {
+    return callback_(req, res, pattern_, path, parameters);
   }
 
  private:
@@ -290,7 +263,7 @@ class router_handler_parametrized {
   // +-------------------------------------------------------------------------+
   std::string pattern_;     // The route pattern to match against.
   matcher_type matcher_;    // The function to match the route pattern against.
-  callback_type callback_;  // The function to invoke when there's a matche.
+  callback_type callback_;  // The function to invoke when there's a match.
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -303,11 +276,6 @@ class router_handler_parametrized {
 // |   Args - route parameters being used                                      |
 // |   Hty - handler being used                                                |
 // +---------------------------------------------------------------------------+
-// | This function creates a router_handler_parametrized object for a          |
-// | synchronous route handler. It takes a pattern and a handler as input,     |
-// | and returns a router_handler_parametrized object that can be used to      |
-// | match and invoke the handler with the request and parsed parameters.      |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename... Args, typename Hty>
 auto make_router_handler_parametrized(std::string_view pattern, Hty&& handler) {
@@ -316,9 +284,26 @@ auto make_router_handler_parametrized(std::string_view pattern, Hty&& handler) {
       std::string(pattern), &detail::match_route_parameters<Args...>,
       [handler = handler_type(std::forward<Hty>(handler))](
           const RQty& req, RSty& res, std::string_view route_pattern,
-          std::string_view path) mutable {
-        detail::invoke_route_handler<handler_type, RQty, RSty, Args...>(
-            handler, req, res, route_pattern, path);
+          std::string_view path,
+          detail::router_parameter_storage& storage) mutable
+          -> common::task<void> {
+        std::array<std::string_view, sizeof...(Args)> parameters;
+        if (!detail::extract_route_parameters(route_pattern, path,
+                                              parameters)) {
+          throw std::runtime_error(
+              "The route parameters could not be extracted");
+        }
+        auto& values =
+            storage.acquire<std::tuple<std::decay_t<Args>...>>();
+        if (!detail::parse_route_parameters_<Args...>(
+                parameters, values, std::index_sequence_for<Args...>{})) {
+          throw std::runtime_error("The route parameters could not be parsed");
+        }
+        return std::apply(
+            [&handler, &req, &res](auto&... value) {
+              return std::invoke(handler, req, res, value...);
+            },
+            values);
       });
 }
 }  // namespace martianlabs::doba::protocol::http

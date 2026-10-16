@@ -40,8 +40,10 @@ int main() {
                           co_await sleep_for(std::chrono::milliseconds(50));
                           res.ok_200().set_body("slow");
                         });
-  http_server.add_route("GET", "/fast", [](const request&, response& res) {
+  http_server.add_route("GET", "/fast", [](const request&, response& res)
+      -> task<void> {
     res.ok_200().set_body("fast");
+    co_return;
   });
   http_server.start();
   signaler::wait();

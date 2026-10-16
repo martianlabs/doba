@@ -29,6 +29,7 @@
 #include <string>
 #include <string_view>
 
+#include "common/task.h"
 #include "http_server.h"
 #include "echo_body.h"
 #include "http_test_helper.h"
@@ -51,6 +52,7 @@ constexpr std::size_t max_chunked_trailer_size = 4096;
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+using martianlabs::doba::common::task;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::http_server;
@@ -71,11 +73,12 @@ DOBA_TEST("HTTP/1.1 enforces the 4 KiB request head limit") {
   http_server<> http_server({.receive_buffer_capacity = receive_capacity,
                         .ip = "127.0.0.1",
                         .port = std::to_string(port)});
-  http_server.add_route("GET", "/ok", [&calls](const request&, response& res) {
+  http_server.add_route("GET", "/ok", [&calls](const request&, response& res)
+      -> task<void> {
     calls.fetch_add(1);
     res.ok_200();
     res.set_body("ok");
-    return;
+    co_return;
   });
   http_server.start();
   const std::string prefix = "GET /ok HTTP/1.1\r\nHost: example.com\r\nX-Pad: ";
@@ -131,11 +134,12 @@ DOBA_TEST("HTTP/1.1 preserves every query parameter at supported boundaries") {
                         .ip = "127.0.0.1",
                         .port = std::to_string(port)});
   http_server.add_route("GET", "/query",
-                        [&calls](const request& req, response& res) {
+                        [&calls](const request& req, response& res)
+                            -> task<void> {
                           calls.fetch_add(1);
                           res.ok_200();
                           res.set_body(req.get_query_parameters_length());
-                          return;
+                          co_return;
                         });
   http_server.start();
   for (const std::size_t count :
@@ -184,8 +188,10 @@ DOBA_TEST("HTTP/1.1 enforces chunk extension and trailer wire limits") {
   http_server<> http_server({.receive_buffer_capacity = receive_capacity,
                         .ip = "127.0.0.1",
                         .port = std::to_string(port)});
-  http_server.add_route("POST", "/body", [](const request& req, response& res) {
+  http_server.add_route("POST", "/body", [](const request& req, response& res)
+      -> task<void> {
     echo_body(req, res);
+    co_return;
   });
   http_server.start();
   for (const bool extension : {true, false}) {

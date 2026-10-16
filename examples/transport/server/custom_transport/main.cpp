@@ -30,6 +30,7 @@
 #include <utility>
 
 #include "common/reader.h"
+#include "common/task.h"
 #include "http_server.h"
 
 namespace {
@@ -132,9 +133,11 @@ int main() {
       http::engine<http::request, http::response>, custom_transport>
       server(&output);
   server.add_route("GET", "/hello",
-                   [](const http::request&, http::response& response) {
+                   [](const http::request&, http::response& response)
+                       -> martianlabs::doba::common::task<void> {
                      response.ok_200();
                      response.set_body("hello from memory");
+                     co_return;
                    });
   server.start();
   server.stop();

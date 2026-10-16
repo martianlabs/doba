@@ -26,6 +26,7 @@
 
 #include "common/console_logger.h"
 #include "common/signaler.h"
+#include "common/task.h"
 #include "http_server.h"
 
 using namespace martianlabs::doba::common;
@@ -48,7 +49,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
-      "GET", "/headers", [](const request& req, response& res) {
+      "GET", "/headers", [](const request& req, response& res) -> task<void> {
         res.ok_200();
         std::string body = "user-agent: ";
         // Header-name lookup is case-insensitive.
@@ -68,7 +69,7 @@ int main() {
         }
         res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body(body);
-        return;
+        co_return;
       });
   http_server.start();
   signaler::wait();

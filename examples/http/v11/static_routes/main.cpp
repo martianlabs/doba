@@ -24,6 +24,7 @@
 
 #include "common/console_logger.h"
 #include "common/signaler.h"
+#include "common/task.h"
 #include "protocol/http/common/method_names.h"
 #include "http_server.h"
 
@@ -49,30 +50,32 @@ int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   // A path can expose an independent handler for each HTTP method.
   http_server.add_route(
-      method_names::kGet, "/resources", [](const request&, response& res) {
+      method_names::kGet, "/resources", [](const request&, response& res)
+          -> task<void> {
         res.ok_200();
         res.add_header("Content-Type", "text/plain; charset=utf-8")
             .set_body("resource list");
-        return;
+        co_return;
       });
   http_server.add_route(
-      method_names::kPost, "/resources", [](const request&, response& res) {
+      method_names::kPost, "/resources", [](const request&, response& res)
+          -> task<void> {
         res.created_201();
         res.add_header("Location", "/resources/1").set_body("resource created");
-        return;
+        co_return;
       });
   http_server.add_route(method_names::kPut, "/resources",
-                        [](const request&, response& res) {
+                        [](const request&, response& res) -> task<void> {
                           res.ok_200();
                           res.set_body("resource replaced");
-                          return;
+                          co_return;
                         });
   http_server.add_route(method_names::kDelete, "/resources",
-                        [](const request&, response& res) {
+                        [](const request&, response& res) -> task<void> {
                           res.no_content_204();
                           // no_content_204() leaves the response without a
                           // message body.
-                          return;
+                          co_return;
                         });
   http_server.start();
   signaler::wait();

@@ -24,10 +24,12 @@
 
 #include "common/filesystem.h"
 #include "common/reader.h"
+#include "common/task.h"
 #include "http_server.h"
 #include "protocol/http/v11/static_file_server.h"
 
 namespace {
+using martianlabs::doba::common::task;
 using martianlabs::doba::http_server;
 using namespace martianlabs::doba::protocol::http::v11;
 // /////////////////////////////////////////////////////////////////////////////
@@ -49,10 +51,10 @@ class package_controller {
   // +=========================================================================+
   // | [>] get                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  void get(const request&, response& res, int id) const {
+  task<void> get(const request&, response& res, int id) const {
     res.ok_200();
     res.set_body(id);
-    return;
+    co_return;
   }
 };
 }  // namespace

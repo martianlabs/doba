@@ -32,6 +32,7 @@
 #include <utility>
 
 #include "protocol/http/v11/decoder.h"
+#include "protocol/http/v11/policies.h"
 #include "protocol/http/v11/request.h"
 #include "protocol/http/v11/response.h"
 #include "test_helper.h"
@@ -46,6 +47,7 @@ using martianlabs::doba::protocol::deserialization_status;
 using martianlabs::doba::protocol::http::helpers;
 using martianlabs::doba::protocol::http::target;
 using martianlabs::doba::protocol::http::v11::decoder;
+using martianlabs::doba::protocol::http::v11::policies;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 
@@ -60,7 +62,13 @@ using martianlabs::doba::protocol::http::v11::response;
 // /////////////////////////////////////////////////////////////////////////////
 template <typename FNty>
 void with_request(std::string_view wire, FNty&& check) {
-  decoder<request, response> value;
+  std::array<char, policies::kDefaultRequestHeadBufferCapacity +
+                       policies::kDefaultRequestBodyInlineCapacity>
+      request_storage;
+  std::array<char, policies::kDefaultResponseHeadBufferCapacity +
+                       policies::kDefaultResponseBodyInlineCapacity>
+      response_storage;
+  decoder<request, response> value({}, request_storage, response_storage);
   std::size_t consumed = 0;
   const auto result =
       value.deserialize(wire.data(), wire.size(), wire.size(), consumed);
@@ -169,7 +177,13 @@ DOBA_TEST("malformed cookie syntax is rejected") {
   const std::string wire =
       "GET / HTTP/1.1\r\nHost: a\r\n"
       "Cookie: a=1;bad; b=2; =empty; tail=3\r\n\r\n";
-  decoder<request, response> value;
+  std::array<char, policies::kDefaultRequestHeadBufferCapacity +
+                       policies::kDefaultRequestBodyInlineCapacity>
+      request_storage;
+  std::array<char, policies::kDefaultResponseHeadBufferCapacity +
+                       policies::kDefaultResponseBodyInlineCapacity>
+      response_storage;
+  decoder<request, response> value({}, request_storage, response_storage);
   std::size_t consumed = 0;
   const auto result =
       value.deserialize(wire.data(), wire.size(), wire.size(), consumed);
@@ -217,7 +231,13 @@ DOBA_TEST("body reader can remain unread") {
 DOBA_TEST("request views remain valid when transport input changes") {
   std::string wire =
       "GET /?name=value HTTP/1.1\r\nHost: example.com\r\nX: y\r\n\r\n";
-  decoder<request, response> value;
+  std::array<char, policies::kDefaultRequestHeadBufferCapacity +
+                       policies::kDefaultRequestBodyInlineCapacity>
+      request_storage;
+  std::array<char, policies::kDefaultResponseHeadBufferCapacity +
+                       policies::kDefaultResponseBodyInlineCapacity>
+      response_storage;
+  decoder<request, response> value({}, request_storage, response_storage);
   std::size_t consumed = 0;
   const auto result =
       value.deserialize(wire.data(), wire.size(), wire.size(), consumed);
@@ -307,4 +327,31 @@ DOBA_TEST("decoded path outlives caller storage") {
                                    {}, {}, {}, {}, {}, {}, {}, false, {}));
   }
   DOBA_EXPECT_EQUAL(retained->get_absolute_path(), "/a b");
+}
+
+DOBA_TEST("request returns metadata capacity only after destruction") {
+  using martianlabs::doba::protocol::http::v11::detail::request_metadata_pool;
+  auto headers = request_metadata_pool::acquire();
+  auto parameters = request_metadata_pool::acquire();
+  headers.emplace_back("Host", "localhost");
+  parameters.emplace_back("name", "retained");
+  const auto* header_storage = headers.data();
+  const auto* parameter_storage = parameters.data();
+  {
+    auto value = request::from(
+        "GET", "/", target::kOriginForm, std::move(headers),
+        std::move(parameters), {}, {}, {}, {}, {}, {}, false, {});
+    auto other = request_metadata_pool::acquire();
+    DOBA_EXPECT(other.data() != header_storage);
+    DOBA_EXPECT(other.data() != parameter_storage);
+    auto moved = std::move(value);
+    DOBA_EXPECT_EQUAL(moved.get_header("Host").second, "localhost");
+    DOBA_EXPECT_EQUAL(moved.get_query_parameter("name")->second, "retained");
+  }
+  auto returned_parameters = request_metadata_pool::acquire();
+  auto returned_headers = request_metadata_pool::acquire();
+  DOBA_EXPECT(returned_parameters.data() == parameter_storage);
+  DOBA_EXPECT(returned_headers.data() == header_storage);
+  DOBA_EXPECT(returned_parameters.empty());
+  DOBA_EXPECT(returned_headers.empty());
 }

@@ -23,6 +23,7 @@
 // permissions and limitations under the License.
 
 #include "common/signaler.h"
+#include "common/task.h"
 #include "http_server.h"
 
 using namespace martianlabs::doba::common;
@@ -41,9 +42,9 @@ int main() {
   limits.max_request_body_size = 5;
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"}, limits);
   http_server.add_route("POST", "/upload",
-                        [](const request&, response& res) {
+                        [](const request&, response& res) -> task<void> {
                           res.ok_200().set_body("accepted");
-                          return;
+                          co_return;
                         });
   http_server.start();
   signaler::wait();

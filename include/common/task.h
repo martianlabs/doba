@@ -26,8 +26,12 @@
 #define martianlabs_doba_common_task_h
 
 #include <coroutine>
+#include <cstddef>
+#include <cstring>
 #include <exception>
-#include <functional>
+#include <limits>
+#include <memory>
+#include <new>
 #include <type_traits>
 #include <utility>
 
@@ -49,6 +53,40 @@ class task {
   // | [>] TYPEs                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   struct promise_type {
+    static void* operator new(std::size_t size) {
+      auto& available = frames().head;
+      auto* next = &available;
+      while (*next && (*next)->size != size) next = &(*next)->next;
+      std::unique_ptr<frame_block> block;
+      if (*next) {
+        block = std::move(*next);
+        *next = std::move(block->next);
+      } else {
+        if (size > std::numeric_limits<std::size_t>::max() -
+                       __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
+          throw std::bad_alloc();
+        }
+        block = std::make_unique<frame_block>();
+        block->size = size;
+        block->storage = std::make_unique_for_overwrite<std::byte[]>(
+            size + __STDCPP_DEFAULT_NEW_ALIGNMENT__);
+      }
+      auto* storage = block->storage.get();
+      // The coroutine runtime owns the block until operator delete recycles it.
+      auto* owner = block.release();
+      std::memcpy(storage, &owner, sizeof(owner));
+      return storage + __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+    }
+    static void operator delete(void* address) noexcept {
+      auto* storage = static_cast<std::byte*>(address) -
+                      __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+      frame_block* owner;
+      std::memcpy(&owner, storage, sizeof(owner));
+      std::unique_ptr<frame_block> block{owner};
+      auto& available = frames().head;
+      block->next = std::move(available);
+      available = std::move(block);
+    }
     task get_return_object() noexcept {
       return task{handle_type::from_promise(*this)};
     }
@@ -56,9 +94,9 @@ class task {
     struct final_awaiter {
       promise_type& promise;
       bool await_ready() noexcept {
-        auto callback = std::move(promise.completion);
+        auto callback = std::exchange(promise.completion, nullptr);
         try {
-          if (callback) callback(promise.error);
+          if (callback) callback(promise.owner, promise.error);
         } catch (...) {
         }
         return true;
@@ -69,7 +107,8 @@ class task {
     final_awaiter final_suspend() noexcept { return {*this}; }
     void return_void() noexcept {}
     void unhandled_exception() noexcept { error = std::current_exception(); }
-    std::function<void(std::exception_ptr)> completion;
+    void* owner{nullptr};
+    void (*completion)(void*, std::exception_ptr){nullptr};
     std::exception_ptr error;
     task_scheduler scheduler;
   };
@@ -99,21 +138,40 @@ class task {
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  void start(std::function<void(std::exception_ptr)> completion) {
-    start(std::move(completion), {});
-  }
-  // +=========================================================================+
-  // | [>] start                                                    ( public ) |
-  // +-------------------------------------------------------------------------+
-  void start(std::function<void(std::exception_ptr)> completion,
-             task_scheduler scheduler) {
+  void start(void* owner, void (*completion)(void*, std::exception_ptr),
+             task_scheduler scheduler = {}) {
     auto handle = std::exchange(handle_, {});
-    handle.promise().completion = std::move(completion);
+    handle.promise().owner = owner;
+    handle.promise().completion = completion;
     handle.promise().scheduler = scheduler;
     handle.resume();
   }
 
  private:
+  // +=========================================================================+
+  // | [>] TYPEs                                                   ( private ) |
+  // +-------------------------------------------------------------------------+
+  struct frame_block {
+    std::unique_ptr<frame_block> next;
+    std::size_t size{0};
+    std::unique_ptr<std::byte[]> storage;
+  };
+  struct frame_pool {
+    std::unique_ptr<frame_block> head;
+    ~frame_pool() {
+      while (head) {
+        auto block = std::move(head);
+        head = std::move(block->next);
+      }
+    }
+  };
+  // +=========================================================================+
+  // | [>] frames                                                  ( private ) |
+  // +-------------------------------------------------------------------------+
+  static frame_pool& frames() noexcept {
+    thread_local frame_pool value;
+    return value;
+  }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+

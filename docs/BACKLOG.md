@@ -210,14 +210,28 @@ connection after capacity becomes available.
 </h3>
 
 **Status.** Partially implemented; required for `0.1.0-beta1`.
-`max_pending_requests` bounds asynchronous response positions. TCP
+*max_pending_requests* bounds occupied response positions, including
+completed responses waiting behind an earlier request. Reaching a positive
+limit closes the connection; zero leaves the limit unbounded. TCP
 `max_buffered_send_bytes` bounds queued reservations and the active batch but
 excludes source-owned storage; neither is a complete retained-work budget.
 
-**Remaining work.** Define accounting, defaults, and admission or resume
-behavior for queued response sources and other retained transport work.
-Preserve response order and transport ownership without an HTTP-specific
-queue.
+**Remaining work: backpressure and operational limits.** Define accounting,
+defaults, and admission or resume behavior for queued response sources and
+other retained transport work. Preserve response order and transport
+ownership without an HTTP-specific queue.
+
+**Risk and production impact.** A slow first handler or non-reading peer can
+retain completed responses, request buffers, coroutine frames, and body
+sources. Closing at the current request limit bounds positions but can
+interrupt otherwise healthy pipelined clients. A retained-byte and work
+budget matters for predictable memory use and service availability under
+load.
+
+**Components.** The HTTP engine owns response admission and ordering; TCP
+and TLS own queued output and source delivery. Future backpressure must
+coordinate those existing responsibilities without making transports
+interpret HTTP or manage protocol pools.
 
 **Close when.** A non-reading peer and delayed first handler with pipelined
 successors respect configured limits on both platforms. Verify another
@@ -320,7 +334,7 @@ failure records without duplicates, and define lifetime and disabled cost.
 **Status.** Future product decision; no concrete composition use case has
 been selected.
 
-**Decide.** Identify a real need across synchronous and asynchronous
+**Decide.** Identify a real need across immediate and suspended task
 handlers before defining middleware. A general extension framework is not
 justified by this entry.
 

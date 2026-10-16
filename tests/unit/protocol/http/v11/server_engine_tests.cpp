@@ -28,6 +28,7 @@
 #include <string>
 #include <utility>
 
+#include "common/task.h"
 #include "http_server.h"
 #include "protocol/http/common/auth/basic.h"
 #include "protocol/http/common/auth/bearer.h"
@@ -43,6 +44,7 @@ namespace {
 // | [>] usings                                                     ( public ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+using martianlabs::doba::common::task;
 using martianlabs::doba::http_server;
 #ifdef DOBA_ENABLE_TLS
 using martianlabs::doba::https_server;
@@ -320,7 +322,9 @@ concept registered_auth = requires(
                 http::engine<http::request, http::response>, fake_transport,
                 auth::basic, auth::bearer, custom_auth>& server) {
   server.template add_route<Aty>("GET", "/",
-      [](const http::request&, http::response&) {});
+      [](const http::request&, http::response&) -> task<void> {
+        co_return;
+      });
 };
 static_assert(registered_auth<custom_auth>);
 static_assert(!registered_auth<invalid_auth>);
@@ -390,10 +394,10 @@ struct controller {
   // +=========================================================================+
   // | [>] handle                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  void handle(const http::request&, http::response& res) {
+  task<void> handle(const http::request&, http::response& res) {
     res.ok_200();
     res.set_body(std::to_string(++calls_));
-    return;
+    co_return;
   }
   // +=========================================================================+
   // | [>] ATTRIUBUTEs                                              ( public ) |
@@ -442,7 +446,10 @@ DOBA_TEST("server shares its router between engines") {
     try {
       value.add_route(
           "GET", "/late",
-          [](const http::request&, http::response& res) { res.ok_200(); });
+          [](const http::request&, http::response& res) -> task<void> {
+            res.ok_200();
+            co_return;
+          });
     } catch (const std::runtime_error&) {
       rejected = true;
     }
@@ -459,7 +466,10 @@ DOBA_TEST("server shares its router between engines") {
     DOBA_EXPECT_EQUAL(observed.stops, 1);
     value.add_route(
         "GET", "/new",
-        [](const http::request&, http::response& res) { res.ok_200(); });
+        [](const http::request&, http::response& res) -> task<void> {
+          res.ok_200();
+          co_return;
+        });
     value.start();
     DOBA_EXPECT_EQUAL(calls, 4);
   }
@@ -483,10 +493,11 @@ DOBA_TEST("server recovers from startup failure") {
     failed = true;
   }
   DOBA_EXPECT(failed);
-  value.add_route("GET", "/", [](const http::request&, http::response& res) {
+  value.add_route("GET", "/", [](const http::request&, http::response& res)
+      -> task<void> {
     res.ok_200();
     res.set_body("ready");
-    return;
+    co_return;
   });
   observed.fail_start = false;
   value.start();
@@ -501,11 +512,12 @@ DOBA_TEST("server recovers from startup failure") {
 DOBA_TEST("engine factories preserve policies and independence") {
   router<http::request, http::response> routes;
   int calls = 0;
-  routes.add("GET", "/first", [&](const http::request&, http::response& res) {
+  routes.add("GET", "/first", [&](const http::request&, http::response& res)
+      -> task<void> {
     calls++;
     res.ok_200();
     res.set_body("first");
-    return;
+    co_return;
   });
   http::policies configuration;
   configuration.max_request_body_size = 1;
@@ -564,9 +576,11 @@ DOBA_TEST("server forwards engine policies to every connection") {
               router<http::request, http::response>,
               http::engine<http::request, http::response>, fake_transport>
       value(std::make_unique<int>(7), {.max_request_body_size = 1});
-  value.add_route("GET", "/", [&](const http::request&, http::response& res) {
+  value.add_route("GET", "/", [&](const http::request&, http::response& res)
+      -> task<void> {
     calls++;
     res.ok_200();
+    co_return;
   });
   value.start();
   DOBA_EXPECT_EQUAL(observed.configuration, 7);
@@ -591,13 +605,18 @@ DOBA_TEST("server owns and selects authentication providers across engines") {
                        auth::bearer{"demo", [](auto) { return false; }},
                        custom_auth{checks}});
   value.add_route<custom_auth>("GET", "/",
-      [](const http::request&, http::response& res) { res.ok_200(); });
+      [](const http::request&, http::response& res) -> task<void> {
+        res.ok_200();
+        co_return;
+      });
   value.start();
   DOBA_EXPECT_EQUAL(checks, 2);
   bool rejected = false;
   try {
     value.add_route<custom_auth>("GET", "/late",
-        [](const http::request&, http::response&) {});
+        [](const http::request&, http::response&) -> task<void> {
+          co_return;
+        });
   } catch (const std::runtime_error&) {
     rejected = true;
   }

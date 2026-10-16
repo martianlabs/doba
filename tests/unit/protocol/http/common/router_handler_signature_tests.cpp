@@ -31,6 +31,7 @@
 #include "test_helper.h"
 
 namespace {
+using martianlabs::doba::common::task;
 using martianlabs::doba::protocol::http::router_handler_lambda;
 using martianlabs::doba::tests::unit::router_empty_request;
 using martianlabs::doba::tests::unit::router_empty_response;
@@ -40,12 +41,18 @@ using martianlabs::doba::tests::unit::router_empty_response;
 // | [>] handler concepts require a request and response         ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("handler concepts require a request and response") {
-  auto sync = [](const router_empty_request&, router_empty_response&) {};
+  auto handler = [](const router_empty_request&, router_empty_response&)
+      -> task<void> {
+    co_return;
+  };
+  auto synchronous = [](const router_empty_request&,
+                        router_empty_response&) {};
+  static_assert(!router_handler_lambda<decltype(synchronous)>);
   auto legacy = [](const router_empty_request&) {
     return router_empty_response{};
   };
   static_assert(!router_handler_lambda<decltype(legacy)>);
-  static_assert(router_handler_lambda<decltype(sync)>);
+  static_assert(router_handler_lambda<decltype(handler)>);
   DOBA_EXPECT(true);
 }
 
@@ -53,21 +60,26 @@ DOBA_TEST("handler concepts require a request and response") {
 // | [>] mutable handler signatures retain their argument count  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("mutable handler signatures retain their argument count") {
-  auto sync = [](const router_empty_request&, router_empty_response&,
-                 int) mutable {};
+  auto handler = [](const router_empty_request&, router_empty_response&,
+                    int) mutable -> task<void> {
+    co_return;
+  };
   using namespace martianlabs::doba::protocol::http;
-  static_assert(router_handler_lambda<decltype(sync)>);
-  DOBA_EXPECT_EQUAL(router_handler_signature<
-                        decltype(&decltype(sync)::operator())>::parameter_count,
-                    1);
+  static_assert(router_handler_lambda<decltype(handler)>);
+  DOBA_EXPECT_EQUAL(
+      router_handler_signature<
+          decltype(&decltype(handler)::operator())>::parameter_count,
+      1);
 }
 
 // +===========================================================================+
-// | [>] noexcept sync handlers retain signature compatibility   ( test-case ) |
+// | [>] noexcept task handlers retain signature compatibility   ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("noexcept sync handlers retain signature compatibility") {
+DOBA_TEST("noexcept task handlers retain signature compatibility") {
   auto handler = [](const router_empty_request&,
-                    router_empty_response&) noexcept {};
+                    router_empty_response&) noexcept -> task<void> {
+    co_return;
+  };
   DOBA_EXPECT(router_handler_lambda<decltype(handler)>);
 }
 
@@ -75,19 +87,24 @@ DOBA_TEST("noexcept sync handlers retain signature compatibility") {
 // | [>] noexcept qualifiers preserve routing parameter counts   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("noexcept qualifiers preserve routing parameter counts") {
-  auto sync = [](const router_empty_request&, router_empty_response&,
-                 int) noexcept {};
-  auto mutable_sync = [](const router_empty_request&, router_empty_response&,
-                         int) mutable noexcept {};
+  auto handler = [](const router_empty_request&, router_empty_response&,
+                    int) noexcept -> task<void> {
+    co_return;
+  };
+  auto mutable_handler = [](const router_empty_request&, router_empty_response&,
+                            int) mutable noexcept -> task<void> {
+    co_return;
+  };
   using namespace martianlabs::doba::protocol::http;
-  static_assert(router_handler_lambda<decltype(sync)>);
-  static_assert(router_handler_lambda<decltype(mutable_sync)>);
-  DOBA_EXPECT_EQUAL(router_handler_signature<
-                        decltype(&decltype(sync)::operator())>::parameter_count,
-                    1);
+  static_assert(router_handler_lambda<decltype(handler)>);
+  static_assert(router_handler_lambda<decltype(mutable_handler)>);
   DOBA_EXPECT_EQUAL(
       router_handler_signature<
-          decltype(&decltype(mutable_sync)::operator())>::parameter_count,
+          decltype(&decltype(handler)::operator())>::parameter_count,
+      1);
+  DOBA_EXPECT_EQUAL(
+      router_handler_signature<
+          decltype(&decltype(mutable_handler)::operator())>::parameter_count,
       1);
 }
 
@@ -96,9 +113,13 @@ DOBA_TEST("noexcept qualifiers preserve routing parameter counts") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("noexcept handlers retain invalid signature rejection") {
   auto mutable_request = [](router_empty_request&,
-                            router_empty_response&) noexcept {};
+                            router_empty_response&) noexcept -> task<void> {
+    co_return;
+  };
   auto value_request = [](router_empty_request,
-                          router_empty_response&) noexcept {};
+                          router_empty_response&) noexcept -> task<void> {
+    co_return;
+  };
   auto no_result = [](const router_empty_request&,
                       router_empty_response&) noexcept {
     return router_empty_response{};
@@ -109,13 +130,21 @@ DOBA_TEST("noexcept handlers retain invalid signature rejection") {
 }
 
 // +===========================================================================+
-// | [>] sync signatures reject mutable and value requests       ( test-case ) |
+// | [>] task signatures reject mutable and value requests       ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("sync signatures reject mutable and value requests") {
-  auto mutable_request = [](router_empty_request&, router_empty_response&) {};
-  auto value_request = [](router_empty_request, router_empty_response&) {};
+DOBA_TEST("task signatures reject mutable and value requests") {
+  auto mutable_request = [](router_empty_request&, router_empty_response&)
+      -> task<void> {
+    co_return;
+  };
+  auto value_request = [](router_empty_request, router_empty_response&)
+      -> task<void> {
+    co_return;
+  };
   auto rvalue_request = [](const router_empty_request&&,
-                           router_empty_response&) {};
+                           router_empty_response&) -> task<void> {
+    co_return;
+  };
   auto no_result = [](const router_empty_request&, router_empty_response&) {
     return router_empty_response{};
   };
@@ -137,8 +166,10 @@ struct signature_controller {
   // +=========================================================================+
   // | [>] get                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  void get(const router_empty_request&, router_empty_response&,
-           int) const noexcept {}
+  task<void> get(const router_empty_request&, router_empty_response&,
+           int) const noexcept {
+    co_return;
+  }
 };
 }  // namespace
 

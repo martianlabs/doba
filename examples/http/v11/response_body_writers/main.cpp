@@ -28,6 +28,7 @@
 
 #include "common/console_logger.h"
 #include "common/signaler.h"
+#include "common/task.h"
 #include "protocol/http/v11/body/writer.h"
 #include "http_server.h"
 
@@ -54,20 +55,22 @@ using namespace martianlabs::doba::protocol::http::v11;
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  http_server.add_route("GET", "/raw", [](const request&, response& res) {
+  http_server.add_route("GET", "/raw", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     // A raw writer stores payload bytes without transfer-coding them.
     auto writer = body::body_writer::raw();
     if (!writer.write("first part\n") || !writer.write("second part\n")) {
       res.internal_server_error_500();
-      return;
+      co_return;
     }
     res.add_header("Content-Type", "text/plain; charset=utf-8")
         // Moving the writer derives Content-Length from bytes_written().
         .set_body(std::move(writer));
-    return;
+    co_return;
   });
-  http_server.add_route("GET", "/binary", [](const request&, response& res) {
+  http_server.add_route("GET", "/binary", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     const std::array bytes{std::byte{0x00}, std::byte{0x01}, std::byte{0x02},
                            std::byte{0x03}};
@@ -75,24 +78,25 @@ int main() {
     // write() also accepts byte spans for binary payloads.
     if (!writer.write(bytes)) {
       res.internal_server_error_500();
-      return;
+      co_return;
     }
     res.add_header("Content-Type", "application/octet-stream")
         .set_body(std::move(writer));
-    return;
+    co_return;
   });
-  http_server.add_route("GET", "/chunked", [](const request&, response& res) {
+  http_server.add_route("GET", "/chunked", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     auto writer = body::body_writer::chunked();
     // Each write emits one chunk; end() emits the terminating chunk.
     if (!writer.write("first chunk\n") || !writer.write("second chunk\n") ||
         !writer.end()) {
       res.internal_server_error_500();
-      return;
+      co_return;
     }
     res.add_header("Content-Type", "text/plain; charset=utf-8")
         .set_body(std::move(writer));
-    return;
+    co_return;
   });
   http_server.start();
   signaler::wait();

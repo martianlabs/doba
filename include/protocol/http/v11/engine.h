@@ -37,9 +37,9 @@
 #include "protocol/http/common/router.h"
 #include "protocol/http/common/router_match_result.h"
 #include "protocol/http/v11/contracts.h"
+#include "protocol/http/v11/buffer_pool.h"
 #include "protocol/http/v11/decoder.h"
 #include "protocol/http/v11/engine_async.h"
-#include "protocol/http/v11/engine_sync.h"
 #include "protocol/http/v11/policies.h"
 #include "protocol/http/v11/results.h"
 #include "transport/server/contracts.h"
@@ -61,6 +61,11 @@ template <contracts::request RQty, contracts::response RSty,
           typename ROty = router<RQty, RSty>>
   requires contracts::router<ROty, RQty, RSty>
 class engine {
+  // +=========================================================================+
+  // | [>] USINGs                                                  ( private ) |
+  // +-------------------------------------------------------------------------+
+  using state_type = engine_async<RQty, RSty, ROty>;
+
  public:
   // +=========================================================================+
   // | [>] USINGs                                                   ( public ) |
@@ -73,10 +78,13 @@ class engine {
          std::function<void()> on_async_started = {},
          std::function<void()> on_async_finished = {})
       : router_{router},
-        decoder_{configuration},
+        buffers_{detail::buffer_pool::acquire(configuration)},
+        decoder_{configuration,
+                 {buffers_->request.get(), buffers_->request_capacity},
+                 {buffers_->response.get(), buffers_->response_capacity}},
         on_async_started_{std::move(on_async_started)},
         on_async_finished_{std::move(on_async_finished)} {
-    async_ = std::make_shared<engine_async>(
+    async_ = std::make_shared<state_type>(
         decoder_.configuration().max_pending_requests, on_async_started_,
         on_async_finished_);
   }
@@ -119,7 +127,6 @@ class engine {
   // | [>] stop                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   bool stop(std::function<void()> completed) {
-    closed_ = true;
     return async_->stop(std::move(completed));
   }
   // +=========================================================================+
@@ -129,33 +136,60 @@ class engine {
   // +-------------------------------------------------------------------------+
   std::size_t on_bytes_received(const char* buffer, const std::size_t size,
                                 const std::size_t capacity) {
+    auto state = async_;
+    if (!state->begin_receive()) return size;
+    std::size_t consumed;
+    try {
+      consumed = receive(buffer, size, capacity);
+    } catch (...) {
+      state->end_receive();
+      throw;
+    }
+    state->end_receive();
+    return consumed;
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] receive                                                 ( private ) |
+  // +-------------------------------------------------------------------------+
+  std::size_t receive(const char* buffer, const std::size_t size,
+                       const std::size_t capacity) {
     if (closed_) return size;
     if (!size) return 0;
     std::size_t total = 0;
     while (total < size && !closed_) {
-      if (!synchronous_) {
-        if (!async_->accepting()) return size;
-        if (async_->idle()) synchronous_ = true;
-      }
+      if (!async_->accepting()) return size;
       std::size_t consumed = 0;
       try {
+        if (!buffers_) {
+          buffers_ = detail::buffer_pool::acquire(decoder_.configuration());
+          decoder_.set_storage(
+              {buffers_->request.get(), buffers_->request_capacity},
+              {buffers_->response.get(), buffers_->response_capacity});
+        }
         deserialization_result result = decoder_.deserialize(
             buffer + total, size - total, capacity, consumed);
         if (result.code != deserialization_status::kSucceeded) {
           const bool rejected =
               result.code == deserialization_status::kInvalidSource;
           if (result.response) {
-            if (!synchronous_) {
-              const bool submitted =
-                  rejected ? async_->handle_error<RQty, RSty, ROty>(
-                                 *result.response, closed_)
-                           : async_->handle_interim<RQty, RSty, ROty>(
-                                 *result.response);
-              if (!submitted) return size;
+            if (!current_) current_ = async_->reserve();
+            if (!current_) return size;
+            if (rejected) {
+              auto* entry = std::exchange(current_, nullptr);
+              entry->storage = std::move(buffers_);
+              entry->response.emplace(std::move(*result.response));
+              closed_ = true;
+              async_->handle_error(*entry);
             } else {
-              engine_sync<RQty, RSty, ROty>::handle_response(
-                  *result.response, rejected, on_send_);
-              if (rejected) query_for_close();
+              auto storage =
+                  detail::buffer_pool::acquire(decoder_.configuration());
+              auto response = decoder_.make_response(
+                  {storage->response.get(), storage->response_capacity});
+              response.continue_100();
+              async_->handle_interim(*current_, std::move(response),
+                                      std::move(storage));
             }
           }
           return rejected ? size : total + consumed;
@@ -168,17 +202,19 @@ class engine {
           path = request.get_absolute_path();
           match = router_.match(request.get_method(), path);
         }
-        if (!synchronous_ || engine_async::handles(match)) {
-          synchronous_ = false;
-          if (!async_->handle_request(decoder_, router_, request, match, path,
-                                      execution_, async_, closed_)) {
-            return size;
-          }
-        } else if (engine_sync<RQty, RSty, ROty>::handle_request(
-                       decoder_, router_, request, match, on_send_)) {
-          query_for_close();
-        }
+        auto* entry = std::exchange(current_, nullptr);
+        if (!entry) entry = async_->reserve();
+        if (!entry) return size;
+        entry->storage = std::move(buffers_);
+        entry->request.emplace(std::move(request));
+        entry->response.emplace(decoder_.make_response(
+            {entry->storage->response.get(),
+             entry->storage->response_capacity}));
+        if (!path.empty()) path = entry->request->get_absolute_path();
+        async_->handle_request(*entry, router_, match, path, execution_, async_,
+                                 closed_);
         total += consumed;
+        if (!async_->accepting()) return total;
         continue;
       } catch (...) {
         query_for_close();
@@ -188,7 +224,6 @@ class engine {
     return total;
   }
 
- private:
   // +=========================================================================+
   // | [>] query_for_close                                         ( private ) |
   // +-------------------------------------------------------------------------+
@@ -204,15 +239,16 @@ class engine {
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   const ROty& router_;
+  std::unique_ptr<detail::buffer_pool::buffer_pair> buffers_;
   decoder<RQty, RSty> decoder_;
   std::function<void()> on_async_started_;
   std::function<void()> on_async_finished_;
   std::function<void()> on_close_;
-  std::shared_ptr<engine_async> async_;
+  std::shared_ptr<state_type> async_;
+  typename state_type::slot* current_{nullptr};
   transport::server::execution_capacity execution_;
   protocol::send_delegate on_send_;
   bool closed_{false};
-  bool synchronous_{true};
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

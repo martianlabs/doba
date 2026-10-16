@@ -16,7 +16,8 @@ The server owns the providers; routes select one by type. Registrations
 without a provider remain public. See [HTTP server](server.md#authentication)
 for construction and registration.
 
-Checks run synchronously before the handler, even for coroutine handlers.
+Checks run synchronously before every handler. Handlers return
+*common::task<void>* and may complete immediately or suspend.
 The engine builds rejection responses and keeps them in request order.
 Authentication runs after receiving a complete request: it does not reject
 a body before reading it or suppress **100 Continue**.

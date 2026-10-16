@@ -96,8 +96,10 @@ DOBA_TEST("HTTP/1.1 orders mixed routes over one connection") {
                           co_await pause_awaiter{pending};
                           text_response(res, "slow");
                         });
-  http_server.add_route("GET", "/fast", [](const request&, response& res) {
+  http_server.add_route("GET", "/fast", [](const request&, response& res)
+      -> task<void> {
     text_response(res, "fast");
+    co_return;
   });
   http_server.start();
   DOBA_EXPECT(client.connect(port));
@@ -144,8 +146,10 @@ DOBA_TEST("HTTP/1.1 resumes timed routes through transport execution") {
                     std::chrono::milliseconds(10);
         text_response(res, "slow");
       });
-  http_server.add_route("GET", "/fast", [](const request&, response& res) {
+  http_server.add_route("GET", "/fast", [](const request&, response& res)
+      -> task<void> {
     text_response(res, "fast");
+    co_return;
   });
   http_server.start();
   DOBA_EXPECT(client.connect(port));
@@ -217,8 +221,10 @@ DOBA_TEST("HTTP/1.1 orders responses after different timer deadlines") {
         if (id == 3) third_order = order;
         text_response(res, std::to_string(id));
       });
-  http_server.add_route("GET", "/fast", [](const request&, response& res) {
+  http_server.add_route("GET", "/fast", [](const request&, response& res)
+      -> task<void> {
     text_response(res, "fast");
+    co_return;
   });
   http_server.start();
   DOBA_EXPECT(client.connect(port));
@@ -394,8 +400,10 @@ DOBA_TEST("HTTP/1.1 retains a spilled asynchronous body and parameter") {
         }
         text_response(res, name + ":" + std::to_string(state.produced));
       });
-  http_server.add_route("GET", "/next", [](const request&, response& res) {
+  http_server.add_route("GET", "/next", [](const request&, response& res)
+      -> task<void> {
     text_response(res, "next");
+    co_return;
   });
   http_server.start();
   DOBA_EXPECT(client.connect(port));
@@ -466,15 +474,21 @@ DOBA_TEST("HTTP/1.1 applies static parametrized and wildcard precedence") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/items/*", [](const request&, response& res) {
+  http_server.add_route("GET", "/items/*", [](const request&, response& res)
+      -> task<void> {
     text_response(res, "wildcard");
+    co_return;
   });
   http_server.add_route("GET", "/items/:id",
-                        [](const request&, response& res, int id) {
+                        [](const request&, response& res, int id)
+                            -> task<void> {
                           text_response(res, "parameter:" + std::to_string(id));
+                          co_return;
                         });
-  http_server.add_route("GET", "/items/42", [](const request&, response& res) {
+  http_server.add_route("GET", "/items/42", [](const request&, response& res)
+      -> task<void> {
     text_response(res, "static");
+    co_return;
   });
   http_server.start();
   DOBA_EXPECT(client.connect(port));
@@ -505,20 +519,26 @@ DOBA_TEST("HTTP/1.1 routes typed parameter boundaries without partial parses") {
   http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route(
       "GET", "/signed/:value",
-      [&calls](const request&, response& res, std::int64_t value) {
+      [&calls](const request&, response& res, std::int64_t value)
+          -> task<void> {
         calls.fetch_add(1);
         text_response(res, std::to_string(value));
+        co_return;
       });
   http_server.add_route(
       "GET", "/unsigned/:value",
-      [&calls](const request&, response& res, std::uint64_t value) {
+      [&calls](const request&, response& res, std::uint64_t value)
+          -> task<void> {
         calls.fetch_add(1);
         text_response(res, std::to_string(value));
+        co_return;
       });
   http_server.add_route("GET", "/boolean/:value",
-                        [&calls](const request&, response& res, bool value) {
+                        [&calls](const request&, response& res, bool value)
+                            -> task<void> {
                           calls.fetch_add(1);
                           text_response(res, value ? "true" : "false");
+                          co_return;
                         });
   http_server.start();
   struct test_case {
@@ -564,7 +584,8 @@ DOBA_TEST("HTTP/1.1 exposes decoded path query headers and cookies to routes") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/a b", [](const request& req, response& res) {
+  http_server.add_route("GET", "/a b", [](const request& req, response& res)
+      -> task<void> {
     const auto query = req.get_query_parameter("key");
     const auto empty = req.get_query_parameter("empty");
     const auto cookie = req.get_cookie("sid");
@@ -574,6 +595,7 @@ DOBA_TEST("HTTP/1.1 exposes decoded path query headers and cookies to routes") {
                        req.get_header("x-id").second == "value" &&
                        cookie.has_value() && *cookie == "abc=123";
     text_response(res, valid ? "valid" : "invalid");
+    co_return;
   });
   http_server.start();
   DOBA_EXPECT(client.connect(port));
@@ -599,13 +621,22 @@ DOBA_TEST("HTTP/1.1 reports allowed methods across all matching route kinds") {
   http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route(
       "GET", "/assets/logo",
-      [](const request&, response& res) { text_response(res, "get"); });
+      [](const request&, response& res) -> task<void> {
+        text_response(res, "get");
+        co_return;
+      });
   http_server.add_route(
       "POST", "/assets/:id",
-      [](const request&, response& res, int) { text_response(res, "post"); });
+      [](const request&, response& res, int) -> task<void> {
+        text_response(res, "post");
+        co_return;
+      });
   http_server.add_route(
       "DELETE", "/assets/*",
-      [](const request&, response& res) { text_response(res, "delete"); });
+      [](const request&, response& res) -> task<void> {
+        text_response(res, "delete");
+        co_return;
+      });
   http_server.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("PUT /assets/42 HTTP/1.1\r\nHost: a\r\n\r\n"));
@@ -627,14 +658,18 @@ DOBA_TEST(
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/first", [](const request&, response& res) {
+  http_server.add_route("GET", "/first", [](const request&, response& res)
+      -> task<void> {
     text_response(res, "first");
+    co_return;
   });
   http_server.start();
   bool threw = false;
   try {
-    http_server.add_route("GET", "/late", [](const request&, response& res) {
+    http_server.add_route("GET", "/late", [](const request&, response& res)
+        -> task<void> {
       text_response(res, "late");
+      co_return;
     });
   } catch (const std::runtime_error&) {
     threw = true;
@@ -647,8 +682,10 @@ DOBA_TEST(
   if (first.has_value()) DOBA_EXPECT_EQUAL(first->body, "first");
   client.close();
   http_server.stop();
-  http_server.add_route("GET", "/late", [](const request&, response& res) {
+  http_server.add_route("GET", "/late", [](const request&, response& res)
+      -> task<void> {
     text_response(res, "late");
+    co_return;
   });
   http_server.start();
   DOBA_EXPECT(client.connect(port));
@@ -680,9 +717,10 @@ DOBA_TEST("HTTP/1.1 authenticates Basic and Bearer over persistent TCP") {
                                        return token == "demo-token";
                                      }}});
   server.add_route<auth::basic>("POST", "/basic",
-      [&](const request&, response& res) {
+      [&](const request&, response& res) -> task<void> {
         calls++;
         text_response(res, "basic");
+        co_return;
       });
   server.add_route<auth::bearer>("GET", "/bearer",
       [&](const request&, response& res) -> task<void> {
@@ -690,8 +728,10 @@ DOBA_TEST("HTTP/1.1 authenticates Basic and Bearer over persistent TCP") {
         text_response(res, "bearer");
         co_return;
       });
-  server.add_route("GET", "/public", [](const request&, response& res) {
+  server.add_route("GET", "/public", [](const request&, response& res)
+      -> task<void> {
     text_response(res, "public");
+    co_return;
   });
   server.start();
   DOBA_EXPECT(client.connect(port));
@@ -754,7 +794,10 @@ DOBA_TEST("HTTP/1.1 orders auth rejection behind suspended TCP response") {
     text_response(res, "slow");
   });
   server.add_route<auth::bearer>("GET", "/private",
-      [](const request&, response& res) { text_response(res, "unexpected"); });
+      [](const request&, response& res) -> task<void> {
+        text_response(res, "unexpected");
+        co_return;
+      });
   server.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all(
@@ -793,7 +836,10 @@ DOBA_TEST("HTTP/1.1 shares a Bearer provider across concurrent connections") {
                                         return token == "demo-token";
                                       }}});
   server.add_route<auth::bearer>("GET", "/",
-      [](const request&, response& res) { text_response(res, "accepted"); });
+      [](const request&, response& res) -> task<void> {
+        text_response(res, "accepted");
+        co_return;
+      });
   server.start();
   std::vector<std::jthread> clients;
   for (int i = 0; i < 16; i++) {

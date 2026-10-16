@@ -23,6 +23,7 @@
 // permissions and limitations under the License.
 
 #include "common/signaler.h"
+#include "common/task.h"
 #include "protocol/http/common/method_names.h"
 #include "http_server.h"
 
@@ -44,10 +45,10 @@ using namespace martianlabs::doba::protocol::http::v11;
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  auto resource = [](const request&, response& res) {
+  auto resource = [](const request&, response& res) -> task<void> {
     res.ok_200();
     res.set_body("resource representation");
-    return;
+    co_return;
   };
   http_server.add_route(method_names::kGet, "/resource", resource);
   http_server.add_route(method_names::kHead, "/resource", resource);

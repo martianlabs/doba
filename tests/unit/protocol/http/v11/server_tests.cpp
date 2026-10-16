@@ -31,6 +31,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "common/task.h"
 #include "http_server.h"
 #include "test_helper.h"
 
@@ -40,6 +41,7 @@ namespace {
 // | [>] usings                                                     ( public ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+using martianlabs::doba::common::task;
 using martianlabs::doba::http_server;
 using martianlabs::doba::protocol::http::router;
 namespace http = martianlabs::doba::protocol::http::v11;
@@ -155,9 +157,10 @@ struct controller {
   // +=========================================================================+
   // | [>] get                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  void get(const http::request&, http::response& res) {
+  task<void> get(const http::request&, http::response& res) {
     calls++;
     res.ok_200();
+    co_return;
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
@@ -203,8 +206,10 @@ DOBA_TEST("HTTP server builds transport after route registration") {
                            http::engine<http::request, http::response>,
                            router<http::request, http::response>>>::instance),
       nullptr);
-  value.add_route("GET", "/", [](const http::request&, http::response& res) {
+  value.add_route("GET", "/", [](const http::request&, http::response& res)
+      -> task<void> {
     res.ok_200();
+    co_return;
   });
   value.start();
   DOBA_EXPECT((
@@ -226,10 +231,11 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
       value;
   DOBA_EXPECT_EQUAL(
       &value.add_route("GET", "/",
-                       [](const http::request&, http::response& res) {
+                       [](const http::request&, http::response& res)
+                           -> task<void> {
                          res.ok_200();
                          res.set_body("body");
-                         return;
+                         co_return;
                        }),
       &value);
   value.start();
@@ -288,8 +294,10 @@ DOBA_TEST("failed starts release the date server") {
     failed = true;
   }
   DOBA_EXPECT(failed);
-  value.add_route("GET", "/", [](const http::request&, http::response& res) {
+  value.add_route("GET", "/", [](const http::request&, http::response& res)
+      -> task<void> {
     res.ok_200();
+    co_return;
   });
   memory_transport<
       http::engine<http::request, http::response>,
@@ -311,11 +319,14 @@ DOBA_TEST("server accepts new connections after handler failure") {
               http::engine<http::request, http::response>, memory_transport>
       value;
   value.add_route("GET", "/fail",
-                  [](const http::request&, http::response&) -> void {
+                  [](const http::request&, http::response&) -> task<void> {
                     throw std::runtime_error("handler failed");
+                    co_return;
                   });
-  value.add_route("GET", "/", [](const http::request&, http::response& res) {
+  value.add_route("GET", "/", [](const http::request&, http::response& res)
+      -> task<void> {
     res.ok_200();
+    co_return;
   });
   value.start();
   DOBA_EXPECT(send_request("GET", "/fail").starts_with("HTTP/1.1 500 "));
@@ -390,8 +401,10 @@ DOBA_TEST("server rejects route registration during startup") {
   auto registration = std::async(std::launch::async, [&]() {
     try {
       value.add_route("GET", "/late",
-                      [](const http::request&, http::response& res) {
+                      [](const http::request&, http::response& res)
+                          -> task<void> {
                         res.ok_200();
+                        co_return;
                       });
     } catch (const std::runtime_error& error) {
       return std::string_view(error.what()) ==
@@ -426,8 +439,9 @@ DOBA_TEST("server accepts route registration after stop") {
   value.start();
   value.stop();
   value.add_route("GET", "/late",
-                  [](const http::request&, http::response& res) {
+                  [](const http::request&, http::response& res) -> task<void> {
                     res.ok_200().set_body("late");
+                    co_return;
                   });
   value.start();
   DOBA_EXPECT(send_request("GET", "/late").ends_with("\r\n\r\nlate"));

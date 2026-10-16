@@ -33,6 +33,7 @@
 
 #include "common/filesystem.h"
 #include "common/reader.h"
+#include "common/task.h"
 #include "protocol/http/common/helpers.h"
 #include "protocol/http/v11/request.h"
 #include "protocol/http/v11/response.h"
@@ -85,16 +86,16 @@ class static_file_server {
   // +=========================================================================+
   // | [>] serve                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  void serve(const request& req, response& result) const {
+  common::task<void> serve(const request& req, response& result) const {
     const auto path = req.get_absolute_path();
     if (!path.starts_with(prefix_)) {
       result.not_found_404();
-      return;
+      co_return;
     }
     const auto relative = path.substr(prefix_.size());
     if (relative.empty() || relative.back() == '/') {
       result.not_found_404();
-      return;
+      co_return;
     }
     common::filesystem_file file;
     std::error_code error;
@@ -103,16 +104,16 @@ class static_file_server {
           error == std::errc::not_a_directory ||
           error == std::errc::is_a_directory) {
         result.not_found_404();
-        return;
+        co_return;
       }
       if (error == std::errc::permission_denied ||
           error == std::errc::operation_not_permitted ||
           error == std::errc::too_many_symbolic_link_levels) {
         result.forbidden_403();
-        return;
+        co_return;
       }
       result.internal_server_error_500();
-      return;
+      co_return;
     }
     // RFC 9110 S13.2.2: evaluate If-Match before If-None-Match.
     bool if_match = false;
@@ -131,12 +132,12 @@ class static_file_server {
     }
     if (if_match && !match_star) {
       result.precondition_failed_412();
-      return;
+      co_return;
     }
     if (none_star) {
       result.not_modified_304();
       result.clear_body();
-      return;
+      co_return;
     }
     result.ok_200();
     result.set_header("Content-Type", content_type(relative));
@@ -146,6 +147,7 @@ class static_file_server {
     } else {
       result.set_body(common::reader(std::move(file)), length);
     }
+    co_return;
   }
   // +=========================================================================+
   // | [>] content_type                                            ( private ) |

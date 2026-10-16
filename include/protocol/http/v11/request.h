@@ -47,6 +47,7 @@
 #include "protocol/http/v11/parsed_types.h"
 #include "protocol/http/v11/body/reader.h"
 #include "protocol/http/v11/policies.h"
+#include "protocol/http/v11/request_metadata_pool.h"
 #include "protocol/http/v11/verdict.h"
 #include "protocol/http/common/target.h"
 #include "protocol/http/common/headers/accept.h"
@@ -135,7 +136,10 @@ class request {
   // +-------------------------------------------------------------------------+
   request(const request&) = delete;
   request(request&&) noexcept = default;
-  ~request() = default;
+  ~request() {
+    detail::request_metadata_pool::release(std::move(headers_));
+    detail::request_metadata_pool::release(std::move(query_parameters_));
+  }
   // +=========================================================================+
   // | [>] from                                                     ( public ) |
   // +-------------------------------------------------------------------------+

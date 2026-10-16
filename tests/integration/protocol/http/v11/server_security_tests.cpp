@@ -28,6 +28,7 @@
 #include <string_view>
 #include <vector>
 
+#include "common/task.h"
 #include "http_server.h"
 #include "echo_body.h"
 #include "http_test_helper.h"
@@ -40,6 +41,7 @@ namespace {
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+using martianlabs::doba::common::task;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::http_server;
@@ -58,11 +60,12 @@ DOBA_TEST("HTTP/1.1 rejects hostile requests without dispatching successors") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> dispatched = 0;
   http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/sentinel", [&](const request&, response& res) {
+  http_server.add_route("GET", "/sentinel", [&](const request&, response& res)
+      -> task<void> {
     dispatched.fetch_add(1);
     res.ok_200();
     res.set_body("sentinel");
-    return;
+    co_return;
   });
   http_server.start();
   struct test_case {
@@ -209,13 +212,16 @@ DOBA_TEST("HTTP/1.1 accepts case insensitive framing and valid target forms") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("POST", "/echo", [](const request& req, response& res) {
+  http_server.add_route("POST", "/echo", [](const request& req, response& res)
+      -> task<void> {
     echo_body(req, res);
+    co_return;
   });
-  http_server.add_route("GET", "/ok", [](const request&, response& res) {
+  http_server.add_route("GET", "/ok", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     res.set_body("ok");
-    return;
+    co_return;
   });
   http_server.start();
   struct test_case {
@@ -262,14 +268,14 @@ DOBA_TEST("HTTP/1.1 absolute authority preserves the received Host") {
   DOBA_EXPECT(port != 0);
   http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
   http_server.add_route(
-      "GET", "/authority", [](const request& req, response& res) {
+      "GET", "/authority", [](const request& req, response& res) -> task<void> {
         res.ok_200();
         res.set_body(std::string(req.get_target_authority_host()) + "|" +
                      std::string(req.get_target_authority_port()) + "|" +
                      std::string(req.get_host()) + "|" +
                      std::string(req.get_host_port()) + "|" +
                      std::string(req.get_header("Host").second));
-        return;
+        co_return;
       });
   http_server.start();
   struct test_case {
@@ -312,13 +318,16 @@ DOBA_TEST(
   const uint16_t port = healthy.find_available_port();
   DOBA_EXPECT(port != 0);
   http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/ok", [](const request&, response& res) {
+  http_server.add_route("GET", "/ok", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     res.set_body("ok");
-    return;
+    co_return;
   });
-  http_server.add_route("POST", "/echo", [](const request& req, response& res) {
+  http_server.add_route("POST", "/echo", [](const request& req, response& res)
+      -> task<void> {
     echo_body(req, res);
+    co_return;
   });
   http_server.start();
   DOBA_EXPECT(slow_head.connect(port));

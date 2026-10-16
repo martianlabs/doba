@@ -30,10 +30,12 @@
 
 #include "common/reader.h"
 #include "common/signaler.h"
+#include "common/task.h"
 #include "http_server.h"
 #include "protocol/http/v11/contracts.h"
 
 namespace {
+using martianlabs::doba::common::task;
 using namespace martianlabs::doba::protocol::http::v11;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -352,8 +354,9 @@ int main() {
   martianlabs::doba::http_server<request, custom_response> server(
       {.ip = "0.0.0.0", .port = "8080"});
   server.add_route("GET", "/hello",
-                   [](const request&, custom_response& res) {
+                   [](const request&, custom_response& res) -> task<void> {
                      res.json_200(R"({"message":"hello"})");
+                     co_return;
                    });
   server.start();
   martianlabs::doba::common::signaler::wait();

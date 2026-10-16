@@ -24,12 +24,16 @@ it an IPv4 address and port, then starts the listener. Here is the relevant
 bit of [main.cpp](../../examples/http/v11/hello_world/main.cpp):
 
 ```cpp
+using martianlabs::doba::common::task;
+
 http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-http_server.add_route("GET", "/hello", [](const request&, response& res) {
+http_server.add_route("GET", "/hello", [](const request&, response& res)
+    -> task<void> {
   res.ok_200();
   res.add_header("Server", "doba.")
       .add_header("Content-Type", "text/plain; charset=utf-8")
       .set_body("ok");
+  co_return;
 });
 http_server.start();
 ```

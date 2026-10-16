@@ -34,7 +34,6 @@
 #include <utility>
 
 #include "protocol/http/common/router_handler_parametrized.h"
-#include "protocol/http/common/router_handler_parametrized_async.h"
 
 namespace martianlabs::doba::protocol::http {
 // /////////////////////////////////////////////////////////////////////////////
@@ -114,24 +113,19 @@ struct router_handler_signature_base {
     return make_router_handler_parametrized<RQty, RSty, Args...>(
         pattern, std::forward<Hty>(handler));
   }
-  template <typename RQty, typename RSty, typename Hty>
-  static auto make_parametrized_async(std::string_view pattern, Hty&& handler) {
-    return make_router_handler_parametrized_async<RQty, RSty, Args...>(
-        pattern, std::forward<Hty>(handler));
-  }
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   // | This static method checks if the types of the handler's arguments match |
   // | the expected types. It takes two template parameters, RQty and RSty,    |
   // | which represent the expected request and response types. It requires    |
-  // | void(const RQty&, RSty&, ...).                                          |
+  // | task<void>(const RQty&, RSty&, ...).                                    |
   // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty>
   static void check() {
     static_assert(
-        std::same_as<LOty, void> || std::same_as<LOty, common::task<void>>,
-        "The route handler must return void or task<void>");
+        std::same_as<LOty, common::task<void>>,
+        "The route handler must return task<void>");
     static_assert(std::same_as<std::decay_t<LQty>, RQty>,
                   "The first route handler argument must be const RQty&");
     static_assert(std::is_lvalue_reference_v<LQty> &&
@@ -188,7 +182,7 @@ struct router_handler_signature<Retty (Cty::*)(Reqty, Resty, Args...) noexcept>
 // +---------------------------------------------------------------------------+
 // | This concept checks if a given handler type Hty is a valid router handler |
 // | lambda. It requires that the handler has a request_type defined in its    |
-// | signature and returns void. If these conditions are met,                  |
+// | signature and returns task<void>. If these conditions are met,            |
 // | the concept evaluates to true; otherwise, it evaluates to false.          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
@@ -202,13 +196,9 @@ concept router_handler_lambda = requires {
       std::remove_reference_t<typename router_handler_signature<
           decltype(&std::decay_t<Hty>::operator())>::request_type>>;
   requires std::same_as<
-               typename router_handler_signature<
-                   decltype(&std::decay_t<Hty>::operator())>::return_type,
-               void> ||
-               std::same_as<
-                   typename router_handler_signature<
-                       decltype(&std::decay_t<Hty>::operator())>::return_type,
-                   common::task<void>>;
+      typename router_handler_signature<
+          decltype(&std::decay_t<Hty>::operator())>::return_type,
+      common::task<void>>;
   requires std::is_lvalue_reference_v<typename router_handler_signature<
       decltype(&std::decay_t<Hty>::operator())>::response_type>;
   requires !std::is_const_v<

@@ -24,6 +24,7 @@
 
 #include "common/console_logger.h"
 #include "common/signaler.h"
+#include "common/task.h"
 #include "http_server.h"
 
 using namespace martianlabs::doba::common;
@@ -44,12 +45,14 @@ using namespace martianlabs::doba::protocol::http::v11;
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   // Routes are selected by both the HTTP method and the absolute path.
-  http_server.add_route("GET", "/hello", [](const request&, response& res) {
+  http_server.add_route("GET", "/hello", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     // Response mutators return response&, so they can be chained.
     res.add_header("Server", "doba.")
         .add_header("Content-Type", "text/plain; charset=utf-8")
         .set_body("ok");
+    co_return;
   });
   http_server.start();
   // start() returns after opening the listener; wait for a shutdown signal.

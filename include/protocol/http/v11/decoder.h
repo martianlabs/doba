@@ -104,6 +104,7 @@
 #include "protocol/http/v11/body/framer_raw.h"
 #include "protocol/http/v11/body/framer_chunked.h"
 #include "protocol/http/v11/body/reader.h"
+#include "protocol/http/v11/request_metadata_pool.h"
 #include "protocol/http/v11/context.h"
 #include "protocol/http/v11/contracts.h"
 #include "protocol/http/v11/headers/connection.h"
@@ -152,7 +153,27 @@ class decoder {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  explicit decoder(policies configuration = {}) {
+  decoder(policies configuration, std::span<char> request_storage,
+          std::span<char> response_storage) {
+    context_.policies = configuration;
+    set_storage(request_storage, response_storage);
+  }
+  decoder(const decoder&) = delete;
+  decoder(decoder&&) noexcept = delete;
+  ~decoder() { cleanup_body_file(); }
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  decoder& operator=(const decoder&) = delete;
+  decoder& operator=(decoder&&) noexcept = delete;
+  // +=========================================================================+
+  // | [>] set_storage                                              ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Rebind between requests; storage must outlive all dependent views.      |
+  // +-------------------------------------------------------------------------+
+  void set_storage(std::span<char> request_storage,
+                   std::span<char> response_storage) {
+    const auto& configuration = context_.policies;
     if (!configuration.request_head_buffer_capacity ||
         !configuration.response_head_buffer_capacity ||
         configuration.request_body_inline_capacity >
@@ -163,22 +184,17 @@ class decoder {
                 configuration.response_head_buffer_capacity) {
       throw std::invalid_argument("Invalid HTTP buffer capacities");
     }
-    buffer_ = std::make_unique_for_overwrite<char[]>(
-        configuration.request_head_buffer_capacity +
-        configuration.request_body_inline_capacity);
-    response_buffer_ = std::make_unique_for_overwrite<char[]>(
-        configuration.response_head_buffer_capacity +
-        configuration.response_body_inline_capacity);
-    context_.policies = configuration;
+    const auto request_capacity = configuration.request_head_buffer_capacity +
+                                  configuration.request_body_inline_capacity;
+    const auto response_capacity = configuration.response_head_buffer_capacity +
+                                   configuration.response_body_inline_capacity;
+    if (request_storage.size() < request_capacity ||
+        response_storage.size() < response_capacity) {
+      throw std::invalid_argument("Insufficient HTTP buffer storage");
+    }
+    buffer_ = request_storage.first(request_capacity);
+    response_buffer_ = response_storage.first(response_capacity);
   }
-  decoder(const decoder&) = delete;
-  decoder(decoder&&) noexcept = delete;
-  ~decoder() { cleanup_body_file(); }
-  // +=========================================================================+
-  // | [>] OPERATORs                                                ( public ) |
-  // +-------------------------------------------------------------------------+
-  decoder& operator=(const decoder&) = delete;
-  decoder& operator=(decoder&&) noexcept = delete;
   // +=========================================================================+
   // | [>] deserialize                                              ( public ) |
   // +-------------------------------------------------------------------------+
@@ -219,7 +235,7 @@ class decoder {
           if (body_file_path_.empty()) {
             std::span<const std::byte> wire(
                 reinterpret_cast<const std::byte*>(
-                    buffer_.get() +
+                    buffer_.data() +
                     context_.policies.request_head_buffer_capacity),
                 body_size_);
             body_reader =
@@ -249,7 +265,8 @@ class decoder {
         }
         if (result.code == deserialization_status::kSucceeded) {
           RQty request = RQty::from(
-              method_, absolute_path_, target_, headers_, query_parameters_,
+              method_, absolute_path_, target_, std::move(headers_),
+              std::move(query_parameters_),
               host_host, host_port, host_type, target_authority_host,
               target_authority_port, target_authority_type,
               context_.connection.close_requested, std::move(body_reader));
@@ -261,7 +278,7 @@ class decoder {
       }
     }
     if (result.code == deserialization_status::kInvalidSource) {
-      result.response.emplace(make_response());
+      result.response.emplace(make_response(response_buffer_));
       if (storage_failed_) {
         result.response->internal_server_error_500();
       } else {
@@ -322,24 +339,6 @@ class decoder {
   // +=========================================================================+
   // | [>] make_response                                            ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Creates a response object using the decoder's internal storage.         |
-  // +-------------------------------------------------------------------------+
-  RSty make_response() { return make_response(response_storage()); }
-  // +=========================================================================+
-  // | [>] take_request_storage                                     ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Takes ownership of the decoder's internal request storage.              |
-  // +-------------------------------------------------------------------------+
-  std::unique_ptr<char[]> take_request_storage() {
-    auto replacement = std::make_unique_for_overwrite<char[]>(
-        context_.policies.request_head_buffer_capacity +
-        context_.policies.request_body_inline_capacity);
-    buffer_.swap(replacement);
-    return replacement;
-  }
-  // +=========================================================================+
-  // | [>] make_response                                            ( public ) |
-  // +-------------------------------------------------------------------------+
   // | Creates a response object using the provided storage.                   |
   // +-------------------------------------------------------------------------+
   RSty make_response(std::span<char> storage) {
@@ -348,17 +347,6 @@ class decoder {
   }
 
  private:
-  // +=========================================================================+
-  // | [>] response_storage                                         ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Returns a span of the response buffer, which is used to store the       |
-  // | response head and body.                                                 |
-  // +-------------------------------------------------------------------------+
-  std::span<char> response_storage() noexcept {
-    return {response_buffer_.get(),
-            context_.policies.response_head_buffer_capacity +
-                context_.policies.response_body_inline_capacity};
-  }
   // +=========================================================================+
   // | [>] parse_core                                               ( public ) |
   // +-------------------------------------------------------------------------+
@@ -560,7 +548,7 @@ class decoder {
           auto result = parse_body(source);
           if (result.code == deserialization_status::kMoreBytesNeeded &&
               context_.connection.expects_continue) {
-            result.response.emplace(make_response());
+            result.response.emplace(make_response(response_buffer_));
             result.response->continue_100();
           }
           return result;
@@ -608,6 +596,9 @@ class decoder {
           return deserialization_status::kInvalidSource;
         }
       }
+      if (!headers_.capacity()) {
+        headers_ = detail::request_metadata_pool::acquire();
+      }
       headers_.emplace_back(field_name, field_value);
       i += 2;
       fn_start = i;
@@ -641,7 +632,7 @@ class decoder {
         return deserialization_status::kInvalidSource;
       }
       if (body_file_path_.empty()) {
-        std::memcpy(buffer_.get() +
+        std::memcpy(buffer_.data() +
                         context_.policies.request_head_buffer_capacity +
                         body_size_,
                     source.data(), state.consumed);
@@ -666,7 +657,7 @@ class decoder {
     if (!body_file_.open(directory, path)) return false;
     body_file_path_ = std::move(path);
     if (body_size_ &&
-        !body_file_.write(buffer_.get() +
+        !body_file_.write(buffer_.data() +
                               context_.policies.request_head_buffer_capacity,
                           body_size_)) {
       return false;
@@ -717,17 +708,20 @@ class decoder {
       const std::size_t qc =
           helpers::split_query_parameters(query_, keys, values);
       if (limit && qc > limit) return false;
+      if (!query_parameters_.capacity()) {
+        query_parameters_ = detail::request_metadata_pool::acquire();
+      }
       query_parameters_.reserve(qc);
       for (std::size_t q = 0; q < qc; q++) {
         query_parameters_.emplace_back(keys[q], values[q]);
       }
     }
-    std::memcpy(buffer_.get(), buffer_view.data(), buffer_view.size());
+    std::memcpy(buffer_.data(), buffer_view.data(), buffer_view.size());
     head_size_ = buffer_view.size();
     auto rebase = [this, buffer_view](std::string_view value) {
       if (value.empty()) return std::string_view{};
       const std::size_t offset = value.data() - buffer_view.data();
-      return std::string_view(buffer_.get() + offset, value.size());
+      return std::string_view(buffer_.data() + offset, value.size());
     };
     method_ = rebase(method_);
     absolute_path_ = rebase(absolute_path_);
@@ -1200,8 +1194,8 @@ class decoder {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  std::unique_ptr<char[]> buffer_;
-  std::unique_ptr<char[]> response_buffer_;
+  std::span<char> buffer_;
+  std::span<char> response_buffer_;
   std::size_t head_size_ = 0;
   std::size_t body_size_ = 0;
   common::byte_storage_file body_file_;

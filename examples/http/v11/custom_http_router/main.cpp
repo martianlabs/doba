@@ -26,11 +26,13 @@
 #include <string_view>
 
 #include "common/signaler.h"
+#include "common/task.h"
 #include "http_server.h"
 #include "protocol/http/common/router_match_result.h"
 #include "protocol/http/v11/contracts.h"
 
 namespace {
+using martianlabs::doba::common::task;
 using namespace martianlabs::doba::protocol::http;
 using namespace martianlabs::doba::protocol::http::v11;
 
@@ -71,8 +73,10 @@ static_assert(contracts::router<custom_router, request, response>);
 int main() {
   martianlabs::doba::http_server<request, response, custom_router> server(
       {.ip = "0.0.0.0", .port = "8080"});
-  server.add_route("GET", "/hello", [](const request&, response& res) {
+  server.add_route("GET", "/hello", [](const request&, response& res)
+      -> task<void> {
     res.ok_200().set_body("hello");
+    co_return;
   });
   server.start();
   martianlabs::doba::common::signaler::wait();

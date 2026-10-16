@@ -23,6 +23,7 @@
 // permissions and limitations under the License.
 
 #include <memory>
+#include <future>
 #include <atomic>
 #include <chrono>
 #include <coroutine>
@@ -34,6 +35,7 @@
 #include <thread>
 #include <vector>
 
+#include "protocol/http/v11/buffer_pool.h"
 #include "protocol/http/v11/engine.h"
 #include "common/task.h"
 #include "protocol/http/v11/request.h"
@@ -211,7 +213,7 @@ DOBA_TEST("engine closes when execution rejects a continuation") {
   DOBA_EXPECT_EQUAL(current.closes, 1);
 }
 
-DOBA_TEST("engine orders asynchronous and synchronous responses") {
+DOBA_TEST("engine orders suspended and immediate responses") {
   router<request, response> routes;
   std::coroutine_handle<> next;
   routes.add("POST", "/slow", [&next](const request& req, response& res)
@@ -225,8 +227,9 @@ DOBA_TEST("engine orders asynchronous and synchronous responses") {
     make_response(res, std::string_view(
                            reinterpret_cast<const char*>(body.data()), 4));
   });
-  routes.add("GET", "/fast", [](const request&, response& res) {
+  routes.add("GET", "/fast", [](const request&, response& res) -> task<void> {
     make_response(res, "fast");
+    co_return;
   });
   connection current(routes);
   const std::string slow =
@@ -250,8 +253,9 @@ DOBA_TEST("engine retains a borrowed request body across suspension") {
     res.ok_200().set_header("Date", "fixed").set_body(req.get_body_reader());
     co_await suspend_once{next};
   });
-  routes.add("GET", "/fast", [](const request&, response& res) {
+  routes.add("GET", "/fast", [](const request&, response& res) -> task<void> {
     make_response(res, "fast");
+    co_return;
   });
   connection current(routes);
   const std::string slow =
@@ -267,7 +271,7 @@ DOBA_TEST("engine retains a borrowed request body across suspension") {
   DOBA_EXPECT(current.wire.substr(second).ends_with("\r\n\r\nfast"));
 }
 
-DOBA_TEST("engine returns to synchronous delivery after asynchronous work") {
+DOBA_TEST("engine returns to immediate delivery after suspended work") {
   router<request, response> routes;
   std::coroutine_handle<> pending;
   routes.add("GET", "/slow", [&pending](const request&, response& res)
@@ -275,8 +279,9 @@ DOBA_TEST("engine returns to synchronous delivery after asynchronous work") {
     co_await suspend_once{pending};
     make_response(res, "slow");
   });
-  routes.add("GET", "/fast", [](const request&, response& res) {
+  routes.add("GET", "/fast", [](const request&, response& res) -> task<void> {
     make_response(res, "fast");
+    co_return;
   });
   connection current(routes);
   const std::string fast = "GET /fast HTTP/1.1\r\nHost: localhost\r\n\r\n";
@@ -304,15 +309,16 @@ DOBA_TEST("engine returns to synchronous delivery after asynchronous work") {
   DOBA_EXPECT_EQUAL(current.closes, 0);
 }
 
-DOBA_TEST("engine resumes synchronous delivery in a coalesced batch") {
+DOBA_TEST("engine resumes immediate delivery in a coalesced batch") {
   router<request, response> routes;
   routes.add("GET", "/instant", [](const request&, response& res)
                  -> task<void> {
     make_response(res, "instant");
     co_return;
   });
-  routes.add("GET", "/fast", [](const request&, response& res) {
+  routes.add("GET", "/fast", [](const request&, response& res) -> task<void> {
     make_response(res, "fast");
+    co_return;
   });
   connection current(routes);
   const std::string instant =
@@ -338,8 +344,9 @@ DOBA_TEST("engine alternates execution models in one batch") {
     make_response(res, "instant");
     co_return;
   });
-  routes.add("GET", "/fast", [](const request&, response& res) {
+  routes.add("GET", "/fast", [](const request&, response& res) -> task<void> {
     make_response(res, "fast");
+    co_return;
   });
   connection current(routes);
   const std::string instant =
@@ -404,8 +411,9 @@ DOBA_TEST("engine drains queued responses after current completion") {
     make_response(res, large);
     co_return;
   });
-  routes.add("GET", "/last", [](const request&, response& res) {
+  routes.add("GET", "/last", [](const request&, response& res) -> task<void> {
     make_response(res, "last");
+    co_return;
   });
   connection current(routes);
   int sources = 0;
@@ -448,9 +456,11 @@ DOBA_TEST("engine stops dispatch after a queued asynchronous error") {
                  -> task<void> {
     throw std::runtime_error("before task creation");
   });
-  routes.add("GET", "/later", [&later_calls](const request&, response& res) {
+  routes.add("GET", "/later", [&later_calls](const request&, response& res)
+      -> task<void> {
     later_calls++;
     make_response(res, "later");
+    co_return;
   });
   connection current(routes);
   const std::string requests =
@@ -473,9 +483,11 @@ DOBA_TEST("engine bounds positions behind a suspended request") {
     co_await suspend_once{slow};
     make_response(res, "slow");
   });
-  routes.add("GET", "/later", [&later_calls](const request&, response& res) {
+  routes.add("GET", "/later", [&later_calls](const request&, response& res)
+      -> task<void> {
     later_calls++;
     make_response(res, "later");
+    co_return;
   });
   connection current(routes);
   current.receive("GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n");
@@ -497,9 +509,11 @@ DOBA_TEST("engine uses the configured pending request limit") {
     co_await suspend_once{slow};
     make_response(res, "slow");
   });
-  routes.add("GET", "/later", [&later_calls](const request&, response& res) {
+  routes.add("GET", "/later", [&later_calls](const request&, response& res)
+      -> task<void> {
     later_calls++;
     make_response(res, "later");
+    co_return;
   });
   policies configuration;
   configuration.max_pending_requests = 2;
@@ -523,9 +537,11 @@ DOBA_TEST("engine allows unlimited pending requests when configured") {
     co_await suspend_once{slow};
     make_response(res, "slow");
   });
-  routes.add("GET", "/later", [&later_calls](const request&, response& res) {
+  routes.add("GET", "/later", [&later_calls](const request&, response& res)
+      -> task<void> {
     later_calls++;
     make_response(res, "later");
+    co_return;
   });
   policies configuration;
   configuration.max_pending_requests = 0;
@@ -542,8 +558,9 @@ DOBA_TEST("engine allows unlimited pending requests when configured") {
 
 DOBA_TEST("engine uses configured response head and inline capacities") {
   router<request, response> routes;
-  routes.add("GET", "/sync", [](const request&, response& res) {
+  routes.add("GET", "/sync", [](const request&, response& res) -> task<void> {
     make_response(res, "ab");
+    co_return;
   });
   routes.add("GET", "/async", [](const request&, response& res)
                  -> task<void> {
@@ -590,9 +607,11 @@ DOBA_TEST("engine stops dispatch after a queued close response") {
     res.set_header("Connection", "close");
     co_return;
   });
-  routes.add("GET", "/later", [&later_calls](const request&, response& res) {
+  routes.add("GET", "/later", [&later_calls](const request&, response& res)
+      -> task<void> {
     later_calls++;
     make_response(res, "later");
+    co_return;
   });
   connection current(routes);
   current.receive(
@@ -612,8 +631,9 @@ DOBA_TEST("engine keeps an asynchronous response written before suspension") {
     make_response(res, "before");
     co_await suspend_once{slow};
   });
-  routes.add("GET", "/later", [](const request&, response& res) {
+  routes.add("GET", "/later", [](const request&, response& res) -> task<void> {
     make_response(res, "later");
+    co_return;
   });
   connection current(routes);
   current.receive(
@@ -681,8 +701,9 @@ DOBA_TEST("engine closes after an asynchronous handler error") {
     co_await suspend_once{next};
     throw std::runtime_error("handler failure");
   });
-  routes.add("GET", "/later", [](const request&, response& res) {
+  routes.add("GET", "/later", [](const request&, response& res) -> task<void> {
     make_response(res, "later");
+    co_return;
   });
   connection current(routes);
   const std::string first = "GET /fail HTTP/1.1\r\nHost: localhost\r\n\r\n";
@@ -705,8 +726,10 @@ DOBA_TEST("engine orders 100 Continue after an asynchronous response") {
     co_await suspend_once{next};
     make_response(res, "slow");
   });
-  routes.add("POST", "/upload", [](const request&, response& res) {
+  routes.add("POST", "/upload", [](const request&, response& res)
+      -> task<void> {
     make_response(res, "done");
+    co_return;
   });
   connection current(routes);
   const std::string first = "GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n";
@@ -751,9 +774,11 @@ DOBA_TEST("engine honors close on an asynchronous request") {
     co_await suspend_once{next};
     make_response(res, "slow");
   });
-  routes.add("GET", "/later", [&later_calls](const request&, response& res) {
+  routes.add("GET", "/later", [&later_calls](const request&, response& res)
+      -> task<void> {
     later_calls++;
     make_response(res, "later");
+    co_return;
   });
   connection current(routes);
   current.receive(
@@ -792,19 +817,29 @@ DOBA_TEST("engine transfers an asynchronous response source") {
 }
 
 // +===========================================================================+
-// | [>] engine resolves synchronous route forms                 ( test-case ) |
+// | [>] engine resolves immediate route forms                 ( test-case )   |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("engine resolves synchronous route forms") {
+DOBA_TEST("engine resolves immediate route forms") {
   router<request, response> routes;
   routes.add("GET", "/static",
-             [](const request&, response& res) { make_response(res, "one"); });
+             [](const request&, response& res) -> task<void> {
+               make_response(res, "one");
+               co_return;
+             });
   routes.add("POST", "/static",
-             [](const request&, response& res) { make_response(res, "post"); });
-  routes.add("GET", "/item/:id", [](const request&, response& res, int id) {
+             [](const request&, response& res) -> task<void> {
+               make_response(res, "post");
+               co_return;
+             });
+  routes.add("GET", "/item/:id", [](const request&, response& res, int id)
+      -> task<void> {
     make_response(res, std::to_string(id));
+    co_return;
   });
-  routes.add("GET", "/assets/*", [](const request&, response& res) {
+  routes.add("GET", "/assets/*", [](const request&, response& res)
+      -> task<void> {
     make_response(res, "asset");
+    co_return;
   });
   const std::vector<std::pair<std::string, std::string>> cases{
       {"/static", "one"},
@@ -832,9 +867,11 @@ DOBA_TEST("engine resolves synchronous route forms") {
 DOBA_TEST("engine routes only complete requests") {
   router<request, response> routes;
   int calls = 0;
-  routes.add("POST", "/", [&calls](const request&, response& res) {
+  routes.add("POST", "/", [&calls](const request&, response& res)
+      -> task<void> {
     calls++;
     make_response(res, "accepted");
+    co_return;
   });
   const std::string bytes =
       "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 4\r\n\r\ndata";
@@ -859,9 +896,13 @@ DOBA_TEST("engine routes only complete requests") {
 DOBA_TEST("engine returns routing and handler errors") {
   router<request, response> routes;
   routes.add("GET", "/",
-             [](const request&, response& res) { make_response(res, "ok"); });
-  routes.add("GET", "/fail", [](const request&, response&) -> void {
+             [](const request&, response& res) -> task<void> {
+               make_response(res, "ok");
+               co_return;
+             });
+  routes.add("GET", "/fail", [](const request&, response&) -> task<void> {
     throw std::runtime_error("handler failure");
+    co_return;
   });
   const std::vector<std::pair<std::string, std::string>> cases{
       {"GET /missing", "404"},
@@ -886,7 +927,10 @@ DOBA_TEST("engine returns routing and handler errors") {
 DOBA_TEST("engine rejects a handler 100 without a final response") {
   router<request, response> routes;
   routes.add("GET", "/",
-             [](const request&, response& res) { res.continue_100(); });
+             [](const request&, response& res) -> task<void> {
+               res.continue_100();
+               co_return;
+             });
   connection current(routes);
   const std::string one = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
   DOBA_EXPECT_EQUAL(current.receive(one + one), one.size());
@@ -902,7 +946,9 @@ DOBA_TEST("engine rejects a handler 100 without a final response") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("engine rejects handlers without a status") {
   router<request, response> routes;
-  routes.add("GET", "/", [](const request&, response&) {});
+  routes.add("GET", "/", [](const request&, response&) -> task<void> {
+    co_return;
+  });
   connection current(routes);
   const std::string bytes = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
   DOBA_EXPECT_EQUAL(current.receive(bytes), bytes.size());
@@ -917,8 +963,9 @@ DOBA_TEST("engine rejects handlers without a status") {
 DOBA_TEST("engine processes coalesced requests in order") {
   router<request, response> routes;
   int count = 0;
-  routes.add("GET", "/", [&count](const request&, response& res) {
+  routes.add("GET", "/", [&count](const request&, response& res) -> task<void> {
     make_response(res, std::to_string(++count));
+    co_return;
   });
   connection current(routes);
   const std::string one = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
@@ -939,15 +986,18 @@ DOBA_TEST("engine processes coalesced requests in order") {
 DOBA_TEST("engine sends large and chunked response bodies") {
   router<request, response> routes;
   const std::string body(24001, 'x');
-  routes.add("GET", "/large", [&body](const request&, response& res) {
+  routes.add("GET", "/large", [&body](const request&, response& res)
+      -> task<void> {
     make_response(res, body);
+    co_return;
   });
-  routes.add("GET", "/chunked", [](const request&, response& res) {
+  routes.add("GET", "/chunked", [](const request&, response& res)
+      -> task<void> {
     auto writer = body_writer::chunked();
     if (!writer.write("abc")) throw std::runtime_error("body write failed");
     res.ok_200();
     res.set_body(std::move(writer));
-    return;
+    co_return;
   });
   connection current(routes);
   const std::string large = "GET /large HTTP/1.1\r\nHost: localhost\r\n\r\n";
@@ -969,8 +1019,9 @@ DOBA_TEST("engine sends large and chunked response bodies") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("engine suppresses HEAD bodies") {
   router<request, response> routes;
-  routes.add("HEAD", "/", [](const request&, response& res) {
+  routes.add("HEAD", "/", [](const request&, response& res) -> task<void> {
     make_response(res, std::string(9000, 'h'));
+    co_return;
   });
   connection current(routes);
   const std::string bytes = "HEAD / HTTP/1.1\r\nHost: localhost\r\n\r\n";
@@ -987,9 +1038,10 @@ DOBA_TEST("engine suppresses HEAD bodies") {
 DOBA_TEST("engine requests close without waiting") {
   router<request, response> routes;
   int calls = 0;
-  routes.add("GET", "/", [&calls](const request&, response& res) {
+  routes.add("GET", "/", [&calls](const request&, response& res) -> task<void> {
     calls++;
     make_response(res, std::string(17000, 'c'));
+    co_return;
   });
   connection current(routes);
   const std::string one = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
@@ -1009,11 +1061,11 @@ DOBA_TEST("engine requests close without waiting") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("engine honors response close") {
   router<request, response> routes;
-  routes.add("GET", "/", [](const request&, response& res) {
+  routes.add("GET", "/", [](const request&, response& res) -> task<void> {
     make_response(res, "close");
     res.add_header("Connection", "keep-alive");
     res.add_header("Connection", " upgrade, ClOsE ");
-    return;
+    co_return;
   });
   const std::string bytes = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
   connection current(routes);
@@ -1028,9 +1080,10 @@ DOBA_TEST("engine honors response close") {
 DOBA_TEST("engine rejects invalid and policy limited requests") {
   router<request, response> routes;
   int calls = 0;
-  routes.add("GET", "/", [&calls](const request&, response& res) {
+  routes.add("GET", "/", [&calls](const request&, response& res) -> task<void> {
     calls++;
     make_response(res, "ok");
+    co_return;
   });
   connection invalid(routes);
   invalid.receive("GET / HTTP/1.0\r\nHost: localhost\r\n\r\n");
@@ -1055,8 +1108,9 @@ DOBA_TEST("engine rejects invalid and policy limited requests") {
 DOBA_TEST("engine transfers unread sources") {
   router<request, response> routes;
   const std::string body(131073, 'r');
-  routes.add("GET", "/", [&body](const request&, response& res) {
+  routes.add("GET", "/", [&body](const request&, response& res) -> task<void> {
     make_response(res, body);
+    co_return;
   });
   std::string prefix;
   std::unique_ptr<reader> pending;
@@ -1104,11 +1158,16 @@ DOBA_TEST("engine closes after immediate response failures") {
         return;
       };
       routes.add(method, "/fail",
-                 [fail](const request&, response& res) { fail(res); });
+                 [fail](const request&, response& res) -> task<void> {
+                   fail(res);
+                   co_return;
+                 });
 
-      routes.add("GET", "/next", [&](const request&, response& res) {
+      routes.add("GET", "/next", [&](const request&, response& res)
+          -> task<void> {
         successors++;
         make_response(res, "next");
+        co_return;
       });
       connection current(routes);
       const std::string first =
@@ -1140,14 +1199,15 @@ DOBA_TEST("engine closes after immediate response failures") {
 DOBA_TEST("engine never retries a failed transport delivery") {
   for (const std::string_view scenario : {"ok", "throw", "framing"}) {
     router<request, response> routes;
-    routes.add("GET", "/", [scenario](const request&, response& res) {
+    routes.add("GET", "/", [scenario](const request&, response& res)
+        -> task<void> {
       if (scenario == "throw") throw std::runtime_error("private detail");
       make_response(res, "ok");
       if (scenario == "framing") {
         res.set_header("Transfer-Encoding", "chunked");
         res.set_header("Content-Length", "2");
       }
-      return;
+      co_return;
     });
     connection current(routes);
     int deliveries = 0;
@@ -1172,9 +1232,10 @@ DOBA_TEST("engine sends one interim for a fragmented body") {
   for (const bool chunked : {false, true}) {
     router<request, response> routes;
     int calls = 0;
-    routes.add("POST", "/", [&](const request&, response& res) {
+    routes.add("POST", "/", [&](const request&, response& res) -> task<void> {
       calls++;
       make_response(res, "done");
+      co_return;
     });
     const std::string head =
         "POST / HTTP/1.1\r\nHost: localhost\r\nExpect: 100-continue\r\n" +
@@ -1240,9 +1301,10 @@ DOBA_TEST("engine closes when interim delivery fails") {
 DOBA_TEST("engine emits a terminal rejection without dispatch") {
   router<request, response> routes;
   int calls = 0;
-  routes.add("GET", "/", [&](const request&, response& res) {
+  routes.add("GET", "/", [&](const request&, response& res) -> task<void> {
     calls++;
     make_response(res, "unexpected");
+    co_return;
   });
   for (const bool head : {false, true}) {
     connection current(routes);
@@ -1293,13 +1355,16 @@ DOBA_TEST("engine never dispatches a smuggled request") {
     router<request, response> routes;
     int posts = 0;
     int admin = 0;
-    routes.add("POST", "/", [&](const request&, response& res) {
+    routes.add("POST", "/", [&](const request&, response& res) -> task<void> {
       posts++;
       make_response(res, "post");
+      co_return;
     });
-    routes.add("GET", "/admin", [&](const request&, response& res) {
+    routes.add("GET", "/admin", [&](const request&, response& res)
+        -> task<void> {
       admin++;
       make_response(res, "admin");
+      co_return;
     });
     connection current(routes);
     current.receive(bytes);
@@ -1326,15 +1391,17 @@ DOBA_TEST("engine ignores trailer fields for later requests") {
   int admin = 0;
   std::string host;
   std::size_t headers = 0;
-  routes.add("POST", "/", [&](const request& req, response& res) {
+  routes.add("POST", "/", [&](const request& req, response& res) -> task<void> {
     posts++;
     host = req.get_header("Host").second;
     headers = req.get_headers_length();
     make_response(res, "post");
+    co_return;
   });
-  routes.add("GET", "/admin", [&](const request&, response& res) {
+  routes.add("GET", "/admin", [&](const request&, response& res) -> task<void> {
     admin++;
     make_response(res, "admin");
+    co_return;
   });
   connection current(routes);
   const std::string post =
@@ -1357,9 +1424,10 @@ DOBA_TEST("engine ignores trailer fields for later requests") {
 DOBA_TEST("engine rejects an invalid coalesced successor") {
   router<request, response> routes;
   int calls = 0;
-  routes.add("GET", "/", [&](const request&, response& res) {
+  routes.add("GET", "/", [&](const request&, response& res) -> task<void> {
     calls++;
     make_response(res, "first");
+    co_return;
   });
   connection current(routes);
   const std::string bytes =
@@ -1405,7 +1473,10 @@ DOBA_TEST("engine response close stops immediate dispatch") {
     return;
   };
   routes.add("GET", "/",
-             [closing](const request&, response& res) { closing(res); });
+             [closing](const request&, response& res) -> task<void> {
+               closing(res);
+               co_return;
+             });
   connection current(routes);
   const std::string bytes = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
   DOBA_EXPECT_EQUAL(current.receive(bytes + bytes), bytes.size());
@@ -1425,10 +1496,11 @@ DOBA_TEST("engine matches only complete close options") {
   for (const std::string_view option :
        {"keep-alive", "x-close", "keep-alive, close-later"}) {
     router<request, response> routes;
-    routes.add("GET", "/", [option](const request&, response& res) {
+    routes.add("GET", "/", [option](const request&, response& res)
+        -> task<void> {
       make_response(res, "ok");
       res.set_header("Connection", option);
-      return;
+      co_return;
     });
     connection current(routes);
     const std::string bytes = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
@@ -1446,82 +1518,65 @@ DOBA_TEST("engine matches only complete close options") {
   }
 }
 
-
 DOBA_TEST("engine authenticates all route forms before invoking handlers") {
   namespace auth = martianlabs::doba::protocol::http::auth;
-  for (const bool asynchronous : {false, true}) {
-    for (const bool accepted : {false, true}) {
-      router<request, response> routes;
-      int checks = 0;
-      int calls = 0;
-      auto authenticate = [&](const request&) -> auth::authentication_result {
-        checks++;
-        return accepted
-            ? auth::authentication_result{
-                  auth::authentication_status::kAccepted,
-                                           {}}
-            : auth::authentication_result{
-                  auth::authentication_status::kUnauthenticated,
-                  "Custom realm=\"demo\""};
-      };
-      if (asynchronous) {
-        routes.add("GET", "/static", [&](const request&, response& res)
-                       -> task<void> {
-          calls++;
-          make_response(res, "ok");
-          co_return;
-        }, authenticate);
-        routes.add("GET", "/items/:id",
-                   [&](const request&, response& res, int) -> task<void> {
-          calls++;
-          make_response(res, "ok");
-          co_return;
-        }, authenticate);
-        routes.add("GET", "/files/*", [&](const request&, response& res)
-                       -> task<void> {
-          calls++;
-          make_response(res, "ok");
-          co_return;
-        }, authenticate);
-      } else {
-        routes.add("GET", "/static", [&](const request&, response& res) {
-          calls++;
-          make_response(res, "ok");
-        }, authenticate);
-        routes.add("GET", "/items/:id",
-                   [&](const request&, response& res, int) {
-          calls++;
-          make_response(res, "ok");
-        }, authenticate);
-        routes.add("GET", "/files/*", [&](const request&, response& res) {
-          calls++;
-          make_response(res, "ok");
-        }, authenticate);
-      }
-      routes.add("GET", "/public", [](const request&, response& res) {
-        make_response(res, "public");
-      });
-      connection current(routes);
-      for (const auto path : {"/static", "/items/42", "/files/a"}) {
-        current.wire.clear();
-        current.receive(std::string("GET ") + path +
-                        " HTTP/1.1\r\nHost: localhost\r\n\r\n");
-        DOBA_EXPECT(current.wire.starts_with(accepted ? "HTTP/1.1 200 "
-                                                     : "HTTP/1.1 401 "));
-        if (!accepted) {
-          DOBA_EXPECT(current.wire.find(
-              "WWW-Authenticate: Custom realm=\"demo\"") !=
-              std::string::npos);
-        }
-      }
-      DOBA_EXPECT_EQUAL(checks, 3);
-      DOBA_EXPECT_EQUAL(calls, accepted ? 3 : 0);
+  for (const bool accepted : {false, true}) {
+    router<request, response> routes;
+    int checks = 0;
+    int calls = 0;
+    auto authenticate = [&](const request&) -> auth::authentication_result {
+      checks++;
+      return accepted
+          ? auth::authentication_result{
+                auth::authentication_status::kAccepted,
+                                         {}}
+          : auth::authentication_result{
+                auth::authentication_status::kUnauthenticated,
+                "Custom realm=\"demo\""};
+    };
+    routes.add("GET", "/static", [&](const request&, response& res)
+                   -> task<void> {
+      calls++;
+      make_response(res, "ok");
+      co_return;
+    }, authenticate);
+    routes.add("GET", "/items/:id",
+               [&](const request&, response& res, int) -> task<void> {
+      calls++;
+      make_response(res, "ok");
+      co_return;
+    }, authenticate);
+    routes.add("GET", "/files/*", [&](const request&, response& res)
+                   -> task<void> {
+      calls++;
+      make_response(res, "ok");
+      co_return;
+    }, authenticate);
+    routes.add("GET", "/public", [](const request&, response& res)
+        -> task<void> {
+      make_response(res, "public");
+      co_return;
+    });
+    connection current(routes);
+    for (const auto path : {"/static", "/items/42", "/files/a"}) {
       current.wire.clear();
-      current.receive("GET /public HTTP/1.1\r\nHost: localhost\r\n\r\n");
-      DOBA_EXPECT(current.wire.ends_with("public"));
-      DOBA_EXPECT_EQUAL(checks, 3);
-      DOBA_EXPECT_EQUAL(current.closes, 0);
+      current.receive(std::string("GET ") + path +
+                      " HTTP/1.1\r\nHost: localhost\r\n\r\n");
+      DOBA_EXPECT(current.wire.starts_with(accepted ? "HTTP/1.1 200 "
+                                                   : "HTTP/1.1 401 "));
+      if (!accepted) {
+        DOBA_EXPECT(current.wire.find(
+            "WWW-Authenticate: Custom realm=\"demo\"") !=
+            std::string::npos);
+      }
     }
+    DOBA_EXPECT_EQUAL(checks, 3);
+    DOBA_EXPECT_EQUAL(calls, accepted ? 3 : 0);
+    current.wire.clear();
+    current.receive("GET /public HTTP/1.1\r\nHost: localhost\r\n\r\n");
+    DOBA_EXPECT(current.wire.ends_with("public"));
+    DOBA_EXPECT_EQUAL(checks, 3);
+    DOBA_EXPECT_EQUAL(current.closes, 0);
   }
 }
 
@@ -1553,30 +1608,24 @@ DOBA_TEST("engine orders authentication rejection after suspended response") {
 
 DOBA_TEST("engine handles provider exceptions and invalid challenges") {
   namespace auth = martianlabs::doba::protocol::http::auth;
-  for (const bool asynchronous : {false, true}) {
-    for (const auto challenge :
-         {"", ", ,", "Custom\r\nInjected: yes", "Custom"}) {
-      router<request, response> routes;
-      auto authenticate = [challenge](const request&)
-          -> auth::authentication_result {
-        if (std::string_view(challenge) == "Custom") {
-          throw std::runtime_error("validator failed");
-        }
-        return {auth::authentication_status::kUnauthenticated, challenge};
-      };
-      if (asynchronous) {
-        routes.add("GET", "/", [](const request&, response&) -> task<void> {
-          co_return;
-        }, authenticate);
-      } else {
-        routes.add("GET", "/", [](const request&, response&) {}, authenticate);
+  for (const auto challenge :
+       {"", ", ,", "Custom\r\nInjected: yes", "Custom"}) {
+    router<request, response> routes;
+    auto authenticate = [challenge](const request&)
+        -> auth::authentication_result {
+      if (std::string_view(challenge) == "Custom") {
+        throw std::runtime_error("validator failed");
       }
-      connection current(routes);
-      current.receive("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n");
-      DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 500 "));
-      DOBA_EXPECT_EQUAL(current.closes, 1);
-      DOBA_EXPECT(current.wire.find("Injected:") == std::string::npos);
-    }
+      return {auth::authentication_status::kUnauthenticated, challenge};
+    };
+    routes.add("GET", "/", [](const request&, response&) -> task<void> {
+      co_return;
+    }, authenticate);
+    connection current(routes);
+    current.receive("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n");
+    DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 500 "));
+    DOBA_EXPECT_EQUAL(current.closes, 1);
+    DOBA_EXPECT(current.wire.find("Injected:") == std::string::npos);
   }
 }
 
@@ -1585,7 +1634,8 @@ DOBA_TEST("engine maps custom rejection statuses and preserves HEAD") {
   for (const auto status : {auth::authentication_status::kInvalidRequest,
                             auth::authentication_status::kForbidden}) {
     router<request, response> routes;
-    routes.add("HEAD", "/", [](const request&, response&) {},
+    routes.add("HEAD", "/", [](const request&, response&)
+        -> task<void> { co_return; },
                [status](const request&) -> auth::authentication_result {
       return {status, {}};
     });
@@ -1596,4 +1646,495 @@ DOBA_TEST("engine maps custom rejection statuses and preserves HEAD") {
             ? "HTTP/1.1 400 " : "HTTP/1.1 403 "));
     DOBA_EXPECT(current.wire.ends_with("\r\n\r\n"));
   }
+}
+
+DOBA_TEST("engine retains suspended storage after destruction") {
+  for (const bool chunked : {false, true}) {
+    router<request, response> routes;
+    std::coroutine_handle<> pending;
+    routes.add("POST", "/wait", [&](const request& req, response& res)
+                   -> task<void> {
+      make_response(res, "retained");
+      co_await suspend_once{pending};
+      if (req.get_header("X-Id").second != "old" ||
+          req.get_query_parameter("key")->second != "value") {
+        throw std::runtime_error("invalid retained head");
+      }
+      std::array<std::byte, 4> output{};
+      const auto state = req.get_body_reader()->read(output);
+      if (!state.complete || state.produced != output.size() ||
+          std::string_view(reinterpret_cast<const char*>(output.data()), 4) !=
+              "data") {
+        throw std::runtime_error("invalid retained body");
+      }
+    });
+    routes.add("GET", "/next", [](const request&, response& res) -> task<void> {
+      make_response(res, "next");
+      co_return;
+    });
+    std::string wire;
+    int closes = 0;
+    {
+      engine<request, response> value({}, routes);
+      value.set_on_send([&](std::string_view head, std::string_view body,
+                             std::unique_ptr<reader> source) {
+        wire.append(head).append(body);
+        if (source) source->read_all(wire);
+      });
+      value.set_on_close([&]() { closes++; });
+      const std::string input =
+          "POST /wait?key=value HTTP/1.1\r\nHost: a\r\nX-Id: old\r\n" +
+          std::string(chunked ? "Transfer-Encoding: chunked\r\n\r\n"
+                                 "4\r\ndata\r\n0\r\n\r\n"
+                             : "Content-Length: 4\r\n\r\ndata") +
+          "GET /next HTTP/1.1\r\nHost: b\r\nX-Id: new\r\n\r\n";
+      DOBA_EXPECT_EQUAL(value.on_bytes_received(
+                            input.data(), input.size(), input.size()),
+                        input.size());
+      DOBA_EXPECT(static_cast<bool>(pending));
+      DOBA_EXPECT(wire.empty());
+    }
+    pending.resume();
+    DOBA_EXPECT_EQUAL(closes, 0);
+    const auto second = wire.find("HTTP/1.1", 1);
+    DOBA_EXPECT(second != std::string::npos);
+    DOBA_EXPECT(wire.substr(0, second).ends_with("\r\n\r\nretained"));
+    DOBA_EXPECT(wire.substr(second).ends_with("\r\n\r\nnext"));
+  }
+}
+
+DOBA_TEST("engine admits a response while on_send is running") {
+  router<request, response> routes;
+  std::coroutine_handle<> first;
+  routes.add("GET", "/first", [&first](const request&, response& res)
+                 -> task<void> {
+    co_await suspend_once{first};
+    make_response(res, "first");
+  });
+  routes.add("GET", "/next", [](const request&, response& res) -> task<void> {
+    make_response(res, "next");
+    co_return;
+  });
+  connection current(routes);
+  std::promise<void> received;
+  auto ready = received.get_future();
+  std::promise<void> sending;
+  auto entered = sending.get_future();
+  std::jthread receiver([&]() {
+    entered.wait();
+    current.receive("GET /next HTTP/1.1\r\nHost: a\r\n\r\n");
+    received.set_value();
+  });
+  bool received_during_send = false;
+  current.value.set_on_send(
+      [&](std::string_view head, std::string_view body,
+          std::unique_ptr<reader>) {
+        current.wire.append(head).append(body);
+        if (body == "first") {
+          sending.set_value();
+          received_during_send =
+              ready.wait_for(std::chrono::seconds(1)) ==
+              std::future_status::ready;
+        }
+      });
+  current.receive("GET /first HTTP/1.1\r\nHost: a\r\n\r\n");
+  first.resume();
+  receiver.join();
+  DOBA_EXPECT(received_during_send);
+  const auto second = current.wire.find("HTTP/1.1", 1);
+  DOBA_EXPECT(second != std::string::npos);
+  DOBA_EXPECT(current.wire.substr(0, second).ends_with("\r\n\r\nfirst"));
+  DOBA_EXPECT(current.wire.substr(second).ends_with("\r\n\r\nnext"));
+}
+
+DOBA_TEST("engine drains queued completion before a later immediate response") {
+  router<request, response> routes;
+  std::coroutine_handle<> first;
+  std::coroutine_handle<> second;
+  routes.add("GET", "/first", [&first](const request&, response& res)
+                 -> task<void> {
+    co_await suspend_once{first};
+    make_response(res, "first");
+  });
+  routes.add("GET", "/second", [&second](const request&, response& res)
+                 -> task<void> {
+    co_await suspend_once{second};
+    make_response(res, "second");
+  });
+  routes.add("GET", "/third", [&second](const request&, response& res)
+                 -> task<void> {
+    second.resume();
+    make_response(res, "third");
+    co_return;
+  });
+  connection current(routes);
+  int depth = 0;
+  int maximum_depth = 0;
+  current.value.set_on_send(
+      [&](std::string_view head, std::string_view body,
+          std::unique_ptr<reader>) {
+        ++depth;
+        if (depth > maximum_depth) maximum_depth = depth;
+        current.wire.append(head).append(body);
+        --depth;
+      });
+  current.receive("GET /first HTTP/1.1\r\nHost: a\r\n\r\n"
+                  "GET /second HTTP/1.1\r\nHost: a\r\n\r\n");
+  first.resume();
+  current.receive("GET /third HTTP/1.1\r\nHost: a\r\n\r\n");
+  DOBA_EXPECT_EQUAL(maximum_depth, 1);
+  const auto middle = current.wire.find("HTTP/1.1", 1);
+  DOBA_EXPECT(middle != std::string::npos);
+  const auto last = current.wire.find("HTTP/1.1", middle + 1);
+  DOBA_EXPECT(last != std::string::npos);
+  DOBA_EXPECT(current.wire.substr(0, middle).ends_with("\r\n\r\nfirst"));
+  DOBA_EXPECT(current.wire.substr(middle, last - middle)
+                  .ends_with("\r\n\r\nsecond"));
+  DOBA_EXPECT(current.wire.substr(last).ends_with("\r\n\r\nthird"));
+}
+
+DOBA_TEST("engine stop waits for an admitted immediate handler and its send") {
+  router<request, response> routes;
+  std::promise<void> entered;
+  auto running = entered.get_future();
+  std::promise<void> release;
+  auto released = release.get_future();
+  routes.add("GET", "/", [&](const request&, response& res) -> task<void> {
+    entered.set_value();
+    released.wait();
+    make_response(res, "done");
+    co_return;
+  });
+  connection current(routes);
+  std::atomic<int> completions{0};
+  bool completed_after_send = false;
+  std::jthread receiver([&]() {
+    current.receive("GET / HTTP/1.1\r\nHost: a\r\n\r\n");
+  });
+  running.wait();
+  const bool stopped = current.value.stop([&]() {
+    completed_after_send = current.wire.ends_with("\r\n\r\ndone");
+    completions++;
+  });
+  const auto before_release = completions.load();
+  release.set_value();
+  receiver.join();
+  DOBA_EXPECT(!stopped);
+  DOBA_EXPECT_EQUAL(before_release, 0);
+  DOBA_EXPECT_EQUAL(completions.load(), 1);
+  DOBA_EXPECT(completed_after_send);
+}
+
+DOBA_TEST("engine stop during on_send waits for the queued finalizations") {
+  router<request, response> routes;
+  std::coroutine_handle<> first;
+  std::coroutine_handle<> second;
+  routes.add("GET", "/first", [&first](const request&, response& res)
+                 -> task<void> {
+    co_await suspend_once{first};
+    make_response(res, "first");
+  });
+  routes.add("GET", "/second", [&second](const request&, response& res)
+                 -> task<void> {
+    co_await suspend_once{second};
+    make_response(res, "second");
+  });
+  connection current(routes);
+  bool stopped = true;
+  bool completed_after_send = false;
+  int completions = 0;
+  int during_send = -1;
+  current.value.set_on_send(
+      [&](std::string_view head, std::string_view body,
+          std::unique_ptr<reader>) {
+        current.wire.append(head).append(body);
+        if (body == "first") {
+          second.resume();
+          stopped = current.value.stop([&]() {
+            completed_after_send = current.wire.ends_with("\r\n\r\nsecond");
+            ++completions;
+          });
+          during_send = completions;
+        }
+      });
+  current.receive("GET /first HTTP/1.1\r\nHost: a\r\n\r\n"
+                  "GET /second HTTP/1.1\r\nHost: a\r\n\r\n");
+  first.resume();
+  DOBA_EXPECT(!stopped);
+  DOBA_EXPECT_EQUAL(during_send, 0);
+  DOBA_EXPECT_EQUAL(completions, 1);
+  DOBA_EXPECT(completed_after_send);
+}
+
+DOBA_TEST("engine publishes early external completion after start returns") {
+  struct resume_elsewhere {
+    bool& returned;
+    bool await_ready() const noexcept { return false; }
+    void await_suspend(std::coroutine_handle<> handle) const {
+      auto* finished = &returned;
+      {
+        std::jthread worker([handle]() { handle.resume(); });
+      }
+      *finished = true;
+    }
+    void await_resume() const noexcept {}
+  };
+  router<request, response> routes;
+  bool returned = false;
+  routes.add("GET", "/", [&](const request&, response& res) -> task<void> {
+    co_await resume_elsewhere{returned};
+    make_response(res, "done");
+  });
+  connection current(routes);
+  bool published_after_start = false;
+  current.value.set_on_send(
+      [&](std::string_view head, std::string_view body,
+          std::unique_ptr<reader>) {
+        published_after_start = returned;
+        current.wire.append(head).append(body);
+      });
+  current.receive("GET / HTTP/1.1\r\nHost: a\r\n\r\n");
+  DOBA_EXPECT(published_after_start);
+  DOBA_EXPECT(current.wire.ends_with("\r\n\r\ndone"));
+}
+
+DOBA_TEST("engine completes ordered sends when its finished observer throws") {
+  router<request, response> routes;
+  std::coroutine_handle<> pending;
+  routes.add("GET", "/", [&](const request&, response& res) -> task<void> {
+    co_await suspend_once{pending};
+    make_response(res, "done");
+  });
+  engine<request, response> value({}, routes, []() {}, []() {
+    throw std::runtime_error("observer failure");
+  });
+  std::string wire;
+  int closes = 0;
+  int completions = 0;
+  value.set_on_send([&](std::string_view head, std::string_view body,
+                         std::unique_ptr<reader>) {
+    wire.append(head).append(body);
+  });
+  value.set_on_close([&]() { closes++; });
+  constexpr std::string_view input = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
+  value.on_bytes_received(input.data(), input.size(), input.size());
+  const bool stopped = value.stop([&]() { ++completions; });
+  pending.resume();
+  DOBA_EXPECT(!stopped);
+  DOBA_EXPECT_EQUAL(completions, 1);
+  DOBA_EXPECT_EQUAL(closes, 0);
+  DOBA_EXPECT(wire.ends_with("\r\n\r\ndone"));
+}
+
+DOBA_TEST("engine retains queued response views without copying") {
+  router<request, response> routes;
+  std::coroutine_handle<> pending;
+  const char* expected_head = nullptr;
+  const char* expected_body = nullptr;
+  routes.add("GET", "/first", [&](const request&, response& res)
+                 -> task<void> {
+    co_await suspend_once{pending};
+    make_response(res, "first");
+  });
+  routes.add("GET", "/second", [&](const request&, response& res)
+      -> task<void> {
+    make_response(res, "second");
+    const auto preview = res.serialize();
+    expected_head = preview.head.data();
+    expected_body = preview.body.data();
+    make_response(res, "second");
+    co_return;
+  });
+  connection current(routes);
+  bool same_head = false;
+  bool same_body = false;
+  current.value.set_on_send(
+      [&](std::string_view head, std::string_view body,
+          std::unique_ptr<reader>) {
+        if (body == "second") {
+          same_head = head.data() == expected_head;
+          same_body = body.data() == expected_body;
+        }
+        current.wire.append(head).append(body);
+      });
+  current.receive("GET /first HTTP/1.1\r\nHost: a\r\n\r\n"
+                  "GET /second HTTP/1.1\r\nHost: b\r\n\r\n");
+  DOBA_EXPECT(current.wire.empty());
+  pending.resume();
+  DOBA_EXPECT(same_head);
+  DOBA_EXPECT(same_body);
+  DOBA_EXPECT(current.wire.ends_with("\r\n\r\nsecond"));
+}
+
+DOBA_TEST("engine reuses its single slot and returns buffers to the pool") {
+  router<request, response> routes;
+  const response* previous = nullptr;
+  const char* request_storage = nullptr;
+  bool same_slot = true;
+  int calls = 0;
+  routes.add("GET", "/", [&](const request& req, response& res)
+                 -> task<void> {
+    if (previous && previous != &res) same_slot = false;
+    previous = &res;
+    request_storage = req.get_method().data();
+    ++calls;
+    make_response(res, "done");
+    co_return;
+  });
+  policies configuration;
+  configuration.max_pending_requests = 1;
+  connection current(routes, configuration);
+  for (int index = 0; index < 8; ++index) {
+    current.receive("GET / HTTP/1.1\r\nHost: a\r\n\r\n");
+    DOBA_EXPECT_EQUAL(current.closes, 0);
+  }
+  DOBA_EXPECT(same_slot);
+  DOBA_EXPECT_EQUAL(calls, 8);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 8U);
+  using martianlabs::doba::protocol::http::v11::detail::buffer_pool;
+  auto returned = buffer_pool::acquire(configuration);
+  DOBA_EXPECT(returned->request.get() == request_storage);
+  buffer_pool::release(std::move(returned));
+}
+
+DOBA_TEST("engine retains an interim response after its final body arrives") {
+  router<request, response> routes;
+  std::coroutine_handle<> pending;
+  routes.add("GET", "/first", [&](const request&, response& res)
+                 -> task<void> {
+    co_await suspend_once{pending};
+    make_response(res, "first");
+  });
+  routes.add("POST", "/upload", [](const request& req, response& res)
+      -> task<void> {
+    res.ok_200().set_header("Date", "fixed").set_body(req.get_body_reader());
+    co_return;
+  });
+  connection current(routes);
+  const std::string input =
+      "GET /first HTTP/1.1\r\nHost: a\r\n\r\n"
+      "POST /upload HTTP/1.1\r\nHost: a\r\nExpect: 100-continue\r\n"
+      "Content-Length: 4\r\n\r\n";
+  DOBA_EXPECT_EQUAL(current.receive(input), input.size());
+  DOBA_EXPECT(current.wire.empty());
+  DOBA_EXPECT_EQUAL(current.receive("data"), 4U);
+  DOBA_EXPECT(current.wire.empty());
+  pending.resume();
+  const auto interim = current.wire.find("HTTP/1.1 100 Continue");
+  DOBA_EXPECT(interim != std::string::npos);
+  const auto final = current.wire.find("HTTP/1.1 200 OK", interim + 1);
+  DOBA_EXPECT(final != std::string::npos);
+  DOBA_EXPECT(current.wire.substr(0, interim).ends_with("\r\n\r\nfirst"));
+  DOBA_EXPECT(current.wire.substr(interim, final - interim)
+                  .starts_with("HTTP/1.1 100 Continue\r\n"));
+  DOBA_EXPECT(current.wire.substr(final).ends_with("\r\n\r\ndata"));
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 3U);
+}
+
+DOBA_TEST("engine alternates external completions and immediate batches") {
+  router<request, response> routes;
+  std::coroutine_handle<> pending;
+  routes.add("GET", "/wait", [&](const request&, response& res)
+                 -> task<void> {
+    co_await suspend_once{pending};
+    make_response(res, "wait");
+  });
+  routes.add("GET", "/now", [](const request&, response& res)
+                 -> task<void> {
+    make_response(res, "now");
+    co_return;
+  });
+  connection current(routes);
+  const std::string now = "GET /now HTTP/1.1\r\nHost: a\r\n\r\n";
+  for (int index = 0; index < 32; ++index) {
+    current.wire.clear();
+    current.receive("GET /wait HTTP/1.1\r\nHost: a\r\n\r\n" + now);
+    DOBA_EXPECT(current.wire.empty());
+    {
+      std::jthread resumer([&]() { pending.resume(); });
+    }
+    const auto second = current.wire.find("HTTP/1.1", 1);
+    DOBA_EXPECT(second != std::string::npos);
+    DOBA_EXPECT(current.wire.substr(0, second).ends_with("\r\n\r\nwait"));
+    DOBA_EXPECT(current.wire.ends_with("\r\n\r\nnow"));
+    current.wire.clear();
+    DOBA_EXPECT_EQUAL(current.receive(now + now), 2 * now.size());
+    DOBA_EXPECT(current.wire.ends_with("\r\n\r\nnow"));
+    DOBA_EXPECT_EQUAL(current.closes, 0);
+  }
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 128U);
+}
+
+DOBA_TEST("engine stop completes the admitted batch before closing admission") {
+  router<request, response> routes;
+  std::promise<void> entered;
+  auto running = entered.get_future();
+  std::promise<void> release;
+  auto released = release.get_future();
+  int calls = 0;
+  routes.add("GET", "/", [&](const request&, response& res)
+                 -> task<void> {
+    if (++calls == 1) {
+      entered.set_value();
+      released.wait();
+    }
+    make_response(res, calls == 1 ? "first" : "second");
+    co_return;
+  });
+  connection current(routes);
+  const std::string input = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
+  std::size_t consumed = 0;
+  std::jthread receiver([&]() { consumed = current.receive(input + input); });
+  running.wait();
+  std::atomic<int> completions{0};
+  bool after_batch = false;
+  const bool stopped = current.value.stop([&]() {
+    after_batch = current.wire.ends_with("\r\n\r\nsecond");
+    ++completions;
+  });
+  const auto before_release = completions.load();
+  release.set_value();
+  receiver.join();
+  DOBA_EXPECT(!stopped);
+  DOBA_EXPECT_EQUAL(before_release, 0);
+  DOBA_EXPECT_EQUAL(completions.load(), 1);
+  DOBA_EXPECT(after_batch);
+  DOBA_EXPECT_EQUAL(consumed, 2 * input.size());
+  DOBA_EXPECT_EQUAL(calls, 2);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 2U);
+  DOBA_EXPECT_EQUAL(current.receive(input), input.size());
+  DOBA_EXPECT_EQUAL(calls, 2);
+}
+
+DOBA_TEST("engine retains parameter references through external completion") {
+  router<request, response> routes;
+  std::coroutine_handle<> first;
+  std::coroutine_handle<> second;
+  bool metadata_valid = true;
+  routes.add("GET", "/item/:name",
+             [&](const request& req, response& res, const std::string& name)
+                 -> task<void> {
+    if (name == "first") {
+      co_await suspend_once{first};
+    } else {
+      co_await suspend_once{second};
+    }
+    metadata_valid = metadata_valid &&
+                     req.get_header("X-Name").second == name &&
+                     req.get_query_parameter("name")->second == name;
+    make_response(res, name);
+  });
+  connection current(routes);
+  current.receive("GET /item/first?name=first HTTP/1.1\r\nHost: localhost\r\n"
+                  "X-Name: first\r\n\r\n"
+                  "GET /item/second?name=second HTTP/1.1\r\nHost: localhost\r\n"
+                  "X-Name: second\r\n\r\n");
+  std::jthread later([&]() { second.resume(); });
+  later.join();
+  DOBA_EXPECT(current.wire.empty());
+  std::jthread earlier([&]() { first.resume(); });
+  earlier.join();
+  DOBA_EXPECT(metadata_valid);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 2);
+  DOBA_EXPECT(current.wire.find("first") < current.wire.find("second"));
 }

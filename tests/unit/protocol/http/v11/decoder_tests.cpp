@@ -29,6 +29,7 @@
 #include <filesystem>
 #include <functional>
 #include <optional>
+#include <memory>
 #include <stdexcept>
 #include <charconv>
 #include <cstddef>
@@ -89,7 +90,19 @@ struct decoder_input {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   explicit decoder_input(policies configuration = {})
-      : decoder{configuration} {}
+      : request_storage{std::make_unique_for_overwrite<char[]>(
+            configuration.request_head_buffer_capacity +
+            configuration.request_body_inline_capacity)},
+        response_storage{std::make_unique_for_overwrite<char[]>(
+            configuration.response_head_buffer_capacity +
+            configuration.response_body_inline_capacity)},
+        decoder{configuration,
+                {request_storage.get(),
+                 configuration.request_head_buffer_capacity +
+                     configuration.request_body_inline_capacity},
+                {response_storage.get(),
+                 configuration.response_head_buffer_capacity +
+                     configuration.response_body_inline_capacity}} {}
   // +=========================================================================+
   // | [>] append                                                   ( public ) |
   // +-------------------------------------------------------------------------+
@@ -121,6 +134,8 @@ struct decoder_input {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
+  std::unique_ptr<char[]> request_storage;
+  std::unique_ptr<char[]> response_storage;
   martianlabs::doba::protocol::http::v11::decoder<request, response> decoder;
   std::function<void(const request&)> on_request;
   bool request_seen = false;
@@ -249,16 +264,26 @@ void check_header(std::string_view name, std::string_view field_value,
 }
 }  // namespace
 
-DOBA_TEST("detached decoder storage keeps an asynchronous request valid") {
+DOBA_TEST("external decoder storage keeps an asynchronous request valid") {
   decoder_input value;
   const std::string first =
       "POST /fi%72st?token=old HTTP/1.1\r\nHost: localhost\r\n"
       "X-Id: retained\r\nContent-Length: 4\r\n"
       "\r\ndata";
   DOBA_EXPECT_EQUAL(value.append(first), first.size());
+  std::unique_ptr<char[]> storage;
   auto original = value.decode();
   DOBA_EXPECT_EQUAL(original.code, deserialization_status::kSucceeded);
-  auto storage = value.decoder.take_request_storage();
+  storage = std::move(value.request_storage);
+  const auto& configuration = value.decoder.configuration();
+  const auto capacity = configuration.request_head_buffer_capacity +
+                        configuration.request_body_inline_capacity;
+  value.request_storage = std::make_unique_for_overwrite<char[]>(capacity);
+  value.decoder.set_storage(
+      {value.request_storage.get(), capacity},
+      {value.response_storage.get(),
+       configuration.response_head_buffer_capacity +
+           configuration.response_body_inline_capacity});
   const std::string second = "GET /second HTTP/1.1\r\nHost: next\r\n\r\n";
   DOBA_EXPECT_EQUAL(value.append(second), second.size());
   auto following = value.decode();
@@ -277,13 +302,14 @@ DOBA_TEST("detached decoder storage keeps an asynchronous request valid") {
       "data");
 }
 
-DOBA_TEST("detached request keeps a spilled body readable") {
+DOBA_TEST("external request storage keeps a spilled body readable") {
   decoder_input value;
   const std::string body(16 * 1024 + 1, 'x');
   const std::string head =
       "POST /spilled HTTP/1.1\r\nHost: localhost\r\nContent-Length: " +
       std::to_string(body.size()) + "\r\n\r\n";
   const std::string wire = head + body;
+  std::unique_ptr<char[]> storage;
   std::optional<request> held;
   std::size_t offset = 0;
   while (offset < wire.size()) {
@@ -292,7 +318,16 @@ DOBA_TEST("detached request keeps a spilled body readable") {
     if (result.request) held.emplace(std::move(*result.request));
   }
   DOBA_EXPECT(held.has_value());
-  auto storage = value.decoder.take_request_storage();
+  storage = std::move(value.request_storage);
+  const auto& configuration = value.decoder.configuration();
+  const auto capacity = configuration.request_head_buffer_capacity +
+                        configuration.request_body_inline_capacity;
+  value.request_storage = std::make_unique_for_overwrite<char[]>(capacity);
+  value.decoder.set_storage(
+      {value.request_storage.get(), capacity},
+      {value.response_storage.get(),
+       configuration.response_head_buffer_capacity +
+           configuration.response_body_inline_capacity});
   const std::string next = "GET /next HTTP/1.1\r\nHost: next\r\n\r\n";
   DOBA_EXPECT_EQUAL(value.append(next), next.size());
   DOBA_EXPECT_EQUAL(value.decode().code, deserialization_status::kSucceeded);
@@ -319,7 +354,8 @@ DOBA_TEST("decoder is neither copyable nor movable") {
 // | [>] empty input and full receive buffer                     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("empty input needs more bytes and full incomplete cores fail") {
-  decoder<request, response> value;
+  decoder_input input;
+  auto& value = input.decoder;
   std::size_t consumed = 42;
   const std::string source(receive_capacity, 'x');
   DOBA_EXPECT_EQUAL(value
@@ -347,7 +383,8 @@ DOBA_TEST("request head may fill default receive buffer") {
       std::string(prefix) +
       std::string(capacity - prefix.size() - suffix.size(), 'x') +
       std::string(suffix);
-  decoder<request, response> value;
+  decoder_input input;
+  auto& value = input.decoder;
   std::size_t consumed = 0;
   const auto result =
       value.deserialize(head.data(), head.size(), capacity, consumed);
@@ -364,7 +401,8 @@ DOBA_TEST("incomplete head fails at default receive capacity") {
   constexpr std::string_view prefix = "GET / HTTP/1.1\r\nHost: a\r\nX: ";
   const std::string head =
       std::string(prefix) + std::string(capacity - prefix.size(), 'x');
-  decoder<request, response> value;
+  decoder_input input;
+  auto& value = input.decoder;
   std::size_t consumed = 0;
   const auto result =
       value.deserialize(head.data(), head.size(), capacity, consumed);
@@ -397,7 +435,8 @@ DOBA_TEST("request head size is bounded by receive capacity") {
           std::string(size - test.prefix.size() - test.tail.size(), test.fill) +
           std::string(test.tail);
       DOBA_EXPECT_EQUAL(head.size(), size);
-      decoder<request, response> value;
+      decoder_input input;
+      auto& value = input.decoder;
       std::size_t consumed = 0;
       const std::size_t received = std::min(size, capacity);
       auto result =
@@ -434,7 +473,8 @@ DOBA_TEST("header field count is bounded only by head size") {
   head += "\r\n";
   DOBA_EXPECT(head.size() <= capacity);
   DOBA_EXPECT(fields > 100);
-  decoder<request, response> value;
+  decoder_input input;
+  auto& value = input.decoder;
   std::size_t consumed = 0;
   const auto result =
       value.deserialize(head.data(), head.size(), capacity, consumed);
@@ -452,7 +492,8 @@ DOBA_TEST("request body spans default receive buffers") {
   const std::string body(capacity + 1, 'x');
   const std::size_t first_body_size = capacity - head.size();
   const std::string first = head + body.substr(0, first_body_size);
-  decoder<request, response> value;
+  decoder_input input;
+  auto& value = input.decoder;
   std::size_t consumed = 0;
   auto result =
       value.deserialize(first.data(), first.size(), capacity, consumed);
@@ -3137,7 +3178,8 @@ DOBA_TEST("decoder returns responses for rejection reasons") {
        "501"},
       {"GET / HTTP/1.2\r\nHost: a\r\n\r\n", "505"}};
   for (const auto& [input, status] : cases) {
-    decoder<request, response> value(configuration);
+    decoder_input storage(configuration);
+    auto& value = storage.decoder;
     std::size_t consumed = 0;
     auto result =
         value.deserialize(input.data(), input.size(), 4096, consumed);
@@ -3484,7 +3526,7 @@ DOBA_TEST("decoder rejects zero head capacities") {
     }
     bool rejected = false;
     try {
-      decoder<request, response> value(configuration);
+      decoder<request, response> value(configuration, {}, {});
     } catch (const std::invalid_argument&) {
       rejected = true;
     }
@@ -3514,5 +3556,85 @@ DOBA_TEST("decoder applies configured chunk extension and trailer limits") {
                         limit ? deserialization_status::kInvalidSource
                               : deserialization_status::kSucceeded);
     }
+  }
+}
+
+DOBA_TEST("decoder rejects short storage without replacing its views") {
+  decoder_input storage;
+  auto& value = storage.decoder;
+  const auto& configuration = value.configuration();
+  const auto request_capacity = configuration.request_head_buffer_capacity +
+                                configuration.request_body_inline_capacity;
+  const auto response_capacity = configuration.response_head_buffer_capacity +
+                                 configuration.response_body_inline_capacity;
+  for (const bool short_request : {false, true}) {
+    const std::span<char> request_storage{
+        storage.request_storage.get(),
+        request_capacity - (short_request ? 1 : 0)};
+    const std::span<char> response_storage{
+        storage.response_storage.get(),
+        response_capacity - (short_request ? 0 : 1)};
+    bool rejected = false;
+    try {
+      decoder<request, response> invalid(configuration, request_storage,
+                                          response_storage);
+    } catch (const std::invalid_argument&) {
+      rejected = true;
+    }
+    DOBA_EXPECT(rejected);
+    rejected = false;
+    try {
+      value.set_storage(request_storage, response_storage);
+    } catch (const std::invalid_argument&) {
+      rejected = true;
+    }
+    DOBA_EXPECT(rejected);
+    const std::string input = "GET /stable HTTP/1.1\r\nHost: a\r\n\r\n";
+    DOBA_EXPECT_EQUAL(storage.append(input), input.size());
+    auto result = storage.decode();
+    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+    DOBA_EXPECT_EQUAL(result.request->get_absolute_path(), "/stable");
+  }
+}
+
+DOBA_TEST("external request and response storage outlive the decoder") {
+  for (const bool chunked : {false, true}) {
+    const policies configuration;
+    std::array<char, policies::kDefaultRequestHeadBufferCapacity +
+                         policies::kDefaultRequestBodyInlineCapacity>
+        request_storage;
+    std::array<char, policies::kDefaultResponseHeadBufferCapacity +
+                         policies::kDefaultResponseBodyInlineCapacity>
+        response_storage;
+    std::optional<request> retained;
+    std::optional<response> reply;
+    {
+      decoder<request, response> value(configuration, request_storage,
+                                        response_storage);
+      const std::string input =
+          "POST /stable?key=old HTTP/1.1\r\nHost: a\r\nX-Id: retained\r\n" +
+          std::string(chunked ? "Transfer-Encoding: chunked\r\n\r\n"
+                                 "4\r\ndata\r\n0\r\n\r\n"
+                             : "Content-Length: 4\r\n\r\ndata");
+      std::size_t consumed = 0;
+      auto result = value.deserialize(input.data(), input.size(), input.size(),
+                                        consumed);
+      DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+      retained.emplace(std::move(*result.request));
+      reply.emplace(value.make_response(response_storage));
+      reply->ok_200().set_body("stable");
+    }
+    DOBA_EXPECT_EQUAL(retained->get_absolute_path(), "/stable");
+    DOBA_EXPECT_EQUAL(retained->get_header("X-Id").second, "retained");
+    DOBA_EXPECT_EQUAL(retained->get_query_parameter("key")->second, "old");
+    std::array<std::byte, 4> output{};
+    const auto state = retained->get_body_reader()->read(output);
+    DOBA_EXPECT(state.complete);
+    DOBA_EXPECT_EQUAL(state.produced, output.size());
+    DOBA_EXPECT_EQUAL(
+        std::string_view(reinterpret_cast<const char*>(output.data()), 4),
+        "data");
+    auto serialized = reply->serialize();
+    DOBA_EXPECT(wire_prefix(serialized).ends_with("\r\n\r\nstable"));
   }
 }

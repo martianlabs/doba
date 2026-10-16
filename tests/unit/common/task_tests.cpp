@@ -24,6 +24,10 @@
 
 #include <chrono>
 #include <coroutine>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <new>
 #include <exception>
 #include <memory>
 #include <stdexcept>
@@ -111,9 +115,12 @@ DOBA_TEST("task starts lazily and completes after resumption") {
   auto value = run(next, steps);
   DOBA_EXPECT_EQUAL(steps, 0);
   auto moved = std::move(value);
-  moved.start([&](std::exception_ptr error) {
+  auto completion = [&](std::exception_ptr error) {
     DOBA_EXPECT(!error);
     completed = true;
+  };
+  moved.start(&completion, [](void* context, std::exception_ptr error) {
+    (*static_cast<decltype(completion)*>(context))(error);
   });
   DOBA_EXPECT_EQUAL(steps, 1);
   DOBA_EXPECT(!completed);
@@ -125,13 +132,16 @@ DOBA_TEST("task starts lazily and completes after resumption") {
 DOBA_TEST("task reports coroutine exceptions") {
   bool completed = false;
   auto value = fail();
-  value.start([&](std::exception_ptr error) {
+  auto completion = [&](std::exception_ptr error) {
     DOBA_EXPECT(static_cast<bool>(error));
     try {
       std::rethrow_exception(error);
     } catch (const std::runtime_error&) {
       completed = true;
     }
+  };
+  value.start(&completion, [](void* context, std::exception_ptr error) {
+    (*static_cast<decltype(completion)*>(context))(error);
   });
   DOBA_EXPECT(completed);
 }
@@ -155,10 +165,13 @@ DOBA_TEST("task completes once on a different resuming thread") {
   int completions = 0;
   std::thread::id completed_on;
   auto value = fail_after(next);
-  value.start([&](std::exception_ptr error) {
+  auto completion = [&](std::exception_ptr error) {
     completions++;
     completed_on = std::this_thread::get_id();
     DOBA_EXPECT(static_cast<bool>(error));
+  };
+  value.start(&completion, [](void* context, std::exception_ptr error) {
+    (*static_cast<decltype(completion)*>(context))(error);
   });
   DOBA_EXPECT_EQUAL(completions, 0);
   std::jthread worker([&]() { next.resume(); });
@@ -184,9 +197,12 @@ DOBA_TEST("task yields and sleeps through its scheduler") {
   int steps = 0;
   bool completed = false;
   auto value = use_scheduler(steps);
-  value.start([&](std::exception_ptr error) {
+  auto completion = [&](std::exception_ptr error) {
     DOBA_EXPECT(!error);
     completed = true;
+  };
+  value.start(&completion, [](void* context, std::exception_ptr error) {
+    (*static_cast<decltype(completion)*>(context))(error);
   }, scheduler);
   DOBA_EXPECT_EQUAL(steps, 1);
   DOBA_EXPECT(static_cast<bool>(handles.ready));
@@ -204,9 +220,12 @@ DOBA_TEST("task skips zero sleep without a scheduler") {
   int steps = 0;
   int completions = 0;
   auto value = immediate_sleep(steps);
-  value.start([&](std::exception_ptr error) {
+  auto completion = [&](std::exception_ptr error) {
     DOBA_EXPECT(!error);
     completions++;
+  };
+  value.start(&completion, [](void* context, std::exception_ptr error) {
+    (*static_cast<decltype(completion)*>(context))(error);
   });
   DOBA_EXPECT_EQUAL(steps, 2);
   DOBA_EXPECT_EQUAL(completions, 1);
@@ -216,7 +235,7 @@ DOBA_TEST("task reports a missing scheduler for yield and sleep") {
   for (bool timed : {false, true}) {
     int completions = 0;
     auto value = without_scheduler(timed);
-    value.start([&](std::exception_ptr error) {
+    auto completion = [&](std::exception_ptr error) {
       DOBA_EXPECT(static_cast<bool>(error));
       try {
         std::rethrow_exception(error);
@@ -225,7 +244,184 @@ DOBA_TEST("task reports a missing scheduler for yield and sleep") {
                           "No task scheduler");
       }
       completions++;
+    };
+    value.start(&completion, [](void* context, std::exception_ptr error) {
+      (*static_cast<decltype(completion)*>(context))(error);
     });
     DOBA_EXPECT_EQUAL(completions, 1);
   }
+}
+
+DOBA_TEST("task recycles frames after completion") {
+  std::coroutine_handle<> next;
+  int steps = 0;
+  auto first = run(next, steps);
+  first.start(nullptr, nullptr);
+  const auto address = next.address();
+  next.resume();
+  auto second = run(next, steps);
+  second.start(nullptr, nullptr);
+  DOBA_EXPECT(next.address() == address);
+  next.resume();
+  DOBA_EXPECT_EQUAL(steps, 4);
+}
+
+DOBA_TEST("task frame storage preserves size and alignment") {
+  using promise = task<void>::promise_type;
+  auto* small = promise::operator new(37);
+  auto* large = promise::operator new(4097);
+  DOBA_EXPECT(small != large);
+  DOBA_EXPECT_EQUAL(reinterpret_cast<std::uintptr_t>(small) %
+                        __STDCPP_DEFAULT_NEW_ALIGNMENT__,
+                    0u);
+  DOBA_EXPECT_EQUAL(reinterpret_cast<std::uintptr_t>(large) %
+                        __STDCPP_DEFAULT_NEW_ALIGNMENT__,
+                    0u);
+  static_cast<std::byte*>(small)[36] = std::byte{1};
+  static_cast<std::byte*>(large)[4096] = std::byte{2};
+  promise::operator delete(small);
+  promise::operator delete(large);
+  auto* reused_small = promise::operator new(37);
+  auto* reused_large = promise::operator new(4097);
+  DOBA_EXPECT(reused_small == small);
+  DOBA_EXPECT(reused_large == large);
+  promise::operator delete(reused_small);
+  promise::operator delete(reused_large);
+}
+
+DOBA_TEST("task frame allocation rejects size overflow") {
+  bool failed = false;
+  try {
+    auto* storage = task<void>::promise_type::operator new(
+        std::numeric_limits<std::size_t>::max());
+    task<void>::promise_type::operator delete(storage);
+  } catch (const std::bad_alloc&) {
+    failed = true;
+  }
+  DOBA_EXPECT(failed);
+}
+
+DOBA_TEST("task returns frames to the resuming thread") {
+  std::coroutine_handle<> next;
+  int steps = 0;
+  int completions = 0;
+  auto value = run(next, steps);
+  value.start(&completions, [](void* owner, std::exception_ptr error) {
+    DOBA_EXPECT(!error);
+    ++*static_cast<int*>(owner);
+  });
+  const auto address = next.address();
+  bool reused = false;
+  std::jthread worker([&]() {
+    next.resume();
+    auto second = run(next, steps);
+    second.start(&completions, [](void* owner, std::exception_ptr error) {
+      DOBA_EXPECT(!error);
+      ++*static_cast<int*>(owner);
+    });
+    reused = next.address() == address;
+    next.resume();
+  });
+  worker.join();
+  DOBA_EXPECT(reused);
+  DOBA_EXPECT_EQUAL(steps, 4);
+  DOBA_EXPECT_EQUAL(completions, 2);
+}
+
+DOBA_TEST("task context completion reports immediate and suspended errors") {
+  for (bool suspended : {false, true}) {
+    std::coroutine_handle<> next;
+    int completions = 0;
+    auto value = suspended ? fail_after(next) : fail();
+    value.start(&completions, [](void* owner, std::exception_ptr error) {
+      DOBA_EXPECT(static_cast<bool>(error));
+      ++*static_cast<int*>(owner);
+    });
+    DOBA_EXPECT_EQUAL(completions, suspended ? 0 : 1);
+    if (suspended) next.resume();
+    DOBA_EXPECT_EQUAL(completions, 1);
+  }
+}
+
+DOBA_TEST("task context completion contains callback exceptions") {
+  int steps = 0;
+  int completions = 0;
+  auto value = immediate_sleep(steps);
+  value.start(&completions, [](void* owner, std::exception_ptr error) {
+    DOBA_EXPECT(!error);
+    ++*static_cast<int*>(owner);
+    throw std::runtime_error("completion failure");
+  });
+  DOBA_EXPECT_EQUAL(steps, 2);
+  DOBA_EXPECT_EQUAL(completions, 1);
+}
+
+DOBA_TEST("task completion borrows caller owned context") {
+  auto owner = std::make_shared<int>(0);
+  std::weak_ptr<int> retained = owner;
+  std::coroutine_handle<> next;
+  int steps = 0;
+  auto value = run(next, steps);
+  value.start(owner.get(), [](void* context, std::exception_ptr error) {
+    DOBA_EXPECT(!error);
+    ++*static_cast<int*>(context);
+  });
+  DOBA_EXPECT_EQUAL(owner.use_count(), 1);
+  next.resume();
+  DOBA_EXPECT_EQUAL(*owner, 1);
+  DOBA_EXPECT_EQUAL(owner.use_count(), 1);
+  owner.reset();
+  DOBA_EXPECT(retained.expired());
+}
+
+DOBA_TEST("task survives allocation thread exit before completion") {
+  std::coroutine_handle<> next;
+  int steps = 0;
+  int completions = 0;
+  {
+    std::jthread worker([&]() {
+      auto value = run(next, steps);
+      value.start(&completions, [](void* owner, std::exception_ptr error) {
+        DOBA_EXPECT(!error);
+        ++*static_cast<int*>(owner);
+      });
+    });
+  }
+  DOBA_EXPECT_EQUAL(steps, 1);
+  DOBA_EXPECT_EQUAL(completions, 0);
+  next.resume();
+  DOBA_EXPECT_EQUAL(steps, 2);
+  DOBA_EXPECT_EQUAL(completions, 1);
+}
+
+DOBA_TEST("task context completion uses its scheduler") {
+  scheduled_handles handles;
+  task_scheduler scheduler{
+      &handles,
+      [](void* owner, std::coroutine_handle<> handle) {
+        static_cast<scheduled_handles*>(owner)->ready = handle;
+      },
+      [](void* owner, std::chrono::steady_clock::time_point due,
+         std::coroutine_handle<> handle) {
+        auto& state = *static_cast<scheduled_handles*>(owner);
+        state.due = due;
+        state.timed = handle;
+      }};
+  int steps = 0;
+  int completions = 0;
+  auto value = use_scheduler(steps);
+  value.start(&completions, [](void* owner, std::exception_ptr error) {
+    DOBA_EXPECT(!error);
+    ++*static_cast<int*>(owner);
+  }, scheduler);
+  DOBA_EXPECT_EQUAL(steps, 1);
+  DOBA_EXPECT_EQUAL(completions, 0);
+  DOBA_EXPECT(static_cast<bool>(handles.ready));
+  handles.ready.resume();
+  DOBA_EXPECT_EQUAL(steps, 2);
+  DOBA_EXPECT_EQUAL(completions, 0);
+  DOBA_EXPECT(static_cast<bool>(handles.timed));
+  handles.timed.resume();
+  DOBA_EXPECT_EQUAL(steps, 3);
+  DOBA_EXPECT_EQUAL(completions, 1);
 }

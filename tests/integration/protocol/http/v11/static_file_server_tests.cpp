@@ -33,6 +33,7 @@
 
 #include "common/filesystem.h"
 #include "common/reader.h"
+#include "common/task.h"
 #include "http_server.h"
 #include "protocol/http/v11/static_file_server.h"
 #include "http_test_helper.h"
@@ -41,6 +42,7 @@
 #include "test_helper.h"
 
 namespace {
+using martianlabs::doba::common::task;
 using martianlabs::doba::tests::file_directory;
 namespace fs = std::filesystem;
 using martianlabs::doba::common::filesystem_file;
@@ -69,10 +71,11 @@ DOBA_TEST("HTTP static files preserve binary framing and HEAD") {
   http_server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_controller<static_file_server>("/assets", first.path());
   value.add_controller<static_file_server>("/other", second.path());
-  value.add_route("GET", "/assets/override", [](const request&, response& res) {
+  value.add_route("GET", "/assets/override", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     res.set_body("application");
-    return;
+    co_return;
   });
   value.start();
   DOBA_EXPECT(client.connect(port));

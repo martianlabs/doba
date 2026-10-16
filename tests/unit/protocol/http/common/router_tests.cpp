@@ -92,6 +92,27 @@ struct route_only_router {
 static_assert(martianlabs::doba::protocol::http::v11::contracts::router<
               route_only_router, request, router_value_response>);
 
+void invoke(const router_match_result<request, router_value_response>& match,
+            const request& req, router_value_response& res,
+            std::string_view path = {}) {
+  martianlabs::doba::protocol::http::detail::
+      router_parameter_storage parameters;
+  auto work = match.handler ? (*match.handler)(req, res)
+                            : match.parametrized_handler->invoke(
+                                  req, res, path, parameters);
+  bool completed = false;
+  std::exception_ptr error;
+  auto completion = [&](std::exception_ptr result) {
+    error = result;
+    completed = true;
+  };
+  work.start(&completion, [](void* context, std::exception_ptr error) {
+    (*static_cast<decltype(completion)*>(context))(error);
+  });
+  if (error) std::rethrow_exception(error);
+  if (!completed) throw std::runtime_error("Route handler did not complete");
+}
+
 struct suspend_once {
   std::coroutine_handle<>& next;
   bool await_ready() const noexcept { return false; }
@@ -123,21 +144,28 @@ DOBA_TEST("router selects asynchronous route forms") {
   request req;
   router_value_response res;
   auto match = value.match("GET", "/items/42");
-  DOBA_EXPECT(match.async_handler != nullptr);
-  auto selected = (*match.async_handler)(req, res);
-  selected.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  DOBA_EXPECT(match.handler != nullptr);
+  auto selected = (*match.handler)(req, res);
+  selected.start(nullptr, [](void*, std::exception_ptr error) {
+    DOBA_EXPECT(!error);
+  });
   DOBA_EXPECT_EQUAL(res.value, "static");
   match = value.match("GET", "/items/7");
-  DOBA_EXPECT(match.async_parametrized_handler != nullptr);
-  std::shared_ptr<void> parameters;
-  auto parametrized = match.async_parametrized_handler->invoke(
+  DOBA_EXPECT(match.parametrized_handler != nullptr);
+  martianlabs::doba::protocol::http::detail::
+      router_parameter_storage parameters;
+  auto parametrized = match.parametrized_handler->invoke(
       req, res, "/items/7", parameters);
-  parametrized.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  parametrized.start(nullptr, [](void*, std::exception_ptr error) {
+    DOBA_EXPECT(!error);
+  });
   DOBA_EXPECT_EQUAL(res.value, "7");
   match = value.match("GET", "/items/name/extra");
-  DOBA_EXPECT(match.async_handler != nullptr);
-  auto wildcard = (*match.async_handler)(req, res);
-  wildcard.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  DOBA_EXPECT(match.handler != nullptr);
+  auto wildcard = (*match.handler)(req, res);
+  wildcard.start(nullptr, [](void*, std::exception_ptr error) {
+    DOBA_EXPECT(!error);
+  });
   DOBA_EXPECT_EQUAL(res.value, "wildcard");
 }
 
@@ -152,12 +180,15 @@ DOBA_TEST("asynchronous route parameters survive suspension") {
             });
   request req;
   router_value_response res;
-  std::shared_ptr<void> parameters;
+  martianlabs::doba::protocol::http::detail::
+      router_parameter_storage parameters;
   auto match = value.match("GET", "/items/example");
-  DOBA_EXPECT(match.async_parametrized_handler != nullptr);
-  auto work = match.async_parametrized_handler->invoke(
+  DOBA_EXPECT(match.parametrized_handler != nullptr);
+  auto work = match.parametrized_handler->invoke(
       req, res, "/items/example", parameters);
-  work.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  work.start(nullptr, [](void*, std::exception_ptr error) {
+    DOBA_EXPECT(!error);
+  });
   DOBA_EXPECT(res.value.empty());
   next.resume();
   DOBA_EXPECT_EQUAL(res.value, "example");
@@ -165,8 +196,10 @@ DOBA_TEST("asynchronous route parameters survive suspension") {
 
 DOBA_TEST("router preserves precedence across execution models") {
   router<request, router_value_response> value;
-  value.add("GET", "/items/*", [](const request&, router_value_response& res) {
+  value.add("GET", "/items/*", [](const request&, router_value_response& res)
+      -> task<void> {
     res.value = "wildcard";
+    co_return;
   });
   value.add(
       "GET", "/items/:id",
@@ -174,13 +207,17 @@ DOBA_TEST("router preserves precedence across execution models") {
         res.value = std::to_string(id);
         co_return;
       });
-  value.add("GET", "/items/42", [](const request&, router_value_response& res) {
+  value.add("GET", "/items/42", [](const request&, router_value_response& res)
+      -> task<void> {
     res.value = "static";
+    co_return;
   });
   value.add("POST", "/items/:id",
-            [](const request&, router_value_response&, int) {});
+            [](const request&, router_value_response&, int) -> task<void> {
+                            co_return;
+            });
   DOBA_EXPECT(value.match("GET", "/items/42").handler != nullptr);
-  DOBA_EXPECT(value.match("GET", "/items/7").async_parametrized_handler !=
+  DOBA_EXPECT(value.match("GET", "/items/7").parametrized_handler !=
               nullptr);
   DOBA_EXPECT(value.match("GET", "/items/name").handler != nullptr);
   DOBA_EXPECT_EQUAL(value.allowed_methods("/items/7"), "GET, POST");
@@ -209,16 +246,18 @@ DOBA_TEST("match returns handler without executing it") {
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/items")));
   bool invoked = false;
   value.add("GET", "/items",
-            [&invoked](const request&, router_value_response& res) {
+            [&invoked](const request&, router_value_response& res)
+                -> task<void> {
               invoked = true;
               res.value = "matched";
+              co_return;
             });
   auto match = value.match("GET", "/items");
   DOBA_EXPECT(static_cast<bool>(match));
   DOBA_EXPECT(!invoked);
   request req;
   router_value_response res;
-  match.handler->operator()(req, res);
+  invoke(match, req, res);
   DOBA_EXPECT(invoked);
   DOBA_EXPECT_EQUAL(res.value, "matched");
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/Items")));
@@ -229,7 +268,9 @@ DOBA_TEST("match returns handler without executing it") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("static routes use exact path matching") {
   router<request, router_value_response> value;
-  auto handler = [](const request&, router_value_response&) {};
+  auto handler = [](const request&, router_value_response&) -> task<void> {
+    co_return;
+  };
   value.add("GET", "/assets", handler);
   DOBA_EXPECT(static_cast<bool>(value.match("GET", "/assets")));
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/assets/a")));
@@ -242,9 +283,11 @@ DOBA_TEST("wildcard routes match their prefix") {
   router<request, router_value_response> value;
   bool invoked = false;
   value.add("GET", "/assets/*",
-            [&invoked](const request&, router_value_response& res) {
+            [&invoked](const request&, router_value_response& res)
+                -> task<void> {
               invoked = true;
               res.value = "wildcard";
+              co_return;
             });
   constexpr std::string_view matching[] = {
       "/assets/",
@@ -259,7 +302,7 @@ DOBA_TEST("wildcard routes match their prefix") {
   DOBA_EXPECT(!invoked);
   request req;
   router_value_response res;
-  value.match("GET", "/assets/a").handler->operator()(req, res);
+  invoke(value.match("GET", "/assets/a"), req, res);
   DOBA_EXPECT(invoked);
   DOBA_EXPECT_EQUAL(res.value, "wildcard");
   DOBA_EXPECT(!static_cast<bool>(value.match("GET", "/assets")));
@@ -271,11 +314,15 @@ DOBA_TEST("wildcard routes match their prefix") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("protected routes resist lookalike paths and methods") {
   router<request, router_value_response> value;
-  auto handler = [](const request&, router_value_response&) {};
+  auto handler = [](const request&, router_value_response&) -> task<void> {
+    co_return;
+  };
   value.add("GET", "/admin", handler);
   value.add("GET", "/private/*", handler);
   value.add("GET", "/user/:id",
-            [](const request&, router_value_response&, int) {});
+            [](const request&, router_value_response&, int) -> task<void> {
+                            co_return;
+            });
   const std::string nul_admin("/admin\0x", 7);
   const std::string_view paths[] = {
       "/admin/",   "/admin/x",  "/adminx",  "/Admin",     "/ADMIN",
@@ -300,18 +347,21 @@ DOBA_TEST("protected routes resist lookalike paths and methods") {
 DOBA_TEST("static routes take precedence over parametrized routes") {
   router<request, router_value_response> value;
   value.add("GET", "/items/:id",
-            [](const request&, router_value_response& res, int) {
+            [](const request&, router_value_response& res, int) -> task<void> {
               res.value = "parametrized";
+              co_return;
             });
-  value.add("GET", "/items/42", [](const request&, router_value_response& res) {
+  value.add("GET", "/items/42", [](const request&, router_value_response& res)
+      -> task<void> {
     res.value = "static";
+    co_return;
   });
   auto match = value.match("GET", "/items/42");
   DOBA_EXPECT(match.handler != nullptr);
   DOBA_EXPECT(match.parametrized_handler == nullptr);
   request req;
   router_value_response res;
-  match.handler->operator()(req, res);
+  invoke(match, req, res);
   DOBA_EXPECT_EQUAL(res.value, "static");
 }
 
@@ -320,26 +370,31 @@ DOBA_TEST("static routes take precedence over parametrized routes") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("route precedence ends with wildcard routes") {
   router<request, router_value_response> value;
-  value.add("GET", "/items/*", [](const request&, router_value_response& res) {
+  value.add("GET", "/items/*", [](const request&, router_value_response& res)
+      -> task<void> {
     res.value = "wildcard";
+    co_return;
   });
   value.add("GET", "/items/:id",
-            [](const request&, router_value_response& res, int) {
+            [](const request&, router_value_response& res, int) -> task<void> {
               res.value = "parametrized";
+              co_return;
             });
-  value.add("GET", "/items/42", [](const request&, router_value_response& res) {
+  value.add("GET", "/items/42", [](const request&, router_value_response& res)
+      -> task<void> {
     res.value = "static";
+    co_return;
   });
   request req;
   router_value_response res;
   auto match = value.match("GET", "/items/42");
-  match.handler->operator()(req, res);
+  invoke(match, req, res);
   DOBA_EXPECT_EQUAL(res.value, "static");
   match = value.match("GET", "/items/7");
-  match.parametrized_handler->invoke(req, res, "/items/7");
+  invoke(match, req, res, "/items/7");
   DOBA_EXPECT_EQUAL(res.value, "parametrized");
   match = value.match("GET", "/items/name");
-  match.handler->operator()(req, res);
+  invoke(match, req, res);
   DOBA_EXPECT_EQUAL(res.value, "wildcard");
 }
 
@@ -349,20 +404,23 @@ DOBA_TEST("route precedence ends with wildcard routes") {
 DOBA_TEST("parametrized routes preserve typed registration order") {
   router<request, router_value_response> value;
   value.add("GET", "/items/:value",
-            [](const request&, router_value_response& res, int) {
+            [](const request&, router_value_response& res, int) -> task<void> {
               res.value = "integer";
+              co_return;
             });
   value.add("GET", "/items/:value",
-            [](const request&, router_value_response& res, std::string_view) {
+            [](const request&, router_value_response& res, std::string_view)
+                -> task<void> {
               res.value = "text";
+              co_return;
             });
   request req;
   router_value_response res;
   auto integer = value.match("GET", "/items/42");
-  integer.parametrized_handler->invoke(req, res, "/items/42");
+  invoke(integer, req, res, "/items/42");
   DOBA_EXPECT_EQUAL(res.value, "integer");
   auto text = value.match("GET", "/items/value");
-  text.parametrized_handler->invoke(req, res, "/items/value");
+  invoke(text, req, res, "/items/value");
   DOBA_EXPECT_EQUAL(res.value, "text");
 }
 
@@ -374,7 +432,9 @@ DOBA_TEST("parametrized routes validate pattern and handler shape") {
   bool threw = false;
   try {
     value.add("GET", "/items/:id",
-              [](const request&, router_value_response&) {});
+              [](const request&, router_value_response&) -> task<void> {
+                                co_return;
+              });
   } catch (const std::invalid_argument&) {
     threw = true;
   }
@@ -382,7 +442,9 @@ DOBA_TEST("parametrized routes validate pattern and handler shape") {
   threw = false;
   try {
     value.add("GET", "/items",
-              [](const request&, router_value_response&, int) {});
+              [](const request&, router_value_response&, int) -> task<void> {
+                                co_return;
+              });
   } catch (const std::invalid_argument&) {
     threw = true;
   }
@@ -390,7 +452,10 @@ DOBA_TEST("parametrized routes validate pattern and handler shape") {
   threw = false;
   try {
     value.add("GET",
-              "/items/:", [](const request&, router_value_response&, int) {});
+              "/items/:", [](const request&, router_value_response&, int)
+                  -> task<void> {
+                                co_return;
+              });
   } catch (const std::invalid_argument&) {
     threw = true;
   }
@@ -408,7 +473,10 @@ DOBA_TEST("wildcard routes validate pattern and handler shape") {
     router<request, router_value_response> value;
     bool threw = false;
     try {
-      value.add("GET", route, [](const request&, router_value_response&) {});
+      value.add("GET", route, [](const request&, router_value_response&)
+          -> task<void> {
+                co_return;
+      });
     } catch (const std::invalid_argument&) {
       threw = true;
     }
@@ -418,7 +486,9 @@ DOBA_TEST("wildcard routes validate pattern and handler shape") {
   bool threw = false;
   try {
     value.add("GET", "/items/:id/*",
-              [](const request&, router_value_response&) {});
+              [](const request&, router_value_response&) -> task<void> {
+                                co_return;
+              });
   } catch (const std::invalid_argument&) {
     threw = true;
   }
@@ -426,7 +496,9 @@ DOBA_TEST("wildcard routes validate pattern and handler shape") {
   threw = false;
   try {
     value.add("GET", "/items/*",
-              [](const request&, router_value_response&, int) {});
+              [](const request&, router_value_response&, int) -> task<void> {
+                                co_return;
+              });
   } catch (const std::invalid_argument&) {
     threw = true;
   }
@@ -438,18 +510,25 @@ DOBA_TEST("wildcard routes validate pattern and handler shape") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("match preserves first handler") {
   router<request, router_value_response> value;
-  value.add("GET", "/resource", [](const request&, router_value_response& res) {
+  value.add("GET", "/resource", [](const request&, router_value_response& res)
+      -> task<void> {
     res.value = "first";
+    co_return;
   });
-  value.add("GET", "/resource", [](const request&, router_value_response& res) {
+  value.add("GET", "/resource", [](const request&, router_value_response& res)
+      -> task<void> {
     res.value = "second";
+    co_return;
   });
-  value.add("POST", "/resource", [](const request&, router_value_response&) {});
+  value.add("POST", "/resource", [](const request&, router_value_response&)
+      -> task<void> {
+        co_return;
+  });
   auto get = value.match("GET", "/resource");
   auto post = value.match("POST", "/resource");
   request req;
   router_value_response res;
-  get.handler->operator()(req, res);
+  invoke(get, req, res);
   DOBA_EXPECT_EQUAL(res.value, "first");
   DOBA_EXPECT(static_cast<bool>(post));
   DOBA_EXPECT_EQUAL(value.allowed_methods("/resource"), "GET, POST");
@@ -462,9 +541,14 @@ DOBA_TEST("match preserves first handler") {
 DOBA_TEST("allowed methods include matching parametrized routes") {
   router<request, router_value_response> value;
   value.add("GET", "/items/:id",
-            [](const request&, router_value_response&, int) {});
+            [](const request&, router_value_response&, int) -> task<void> {
+                            co_return;
+            });
   value.add("POST", "/items/:name",
-            [](const request&, router_value_response&, std::string_view) {});
+            [](const request&, router_value_response&, std::string_view)
+                -> task<void> {
+                            co_return;
+            });
   DOBA_EXPECT_EQUAL(value.allowed_methods("/items/42"), "GET, POST");
   DOBA_EXPECT_EQUAL(value.allowed_methods("/items/name"), "POST");
 }
@@ -475,12 +559,21 @@ DOBA_TEST("allowed methods include matching parametrized routes") {
 DOBA_TEST("allowed methods include matching wildcard routes") {
   router<request, router_value_response> value;
   value.add("GET", "/assets/logo",
-            [](const request&, router_value_response&) {});
-  value.add("GET", "/assets/*", [](const request&, router_value_response&) {});
+            [](const request&, router_value_response&) -> task<void> {
+                            co_return;
+            });
+  value.add("GET", "/assets/*", [](const request&, router_value_response&)
+      -> task<void> {
+        co_return;
+  });
   value.add("POST", "/assets/:id",
-            [](const request&, router_value_response&, int) {});
+            [](const request&, router_value_response&, int) -> task<void> {
+                            co_return;
+            });
   value.add("DELETE", "/assets/*",
-            [](const request&, router_value_response&) {});
+            [](const request&, router_value_response&) -> task<void> {
+                            co_return;
+            });
   DOBA_EXPECT_EQUAL(value.allowed_methods("/assets/logo"), "GET, DELETE");
   DOBA_EXPECT_EQUAL(value.allowed_methods("/assets/42"), "POST, GET, DELETE");
   DOBA_EXPECT(value.allowed_methods("/assets").empty());
@@ -492,19 +585,24 @@ DOBA_TEST("allowed methods include matching wildcard routes") {
 DOBA_TEST("noexcept handlers register and execute") {
   router<request, router_value_response> value;
   value.add("GET", "/sync",
-            [](const request&, router_value_response& res) noexcept {
+            [](const request&, router_value_response& res) noexcept
+                -> task<void> {
               res.value = "sync";
+              co_return;
             });
   value.add("GET", "/mutable/:id",
             [](const request&, router_value_response& res,
-               int id) mutable noexcept { res.value = std::to_string(id); });
+               int id) mutable noexcept -> task<void> {
+              res.value = std::to_string(id);
+              co_return;
+            });
   request req;
   router_value_response res;
   const auto sync = value.match("GET", "/sync");
-  sync.handler->operator()(req, res);
+  invoke(sync, req, res);
   DOBA_EXPECT_EQUAL(res.value, "sync");
   const auto mutable_sync = value.match("GET", "/mutable/42");
-  mutable_sync.parametrized_handler->invoke(req, res, "/mutable/42");
+  invoke(mutable_sync, req, res, "/mutable/42");
   DOBA_EXPECT_EQUAL(res.value, "42");
 }
 
@@ -518,15 +616,21 @@ DOBA_TEST("registration owns method and all route pattern forms") {
     std::string fixed = "/fixed";
     std::string parameter = "/value/:id";
     std::string wildcard = "/assets/*";
-    value.add(method, fixed, [](const request&, router_value_response& res) {
+    value.add(method, fixed, [](const request&, router_value_response& res)
+        -> task<void> {
       res.value = "fixed";
+      co_return;
     });
     value.add(method, parameter,
-              [](const request&, router_value_response& res, int id) {
+              [](const request&, router_value_response& res, int id)
+                  -> task<void> {
                 res.value = std::to_string(id);
+                co_return;
               });
-    value.add(method, wildcard, [](const request&, router_value_response& res) {
+    value.add(method, wildcard, [](const request&, router_value_response& res)
+        -> task<void> {
       res.value = "wildcard";
+      co_return;
     });
     method.assign(method.size(), 'x');
     fixed.assign(fixed.size(), 'x');
@@ -537,15 +641,15 @@ DOBA_TEST("registration owns method and all route pattern forms") {
   router_value_response res;
   const auto fixed = value.match("GET", "/fixed");
   DOBA_EXPECT(fixed.handler != nullptr);
-  fixed.handler->operator()(req, res);
+  invoke(fixed, req, res);
   DOBA_EXPECT_EQUAL(res.value, "fixed");
   const auto parameter = value.match("GET", "/value/42");
   DOBA_EXPECT(parameter.parametrized_handler != nullptr);
-  parameter.parametrized_handler->invoke(req, res, "/value/42");
+  invoke(parameter, req, res, "/value/42");
   DOBA_EXPECT_EQUAL(res.value, "42");
   const auto wildcard = value.match("GET", "/assets/one");
   DOBA_EXPECT(wildcard.handler != nullptr);
-  wildcard.handler->operator()(req, res);
+  invoke(wildcard, req, res);
   DOBA_EXPECT_EQUAL(res.value, "wildcard");
 }
 
@@ -554,15 +658,19 @@ DOBA_TEST("registration owns method and all route pattern forms") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("invalid registration preserves existing route selection") {
   router<request, router_value_response> value;
-  value.add("GET", "/kept", [](const request&, router_value_response& res) {
+  value.add("GET", "/kept", [](const request&, router_value_response& res)
+      -> task<void> {
     res.value = "kept";
+    co_return;
   });
   for (std::string_view pattern : {"/:", "/x/*/tail", "/x/:id/*"}) {
     bool threw = false;
     try {
       value.add("GET", pattern,
-                [](const request&, router_value_response& res, int) {
+                [](const request&, router_value_response& res, int)
+                    -> task<void> {
                   res.value = "invalid";
+                  co_return;
                 });
     } catch (const std::invalid_argument&) {
       threw = true;
@@ -571,7 +679,7 @@ DOBA_TEST("invalid registration preserves existing route selection") {
     const auto match = value.match("GET", "/kept");
     DOBA_EXPECT(match.handler != nullptr);
     router_value_response res;
-    match.handler->operator()(request{}, res);
+    invoke(match, request{}, res);
     DOBA_EXPECT_EQUAL(res.value, "kept");
     DOBA_EXPECT_EQUAL(value.allowed_methods("/kept"), "GET");
   }
@@ -609,21 +717,24 @@ class controller_probe {
   // +=========================================================================+
   // | [>] count                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  void count(const request&, router_value_response& res) {
+  task<void> count(const request&, router_value_response& res) {
     res.value = std::to_string(++count_);
+    co_return;
   }
   // +=========================================================================+
   // | [>] value                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  void value(const request&, router_value_response& res,
+  task<void> value(const request&, router_value_response& res,
              int id) const noexcept {
     res.value = std::to_string(count_ + id);
+    co_return;
   }
   // +=========================================================================+
   // | [>] value_zero                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  void value_zero(const request&, router_value_response& res) const {
+  task<void> value_zero(const request&, router_value_response& res) const {
     res.value = prefix_;
+    co_return;
   }
 
  private:
@@ -666,11 +777,15 @@ struct failing_controller {
   // +=========================================================================+
   // | [>] get                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  void get(const request&, router_value_response&) {}
+  task<void> get(const request&, router_value_response&) {
+    co_return;
+  }
   // +=========================================================================+
   // | [>] typed                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  void typed(const request&, router_value_response&, int) {}
+  task<void> typed(const request&, router_value_response&, int) {
+    co_return;
+  }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
@@ -699,7 +814,9 @@ struct staged_controller {
   // +=========================================================================+
   // | [>] get                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  void get(const request&, router_value_response&) {}
+  task<void> get(const request&, router_value_response&) {
+    co_return;
+  }
 };
 
 struct async_controller {
@@ -726,16 +843,16 @@ DOBA_TEST("controllers share one instance per registration") {
     DOBA_EXPECT_EQUAL(alive, 2);
     auto count = value.match("GET", "/a/count");
     router_value_response res;
-    count.handler->operator()({}, res);
+    invoke(count, {}, res);
     DOBA_EXPECT_EQUAL(res.value, "1");
-    count.handler->operator()({}, res);
+    invoke(count, {}, res);
     DOBA_EXPECT_EQUAL(res.value, "2");
     auto typed = value.match("GET", "/a/value/40");
-    typed.parametrized_handler->invoke({}, res, "/a/value/40");
+    invoke(typed, {}, res, "/a/value/40");
     DOBA_EXPECT_EQUAL(res.value, "42");
-    value.match("GET", "/b/count").handler->operator()({}, res);
+    invoke(value.match("GET", "/b/count"), {}, res);
     DOBA_EXPECT_EQUAL(res.value, "1");
-    value.match("GET", "/a/wild/x").handler->operator()({}, res);
+    invoke(value.match("GET", "/a/wild/x"), {}, res);
     DOBA_EXPECT_EQUAL(res.value, "/a");
   }
   DOBA_EXPECT_EQUAL(alive, 0);
@@ -745,13 +862,16 @@ DOBA_TEST("controller registers an asynchronous parametrized route") {
   router<request, router_value_response> value;
   value.add_controller<async_controller>();
   auto match = value.match("GET", "/async/7");
-  DOBA_EXPECT(match.async_parametrized_handler != nullptr);
+  DOBA_EXPECT(match.parametrized_handler != nullptr);
   request req;
   router_value_response res;
-  std::shared_ptr<void> parameters;
-  auto work = match.async_parametrized_handler->invoke(
+  martianlabs::doba::protocol::http::detail::
+      router_parameter_storage parameters;
+  auto work = match.parametrized_handler->invoke(
       req, res, "/async/7", parameters);
-  work.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  work.start(nullptr, [](void*, std::exception_ptr error) {
+    DOBA_EXPECT(!error);
+  });
   DOBA_EXPECT_EQUAL(res.value, "7");
 }
 
@@ -771,15 +891,20 @@ DOBA_TEST("controller routes are staged before registration") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("controller registration rolls back every route category") {
   router<request, router_value_response> value;
-  value.add("GET", "/old", [](const request&, router_value_response& res) {
+  value.add("GET", "/old", [](const request&, router_value_response& res)
+      -> task<void> {
     res.value = "old";
+    co_return;
   });
   value.add("GET", "/old/:id",
-            [](const request&, router_value_response& res, int) {
+            [](const request&, router_value_response& res, int) -> task<void> {
               res.value = "typed";
+              co_return;
             });
-  value.add("GET", "/old/*", [](const request&, router_value_response& res) {
+  value.add("GET", "/old/*", [](const request&, router_value_response& res)
+      -> task<void> {
     res.value = "wild";
+    co_return;
   });
   for (int mode : {0, 1, 2}) {
     bool threw = false;
@@ -795,7 +920,7 @@ DOBA_TEST("controller registration rolls back every route category") {
     DOBA_EXPECT(!value.match("POST", "/new/x"));
     DOBA_EXPECT_EQUAL(value.allowed_methods("/new/42"), "");
     router_value_response res;
-    value.match("GET", "/old").handler->operator()({}, res);
+    invoke(value.match("GET", "/old"), {}, res);
     DOBA_EXPECT_EQUAL(res.value, "old");
     DOBA_EXPECT(value.match("GET", "/old/42").parametrized_handler);
     DOBA_EXPECT(value.match("GET", "/old/x").handler);
@@ -808,13 +933,18 @@ DOBA_TEST("router associates authentication with selected route only") {
   router<request, router_value_response> routes;
   int checks = 0;
   routes.add(
-      "GET", "/items/*", [](const request&, router_value_response&) {},
+      "GET", "/items/*", [](const request&, router_value_response&)
+          -> task<void> {
+                co_return;
+      },
       [&](const request&) -> auth::authentication_result {
         checks++;
         return {auth::authentication_status::kUnauthenticated, "Custom"};
       });
   routes.add("GET", "/items/public",
-             [](const request&, router_value_response&) {});
+             [](const request&, router_value_response&) -> task<void> {
+                              co_return;
+             });
   const auto selected = routes.match("GET", "/items/public");
   DOBA_EXPECT(static_cast<bool>(selected));
   DOBA_EXPECT(selected.authenticate && !*selected.authenticate);

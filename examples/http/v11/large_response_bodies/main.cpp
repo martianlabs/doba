@@ -28,6 +28,7 @@
 #include "common/byte_storage.h"
 #include "common/console_logger.h"
 #include "common/signaler.h"
+#include "common/task.h"
 #include "protocol/http/v11/body/writer.h"
 #include "http_server.h"
 
@@ -50,7 +51,8 @@ using namespace martianlabs::doba::protocol::http::v11;
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  http_server.add_route("GET", "/large", [](const request&, response& res) {
+  http_server.add_route("GET", "/large", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     // Storage spills to a temporary file after this in-memory threshold.
     byte_storage_options options{
@@ -60,13 +62,13 @@ int main() {
     for (int i = 0; i < 8; i++) {
       if (!writer.write(block)) {
         res.internal_server_error_500();
-        return;
+        co_return;
       }
     }
     res.add_header("Content-Type", "application/octet-stream")
         // The response adopts the writer and its storage.
         .set_body(std::move(writer));
-    return;
+    co_return;
   });
   http_server.start();
   signaler::wait();

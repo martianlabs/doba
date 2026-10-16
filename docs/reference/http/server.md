@@ -74,8 +74,11 @@ Requests and responses provide *from* factories; the router registers and
 selects routes. Its *match* method returns
 [*router_match_result<RQty, RSty>*](../../../include/protocol/http/common/router_match_result.h).
 The result holds non-owning handler and authentication callback pointers. Keep selected handlers alive
-while the engine may use them, including pending async work. Each contract
-checks the public API of the corresponding doba type. These requirements also
+while the engine may use them, including suspended handlers. Custom adapters
+calling *router_handler_parametrized::invoke* now pass an exclusively owned
+*http::detail::router_parameter_storage* instead of *std::shared_ptr<void>*.
+Keep it alive until the handler completes. Each contract checks the public
+API of the corresponding doba type. These requirements also
 apply when you provide a custom engine. A custom engine used by *http_server*
 accepts its policies and router. If it leaves work pending after a connection
 closes, it must also implement the optional
@@ -192,7 +195,8 @@ void stop();
 **Returns:** Nothing (*void*).
 
 Returns immediately if already stopped. With TCP or TLS, *stop* quiesces the
-transport, waits for engines with pending work to complete, then stops the
+transport, lets already admitted input batches finish, waits for engines
+with pending work and response handoff to complete, then stops the
 transport and date service. Call it from a control thread: the bundled
 transports reject quiescing from one of their workers.
 
@@ -264,7 +268,10 @@ http_server& add_route(std::string_view method, std::string_view route,
 The authenticated overload calls the provider once before the handler.
 Only an accepted result runs it. Rejections use the engine's normal response
 ordering. Static, parametrized, and wildcard routes support authentication
-with synchronous or coroutine handlers; route precedence is unchanged.
+with task handlers; route precedence is unchanged. Every handler returns
+*common::task<void>* and starts immediately. A handler that completes later
+keeps its response position, so responses still reach the transport in
+request order. Handlers returning *void* are rejected at compile time.
 
 **Returns:** A reference to this server, so registrations can be chained.
 

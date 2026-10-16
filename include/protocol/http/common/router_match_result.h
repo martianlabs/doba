@@ -29,9 +29,7 @@
 
 #include "protocol/http/common/auth/authentication_result.h"
 #include "protocol/http/common/router_handler_parametrized.h"
-#include "protocol/http/common/router_handler_parametrized_async.h"
 #include "protocol/http/common/router_handler_static.h"
-#include "protocol/http/common/router_handler_static_async.h"
 
 namespace martianlabs::doba::protocol::http {
 // /////////////////////////////////////////////////////////////////////////////
@@ -43,14 +41,10 @@ template <typename RQty, typename RSty>
 struct router_match_result {
   const router_handler_static<RQty, RSty>* handler{nullptr};
   const router_handler_parametrized<RQty, RSty>* parametrized_handler{nullptr};
-  const router_handler_static_async<RQty, RSty>* async_handler{nullptr};
-  const router_handler_parametrized_async<RQty, RSty>*
-      async_parametrized_handler{nullptr};
   const std::function<auth::authentication_result(const RQty&)>*
       authenticate{nullptr};
   [[nodiscard]] explicit operator bool() const {
-    return handler != nullptr || parametrized_handler != nullptr ||
-           async_handler != nullptr || async_parametrized_handler != nullptr;
+    return handler != nullptr || parametrized_handler != nullptr;
   }
 };
 }  // namespace martianlabs::doba::protocol::http

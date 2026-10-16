@@ -251,9 +251,6 @@ concept router =
     std::default_initializable<ROty> &&
     requires(ROty& routes, const ROty& constant, std::string_view text) {
       {
-        routes.add(text, text, [](const RQty&, RSty&) {})
-      } -> std::same_as<void>;
-      {
         routes.add(text, text,
                    [](const RQty&, RSty&) -> common::task<void> { co_return; })
       } -> std::same_as<void>;

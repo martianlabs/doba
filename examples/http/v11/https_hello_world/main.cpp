@@ -25,6 +25,7 @@
 #include <iostream>
 
 #include "common/signaler.h"
+#include "common/task.h"
 #include "https_server.h"
 #include "transport/server/tls.h"
 
@@ -56,10 +57,11 @@ int main(int argc, char* argv[]) {
   configuration.certificate_file = argv[1];
   configuration.private_key_file = argv[2];
   https_server<> https_server(configuration);
-  https_server.add_route("GET", "/hello", [](const request&, response& res) {
+  https_server.add_route("GET", "/hello", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     res.set_body("hello from doba");
-    return;
+    co_return;
   });
   https_server.start();
   signaler::wait();

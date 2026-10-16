@@ -30,6 +30,7 @@
 #include "common/filesystem.h"
 #include "common/reader.h"
 #include "common/signaler.h"
+#include "common/task.h"
 #include "http_server.h"
 
 using namespace martianlabs::doba::common;
@@ -58,7 +59,7 @@ int main(int argc, char* argv[]) {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
       "GET", "/download",
-      [root, relative_file](const request&, response& res) {
+      [root, relative_file](const request&, response& res) -> task<void> {
         filesystem_file file;
         std::error_code error;
         if (!file.open(root, relative_file, error)) {
@@ -67,13 +68,13 @@ int main(int argc, char* argv[]) {
           } else {
             res.internal_server_error_500();
           }
-          return;
+          co_return;
         }
         const auto length = file.size();
         res.ok_200()
             .add_header("Content-Type", "application/octet-stream")
             .set_body(reader(std::move(file)), length);
-        return;
+        co_return;
       });
   http_server.start();
   signaler::wait();

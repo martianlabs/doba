@@ -91,12 +91,16 @@ Here is the bit doing the work in
 [main.cpp](../../examples/http/v11/hello_world/main.cpp):
 
 ```cpp
+using martianlabs::doba::common::task;
+
 http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-http_server.add_route("GET", "/hello", [](const request&, response& res) {
+http_server.add_route("GET", "/hello", [](const request&, response& res)
+    -> task<void> {
   res.ok_200();
   res.add_header("Server", "doba.")
       .add_header("Content-Type", "text/plain; charset=utf-8")
       .set_body("ok");
+  co_return;
 });
 http_server.start();
 signaler::wait();
@@ -104,8 +108,9 @@ signaler::wait();
 
 **http_server<>** pairs doba's HTTP/1.1 engine with its default TCP transport.
 **add_route** matches **GET /hello**; the response sets its status, headers,
-and body. **start()** opens the listener; **signaler::wait()** keeps it alive
-until Ctrl+C.
+and body. The handler returns *common::task<void>*; `co_return` completes
+it immediately. **start()** opens the listener; **signaler::wait()** keeps
+it alive until Ctrl+C.
 
 That's your first doba server. Head back to the [guide index](README.md) when
 you're ready for more.

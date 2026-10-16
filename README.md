@@ -168,8 +168,9 @@ and a **1 Gbps public connection**, upgradable to **25 Gbps**.
   a fixed buffer for small responses help avoid unnecessary copies.
   Not "zero-copy everything". Just deliberate data movement.
 
-- **Handlers run directly.** Synchronous execution preserves request order
-  without a separate response scheduler.
+- **Handlers run directly.** Every handler returns a task and starts
+  immediately. The HTTP engine sends responses in request order, including
+  handlers that suspend and finish out of order.
 
 <a name="hello-world-lets-not-overcomplicate-it"></a>
 <h2>
@@ -185,6 +186,7 @@ and a **1 Gbps public connection**, upgradable to **25 Gbps**.
 
 ```cpp
 #include "common/signaler.h"
+#include "common/task.h"
 #include "http_server.h"
 
 using namespace martianlabs::doba::common;
@@ -194,10 +196,11 @@ int main() {
   martianlabs::doba::http_server<> srv({.ip = "0.0.0.0", .port = "8080"});
   srv.add_route(
       "GET", "/hello",
-      [](const request&, response& res) {
+      [](const request&, response& res) -> task<void> {
         res.ok_200();
         res.add_header("Content-Type", "text/plain")
             .set_body("hello from doba");
+        co_return;
       });
   srv.start();
   signaler::wait();

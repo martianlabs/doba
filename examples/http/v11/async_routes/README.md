@@ -1,8 +1,8 @@
 # Asynchronous routes
 
-This example registers a coroutine route and a synchronous route on the same
-HTTP/1.1 server. `GET /slow` yields to its transport worker, sleeps for about
-50 ms, and returns `slow`. `GET /fast` returns `fast` synchronously.
+This example registers two task handlers on the same HTTP/1.1 server.
+`GET /slow` yields to its transport worker, sleeps for about 50 ms, and
+returns `slow`. `GET /fast` completes immediately with `fast`.
 
 ```text
 curl -i http://localhost:8080/slow
@@ -33,4 +33,5 @@ print("slow, fast")
 ```
 
 The responses keep request order even though `/fast` finishes first.
-`server.stop()` waits for pending coroutines before stopping the workers.
+`server.stop()` finishes an admitted input batch and waits for pending
+handlers and ordered response handoff before stopping the workers.

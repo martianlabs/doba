@@ -26,6 +26,7 @@
 #include <atomic>
 #include <chrono>
 #include <deque>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -71,7 +72,13 @@ response file_request(router<request, response>& routes,
   std::string wire = std::string(method) + " " + std::string(path) +
                      " HTTP/1.1\r\nHost: example.com\r\n" +
                      std::string(headers) + "\r\n";
-  decoder<request, response> decoder;
+  std::array<char, policies::kDefaultRequestHeadBufferCapacity +
+                       policies::kDefaultRequestBodyInlineCapacity>
+      request_storage;
+  std::array<char, policies::kDefaultResponseHeadBufferCapacity +
+                       policies::kDefaultResponseBodyInlineCapacity>
+      response_storage;
+  decoder<request, response> decoder({}, request_storage, response_storage);
   std::size_t consumed = 0;
   static thread_local std::deque<std::array<char, 20480>> storage;
   storage.emplace_back();
@@ -89,7 +96,18 @@ response file_request(router<request, response>& routes,
   if (!match.handler) {
     result->not_found_404();
   } else {
-    (*match.handler)(value, *result);
+    bool completed = false;
+    std::exception_ptr error;
+    auto work = (*match.handler)(value, *result);
+    auto completion = [&](std::exception_ptr result) {
+      error = result;
+      completed = true;
+    };
+    work.start(&completion, [](void* context, std::exception_ptr error) {
+      (*static_cast<decltype(completion)*>(context))(error);
+    });
+    if (error) std::rethrow_exception(error);
+    if (!completed) throw std::runtime_error("File handler did not complete");
   }
   return std::move(*result);
 }
@@ -244,7 +262,13 @@ DOBA_TEST("static file server never escapes its root") {
     martianlabs::doba::tests::unit::test_helper::set_context(path);
     const std::string wire =
         "GET " + path + " HTTP/1.1\r\nHost: example.com\r\n\r\n";
-    decoder<request, response> value;
+    std::array<char, policies::kDefaultRequestHeadBufferCapacity +
+                         policies::kDefaultRequestBodyInlineCapacity>
+        request_storage;
+    std::array<char, policies::kDefaultResponseHeadBufferCapacity +
+                         policies::kDefaultResponseBodyInlineCapacity>
+        response_storage;
+    decoder<request, response> value({}, request_storage, response_storage);
     std::size_t consumed = 0;
     auto decoded =
         value.deserialize(wire.data(), wire.size(), 8192, consumed);

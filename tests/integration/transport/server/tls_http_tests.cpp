@@ -125,10 +125,11 @@ DOBA_TEST("tls serves HTTP with configured buffer capacities") {
   configuration.encrypted_receive_buffer_capacity = 8192;
   configuration.network_bio_buffer_capacity = 4096;
   https_server<> http_server(configuration);
-  http_server.add_route("GET", "/ready", [](const request&, response& res) {
+  http_server.add_route("GET", "/ready", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     res.set_body("ready");
-    return;
+    co_return;
   });
   http_server.start();
   DOBA_EXPECT(client.socket.connect(port));
@@ -150,10 +151,11 @@ DOBA_TEST("tls preserves a fragmented binary HTTP body") {
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   https_server<> http_server(server_policies(port));
-  http_server.add_route("POST", "/echo", [](const request& req, response& res) {
+  http_server.add_route("POST", "/echo", [](const request& req, response& res)
+      -> task<void> {
     if (!req.has_body_reader()) {
       res.bad_request_400();
-      return;
+      co_return;
     }
     std::array<std::byte, 1024> buffer{};
     std::string body;
@@ -161,19 +163,20 @@ DOBA_TEST("tls preserves a fragmented binary HTTP body") {
       const auto state = req.get_body_reader()->read(buffer);
       if (state.has_error) {
         res.bad_request_400();
-        return;
+        co_return;
       }
       body.append(reinterpret_cast<const char*>(buffer.data()), state.produced);
       if (state.complete) {
         res.ok_200();
         res.set_body(body);
-        return;
+        co_return;
       }
     }
     {
       res.bad_request_400();
-      return;
+      co_return;
     }
+    co_return;
   });
   http_server.start();
   DOBA_EXPECT(client.socket.connect(port));
@@ -203,20 +206,23 @@ DOBA_TEST("tls serves sequential HTTP requests before closing") {
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   https_server<> http_server(server_policies(port));
-  http_server.add_route("GET", "/one", [](const request&, response& res) {
+  http_server.add_route("GET", "/one", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     res.set_body("one");
-    return;
+    co_return;
   });
-  http_server.add_route("GET", "/two", [](const request&, response& res) {
+  http_server.add_route("GET", "/two", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     res.set_body("two");
-    return;
+    co_return;
   });
-  http_server.add_route("GET", "/three", [](const request&, response& res) {
+  http_server.add_route("GET", "/three", [](const request&, response& res)
+      -> task<void> {
     res.ok_200();
     res.set_body("three");
-    return;
+    co_return;
   });
   http_server.start();
   DOBA_EXPECT(client.socket.connect(port));
@@ -242,7 +248,7 @@ DOBA_TEST("tls serves sequential HTTP requests before closing") {
   http_server.stop();
 }
 
-DOBA_TEST("tls orders asynchronous and synchronous HTTP responses") {
+DOBA_TEST("tls orders immediate and suspended HTTP responses") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -255,8 +261,10 @@ DOBA_TEST("tls orders asynchronous and synchronous HTTP responses") {
                           co_await pause_awaiter{pending};
                           res.ok_200().set_body("slow");
                         });
-  http_server.add_route("GET", "/fast", [](const request&, response& res) {
+  http_server.add_route("GET", "/fast", [](const request&, response& res)
+      -> task<void> {
     res.ok_200().set_body("fast");
+    co_return;
   });
   http_server.start();
   DOBA_EXPECT(client.socket.connect(port));
@@ -331,8 +339,10 @@ DOBA_TEST("tls resumes timed asynchronous HTTP routes") {
                           co_await martianlabs::doba::common::sleep_for(10ms);
                           res.ok_200().set_body("slow");
                         });
-  http_server.add_route("GET", "/fast", [](const request&, response& res) {
+  http_server.add_route("GET", "/fast", [](const request&, response& res)
+      -> task<void> {
     res.ok_200().set_body("fast");
+    co_return;
   });
   http_server.start();
   DOBA_EXPECT(client.socket.connect(port));
@@ -348,6 +358,92 @@ DOBA_TEST("tls resumes timed asynchronous HTTP routes") {
     DOBA_EXPECT_EQUAL(*first, "slow");
     DOBA_EXPECT_EQUAL(*second, "fast");
   }
+  client.socket.close();
+  http_server.stop();
+}
+
+DOBA_TEST("tls orders externally completed errors before closing") {
+  tls_client client;
+  const auto port = client.socket.find_available_port();
+  DOBA_EXPECT(port != 0);
+  std::promise<std::coroutine_handle<>> first;
+  std::promise<std::coroutine_handle<>> failed;
+  auto waiting = first.get_future();
+  auto failing = failed.get_future();
+  https_server<> http_server(server_policies(port));
+  http_server.add_route("GET", "/first",
+                        [&](const request&, response& res) -> task<void> {
+                          co_await pause_awaiter{first};
+                          res.ok_200().set_body("first");
+                        });
+  http_server.add_route("GET", "/fail",
+                        [&](const request&, response&) -> task<void> {
+                          co_await pause_awaiter{failed};
+                          throw std::runtime_error("handler failure");
+                        });
+  http_server.start();
+  DOBA_EXPECT(client.socket.connect(port));
+  DOBA_EXPECT(client.negotiate());
+  DOBA_EXPECT(client.send_outgoing(
+      "GET /first HTTP/1.1\r\nHost: a\r\n\r\n"
+      "GET /fail HTTP/1.1\r\nHost: a\r\n\r\n"));
+  if (waiting.wait_for(2s) != std::future_status::ready ||
+      failing.wait_for(2s) != std::future_status::ready) {
+    throw std::runtime_error("asynchronous routes did not suspend");
+  }
+  {
+    std::jthread worker([&]() { failing.get().resume(); });
+  }
+  {
+    std::jthread worker([&]() { waiting.get().resume(); });
+  }
+  const auto response = receive_response(client);
+  DOBA_EXPECT(response.has_value());
+  DOBA_EXPECT_EQUAL(*response, "first");
+  std::string head;
+  while (!head.ends_with("\r\n\r\n") && head.size() < 16384) {
+    const auto byte = client.receive(1);
+    DOBA_EXPECT(byte.has_value());
+    head += *byte;
+  }
+  DOBA_EXPECT(head.starts_with("HTTP/1.1 500 "));
+  DOBA_EXPECT(head.find("Connection: close\r\n") != std::string::npos);
+  const auto body =
+      client.receive(std::string_view("Internal Server Error").size());
+  DOBA_EXPECT(body.has_value());
+  DOBA_EXPECT_EQUAL(*body, "Internal Server Error");
+  DOBA_EXPECT(client.receive_close());
+  client.socket.close();
+  http_server.stop();
+}
+
+DOBA_TEST("tls reuses a single response slot across keepalive requests") {
+  tls_client client;
+  const auto port = client.socket.find_available_port();
+  DOBA_EXPECT(port != 0);
+  martianlabs::doba::protocol::http::v11::policies configuration;
+  configuration.max_pending_requests = 1;
+  https_server<> http_server(server_policies(port), configuration);
+  http_server.add_route("GET", "/", [](const request&, response& res)
+                            -> task<void> {
+                          res.ok_200().set_body("reused");
+                          co_return;
+                        });
+  http_server.start();
+  DOBA_EXPECT(client.socket.connect(port));
+  DOBA_EXPECT(client.negotiate());
+  for (int index = 0; index < 8; ++index) {
+    DOBA_EXPECT(client.send_outgoing("GET / HTTP/1.1\r\nHost: a\r\n\r\n"));
+    const auto received = receive_response(client);
+    DOBA_EXPECT(received.has_value());
+    DOBA_EXPECT_EQUAL(*received, "reused");
+  }
+  DOBA_EXPECT(client.send_outgoing(
+      "GET / HTTP/1.1\r\nHost: a\r\nConnection: close\r\n\r\n"));
+  const auto received = receive_response(client);
+  DOBA_EXPECT(received.has_value());
+  DOBA_EXPECT_EQUAL(*received, "reused");
+  DOBA_EXPECT(client.receive_close());
   client.socket.close();
   http_server.stop();
 }

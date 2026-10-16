@@ -27,8 +27,9 @@ serves the sample HTML. The directory request returns `404`; traversal returns
 `403`. Files are opened afresh for every request, so edits appear on subsequent
 requests without restarting the server.
 
-The controller registers GET and HEAD wildcard routes. Existing literal and
-parametrized routes keep their precedence over a wildcard. Other methods use
+The controller registers GET and HEAD wildcard routes with task handlers
+that complete immediately. Existing literal and parametrized routes keep
+their precedence over a wildcard. Other methods use
 the router's existing `405` and `Allow` handling.
 
 Responses read directly from an owned file handle through the transport's

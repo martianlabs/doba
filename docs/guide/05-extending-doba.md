@@ -209,7 +209,8 @@ view:
   Output can arrive from different threads, and a close request must stop
   further input for that connection.
 
-The in-memory demo handles one fixed request synchronously. It shows where
-the pieces meet; a real network transport also needs connection management,
+The in-memory demo uses a task handler that completes immediately for one
+fixed request. It shows where the pieces meet; a real network transport
+also needs connection management,
 buffering, and safe output delivery. Head back to the [guide index](README.md)
 when you're ready for the final chapter.

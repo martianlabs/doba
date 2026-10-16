@@ -28,6 +28,7 @@
 
 #include "common/console_logger.h"
 #include "common/signaler.h"
+#include "common/task.h"
 #include "protocol/http/common/method_names.h"
 #include "http_server.h"
 
@@ -65,18 +66,18 @@ class counter_controller {
   // +=========================================================================+
   // | [>] count                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  void count(const request&, response& result) {
+  task<void> count(const request&, response& result) {
     result.ok_200();
     result.set_body(++count_);
-    return;
+    co_return;
   }
   // +=========================================================================+
   // | [>] echo                                                    ( private ) |
   // +-------------------------------------------------------------------------+
-  void echo(const request&, response& result, int id) const {
+  task<void> echo(const request&, response& result, int id) const {
     result.ok_200();
     result.set_body(id);
-    return;
+    co_return;
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |

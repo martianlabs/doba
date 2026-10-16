@@ -28,6 +28,7 @@
 
 #include "common/console_logger.h"
 #include "common/signaler.h"
+#include "common/task.h"
 #include "http_server.h"
 #include "protocol/http/common/auth/basic.h"
 
@@ -51,12 +52,15 @@ int main() {
       engine<request, response>, doba::transport::server::tcp, auth::basic>
       server({.ip = "127.0.0.1", .port = "8080"}, {},
              std::tuple{std::move(provider)});
-  server.add_route("GET", "/health", [](const request&, response& res) {
+  server.add_route("GET", "/health", [](const request&, response& res)
+      -> task<void> {
     res.ok_200().set_body("ok");
+    co_return;
   });
   server.add_route<auth::basic>("GET", "/private",
-      [](const request&, response& res) {
+      [](const request&, response& res) -> task<void> {
         res.ok_200().set_body("Authenticated with Basic");
+        co_return;
       });
   server.start();
   signaler::wait();

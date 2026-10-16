@@ -23,6 +23,7 @@
 // permissions and limitations under the License.
 
 #include "common/signaler.h"
+#include "common/task.h"
 #include "http_server.h"
 
 using namespace martianlabs::doba::common;
@@ -47,20 +48,21 @@ using namespace martianlabs::doba::protocol::http::v11;
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route("POST", "/resources",
-                        [](const request&, response& res) {
+                        [](const request&, response& res) -> task<void> {
                           res.created_201();
                           res.add_header("Location", "/resources/1");
-                          return;
+                          co_return;
                         });
-  http_server.add_route("GET", "/redirect", [](const request&, response& res) {
+  http_server.add_route("GET", "/redirect", [](const request&, response& res)
+      -> task<void> {
     res.temporary_redirect_307();
     res.add_header("Location", "/resources/1");
-    return;
+    co_return;
   });
   http_server.add_route("DELETE", "/resources/1",
-                        [](const request&, response& res) {
+                        [](const request&, response& res) -> task<void> {
                           res.no_content_204();
-                          return;
+                          co_return;
                         });
   http_server.start();
   signaler::wait();
