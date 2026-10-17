@@ -35,7 +35,7 @@
 #include <thread>
 #include <vector>
 
-#include "protocol/http/v11/buffer_pool.h"
+#include "protocol/http/v11/pool.h"
 #include "protocol/http/v11/engine.h"
 #include "common/task.h"
 #include "protocol/http/v11/request.h"

@@ -22,8 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#ifndef martianlabs_doba_protocol_http_v11_buffer_pool_h
-#define martianlabs_doba_protocol_http_v11_buffer_pool_h
+#ifndef martianlabs_doba_protocol_http_v11_pool_h
+#define martianlabs_doba_protocol_http_v11_pool_h
 
 #include <cstddef>
 #include <limits>
@@ -45,28 +45,19 @@ namespace detail {
 class buffer_pool {
  public:
   // +=========================================================================+
-  // | [>] TYPEs                                                    ( public ) |
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  struct buffer_pair {
-    // +=======================================================================+
-    // | [>] ATTRIBUTEs                                             ( public ) |
-    // +-----------------------------------------------------------------------+
-    std::unique_ptr<char[]> request;
-    std::unique_ptr<char[]> response;
-    std::size_t request_capacity{0};
-    std::size_t response_capacity{0};
-
-   private:
-    friend class buffer_pool;
-    // +=======================================================================+
-    // | [>] ATTRIBUTEs                                            ( private ) |
-    // +-----------------------------------------------------------------------+
-    std::unique_ptr<buffer_pair> next_;
-  };
+  buffer_pool() = default;
+  ~buffer_pool() {
+    while (next_) {
+      auto value = std::move(next_);
+      next_ = std::move(value->next_);
+    }
+  }
   // +=========================================================================+
   // | [>] acquire                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  static std::unique_ptr<buffer_pair> acquire(const policies& configuration) {
+  static std::unique_ptr<buffer_pool> acquire(const policies& configuration) {
     if (!configuration.request_head_buffer_capacity ||
         !configuration.response_head_buffer_capacity ||
         configuration.request_body_inline_capacity >
@@ -81,7 +72,7 @@ class buffer_pool {
                                   configuration.request_body_inline_capacity;
     const auto response_capacity = configuration.response_head_buffer_capacity +
                                    configuration.response_body_inline_capacity;
-    auto* next = &available().head_;
+    auto* next = &available();
     while (*next && ((*next)->request_capacity != request_capacity ||
                      (*next)->response_capacity != response_capacity)) {
       next = &(*next)->next_;
@@ -91,7 +82,7 @@ class buffer_pool {
       *next = std::move(value->next_);
       return value;
     }
-    auto value = std::make_unique<buffer_pair>();
+    auto value = std::make_unique<buffer_pool>();
     value->request_capacity = request_capacity;
     value->response_capacity = response_capacity;
     value->request = std::make_unique_for_overwrite<char[]>(request_capacity);
@@ -101,36 +92,34 @@ class buffer_pool {
   // +=========================================================================+
   // | [>] release                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Requires a nonempty pair; only the calling worker accesses its list.    |
+  // | Requires a nonempty loan; only the calling worker accesses its list.    |
   // +-------------------------------------------------------------------------+
-  static void release(std::unique_ptr<buffer_pair> value) noexcept {
-    auto& head = available().head_;
+  static void release(std::unique_ptr<buffer_pool> value) noexcept {
+    auto& head = available();
     value->next_ = std::move(head);
     head = std::move(value);
   }
 
- private:
   // +=========================================================================+
-  // | [>] CONSTRUCTORs/DESTRUCTORs                                ( private ) |
+  // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  buffer_pool() = default;
-  ~buffer_pool() {
-    while (head_) {
-      auto value = std::move(head_);
-      head_ = std::move(value->next_);
-    }
-  }
+  std::unique_ptr<char[]> request;
+  std::unique_ptr<char[]> response;
+  std::size_t request_capacity{0};
+  std::size_t response_capacity{0};
+
+ private:
   // +=========================================================================+
   // | [>] available                                               ( private ) |
   // +-------------------------------------------------------------------------+
-  static buffer_pool& available() noexcept {
-    thread_local buffer_pool value;
-    return value;
+  static std::unique_ptr<buffer_pool>& available() noexcept {
+    thread_local std::unique_ptr<buffer_pool> head;
+    return head;
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  std::unique_ptr<buffer_pair> head_;
+  std::unique_ptr<buffer_pool> next_;
 };
 }  // namespace detail
 }  // namespace martianlabs::doba::protocol::http::v11

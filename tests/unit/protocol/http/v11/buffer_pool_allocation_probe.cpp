@@ -27,7 +27,7 @@
 #include <new>
 #include <utility>
 
-#include "protocol/http/v11/buffer_pool.h"
+#include "protocol/http/v11/pool.h"
 #include "protocol/http/v11/policies.h"
 #include "test_helper.h"
 
