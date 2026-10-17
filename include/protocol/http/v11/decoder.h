@@ -153,22 +153,10 @@ class decoder {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   explicit decoder(policies configuration = {}) {
-    if (!configuration.request_head_buffer_capacity ||
-        !configuration.response_head_buffer_capacity ||
-        configuration.request_body_inline_capacity >
-            std::numeric_limits<std::size_t>::max() -
-                configuration.request_head_buffer_capacity ||
-        configuration.response_body_inline_capacity >
-            std::numeric_limits<std::size_t>::max() -
-                configuration.response_head_buffer_capacity) {
-      throw std::invalid_argument("Invalid HTTP buffer capacities");
+    if (!configuration.max_request_head_size ||
+        !configuration.max_response_head_size) {
+      throw std::invalid_argument("Invalid HTTP head limits");
     }
-    buffer_ = std::make_unique_for_overwrite<char[]>(
-        configuration.request_head_buffer_capacity +
-        configuration.request_body_inline_capacity);
-    response_buffer_ = std::make_unique_for_overwrite<char[]>(
-        configuration.response_head_buffer_capacity +
-        configuration.response_body_inline_capacity);
     context_.policies = configuration;
   }
   decoder(const decoder&) = delete;
@@ -193,7 +181,7 @@ class decoder {
     if (result.code == deserialization_status::kMoreBytesNeeded &&
         !body_framer_ &&
         (size == capacity ||
-         size >= context_.policies.request_head_buffer_capacity)) {
+         size >= context_.policies.max_request_head_size)) {
       result.code = deserialization_status::kInvalidSource;
     }
     if (result.code == deserialization_status::kSucceeded) {
@@ -219,8 +207,7 @@ class decoder {
           if (body_file_path_.empty()) {
             std::span<const std::byte> wire(
                 reinterpret_cast<const std::byte*>(
-                    buffer_.get() +
-                    context_.policies.request_head_buffer_capacity),
+                    body_buffer_.data()),
                 body_size_);
             body_reader =
                 context_.connection.chunked
@@ -324,41 +311,28 @@ class decoder {
   // +-------------------------------------------------------------------------+
   // | Creates a response object using the decoder's internal storage.         |
   // +-------------------------------------------------------------------------+
-  RSty make_response() { return make_response(response_storage()); }
+  RSty make_response() {
+    return make_response(response_buffer_, response_body_buffer_);
+  }
   // +=========================================================================+
   // | [>] take_request_storage                                     ( public ) |
   // +-------------------------------------------------------------------------+
   // | Takes ownership of the decoder's internal request storage.              |
   // +-------------------------------------------------------------------------+
-  std::unique_ptr<char[]> take_request_storage() {
-    auto replacement = std::make_unique_for_overwrite<char[]>(
-        context_.policies.request_head_buffer_capacity +
-        context_.policies.request_body_inline_capacity);
-    buffer_.swap(replacement);
-    return replacement;
+  std::pair<std::vector<char>, std::vector<char>> take_request_storage() {
+    return {std::exchange(buffer_, {}), std::exchange(body_buffer_, {})};
   }
   // +=========================================================================+
   // | [>] make_response                                            ( public ) |
   // +-------------------------------------------------------------------------+
   // | Creates a response object using the provided storage.                   |
   // +-------------------------------------------------------------------------+
-  RSty make_response(std::span<char> storage) {
-    return RSty::from(storage, context_.policies.response_head_buffer_capacity,
-                     context_.policies.response_body_inline_capacity);
+  RSty make_response(std::vector<char>& head, std::vector<char>& body) {
+    return RSty::from(head, body, context_.policies.max_response_head_size,
+                     context_.policies.response_body_memory_threshold);
   }
 
  private:
-  // +=========================================================================+
-  // | [>] response_storage                                         ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Returns a span of the response buffer, which is used to store the       |
-  // | response head and body.                                                 |
-  // +-------------------------------------------------------------------------+
-  std::span<char> response_storage() noexcept {
-    return {response_buffer_.get(),
-            context_.policies.response_head_buffer_capacity +
-                context_.policies.response_body_inline_capacity};
-  }
   // +=========================================================================+
   // | [>] parse_core                                               ( public ) |
   // +-------------------------------------------------------------------------+
@@ -548,7 +522,7 @@ class decoder {
                   context_.policies.max_trailer_section_size);
             } else {
               if (context_.content_length >
-                      context_.policies.request_body_inline_capacity &&
+                      context_.policies.request_body_memory_threshold &&
                   !spill_body()) {
                 storage_failed_ = true;
                 return deserialization_status::kInvalidSource;
@@ -635,16 +609,14 @@ class decoder {
     if (state.consumed) {
       if (body_file_path_.empty() &&
           state.consumed >
-              context_.policies.request_body_inline_capacity - body_size_ &&
+              context_.policies.request_body_memory_threshold - body_size_ &&
           !spill_body()) {
         storage_failed_ = true;
         return deserialization_status::kInvalidSource;
       }
       if (body_file_path_.empty()) {
-        std::memcpy(buffer_.get() +
-                        context_.policies.request_head_buffer_capacity +
-                        body_size_,
-                    source.data(), state.consumed);
+        body_buffer_.insert(body_buffer_.end(), source.data(),
+                            source.data() + state.consumed);
       } else if (!body_file_.write(source.data(), state.consumed)) {
         storage_failed_ = true;
         return deserialization_status::kInvalidSource;
@@ -665,10 +637,7 @@ class decoder {
     std::filesystem::path path;
     if (!body_file_.open(directory, path)) return false;
     body_file_path_ = std::move(path);
-    if (body_size_ &&
-        !body_file_.write(buffer_.get() +
-                              context_.policies.request_head_buffer_capacity,
-                          body_size_)) {
+    if (body_size_ && !body_file_.write(body_buffer_.data(), body_size_)) {
       return false;
     }
     return true;
@@ -687,7 +656,7 @@ class decoder {
   // | [>] store_head                                              ( private ) |
   // +-------------------------------------------------------------------------+
   bool store_head(std::string_view buffer_view) {
-    if (buffer_view.size() > context_.policies.request_head_buffer_capacity) {
+    if (buffer_view.size() > context_.policies.max_request_head_size) {
       context_.rejection_reason = rejection_reason::kHeaderFieldsTooLarge;
       return false;
     }
@@ -722,12 +691,13 @@ class decoder {
         query_parameters_.emplace_back(keys[q], values[q]);
       }
     }
-    std::memcpy(buffer_.get(), buffer_view.data(), buffer_view.size());
+    buffer_.assign(buffer_view.begin(), buffer_view.end());
+    body_buffer_.clear();
     head_size_ = buffer_view.size();
     auto rebase = [this, buffer_view](std::string_view value) {
       if (value.empty()) return std::string_view{};
       const std::size_t offset = value.data() - buffer_view.data();
-      return std::string_view(buffer_.get() + offset, value.size());
+      return std::string_view(buffer_.data() + offset, value.size());
     };
     method_ = rebase(method_);
     absolute_path_ = rebase(absolute_path_);
@@ -1200,8 +1170,10 @@ class decoder {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  std::unique_ptr<char[]> buffer_;
-  std::unique_ptr<char[]> response_buffer_;
+  std::vector<char> buffer_;
+  std::vector<char> body_buffer_;
+  std::vector<char> response_buffer_;
+  std::vector<char> response_body_buffer_;
   std::size_t head_size_ = 0;
   std::size_t body_size_ = 0;
   common::byte_storage_file body_file_;

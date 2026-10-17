@@ -45,7 +45,7 @@ using martianlabs::doba::tests::file_directory;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 constexpr std::size_t max_response_body_size_in_memory = martianlabs::doba::
-    protocol::http::v11::policies::kDefaultResponseBodyInlineCapacity;
+    protocol::http::v11::policies::kDefaultResponseBodyMemoryThreshold;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

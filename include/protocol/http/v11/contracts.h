@@ -163,9 +163,11 @@ concept response =
     std::move_constructible<RSty> && std::assignable_from<RSty&, RSty> &&
     std::same_as<typename RSty::serialized_type, serialization_result> &&
     requires(RSty& value, const RSty& constant, std::span<char> storage,
+             std::vector<char>& head, std::vector<char>& body,
              std::size_t size, std::string_view text, body::reader* body_reader,
              body::body_writer body_writer, common::reader source) {
       { RSty::from(storage, size, size) } -> std::same_as<RSty>;
+      { RSty::from(head, body, size, size) } -> std::same_as<RSty>;
       { value.serialize() } -> std::same_as<serialization_result>;
       { value.add_header(text, text) } -> std::same_as<RSty&>;
       { value.add_header(text, 1) } -> std::same_as<RSty&>;

@@ -40,6 +40,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "common/task.h"
 #include "protocol/contracts.h"
@@ -65,11 +66,11 @@ class engine_async {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   explicit engine_async(std::size_t max_pending_requests,
-                        const std::function<void()>& on_async_started,
-                        const std::function<void()>& on_async_finished)
+                        std::function<void()> on_async_started,
+                        std::function<void()> on_async_finished)
       : max_pending_requests_{max_pending_requests},
-        on_async_started_{on_async_started},
-        on_async_finished_{on_async_finished} {}
+        on_async_started_{std::move(on_async_started)},
+        on_async_finished_{std::move(on_async_finished)} {}
   engine_async(const engine_async&) = delete;
   engine_async(engine_async&&) noexcept = delete;
   ~engine_async() = default;
@@ -340,23 +341,20 @@ class engine_async {
   // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty>
   struct async_request {
-    std::unique_ptr<char[]> request_storage;
+    std::pair<std::vector<char>, std::vector<char>> request_storage;
     RQty request;
-    std::unique_ptr<char[]> response_storage;
+    std::vector<char> response_storage;
+    std::vector<char> response_body_storage;
     std::shared_ptr<void> parameters;
     RSty response;
     transport::server::execution_capacity execution;
-    async_request(decoder<RQty, RSty>& owner, std::unique_ptr<char[]> storage,
+    async_request(decoder<RQty, RSty>& owner,
+                  std::pair<std::vector<char>, std::vector<char>> storage,
                   RQty value)
         : request_storage(std::move(storage)),
           request(std::move(value)),
-          response_storage(std::make_unique_for_overwrite<char[]>(
-              owner.configuration().response_head_buffer_capacity +
-              owner.configuration().response_body_inline_capacity)),
-          response(owner.make_response(std::span<char>(
-              response_storage.get(),
-              owner.configuration().response_head_buffer_capacity +
-                  owner.configuration().response_body_inline_capacity))) {}
+          response(owner.make_response(response_storage,
+                                       response_body_storage)) {}
   };
   // +=========================================================================+
   // | [>] dispatch                                                ( private ) |

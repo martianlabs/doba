@@ -26,6 +26,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <vector>
 
 #include "common/reader.h"
 #include "protocol/http/v11/body/reader.h"
@@ -51,10 +52,10 @@ using martianlabs::doba::protocol::http::v11::body::body_writer;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 constexpr std::size_t max_response_size_in_memory =
-    policies::kDefaultResponseHeadBufferCapacity +
-    policies::kDefaultResponseBodyInlineCapacity;
+    policies::kDefaultMaxResponseHeadSize +
+    policies::kDefaultResponseBodyMemoryThreshold;
 constexpr std::size_t max_response_body_size_in_memory =
-    policies::kDefaultResponseBodyInlineCapacity;
+    policies::kDefaultResponseBodyMemoryThreshold;
 
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -661,7 +662,7 @@ DOBA_TEST("response head and body limits are independent") {
   const std::string framing =
       "Content-Length: " + std::to_string(body.size()) + "\r\n";
   const std::string padding(
-      policies::kDefaultResponseHeadBufferCapacity - head.size() -
+      policies::kDefaultMaxResponseHeadSize - head.size() -
           framing.size() - 4,
       'p');
   for (std::size_t excess : {0, 1}) {
@@ -679,7 +680,7 @@ DOBA_TEST("response head and body limits are independent") {
         "\r\nContent-Length: " + std::to_string(payload.size()) + "\r\n\r\n";
     DOBA_EXPECT_EQUAL(actual, expected_head + payload);
     DOBA_EXPECT_EQUAL(serialized.head.size(),
-                      policies::kDefaultResponseHeadBufferCapacity);
+                      policies::kDefaultMaxResponseHeadSize);
     DOBA_EXPECT_EQUAL(serialized.body.size(), excess ? 0 : body.size());
     DOBA_EXPECT_EQUAL(serialized.source != nullptr, excess != 0);
   }
@@ -1079,7 +1080,7 @@ DOBA_TEST("streamed body survives near-limit headers") {
   for (std::size_t i = 0; i < body.size(); i++) {
     body[i] = static_cast<char>(i % 256);
   }
-  const std::size_t head_limit = policies::kDefaultResponseHeadBufferCapacity;
+  const std::size_t head_limit = policies::kDefaultMaxResponseHeadSize;
   const std::string head = "HTTP/1.1 200 OK\r\nDate: fixed\r\nX-Pad: ";
   const std::string framing =
       "Content-Length: " + std::to_string(body.size()) + "\r\n";
@@ -1466,5 +1467,62 @@ DOBA_TEST("reader bodies are replaced or suppressed without leaking bytes") {
     if (result == 0) {
       DOBA_EXPECT(prefix.find("Content-Length: 6\r\n") != prefix.npos);
     }
+  }
+}
+
+DOBA_TEST("dynamic response storage starts empty and grows independently") {
+  std::vector<char> head;
+  std::vector<char> body;
+  response value(head, body);
+  DOBA_EXPECT_EQUAL(head.capacity(), 0U);
+  DOBA_EXPECT_EQUAL(body.capacity(), 0U);
+  value.ok_200().set_body(std::string(8192, 'x'));
+  DOBA_EXPECT_EQUAL(body.size(), 8192U);
+  DOBA_EXPECT(head.size() < 64);
+  value.set_header("X-Growing", std::string(2048, 'h'));
+  value.set_header("X-Growing", "short");
+  value.remove_header("X-Growing");
+  value.set_header("Date", "fixed");
+  auto moved = std::move(value);
+  auto result = moved.serialize();
+  DOBA_EXPECT_EQUAL(result.body, std::string(8192, 'x'));
+  DOBA_EXPECT(result.head.find("X-Growing") == std::string_view::npos);
+  DOBA_EXPECT(result.head.find("Content-Length: 8192") !=
+              std::string_view::npos);
+  DOBA_EXPECT(!result.source);
+}
+
+DOBA_TEST("dynamic response head limits do not allocate the configured maximum") {
+  std::vector<char> head;
+  std::vector<char> body;
+  response value(head, body, 128, 0);
+  value.ok_200().set_header("Date", "fixed").set_body("x");
+  bool rejected = false;
+  try {
+    value.set_header("X-Too-Large", std::string(128, 'h'));
+  } catch (const std::out_of_range&) {
+    rejected = true;
+  }
+  DOBA_EXPECT(rejected);
+  auto result = value.serialize();
+  DOBA_EXPECT(result.source != nullptr);
+  DOBA_EXPECT_EQUAL(read_source(*result.source), "x");
+  DOBA_EXPECT_EQUAL(body.capacity(), 0U);
+}
+
+DOBA_TEST("dynamic response decodes a chunked body around the memory threshold") {
+  for (const std::size_t threshold : {0U, 2U, 3U, 4U}) {
+    std::vector<char> head;
+    std::vector<char> body;
+    response value(head, body, 512, threshold);
+    const std::string wire = "3\r\nabc\r\n0\r\n\r\n";
+    auto source = martianlabs::doba::protocol::http::v11::body::reader::chunked(
+        std::as_bytes(std::span(wire)));
+    value.ok_200().set_header("Date", "fixed").set_body(&source);
+    auto result = value.serialize();
+    const auto output = result.source ? read_source(*result.source)
+                                      : std::string(result.body);
+    DOBA_EXPECT_EQUAL(output, "abc");
+    DOBA_EXPECT_EQUAL(static_cast<bool>(result.source), threshold < 3);
   }
 }

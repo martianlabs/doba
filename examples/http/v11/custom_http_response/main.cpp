@@ -27,6 +27,7 @@
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "common/reader.h"
 #include "common/signaler.h"
@@ -50,6 +51,9 @@ class custom_response : public response {
   custom_response(std::span<char> storage, std::size_t head_capacity,
                   std::size_t body_capacity)
       : response(storage, head_capacity, body_capacity) {}
+  custom_response(std::vector<char>& head, std::vector<char>& body,
+                  std::size_t max_head_size, std::size_t body_memory_threshold)
+      : response(head, body, max_head_size, body_memory_threshold) {}
   custom_response(custom_response&&) noexcept = default;
   ~custom_response() = default;
   // +=========================================================================+
@@ -59,6 +63,12 @@ class custom_response : public response {
                               std::size_t head_capacity,
                               std::size_t body_capacity) {
     return custom_response(storage, head_capacity, body_capacity);
+  }
+  static custom_response from(std::vector<char>& head,
+                              std::vector<char>& body,
+                              std::size_t max_head_size,
+                              std::size_t body_memory_threshold) {
+    return custom_response(head, body, max_head_size, body_memory_threshold);
   }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |

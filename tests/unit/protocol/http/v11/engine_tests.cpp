@@ -551,8 +551,8 @@ DOBA_TEST("engine uses configured response head and inline capacities") {
     co_return;
   });
   policies configuration;
-  configuration.response_head_buffer_capacity = 128;
-  configuration.response_body_inline_capacity = 0;
+  configuration.max_response_head_size = 128;
+  configuration.response_body_memory_threshold = 0;
   engine<request, response> value(configuration, routes);
   int sources = 0;
   std::string wire;
@@ -1596,4 +1596,65 @@ DOBA_TEST("engine maps custom rejection statuses and preserves HEAD") {
             ? "HTTP/1.1 400 " : "HTTP/1.1 403 "));
     DOBA_EXPECT(current.wire.ends_with("\r\n\r\n"));
   }
+}
+
+DOBA_TEST("engine transfers observers only when asynchronous handling starts") {
+  router<request, response> routes;
+  routes.add("GET", "/sync", [](const request&, response& res) {
+    make_response(res, "sync");
+  });
+  routes.add("GET", "/async", [](const request&, response& res)
+                 -> task<void> {
+    make_response(res, "async");
+    co_return;
+  });
+  auto started = std::make_shared<int>(0);
+  auto finished = std::make_shared<int>(0);
+  engine<request, response> value(
+      {}, routes, [started]() { ++*started; },
+      [finished]() { ++*finished; });
+  value.set_on_send([](std::string_view, std::string_view,
+                       std::unique_ptr<reader>) {});
+  value.set_on_close([]() {});
+  DOBA_EXPECT_EQUAL(started.use_count(), 2);
+  DOBA_EXPECT_EQUAL(finished.use_count(), 2);
+  const std::string_view sync = "GET /sync HTTP/1.1\r\nHost: a\r\n\r\n";
+  value.on_bytes_received(sync.data(), sync.size(), 4096);
+  DOBA_EXPECT_EQUAL(*started, 0);
+  DOBA_EXPECT_EQUAL(*finished, 0);
+  const std::string_view async = "GET /async HTTP/1.1\r\nHost: a\r\n\r\n";
+  for (int i = 1; i <= 2; i++) {
+    value.on_bytes_received(async.data(), async.size(), 4096);
+    DOBA_EXPECT_EQUAL(*started, i);
+    DOBA_EXPECT_EQUAL(*finished, i);
+    DOBA_EXPECT_EQUAL(started.use_count(), 2);
+    DOBA_EXPECT_EQUAL(finished.use_count(), 2);
+  }
+}
+
+DOBA_TEST("engine updates callbacks after asynchronous handling starts") {
+  router<request, response> routes;
+  std::coroutine_handle<> pending;
+  routes.add("GET", "/wait", [&pending](const request&, response& res)
+                 -> task<void> {
+    co_await suspend_once{pending};
+    make_response(res, "done");
+    res.set_header("Connection", "close");
+  });
+  connection current(routes);
+  current.receive("GET /wait HTTP/1.1\r\nHost: a\r\n\r\n");
+  DOBA_EXPECT(static_cast<bool>(pending));
+  int sends = 0;
+  int closes = 0;
+  current.value.set_on_send([&](std::string_view, std::string_view body,
+                                 std::unique_ptr<reader>) {
+    DOBA_EXPECT_EQUAL(body, "done");
+    sends++;
+  });
+  current.value.set_on_close([&]() { closes++; });
+  pending.resume();
+  DOBA_EXPECT_EQUAL(sends, 1);
+  DOBA_EXPECT_EQUAL(closes, 1);
+  DOBA_EXPECT(current.blocks.empty());
+  DOBA_EXPECT_EQUAL(current.closes, 0);
 }

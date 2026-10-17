@@ -75,11 +75,7 @@ class engine {
       : router_{router},
         decoder_{configuration},
         on_async_started_{std::move(on_async_started)},
-        on_async_finished_{std::move(on_async_finished)} {
-    async_ = std::make_shared<engine_async>(
-        decoder_.configuration().max_pending_requests, on_async_started_,
-        on_async_finished_);
-  }
+        on_async_finished_{std::move(on_async_finished)} {}
   engine(const engine&) = delete;
   engine(engine&&) noexcept = delete;
   ~engine() = default;
@@ -95,7 +91,7 @@ class engine {
   // +-------------------------------------------------------------------------+
   void set_on_send(protocol::send_delegate output) {
     on_send_ = std::move(output);
-    async_->set_on_send(on_send_);
+    if (async_) async_->set_on_send(on_send_);
   }
   // +=========================================================================+
   // | [>] set_on_close                                             ( public ) |
@@ -104,7 +100,7 @@ class engine {
   // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()> close) {
     on_close_ = std::move(close);
-    async_->set_on_close(on_close_);
+    if (async_) async_->set_on_close(on_close_);
   }
   // +=========================================================================+
   // | [>] set_execution_capacity                                   ( public ) |
@@ -120,6 +116,7 @@ class engine {
   // +-------------------------------------------------------------------------+
   bool stop(std::function<void()> completed) {
     closed_ = true;
+    if (!async_) return true;
     return async_->stop(std::move(completed));
   }
   // +=========================================================================+
@@ -169,6 +166,13 @@ class engine {
           match = router_.match(request.get_method(), path);
         }
         if (!synchronous_ || engine_async::handles(match)) {
+          if (!async_) {
+            async_ = std::make_shared<engine_async>(
+                decoder_.configuration().max_pending_requests,
+                std::move(on_async_started_), std::move(on_async_finished_));
+            async_->set_on_send(on_send_);
+            async_->set_on_close(on_close_);
+          }
           synchronous_ = false;
           if (!async_->handle_request(decoder_, router_, request, match, path,
                                       execution_, async_, closed_)) {

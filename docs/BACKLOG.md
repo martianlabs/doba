@@ -163,8 +163,8 @@ ownership, response order, and one disconnect callback on IOCP and epoll.
 
 **Existing limits.** HTTP policies bound content length (16 MiB by default),
 query pairs, chunk extensions, trailers, request-head bytes, and body storage.
-Response capacities are separate. A complete head over
-`request_head_buffer_capacity` returns 431; an incomplete head filling that
+Response limits are separate. A complete head over
+`max_request_head_size` returns 431; an incomplete head filling that
 limit currently returns 400.
 
 **Remaining work.** Define separate header-field count, per-field size, and

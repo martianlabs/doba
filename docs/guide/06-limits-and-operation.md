@@ -95,19 +95,20 @@ to change them.
   </picture>
 </h2>
 
-HTTP reserves fixed head buffers: *request_head_buffer_capacity* and
-*response_head_buffer_capacity* each default to **4 KiB**. A head cannot
-grow beyond its capacity.
+HTTP head buffers grow on demand. *max_request_head_size* and
+*max_response_head_size* each default to **4 KiB** and cap head size
+without reserving that memory up front. The decoder reuses its vector
+capacity; async requests take their storage with them.
 
-An accepted body does not have to stay inline. The fixed
-*request_body_inline_capacity* defaults to **16 KiB**; a larger incoming
+An accepted body does not have to stay inline. The
+*request_body_memory_threshold* defaults to **16 KiB**; a larger incoming
 body moves to a temporary file. *max_request_body_size* still decides
 whether the body is accepted.
 
-The fixed *response_body_inline_capacity* also defaults to **16 KiB**.
+The *response_body_memory_threshold* also defaults to **16 KiB**.
 An inline body that exceeds it uses a writer with separate storage options.
 Its *spill_to_disk_threshold* defaults to **128 KiB** and does not change
-either HTTP inline capacity. The
+either HTTP memory threshold. The
 [large_response_bodies example][large-bodies] uses a raw writer that spills
 after **1024** bytes, then builds an **8192-byte** response. Its
 [source](../../examples/http/v11/large_response_bodies/main.cpp) starts
