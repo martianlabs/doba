@@ -64,13 +64,13 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   template <protocol::contracts::engine_factory<ENty> FAty>
-  context(int in_socket, std::size_t recv_buffer_size,
+  context(int in_socket, std::size_t receive_buffer_capacity,
           std::size_t send_buffer_size, const FAty& create_engine,
           types::on_client_connected_delegate on_connection,
           types::on_client_disconnected_delegate on_disconnection,
           typename CNty::shared_state shared_state,
-          std::size_t encrypted_receive_buffer_size = 0,
-          std::size_t network_bio_buffer_size = 0)
+          std::size_t encrypted_receive_buffer_capacity = 0,
+          std::size_t network_bio_buffer_capacity = 0)
       : on_connection_{std::move(on_connection)},
         on_disconnection_{std::move(on_disconnection)},
         socket_{in_socket},
@@ -79,12 +79,13 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
                                                 const FAty&,
                                                 typename CNty::shared_state,
                                                 std::size_t, std::size_t>) {
-            return CNty(recv_buffer_size, send_buffer_size, create_engine,
-                        shared_state, encrypted_receive_buffer_size,
-                        network_bio_buffer_size);
+            return CNty(receive_buffer_capacity, send_buffer_size,
+                        create_engine, shared_state,
+                        encrypted_receive_buffer_capacity,
+                        network_bio_buffer_capacity);
           } else {
-            return CNty(recv_buffer_size, send_buffer_size, create_engine,
-                        shared_state);
+            return CNty(receive_buffer_capacity, send_buffer_size,
+                        create_engine, shared_state);
           }
         }()},
         output_{send_buffer_size} {}

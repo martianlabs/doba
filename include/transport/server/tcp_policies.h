@@ -37,12 +37,12 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct tcp_policies {
-  // Default receive buffer size, in bytes.
-  static constexpr std::size_t kDefaultRecvBufferSize = 4 * 1024;
+  // Default receive buffer capacity, in bytes.
+  static constexpr std::size_t kDefaultReceiveBufferCapacity = 4 * 1024;
   // Receive capacity per connection, in bytes (must be positive).
   // Engines retain incomplete cores here; bodies may span multiple receives.
   // A full buffer with no consumption closes the connection.
-  std::size_t recv_buffer_size = kDefaultRecvBufferSize;
+  std::size_t receive_buffer_capacity = kDefaultReceiveBufferCapacity;
   // Number of workers (0 selects automatically).
   std::size_t worker_count = 0;
   // Requested pending connection queue size (0 uses the system default).
@@ -50,7 +50,7 @@ struct tcp_policies {
   // Queued send reservations plus the entire active batch, per connection.
   // Also bounds each accumulated batch; source-owned storage is excluded.
   // Must be positive; exceeding it closes the connection. No preallocation.
-  std::size_t max_send_buffer_size = 1024 * 1024;
+  std::size_t max_buffered_send_bytes = 1024 * 1024;
   // IPv4 bind address and port (1-65535); both must be set.
   std::string ip;
   std::string port;

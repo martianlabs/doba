@@ -58,9 +58,9 @@ full list; the settings you are most likely to touch are:
   one based on hardware concurrency.
 - **Queue.** *listen_backlog* requests the pending connection queue size.
   **0** leaves that choice to the system.
-- **Buffers.** *recv_buffer_size* gives each connection its receive capacity;
-  *max_send_buffer_size* caps its queued send reservations and active batch.
-  Both must be positive.
+- **Buffers.** *receive_buffer_capacity* reserves a fixed receive buffer per
+  connection. *max_buffered_send_bytes* caps queued send reservations and the
+  active batch without preallocating that amount. Both must be positive.
 
 You can pass a named policy value when a designated initializer starts to
 feel crowded:
@@ -108,6 +108,9 @@ even with a custom engine. *http_server* also accepts a custom transport;
 chain and its matching PEM private key. doba checks that both files load and
 the key matches the certificate when it creates the TLS transport. A bad
 pair makes the first *start* fail instead of waiting for the first request.
+The TLS receive buffer and network BIO use the fixed capacities
+*encrypted_receive_buffer_capacity* and *network_bio_buffer_capacity*. Both
+default to **17 KiB** per connection.
 
 <a name="try-https"></a>
 <h2>

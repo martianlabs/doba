@@ -25,6 +25,7 @@
 #ifndef martianlabs_doba_protocol_http_v11_engine_sync_h
 #define martianlabs_doba_protocol_http_v11_engine_sync_h
 
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -34,6 +35,7 @@
 #include "protocol/http/v11/results.h"
 #include "protocol/http/common/header_names.h"
 #include "protocol/http/common/method_names.h"
+#include "protocol/http/common/headers/www_authenticate.h"
 #include "protocol/http/common/router.h"
 #include "protocol/http/common/router_match_result.h"
 
@@ -110,6 +112,7 @@ struct engine_sync {
           const std::string_view path = request.get_absolute_path();
           const router_match_result<RQty, RSty> match =
               selected ? *selected : router.match(request.get_method(), path);
+          if (match && !authenticate(match, request, response)) return;
           if (match.handler) {
             (*match.handler)(request, response);
             return;
@@ -142,6 +145,39 @@ struct engine_sync {
       close = true;
       build_error_response(response);
     }
+  }
+  // +=========================================================================+
+  // | [>] authenticate                                             ( public ) |
+  // +-------------------------------------------------------------------------+
+  static bool authenticate(const router_match_result<RQty, RSty>& match,
+                           const RQty& request, RSty& response) {
+    if (!match.authenticate || !*match.authenticate) return true;
+    const auto result = (*match.authenticate)(request);
+    if (result.status == auth::authentication_status::kAccepted) return true;
+    if ((!result.challenge.empty() &&
+         !http::headers::www_authenticate::check(result.challenge)) ||
+        (result.status == auth::authentication_status::kUnauthenticated &&
+         result.challenge.find_first_not_of(" \t,") ==
+             std::string::npos)) {
+      throw std::invalid_argument("Invalid authentication challenge");
+    }
+    switch (result.status) {
+      case auth::authentication_status::kInvalidRequest:
+        response.bad_request_400();
+        break;
+      case auth::authentication_status::kUnauthenticated:
+        response.unauthorized_401();
+        break;
+      case auth::authentication_status::kForbidden:
+        response.forbidden_403();
+        break;
+      default:
+        throw std::invalid_argument("Invalid authentication result");
+    }
+    if (!result.challenge.empty()) {
+      response.set_header(header_names::kWwwAuthenticate, result.challenge);
+    }
+    return false;
   }
   // +=========================================================================+
   // | [>] build_error_response                                     ( public ) |

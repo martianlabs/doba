@@ -29,7 +29,13 @@
 #include <utility>
 
 #include "http_server.h"
+#include "protocol/http/common/auth/basic.h"
+#include "protocol/http/common/auth/bearer.h"
 #include "test_helper.h"
+
+#ifdef DOBA_ENABLE_TLS
+#include "https_server.h"
+#endif
 
 namespace {
 // /////////////////////////////////////////////////////////////////////////////
@@ -37,13 +43,15 @@ namespace {
 // | [>] usings                                                     ( public ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+using martianlabs::doba::http_server;
+#ifdef DOBA_ENABLE_TLS
+using martianlabs::doba::https_server;
+#endif
+using martianlabs::doba::protocol::http::router;
 using martianlabs::doba::common::reader;
 namespace protocol = martianlabs::doba::protocol;
 namespace http = martianlabs::doba::protocol::http::v11;
 namespace tr = martianlabs::doba::transport::server;
-using routes_type =
-    martianlabs::doba::protocol::http::router<http::request, http::response>;
-using engine_type = http::engine<http::request, http::response>;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -171,7 +179,7 @@ struct private_policies_transport : fake_transport<ENty, FNty> {
 // | [>] bad_engine                                                 ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-struct bad_engine : engine_type {
+struct bad_engine : http::engine<http::request, http::response> {
   explicit bad_engine(http::policies);
 };
 
@@ -180,7 +188,7 @@ struct bad_engine : engine_type {
 // | [>] bad_receive_engine                                         ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-struct bad_receive_engine : engine_type {
+struct bad_receive_engine : http::engine<http::request, http::response> {
   void on_bytes_received(const char*, std::size_t, std::size_t);
 };
 
@@ -189,7 +197,7 @@ struct bad_receive_engine : engine_type {
 // | [>] bad_send_engine                                            ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-struct bad_send_engine : engine_type {
+struct bad_send_engine : http::engine<http::request, http::response> {
   void set_on_send(std::function<void(const char*, std::size_t)>);
 };
 
@@ -217,16 +225,21 @@ struct custom_engine {
 // /////////////////////////////////////////////////////////////////////////////
 static_assert(!protocol::contracts::engine<bad_receive_engine>);
 static_assert(!protocol::contracts::engine<bad_send_engine>);
-static_assert(!protocol::contracts::engine_factory<decltype([]() { return 0; }),
-                                                   engine_type>);
 static_assert(!protocol::contracts::engine_factory<
-              decltype([](int) -> engine_type { throw 0; }), engine_type>);
+              decltype([]() { return 0; }),
+              http::engine<http::request, http::response>>);
 static_assert(!protocol::contracts::engine_factory<
-              decltype([value = 0]() mutable -> engine_type {
+              decltype([](int) -> http::engine<http::request, http::response> {
+                throw 0;
+              }),
+              http::engine<http::request, http::response>>);
+static_assert(!protocol::contracts::engine_factory<
+              decltype([value = 0]() mutable
+                           -> http::engine<http::request, http::response> {
                 value++;
                 throw value;
               }),
-              engine_type>);
+              http::engine<http::request, http::response>>);
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -235,14 +248,13 @@ static_assert(!protocol::contracts::engine_factory<
 // /////////////////////////////////////////////////////////////////////////////
 template <typename ENty, template <typename, typename> class TRty>
 concept accepts_server = requires {
-  typename martianlabs::doba::http_server<http::request, http::response,
-                                          routes_type, ENty, TRty>;
+  typename http_server<http::request, http::response,
+                       router<http::request, http::response>, ENty, TRty>;
 };
 
 template <typename RQty, typename RSty, typename ROty>
 concept accepts_custom_http_server = requires {
-  typename martianlabs::doba::http_server<RQty, RSty, ROty, custom_engine,
-                                          fake_transport>;
+  typename http_server<RQty, RSty, ROty, custom_engine, fake_transport>;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -250,25 +262,37 @@ concept accepts_custom_http_server = requires {
 // | [>] asserts                                                    ( static ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-static_assert(protocol::contracts::engine<engine_type>);
-static_assert(protocol::contracts::completion_engine<engine_type>);
+static_assert(
+    protocol::contracts::engine<http::engine<http::request, http::response>>);
+static_assert(protocol::contracts::completion_engine<
+              http::engine<http::request, http::response>>);
 static_assert(!protocol::contracts::completion_engine<custom_engine>);
-static_assert(!std::constructible_from<engine_type, http::policies>);
-static_assert(accepts_server<engine_type, fake_transport>);
-static_assert(accepts_server<engine_type, tr::tcp>);
-static_assert(!accepts_server<engine_type, bad_transport>);
-static_assert(!accepts_server<engine_type, bad_start_transport>);
-static_assert(!accepts_server<engine_type, bad_policies_transport>);
-static_assert(!accepts_server<engine_type, private_policies_transport>);
+static_assert(!std::constructible_from<
+              http::engine<http::request, http::response>, http::policies>);
+static_assert(accepts_server<http::engine<http::request, http::response>,
+                             fake_transport>);
+static_assert(
+    accepts_server<http::engine<http::request, http::response>, tr::tcp>);
+static_assert(!accepts_server<http::engine<http::request, http::response>,
+                              bad_transport>);
+static_assert(!accepts_server<http::engine<http::request, http::response>,
+                              bad_start_transport>);
+static_assert(!accepts_server<http::engine<http::request, http::response>,
+                              bad_policies_transport>);
+static_assert(!accepts_server<http::engine<http::request, http::response>,
+                              private_policies_transport>);
 static_assert(protocol::contracts::engine<bad_engine>);
 static_assert(!accepts_server<bad_engine, fake_transport>);
 static_assert(!accepts_server<int, fake_transport>);
-static_assert(accepts_custom_http_server<http::request, http::response,
-                                         routes_type>);
-static_assert(!accepts_custom_http_server<custom_request, http::response,
-                                          routes_type>);
-static_assert(!accepts_custom_http_server<http::request, custom_response,
-                                          routes_type>);
+static_assert(
+    accepts_custom_http_server<http::request, http::response,
+                               router<http::request, http::response>>);
+static_assert(
+    !accepts_custom_http_server<custom_request, http::response,
+                                router<http::request, http::response>>);
+static_assert(
+    !accepts_custom_http_server<http::request, custom_response,
+                                router<http::request, http::response>>);
 static_assert(!accepts_custom_http_server<http::request, http::response,
                                           custom_routes>);
 
@@ -277,9 +301,37 @@ static_assert(!accepts_custom_http_server<http::request, http::response,
 // | [>] usings                                                     ( public ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-using server_type = martianlabs::doba::http_server<
-    http::request, http::response, routes_type, engine_type, fake_transport>;
-using factory_type = http::engine_factory<engine_type, routes_type>;
+namespace auth = martianlabs::doba::protocol::http::auth;
+struct custom_auth {
+  int& checks;
+  auth::authentication_result authenticate(const http::request&) const {
+    checks++;
+    return {auth::authentication_status::kAccepted, {}};
+  }
+};
+struct invalid_auth {
+  bool authenticate(const http::request&) const { return true; }
+};
+static_assert(!auth::contracts::provider<invalid_auth, http::request>);
+template <typename Aty>
+concept registered_auth = requires(
+    http_server<http::request, http::response,
+                router<http::request, http::response>,
+                http::engine<http::request, http::response>, fake_transport,
+                auth::basic, auth::bearer, custom_auth>& server) {
+  server.template add_route<Aty>("GET", "/",
+      [](const http::request&, http::response&) {});
+};
+static_assert(registered_auth<custom_auth>);
+static_assert(!registered_auth<invalid_auth>);
+#ifdef DOBA_ENABLE_TLS
+static_assert(
+    std::constructible_from<
+        https_server<http::request, http::response,
+                     router<http::request, http::response>,
+                     http::engine<http::request, http::response>, auth::bearer>,
+        tr::tls_policies, http::policies, std::tuple<auth::bearer>>);
+#endif
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -287,15 +339,36 @@ using factory_type = http::engine_factory<engine_type, routes_type>;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 static_assert(
-    std::same_as<typename tr::tcp<engine_type, factory_type>::policies_type,
+    std::same_as<typename tr::tcp<
+                     http::engine<http::request, http::response>,
+                     http::engine_factory<
+                         http::engine<http::request, http::response>,
+                         router<http::request, http::response>>>::policies_type,
                  tr::tcp_policies>);
-static_assert(std::constructible_from<server_type, std::unique_ptr<int>>);
-static_assert(
-    std::constructible_from<server_type, std::unique_ptr<int>, http::policies>);
-static_assert(!std::constructible_from<server_type, http::policies,
-                                       std::unique_ptr<int>>);
-static_assert(
-    !std::constructible_from<server_type, tr::tcp_policies, http::policies>);
+static_assert(std::constructible_from<
+              http_server<http::request, http::response,
+                          router<http::request, http::response>,
+                          http::engine<http::request, http::response>,
+                          fake_transport>,
+              std::unique_ptr<int>>);
+static_assert(std::constructible_from<
+              http_server<http::request, http::response,
+                          router<http::request, http::response>,
+                          http::engine<http::request, http::response>,
+                          fake_transport>,
+              std::unique_ptr<int>, http::policies>);
+static_assert(!std::constructible_from<
+              http_server<http::request, http::response,
+                          router<http::request, http::response>,
+                          http::engine<http::request, http::response>,
+                          fake_transport>,
+              http::policies, std::unique_ptr<int>>);
+static_assert(!std::constructible_from<
+              http_server<http::request, http::response,
+                          router<http::request, http::response>,
+                          http::engine<http::request, http::response>,
+                          fake_transport>,
+              tr::tcp_policies, http::policies>);
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -334,8 +407,9 @@ struct controller {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP server accepts a custom engine") {
   observed = {};
-  martianlabs::doba::http_server<http::request, http::response, routes_type,
-                                  custom_engine, fake_transport>
+  http_server<http::request, http::response,
+              router<http::request, http::response>, custom_engine,
+              fake_transport>
       value(std::make_unique<int>(5));
   value.start();
   DOBA_EXPECT_EQUAL(observed.starts, 1);
@@ -352,7 +426,10 @@ DOBA_TEST("server shares its router between engines") {
   int calls = 0;
   auto transport_configuration = std::make_unique<int>(3);
   {
-    server_type value(std::move(transport_configuration));
+    http_server<http::request, http::response,
+                router<http::request, http::response>,
+                http::engine<http::request, http::response>, fake_transport>
+        value(std::move(transport_configuration));
     value.add_controller<controller>(calls);
     value.start();
     value.start();
@@ -395,7 +472,10 @@ DOBA_TEST("server shares its router between engines") {
 DOBA_TEST("server recovers from startup failure") {
   observed = {};
   observed.fail_start = true;
-  server_type value({}, {.max_content_length = 1});
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, fake_transport>
+      value({}, {.max_request_body_size = 1});
   bool failed = false;
   try {
     value.start();
@@ -419,7 +499,7 @@ DOBA_TEST("server recovers from startup failure") {
 // | [>] engine factories preserve policies and independence     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("engine factories preserve policies and independence") {
-  routes_type routes;
+  router<http::request, http::response> routes;
   int calls = 0;
   routes.add("GET", "/first", [&](const http::request&, http::response& res) {
     calls++;
@@ -428,12 +508,14 @@ DOBA_TEST("engine factories preserve policies and independence") {
     return;
   });
   http::policies configuration;
-  configuration.max_content_length = 1;
-  auto factory = http::make_engine_factory<engine_type>(configuration, routes);
-  configuration.max_content_length = 100;
+  configuration.max_request_body_size = 1;
+  auto factory =
+      http::make_engine_factory<http::engine<http::request, http::response>>(
+          configuration, routes);
+  configuration.max_request_body_size = 100;
   auto first = factory();
   auto second = factory();
-  engine_type* engines[] = {&first, &second};
+  http::engine<http::request, http::response>* engines[] = {&first, &second};
   std::string bytes[2];
   int closed[2] = {};
   for (int i = 0; i < 2; i++) {
@@ -478,7 +560,10 @@ DOBA_TEST("server forwards engine policies to every connection") {
   observed.request =
       "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 2\r\n\r\n";
   int calls = 0;
-  server_type value(std::make_unique<int>(7), {.max_content_length = 1});
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, fake_transport>
+      value(std::make_unique<int>(7), {.max_request_body_size = 1});
   value.add_route("GET", "/", [&](const http::request&, http::response& res) {
     calls++;
     res.ok_200();
@@ -492,4 +577,33 @@ DOBA_TEST("server forwards engine policies to every connection") {
   DOBA_EXPECT(second != std::string::npos);
   value.stop();
   DOBA_EXPECT_EQUAL(observed.stops, 1);
+}
+
+DOBA_TEST("server owns and selects authentication providers across engines") {
+  observed = {};
+  int checks = 0;
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, fake_transport,
+              auth::basic, auth::bearer, custom_auth>
+      value({}, {},
+            std::tuple{auth::basic{"demo", [](auto, auto) { return false; }},
+                       auth::bearer{"demo", [](auto) { return false; }},
+                       custom_auth{checks}});
+  value.add_route<custom_auth>("GET", "/",
+      [](const http::request&, http::response& res) { res.ok_200(); });
+  value.start();
+  DOBA_EXPECT_EQUAL(checks, 2);
+  bool rejected = false;
+  try {
+    value.add_route<custom_auth>("GET", "/late",
+        [](const http::request&, http::response&) {});
+  } catch (const std::runtime_error&) {
+    rejected = true;
+  }
+  DOBA_EXPECT(rejected);
+  value.stop();
+  value.start();
+  DOBA_EXPECT_EQUAL(checks, 4);
+  value.stop();
 }

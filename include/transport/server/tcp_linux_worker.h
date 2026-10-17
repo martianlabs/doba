@@ -438,21 +438,21 @@ struct worker {
   // | connection is accepted.                                                 |
   // +-------------------------------------------------------------------------+
   void register_context(int socket) {
-    std::size_t encrypted_receive_buffer_size = 0;
-    std::size_t network_bio_buffer_size = 0;
+    std::size_t encrypted_receive_buffer_capacity = 0;
+    std::size_t network_bio_buffer_capacity = 0;
     if constexpr (requires(const POty& value) {
-                    value.encrypted_receive_buffer_size;
-                    value.network_bio_buffer_size;
+                    value.encrypted_receive_buffer_capacity;
+                    value.network_bio_buffer_capacity;
                   }) {
-      encrypted_receive_buffer_size =
-          configuration_.encrypted_receive_buffer_size;
-      network_bio_buffer_size = configuration_.network_bio_buffer_size;
+      encrypted_receive_buffer_capacity =
+          configuration_.encrypted_receive_buffer_capacity;
+      network_bio_buffer_capacity = configuration_.network_bio_buffer_capacity;
     }
     auto ctx = std::make_shared<context<ENty, CNty>>(
-        socket, configuration_.recv_buffer_size,
-        configuration_.max_send_buffer_size, create_engine_, on_connection_,
-        on_disconnection_, shared_state_, encrypted_receive_buffer_size,
-        network_bio_buffer_size);
+        socket, configuration_.receive_buffer_capacity,
+        configuration_.max_buffered_send_bytes, create_engine_, on_connection_,
+        on_disconnection_, shared_state_, encrypted_receive_buffer_capacity,
+        network_bio_buffer_capacity);
     auto ctx_ptr = ctx.get();
     if (!contexts_.emplace(ctx_ptr, std::move(ctx)).second) {
       throw std::runtime_error("Context could not be registered!");

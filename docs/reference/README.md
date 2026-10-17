@@ -11,7 +11,8 @@ with links are ready; the rest will join them as we verify each API. For a
 walkthrough, head to the [guide](../guide/README.md).
 
 - **Server:** [Core server](server.md). Compose an engine and a transport.
-- **HTTP/1.1:** [Server](http/server.md). Routing, requests, responses,
+- **HTTP/1.1:** [Server](http/server.md) and
+  [authentication](http/authentication.md). Routing, requests, responses,
   bodies, policies, and static files are coming next.
 - **Transports:** TCP and TLS are coming next.
 - **Extensions:** Protocol and transport contracts are coming next.

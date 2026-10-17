@@ -275,17 +275,23 @@ class engine_async {
     std::lock_guard<std::mutex> lock(mutex_);
     if (closing()) return;
     if (final && position == next_send_.load(std::memory_order_relaxed) &&
-        pending_.empty()) {
+        (pending_.empty() || pending_.find(position) == pending_.end())) {
       on_send_(result.head, result.body, std::move(result.source));
       next_send_++;
-      if (close) close_now();
-      return;
+      if (close) {
+        pending_.clear();
+        close_now();
+        return;
+      }
+      if (pending_.empty()) return;
+    } else {
+      auto& slot = pending_[position];
+      slot.outputs.push_back(
+          {std::string(result.head), std::string(result.body),
+           std::move(result.source)});
+      slot.complete = final;
+      slot.close = close;
     }
-    auto& slot = pending_[position];
-    slot.outputs.push_back({std::string(result.head), std::string(result.body),
-                            std::move(result.source)});
-    slot.complete = final;
-    slot.close = close;
     for (;;) {
       auto current = pending_.find(next_send_.load());
       if (current == pending_.end()) break;
@@ -345,11 +351,11 @@ class engine_async {
         : request_storage(std::move(storage)),
           request(std::move(value)),
           response_storage(std::make_unique_for_overwrite<char[]>(
-              owner.configuration().max_response_head_size +
+              owner.configuration().response_head_buffer_capacity +
               owner.configuration().response_body_inline_capacity)),
           response(owner.make_response(std::span<char>(
               response_storage.get(),
-              owner.configuration().max_response_head_size +
+              owner.configuration().response_head_buffer_capacity +
                   owner.configuration().response_body_inline_capacity))) {}
   };
   // +=========================================================================+
@@ -369,6 +375,13 @@ class engine_async {
         owner, owner.take_request_storage(), std::move(request));
     entry->execution = execution;
     try {
+      if (!engine_sync<RQty, RSty, ROty>::authenticate(
+              match, entry->request, entry->response)) {
+        auto serialized = engine_sync<RQty, RSty, ROty>::serialize(
+            entry->request, entry->response, close);
+        state->submit(position, std::move(serialized), true, close);
+        return;
+      }
       common::task<void> work =
           match.async_handler
               ? (*match.async_handler)(entry->request, entry->response)

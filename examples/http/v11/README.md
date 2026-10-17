@@ -37,6 +37,9 @@ your application needs. Each step below lists examples in reading order:
 7. **Add asynchronous work or TLS:** [async_routes](async_routes/README.md)
    and [https_hello_world](https_hello_world/README.md).
 
+Protect individual endpoints with [basic_auth](basic_auth/README.md) or
+[bearer_auth](bearer_auth/README.md). Both keep a public health route.
+
 To customize HTTP composition, continue with [custom_http_request](custom_http_request/README.md),
 [custom_http_response](custom_http_response/README.md), and
 [custom_http_router](custom_http_router/README.md). For a different protocol

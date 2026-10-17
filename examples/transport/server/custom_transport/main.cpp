@@ -125,13 +125,11 @@ class custom_transport {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
-  using routes_type =
-      martianlabs::doba::protocol::http::router<http::request, http::response>;
-  using engine_type = http::engine<http::request, http::response>;
-
   std::string output;
-  martianlabs::doba::http_server<http::request, http::response, routes_type,
-                                 engine_type, custom_transport>
+  martianlabs::doba::http_server<
+      http::request, http::response,
+      martianlabs::doba::protocol::http::router<http::request, http::response>,
+      http::engine<http::request, http::response>, custom_transport>
       server(&output);
   server.add_route("GET", "/hello",
                    [](const http::request&, http::response& response) {

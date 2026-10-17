@@ -91,15 +91,15 @@ class reader_chunked {
   // +=========================================================================+
   // | [>] CONSTANTs                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  static constexpr std::size_t kMaxChunkedExtensionSize =
-      policies::kMaxChunkedExtensionSize;
-  static constexpr std::size_t kMaxChunkedTrailerSize =
-      policies::kMaxChunkedTrailerSize;
+  static constexpr std::size_t kDefaultMaxChunkExtensionSize =
+      policies::kDefaultMaxChunkExtensionSize;
+  static constexpr std::size_t kDefaultMaxTrailerSectionSize =
+      policies::kDefaultMaxTrailerSectionSize;
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
   // +-------------------------------------------------------------------------+
-  reader_chunked(std::size_t extension_limit = kMaxChunkedExtensionSize,
-                 std::size_t trailer_limit = kMaxChunkedTrailerSize)
+  reader_chunked(std::size_t extension_limit = kDefaultMaxChunkExtensionSize,
+                 std::size_t trailer_limit = kDefaultMaxTrailerSectionSize)
       : extension_limit_(extension_limit), trailer_limit_(trailer_limit) {}
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
@@ -523,8 +523,8 @@ class reader_chunked {
   state state_{state::chunk_size};
   reader_error error_{reader_error::none};
   std::size_t chunk_remaining_{0};
-  std::size_t extension_limit_{kMaxChunkedExtensionSize};
-  std::size_t trailer_limit_{kMaxChunkedTrailerSize};
+  std::size_t extension_limit_{kDefaultMaxChunkExtensionSize};
+  std::size_t trailer_limit_{kDefaultMaxTrailerSectionSize};
   std::size_t extension_size_{0};
   std::size_t trailer_size_{0};
   bool chunk_size_started_{false};

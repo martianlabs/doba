@@ -87,14 +87,15 @@ struct worker {
       : configuration_{configuration},
         create_engine_{std::move(create_engine)},
         shared_state_{std::move(shared_state)} {
-    if (!configuration_.recv_buffer_size ||
-        configuration_.recv_buffer_size > std::numeric_limits<ULONG>::max()) {
+    if (!configuration_.receive_buffer_capacity ||
+        configuration_.receive_buffer_capacity >
+            std::numeric_limits<ULONG>::max()) {
       throw std::runtime_error("Invalid receive buffer size!");
     }
     if (configuration_.worker_count > std::numeric_limits<DWORD>::max()) {
       throw std::runtime_error("Invalid worker count!");
     }
-    if (!configuration_.max_send_buffer_size) {
+    if (!configuration_.max_buffered_send_bytes) {
       throw std::runtime_error("Invalid send buffer size!");
     }
     if (configuration_.listen_backlog < 0) {
@@ -660,23 +661,24 @@ struct worker {
     }
     std::shared_ptr<context<ENty, CNty>> ctx;
     try {
-      std::size_t encrypted_receive_buffer_size = 0;
-      std::size_t network_bio_buffer_size = 0;
+      std::size_t encrypted_receive_buffer_capacity = 0;
+      std::size_t network_bio_buffer_capacity = 0;
       if constexpr (requires(const POty& value) {
-                      value.encrypted_receive_buffer_size;
-                      value.network_bio_buffer_size;
+                      value.encrypted_receive_buffer_capacity;
+                      value.network_bio_buffer_capacity;
                     }) {
-        encrypted_receive_buffer_size =
-            configuration_.encrypted_receive_buffer_size;
-        network_bio_buffer_size = configuration_.network_bio_buffer_size;
+        encrypted_receive_buffer_capacity =
+            configuration_.encrypted_receive_buffer_capacity;
+        network_bio_buffer_capacity =
+            configuration_.network_bio_buffer_capacity;
       }
       ctx = std::make_shared<context<ENty, CNty>>(
-          ova->socket, configuration_.recv_buffer_size,
-          configuration_.max_send_buffer_size, create_engine_, stopping_,
+          ova->socket, configuration_.receive_buffer_capacity,
+          configuration_.max_buffered_send_bytes, create_engine_, stopping_,
           on_connection_, on_disconnection_,
           [this](context<ENty, CNty>* context) { retire_context(context); },
-          shared_state_, encrypted_receive_buffer_size,
-          network_bio_buffer_size);
+          shared_state_, encrypted_receive_buffer_capacity,
+          network_bio_buffer_capacity);
     } catch (...) {
       closesocket(ova->socket);
       finish_accept();

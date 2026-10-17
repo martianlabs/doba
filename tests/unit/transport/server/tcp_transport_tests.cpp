@@ -66,14 +66,15 @@ DOBA_TEST("tcp transport rejects invalid buffer policies") {
     return false;
   };
   tr::tcp_policies configuration;
-  configuration.recv_buffer_size = 0;
+  configuration.receive_buffer_capacity = 0;
   DOBA_EXPECT(rejects(configuration));
-  configuration.recv_buffer_size = std::numeric_limits<std::size_t>::max();
+  configuration.receive_buffer_capacity =
+      std::numeric_limits<std::size_t>::max();
   DOBA_EXPECT(rejects(configuration));
-  configuration.recv_buffer_size = 1;
-  configuration.max_send_buffer_size = 0;
+  configuration.receive_buffer_capacity = 1;
+  configuration.max_buffered_send_bytes = 0;
   DOBA_EXPECT(rejects(configuration));
-  configuration.max_send_buffer_size = 1;
+  configuration.max_buffered_send_bytes = 1;
   configuration.listen_backlog = -1;
   DOBA_EXPECT(rejects(configuration));
 #ifdef _WIN32

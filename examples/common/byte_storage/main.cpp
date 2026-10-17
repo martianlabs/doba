@@ -38,7 +38,7 @@ using namespace martianlabs::doba::common;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
-  byte_storage storage({.spill_threshold = 4, .spill_dir = {}});
+  byte_storage storage({.spill_to_disk_threshold = 4, .spill_dir = {}});
   if (!storage.write("doba", 4) || !storage.write(" storage", 8)) return 1;
   storage.finish(12);
   char output[12]{};

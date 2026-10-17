@@ -40,15 +40,17 @@ template <typename RQty = protocol::http::v11::request,
           typename RSty = protocol::http::v11::response,
           typename ROty = protocol::http::router<RQty, RSty>,
           protocol::contracts::engine ENty =
-              protocol::http::v11::engine<RQty, RSty, ROty>>
+              protocol::http::v11::engine<RQty, RSty, ROty>,
+          typename... AUty>
 class https_server
-    : public http_server<RQty, RSty, ROty, ENty, transport::server::tls> {
+    : public http_server<RQty, RSty, ROty, ENty, transport::server::tls,
+                         AUty...> {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   using http_server<RQty, RSty, ROty, ENty,
-                    transport::server::tls>::http_server;
+                    transport::server::tls, AUty...>::http_server;
 };
 }  // namespace martianlabs::doba
 

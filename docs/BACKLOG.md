@@ -164,8 +164,8 @@ ownership, response order, and one disconnect callback on IOCP and epoll.
 **Existing limits.** HTTP policies bound content length (16 MiB by default),
 query pairs, chunk extensions, trailers, request-head bytes, and body storage.
 Response capacities are separate. A complete head over
-`max_request_head_size` returns 431; an incomplete head filling that limit
-currently returns 400.
+`request_head_buffer_capacity` returns 431; an incomplete head filling that
+limit currently returns 400.
 
 **Remaining work.** Define separate header-field count, per-field size, and
 request-target limits, including exact accounting and 431/414 rejection
@@ -211,7 +211,7 @@ connection after capacity becomes available.
 
 **Status.** Partially implemented; required for `0.1.0-beta1`.
 `max_pending_requests` bounds asynchronous response positions. TCP
-`max_send_buffer_size` bounds queued reservations and the active batch but
+`max_buffered_send_bytes` bounds queued reservations and the active batch but
 excludes source-owned storage; neither is a complete retained-work budget.
 
 **Remaining work.** Define accounting, defaults, and admission or resume

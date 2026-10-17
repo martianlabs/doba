@@ -354,6 +354,12 @@ if(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/cookies
   )
   add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/basic_auth
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/bearer_auth
+  )
+  add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/request_body_text
   )
   add_subdirectory(

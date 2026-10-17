@@ -153,21 +153,21 @@ class decoder {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   explicit decoder(policies configuration = {}) {
-    if (!configuration.max_request_head_size ||
-        !configuration.max_response_head_size ||
-        configuration.request_body_memory_threshold >
+    if (!configuration.request_head_buffer_capacity ||
+        !configuration.response_head_buffer_capacity ||
+        configuration.request_body_inline_capacity >
             std::numeric_limits<std::size_t>::max() -
-                configuration.max_request_head_size ||
+                configuration.request_head_buffer_capacity ||
         configuration.response_body_inline_capacity >
             std::numeric_limits<std::size_t>::max() -
-                configuration.max_response_head_size) {
+                configuration.response_head_buffer_capacity) {
       throw std::invalid_argument("Invalid HTTP buffer capacities");
     }
     buffer_ = std::make_unique_for_overwrite<char[]>(
-        configuration.max_request_head_size +
-        configuration.request_body_memory_threshold);
+        configuration.request_head_buffer_capacity +
+        configuration.request_body_inline_capacity);
     response_buffer_ = std::make_unique_for_overwrite<char[]>(
-        configuration.max_response_head_size +
+        configuration.response_head_buffer_capacity +
         configuration.response_body_inline_capacity);
     context_.policies = configuration;
   }
@@ -192,7 +192,8 @@ class decoder {
     consumed = size - source.size();
     if (result.code == deserialization_status::kMoreBytesNeeded &&
         !body_framer_ &&
-        (size == capacity || size >= context_.policies.max_request_head_size)) {
+        (size == capacity ||
+         size >= context_.policies.request_head_buffer_capacity)) {
       result.code = deserialization_status::kInvalidSource;
     }
     if (result.code == deserialization_status::kSucceeded) {
@@ -218,7 +219,8 @@ class decoder {
           if (body_file_path_.empty()) {
             std::span<const std::byte> wire(
                 reinterpret_cast<const std::byte*>(
-                    buffer_.get() + context_.policies.max_request_head_size),
+                    buffer_.get() +
+                    context_.policies.request_head_buffer_capacity),
                 body_size_);
             body_reader =
                 context_.connection.chunked
@@ -330,8 +332,8 @@ class decoder {
   // +-------------------------------------------------------------------------+
   std::unique_ptr<char[]> take_request_storage() {
     auto replacement = std::make_unique_for_overwrite<char[]>(
-        context_.policies.max_request_head_size +
-        context_.policies.request_body_memory_threshold);
+        context_.policies.request_head_buffer_capacity +
+        context_.policies.request_body_inline_capacity);
     buffer_.swap(replacement);
     return replacement;
   }
@@ -341,7 +343,7 @@ class decoder {
   // | Creates a response object using the provided storage.                   |
   // +-------------------------------------------------------------------------+
   RSty make_response(std::span<char> storage) {
-    return RSty::from(storage, context_.policies.max_response_head_size,
+    return RSty::from(storage, context_.policies.response_head_buffer_capacity,
                      context_.policies.response_body_inline_capacity);
   }
 
@@ -354,7 +356,7 @@ class decoder {
   // +-------------------------------------------------------------------------+
   std::span<char> response_storage() noexcept {
     return {response_buffer_.get(),
-            context_.policies.max_response_head_size +
+            context_.policies.response_head_buffer_capacity +
                 context_.policies.response_body_inline_capacity};
   }
   // +=========================================================================+
@@ -541,12 +543,12 @@ class decoder {
           if (body_expected) {
             if (context_.connection.chunked) {
               body_framer_ = body::framer_chunked(
-                  context_.policies.max_content_length,
+                  context_.policies.max_request_body_size,
                   context_.policies.max_chunk_extension_size,
                   context_.policies.max_trailer_section_size);
             } else {
               if (context_.content_length >
-                      context_.policies.request_body_memory_threshold &&
+                      context_.policies.request_body_inline_capacity &&
                   !spill_body()) {
                 storage_failed_ = true;
                 return deserialization_status::kInvalidSource;
@@ -633,14 +635,15 @@ class decoder {
     if (state.consumed) {
       if (body_file_path_.empty() &&
           state.consumed >
-              context_.policies.request_body_memory_threshold - body_size_ &&
+              context_.policies.request_body_inline_capacity - body_size_ &&
           !spill_body()) {
         storage_failed_ = true;
         return deserialization_status::kInvalidSource;
       }
       if (body_file_path_.empty()) {
         std::memcpy(buffer_.get() +
-                        context_.policies.max_request_head_size + body_size_,
+                        context_.policies.request_head_buffer_capacity +
+                        body_size_,
                     source.data(), state.consumed);
       } else if (!body_file_.write(source.data(), state.consumed)) {
         storage_failed_ = true;
@@ -664,7 +667,7 @@ class decoder {
     body_file_path_ = std::move(path);
     if (body_size_ &&
         !body_file_.write(buffer_.get() +
-                              context_.policies.max_request_head_size,
+                              context_.policies.request_head_buffer_capacity,
                           body_size_)) {
       return false;
     }
@@ -684,7 +687,7 @@ class decoder {
   // | [>] store_head                                              ( private ) |
   // +-------------------------------------------------------------------------+
   bool store_head(std::string_view buffer_view) {
-    if (buffer_view.size() > context_.policies.max_request_head_size) {
+    if (buffer_view.size() > context_.policies.request_head_buffer_capacity) {
       context_.rejection_reason = rejection_reason::kHeaderFieldsTooLarge;
       return false;
     }
@@ -692,7 +695,8 @@ class decoder {
     // pairs and set it in the request.
     query_parameters_.clear();
     if (!query_.empty()) {
-      std::array<std::string_view, policies::kMaxQueryParameters + 1>
+      constexpr std::size_t kQueryParameterStackCapacity = 129;
+      std::array<std::string_view, kQueryParameterStackCapacity>
           key_stack, value_stack;
       std::vector<std::string_view> key_extra, value_extra;
       const std::size_t possible = query_.size() / 2 + 1;

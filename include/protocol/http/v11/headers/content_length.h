@@ -83,7 +83,8 @@ class content_length {
   // +-------------------------------------------------------------------------+
   static constexpr verdict interpret(const std::size_t& len, v11::connection&,
                                      const policies& policies) {
-    if (policies.max_content_length != 0 && len > policies.max_content_length) {
+    if (policies.max_request_body_size != 0 &&
+        len > policies.max_request_body_size) {
       return verdict::kReject;
     }
     return verdict::kAccept;

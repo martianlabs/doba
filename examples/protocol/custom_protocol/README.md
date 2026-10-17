@@ -6,9 +6,9 @@ transport. Each connection has its own engine. Complete lines are returned as
 until more bytes arrive. A line longer than the receive buffer closes the
 connection.
 
-`server<custom_protocol, transport_type>` combines the engine and TCP transport
-without HTTP request, response, or router types. Its constructor stores the
-transport policies and engine factory. `start()` creates the transport, which
+The generic `server` combines the engine and TCP transport without HTTP
+request, response, or router types. Its constructor stores the transport
+policies and engine factory. `start()` creates the transport, which
 uses the factory to create an engine for each connection.
 
 Build the `custom_protocol` target, run it, and connect to `localhost:8080`.

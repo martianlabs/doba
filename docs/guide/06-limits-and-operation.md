@@ -27,11 +27,11 @@ sets a five-byte body limit in its
 
 ```cpp
 policies limits;
-limits.max_content_length = 5;
+limits.max_request_body_size = 5;
 http_server<> http_server({.ip = "0.0.0.0", .port = "8080"}, limits);
 ```
 
-The address belongs to TCP; *max_content_length* belongs to HTTP. You can
+The address belongs to TCP; *max_request_body_size* belongs to HTTP. You can
 configure them independently. The [TCP policy][tcp-policy] and
 [HTTP policy][http-policy] definitions list every setting. Chapter 4's
 [TCP section][tcp-section] covers listener and worker choices.
@@ -48,7 +48,7 @@ configure them independently. The [TCP policy][tcp-policy] and
   </picture>
 </h2>
 
-*max_content_length* defaults to **16 MiB**. It caps accepted request body
+*max_request_body_size* defaults to **16 MiB**. It caps accepted request body
 size, including chunked bodies. **0** removes this particular limit. The
 **request_limits** example sets it to **5**; build and run that target from
 the repository root:
@@ -95,24 +95,28 @@ to change them.
   </picture>
 </h2>
 
-An accepted body does not have to stay in RAM. The HTTP policy
-*request_body_memory_threshold* controls when doba spills an incoming body
-to a temporary file; it defaults to **16 KiB**. This is a storage threshold,
-not a request-size limit. *max_content_length* still decides whether the
-body is accepted.
+HTTP reserves fixed head buffers: *request_head_buffer_capacity* and
+*response_head_buffer_capacity* each default to **4 KiB**. A head cannot
+grow beyond its capacity.
 
-Responses have a similar distinction. *response_body_inline_capacity* is
-the HTTP response's inline body capacity, while a body writer has its own
-storage options. The [large_response_bodies example][large-bodies] uses a
-raw writer that spills after **1024** bytes, then builds an
-**8192-byte** response. Its
+An accepted body does not have to stay inline. The fixed
+*request_body_inline_capacity* defaults to **16 KiB**; a larger incoming
+body moves to a temporary file. *max_request_body_size* still decides
+whether the body is accepted.
+
+The fixed *response_body_inline_capacity* also defaults to **16 KiB**.
+An inline body that exceeds it uses a writer with separate storage options.
+Its *spill_to_disk_threshold* defaults to **128 KiB** and does not change
+either HTTP inline capacity. The
+[large_response_bodies example][large-bodies] uses a raw writer that spills
+after **1024** bytes, then builds an **8192-byte** response. Its
 [source](../../examples/http/v11/large_response_bodies/main.cpp) starts
 the writer like this:
 
 [large-bodies]: ../../examples/http/v11/large_response_bodies/README.md
 
 ```cpp
-byte_storage_options options{.spill_threshold = 1024, .spill_dir = {}};
+byte_storage_options options{.spill_to_disk_threshold = 1024, .spill_dir = {}};
 auto writer = body::body_writer::raw(options);
 ```
 
@@ -161,7 +165,7 @@ are worth knowing:
   *max_pending_requests* caps response positions awaiting ordered delivery.
   It defaults to **32**. When full, doba closes the connection rather than
   reserving another position. **0** removes this limit.
-- **Queued output.** The TCP policy *max_send_buffer_size* defaults to
+- **Queued output.** The TCP policy *max_buffered_send_bytes* defaults to
   **1 MiB** per connection. It bounds queued send reservations plus the
   active batch; a connection that exceeds it closes. Storage owned by a body
   source is outside this cap.

@@ -83,18 +83,18 @@ class framer_chunked {
   // +=========================================================================+
   // | [>] CONSTANTs                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  static constexpr std::size_t kMaxChunkedExtensionSize =
-      policies::kMaxChunkedExtensionSize;
-  static constexpr std::size_t kMaxChunkedTrailerSize =
-      policies::kMaxChunkedTrailerSize;
+  static constexpr std::size_t kDefaultMaxChunkExtensionSize =
+      policies::kDefaultMaxChunkExtensionSize;
+  static constexpr std::size_t kDefaultMaxTrailerSectionSize =
+      policies::kDefaultMaxTrailerSectionSize;
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
   // +-------------------------------------------------------------------------+
   framer_chunked() = default;
   explicit framer_chunked(
       std::size_t payload_limit,
-      std::size_t extension_limit = kMaxChunkedExtensionSize,
-      std::size_t trailer_limit = kMaxChunkedTrailerSize)
+      std::size_t extension_limit = kDefaultMaxChunkExtensionSize,
+      std::size_t trailer_limit = kDefaultMaxTrailerSectionSize)
       : payload_limit_(payload_limit),
         extension_limit_(extension_limit),
         trailer_limit_(trailer_limit) {}
@@ -472,8 +472,8 @@ class framer_chunked {
   std::size_t chunk_remaining_{0};
   std::size_t payload_size_{0};
   std::size_t payload_limit_{0};
-  std::size_t extension_limit_{kMaxChunkedExtensionSize};
-  std::size_t trailer_limit_{kMaxChunkedTrailerSize};
+  std::size_t extension_limit_{kDefaultMaxChunkExtensionSize};
+  std::size_t trailer_limit_{kDefaultMaxTrailerSectionSize};
   std::size_t extension_size_{0};
   std::size_t trailer_size_{0};
   bool chunk_size_started_{false};
