@@ -42,6 +42,10 @@
 #include <utility>
 #include <vector>
 
+#if defined(__linux__)
+#include <sched.h>
+#endif
+
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -239,8 +243,7 @@ void serve_static(const request& req, response& result,
       }
       remaining = remaining.subspan(count);
     }
-    auto writer = body::body_writer::raw({
-        .spill_to_disk_threshold = 128 * 1024});
+    auto writer = body::body_writer::raw();
     if (!writer.write(std::string_view(contents))) {
       result.internal_server_error_500();
       return;
@@ -319,6 +322,50 @@ bool read_body_integer(const request& req, std::int64_t& value) {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
+  std::size_t workers =
+      std::max<std::size_t>(1, std::thread::hardware_concurrency());
+#if defined(__linux__)
+  cpu_set_t available;
+  CPU_ZERO(&available);
+  if (::sched_getaffinity(0, sizeof(available), &available) != 0) {
+    std::cerr << "unable to read CPU affinity\n";
+    return 1;
+  }
+  workers = std::max<std::size_t>(1, CPU_COUNT(&available));
+  // Docker exposes the container's cgroup at the controller mount root.
+  constexpr std::array<const char*, 3> quota_paths = {
+      "/sys/fs/cgroup/cpu.max",
+      "/sys/fs/cgroup/cpu/cpu.cfs_quota_us",
+      "/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_quota_us"};
+  for (std::size_t i = 0; i < quota_paths.size(); ++i) {
+    std::ifstream quota_file(quota_paths[i]);
+    if (!quota_file) continue;
+    std::string quota_text;
+    quota_file >> quota_text;
+    if (quota_text == "max" || quota_text == "-1") break;
+    std::uint64_t quota = 0;
+    std::uint64_t period = 0;
+    const auto [end, error] = std::from_chars(
+        quota_text.data(), quota_text.data() + quota_text.size(), quota);
+    if (i == 0) {
+      quota_file >> period;
+    } else {
+      std::ifstream period_file(
+          std::filesystem::path(quota_paths[i]).parent_path() /
+          "cpu.cfs_period_us");
+      period_file >> period;
+    }
+    if (error != std::errc() ||
+        end != quota_text.data() + quota_text.size() || !quota || !period) {
+      std::cerr << "invalid CPU quota\n";
+      return 1;
+    }
+    const auto quota_workers = quota / period + (quota % period != 0);
+    workers = static_cast<std::size_t>(
+        std::min<std::uint64_t>(workers, quota_workers));
+    break;
+  }
+#endif
   const char* dataset_path = std::getenv("DATASET_PATH");
   std::ifstream dataset_file(dataset_path ? dataset_path
                                           : "/data/dataset.json");
@@ -335,10 +382,6 @@ int main() {
     return 1;
   }
   policies http_configuration;
-  http_configuration.request_head_buffer_capacity = 1024;
-  http_configuration.request_body_inline_capacity = 1024;
-  http_configuration.response_head_buffer_capacity = 1024;
-  http_configuration.response_body_inline_capacity = 1024;
   std::error_code static_error;
   const auto static_root =
       common::filesystem_root("/data/static", static_error);
@@ -346,8 +389,9 @@ int main() {
     std::cerr << "unable to open static root\n";
     return 1;
   }
-  http_server<> http_server({.ip = "0.0.0.0", .port = "8080"},
-                     http_configuration);
+  http_server<> http_server(
+      {.worker_count = workers, .ip = "0.0.0.0", .port = "8080"},
+      http_configuration);
   http_server.add_route(
       "GET", "/delay/:ms",
       [](const request&, response& res, std::uint32_t ms)
@@ -406,6 +450,24 @@ int main() {
           res.set_body("invalid multiplier");
           return;
         }
+        res.add_header("Vary", "Accept-Encoding");
+        std::array<int, 4> quality = {-1, -1, -1, -1};
+        for (std::size_t i = 0; i < req.get_headers_length(); ++i) {
+          const auto header = req.get_header(i);
+          if (helpers::iequals(header.first, "Accept-Encoding") &&
+              !encoding_weights(header.second, quality)) {
+            res.bad_request_400();
+            return;
+          }
+        }
+        // RFC 9110 S12.5.3: explicit codings override the wildcard.
+        if (quality[1] < 0) quality[1] = std::max(0, quality[3]);
+        if (quality[2] < 0) quality[2] = quality[3] == 0 ? 0 : 1;
+        if (quality[1] == 0 && quality[2] == 0) {
+          res.not_acceptable_406();
+          return;
+        }
+        const bool gzip = quality[1] > 0 && quality[1] >= quality[2];
         const auto count = std::min<std::uint64_t>(requested_count,
                                                    dataset.Size());
         rapidjson::StringBuffer buffer;
@@ -433,29 +495,6 @@ int main() {
 
         std::string_view body(buffer.GetString(), buffer.GetSize());
         res.add_header("Content-Type", "application/json");
-        bool gzip = false;
-        if (req.exist_header("Accept-Encoding")) {
-          martianlabs::doba::protocol::http::helpers::for_each_list_element(
-              req.get_header("Accept-Encoding").second,
-              [&gzip](std::string_view encoding) {
-                const auto separator = encoding.find(';');
-                if (martianlabs::doba::protocol::http::helpers::iequals(
-                        encoding.substr(0, separator), "gzip")) {
-                  gzip = true;
-                  if (separator != std::string_view::npos) {
-                    auto weight = encoding.substr(separator + 1);
-                    martianlabs::doba::protocol::http::helpers::ows_ltrim(
-                        weight);
-                    if (weight.starts_with("q=")) {
-                      const auto value = weight.substr(2);
-                      gzip = value.find_first_of("123456789") !=
-                             std::string_view::npos;
-                    }
-                  }
-                }
-                return true;
-              });
-        }
         if (gzip) {
           z_stream stream{};
           if (deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
@@ -485,6 +524,7 @@ int main() {
       };
   http_server.add_route("GET", "/json/:count", json_handler);
   martianlabs::doba::transport::server::tls_policies tls_configuration;
+  tls_configuration.worker_count = workers;
   tls_configuration.ip = "0.0.0.0";
   tls_configuration.port = "8081";
   tls_configuration.certificate_file = "/certs/server.crt";
@@ -507,6 +547,7 @@ int main() {
       });
   http_server.start();
   tls_server.start();
+  std::cerr << "workers per listener: " << workers << '\n';
   // Docker owns process shutdown; wait after the server starts.
   std::promise<void> shutdown;
   shutdown.get_future().wait();
