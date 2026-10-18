@@ -91,8 +91,7 @@ struct drain_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  std::size_t on_bytes_received(const char* bytes, std::size_t size,
-                                std::size_t) {
+  void on_bytes_received(const char* bytes, [[maybe_unused]] std::size_t size) {
     state_->entered++;
     const auto deadline = std::chrono::steady_clock::now() + 5s;
     while (!state_->release.load()) {
@@ -105,7 +104,7 @@ struct drain_engine {
       output_(std::string(1024 * 1024, bytes[0]), {}, nullptr);
     }
     state_->queued++;
-    return size;
+    return;
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
@@ -248,7 +247,7 @@ struct reader_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  std::size_t on_bytes_received(const char*, std::size_t size, std::size_t) {
+  void on_bytes_received(const char*, std::size_t) {
     namespace common = martianlabs::doba::common;
     common::reader source;
     std::size_t prefix_size = state_->single ? 0 : 1;
@@ -289,7 +288,7 @@ struct reader_engine {
     }
     if (state_->close) close_();
     state_->queued++;
-    return size;
+    return;
   }
   std::shared_ptr<reader_state> state_;
   send_delegate output_;

@@ -112,6 +112,17 @@ class byte_storage {
     return true;
   }
   // +=========================================================================+
+  // | [>] spill                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool spill() { return spilled_ || spill_to_file(); }
+  // The open handle remains readable after removing the temporary name.
+  void unlink_file() noexcept {
+    if (spill_path_.empty()) return;
+    std::error_code error;
+    std::filesystem::remove(spill_path_, error);
+    if (!error) spill_path_.clear();
+  }
+  // +=========================================================================+
   // | [>] finish                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   void finish(std::size_t stored) noexcept {

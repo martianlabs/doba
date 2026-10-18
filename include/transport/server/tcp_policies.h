@@ -39,9 +39,9 @@ namespace martianlabs::doba::transport::server {
 struct tcp_policies {
   // Default receive buffer capacity, in bytes.
   static constexpr std::size_t kDefaultReceiveBufferCapacity = 4 * 1024;
-  // Receive capacity per connection, in bytes (must be positive).
-  // Engines retain incomplete cores here; bodies may span multiple receives.
-  // A full buffer with no consumption closes the connection.
+  // Receive I/O block size per connection, in bytes (must be positive).
+  // Engines receive only fresh bytes and own incomplete protocol messages.
+  // This capacity is independent of protocol head and body limits.
   std::size_t receive_buffer_capacity = kDefaultReceiveBufferCapacity;
   // Number of workers (0 selects automatically).
   std::size_t worker_count = 0;

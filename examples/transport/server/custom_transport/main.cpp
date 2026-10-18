@@ -88,8 +88,7 @@ class custom_transport {
     constexpr std::string_view request =
         "GET /hello HTTP/1.1\r\nHost: example.com\r\n"
         "Connection: close\r\n\r\n";
-    connection_->on_bytes_received(request.data(), request.size(),
-                                   request.size());
+    connection_->on_bytes_received(request.data(), request.size());
     if (close_requested_) {
       connection_.reset();
       on_disconnection_();

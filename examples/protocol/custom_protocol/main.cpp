@@ -64,24 +64,26 @@ struct custom_protocol {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  std::size_t on_bytes_received(const char* buffer, std::size_t size,
-                                std::size_t) {
+  void on_bytes_received(const char* buffer, std::size_t size) {
+    input_.append(buffer, size);
     std::size_t consumed = 0;
-    while (consumed < size) {
-      const std::string_view remaining(buffer + consumed, size - consumed);
-      const std::size_t end = remaining.find('\n');
+    for (;;) {
+      const std::string_view remaining(input_.data() + consumed,
+                                        input_.size() - consumed);
+      const auto end = remaining.find('\n');
       if (end == std::string_view::npos) break;
-      const std::string_view line = remaining.substr(0, end + 1);
+      const auto line = remaining.substr(0, end + 1);
       on_send_("echo: ", line, nullptr);
       consumed += line.size();
     }
-    return consumed;
+    input_.erase(0, consumed);
   }
 
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
+  std::string input_;
   protocol::send_delegate on_send_;
 };
 }  // namespace

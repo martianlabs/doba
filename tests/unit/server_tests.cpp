@@ -48,10 +48,9 @@ struct line_engine {
     on_send = std::move(output);
   }
   void set_on_close(std::function<void()>) {}
-  std::size_t on_bytes_received(const char* buffer, std::size_t size,
-                                std::size_t) {
+  void on_bytes_received(const char* buffer, std::size_t size) {
     on_send("echo: ", {buffer, size}, nullptr);
-    return size;
+    return;
   }
 
   martianlabs::doba::protocol::send_delegate on_send;
@@ -109,7 +108,7 @@ struct memory_transport {
     });
     engine.set_on_close([]() {});
     constexpr char input[] = "line\n";
-    engine.on_bytes_received(input, sizeof(input) - 1, 64);
+    engine.on_bytes_received(input, sizeof(input) - 1);
   }
   void quiesce() {
     state->events += 'q';

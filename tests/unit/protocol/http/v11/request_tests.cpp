@@ -61,11 +61,11 @@ using martianlabs::doba::protocol::http::v11::response;
 template <typename FNty>
 void with_request(std::string_view wire, FNty&& check) {
   decoder<request, response> value;
-  std::size_t consumed = 0;
+  std::string_view value_input;
+  value_input = std::string_view(wire.data(), wire.size());
   const auto result =
-      value.deserialize(wire.data(), wire.size(), wire.size(), consumed);
+      value.deserialize(value_input);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
-  DOBA_EXPECT_EQUAL(consumed, wire.size());
   DOBA_EXPECT(result.request.has_value());
   check(*result.request);
 }
@@ -170,9 +170,10 @@ DOBA_TEST("malformed cookie syntax is rejected") {
       "GET / HTTP/1.1\r\nHost: a\r\n"
       "Cookie: a=1;bad; b=2; =empty; tail=3\r\n\r\n";
   decoder<request, response> value;
-  std::size_t consumed = 0;
+  std::string_view value_input;
+  value_input = std::string_view(wire.data(), wire.size());
   const auto result =
-      value.deserialize(wire.data(), wire.size(), wire.size(), consumed);
+      value.deserialize(value_input);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
   DOBA_EXPECT(!result.request.has_value());
 }
@@ -214,15 +215,17 @@ DOBA_TEST("body reader can remain unread") {
 // +===========================================================================+
 // | [>] views refer to decoder storage                          ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("request views remain valid when transport input changes") {
+DOBA_TEST("owned request views remain valid when transport input changes") {
   std::string wire =
       "GET /?name=value HTTP/1.1\r\nHost: example.com\r\nX: y\r\n\r\n";
   decoder<request, response> value;
-  std::size_t consumed = 0;
-  const auto result =
-      value.deserialize(wire.data(), wire.size(), wire.size(), consumed);
+  std::string_view value_input;
+  value_input = std::string_view(wire.data(), wire.size());
+  auto result =
+      value.deserialize(value_input);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
   DOBA_EXPECT(result.request.has_value());
+  result.request->make_owned();
   wire.assign(wire.size(), 'x');
   const request& decoded = *result.request;
   DOBA_EXPECT_EQUAL(decoded.get_method(), "GET");
@@ -307,4 +310,58 @@ DOBA_TEST("decoded path outlives caller storage") {
                                    {}, {}, {}, {}, {}, {}, {}, false, {}));
   }
   DOBA_EXPECT_EQUAL(retained->get_absolute_path(), "/a b");
+}
+
+DOBA_TEST("request factory copies fields and borrowed body bytes") {
+  std::optional<request> retained;
+  {
+    std::string method = "POST", path = "/plain", name = "X-Key";
+    std::string value = "value", key = "query", host = "example";
+    std::string payload = "payload";
+    auto body = martianlabs::doba::protocol::http::v11::body::reader::raw(
+        std::as_bytes(std::span(payload)), payload.size());
+    retained.emplace(request::from(method, path, target::kOriginForm,
+        {{name, value}}, {{key, value}}, host, {}, {}, {}, {}, {},
+        false, std::move(body)));
+    method.assign(method.size(), '!');
+    path.assign(path.size(), '!');
+    value.assign(value.size(), '!');
+    payload.assign(payload.size(), '!');
+  }
+  auto moved = std::move(*retained);
+  retained.reset();
+  DOBA_EXPECT_EQUAL(moved.get_method(), "POST");
+  DOBA_EXPECT_EQUAL(moved.get_absolute_path(), "/plain");
+  DOBA_EXPECT_EQUAL(moved.get_host(), "example");
+  DOBA_EXPECT_EQUAL(moved.get_header("X-Key").second, "value");
+  DOBA_EXPECT_EQUAL(moved.get_query_parameter("query")->second, "value");
+  std::array<std::byte, 7> bytes{};
+  DOBA_EXPECT(moved.get_body_reader()->read(bytes).complete);
+  DOBA_EXPECT_EQUAL(std::string_view(
+      reinterpret_cast<const char*>(bytes.data()), bytes.size()), "payload");
+}
+
+DOBA_TEST("making a request owned preserves partial body reader progress") {
+  for (const bool chunked : {false, true}) {
+    std::string wire = std::string("POST / HTTP/1.1\r\nHost: retained\r\n") +
+        (chunked ? "Transfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n0\r\n\r\n"
+                 : "Content-Length: 3\r\n\r\nabc");
+    decoder<request, response> value;
+    std::string_view input(wire);
+    auto result = value.deserialize(input);
+    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+    std::array<std::byte, 1> first{};
+    DOBA_EXPECT_EQUAL(result.request->get_body_reader()->read(first).produced, 1U);
+    DOBA_EXPECT_EQUAL(first[0], std::byte{'a'});
+    result.request->make_owned();
+    wire.assign(wire.size(), '!');
+    DOBA_EXPECT_EQUAL(result.request->get_host(), "retained");
+    std::array<std::byte, 2> rest{};
+    const auto state = result.request->get_body_reader()->read(rest);
+    DOBA_EXPECT(!state.has_error);
+    DOBA_EXPECT(state.complete);
+    DOBA_EXPECT_EQUAL(state.produced, 2U);
+    DOBA_EXPECT_EQUAL(rest[0], std::byte{'b'});
+    DOBA_EXPECT_EQUAL(rest[1], std::byte{'c'});
+  }
 }

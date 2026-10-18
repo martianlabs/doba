@@ -69,106 +69,84 @@ struct test_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  std::size_t on_bytes_received(const char* bytes, std::size_t size,
-                                std::size_t capacity) {
-    return receive(bytes, size, capacity);
+  void on_bytes_received(const char* bytes, std::size_t size) {
+    receive(bytes, size);
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  std::function<std::size_t(const char*, std::size_t, std::size_t)> receive;
+  std::function<void(const char*, std::size_t)> receive;
   send_delegate send;
   std::function<void()> close;
 };
 }  // namespace
 
 // +===========================================================================+
-// | [>] tcp connection retains unconsumed fragments             ( test-case ) |
+// | [>] TCP delivers fresh input blocks                          ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("tcp connection retains unconsumed fragments") {
+DOBA_TEST("tcp connection delivers fresh blocks and reuses all receive space") {
   auto factory = []() { return test_engine{}; };
   tcp_connection<test_engine> input(8, factory);
   std::string received;
-  std::size_t received_capacity = 0;
-  input.engine.receive = [&](const char* bytes, std::size_t size,
-                             std::size_t capacity) {
-    received.assign(bytes, size);
-    received_capacity = capacity;
-    return std::size_t{2};
+  input.engine.receive = [&](const char* bytes, std::size_t size) {
+    received.append(bytes, size);
   };
-  std::memcpy(input.buffer.get(), "ab", 2);
-  input.size = 2;
-  DOBA_EXPECT(input.consume(0));
-  std::memcpy(input.buffer.get() + input.size, "cd", 2);
-  input.size += 2;
-  DOBA_EXPECT(input.consume(input.process()));
-  DOBA_EXPECT_EQUAL(received, "abcd");
-  DOBA_EXPECT_EQUAL(received_capacity, 8);
-  DOBA_EXPECT_EQUAL(input.size, 2);
-  DOBA_EXPECT_EQUAL(std::string(input.buffer.get(), input.size), "cd");
-  DOBA_EXPECT(input.consume(2));
-  DOBA_EXPECT_EQUAL(input.size, 0);
+  for (const auto bytes : {"abcdefgh", "ij"}) {
+    auto target = input.receive_buffer();
+    DOBA_EXPECT_EQUAL(target.size(), 8);
+    DOBA_EXPECT_EQUAL(target.data(), input.buffer.get());
+    std::memcpy(target.data(), bytes, std::strlen(bytes));
+    input.process(std::strlen(bytes));
+  }
+  DOBA_EXPECT_EQUAL(received, "abcdefghij");
 }
 
-// +===========================================================================+
-// | [>] tcp connection rejects invalid consumption              ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("tcp connection rejects invalid consumption") {
+DOBA_TEST("tcp connection rejects receive sizes above the buffer") {
   auto factory = []() { return test_engine{}; };
   tcp_connection<test_engine> input(4, factory);
-  std::memcpy(input.buffer.get(), "abcd", 4);
-  input.size = 4;
-  DOBA_EXPECT_EQUAL(input.size, input.capacity);
-  DOBA_EXPECT(!input.consume(5));
-  DOBA_EXPECT_EQUAL(input.size, 4);
-  DOBA_EXPECT_EQUAL(std::string(input.buffer.get(), input.size), "abcd");
-  DOBA_EXPECT(!input.consume(std::numeric_limits<std::size_t>::max()));
-  DOBA_EXPECT_EQUAL(input.size, 4);
+  bool delivered = false;
+  input.engine.receive = [&](const char*, std::size_t) { delivered = true; };
+  for (const auto size : {std::size_t{5}, std::numeric_limits<std::size_t>::max()}) {
+    bool caught = false;
+    try {
+      input.process(size);
+    } catch (const std::out_of_range&) {
+      caught = true;
+    }
+    DOBA_EXPECT(caught);
+  }
+  DOBA_EXPECT(!delivered);
 }
 
-// +===========================================================================+
-// | [>] tcp connection consumes a one byte buffer              ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("tcp connection consumes a one byte buffer") {
+DOBA_TEST("tcp connection reuses a one byte buffer") {
   auto factory = []() { return test_engine{}; };
   tcp_connection<test_engine> input(1, factory);
-  std::size_t received_capacity = 0;
-  char received = 0;
-  input.engine.receive = [&](const char* bytes, std::size_t size,
-                             std::size_t capacity) {
-    received_capacity = capacity;
-    received = bytes[0];
-    return size;
+  std::string received;
+  input.engine.receive = [&](const char* bytes, std::size_t size) {
+    received.append(bytes, size);
   };
-  input.buffer[0] = 'x';
-  input.size = 1;
-  DOBA_EXPECT(input.consume(input.process()));
-  DOBA_EXPECT_EQUAL(received_capacity, 1);
-  DOBA_EXPECT_EQUAL(received, 'x');
-  DOBA_EXPECT_EQUAL(input.size, 0);
-  DOBA_EXPECT(input.consume(0));
+  for (const char value : {'x', 'y'}) {
+    auto target = input.receive_buffer();
+    DOBA_EXPECT_EQUAL(target.size(), 1);
+    target[0] = value;
+    input.process(1);
+  }
+  DOBA_EXPECT_EQUAL(received, "xy");
 }
 
-// +===========================================================================+
-// | [>] tcp connection propagates engine errors                 ( test-case ) |
-// +---------------------------------------------------------------------------+
 DOBA_TEST("tcp connection propagates engine errors") {
   auto factory = []() { return test_engine{}; };
   tcp_connection<test_engine> input(4, factory);
-  input.engine.receive = [](const char*, std::size_t,
-                            std::size_t) -> std::size_t {
+  input.engine.receive = [](const char*, std::size_t) {
     throw std::runtime_error("receive failed");
   };
-  std::memcpy(input.buffer.get(), "x", 1);
-  input.size = 1;
   bool caught = false;
   try {
-    input.process();
+    input.process(1);
   } catch (const std::runtime_error&) {
     caught = true;
   }
   DOBA_EXPECT(caught);
-  DOBA_EXPECT_EQUAL(input.size, 1);
 }
 
 // +===========================================================================+

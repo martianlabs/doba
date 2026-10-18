@@ -65,11 +65,11 @@ class engine_async {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   explicit engine_async(std::size_t max_pending_requests,
-                        const std::function<void()>& on_async_started,
-                        const std::function<void()>& on_async_finished)
+                        std::function<void()> on_async_started,
+                        std::function<void()> on_async_finished)
       : max_pending_requests_{max_pending_requests},
-        on_async_started_{on_async_started},
-        on_async_finished_{on_async_finished} {}
+        on_async_started_{std::move(on_async_started)},
+        on_async_finished_{std::move(on_async_finished)} {}
   engine_async(const engine_async&) = delete;
   engine_async(engine_async&&) noexcept = delete;
   ~engine_async() = default;
@@ -325,6 +325,21 @@ class engine_async {
 
  private:
   // +=========================================================================+
+  // | [>] finish                                                  ( private ) |
+  // +=========================================================================+
+  // | Notifies observers before releasing the active operation, even if the  |
+  // | notification throws.                                                    |
+  // +-------------------------------------------------------------------------+
+  void finish() {
+    try {
+      if (on_async_finished_) on_async_finished_();
+    } catch (...) {
+      end();
+      throw;
+    }
+    end();
+  }
+  // +=========================================================================+
   // | [>] request_position                                        ( private ) |
   // +-------------------------------------------------------------------------+
   std::optional<std::size_t> request_position() {
@@ -340,23 +355,12 @@ class engine_async {
   // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty>
   struct async_request {
-    std::unique_ptr<char[]> request_storage;
     RQty request;
-    std::unique_ptr<char[]> response_storage;
     std::shared_ptr<void> parameters;
     RSty response;
     transport::server::execution_capacity execution;
-    async_request(decoder<RQty, RSty>& owner, std::unique_ptr<char[]> storage,
-                  RQty value)
-        : request_storage(std::move(storage)),
-          request(std::move(value)),
-          response_storage(std::make_unique_for_overwrite<char[]>(
-              owner.configuration().response_head_buffer_capacity +
-              owner.configuration().response_body_inline_capacity)),
-          response(owner.make_response(std::span<char>(
-              response_storage.get(),
-              owner.configuration().response_head_buffer_capacity +
-                  owner.configuration().response_body_inline_capacity))) {}
+    async_request(decoder<RQty, RSty>& owner, RQty value)
+        : request(std::move(value)), response(owner.make_response()) {}
   };
   // +=========================================================================+
   // | [>] dispatch                                                ( private ) |
@@ -372,9 +376,11 @@ class engine_async {
                 transport::server::execution_capacity execution,
                 const std::shared_ptr<engine_async>& state) {
     auto entry = std::make_shared<async_request<RQty, RSty>>(
-        owner, owner.take_request_storage(), std::move(request));
+        owner, std::move(request));
     entry->execution = execution;
     try {
+      entry->request.make_owned();
+      path = entry->request.get_absolute_path();
       if (!engine_sync<RQty, RSty, ROty>::authenticate(
               match, entry->request, entry->response)) {
         auto serialized = engine_sync<RQty, RSty, ROty>::serialize(
@@ -432,23 +438,11 @@ class engine_async {
                 } catch (...) {
                 }
               }
-              try {
-                if (state->on_async_finished_) state->on_async_finished_();
-              } catch (...) {
-                state->end();
-                throw;
-              }
-              state->end();
+              state->finish();
             },
             scheduler);
       } catch (...) {
-        try {
-          if (state->on_async_finished_) state->on_async_finished_();
-        } catch (...) {
-          state->end();
-          throw;
-        }
-        state->end();
+        state->finish();
         throw;
       }
     } catch (...) {

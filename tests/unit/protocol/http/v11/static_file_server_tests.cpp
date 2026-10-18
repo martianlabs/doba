@@ -72,13 +72,12 @@ response file_request(router<request, response>& routes,
                      " HTTP/1.1\r\nHost: example.com\r\n" +
                      std::string(headers) + "\r\n";
   decoder<request, response> decoder;
-  std::size_t consumed = 0;
-  static thread_local std::deque<std::array<char, 20480>> storage;
-  storage.emplace_back();
+  std::string_view decoder_input;
   std::optional<response> result;
-  result.emplace(storage.back());
+  result.emplace();
+  decoder_input = std::string_view(wire.data(), wire.size());
   auto decoded =
-      decoder.deserialize(wire.data(), wire.size(), 8192, consumed);
+      decoder.deserialize(decoder_input);
   if (decoded.code !=
           martianlabs::doba::protocol::deserialization_status::kSucceeded ||
       !decoded.request) {
@@ -245,9 +244,10 @@ DOBA_TEST("static file server never escapes its root") {
     const std::string wire =
         "GET " + path + " HTTP/1.1\r\nHost: example.com\r\n\r\n";
     decoder<request, response> value;
-    std::size_t consumed = 0;
+    std::string_view value_input;
+    value_input = std::string_view(wire.data(), wire.size());
     auto decoded =
-        value.deserialize(wire.data(), wire.size(), 8192, consumed);
+        value.deserialize(value_input);
     if (!decoded.request) {
       DOBA_EXPECT_EQUAL(
           decoded.code,

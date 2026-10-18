@@ -95,19 +95,46 @@ to change them.
   </picture>
 </h2>
 
-HTTP reserves fixed head buffers: *request_head_buffer_capacity* and
-*response_head_buffer_capacity* each default to **4 KiB**. A head cannot
-grow beyond its capacity.
+The decoder normally reads the transport buffer directly. Requests borrow
+field bytes and inline bodies; responses own their serialized bytes.
+Storage starts empty; HTTP limits do not reserve memory up front.
+*max_request_head_size* and *max_response_head_size* each default to
+**4 KiB** and bound accepted and serialized heads, respectively.
 
-An accepted body does not have to stay inline. The fixed
-*request_body_inline_capacity* defaults to **16 KiB**; a larger incoming
+The engine passes a view of the remaining input to
+`deserialize(std::string_view&)` until it needs more bytes or closes.
+Each successful call consumes one request. The input stays immutable and is
+valid for the duration of the transport callback.
+
+Only an incomplete message is copied into the decoder's residual vector.
+On subsequent receives, the decoder adds just enough bytes to complete its
+head; the body framer identifies the bytes belonging to that body. After
+completion, remaining requests are read directly from the new transport
+block. The residual vector is cleared for reuse, without reserving memory
+in advance. The head parser still retries incomplete heads; body framing
+continues incrementally.
+
+Residual storage keeps the incomplete head and any inline body. Bodies above
+the memory threshold use temporary storage, and their consumed wire bytes do
+not remain in the residual vector. Transport capacity controls the I/O block
+size independently of HTTP limits. Percent-encoded paths need a writable
+copy of the path; other field bytes remain borrowed during synchronous work.
+
+Before any asynchronous handler is invoked, the request copies its fields
+and inline wire body into one owned vector. This includes handlers that
+complete immediately. The engine does not copy bytes belonging to other
+requests. The request and response then outlive the input and decoder
+independently.
+
+An accepted body does not have to stay inline. The
+*request_body_memory_threshold* defaults to **16 KiB**; a larger incoming
 body moves to a temporary file. *max_request_body_size* still decides
 whether the body is accepted.
 
-The fixed *response_body_inline_capacity* also defaults to **16 KiB**.
+The *response_body_memory_threshold* also defaults to **16 KiB**.
 An inline body that exceeds it uses a writer with separate storage options.
 Its *spill_to_disk_threshold* defaults to **128 KiB** and does not change
-either HTTP inline capacity. The
+either HTTP memory threshold. The
 [large_response_bodies example][large-bodies] uses a raw writer that spills
 after **1024** bytes, then builds an **8192-byte** response. Its
 [source](../../examples/http/v11/large_response_bodies/main.cpp) starts

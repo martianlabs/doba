@@ -90,7 +90,8 @@ struct connection {
   // | [>] receive                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   std::size_t receive(std::string_view data) {
-    return value.on_bytes_received(data.data(), data.size(), 4096);
+    value.on_bytes_received(data.data(), data.size());
+    return data.size();
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
@@ -154,7 +155,7 @@ DOBA_TEST("engine completion follows asynchronous observers") {
                        std::unique_ptr<reader>) {});
   value.set_on_close([]() {});
   const std::string_view wire = "GET /wait HTTP/1.1\r\nHost: localhost\r\n\r\n";
-  value.on_bytes_received(wire.data(), wire.size(), 4096);
+  value.on_bytes_received(wire.data(), wire.size());
   DOBA_EXPECT(static_cast<bool>(pending));
   DOBA_EXPECT(!value.stop([&]() { completed_after_finish = finished; }));
   pending.resume();
@@ -551,8 +552,8 @@ DOBA_TEST("engine uses configured response head and inline capacities") {
     co_return;
   });
   policies configuration;
-  configuration.response_head_buffer_capacity = 128;
-  configuration.response_body_inline_capacity = 0;
+  configuration.max_response_head_size = 128;
+  configuration.response_body_memory_threshold = 0;
   engine<request, response> value(configuration, routes);
   int sources = 0;
   std::string wire;
@@ -568,8 +569,7 @@ DOBA_TEST("engine uses configured response head and inline capacities") {
   const std::string bytes =
       "GET /sync HTTP/1.1\r\nHost: localhost\r\n\r\n"
       "GET /async HTTP/1.1\r\nHost: localhost\r\n\r\n";
-  DOBA_EXPECT_EQUAL(value.on_bytes_received(bytes.data(), bytes.size(), 4096),
-                    bytes.size());
+  value.on_bytes_received(bytes.data(), bytes.size());
   DOBA_EXPECT_EQUAL(sources, 2);
   DOBA_EXPECT(wire.find("\r\n\r\nab") != std::string::npos);
   DOBA_EXPECT(wire.ends_with("\r\n\r\ncd"));
@@ -783,8 +783,7 @@ DOBA_TEST("engine transfers an asynchronous response source") {
   value.set_on_close([]() {});
   const std::string bytes =
       "GET /large HTTP/1.1\r\nHost: localhost\r\n\r\n";
-  DOBA_EXPECT_EQUAL(value.on_bytes_received(bytes.data(), bytes.size(), 4096),
-                    bytes.size());
+  value.on_bytes_received(bytes.data(), bytes.size());
   DOBA_EXPECT(source != nullptr);
   std::string received;
   source->read_all(received);
@@ -889,7 +888,7 @@ DOBA_TEST("engine rejects a handler 100 without a final response") {
              [](const request&, response& res) { res.continue_100(); });
   connection current(routes);
   const std::string one = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
-  DOBA_EXPECT_EQUAL(current.receive(one + one), one.size());
+  current.receive(one + one);
   DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 500 "));
   DOBA_EXPECT(current.wire.ends_with("\r\n\r\nInternal Server Error"));
   DOBA_EXPECT(current.wire.find("Connection: close\r\n") != std::string::npos);
@@ -1017,7 +1016,7 @@ DOBA_TEST("engine honors response close") {
   });
   const std::string bytes = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
   connection current(routes);
-  DOBA_EXPECT_EQUAL(current.receive(bytes + bytes), bytes.size());
+  current.receive(bytes + bytes);
   DOBA_EXPECT_EQUAL(current.closes, 1);
   DOBA_EXPECT_EQUAL(current.closes, 1);
 }
@@ -1073,8 +1072,7 @@ DOBA_TEST("engine transfers unread sources") {
     value.set_on_close([&]() { closes++; });
     const std::string bytes =
         "GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
-    DOBA_EXPECT_EQUAL(value.on_bytes_received(bytes.data(), bytes.size(), 4096),
-                      bytes.size());
+    value.on_bytes_received(bytes.data(), bytes.size());
     DOBA_EXPECT_EQUAL(deliveries, 1);
     DOBA_EXPECT_EQUAL(closes, 1);
     DOBA_EXPECT(prefix.ends_with("\r\n\r\n"));
@@ -1114,7 +1112,7 @@ DOBA_TEST("engine closes after immediate response failures") {
       const std::string first =
           method + " /fail HTTP/1.1\r\nHost: localhost\r\n\r\n";
       const std::string next = "GET /next HTTP/1.1\r\nHost: localhost\r\n\r\n";
-      DOBA_EXPECT_EQUAL(current.receive(first + next), first.size());
+      current.receive(first + next);
       DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 500 "));
       DOBA_EXPECT(current.wire.find("Content-Length: 21\r\n") !=
                   std::string::npos);
@@ -1184,9 +1182,10 @@ DOBA_TEST("engine sends one interim for a fragmented body") {
     for (std::size_t split = 1; split < head.size(); split++) {
       connection current(routes);
       calls = 0;
-      DOBA_EXPECT_EQUAL(current.receive(head.substr(0, split)), 0);
+      DOBA_EXPECT_EQUAL(current.receive(head.substr(0, split)), split);
       DOBA_EXPECT(current.blocks.empty());
-      DOBA_EXPECT_EQUAL(current.receive(head), head.size());
+      DOBA_EXPECT_EQUAL(current.receive(head.substr(split)),
+                        head.size() - split);
       DOBA_EXPECT_EQUAL(current.blocks.size(), 1);
       DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 100 Continue\r\n"));
       DOBA_EXPECT(current.wire.ends_with("\r\n\r\n"));
@@ -1408,7 +1407,7 @@ DOBA_TEST("engine response close stops immediate dispatch") {
              [closing](const request&, response& res) { closing(res); });
   connection current(routes);
   const std::string bytes = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
-  DOBA_EXPECT_EQUAL(current.receive(bytes + bytes), bytes.size());
+  current.receive(bytes + bytes);
   DOBA_EXPECT_EQUAL(calls, 1);
   DOBA_EXPECT_EQUAL(current.blocks.size(), 1);
   DOBA_EXPECT(current.wire.ends_with("\r\n\r\nlast"));
@@ -1596,4 +1595,107 @@ DOBA_TEST("engine maps custom rejection statuses and preserves HEAD") {
             ? "HTTP/1.1 400 " : "HTTP/1.1 403 "));
     DOBA_EXPECT(current.wire.ends_with("\r\n\r\n"));
   }
+}
+
+DOBA_TEST("engine keeps one owner of each asynchronous observer") {
+  router<request, response> routes;
+  routes.add("GET", "/", [](const request&, response& res) -> task<void> {
+    make_response(res, "done");
+    co_return;
+  });
+  auto started = std::make_shared<int>(0);
+  auto finished = std::make_shared<int>(0);
+  engine<request, response> value(
+      {}, routes, [started]() { ++*started; },
+      [finished]() { ++*finished; });
+  DOBA_EXPECT_EQUAL(started.use_count(), 2L);
+  DOBA_EXPECT_EQUAL(finished.use_count(), 2L);
+  value.set_on_send([](std::string_view, std::string_view,
+                       std::unique_ptr<reader>) {});
+  value.set_on_close([]() {});
+  const std::string_view wire = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
+  value.on_bytes_received(wire.data(), wire.size());
+  DOBA_EXPECT_EQUAL(*started, 1);
+  DOBA_EXPECT_EQUAL(*finished, 1);
+}
+
+DOBA_TEST("engine completes stopping when the finish observer throws") {
+  router<request, response> routes;
+  std::coroutine_handle<> pending;
+  routes.add("GET", "/", [&pending](const request&, response& res)
+                 -> task<void> {
+    co_await suspend_once{pending};
+    make_response(res, "done");
+  });
+  int finished = 0;
+  bool completed = false;
+  engine<request, response> value({}, routes, []() {}, [&]() {
+    ++finished;
+    throw std::runtime_error("observer failed");
+  });
+  value.set_on_send([](std::string_view, std::string_view,
+                       std::unique_ptr<reader>) {});
+  value.set_on_close([]() {});
+  const std::string_view wire = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
+  value.on_bytes_received(wire.data(), wire.size());
+  DOBA_EXPECT(static_cast<bool>(pending));
+  DOBA_EXPECT(!value.stop([&]() { completed = finished == 1; }));
+  pending.resume();
+  DOBA_EXPECT_EQUAL(finished, 1);
+  DOBA_EXPECT(completed);
+  DOBA_EXPECT(value.stop([]() {}));
+}
+
+DOBA_TEST("async handlers retain saved field and body views across decoder reuse") {
+  for (const bool pipeline : {false, true}) {
+    router<request, response> routes;
+    std::coroutine_handle<> pending;
+    const char* original = nullptr;
+    bool valid = true;
+    routes.add("POST", "/wait", [&](const request& req, response& res) -> task<void> {
+      const auto host = req.get_host();
+      const auto data = req.get_body_reader()->take_borrowed_raw(3);
+      valid = data.has_value();
+      original = host.data();
+      co_await suspend_once{pending};
+      valid = valid && host == "original";
+      valid = valid && req.get_host().data() == original;
+      if (data) {
+        valid = valid && std::string_view(reinterpret_cast<const char*>(data->data()), data->size()) == "abc";
+      }
+      make_response(res, host);
+    });
+    routes.add("GET", "/next", [](const request&, response& res) {
+      make_response(res, "next");
+    });
+    connection current(routes);
+    const std::string next = "GET /next HTTP/1.1\r\nHost: replacement\r\n\r\n";
+    current.receive(std::string("POST /wait HTTP/1.1\r\nHost: original\r\nContent-Length: 3\r\n\r\nabc") +
+                    (pipeline ? next : ""));
+    DOBA_EXPECT(static_cast<bool>(pending));
+    if (!pipeline) current.receive(next);
+    DOBA_EXPECT(current.wire.empty());
+    std::thread resumed([&]() { pending.resume(); });
+    resumed.join();
+    DOBA_EXPECT(valid);
+    DOBA_EXPECT(current.wire.find("original") != std::string::npos);
+    DOBA_EXPECT(current.wire.ends_with("next"));
+    DOBA_EXPECT_EQUAL(current.closes, 0);
+  }
+}
+
+DOBA_TEST("async handlers own bytes before their first invocation") {
+  router<request, response> routes;
+  const std::string input = "GET /now HTTP/1.1\r\nHost: a\r\n\r\n";
+  bool owned = true;
+  routes.add("GET", "/now", [&](const request& req, response& res) -> task<void> {
+    owned = owned && !req.borrows_bytes() && req.get_method().data() != input.data();
+    make_response(res, "now");
+    co_return;
+  });
+  connection current(routes);
+  for (int i = 0; i < 3; ++i) current.receive(input);
+  DOBA_EXPECT(owned);
+  DOBA_EXPECT_EQUAL(current.blocks.size(), 3U);
+  DOBA_EXPECT_EQUAL(current.closes, 0);
 }

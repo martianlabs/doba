@@ -97,7 +97,7 @@ struct memory_transport {
   // +-------------------------------------------------------------------------+
   std::string receive(std::string_view wire) {
     bytes.clear();
-    connection->on_bytes_received(wire.data(), wire.size(), 8192);
+    connection->on_bytes_received(wire.data(), wire.size());
     return bytes;
   }
   // +=========================================================================+

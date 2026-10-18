@@ -37,10 +37,10 @@ DOBA_TEST("defaults are bounded and allow supported features") {
   DOBA_EXPECT_EQUAL(value.max_request_body_size, 16 * 1024 * 1024);
   DOBA_EXPECT_EQUAL(value.max_forwarding_hops, 32);
   DOBA_EXPECT_EQUAL(value.max_transfer_codings, 4);
-  DOBA_EXPECT_EQUAL(policies::kDefaultRequestHeadBufferCapacity, 4 * 1024);
-  DOBA_EXPECT_EQUAL(policies::kDefaultRequestBodyInlineCapacity, 16 * 1024);
-  DOBA_EXPECT_EQUAL(policies::kDefaultResponseHeadBufferCapacity, 4 * 1024);
-  DOBA_EXPECT_EQUAL(policies::kDefaultResponseBodyInlineCapacity, 16 * 1024);
+  DOBA_EXPECT_EQUAL(policies::kDefaultMaxRequestHeadSize, 4 * 1024);
+  DOBA_EXPECT_EQUAL(policies::kDefaultRequestBodyMemoryThreshold, 16 * 1024);
+  DOBA_EXPECT_EQUAL(policies::kDefaultMaxResponseHeadSize, 4 * 1024);
+  DOBA_EXPECT_EQUAL(policies::kDefaultResponseBodyMemoryThreshold, 16 * 1024);
   DOBA_EXPECT_EQUAL(policies::kDefaultMaxQueryParameters, 128);
   DOBA_EXPECT_EQUAL(policies::kDefaultMaxChunkExtensionSize, 1024);
   DOBA_EXPECT_EQUAL(policies::kDefaultMaxTrailerSectionSize, 4096);
@@ -50,10 +50,10 @@ DOBA_TEST("defaults are bounded and allow supported features") {
   DOBA_EXPECT_EQUAL(value.max_query_parameters, 128);
   DOBA_EXPECT_EQUAL(value.max_chunk_extension_size, 1024);
   DOBA_EXPECT_EQUAL(value.max_trailer_section_size, 4096);
-  DOBA_EXPECT_EQUAL(value.request_head_buffer_capacity, 4 * 1024);
-  DOBA_EXPECT_EQUAL(value.request_body_inline_capacity, 16 * 1024);
-  DOBA_EXPECT_EQUAL(value.response_head_buffer_capacity, 4 * 1024);
-  DOBA_EXPECT_EQUAL(value.response_body_inline_capacity, 16 * 1024);
+  DOBA_EXPECT_EQUAL(value.max_request_head_size, 4 * 1024);
+  DOBA_EXPECT_EQUAL(value.request_body_memory_threshold, 16 * 1024);
+  DOBA_EXPECT_EQUAL(value.max_response_head_size, 4 * 1024);
+  DOBA_EXPECT_EQUAL(value.response_body_memory_threshold, 16 * 1024);
 }
 
 // +===========================================================================+
@@ -69,10 +69,10 @@ DOBA_TEST("fields retain configured boundaries and switches") {
                        .max_query_parameters = 1,
                        .max_chunk_extension_size = 5,
                        .max_trailer_section_size = 6,
-                       .request_head_buffer_capacity = 512,
-                       .request_body_inline_capacity = 7,
-                       .response_head_buffer_capacity = 512,
-                       .response_body_inline_capacity = 8};
+                       .max_request_head_size = 512,
+                       .request_body_memory_threshold = 7,
+                       .max_response_head_size = 512,
+                       .response_body_memory_threshold = 8};
   DOBA_EXPECT_EQUAL(value.max_request_body_size, 1);
   DOBA_EXPECT_EQUAL(value.max_forwarding_hops, 2);
   DOBA_EXPECT_EQUAL(value.max_transfer_codings, 3);
@@ -82,8 +82,8 @@ DOBA_TEST("fields retain configured boundaries and switches") {
   DOBA_EXPECT_EQUAL(value.max_query_parameters, 1);
   DOBA_EXPECT_EQUAL(value.max_chunk_extension_size, 5);
   DOBA_EXPECT_EQUAL(value.max_trailer_section_size, 6);
-  DOBA_EXPECT_EQUAL(value.request_head_buffer_capacity, 512);
-  DOBA_EXPECT_EQUAL(value.request_body_inline_capacity, 7);
-  DOBA_EXPECT_EQUAL(value.response_head_buffer_capacity, 512);
-  DOBA_EXPECT_EQUAL(value.response_body_inline_capacity, 8);
+  DOBA_EXPECT_EQUAL(value.max_request_head_size, 512);
+  DOBA_EXPECT_EQUAL(value.request_body_memory_threshold, 7);
+  DOBA_EXPECT_EQUAL(value.max_response_head_size, 512);
+  DOBA_EXPECT_EQUAL(value.response_body_memory_threshold, 8);
 }

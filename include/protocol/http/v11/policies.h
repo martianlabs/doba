@@ -35,7 +35,7 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] policies                                                   ( struct ) |
 // +---------------------------------------------------------------------------+
-// | HTTP/1.1 resource limits, storage capacities and feature switches.        |
+// | HTTP/1.1 resource limits, memory thresholds and feature switches.        |
 // | The defaults below preserve the standard server behavior.                 |
 // | A limit of 0 means unlimited unless noted.                                |
 // +---------------------------------------------------------------------------+
@@ -50,14 +50,14 @@ struct policies {
   static constexpr std::size_t kDefaultMaxChunkExtensionSize = 1024;
   // Default maximum trailer section bytes per chunked body.
   static constexpr std::size_t kDefaultMaxTrailerSectionSize = 4096;
-  // Request head bytes retained by the decoder.
-  static constexpr std::size_t kDefaultRequestHeadBufferCapacity = 4 * 1024;
+  // Maximum accepted request head bytes.
+  static constexpr std::size_t kDefaultMaxRequestHeadSize = 4 * 1024;
   // Request body wire bytes retained before spilling to disk.
-  static constexpr std::size_t kDefaultRequestBodyInlineCapacity = 16 * 1024;
-  // Response head bytes in the decoder's reusable storage.
-  static constexpr std::size_t kDefaultResponseHeadBufferCapacity = 4 * 1024;
+  static constexpr std::size_t kDefaultRequestBodyMemoryThreshold = 16 * 1024;
+  // Maximum serialized response head bytes.
+  static constexpr std::size_t kDefaultMaxResponseHeadSize = 4 * 1024;
   // Response body bytes kept inline before using a writer.
-  static constexpr std::size_t kDefaultResponseBodyInlineCapacity = 16 * 1024;
+  static constexpr std::size_t kDefaultResponseBodyMemoryThreshold = 16 * 1024;
   // Maximum accepted body size, in octets (0 means unlimited).
   std::size_t max_request_body_size = 16 * 1024 * 1024;
   // Maximum number of forwarding hops accepted across Via / Forwarded /
@@ -84,16 +84,16 @@ struct policies {
   std::size_t max_chunk_extension_size = kDefaultMaxChunkExtensionSize;
   // Maximum trailer section bytes (0 means unlimited).
   std::size_t max_trailer_section_size = kDefaultMaxTrailerSectionSize;
-  // Request head buffer capacity and hard limit (must be positive).
-  std::size_t request_head_buffer_capacity = kDefaultRequestHeadBufferCapacity;
-  // Request body buffer capacity (0 spills immediately).
-  std::size_t request_body_inline_capacity = kDefaultRequestBodyInlineCapacity;
-  // Response head buffer capacity and hard limit (must be positive).
-  std::size_t response_head_buffer_capacity =
-      kDefaultResponseHeadBufferCapacity;
-  // Response body buffer capacity (0 disables inline storage).
-  std::size_t response_body_inline_capacity =
-      kDefaultResponseBodyInlineCapacity;
+  // Maximum request head bytes (must be positive).
+  std::size_t max_request_head_size = kDefaultMaxRequestHeadSize;
+  // Request body wire bytes kept in memory (0 spills immediately).
+  std::size_t request_body_memory_threshold =
+      kDefaultRequestBodyMemoryThreshold;
+  // Maximum response head bytes (must be positive).
+  std::size_t max_response_head_size = kDefaultMaxResponseHeadSize;
+  // Response body bytes kept inline (0 disables inline storage).
+  std::size_t response_body_memory_threshold =
+      kDefaultResponseBodyMemoryThreshold;
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

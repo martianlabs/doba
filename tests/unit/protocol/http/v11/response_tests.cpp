@@ -51,10 +51,10 @@ using martianlabs::doba::protocol::http::v11::body::body_writer;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 constexpr std::size_t max_response_size_in_memory =
-    policies::kDefaultResponseHeadBufferCapacity +
-    policies::kDefaultResponseBodyInlineCapacity;
+    policies::kDefaultMaxResponseHeadSize +
+    policies::kDefaultResponseBodyMemoryThreshold;
 constexpr std::size_t max_response_body_size_in_memory =
-    policies::kDefaultResponseBodyInlineCapacity;
+    policies::kDefaultResponseBodyMemoryThreshold;
 
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -77,7 +77,7 @@ std::string read_source(reader& source) {
 // | [>] response is movable but not copyable                    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("response is movable but not copyable") {
-  static_assert(!std::is_default_constructible_v<response>);
+  static_assert(std::is_default_constructible_v<response>);
   static_assert(!std::is_constructible_v<response, std::string_view, int>);
   static_assert(!std::is_copy_constructible_v<response>);
   static_assert(!std::is_copy_assignable_v<response>);
@@ -90,23 +90,22 @@ DOBA_TEST("response is movable but not copyable") {
 // | [>] response identifies 100 Continue                        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("response identifies 100 Continue") {
-  std::array<char, max_response_size_in_memory> storage{};
-  response value(storage);
+
+  response value;
   DOBA_EXPECT(value.continue_100().is_continue_100());
   DOBA_EXPECT(!value.switching_protocols_101().is_continue_100());
   DOBA_EXPECT(!value.ok_200().is_continue_100());
 }
 
 DOBA_TEST("response uses configured head and inline capacities") {
-  std::array<char, 72> storage{};
-  response value(storage, 64, 8);
+
+  response value(64, 8);
   value.ok_200().set_header("Date", "fixed").set_body("123456789");
   auto serialized = value.serialize();
   DOBA_EXPECT(serialized.source != nullptr);
   DOBA_EXPECT_EQUAL(read_source(*serialized.source), "123456789");
 
-  std::array<char, 72> limited_storage{};
-  response limited(limited_storage, 64, 8);
+  response limited(64, 8);
   limited.ok_200();
   bool rejected = false;
   try {
@@ -121,8 +120,8 @@ DOBA_TEST("response uses configured head and inline capacities") {
 // | [>] moving preserves response state and owned body writers  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("moving preserves response state and owned body writers") {
-  std::array<char, max_response_size_in_memory> storage_1{};
-  response source(storage_1);
+
+  response source;
   source.created_201();
   auto writer = body_writer::chunked();
   DOBA_EXPECT(writer.write("body"));
@@ -131,8 +130,8 @@ DOBA_TEST("moving preserves response state and owned body writers") {
       .set_body(std::move(writer));
   response constructed(std::move(source));
   DOBA_EXPECT_EQUAL(constructed.get_header("X-Test").second, "value");
-  std::array<char, max_response_size_in_memory> storage_2{};
-  response assigned(storage_2);
+
+  response assigned;
   assigned.bad_request_400();
   assigned.set_body("replaced");
   assigned = std::move(constructed);
@@ -150,13 +149,13 @@ DOBA_TEST("moves preserve the full streamed body") {
   for (std::size_t i = 0; i < body.size(); i++) {
     body[i] = static_cast<char>(i % 256);
   }
-  std::array<char, max_response_size_in_memory> storage_3{};
-  response source(storage_3);
+
+  response source;
   source.created_201();
   source.set_header("Date", "fixed").set_body(body);
   response constructed(std::move(source));
-  std::array<char, max_response_size_in_memory> storage_4{};
-  response assigned(storage_4);
+
+  response assigned;
   assigned.ok_200();
   assigned.set_body("replaced");
   assigned = std::move(constructed);
@@ -177,15 +176,15 @@ DOBA_TEST("moves preserve the full streamed body") {
 // | [>] moved responses require factory reassignment            ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("moved responses are reassigned through status factories") {
-  std::array<char, max_response_size_in_memory> storage_5{};
-  response source(storage_5);
+
+  response source;
   source.ok_200();
   source.set_header("Date", "fixed")
       .add_header("X-Original", "kept")
       .set_body("original");
   response constructed(std::move(source));
-  std::array<char, max_response_size_in_memory> new_storage{};
-  response new_response(new_storage);
+
+  response new_response;
   new_response.accepted_202();
   source = std::move(new_response);
   source.set_header("Date", "fixed").set_body("new");
@@ -193,8 +192,8 @@ DOBA_TEST("moved responses are reassigned through status factories") {
   DOBA_EXPECT((wire_prefix(source_serialized))
                   .starts_with("HTTP/1.1 202 Accepted\r\n"));
   source = std::move(constructed);
-  std::array<char, max_response_size_in_memory> other_storage{};
-  response other_response(other_storage);
+
+  response other_response;
   other_response.no_content_204();
   constructed = std::move(other_response);
   constructed.set_header("Date", "fixed");
@@ -210,21 +209,21 @@ DOBA_TEST("moved responses are reassigned through status factories") {
 // | [>] bodyless responses survive chained moves                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("bodyless responses survive chained moves") {
-  std::array<char, max_response_size_in_memory> storage_6{};
-  response source(storage_6);
+
+  response source;
   source.ok_200();
   response constructed(std::move(source));
-  std::array<char, max_response_size_in_memory> storage_7{};
-  response assigned(storage_7);
+
+  response assigned;
   assigned.bad_request_400();
   assigned.set_body("replaced");
   assigned = std::move(constructed);
-  std::array<char, max_response_size_in_memory> new_storage{};
-  response new_source(new_storage);
+
+  response new_source;
   new_source.created_201();
   source = std::move(new_source);
-  std::array<char, max_response_size_in_memory> other_storage{};
-  response new_constructed(other_storage);
+
+  response new_constructed;
   new_constructed.accepted_202();
   constructed = std::move(new_constructed);
   for (response* value : {&source, &constructed, &assigned}) {
@@ -241,8 +240,8 @@ DOBA_TEST("bodyless responses survive chained moves") {
 // | [>] headers support mutation lookup removal and indexes     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("headers support append replace lookup removal and indexes") {
-  std::array<char, max_response_size_in_memory> storage_8{};
-  response value(storage_8);
+
+  response value;
   value.ok_200();
   value.add_header("X-Test", "a").add_header("X-Test", "b");
   value.add_header("X-Number", 42);
@@ -267,8 +266,8 @@ DOBA_TEST("headers support append replace lookup removal and indexes") {
 // | [>] connection close state follows header mutations         ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("connection close state follows header mutations") {
-  std::array<char, max_response_size_in_memory> storage_9{};
-  response value(storage_9);
+
+  response value;
   value.ok_200();
   DOBA_EXPECT(!value.wants_connection_close());
   value.add_header("Connection", "keep-alive, x-close");
@@ -285,8 +284,8 @@ DOBA_TEST("connection close state follows header mutations") {
   DOBA_EXPECT(value.wants_connection_close());
   response moved(std::move(value));
   DOBA_EXPECT(moved.wants_connection_close());
-  std::array<char, max_response_size_in_memory> storage_10{};
-  response assigned(storage_10);
+
+  response assigned;
   assigned.ok_200();
   assigned = std::move(moved);
   DOBA_EXPECT(assigned.wants_connection_close());
@@ -298,8 +297,8 @@ DOBA_TEST("connection close state follows header mutations") {
 // | [>] missing and out of range header lookups throw           ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("missing and out of range header lookups throw") {
-  std::array<char, max_response_size_in_memory> storage_11{};
-  response value(storage_11);
+
+  response value;
   value.ok_200();
   bool missing_threw = false;
   try {
@@ -321,8 +320,8 @@ DOBA_TEST("missing and out of range header lookups throw") {
 // | [>] oversized header additions and growth throw             ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("oversized header additions and growth throw") {
-  std::array<char, max_response_size_in_memory> storage_12{};
-  response value(storage_12);
+
+  response value;
   value.ok_200();
   const std::string huge(max_response_size_in_memory, 'x');
   bool add_threw = false;
@@ -351,8 +350,8 @@ DOBA_TEST("invalid response header names are rejected") {
       "", "Bad Name", "Bad:Name", "Bad\tName", "Bad\r\nX-Test",
   };
   for (const auto name : cases) {
-    std::array<char, max_response_size_in_memory> storage_13{};
-    response value(storage_13);
+
+    response value;
     value.ok_200();
     bool threw = false;
     try {
@@ -375,8 +374,8 @@ DOBA_TEST("invalid response header values are rejected") {
       std::string("value\0next", 10),
   };
   for (const auto& field_value : cases) {
-    std::array<char, max_response_size_in_memory> storage_14{};
-    response value(storage_14);
+
+    response value;
     value.ok_200();
     bool threw = false;
     try {
@@ -392,8 +391,8 @@ DOBA_TEST("invalid response header values are rejected") {
 // | [>] rejected replacement preserves the original header      ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("rejected replacement preserves the original header") {
-  std::array<char, max_response_size_in_memory> storage_15{};
-  response value(storage_15);
+
+  response value;
   value.ok_200();
   value.add_header("X-Test", "original");
   bool threw = false;
@@ -411,8 +410,8 @@ DOBA_TEST("rejected replacement preserves the original header") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("bounded header views do not copy adjacent bytes") {
   const std::string source = "xxX-Testyyvaluezz";
-  std::array<char, max_response_size_in_memory> storage_16{};
-  response value(storage_16);
+
+  response value;
   value.ok_200();
   value
       .add_header(std::string_view(source).substr(2, 6),
@@ -429,8 +428,8 @@ DOBA_TEST("bounded header views do not copy adjacent bytes") {
 // | [>] small bodies serialize inline including binary bytes    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("small bodies serialize inline including binary bytes") {
-  std::array<char, max_response_size_in_memory> storage_17{};
-  response value(storage_17);
+
+  response value;
   value.ok_200();
   value.set_header("Date", "fixed").set_body(std::string_view("a\0b", 3));
   DOBA_EXPECT(!value.has_header("Content-Length"));
@@ -452,8 +451,8 @@ DOBA_TEST("string view bodies copy caller storage") {
   for (std::size_t size :
        {std::size_t{3}, max_response_body_size_in_memory + 1}) {
     std::string bytes(size, 'a');
-    std::array<char, max_response_size_in_memory> storage{};
-    response value(storage);
+
+    response value;
     value.ok_200().set_header("Date", "fixed").set_body(
         std::string_view(bytes));
     bytes.assign(size, 'b');
@@ -474,15 +473,15 @@ DOBA_TEST("request reader echoes into inline response body") {
   }
   auto source = martianlabs::doba::protocol::http::v11::body::reader::raw(
       std::as_bytes(std::span(payload)), payload.size());
-  std::array<char, max_response_size_in_memory> storage{};
-  response value(storage);
+
+  response value;
   value.ok_200().set_header("Date", "fixed").set_body(&source);
   auto serialized = value.serialize();
   DOBA_EXPECT(!serialized.source);
   DOBA_EXPECT(wire_prefix(serialized).find("Content-Length: 10240\r\n") !=
               std::string_view::npos);
   DOBA_EXPECT_EQUAL(serialized.body, payload);
-  DOBA_EXPECT_EQUAL(serialized.body.data(), payload.data());
+  DOBA_EXPECT(serialized.body.data() != payload.data());
   std::array<std::byte, 1> remaining{};
   const auto state = source.read(remaining);
   DOBA_EXPECT(state.complete);
@@ -499,29 +498,30 @@ DOBA_TEST("partially read raw body uses remaining borrowed bytes") {
   std::array<std::byte, 2> prefix{};
   const auto first = source.read(prefix);
   DOBA_EXPECT_EQUAL(first.produced, 2);
-  std::array<char, max_response_size_in_memory> storage{};
-  response value(storage);
+
+  response value;
   value.ok_200().set_header("Date", "fixed").set_body(&source);
   const auto serialized = value.serialize();
   DOBA_EXPECT_EQUAL(serialized.body, "cdef");
-  DOBA_EXPECT_EQUAL(serialized.body.data(), payload.data() + 2);
+  DOBA_EXPECT(serialized.body.data() != payload.data() + 2);
   DOBA_EXPECT(wire_prefix(serialized).find("Content-Length: 4\r\n") !=
               std::string_view::npos);
 }
 
 // +===========================================================================+
-// | [>] borrowed raw body survives moves and replacement        ( test-case ) |
+// | [>] copied raw body survives moves and replacement        ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("borrowed raw body survives moves and replacement") {
+DOBA_TEST("copied raw body survives moves and replacement") {
   std::string payload(10240, 'x');
   auto source = martianlabs::doba::protocol::http::v11::body::reader::raw(
       std::as_bytes(std::span(payload)), payload.size());
-  std::array<char, max_response_size_in_memory> storage{};
-  response value(storage);
+
+  response value;
   value.ok_200().set_header("Date", "fixed").set_body(&source);
   response moved(std::move(value));
   const auto borrowed = moved.serialize();
-  DOBA_EXPECT_EQUAL(borrowed.body.data(), payload.data());
+  DOBA_EXPECT_EQUAL(borrowed.body, payload);
+  DOBA_EXPECT(borrowed.body.data() != payload.data());
   moved.ok_200().set_header("Date", "fixed").set_body("new");
   const auto replaced = moved.serialize();
   DOBA_EXPECT_EQUAL(replaced.body, "new");
@@ -540,8 +540,8 @@ DOBA_TEST("request reader crosses inline response limit") {
     }
     auto source = martianlabs::doba::protocol::http::v11::body::reader::raw(
         std::as_bytes(std::span(payload)), payload.size());
-    std::array<char, max_response_size_in_memory> storage{};
-    response value(storage);
+
+    response value;
     value.ok_200().set_header("Date", "fixed").set_body(&source);
     auto serialized = value.serialize();
     const std::string prefix(wire_prefix(serialized));
@@ -551,7 +551,7 @@ DOBA_TEST("request reader crosses inline response limit") {
     DOBA_EXPECT_EQUAL(serialized.source != nullptr,
                       size > max_response_body_size_in_memory);
     if (size <= max_response_body_size_in_memory) {
-      DOBA_EXPECT_EQUAL(serialized.body.data(), payload.data());
+      DOBA_EXPECT(serialized.body.data() != payload.data());
     }
     std::string actual(serialized.body);
     if (serialized.source) actual += read_source(*serialized.source);
@@ -571,8 +571,8 @@ DOBA_TEST("chunked request reader emits decoded raw response") {
         std::string("\r\n") + payload + "\r\n0\r\nX-Test: a\r\n\r\n";
     auto source = martianlabs::doba::protocol::http::v11::body::reader::chunked(
         std::as_bytes(std::span(encoded)));
-    std::array<char, max_response_size_in_memory> storage{};
-    response value(storage);
+
+    response value;
     value.ok_200().set_header("Date", "fixed").set_body(&source);
     auto serialized = value.serialize();
     const std::string prefix(wire_prefix(serialized));
@@ -591,8 +591,8 @@ DOBA_TEST("chunked request reader emits decoded raw response") {
 // | [>] request reader errors do not emit partial bodies        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("request reader errors do not emit partial bodies") {
-  std::array<char, max_response_size_in_memory> storage{};
-  response value(storage);
+
+  response value;
   value.ok_200().set_header("Date", "fixed").set_body("old");
   auto source = martianlabs::doba::protocol::http::v11::body::reader::raw(
       std::as_bytes(std::span("abc", 3)), 4);
@@ -607,8 +607,7 @@ DOBA_TEST("request reader errors do not emit partial bodies") {
   DOBA_EXPECT(serialized.body.empty());
   DOBA_EXPECT(!serialized.source);
 
-  std::array<char, max_response_size_in_memory> empty_storage{};
-  response empty(empty_storage);
+  response empty;
   empty.ok_200().set_header("Date", "fixed").set_body("old");
   empty.set_body(nullptr);
   auto empty_serialized = empty.serialize();
@@ -627,8 +626,8 @@ DOBA_TEST("large bodies serialize through an owned source") {
     for (std::size_t i = 0; i < payload.size(); i++) {
       payload[i] = static_cast<char>((i * 31 + i / 127) % 256);
     }
-    std::array<char, max_response_size_in_memory> storage_18{};
-    response value(storage_18);
+
+    response value;
     value.ok_200();
     value.set_header("Date", "fixed").set_body(payload);
     DOBA_EXPECT(!value.has_header("Content-Length"));
@@ -661,13 +660,13 @@ DOBA_TEST("response head and body limits are independent") {
   const std::string framing =
       "Content-Length: " + std::to_string(body.size()) + "\r\n";
   const std::string padding(
-      policies::kDefaultResponseHeadBufferCapacity - head.size() -
+      policies::kDefaultMaxResponseHeadSize - head.size() -
           framing.size() - 4,
       'p');
   for (std::size_t excess : {0, 1}) {
     const std::string payload(body.size() + excess, 'x');
-    std::array<char, max_response_size_in_memory> storage_19{};
-    response value(storage_19);
+
+    response value;
     value.ok_200();
     value.set_header("Date", "fixed").add_header("X-Pad", padding);
     value.set_body(payload);
@@ -679,7 +678,7 @@ DOBA_TEST("response head and body limits are independent") {
         "\r\nContent-Length: " + std::to_string(payload.size()) + "\r\n\r\n";
     DOBA_EXPECT_EQUAL(actual, expected_head + payload);
     DOBA_EXPECT_EQUAL(serialized.head.size(),
-                      policies::kDefaultResponseHeadBufferCapacity);
+                      policies::kDefaultMaxResponseHeadSize);
     DOBA_EXPECT_EQUAL(serialized.body.size(), excess ? 0 : body.size());
     DOBA_EXPECT_EQUAL(serialized.source != nullptr, excess != 0);
   }
@@ -691,8 +690,8 @@ DOBA_TEST("response head and body limits are independent") {
 DOBA_TEST("adopted raw and chunked writers set matching framing") {
   auto raw = body_writer::raw();
   DOBA_EXPECT(raw.write("abc"));
-  std::array<char, max_response_size_in_memory> storage_20{};
-  response raw_response(storage_20);
+
+  response raw_response;
   raw_response.ok_200();
   raw_response.set_header("Date", "fixed").set_body(std::move(raw));
   DOBA_EXPECT(!raw_response.has_header("Content-Length"));
@@ -702,8 +701,8 @@ DOBA_TEST("adopted raw and chunked writers set matching framing") {
   DOBA_EXPECT_EQUAL(read_source(*raw_serialized.source), "abc");
   auto chunked = body_writer::chunked();
   DOBA_EXPECT(chunked.write("abc"));
-  std::array<char, max_response_size_in_memory> storage_21{};
-  response chunked_response(storage_21);
+
+  response chunked_response;
   chunked_response.ok_200();
   chunked_response.set_header("Date", "fixed").set_body(std::move(chunked));
   DOBA_EXPECT(!chunked_response.has_header("Transfer-Encoding"));
@@ -721,8 +720,8 @@ DOBA_TEST("adopted raw and chunked writers set matching framing") {
 // | [>] replacing and clearing bodies removes stale framing     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("replacing and clearing bodies removes stale framing") {
-  std::array<char, max_response_size_in_memory> storage_22{};
-  response value(storage_22);
+
+  response value;
   value.ok_200();
   auto chunked = body_writer::chunked();
   DOBA_EXPECT(chunked.write("abc"));
@@ -743,8 +742,8 @@ DOBA_TEST("cleared bodies retain zero length across storage modes") {
   const std::string bytes = "hidden";
   for (int mode : {1, 2, 3, 4, 5, 0}) {
     for (bool repeated : {false, true}) {
-      std::array<char, max_response_size_in_memory> storage_23{};
-      response value(storage_23);
+
+      response value;
       value.ok_200();
       value.set_header("Date", "fixed");
       if (mode == 1) {
@@ -776,8 +775,8 @@ DOBA_TEST("cleared bodies retain zero length across storage modes") {
 // | [>] clearing bodies removes explicit framing                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("clearing bodies removes explicit framing") {
-  std::array<char, max_response_size_in_memory> storage_24{};
-  response value(storage_24);
+
+  response value;
   value.ok_200();
   value.set_header("Date", "fixed").set_body("hidden");
   value.add_header("Content-Length", "6")
@@ -803,8 +802,8 @@ DOBA_TEST("clearing bodies preserves status specific framing") {
       &response::not_modified_304,
   };
   for (const auto set : cases) {
-    std::array<char, max_response_size_in_memory> storage{};
-    response value(storage);
+
+    response value;
     (value.*set)();
     value.set_header("Date", "fixed").set_body("hidden");
     value.clear_body().clear_body();
@@ -822,8 +821,8 @@ DOBA_TEST("clearing bodies preserves status specific framing") {
   }
   auto writer = body_writer::chunked();
   DOBA_EXPECT(writer.write("hidden"));
-  std::array<char, max_response_size_in_memory> storage_25{};
-  response cached(storage_25);
+
+  response cached;
   cached.not_modified_304();
   cached.set_body("old").set_body(std::move(writer));
   auto serialized = cached.serialize();
@@ -840,8 +839,8 @@ DOBA_TEST("clearing bodies preserves status specific framing") {
 DOBA_TEST("suppression preserves metadata and permits replacement") {
   for (bool explicit_length : {false, true}) {
     for (int operation : {0, 1, 2}) {
-      std::array<char, max_response_size_in_memory> storage_26{};
-      response value(storage_26);
+
+      response value;
       value.ok_200();
       value.set_header("Date", "fixed").set_body("hidden");
       if (explicit_length) value.set_header("Content-Length", "6");
@@ -948,8 +947,8 @@ DOBA_TEST("every status method emits its registered status line") {
        "HTTP/1.1 505 HTTP Version Not Supported\r\n", true},
   };
   for (const auto& test : cases) {
-    std::array<char, max_response_size_in_memory> storage{};
-    response value(storage);
+
+    response value;
     (value.*test.set)();
     value.set_header("Date", "fixed");
     DOBA_EXPECT(!value.has_header("Content-Length"));
@@ -972,8 +971,8 @@ DOBA_TEST("informational 204 205 and 304 responses never serialize bodies") {
       &response::not_modified_304,
   };
   for (const auto set : cases) {
-    std::array<char, max_response_size_in_memory> storage{};
-    response value(storage);
+
+    response value;
     (value.*set)();
     value.set_header("Date", "fixed").set_body("body");
     auto serialized = value.serialize();
@@ -997,8 +996,8 @@ DOBA_TEST("informational 204 205 and 304 responses never serialize bodies") {
   }
   auto writer = body_writer::chunked();
   DOBA_EXPECT(writer.write("body"));
-  std::array<char, max_response_size_in_memory> storage_27{};
-  response streamed(storage_27);
+
+  response streamed;
   streamed.reset_content_205();
   streamed.set_header("Date", "fixed").set_body(std::move(writer));
   const auto serialized = streamed.serialize();
@@ -1017,12 +1016,12 @@ DOBA_TEST("informational 204 205 and 304 responses never serialize bodies") {
 // | [>] serialized views borrow response storage                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("serialized views borrow response storage") {
-  std::array<char, max_response_size_in_memory> storage{};
-  response value(storage);
+
+  response value;
   value.created_201();
   value.set_header("Date", "fixed").set_body("original");
   auto serialized = value.serialize();
-  DOBA_EXPECT_EQUAL(serialized.head.data(), storage.data());
+  DOBA_EXPECT(!serialized.head.empty());
   const std::string prefix(wire_prefix(serialized));
   value.internal_server_error_500().set_body("replacement");
   DOBA_EXPECT_EQUAL(prefix,
@@ -1034,8 +1033,8 @@ DOBA_TEST("serialized views borrow response storage") {
 // | [>] serializing a consumed response fails safely            ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("serializing a consumed response fails safely") {
-  std::array<char, max_response_size_in_memory> storage_29{};
-  response value(storage_29);
+
+  response value;
   value.ok_200();
   value.set_header("Date", "fixed").set_body("body");
   auto serialized = value.serialize();
@@ -1054,8 +1053,8 @@ DOBA_TEST("serializing a consumed response fails safely") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("inline body survives repeated header growth") {
   const std::string body(1024, 'b');
-  std::array<char, max_response_size_in_memory> storage_30{};
-  response value(storage_30);
+
+  response value;
   value.ok_200();
   value.set_body(body).set_header("Date", "fixed");
   for (std::size_t i = 0; i < 12; i++) {
@@ -1079,14 +1078,14 @@ DOBA_TEST("streamed body survives near-limit headers") {
   for (std::size_t i = 0; i < body.size(); i++) {
     body[i] = static_cast<char>(i % 256);
   }
-  const std::size_t head_limit = policies::kDefaultResponseHeadBufferCapacity;
+  const std::size_t head_limit = policies::kDefaultMaxResponseHeadSize;
   const std::string head = "HTTP/1.1 200 OK\r\nDate: fixed\r\nX-Pad: ";
   const std::string framing =
       "Content-Length: " + std::to_string(body.size()) + "\r\n";
   const std::string padding(head_limit - 32 - head.size() - framing.size() - 4,
                             'x');
-  std::array<char, max_response_size_in_memory> storage_31{};
-  response value(storage_31);
+
+  response value;
   value.ok_200();
   value.set_body(body).set_header("Date", "fixed").add_header("X-Pad", padding);
   const auto serialized = value.serialize();
@@ -1101,8 +1100,8 @@ DOBA_TEST("streamed body survives near-limit headers") {
 // | [>] automatic framing stays deferred until serialization    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("automatic framing stays deferred until serialization") {
-  std::array<char, max_response_size_in_memory> storage_32{};
-  response value(storage_32);
+
+  response value;
   value.ok_200();
   DOBA_EXPECT_EQUAL(value.get_headers_length(), 0);
   value.add_header("Content-Type", "text/plain").set_body("ok");
@@ -1130,16 +1129,16 @@ DOBA_TEST("automatic framing stays deferred until serialization") {
 // | [>] body replacement clears explicit framing duplicates     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("body replacement clears explicit framing duplicates") {
-  std::array<char, max_response_size_in_memory> storage_33{};
-  response value(storage_33);
+
+  response value;
   value.ok_200();
   value.add_header("content-length", "12")
       .add_header("Content-Length", "12")
       .add_header("Transfer-Encoding", "chunked")
       .add_header("transfer-encoding", "chunked");
   response moved(std::move(value));
-  std::array<char, max_response_size_in_memory> new_storage{};
-  response replacement(new_storage);
+
+  response replacement;
   replacement.ok_200();
   value = std::move(replacement);
   value = std::move(moved);
@@ -1156,8 +1155,8 @@ DOBA_TEST("body replacement clears explicit framing duplicates") {
 // | [>] explicit framing overrides deferred framing             ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("explicit framing overrides deferred framing") {
-  std::array<char, max_response_size_in_memory> storage_34{};
-  response value(storage_34);
+
+  response value;
   value.ok_200();
   value.set_body("abc").set_header("content-length", "3");
   DOBA_EXPECT_EQUAL(value.get_header("Content-Length").second, "3");
@@ -1165,8 +1164,8 @@ DOBA_TEST("explicit framing overrides deferred framing") {
   const std::string prefix(wire_prefix(serialized));
   DOBA_EXPECT(prefix.find("content-length: 3\r\n") != std::string_view::npos);
   DOBA_EXPECT(prefix.find("Content-Length:") == std::string_view::npos);
-  std::array<char, max_response_size_in_memory> storage_35{};
-  response head(storage_35);
+
+  response head;
   head.ok_200();
   head.set_header("Transfer-Encoding", "chunked").suppress_body();
   auto head_serialized = head.serialize();
@@ -1181,8 +1180,8 @@ DOBA_TEST("explicit framing overrides deferred framing") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("conflicting response framing is rejected before transmission") {
   for (bool automatic : {false, true}) {
-    std::array<char, max_response_size_in_memory> storage_36{};
-    response value(storage_36);
+
+    response value;
     value.ok_200();
     if (automatic) {
       auto writer = body_writer::chunked();
@@ -1209,13 +1208,13 @@ DOBA_TEST("HEAD preserves deferred framing through moves") {
   for (bool chunked : {false, true}) {
     auto writer = chunked ? body_writer::chunked() : body_writer::raw();
     DOBA_EXPECT(writer.write("resource"));
-    std::array<char, max_response_size_in_memory> storage_37{};
-    response value(storage_37);
+
+    response value;
     value.ok_200();
     value.set_body(std::move(writer)).suppress_body();
     response moved(std::move(value));
-    std::array<char, max_response_size_in_memory> new_storage{};
-    response replacement(new_storage);
+
+    response replacement;
     replacement.created_201();
     value = std::move(replacement);
     value = std::move(moved);
@@ -1238,8 +1237,8 @@ DOBA_TEST("HEAD preserves deferred framing through moves") {
 DOBA_TEST("deferred length respects the exact header boundary") {
   for (std::size_t size : {0, 9, 10, 99, 100}) {
     for (std::size_t excess : {0, 1}) {
-      std::array<char, max_response_size_in_memory> storage_38{};
-      response value(storage_38);
+
+      response value;
       value.ok_200();
       const std::string body(size, 'a');
       const std::string head = "HTTP/1.1 200 OK\r\nDate: fixed\r\nX-Pad: ";
@@ -1271,8 +1270,8 @@ DOBA_TEST("deferred length respects the exact header boundary") {
 // | [>] removing one Date preserves the remaining explicit Date ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("removing one Date preserves the remaining explicit Date") {
-  std::array<char, max_response_size_in_memory> storage_39{};
-  response value(storage_39);
+
+  response value;
   value.ok_200();
   value.add_header("Date", "first").add_header("Date", "remaining");
   value.remove_header("date");
@@ -1288,8 +1287,8 @@ DOBA_TEST("removing one Date preserves the remaining explicit Date") {
 // | [>] removing the last Date restores automatic generation    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("removing the last Date restores automatic generation") {
-  std::array<char, max_response_size_in_memory> storage_40{};
-  response value(storage_40);
+
+  response value;
   value.ok_200();
   value.add_header("DATE", "first").add_header("date", "remaining");
   value.add_header("X-Keep", "kept");
@@ -1319,8 +1318,8 @@ DOBA_TEST("header names validate every byte before mutation") {
         (byte >= 'a' && byte <= 'z') || byte == 96 ||
         std::string_view("!#$%&'*+-.^_|~").find(ch) != std::string_view::npos;
     for (bool replace : {false, true}) {
-      std::array<char, max_response_size_in_memory> storage_41{};
-      response value(storage_41);
+
+      response value;
       value.ok_200();
       value.add_header("X-Keep", "original");
       bool threw = false;
@@ -1351,8 +1350,8 @@ DOBA_TEST("header values validate every byte before mutation") {
     const std::string candidate = std::string("a") + ch + "b";
     const bool valid = byte == 9 || (byte >= 32 && byte != 127);
     for (bool replace : {false, true}) {
-      std::array<char, max_response_size_in_memory> storage_42{};
-      response value(storage_42);
+
+      response value;
       value.ok_200();
       value.add_header("X-Keep", "original");
       bool threw = false;
@@ -1379,8 +1378,8 @@ DOBA_TEST("header values validate every byte before mutation") {
 // | [>] header growth at capacity preserves neighbors and body  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("header growth at capacity preserves neighbors and body") {
-  std::array<char, max_response_size_in_memory> storage_43{};
-  response value(storage_43);
+
+  response value;
   value.ok_200();
   const std::string head =
       "HTTP/1.1 200 OK\r\nDate: fixed\r\nContent-Length: 4\r\nX: ";
@@ -1419,13 +1418,13 @@ DOBA_TEST("response adopts a reader at its current position") {
   auto source = reader::borrowed(std::as_bytes(std::span(bytes)));
   std::byte first{};
   DOBA_EXPECT(source.fetch(first));
-  std::array<char, max_response_size_in_memory> storage_44{};
-  response value(storage_44);
+
+  response value;
   value.ok_200();
   value.set_body(std::move(source), 5);
   auto moved = std::move(value);
-  std::array<char, max_response_size_in_memory> storage_45{};
-  response assigned(storage_45);
+
+  response assigned;
   assigned.ok_200();
   assigned.set_body("old");
   assigned = std::move(moved);
@@ -1441,8 +1440,8 @@ DOBA_TEST("response adopts a reader at its current position") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("reader bodies are replaced or suppressed without leaking bytes") {
   const std::string bytes = "hidden";
-  std::array<char, max_response_size_in_memory> storage_46{};
-  response value(storage_46);
+
+  response value;
   value.ok_200();
   value.set_body(reader::borrowed(std::as_bytes(std::span(bytes))), 6);
   value.set_body("next");
@@ -1450,8 +1449,8 @@ DOBA_TEST("reader bodies are replaced or suppressed without leaking bytes") {
   DOBA_EXPECT(!serialized.source);
   DOBA_EXPECT((wire_prefix(serialized)).ends_with("next"));
   for (auto result : {0, 1, 2, 3, 4}) {
-    std::array<char, max_response_size_in_memory> next_storage{};
-    response res(next_storage);
+
+    response res;
     if (result == 0) res.ok_200();
     if (result == 1) res.no_content_204();
     if (result == 2) res.reset_content_205();
@@ -1467,4 +1466,25 @@ DOBA_TEST("reader bodies are replaced or suppressed without leaking bytes") {
       DOBA_EXPECT(prefix.find("Content-Length: 6\r\n") != prefix.npos);
     }
   }
+}
+
+DOBA_TEST("response copies a reader independently of its source lifetime") {
+  response value;
+  value.ok_200().set_header("Date", "fixed");
+  {
+    std::string bytes(8192, 'x');
+    auto source = martianlabs::doba::protocol::http::v11::body::reader::raw(
+        std::as_bytes(std::span(bytes)), bytes.size());
+    value.set_body(&source);
+    bytes.assign(bytes.size(), '!');
+  }
+  value.set_header("X-Growing", std::string(2048, 'h'));
+  value.set_header("X-Growing", "short");
+  value.remove_header("X-Growing");
+  auto moved = std::move(value);
+  response assigned;
+  assigned = std::move(moved);
+  auto serialized = assigned.serialize();
+  DOBA_EXPECT_EQUAL(serialized.body, std::string(8192, 'x'));
+  DOBA_EXPECT(serialized.head.find("X-Growing") == std::string_view::npos);
 }

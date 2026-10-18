@@ -145,6 +145,22 @@ class reader {
     return decoder ? decoder->take_view(borrowed_raw_, maximum) : std::nullopt;
   }
 
+  // Takes ownership of wire bytes, including any temporary backing file.
+  static reader raw(common::byte_storage source, std::size_t length) {
+    return reader(common::reader(std::move(source)), reader_raw(length));
+  }
+  static reader chunked(common::byte_storage source,
+                        std::size_t extension_limit,
+                        std::size_t trailer_limit) {
+    return reader(common::reader(std::move(source)),
+                  reader_chunked(extension_limit, trailer_limit));
+  }
+
+  void rebind_borrowed(std::span<const std::byte> source) noexcept {
+    source_.rebind_borrowed(source);
+    if (!borrowed_raw_.empty()) borrowed_raw_ = source;
+  }
+
  private:
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                            ( private ) |

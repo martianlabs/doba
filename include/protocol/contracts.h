@@ -61,12 +61,12 @@ namespace martianlabs::doba::protocol::contracts {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename ENty>
 concept engine = requires(ENty& engine, const char* buf, std::size_t sze,
-                          std::size_t capacity, protocol::send_delegate output,
+                          protocol::send_delegate output,
                           std::function<void()> close) {
   typename ENty::policies_type;
   { engine.set_on_send(std::move(output)) } -> std::same_as<void>;
   { engine.set_on_close(std::move(close)) } -> std::same_as<void>;
-  { engine.on_bytes_received(buf, sze, capacity) } -> std::same_as<std::size_t>;
+  { engine.on_bytes_received(buf, sze) } -> std::same_as<void>;
 };
 
 // /////////////////////////////////////////////////////////////////////////////

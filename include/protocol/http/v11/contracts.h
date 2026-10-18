@@ -27,6 +27,7 @@
 
 #include <concepts>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <optional>
 #include <span>
@@ -102,7 +103,8 @@ namespace contracts {
 template <typename RQty>
 concept request =
     std::move_constructible<RQty> && std::assignable_from<RQty&, RQty> &&
-    requires(const RQty& value, std::string_view text, std::size_t index,
+    requires(RQty& mutable_value, const RQty& value, std::string_view text,
+             std::size_t index,
              std::vector<http::header_view> headers,
              std::vector<http::query_parameter_view> query_parameters,
              std::optional<body::reader> body_reader) {
@@ -115,8 +117,17 @@ concept request =
                    std::optional<std::string_view>{},
                    std::optional<std::string_view>{},
                    std::optional<http::helpers::host_type>{}, false,
-                   std::move(body_reader))
+                   std::move(body_reader), true)
       } -> std::same_as<RQty>;
+      { value.borrows_bytes() } -> std::same_as<bool>;
+      { value.body_is_stored() } -> std::same_as<bool>;
+      { mutable_value.make_owned() } -> std::same_as<void>;
+      { value.body_wire_size() } -> std::same_as<std::size_t>;
+      { mutable_value.rebase_bytes(std::uintptr_t{}, text.data()) } noexcept -> std::same_as<void>;
+      { mutable_value.begin_body(index, index) } -> std::same_as<bool>;
+      { mutable_value.append_body(text) } -> std::same_as<bool>;
+      { mutable_value.finish_body(false, index, index, index) }
+          -> std::same_as<bool>;
       { value.get_method() } -> std::same_as<std::string_view>;
       { value.get_target() } -> std::same_as<http::target>;
       { value.get_absolute_path() } -> std::same_as<std::string_view>;
@@ -162,10 +173,9 @@ template <typename RSty>
 concept response =
     std::move_constructible<RSty> && std::assignable_from<RSty&, RSty> &&
     std::same_as<typename RSty::serialized_type, serialization_result> &&
-    requires(RSty& value, const RSty& constant, std::span<char> storage,
-             std::size_t size, std::string_view text, body::reader* body_reader,
+    requires(RSty& value, const RSty& constant, std::size_t size, std::string_view text, body::reader* body_reader,
              body::body_writer body_writer, common::reader source) {
-      { RSty::from(storage, size, size) } -> std::same_as<RSty>;
+      { RSty::from(size, size) } -> std::same_as<RSty>;
       { value.serialize() } -> std::same_as<serialization_result>;
       { value.add_header(text, text) } -> std::same_as<RSty&>;
       { value.add_header(text, 1) } -> std::same_as<RSty&>;

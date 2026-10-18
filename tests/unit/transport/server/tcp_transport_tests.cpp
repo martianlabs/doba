@@ -43,9 +43,8 @@ struct policy_engine {
   using policies_type = int;
   void set_on_send(martianlabs::doba::protocol::send_delegate) {}
   void set_on_close(std::function<void()>) {}
-  std::size_t on_bytes_received(const char*, std::size_t size,
-                                std::size_t) {
-    return size;
+  void on_bytes_received(const char*, std::size_t) {
+    return;
   }
 };
 static_assert(!tr::contracts::execution_receiver<policy_engine>);

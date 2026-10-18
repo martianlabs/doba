@@ -98,6 +98,10 @@ class reader {
   static reader borrowed(std::span<const std::byte> source) noexcept {
     return reader(source, borrowed_tag{});
   }
+  void rebind_borrowed(std::span<const std::byte> source) noexcept {
+    if (is_borrowed_) borrowed_ = source;
+  }
+
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
   // +-------------------------------------------------------------------------+

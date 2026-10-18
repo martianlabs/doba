@@ -40,9 +40,8 @@ struct custom_engine {
                 const http::router<v11::request, v11::response>&) {}
   void set_on_send(martianlabs::doba::protocol::send_delegate) {}
   void set_on_close(std::function<void()>) {}
-  std::size_t on_bytes_received(const char*, std::size_t size,
-                                std::size_t) {
-    return size;
+  void on_bytes_received(const char*, std::size_t) {
+    return;
   }
 };
 

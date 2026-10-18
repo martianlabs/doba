@@ -62,12 +62,13 @@ class custom_request : public request {
       std::optional<std::string_view> target_authority_host,
       std::optional<std::string_view> target_authority_port,
       std::optional<helpers::host_type> target_authority_type,
-      bool wants_connection_close, std::optional<body::reader> body_reader) {
+      bool wants_connection_close, std::optional<body::reader> body_reader,
+      bool borrow_bytes = false) {
     return custom_request(request::from(
         method, abs_path, target_form, std::move(headers),
         std::move(query_parameters), host, port, type, target_authority_host,
         target_authority_port, target_authority_type, wants_connection_close,
-        std::move(body_reader)));
+        std::move(body_reader), borrow_bytes));
   }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
