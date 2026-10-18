@@ -75,9 +75,10 @@ struct engine_sync {
   static bool handle_request(decoder<RQty, RSty>& owner, const ROty& router,
                              const RQty& request,
                              const router_match_result<RQty, RSty>& match,
-                             const protocol::send_delegate& on_send) {
+                             const protocol::send_delegate& on_send,
+                             std::string& head, std::string& body) {
     bool close = request.wants_connection_close();
-    RSty response = owner.make_response();
+    RSty response = owner.make_response(head, body);
     execute(router, request, response, close, &match);
     auto serialized = serialize(request, response, close);
     on_send(serialized.head, serialized.body, std::move(serialized.source));

@@ -96,7 +96,8 @@ to change them.
 </h2>
 
 The decoder normally reads the transport buffer directly. Requests borrow
-field bytes and inline bodies; responses own their serialized bytes.
+field bytes and inline bodies. Synchronous response bytes use the engine's
+reusable output strings; asynchronous responses own their serialized bytes.
 Storage starts empty; HTTP limits do not reserve memory up front.
 *max_request_head_size* and *max_response_head_size* each default to
 **4 KiB** and bound accepted and serialized heads, respectively.
@@ -125,6 +126,15 @@ and inline wire body into one owned vector. This includes handlers that
 complete immediately. The engine does not copy bytes belonging to other
 requests. The request and response then outlive the input and decoder
 independently.
+
+Each engine owns two initially empty strings for synchronous response heads
+and inline bodies. They grow only when used and retain their capacity for
+later responses; the policies do not preallocate their maximum sizes. The
+response itself borrows these strings until the transport has preserved the
+output in `on_send`. Replies queued behind pending asynchronous work are
+copied into the existing output queue before the strings are reused. Decoder
+interim and rejection replies use the same engine storage. Asynchronous
+handlers keep independent response storage throughout their execution.
 
 An accepted body does not have to stay inline. The
 *request_body_memory_threshold* defaults to **16 KiB**; a larger incoming

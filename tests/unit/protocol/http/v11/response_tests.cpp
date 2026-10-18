@@ -1488,3 +1488,98 @@ DOBA_TEST("response copies a reader independently of its source lifetime") {
   DOBA_EXPECT_EQUAL(serialized.body, std::string(8192, 'x'));
   DOBA_EXPECT(serialized.head.find("X-Growing") == std::string_view::npos);
 }
+
+DOBA_TEST("borrowed responses serialize directly from reusable external strings") {
+  std::string head, body;
+  std::string saved;
+  const auto text = std::string(128, 'b');
+  const char* head_address = nullptr;
+  const char* body_address = nullptr;
+  for (int i = 0; i < 3; ++i) {
+    auto value = response::from(4096, 1024, head, body);
+    DOBA_EXPECT(!value.has_header("X-Old"));
+    value.ok_200().set_header("Date", "fixed").set_body(i ? "short" : text);
+    if (!i) value.set_header("X-Old", "first");
+    auto wire = value.serialize();
+    DOBA_EXPECT_EQUAL(wire.head.data(), head.data());
+    DOBA_EXPECT_EQUAL(wire.body.data(), body.data());
+    if (!i) {
+      head_address = head.data();
+      body_address = body.data();
+      saved = std::string(wire.head) + std::string(wire.body);
+    } else {
+      DOBA_EXPECT_EQUAL(head.data(), head_address);
+      DOBA_EXPECT_EQUAL(body.data(), body_address);
+      DOBA_EXPECT_EQUAL(wire.body, "short");
+      DOBA_EXPECT(wire.head.find("X-Old") == std::string_view::npos);
+    }
+  }
+  DOBA_EXPECT(saved.ends_with(text));
+  DOBA_EXPECT(saved.find("X-Old: first") != std::string::npos);
+}
+
+DOBA_TEST("moving borrowed responses preserves the external bytes") {
+  for (const std::size_t size : {2U, 256U}) {
+    std::string head, body;
+    auto value = response::from(4096, 1024, head, body);
+    const std::string text(size, 'x');
+    value.ok_200().set_header("Date", "fixed").set_body(text);
+    auto moved = std::move(value);
+    response assigned;
+    assigned.ok_200().set_body("discarded");
+    assigned = std::move(moved);
+    auto wire = assigned.serialize();
+    DOBA_EXPECT_EQUAL(wire.head.data(), head.data());
+    DOBA_EXPECT_EQUAL(wire.body.data(), body.data());
+    DOBA_EXPECT_EQUAL(wire.body, text);
+  }
+}
+
+DOBA_TEST("borrowed response storage still enforces limits and offloads bodies") {
+  for (const std::size_t threshold : {0U, 3U, 32U}) {
+    std::string head, body;
+    auto value = response::from(4096, threshold, head, body);
+    value.ok_200().set_header("Date", "fixed").set_body("abcdef");
+    auto wire = value.serialize();
+    DOBA_EXPECT_EQUAL(wire.head.data(), head.data());
+    if (threshold >= 6) {
+      DOBA_EXPECT(!wire.source);
+      DOBA_EXPECT_EQUAL(wire.body, "abcdef");
+      DOBA_EXPECT_EQUAL(wire.body.data(), body.data());
+    } else {
+      DOBA_EXPECT(wire.body.empty());
+      DOBA_EXPECT(wire.source != nullptr);
+      DOBA_EXPECT_EQUAL(read_source(*wire.source), "abcdef");
+    }
+  }
+  std::string bytes;
+  bool rejected = false;
+  try { auto value = response::from(4096, 8, bytes, bytes); (void)value; }
+  catch (const std::invalid_argument&) { rejected = true; }
+  DOBA_EXPECT(rejected);
+  std::string head, body;
+  auto limited = response::from(16, 8, head, body);
+  rejected = false;
+  try { limited.ok_200().set_header("X-Too-Large", "value"); }
+  catch (const std::out_of_range&) { rejected = true; }
+  DOBA_EXPECT(rejected);
+}
+
+DOBA_TEST("a raw reader is copied once into reusable response storage") {
+  std::string head, body;
+  auto value = response::from(4096, 64, head, body);
+  value.ok_200().set_header("Date", "fixed");
+  {
+    std::string input = "abcdef";
+    auto source = martianlabs::doba::protocol::http::v11::body::reader::raw(
+        std::as_bytes(std::span(input)), input.size());
+    std::array<std::byte, 1> first{};
+    DOBA_EXPECT_EQUAL(source.read(first).produced, 1U);
+    value.set_body(&source);
+    input.assign(input.size(), '!');
+    DOBA_EXPECT(source.read(first).complete);
+  }
+  auto wire = value.serialize();
+  DOBA_EXPECT_EQUAL(wire.body, "bcdef");
+  DOBA_EXPECT_EQUAL(wire.body.data(), body.data());
+}

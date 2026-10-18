@@ -28,6 +28,7 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -133,7 +134,8 @@ class engine {
         if (async_->idle()) synchronous_ = true;
       }
       try {
-        deserialization_result result = decoder_.deserialize(input);
+        deserialization_result result = decoder_.deserialize(
+            input, &response_head_, &response_body_);
         if (result.code != deserialization_status::kSucceeded) {
           const bool rejected =
               result.code == deserialization_status::kInvalidSource;
@@ -164,11 +166,13 @@ class engine {
         if (!synchronous_ || engine_async::handles(match)) {
           synchronous_ = false;
           if (!async_->handle_request(decoder_, router_, request, match, path,
-                                      execution_, async_, closed_)) {
+                                      execution_, async_, closed_,
+                                      response_head_, response_body_)) {
             return;
           }
         } else if (engine_sync<RQty, RSty, ROty>::handle_request(
-                       decoder_, router_, request, match, on_send_)) {
+                       decoder_, router_, request, match, on_send_,
+                       response_head_, response_body_)) {
           query_for_close();
         }
         continue;
@@ -196,6 +200,8 @@ class engine {
   // +-------------------------------------------------------------------------+
   const ROty& router_;
   decoder<RQty, RSty> decoder_;
+  std::string response_head_;
+  std::string response_body_;
   std::function<void()> on_close_;
   std::shared_ptr<engine_async> async_;
   transport::server::execution_capacity execution_;

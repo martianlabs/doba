@@ -226,10 +226,16 @@ storage failure. The decoder calls the factory once the head is complete,
 but dispatches the request only after its body is complete. Deriving from the
 built-in request supplies these operations.
 
-Custom HTTP responses provide `from(max_head_size, body_memory_threshold)`
-and own their byte storage. The factory receives operational limits, not an
-external writable buffer. The custom request and response examples implement
-these contracts.
+Custom HTTP responses provide an owning factory
+`from(max_head_size, body_memory_threshold)` and a synchronous factory
+`from(max_head_size, body_memory_threshold, head_storage, body_storage)`.
+The last two arguments are references to separate engine-owned `std::string`
+objects. The synchronous response starts with fresh message state and writes
+directly into them, reusing their capacity. These borrowed strings must outlive
+serialization and the transport's output capture. The limits remain
+operational bounds; no default capacity is reserved. Deriving from the
+standard response supplies both storage modes. The custom response example
+forwards both factories.
 
 The in-memory demo handles one fixed request synchronously. It shows where
 the pieces meet; a real network transport also needs connection management,

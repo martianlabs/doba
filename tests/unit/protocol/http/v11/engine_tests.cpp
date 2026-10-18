@@ -1699,3 +1699,63 @@ DOBA_TEST("async handlers own bytes before their first invocation") {
   DOBA_EXPECT_EQUAL(current.blocks.size(), 3U);
   DOBA_EXPECT_EQUAL(current.closes, 0);
 }
+
+DOBA_TEST("synchronous responses reuse engine storage and engines remain independent") {
+  router<request, response> routes;
+  const std::string payload(128, 'x');
+  routes.add("GET", "/sync", [&](const request&, response& res) {
+    res.ok_200().set_header("Date", "fixed").set_body(payload);
+  });
+  connection first(routes), second(routes);
+  const char* first_head = nullptr;
+  const char* first_body = nullptr;
+  bool stable = true;
+  int sent = 0;
+  first.value.set_on_send([&](std::string_view head, std::string_view body,
+                              std::unique_ptr<reader>) {
+    if (!sent) { first_head = head.data(); first_body = body.data(); }
+    else stable = stable && first_head == head.data() && first_body == body.data();
+    stable = stable && body == payload;
+    ++sent;
+  });
+  const std::string wire = "GET /sync HTTP/1.1\r\nHost: a\r\n\r\n";
+  for (int i = 0; i < 3; ++i) first.receive(wire);
+  bool independent = false;
+  second.value.set_on_send([&](std::string_view head, std::string_view body,
+                               std::unique_ptr<reader>) {
+    independent = head.data() != first_head && body.data() != first_body &&
+                  body == payload;
+  });
+  second.receive(wire);
+  DOBA_EXPECT(stable);
+  DOBA_EXPECT(independent);
+  DOBA_EXPECT_EQUAL(sent, 3);
+}
+
+DOBA_TEST("queued synchronous responses do not overwrite a pending async response") {
+  router<request, response> routes;
+  std::coroutine_handle<> pending;
+  bool intact = false;
+  routes.add("GET", "/wait", [&](const request&, response& res) -> task<void> {
+    res.ok_200().set_header("X-Owner", "async").set_body("pending");
+    co_await suspend_once{pending};
+    intact = res.get_header("X-Owner").second == "async";
+  });
+  routes.add("GET", "/sync", [](const request& req, response& res) {
+    res.ok_200().set_header("X-Owner", "sync")
+        .set_body(req.get_query_parameter("id")->second);
+  });
+  connection current(routes);
+  current.receive("GET /wait HTTP/1.1\r\nHost: a\r\n\r\n");
+  current.receive("GET /sync?id=first HTTP/1.1\r\nHost: a\r\n\r\n");
+  current.receive("GET /sync?id=second HTTP/1.1\r\nHost: a\r\n\r\n");
+  DOBA_EXPECT(current.wire.empty());
+  pending.resume();
+  DOBA_EXPECT(intact);
+  const auto first = current.wire.find("\r\n\r\npending");
+  const auto second = current.wire.find("\r\n\r\nfirst");
+  const auto third = current.wire.find("\r\n\r\nsecond");
+  DOBA_EXPECT(first != std::string::npos);
+  DOBA_EXPECT(first < second && second < third);
+  DOBA_EXPECT_EQUAL(current.closes, 0);
+}

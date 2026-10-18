@@ -167,13 +167,15 @@ class decoder {
   // +-------------------------------------------------------------------------+
   // | Consume one message, retaining only an unfinished message across calls. |
   // +-------------------------------------------------------------------------+
-  deserialization_result<RQty, RSty> deserialize(std::string_view& input) {
+  deserialization_result<RQty, RSty> deserialize(
+      std::string_view& input, std::string* reply_head = nullptr,
+      std::string* reply_body = nullptr) {
     if (!reminder_active_) reminder_.clear();
     if (input.empty()) return deserialization_status::kMoreBytesNeeded;
     const auto message = input;
     deserialization_result<RQty, RSty> result;
     if (!reminder_active_) {
-      result = parse_core(input);
+      result = parse_core(input, reply_head, reply_body);
       if (result.code == deserialization_status::kMoreBytesNeeded) {
         const auto keep = body_framer_ && request_->body_is_stored()
                               ? head_end_ : message.size();
@@ -190,7 +192,7 @@ class decoder {
       reminder_.insert(reminder_.end(), input.data(), input.data() + take);
       input.remove_prefix(take);
       std::string_view head(reminder_.data(), reminder_.size());
-      result = parse_core(head);
+      result = parse_core(head, reply_head, reply_body);
       if (result.code == deserialization_status::kMoreBytesNeeded &&
           body_framer_ && !input.empty()) {
         auto body_result = parse_body(input);
@@ -218,7 +220,9 @@ class decoder {
       }
     }
     if (result.code == deserialization_status::kInvalidSource) {
-      result.response.emplace(make_response());
+      result.response.emplace(reply_head && reply_body
+                                  ? make_response(*reply_head, *reply_body)
+                                  : make_response());
       if (storage_failed_) {
         result.response->internal_server_error_500();
       } else {
@@ -292,6 +296,11 @@ class decoder {
     return RSty::from(context_.policies.max_response_head_size,
                       context_.policies.response_body_memory_threshold);
   }
+  RSty make_response(std::string& head, std::string& body) {
+    return RSty::from(context_.policies.max_response_head_size,
+                      context_.policies.response_body_memory_threshold,
+                      head, body);
+  }
 
  private:
   // Find the first head terminator, including one crossing the receive boundary.
@@ -312,7 +321,9 @@ class decoder {
   // +=========================================================================+
   // | [>] parse_core                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  deserialization_result<RQty, RSty> parse_core(std::string_view& source) {
+  deserialization_result<RQty, RSty> parse_core(std::string_view& source,
+                                             std::string* reply_head,
+                                             std::string* reply_body) {
     head_request_ = false;
     std::string_view sv = source;
     std::size_t i = 0;
@@ -512,7 +523,9 @@ class decoder {
           auto result = parse_body(source);
           if (result.code == deserialization_status::kMoreBytesNeeded &&
               context_.connection.expects_continue) {
-            result.response.emplace(make_response());
+            result.response.emplace(reply_head && reply_body
+                                        ? make_response(*reply_head, *reply_body)
+                                        : make_response());
             result.response->continue_100();
           }
           return result;

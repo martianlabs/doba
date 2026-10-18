@@ -58,6 +58,14 @@ class custom_response : public response {
                               std::size_t body_threshold) {
     return custom_response(head_limit, body_threshold);
   }
+  custom_response(std::size_t head_limit, std::size_t body_threshold,
+                  std::string& head, std::string& body)
+      : response(head_limit, body_threshold, head, body) {}
+  static custom_response from(std::size_t head_limit,
+                              std::size_t body_threshold,
+                              std::string& head, std::string& body) {
+    return custom_response(head_limit, body_threshold, head, body);
+  }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+

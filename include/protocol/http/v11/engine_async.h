@@ -102,7 +102,7 @@ class engine_async {
                       std::string_view path,
                       transport::server::execution_capacity execution,
                       const std::shared_ptr<engine_async>& state,
-                      bool& closed) {
+                      bool& closed, std::string& head, std::string& body) {
     const auto position = request_position();
     if (!position) return false;
     bool close = request.wants_connection_close();
@@ -112,7 +112,7 @@ class engine_async {
       if (close) closed = true;
       return true;
     }
-    RSty response = owner.make_response();
+    RSty response = owner.make_response(head, body);
     engine_sync<RQty, RSty, ROty>::execute(router, request, response, close,
                                            &match);
     auto serialized =
