@@ -1,24 +1,22 @@
-<a id="authorization-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/authorization/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/authorization/index.svg" alt="Index for authorization.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/authorization/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/authorization/index-dark.svg" alt="Index for authorization.h">
-  </a>
-</h1>
+<a id="authorization"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/authorization/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/authorization/index.svg" alt="authorization">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/authorization/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/authorization/index-dark.svg" alt="authorization">
+</a>
 
 **Header:** [include/protocol/http/common/headers/authorization.h](../../../../../../include/protocol/http/common/headers/authorization.h)
 
 |                                                             authorization | | RFC 9110 S11.6.2 Authorization                                            | | The "Authorization" header field allows a user agent to authenticate      | | itself with an origin server, usually after receiving a 401               | | (Unauthorized) response containing o
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [authorization](#type-authorization) · *type*
+[authorization](#type-authorization)
 
-**protocol::http::headers::authorization**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::authorization
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-authorization"></a>
 

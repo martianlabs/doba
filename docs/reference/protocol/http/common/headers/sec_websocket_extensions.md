@@ -1,24 +1,22 @@
-<a id="sec-websocket-extensions-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_extensions/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_extensions/index.svg" alt="Index for sec_websocket_extensions.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_extensions/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_extensions/index-dark.svg" alt="Index for sec_websocket_extensions.h">
-  </a>
-</h1>
+<a id="sec-websocket-extensions"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_extensions/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_extensions/index.svg" alt="sec_websocket_extensions">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_extensions/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_extensions/index-dark.svg" alt="sec_websocket_extensions">
+</a>
 
 **Header:** [include/protocol/http/common/headers/sec_websocket_extensions.h](../../../../../../include/protocol/http/common/headers/sec_websocket_extensions.h)
 
 |                                                 sec-websocket-extensions  | | RFC 6455 S9.1 Sec-WebSocket-Extensions                                    | | The "Sec-WebSocket-Extensions" header field is used during the WebSocket  | | opening handshake to negotiate protocol-level extensions.                 | | A client MAY send this field in its
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [sec_websocket_extensions](#type-sec-websocket-extensions) · *type*
+[sec_websocket_extensions](#type-sec-websocket-extensions)
 
-**protocol::http::headers::sec_websocket_extensions**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::sec_websocket_extensions
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-sec-websocket-extensions"></a>
 

@@ -1,25 +1,23 @@
-<a id="tcp-windows-overlapped-receive-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index.svg" alt="Index for tcp_windows_overlapped_receive.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index-dark.svg" alt="Index for tcp_windows_overlapped_receive.h">
-  </a>
-</h1>
+<a id="tcp-windows-overlapped-receive"></a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index.svg" alt="tcp_windows_overlapped_receive">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index-dark.svg" alt="tcp_windows_overlapped_receive">
+</a>
 
 **Header:** [include/transport/server/tcp_windows_overlapped_receive.h](../../../../include/transport/server/tcp_windows_overlapped_receive.h)
 
 Provides the context transport component.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [context](#type-context) · *type*
-- [overlapped_receive](#type-overlapped-receive) · *type*
+[context](#type-context) ·
+[overlapped_receive](#type-overlapped-receive)
 
-**transport::server::overlapped_receive**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::overlapped_receive
 
-- [ctx](#field-ctx) · *field*
+[ctx](#field-ctx)
 
 <a id="type-context"></a>
 

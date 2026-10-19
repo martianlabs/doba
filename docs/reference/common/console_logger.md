@@ -1,29 +1,27 @@
-<a id="console-logger-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/console_logger/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/console_logger/index.svg" alt="Index for console_logger.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/console_logger/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/console_logger/index-dark.svg" alt="Index for console_logger.h">
-  </a>
-</h1>
+<a id="console-logger"></a>
+<a href="../../../resources/docs/reference/common/console_logger/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/console_logger/index.svg" alt="console_logger">
+</a>
+<a href="../../../resources/docs/reference/common/console_logger/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/console_logger/index-dark.svg" alt="console_logger">
+</a>
 
 **Header:** [include/common/console_logger.h](../../../include/common/console_logger.h)
 
 Provides the console logger options type.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [console_log_level](#enum-console-log-level) · *enum*
-- [console_log_color](#enum-console-log-color) · *enum*
-- [console_logger_options](#type-console-logger-options) · *type*
+[console_log_level](#enum-console-log-level) ·
+[console_log_color](#enum-console-log-color) ·
+[console_logger_options](#type-console-logger-options)
 
-**common::console_logger_options**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::console_logger_options
 
-- [show_name](#field-show-name) · *field*
-- [show_timestamp](#field-show-timestamp) · *field*
-- [show_function](#field-show-function) · *field*
-- [show_line](#field-show-line) · *field*
+[show_name](#field-show-name) ·
+[show_timestamp](#field-show-timestamp) ·
+[show_function](#field-show-function) ·
+[show_line](#field-show-line)
 
 <a id="enum-console-log-level"></a>
 

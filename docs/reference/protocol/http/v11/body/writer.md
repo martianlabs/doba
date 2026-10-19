@@ -1,31 +1,29 @@
-<a id="writer-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index.svg" alt="Index for writer.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index-dark.svg" alt="Index for writer.h">
-  </a>
-</h1>
+<a id="writer"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index.svg" alt="writer">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index-dark.svg" alt="writer">
+</a>
 
 **Header:** [include/protocol/http/v11/body/writer.h](../../../../../../include/protocol/http/v11/body/writer.h)
 
 Owns the wire-level common::writer sink together with the body encoder (writer_chunked or writer_raw) matching the framing chosen for the outgoing response (Transfer-Encoding: chunked vs Content-Length). This lets callers push raw payload bytes via write() without ever having to know which framing will encode them, mirroring body::reader on the
 
-**protocol::http::v11::body**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body
 
-- [body_writer](#type-body-writer) · *type*
+[body_writer](#type-body-writer)
 
-**protocol::http::v11::body::body_writer**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body::body_writer
 
-- [chunked](#method-chunked) · *method*
-- [raw](#method-raw) · *method*
-- [write(payload)](#method-write) · *method*
-- [write(payload)](#method-write-2) · *method*
-- [end](#method-end) · *method*
-- [release](#method-release) · *method*
-- [is_chunked](#method-is-chunked) · *method*
-- [bytes_written](#method-bytes-written) · *method*
+[chunked](#method-chunked) ·
+[raw](#method-raw) ·
+[write(payload)](#method-write) ·
+[write(payload)](#method-write-2) ·
+[end](#method-end) ·
+[release](#method-release) ·
+[is_chunked](#method-is-chunked) ·
+[bytes_written](#method-bytes-written)
 
 <a id="type-body-writer"></a>
 

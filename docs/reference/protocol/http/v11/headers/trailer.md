@@ -1,25 +1,23 @@
-<a id="trailer-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/index.svg" alt="Index for trailer.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/index-dark.svg" alt="Index for trailer.h">
-  </a>
-</h1>
+<a id="trailer"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/index.svg" alt="trailer">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/index-dark.svg" alt="trailer">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/trailer.h](../../../../../../include/protocol/http/v11/headers/trailer.h)
 
 The "Trailer" header field provides a list of field names that the sender anticipates sending as trailer fields within the same message.
 
-**protocol::http::v11::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
 
-- [trailer](#type-trailer) · *type*
+[trailer](#type-trailer)
 
-**protocol::http::v11::headers::trailer**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::trailer
 
-- [check](#method-check) · *method*
-- [interpret](#method-interpret) · *method*
+[check](#method-check) ·
+[interpret](#method-interpret)
 
 <a id="type-trailer"></a>
 

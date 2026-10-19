@@ -1,24 +1,22 @@
-<a id="signaler-windows-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/signaler_windows/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/signaler_windows/index.svg" alt="Index for signaler_windows.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/signaler_windows/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/signaler_windows/index-dark.svg" alt="Index for signaler_windows.h">
-  </a>
-</h1>
+<a id="signaler-windows"></a>
+<a href="../../../resources/docs/reference/common/signaler_windows/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/signaler_windows/index.svg" alt="signaler_windows">
+</a>
+<a href="../../../resources/docs/reference/common/signaler_windows/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/signaler_windows/index-dark.svg" alt="signaler_windows">
+</a>
 
 **Header:** [include/common/signaler_windows.h](../../../include/common/signaler_windows.h)
 
 Provides the signaler type.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [signaler](#type-signaler) · *type*
+[signaler](#type-signaler)
 
-**common::signaler**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::signaler
 
-- [wait](#method-wait) · *method*
+[wait](#method-wait)
 
 <a id="type-signaler"></a>
 

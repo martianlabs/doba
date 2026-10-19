@@ -1,36 +1,31 @@
-<a id="results-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/results/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/results/index.svg" alt="Index for results.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/results/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/results/index-dark.svg" alt="Index for results.h">
-  </a>
-</h1>
+<a id="results"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/results/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/results/index.svg" alt="results">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/results/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/results/index-dark.svg" alt="results">
+</a>
 
 **Header:** [include/protocol/http/v11/results.h](../../../../../include/protocol/http/v11/results.h)
 
 HTTP/1.1 decoding result for the selected request and response types.
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [deserialization_result](#type-deserialization-result) · *type*
+[deserialization_result](#type-deserialization-result) ·
+[serialization_result](#type-serialization-result)
 
-**protocol::http::v11::deserialization_result**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::deserialization_result
 
-- [code](#field-code) · *field*
-- [request](#field-request) · *field*
-- [response](#field-response) · *field*
+[code](#field-code) ·
+[request](#field-request) ·
+[response](#field-response)
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::serialization_result
 
-- [serialization_result](#type-serialization-result) · *type*
-
-**protocol::http::v11::serialization_result**
-
-- [head](#field-head) · *field*
-- [body](#field-body) · *field*
-- [source](#field-source) · *field*
+[head](#field-head) ·
+[body](#field-body) ·
+[source](#field-source)
 
 <a id="type-deserialization-result"></a>
 

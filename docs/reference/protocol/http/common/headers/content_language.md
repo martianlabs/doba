@@ -1,24 +1,22 @@
-<a id="content-language-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/index.svg" alt="Index for content_language.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/index-dark.svg" alt="Index for content_language.h">
-  </a>
-</h1>
+<a id="content-language"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/index.svg" alt="content_language">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/index-dark.svg" alt="content_language">
+</a>
 
 **Header:** [include/protocol/http/common/headers/content_language.h](../../../../../../include/protocol/http/common/headers/content_language.h)
 
 |                                                          content-language | | RFC 9110 S8.5 Content-Language                                            | | The "Content-Language" header field identifies the natural language(s) of | | the intended audience for a representation. It does not necessarily list  | | every language that appears within t
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [content_language](#type-content-language) · *type*
+[content_language](#type-content-language)
 
-**protocol::http::headers::content_language**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::content_language
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-content-language"></a>
 

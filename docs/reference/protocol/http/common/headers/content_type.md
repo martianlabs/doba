@@ -1,24 +1,22 @@
-<a id="content-type-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_type/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_type/index.svg" alt="Index for content_type.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_type/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_type/index-dark.svg" alt="Index for content_type.h">
-  </a>
-</h1>
+<a id="content-type"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_type/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_type/index.svg" alt="content_type">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_type/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_type/index-dark.svg" alt="content_type">
+</a>
 
 **Header:** [include/protocol/http/common/headers/content_type.h](../../../../../../include/protocol/http/common/headers/content_type.h)
 
 |                                                              content-type | | RFC 9110 S8.3 Content-Type                                                | | The "Content-Type" header field indicates the media type of the           | | associated representation. It identifies both the representation's data   | | format and how that data is intended
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [content_type](#type-content-type) · *type*
+[content_type](#type-content-type)
 
-**protocol::http::headers::content_type**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::content_type
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-content-type"></a>
 

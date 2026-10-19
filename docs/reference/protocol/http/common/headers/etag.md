@@ -1,24 +1,22 @@
-<a id="etag-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/etag/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/etag/index.svg" alt="Index for etag.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/etag/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/etag/index-dark.svg" alt="Index for etag.h">
-  </a>
-</h1>
+<a id="etag"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/etag/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/etag/index.svg" alt="etag">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/etag/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/etag/index-dark.svg" alt="etag">
+</a>
 
 **Header:** [include/protocol/http/common/headers/etag.h](../../../../../../include/protocol/http/common/headers/etag.h)
 
 |                                                                      etag | | RFC 9110 S8.8.3 ETag                                                      | | The "ETag" response header field provides the current entity tag for the  | | selected representation, as determined at the conclusion of handling the  | | request.
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [etag](#type-etag) · *type*
+[etag](#type-etag)
 
-**protocol::http::headers::etag**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::etag
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-etag"></a>
 

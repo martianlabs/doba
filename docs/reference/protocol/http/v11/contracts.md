@@ -1,28 +1,26 @@
-<a id="contracts-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/contracts/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/contracts/index.svg" alt="Index for contracts.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/contracts/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/contracts/index-dark.svg" alt="Index for contracts.h">
-  </a>
-</h1>
+<a id="contracts"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/contracts/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/contracts/index.svg" alt="contracts">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/contracts/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/contracts/index-dark.svg" alt="contracts">
+</a>
 
 **Header:** [include/protocol/http/v11/contracts.h](../../../../../include/protocol/http/v11/contracts.h)
 
 This header declares the types and operations listed below.
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [make_engine_factory&lt;ENty, ROty&gt;(configuration, routes)](#function-make-engine-factory) · *function*
-- [make_engine_factory&lt;ENty, ROty&gt;(configuration, routes, on_async_started, on_async_finished)](#function-make-engine-factory-2) · *function*
-- [engine_factory](#alias-engine-factory) · *alias*
+[make_engine_factory&lt;ENty, ROty&gt;(configuration, routes)](#function-make-engine-factory) ·
+[make_engine_factory&lt;ENty, ROty&gt;(configuration, routes, on_async_started, on_async_finished)](#function-make-engine-factory-2) ·
+[engine_factory](#alias-engine-factory)
 
-**protocol::http::v11::contracts**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::contracts
 
-- [request](#concept-request) · *concept*
-- [response](#concept-response) · *concept*
-- [router](#concept-router) · *concept*
+[request](#concept-request) ·
+[response](#concept-response) ·
+[router](#concept-router)
 
 <a id="function-make-engine-factory"></a>
 

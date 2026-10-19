@@ -1,33 +1,31 @@
-<a id="reader-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/reader/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/reader/index.svg" alt="Index for reader.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/reader/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/reader/index-dark.svg" alt="Index for reader.h">
-  </a>
-</h1>
+<a id="reader"></a>
+<a href="../../../resources/docs/reference/common/reader/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/reader/index.svg" alt="reader">
+</a>
+<a href="../../../resources/docs/reference/common/reader/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/reader/index-dark.svg" alt="reader">
+</a>
 
 **Header:** [include/common/reader.h](../../../include/common/reader.h)
 
 This class provides a reader interface for reading bytes from a byte_storage backend. It supports reading into a span of bytes, fetching individual bytes, and checking the state of the reader (e.g., whether it has reached the end of the storage or encountered an error). It can also read all remaining bytes into a string.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [reader](#type-reader) · *type*
+[reader](#type-reader)
 
-**common::reader**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::reader
 
-- [borrowed](#method-borrowed) · *method*
-- [rebind_borrowed](#method-rebind-borrowed) · *method*
-- [read](#method-read) · *method*
-- [fetch](#method-fetch) · *method*
-- [eof](#method-eof) · *method*
-- [exhausted](#method-exhausted) · *method*
-- [failed](#method-failed) · *method*
-- [ok](#method-ok) · *method*
-- [size](#method-size) · *method*
-- [read_all](#method-read-all) · *method*
+[borrowed](#method-borrowed) ·
+[rebind_borrowed](#method-rebind-borrowed) ·
+[read](#method-read) ·
+[fetch](#method-fetch) ·
+[eof](#method-eof) ·
+[exhausted](#method-exhausted) ·
+[failed](#method-failed) ·
+[ok](#method-ok) ·
+[size](#method-size) ·
+[read_all](#method-read-all)
 
 <a id="type-reader"></a>
 

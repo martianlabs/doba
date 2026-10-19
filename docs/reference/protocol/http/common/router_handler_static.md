@@ -1,20 +1,18 @@
-<a id="router-handler-static-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_static/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_static/index.svg" alt="Index for router_handler_static.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_static/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_static/index-dark.svg" alt="Index for router_handler_static.h">
-  </a>
-</h1>
+<a id="router-handler-static"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_static/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_static/index.svg" alt="router_handler_static">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_static/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_static/index-dark.svg" alt="router_handler_static">
+</a>
 
 **Header:** [include/protocol/http/common/router_handler_static.h](../../../../../include/protocol/http/common/router_handler_static.h)
 
 This header declares the types and operations listed below.
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [router_handler_static](#alias-router-handler-static) · *alias*
+[router_handler_static](#alias-router-handler-static)
 
 <a id="alias-router-handler-static"></a>
 

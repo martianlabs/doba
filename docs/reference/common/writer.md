@@ -1,29 +1,27 @@
-<a id="writer-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/writer/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/writer/index.svg" alt="Index for writer.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/writer/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/writer/index-dark.svg" alt="Index for writer.h">
-  </a>
-</h1>
+<a id="writer"></a>
+<a href="../../../resources/docs/reference/common/writer/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/writer/index.svg" alt="writer">
+</a>
+<a href="../../../resources/docs/reference/common/writer/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/writer/index-dark.svg" alt="writer">
+</a>
 
 **Header:** [include/common/writer.h](../../../include/common/writer.h)
 
 This class provides a writer interface for writing bytes to a byte_storage backend. It supports writing from a pointer, a string_view, or a span of bytes. It also provides methods to finish the writing process and check the state of the writer.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [writer](#type-writer) · *type*
+[writer](#type-writer)
 
-**common::writer**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::writer
 
-- [write(ptr, len)](#method-write) · *method*
-- [write(bytes)](#method-write-2) · *method*
-- [write(bytes)](#method-write-3) · *method*
-- [finish](#method-finish) · *method*
-- [ok](#method-ok) · *method*
-- [release](#method-release) · *method*
+[write(ptr, len)](#method-write) ·
+[write(bytes)](#method-write-2) ·
+[write(bytes)](#method-write-3) ·
+[finish](#method-finish) ·
+[ok](#method-ok) ·
+[release](#method-release)
 
 <a id="type-writer"></a>
 

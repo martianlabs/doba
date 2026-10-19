@@ -1,24 +1,22 @@
-<a id="policy-h"></a>
-<h1>
-  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index.svg#gh-light-mode-only">
-    <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index.svg" alt="Index for policy.h">
-  </a>
-  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index-dark.svg" alt="Index for policy.h">
-  </a>
-</h1>
+<a id="policy"></a>
+<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index.svg#gh-light-mode-only">
+  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index.svg" alt="policy">
+</a>
+<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index-dark.svg" alt="policy">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/rules/policy.h](../../../../../../../include/protocol/http/v11/headers/rules/policy.h)
 
 Inbound policy limits that span several headers Transversal policy rules that enforce limits no single intra-header interpreter can, because the quantity being limited is an aggregate of several headers. Applied by deserialize() after the single header pass has populated the context.
 
-**protocol::http::v11::headers::rules**
+### <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::rules
 
-- [policy](#type-policy) · *type*
+[policy](#type-policy)
 
-**protocol::http::v11::headers::rules::policy**
+### <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::rules::policy
 
-- [apply](#method-apply) · *method*
+[apply](#method-apply)
 
 <a id="type-policy"></a>
 

@@ -1,20 +1,18 @@
-<a id="framer-error-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_error/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_error/index.svg" alt="Index for framer_error.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_error/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_error/index-dark.svg" alt="Index for framer_error.h">
-  </a>
-</h1>
+<a id="framer-error"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_error/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_error/index.svg" alt="framer_error">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_error/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_error/index-dark.svg" alt="framer_error">
+</a>
 
 **Header:** [include/protocol/http/v11/body/framer_error.h](../../../../../../include/protocol/http/v11/body/framer_error.h)
 
 This header declares the types and operations listed below.
 
-**protocol::http::v11::body**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body
 
-- [framer_error](#enum-framer-error) · *enum*
+[framer_error](#enum-framer-error)
 
 <a id="enum-framer-error"></a>
 

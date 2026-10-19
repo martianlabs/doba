@@ -1,121 +1,119 @@
-<a id="status-lines-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index.svg" alt="Index for status_lines.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index-dark.svg" alt="Index for status_lines.h">
-  </a>
-</h1>
+<a id="status-lines"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index.svg" alt="status_lines">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index-dark.svg" alt="status_lines">
+</a>
 
 **Header:** [include/protocol/http/v11/status_lines.h](../../../../../include/protocol/http/v11/status_lines.h)
 
 Provides the http 1.1 status lines.
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [STR_VALUE_RAW](#macro-str-value-raw) · *macro*
-- [STR_VALUE](#macro-str-value) · *macro*
-- [EAS](#macro-eas) · *macro*
-- [SL](#macro-sl) · *macro*
-- [status_lines](#type-status-lines) · *type*
+[STR_VALUE_RAW](#macro-str-value-raw) ·
+[STR_VALUE](#macro-str-value) ·
+[EAS](#macro-eas) ·
+[SL](#macro-sl) ·
+[status_lines](#type-status-lines)
 
-**protocol::http::v11::status_lines**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::status_lines
 
-- [k100](#constant-k100) · *constant*
-- [k101](#constant-k101) · *constant*
-- [k200](#constant-k200) · *constant*
-- [k201](#constant-k201) · *constant*
-- [k202](#constant-k202) · *constant*
-- [k203](#constant-k203) · *constant*
-- [k204](#constant-k204) · *constant*
-- [k205](#constant-k205) · *constant*
-- [k206](#constant-k206) · *constant*
-- [k300](#constant-k300) · *constant*
-- [k301](#constant-k301) · *constant*
-- [k302](#constant-k302) · *constant*
-- [k303](#constant-k303) · *constant*
-- [k304](#constant-k304) · *constant*
-- [k305](#constant-k305) · *constant*
-- [k306](#constant-k306) · *constant*
-- [k307](#constant-k307) · *constant*
-- [k308](#constant-k308) · *constant*
-- [k400](#constant-k400) · *constant*
-- [k401](#constant-k401) · *constant*
-- [k402](#constant-k402) · *constant*
-- [k403](#constant-k403) · *constant*
-- [k404](#constant-k404) · *constant*
-- [k405](#constant-k405) · *constant*
-- [k406](#constant-k406) · *constant*
-- [k407](#constant-k407) · *constant*
-- [k408](#constant-k408) · *constant*
-- [k409](#constant-k409) · *constant*
-- [k410](#constant-k410) · *constant*
-- [k411](#constant-k411) · *constant*
-- [k412](#constant-k412) · *constant*
-- [k413](#constant-k413) · *constant*
-- [k414](#constant-k414) · *constant*
-- [k415](#constant-k415) · *constant*
-- [k416](#constant-k416) · *constant*
-- [k417](#constant-k417) · *constant*
-- [k418](#constant-k418) · *constant*
-- [k421](#constant-k421) · *constant*
-- [k422](#constant-k422) · *constant*
-- [k426](#constant-k426) · *constant*
-- [k431](#constant-k431) · *constant*
-- [k500](#constant-k500) · *constant*
-- [k501](#constant-k501) · *constant*
-- [k502](#constant-k502) · *constant*
-- [k503](#constant-k503) · *constant*
-- [k504](#constant-k504) · *constant*
-- [k505](#constant-k505) · *constant*
-- [k100Sz](#constant-k100sz) · *constant*
-- [k101Sz](#constant-k101sz) · *constant*
-- [k200Sz](#constant-k200sz) · *constant*
-- [k201Sz](#constant-k201sz) · *constant*
-- [k202Sz](#constant-k202sz) · *constant*
-- [k203Sz](#constant-k203sz) · *constant*
-- [k204Sz](#constant-k204sz) · *constant*
-- [k205Sz](#constant-k205sz) · *constant*
-- [k206Sz](#constant-k206sz) · *constant*
-- [k300Sz](#constant-k300sz) · *constant*
-- [k301Sz](#constant-k301sz) · *constant*
-- [k302Sz](#constant-k302sz) · *constant*
-- [k303Sz](#constant-k303sz) · *constant*
-- [k304Sz](#constant-k304sz) · *constant*
-- [k305Sz](#constant-k305sz) · *constant*
-- [k306Sz](#constant-k306sz) · *constant*
-- [k307Sz](#constant-k307sz) · *constant*
-- [k308Sz](#constant-k308sz) · *constant*
-- [k400Sz](#constant-k400sz) · *constant*
-- [k401Sz](#constant-k401sz) · *constant*
-- [k402Sz](#constant-k402sz) · *constant*
-- [k403Sz](#constant-k403sz) · *constant*
-- [k404Sz](#constant-k404sz) · *constant*
-- [k405Sz](#constant-k405sz) · *constant*
-- [k406Sz](#constant-k406sz) · *constant*
-- [k407Sz](#constant-k407sz) · *constant*
-- [k408Sz](#constant-k408sz) · *constant*
-- [k409Sz](#constant-k409sz) · *constant*
-- [k410Sz](#constant-k410sz) · *constant*
-- [k411Sz](#constant-k411sz) · *constant*
-- [k412Sz](#constant-k412sz) · *constant*
-- [k413Sz](#constant-k413sz) · *constant*
-- [k414Sz](#constant-k414sz) · *constant*
-- [k415Sz](#constant-k415sz) · *constant*
-- [k416Sz](#constant-k416sz) · *constant*
-- [k417Sz](#constant-k417sz) · *constant*
-- [k418Sz](#constant-k418sz) · *constant*
-- [k421Sz](#constant-k421sz) · *constant*
-- [k422Sz](#constant-k422sz) · *constant*
-- [k426Sz](#constant-k426sz) · *constant*
-- [k431Sz](#constant-k431sz) · *constant*
-- [k500Sz](#constant-k500sz) · *constant*
-- [k501Sz](#constant-k501sz) · *constant*
-- [k502Sz](#constant-k502sz) · *constant*
-- [k503Sz](#constant-k503sz) · *constant*
-- [k504Sz](#constant-k504sz) · *constant*
-- [k505Sz](#constant-k505sz) · *constant*
+[k100](#constant-k100) ·
+[k101](#constant-k101) ·
+[k200](#constant-k200) ·
+[k201](#constant-k201) ·
+[k202](#constant-k202) ·
+[k203](#constant-k203) ·
+[k204](#constant-k204) ·
+[k205](#constant-k205) ·
+[k206](#constant-k206) ·
+[k300](#constant-k300) ·
+[k301](#constant-k301) ·
+[k302](#constant-k302) ·
+[k303](#constant-k303) ·
+[k304](#constant-k304) ·
+[k305](#constant-k305) ·
+[k306](#constant-k306) ·
+[k307](#constant-k307) ·
+[k308](#constant-k308) ·
+[k400](#constant-k400) ·
+[k401](#constant-k401) ·
+[k402](#constant-k402) ·
+[k403](#constant-k403) ·
+[k404](#constant-k404) ·
+[k405](#constant-k405) ·
+[k406](#constant-k406) ·
+[k407](#constant-k407) ·
+[k408](#constant-k408) ·
+[k409](#constant-k409) ·
+[k410](#constant-k410) ·
+[k411](#constant-k411) ·
+[k412](#constant-k412) ·
+[k413](#constant-k413) ·
+[k414](#constant-k414) ·
+[k415](#constant-k415) ·
+[k416](#constant-k416) ·
+[k417](#constant-k417) ·
+[k418](#constant-k418) ·
+[k421](#constant-k421) ·
+[k422](#constant-k422) ·
+[k426](#constant-k426) ·
+[k431](#constant-k431) ·
+[k500](#constant-k500) ·
+[k501](#constant-k501) ·
+[k502](#constant-k502) ·
+[k503](#constant-k503) ·
+[k504](#constant-k504) ·
+[k505](#constant-k505) ·
+[k100Sz](#constant-k100sz) ·
+[k101Sz](#constant-k101sz) ·
+[k200Sz](#constant-k200sz) ·
+[k201Sz](#constant-k201sz) ·
+[k202Sz](#constant-k202sz) ·
+[k203Sz](#constant-k203sz) ·
+[k204Sz](#constant-k204sz) ·
+[k205Sz](#constant-k205sz) ·
+[k206Sz](#constant-k206sz) ·
+[k300Sz](#constant-k300sz) ·
+[k301Sz](#constant-k301sz) ·
+[k302Sz](#constant-k302sz) ·
+[k303Sz](#constant-k303sz) ·
+[k304Sz](#constant-k304sz) ·
+[k305Sz](#constant-k305sz) ·
+[k306Sz](#constant-k306sz) ·
+[k307Sz](#constant-k307sz) ·
+[k308Sz](#constant-k308sz) ·
+[k400Sz](#constant-k400sz) ·
+[k401Sz](#constant-k401sz) ·
+[k402Sz](#constant-k402sz) ·
+[k403Sz](#constant-k403sz) ·
+[k404Sz](#constant-k404sz) ·
+[k405Sz](#constant-k405sz) ·
+[k406Sz](#constant-k406sz) ·
+[k407Sz](#constant-k407sz) ·
+[k408Sz](#constant-k408sz) ·
+[k409Sz](#constant-k409sz) ·
+[k410Sz](#constant-k410sz) ·
+[k411Sz](#constant-k411sz) ·
+[k412Sz](#constant-k412sz) ·
+[k413Sz](#constant-k413sz) ·
+[k414Sz](#constant-k414sz) ·
+[k415Sz](#constant-k415sz) ·
+[k416Sz](#constant-k416sz) ·
+[k417Sz](#constant-k417sz) ·
+[k418Sz](#constant-k418sz) ·
+[k421Sz](#constant-k421sz) ·
+[k422Sz](#constant-k422sz) ·
+[k426Sz](#constant-k426sz) ·
+[k431Sz](#constant-k431sz) ·
+[k500Sz](#constant-k500sz) ·
+[k501Sz](#constant-k501sz) ·
+[k502Sz](#constant-k502sz) ·
+[k503Sz](#constant-k503sz) ·
+[k504Sz](#constant-k504sz) ·
+[k505Sz](#constant-k505sz)
 
 <a id="macro-str-value-raw"></a>
 

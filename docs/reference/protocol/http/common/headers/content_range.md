@@ -1,24 +1,22 @@
-<a id="content-range-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_range/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_range/index.svg" alt="Index for content_range.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_range/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_range/index-dark.svg" alt="Index for content_range.h">
-  </a>
-</h1>
+<a id="content-range"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_range/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_range/index.svg" alt="content_range">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_range/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_range/index-dark.svg" alt="content_range">
+</a>
 
 **Header:** [include/protocol/http/common/headers/content_range.h](../../../../../../include/protocol/http/common/headers/content_range.h)
 
 |                                                             content-range | | RFC 9110 S14.4 Content-Range                                              | | The "Content-Range" header field identifies which range of a selected     | | representation is enclosed in a message or body part.                     | | It is sent in a single-part 206 (Par
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [content_range](#type-content-range) · *type*
+[content_range](#type-content-range)
 
-**protocol::http::headers::content_range**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::content_range
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-content-range"></a>
 

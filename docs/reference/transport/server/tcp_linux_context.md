@@ -1,40 +1,38 @@
-<a id="tcp-linux-context-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_linux_context/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_linux_context/index.svg" alt="Index for tcp_linux_context.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_linux_context/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_linux_context/index-dark.svg" alt="Index for tcp_linux_context.h">
-  </a>
-</h1>
+<a id="tcp-linux-context"></a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_linux_context/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_context/index.svg" alt="tcp_linux_context">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_linux_context/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_context/index-dark.svg" alt="tcp_linux_context">
+</a>
 
 **Header:** [include/transport/server/tcp_linux_context.h](../../../../include/transport/server/tcp_linux_context.h)
 
 This struct holds an engine's TCP connection state. It manages the socket and input and output buffers, and handles sending and receiving data. It also lets you connect, stop, close, or abort the connection.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [context](#type-context) · *type*
+[context](#type-context)
 
-**transport::server::context**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::context
 
-- [receive](#method-receive) · *method*
-- [connected](#method-connected) · *method*
-- [stop](#method-stop) · *method*
-- [close](#method-close) · *method*
-- [abort](#method-abort) · *method*
-- [can_receive](#method-can-receive) · *method*
-- [is_closed](#method-is-closed) · *method*
-- [eof](#method-eof) · *method*
-- [notify_connection](#method-notify-connection) · *method*
-- [send](#method-send) · *method*
-- [send_pending](#method-send-pending) · *method*
-- [retire_socket](#method-retire-socket) · *method*
-- [stop_engine](#method-stop-engine) · *method*
-- [mark_engine_complete](#method-mark-engine-complete) · *method*
-- [engine_complete](#method-engine-complete) · *method*
-- [notify_disconnection](#method-notify-disconnection) · *method*
-- [retirement_next](#field-retirement-next) · *field*
+[receive](#method-receive) ·
+[connected](#method-connected) ·
+[stop](#method-stop) ·
+[close](#method-close) ·
+[abort](#method-abort) ·
+[can_receive](#method-can-receive) ·
+[is_closed](#method-is-closed) ·
+[eof](#method-eof) ·
+[notify_connection](#method-notify-connection) ·
+[send](#method-send) ·
+[send_pending](#method-send-pending) ·
+[retire_socket](#method-retire-socket) ·
+[stop_engine](#method-stop-engine) ·
+[mark_engine_complete](#method-mark-engine-complete) ·
+[engine_complete](#method-engine-complete) ·
+[notify_disconnection](#method-notify-disconnection) ·
+[retirement_next](#field-retirement-next)
 
 <a id="type-context"></a>
 

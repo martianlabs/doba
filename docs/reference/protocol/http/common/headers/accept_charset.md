@@ -1,24 +1,22 @@
-<a id="accept-charset-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_charset/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_charset/index.svg" alt="Index for accept_charset.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_charset/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_charset/index-dark.svg" alt="Index for accept_charset.h">
-  </a>
-</h1>
+<a id="accept-charset"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_charset/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_charset/index.svg" alt="accept_charset">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_charset/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_charset/index-dark.svg" alt="accept_charset">
+</a>
 
 **Header:** [include/protocol/http/common/headers/accept_charset.h](../../../../../../include/protocol/http/common/headers/accept_charset.h)
 
 |                                                            accept-charset | | RFC 9110 S12.5.2 Accept-Charset                                           | | The "Accept-Charset" header field can be sent by a user agent to indicate | | what charsets are preferred for textual response content.                 | | Each member of the list identifies e
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [accept_charset](#type-accept-charset) · *type*
+[accept_charset](#type-accept-charset)
 
-**protocol::http::headers::accept_charset**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::accept_charset
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-accept-charset"></a>
 

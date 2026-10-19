@@ -1,24 +1,22 @@
-<a id="authentication-info-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/authentication_info/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/authentication_info/index.svg" alt="Index for authentication_info.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/authentication_info/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/authentication_info/index-dark.svg" alt="Index for authentication_info.h">
-  </a>
-</h1>
+<a id="authentication-info"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/authentication_info/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/authentication_info/index.svg" alt="authentication_info">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/authentication_info/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/authentication_info/index-dark.svg" alt="authentication_info">
+</a>
 
 **Header:** [include/protocol/http/common/headers/authentication_info.h](../../../../../../include/protocol/http/common/headers/authentication_info.h)
 
 |                                                       authentication-info | | RFC 9110 S11.6.3 Authentication-Info                                      | | The "Authentication-Info" response header field allows an HTTP            | | authentication scheme to communicate information after the client's       | | authentication credentials have been
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [authentication_info](#type-authentication-info) · *type*
+[authentication_info](#type-authentication-info)
 
-**protocol::http::headers::authentication_info**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::authentication_info
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-authentication-info"></a>
 

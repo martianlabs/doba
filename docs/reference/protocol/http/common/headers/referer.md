@@ -1,24 +1,22 @@
-<a id="referer-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/referer/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/referer/index.svg" alt="Index for referer.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/referer/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/referer/index-dark.svg" alt="Index for referer.h">
-  </a>
-</h1>
+<a id="referer"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/referer/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/referer/index.svg" alt="referer">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/referer/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/referer/index-dark.svg" alt="referer">
+</a>
 
 **Header:** [include/protocol/http/common/headers/referer.h](../../../../../../include/protocol/http/common/headers/referer.h)
 
 |                                                                   referer | | RFC 9110 S10.1.3 Referer                                                  | | The "Referer" header field allows a user agent to specify a URI reference | | for the resource from which the target URI was obtained. This enables     | | servers to generate back-links, perf
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [referer](#type-referer) · *type*
+[referer](#type-referer)
 
-**protocol::http::headers::referer**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::referer
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-referer"></a>
 

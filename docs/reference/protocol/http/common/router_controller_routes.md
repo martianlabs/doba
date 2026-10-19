@@ -1,30 +1,28 @@
-<a id="router-controller-routes-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index.svg" alt="Index for router_controller_routes.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index-dark.svg" alt="Index for router_controller_routes.h">
-  </a>
-</h1>
+<a id="router-controller-routes"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index.svg" alt="router_controller_routes">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index-dark.svg" alt="router_controller_routes">
+</a>
 
 **Header:** [include/protocol/http/common/router_controller_routes.h](../../../../../include/protocol/http/common/router_controller_routes.h)
 
 Provides the router protocol component.
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [router](#type-router) · *type*
+[router](#type-router)
 
-**protocol::http::detail**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::detail
 
-- [router_controller_routes](#type-router-controller-routes) · *type*
+[router_controller_routes](#type-router-controller-routes)
 
-**protocol::http::detail::router_controller_routes**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::detail::router_controller_routes
 
-- [add](#method-add) · *method*
-- [empty](#method-empty) · *method*
-- [apply](#method-apply) · *method*
+[add](#method-add) ·
+[empty](#method-empty) ·
+[apply](#method-apply)
 
 <a id="type-router"></a>
 

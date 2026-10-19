@@ -1,24 +1,22 @@
-<a id="signaler-linux-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/signaler_linux/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/signaler_linux/index.svg" alt="Index for signaler_linux.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/signaler_linux/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/signaler_linux/index-dark.svg" alt="Index for signaler_linux.h">
-  </a>
-</h1>
+<a id="signaler-linux"></a>
+<a href="../../../resources/docs/reference/common/signaler_linux/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/signaler_linux/index.svg" alt="signaler_linux">
+</a>
+<a href="../../../resources/docs/reference/common/signaler_linux/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/signaler_linux/index-dark.svg" alt="signaler_linux">
+</a>
 
 **Header:** [include/common/signaler_linux.h](../../../include/common/signaler_linux.h)
 
 Provides the signaler type.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [signaler](#type-signaler) · *type*
+[signaler](#type-signaler)
 
-**common::signaler**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::signaler
 
-- [wait](#method-wait) · *method*
+[wait](#method-wait)
 
 <a id="type-signaler"></a>
 

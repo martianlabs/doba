@@ -1,24 +1,22 @@
-<a id="bearer-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index.svg" alt="Index for bearer.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index-dark.svg" alt="Index for bearer.h">
-  </a>
-</h1>
+<a id="bearer"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index.svg" alt="bearer">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index-dark.svg" alt="bearer">
+</a>
 
 **Header:** [include/protocol/http/common/auth/bearer.h](../../../../../../include/protocol/http/common/auth/bearer.h)
 
 Validates HTTP Bearer credentials through a user-supplied callback.
 
-**protocol::http::auth**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::auth
 
-- [bearer](#type-bearer) · *type*
+[bearer](#type-bearer)
 
-**protocol::http::auth::bearer**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::auth::bearer
 
-- [authenticate](#method-authenticate) · *method*
+[authenticate](#method-authenticate)
 
 <a id="type-bearer"></a>
 

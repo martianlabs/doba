@@ -1,92 +1,90 @@
-<a id="response-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/response/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/response/index.svg" alt="Index for response.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/response/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/response/index-dark.svg" alt="Index for response.h">
-  </a>
-</h1>
+<a id="response"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/response/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/response/index.svg" alt="response">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/response/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/response/index-dark.svg" alt="response">
+</a>
 
 **Header:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 Provides the http 1.1 response implementation.
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [response](#type-response) · *type*
+[response](#type-response)
 
-**protocol::http::v11::response**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::response
 
-- [serialized_type](#alias-serialized-type) · *alias*
-- [from(head_limit, body_threshold)](#method-from) · *method*
-- [from(head_limit, body_threshold, head, body)](#method-from-2) · *method*
-- [serialize](#method-serialize) · *method*
-- [add_header(k, v)](#method-add-header) · *method*
-- [add_header&lt;T&gt;(key, val)](#method-add-header-2) · *method*
-- [set_header(k, v)](#method-set-header) · *method*
-- [set_header&lt;T&gt;(key, val)](#method-set-header-2) · *method*
-- [has_header](#method-has-header) · *method*
-- [wants_connection_close](#method-wants-connection-close) · *method*
-- [is_continue_100](#method-is-continue-100) · *method*
-- [get_header(k)](#method-get-header) · *method*
-- [get_header(index)](#method-get-header-2) · *method*
-- [get_headers_length](#method-get-headers-length) · *method*
-- [remove_header](#method-remove-header) · *method*
-- [set_body(sv)](#method-set-body) · *method*
-- [set_body(source)](#method-set-body-2) · *method*
-- [set_body(writer)](#method-set-body-3) · *method*
-- [set_body&lt;T&gt;(val)](#method-set-body-4) · *method*
-- [set_body(source, length)](#method-set-body-5) · *method*
-- [clear_body](#method-clear-body) · *method*
-- [suppress_body](#method-suppress-body) · *method*
-- [continue_100](#method-continue-100) · *method*
-- [switching_protocols_101](#method-switching-protocols-101) · *method*
-- [ok_200](#method-ok-200) · *method*
-- [created_201](#method-created-201) · *method*
-- [accepted_202](#method-accepted-202) · *method*
-- [non_authoritative_info_203](#method-non-authoritative-info-203) · *method*
-- [no_content_204](#method-no-content-204) · *method*
-- [reset_content_205](#method-reset-content-205) · *method*
-- [partial_content_206](#method-partial-content-206) · *method*
-- [multiple_choices_300](#method-multiple-choices-300) · *method*
-- [moved_permanently_301](#method-moved-permanently-301) · *method*
-- [found_302](#method-found-302) · *method*
-- [see_other_303](#method-see-other-303) · *method*
-- [not_modified_304](#method-not-modified-304) · *method*
-- [use_proxy_305](#method-use-proxy-305) · *method*
-- [unused_306](#method-unused-306) · *method*
-- [temporary_redirect_307](#method-temporary-redirect-307) · *method*
-- [permanent_redirect_308](#method-permanent-redirect-308) · *method*
-- [bad_request_400](#method-bad-request-400) · *method*
-- [unauthorized_401](#method-unauthorized-401) · *method*
-- [payment_required_402](#method-payment-required-402) · *method*
-- [forbidden_403](#method-forbidden-403) · *method*
-- [not_found_404](#method-not-found-404) · *method*
-- [method_not_allowed_405](#method-method-not-allowed-405) · *method*
-- [not_acceptable_406](#method-not-acceptable-406) · *method*
-- [proxy_auth_required_407](#method-proxy-auth-required-407) · *method*
-- [request_timeout_408](#method-request-timeout-408) · *method*
-- [conflict_409](#method-conflict-409) · *method*
-- [gone_410](#method-gone-410) · *method*
-- [length_required_411](#method-length-required-411) · *method*
-- [precondition_failed_412](#method-precondition-failed-412) · *method*
-- [content_too_large_413](#method-content-too-large-413) · *method*
-- [uri_too_long_414](#method-uri-too-long-414) · *method*
-- [unsupported_media_type_415](#method-unsupported-media-type-415) · *method*
-- [range_not_satisfiable_416](#method-range-not-satisfiable-416) · *method*
-- [expectation_failed_417](#method-expectation-failed-417) · *method*
-- [unused_418](#method-unused-418) · *method*
-- [misdirected_request_421](#method-misdirected-request-421) · *method*
-- [unprocessable_content_422](#method-unprocessable-content-422) · *method*
-- [upgrade_required_426](#method-upgrade-required-426) · *method*
-- [request_header_fields_too_large_431](#method-request-header-fields-too-large-431) · *method*
-- [internal_server_error_500](#method-internal-server-error-500) · *method*
-- [not_implemented_501](#method-not-implemented-501) · *method*
-- [bad_gateway_502](#method-bad-gateway-502) · *method*
-- [service_unavailable_503](#method-service-unavailable-503) · *method*
-- [gateway_timeout_504](#method-gateway-timeout-504) · *method*
-- [http_version_not_supported_505](#method-http-version-not-supported-505) · *method*
+[serialized_type](#alias-serialized-type) ·
+[from(head_limit, body_threshold)](#method-from) ·
+[from(head_limit, body_threshold, head, body)](#method-from-2) ·
+[serialize](#method-serialize) ·
+[add_header(k, v)](#method-add-header) ·
+[add_header&lt;T&gt;(key, val)](#method-add-header-2) ·
+[set_header(k, v)](#method-set-header) ·
+[set_header&lt;T&gt;(key, val)](#method-set-header-2) ·
+[has_header](#method-has-header) ·
+[wants_connection_close](#method-wants-connection-close) ·
+[is_continue_100](#method-is-continue-100) ·
+[get_header(k)](#method-get-header) ·
+[get_header(index)](#method-get-header-2) ·
+[get_headers_length](#method-get-headers-length) ·
+[remove_header](#method-remove-header) ·
+[set_body(sv)](#method-set-body) ·
+[set_body(source)](#method-set-body-2) ·
+[set_body(writer)](#method-set-body-3) ·
+[set_body&lt;T&gt;(val)](#method-set-body-4) ·
+[set_body(source, length)](#method-set-body-5) ·
+[clear_body](#method-clear-body) ·
+[suppress_body](#method-suppress-body) ·
+[continue_100](#method-continue-100) ·
+[switching_protocols_101](#method-switching-protocols-101) ·
+[ok_200](#method-ok-200) ·
+[created_201](#method-created-201) ·
+[accepted_202](#method-accepted-202) ·
+[non_authoritative_info_203](#method-non-authoritative-info-203) ·
+[no_content_204](#method-no-content-204) ·
+[reset_content_205](#method-reset-content-205) ·
+[partial_content_206](#method-partial-content-206) ·
+[multiple_choices_300](#method-multiple-choices-300) ·
+[moved_permanently_301](#method-moved-permanently-301) ·
+[found_302](#method-found-302) ·
+[see_other_303](#method-see-other-303) ·
+[not_modified_304](#method-not-modified-304) ·
+[use_proxy_305](#method-use-proxy-305) ·
+[unused_306](#method-unused-306) ·
+[temporary_redirect_307](#method-temporary-redirect-307) ·
+[permanent_redirect_308](#method-permanent-redirect-308) ·
+[bad_request_400](#method-bad-request-400) ·
+[unauthorized_401](#method-unauthorized-401) ·
+[payment_required_402](#method-payment-required-402) ·
+[forbidden_403](#method-forbidden-403) ·
+[not_found_404](#method-not-found-404) ·
+[method_not_allowed_405](#method-method-not-allowed-405) ·
+[not_acceptable_406](#method-not-acceptable-406) ·
+[proxy_auth_required_407](#method-proxy-auth-required-407) ·
+[request_timeout_408](#method-request-timeout-408) ·
+[conflict_409](#method-conflict-409) ·
+[gone_410](#method-gone-410) ·
+[length_required_411](#method-length-required-411) ·
+[precondition_failed_412](#method-precondition-failed-412) ·
+[content_too_large_413](#method-content-too-large-413) ·
+[uri_too_long_414](#method-uri-too-long-414) ·
+[unsupported_media_type_415](#method-unsupported-media-type-415) ·
+[range_not_satisfiable_416](#method-range-not-satisfiable-416) ·
+[expectation_failed_417](#method-expectation-failed-417) ·
+[unused_418](#method-unused-418) ·
+[misdirected_request_421](#method-misdirected-request-421) ·
+[unprocessable_content_422](#method-unprocessable-content-422) ·
+[upgrade_required_426](#method-upgrade-required-426) ·
+[request_header_fields_too_large_431](#method-request-header-fields-too-large-431) ·
+[internal_server_error_500](#method-internal-server-error-500) ·
+[not_implemented_501](#method-not-implemented-501) ·
+[bad_gateway_502](#method-bad-gateway-502) ·
+[service_unavailable_503](#method-service-unavailable-503) ·
+[gateway_timeout_504](#method-gateway-timeout-504) ·
+[http_version_not_supported_505](#method-http-version-not-supported-505)
 
 <a id="type-response"></a>
 

@@ -1,39 +1,34 @@
-<a id="contracts-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/contracts/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/contracts/index.svg" alt="Index for contracts.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/contracts/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/contracts/index-dark.svg" alt="Index for contracts.h">
-  </a>
-</h1>
+<a id="contracts"></a>
+<a href="../../../../resources/docs/reference/transport/server/contracts/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/contracts/index.svg" alt="contracts">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/contracts/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/contracts/index-dark.svg" alt="contracts">
+</a>
 
 **Header:** [include/transport/server/contracts.h](../../../../include/transport/server/contracts.h)
 
 Provides the execution work transport component.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [execution_work](#type-execution-work) · *type*
+[execution_work](#type-execution-work) ·
+[execution_capacity](#type-execution-capacity)
 
-**transport::server::execution_work**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::execution_work
 
-- [context](#field-context) · *field*
-- [run](#field-run) · *field*
+[context](#field-context) ·
+[run](#field-run)
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::execution_capacity
 
-- [execution_capacity](#type-execution-capacity) · *type*
+[owner](#field-owner) ·
+[submit](#field-submit)
 
-**transport::server::execution_capacity**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::contracts
 
-- [owner](#field-owner) · *field*
-- [submit](#field-submit) · *field*
-
-**transport::server::contracts**
-
-- [execution_receiver](#concept-execution-receiver) · *concept*
-- [transport](#concept-transport) · *concept*
+[execution_receiver](#concept-execution-receiver) ·
+[transport](#concept-transport)
 
 <a id="type-execution-work"></a>
 

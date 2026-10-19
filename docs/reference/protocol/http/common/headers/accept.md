@@ -1,24 +1,22 @@
-<a id="accept-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept/index.svg" alt="Index for accept.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept/index-dark.svg" alt="Index for accept.h">
-  </a>
-</h1>
+<a id="accept"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept/index.svg" alt="accept">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept/index-dark.svg" alt="accept">
+</a>
 
 **Header:** [include/protocol/http/common/headers/accept.h](../../../../../../include/protocol/http/common/headers/accept.h)
 
 |                                                                    accept | | RFC 9110 S12.5.1 Accept                                                   | | The "Accept" header field allows a user agent to specify its preferences  | | regarding the media types of the response representation. It can be used  | | to restrict the response to a set of
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [accept](#type-accept) · *type*
+[accept](#type-accept)
 
-**protocol::http::headers::accept**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::accept
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-accept"></a>
 

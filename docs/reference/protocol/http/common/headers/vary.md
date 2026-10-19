@@ -1,24 +1,22 @@
-<a id="vary-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/vary/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/vary/index.svg" alt="Index for vary.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/vary/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/vary/index-dark.svg" alt="Index for vary.h">
-  </a>
-</h1>
+<a id="vary"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/vary/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/vary/index.svg" alt="vary">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/vary/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/vary/index-dark.svg" alt="vary">
+</a>
 
 **Header:** [include/protocol/http/common/headers/vary.h](../../../../../../include/protocol/http/common/headers/vary.h)
 
 |                                                                      vary | | RFC 9110 S12.5.5 Vary                                                     | | The "Vary" response header field describes which parts of the request,    | | aside from the method and target URI, might have influenced the origin    | | server's process for selecting the r
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [vary](#type-vary) · *type*
+[vary](#type-vary)
 
-**protocol::http::headers::vary**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::vary
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-vary"></a>
 

@@ -1,25 +1,23 @@
-<a id="server-h"></a>
-<h1>
-  <a href="../../resources/docs/reference/server/index.svg#gh-light-mode-only">
-    <img src="../../resources/docs/reference/server/index.svg" alt="Index for server.h">
-  </a>
-  <a href="../../resources/docs/reference/server/index-dark.svg#gh-dark-mode-only">
-    <img src="../../resources/docs/reference/server/index-dark.svg" alt="Index for server.h">
-  </a>
-</h1>
+<a id="server"></a>
+<a href="../../resources/docs/reference/server/index.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/server/index.svg" alt="server">
+</a>
+<a href="../../resources/docs/reference/server/index-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/server/index-dark.svg" alt="server">
+</a>
 
 **Header:** [include/server.h](../../include/server.h)
 
 Server class that manages the lifecycle of a transport server and its associated protocol engine.
 
-**doba**
+### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> doba
 
-- [server](#type-server) · *type*
+[server](#type-server)
 
-**server**
+### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> server
 
-- [start](#method-start) · *method*
-- [stop](#method-stop) · *method*
+[start](#method-start) ·
+[stop](#method-stop)
 
 <a id="type-server"></a>
 

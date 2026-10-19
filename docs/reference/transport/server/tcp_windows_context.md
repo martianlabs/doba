@@ -1,39 +1,37 @@
-<a id="tcp-windows-context-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_context/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_context/index.svg" alt="Index for tcp_windows_context.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_context/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_context/index-dark.svg" alt="Index for tcp_windows_context.h">
-  </a>
-</h1>
+<a id="tcp-windows-context"></a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_context/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_context/index.svg" alt="tcp_windows_context">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_context/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_context/index-dark.svg" alt="tcp_windows_context">
+</a>
 
 **Header:** [include/transport/server/tcp_windows_context.h](../../../../include/transport/server/tcp_windows_context.h)
 
 This struct keeps track of an engine's TCP connection. It manages the socket and input and output buffers, and handles sending and receiving data. It also lets you connect, stop, close, and abort the connection.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [context](#type-context) · *type*
+[context](#type-context)
 
-**transport::server::context**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::context
 
-- [send_completed](#method-send-completed) · *method*
-- [output_ready](#method-output-ready) · *method*
-- [send](#method-send) · *method*
-- [arm_next_receive_operation](#method-arm-next-receive-operation) · *method*
-- [receive_completed](#method-receive-completed) · *method*
-- [receive_failed](#method-receive-failed) · *method*
-- [send_failed](#method-send-failed) · *method*
-- [abort](#method-abort) · *method*
-- [connected](#method-connected) · *method*
-- [close](#method-close) · *method*
-- [stop](#method-stop) · *method*
-- [quiesce](#method-quiesce) · *method*
-- [notify_disconnection](#method-notify-disconnection) · *method*
-- [engine_completed](#method-engine-completed) · *method*
-- [notify_connection](#method-notify-connection) · *method*
-- [eof](#method-eof) · *method*
+[send_completed](#method-send-completed) ·
+[output_ready](#method-output-ready) ·
+[send](#method-send) ·
+[arm_next_receive_operation](#method-arm-next-receive-operation) ·
+[receive_completed](#method-receive-completed) ·
+[receive_failed](#method-receive-failed) ·
+[send_failed](#method-send-failed) ·
+[abort](#method-abort) ·
+[connected](#method-connected) ·
+[close](#method-close) ·
+[stop](#method-stop) ·
+[quiesce](#method-quiesce) ·
+[notify_disconnection](#method-notify-disconnection) ·
+[engine_completed](#method-engine-completed) ·
+[notify_connection](#method-notify-connection) ·
+[eof](#method-eof)
 
 <a id="type-context"></a>
 

@@ -1,29 +1,27 @@
-<a id="tls-policies-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tls_policies/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tls_policies/index.svg" alt="Index for tls_policies.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tls_policies/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tls_policies/index-dark.svg" alt="Index for tls_policies.h">
-  </a>
-</h1>
+<a id="tls-policies"></a>
+<a href="../../../../resources/docs/reference/transport/server/tls_policies/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tls_policies/index.svg" alt="tls_policies">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tls_policies/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tls_policies/index-dark.svg" alt="tls_policies">
+</a>
 
 **Header:** [include/transport/server/tls_policies.h](../../../../include/transport/server/tls_policies.h)
 
 Provides the tls policies transport component.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [tls_policies](#type-tls-policies) · *type*
+[tls_policies](#type-tls-policies)
 
-**transport::server::tls_policies**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::tls_policies
 
-- [kDefaultEncryptedReceiveBufferCapacity](#constant-kdefaultencryptedreceivebuffercapacity) · *constant*
-- [kDefaultNetworkBioBufferCapacity](#constant-kdefaultnetworkbiobuffercapacity) · *constant*
-- [certificate_file](#field-certificate-file) · *field*
-- [private_key_file](#field-private-key-file) · *field*
-- [encrypted_receive_buffer_capacity](#field-encrypted-receive-buffer-capacity) · *field*
-- [network_bio_buffer_capacity](#field-network-bio-buffer-capacity) · *field*
+[kDefaultEncryptedReceiveBufferCapacity](#constant-kdefaultencryptedreceivebuffercapacity) ·
+[kDefaultNetworkBioBufferCapacity](#constant-kdefaultnetworkbiobuffercapacity) ·
+[certificate_file](#field-certificate-file) ·
+[private_key_file](#field-private-key-file) ·
+[encrypted_receive_buffer_capacity](#field-encrypted-receive-buffer-capacity) ·
+[network_bio_buffer_capacity](#field-network-bio-buffer-capacity)
 
 <a id="type-tls-policies"></a>
 

@@ -1,42 +1,34 @@
-<a id="task-awaiters-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/task_awaiters/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/task_awaiters/index.svg" alt="Index for task_awaiters.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/task_awaiters/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/task_awaiters/index-dark.svg" alt="Index for task_awaiters.h">
-  </a>
-</h1>
+<a id="task-awaiters"></a>
+<a href="../../../resources/docs/reference/common/task_awaiters/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/task_awaiters/index.svg" alt="task_awaiters">
+</a>
+<a href="../../../resources/docs/reference/common/task_awaiters/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/task_awaiters/index-dark.svg" alt="task_awaiters">
+</a>
 
 **Header:** [include/common/task_awaiters.h](../../../include/common/task_awaiters.h)
 
 Provides the yield awaiter type.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [yield_awaiter](#type-yield-awaiter) · *type*
+[yield_awaiter](#type-yield-awaiter) ·
+[yield](#function-yield) ·
+[sleep_awaiter](#type-sleep-awaiter) ·
+[sleep_for](#function-sleep-for)
 
-**common::yield_awaiter**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::yield_awaiter
 
-- [await_ready](#method-await-ready) · *method*
-- [await_suspend](#method-await-suspend) · *method*
-- [await_resume](#method-await-resume) · *method*
+[await_ready](#method-await-ready) ·
+[await_suspend](#method-await-suspend) ·
+[await_resume](#method-await-resume)
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::sleep_awaiter
 
-- [yield](#function-yield) · *function*
-- [sleep_awaiter](#type-sleep-awaiter) · *type*
-
-**common::sleep_awaiter**
-
-- [duration](#field-duration) · *field*
-- [await_ready](#method-await-ready-2) · *method*
-- [await_suspend](#method-await-suspend-2) · *method*
-- [await_resume](#method-await-resume-2) · *method*
-
-**common**
-
-- [sleep_for](#function-sleep-for) · *function*
+[duration](#field-duration) ·
+[await_ready](#method-await-ready-2) ·
+[await_suspend](#method-await-suspend-2) ·
+[await_resume](#method-await-resume-2)
 
 <a id="type-yield-awaiter"></a>
 

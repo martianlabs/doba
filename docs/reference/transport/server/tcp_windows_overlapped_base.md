@@ -1,25 +1,23 @@
-<a id="tcp-windows-overlapped-base-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/index.svg" alt="Index for tcp_windows_overlapped_base.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/index-dark.svg" alt="Index for tcp_windows_overlapped_base.h">
-  </a>
-</h1>
+<a id="tcp-windows-overlapped-base"></a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/index.svg" alt="tcp_windows_overlapped_base">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/index-dark.svg" alt="tcp_windows_overlapped_base">
+</a>
 
 **Header:** [include/transport/server/tcp_windows_overlapped_base.h](../../../../include/transport/server/tcp_windows_overlapped_base.h)
 
 Base state for Windows overlapped I/O.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [io_type](#enum-io-type) · *enum*
-- [overlapped_base](#type-overlapped-base) · *type*
+[io_type](#enum-io-type) ·
+[overlapped_base](#type-overlapped-base)
 
-**transport::server::overlapped_base**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::overlapped_base
 
-- [get_type](#method-get-type) · *method*
+[get_type](#method-get-type)
 
 <a id="enum-io-type"></a>
 

@@ -1,25 +1,23 @@
-<a id="host-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index.svg" alt="Index for host.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index-dark.svg" alt="Index for host.h">
-  </a>
-</h1>
+<a id="host"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index.svg" alt="host">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index-dark.svg" alt="host">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/host.h](../../../../../../include/protocol/http/v11/headers/host.h)
 
 The "Host" header field in a request provides the host and optional port information from the target URI, allowing the origin server to distinguish among resources while servicing requests for multiple host names.
 
-**protocol::http::v11::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
 
-- [host](#type-host) · *type*
+[host](#type-host)
 
-**protocol::http::v11::headers::host**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::host
 
-- [check](#method-check) · *method*
-- [interpret](#method-interpret) · *method*
+[check](#method-check) ·
+[interpret](#method-interpret)
 
 <a id="type-host"></a>
 

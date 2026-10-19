@@ -1,46 +1,36 @@
-<a id="tls-session-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tls_session/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tls_session/index.svg" alt="Index for tls_session.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tls_session/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tls_session/index-dark.svg" alt="Index for tls_session.h">
-  </a>
-</h1>
+<a id="tls-session"></a>
+<a href="../../../../resources/docs/reference/transport/server/tls_session/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tls_session/index.svg" alt="tls_session">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tls_session/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tls_session/index-dark.svg" alt="tls_session">
+</a>
 
 **Header:** [include/transport/server/tls_session.h](../../../../include/transport/server/tls_session.h)
 
 This class manages the TLS session for a single connection. It handles the handshake, encrypts and decrypts data, and manages the encrypted and plaintext buffers. It also lets you read and write data, check the session state, and shut it down cleanly.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [tls_context](#alias-tls-context) · *alias*
-- [make_tls_context](#function-make-tls-context) · *function*
-- [tls_session](#type-tls-session) · *type*
+[tls_context](#alias-tls-context) ·
+[make_tls_context](#function-make-tls-context) ·
+[tls_session](#type-tls-session)
 
-**transport::server::tls_session**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::tls_session
 
-- [status](#enum-status) · *enum*
-- [result](#type-result) · *type*
-
-**transport::server::tls_session::result**
-
-- [state](#field-state) · *field*
-- [size](#field-size) · *field*
-
-**transport::server::tls_session**
-
-- [handshake](#method-handshake) · *method*
-- [receive](#method-receive) · *method*
-- [read](#method-read) · *method*
-- [write](#method-write) · *method*
-- [shutdown](#method-shutdown) · *method*
-- [drain](#method-drain) · *method*
-- [output_bytes](#method-output-bytes) · *method*
-- [output_sent](#method-output-sent) · *method*
-- [pending](#method-pending) · *method*
-- [established](#method-established) · *method*
-- [failed](#method-failed) · *method*
+[result](result.md) ·
+[status](#enum-status) ·
+[handshake](#method-handshake) ·
+[receive](#method-receive) ·
+[read](#method-read) ·
+[write](#method-write) ·
+[shutdown](#method-shutdown) ·
+[drain](#method-drain) ·
+[output_bytes](#method-output-bytes) ·
+[output_sent](#method-output-sent) ·
+[pending](#method-pending) ·
+[established](#method-established) ·
+[failed](#method-failed)
 
 <a id="alias-tls-context"></a>
 
@@ -115,54 +105,6 @@ Enumerates status values.
 - **failed:** Failed. Declaration: `failed`.
 
 **Source:** [include/transport/server/tls_session.h:94](../../../../include/transport/server/tls_session.h#L94)
-
-<a id="type-result"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> result
-
-**TYPE** · *transport::server::tls_session*
-
-**Declaration synopsis:**
-
-```cpp
-struct result { ... };
-```
-
-Provides the result transport component.
-
-**Source:** [include/transport/server/tls_session.h:95](../../../../include/transport/server/tls_session.h#L95)
-
-<a id="field-state"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> state
-
-**FIELD** · *transport::server::tls_session::result*
-
-```cpp
-status state;
-```
-
-Stores the state value.
-
-**Value:** No explicit initializer appears in this declaration.
-
-**Source:** [include/transport/server/tls_session.h:96](../../../../include/transport/server/tls_session.h#L96)
-
-<a id="field-size"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> size
-
-**FIELD** · *transport::server::tls_session::result*
-
-```cpp
-std::size_t size;
-```
-
-Stores the size value.
-
-**Value:** No explicit initializer appears in this declaration.
-
-**Source:** [include/transport/server/tls_session.h:97](../../../../include/transport/server/tls_session.h#L97)
 
 <a id="method-handshake"></a>
 

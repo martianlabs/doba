@@ -1,148 +1,146 @@
-<a id="helpers-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/helpers/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/helpers/index.svg" alt="Index for helpers.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/helpers/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/helpers/index-dark.svg" alt="Index for helpers.h">
-  </a>
-</h1>
+<a id="helpers"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/helpers/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/helpers/index.svg" alt="helpers">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/helpers/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/helpers/index-dark.svg" alt="helpers">
+</a>
 
 **Header:** [include/protocol/http/common/helpers.h](../../../../../include/protocol/http/common/helpers.h)
 
 Provides the http 1.1 helper functions.
 
-**protocol::http::detail**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::detail
 
-- [kF_token](#constant-kf-token) · *constant*
-- [kF_vchar](#constant-kf-vchar) · *constant*
-- [kF_obs_text](#constant-kf-obs-text) · *constant*
-- [kF_ows](#constant-kf-ows) · *constant*
-- [kF_pchar](#constant-kf-pchar) · *constant*
-- [kF_qdtext](#constant-kf-qdtext) · *constant*
-- [kF_ctext](#constant-kf-ctext) · *constant*
-- [kF_etagc](#constant-kf-etagc) · *constant*
-- [kF_cookie](#constant-kf-cookie) · *constant*
-- [kF_cookie_av](#constant-kf-cookie-av) · *constant*
-- [kF_atext](#constant-kf-atext) · *constant*
-- [kF_dtext](#constant-kf-dtext) · *constant*
-- [kF_hexdig](#constant-kf-hexdig) · *constant*
-- [kF_unreserv](#constant-kf-unreserv) · *constant*
-- [build_char_flags](#function-build-char-flags) · *function*
-- [kCharFlags](#constant-kcharflags) · *constant*
+[kF_token](#constant-kf-token) ·
+[kF_vchar](#constant-kf-vchar) ·
+[kF_obs_text](#constant-kf-obs-text) ·
+[kF_ows](#constant-kf-ows) ·
+[kF_pchar](#constant-kf-pchar) ·
+[kF_qdtext](#constant-kf-qdtext) ·
+[kF_ctext](#constant-kf-ctext) ·
+[kF_etagc](#constant-kf-etagc) ·
+[kF_cookie](#constant-kf-cookie) ·
+[kF_cookie_av](#constant-kf-cookie-av) ·
+[kF_atext](#constant-kf-atext) ·
+[kF_dtext](#constant-kf-dtext) ·
+[kF_hexdig](#constant-kf-hexdig) ·
+[kF_unreserv](#constant-kf-unreserv) ·
+[build_char_flags](#function-build-char-flags) ·
+[kCharFlags](#constant-kcharflags)
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [helpers](#type-helpers) · *type*
+[helpers](#type-helpers)
 
-**protocol::http::helpers**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::helpers
 
-- [host_type](#enum-host-type) · *enum*
-- [is_digit(c)](#method-is-digit) · *method*
-- [is_digit(c)](#method-is-digit-2) · *method*
-- [is_digits](#method-is-digits) · *method*
-- [parse_size_t](#method-parse-size-t) · *method*
-- [is_hex_digit(c)](#method-is-hex-digit) · *method*
-- [is_hex_digit(c)](#method-is-hex-digit-2) · *method*
-- [is_alpha(c)](#method-is-alpha) · *method*
-- [is_alpha(c)](#method-is-alpha-2) · *method*
-- [is_token(c)](#method-is-token) · *method*
-- [is_token(c)](#method-is-token-2) · *method*
-- [is_token(sv)](#method-is-token-3) · *method*
-- [is_unreserved(c)](#method-is-unreserved) · *method*
-- [is_unreserved(c)](#method-is-unreserved-2) · *method*
-- [is_sub_delim(c)](#method-is-sub-delim) · *method*
-- [is_sub_delim(c)](#method-is-sub-delim-2) · *method*
-- [is_pchar(c)](#method-is-pchar) · *method*
-- [is_pchar(c)](#method-is-pchar-2) · *method*
-- [is_vchar(c)](#method-is-vchar) · *method*
-- [is_vchar(c)](#method-is-vchar-2) · *method*
-- [is_qdtext(c)](#method-is-qdtext) · *method*
-- [is_qdtext(c)](#method-is-qdtext-2) · *method*
-- [is_obs_text(c)](#method-is-obs-text) · *method*
-- [is_obs_text(c)](#method-is-obs-text-2) · *method*
-- [is_ctext(c)](#method-is-ctext) · *method*
-- [is_ctext(c)](#method-is-ctext-2) · *method*
-- [is_atext(c)](#method-is-atext) · *method*
-- [is_atext(c)](#method-is-atext-2) · *method*
-- [is_dtext(c)](#method-is-dtext) · *method*
-- [is_dtext(c)](#method-is-dtext-2) · *method*
-- [is_etagc(c)](#method-is-etagc) · *method*
-- [is_etagc(c)](#method-is-etagc-2) · *method*
-- [is_cookie_octet(c)](#method-is-cookie-octet) · *method*
-- [is_cookie_octet(c)](#method-is-cookie-octet-2) · *method*
-- [is_cookie_av_octet(c)](#method-is-cookie-av-octet) · *method*
-- [is_cookie_av_octet(c)](#method-is-cookie-av-octet-2) · *method*
-- [is_entity_tag](#method-is-entity-tag) · *method*
-- [is_ows(c)](#method-is-ows) · *method*
-- [is_ows(c)](#method-is-ows-2) · *method*
-- [is_qvalue](#method-is-qvalue) · *method*
-- [consume_weight](#method-consume-weight) · *method*
-- [tolower_ascii(c)](#method-tolower-ascii) · *method*
-- [tolower_ascii(c)](#method-tolower-ascii-2) · *method*
-- [ows_ltrim](#method-ows-ltrim) · *method*
-- [ows_rtrim](#method-ows-rtrim) · *method*
-- [ows_trim](#method-ows-trim) · *method*
-- [skip_n_hextets](#method-skip-n-hextets) · *method*
-- [is_port](#method-is-port) · *method*
-- [is_dec_octet(sv, digits, off)](#method-is-dec-octet) · *method*
-- [is_dec_octet(sv)](#method-is-dec-octet-2) · *method*
-- [is_ip_v_future](#method-is-ip-v-future) · *method*
-- [is_ip_v6_address](#method-is-ip-v6-address) · *method*
-- [is_ip_v4_address](#method-is-ip-v4-address) · *method*
-- [is_ip_literal](#method-is-ip-literal) · *method*
-- [is_reg_name](#method-is-reg-name) · *method*
-- [is_token68](#method-is-token68) · *method*
-- [is_base64_char](#method-is-base64-char) · *method*
-- [check_base64_value](#method-check-base64-value) · *method*
-- [consume_token](#method-consume-token) · *method*
-- [consume_quoted_string](#method-consume-quoted-string) · *method*
-- [consume_comment](#method-consume-comment) · *method*
-- [consume_cfws](#method-consume-cfws) · *method*
-- [consume_dot_atom](#method-consume-dot-atom) · *method*
-- [consume_domain_literal](#method-consume-domain-literal) · *method*
-- [consume_addr_spec](#method-consume-addr-spec) · *method*
-- [consume_word](#method-consume-word) · *method*
-- [check_mailbox](#method-check-mailbox) · *method*
-- [consume_token_or_quoted_string](#method-consume-token-or-quoted-string) · *method*
-- [is_cookie_value](#method-is-cookie-value) · *method*
-- [is_cookie_pair](#method-is-cookie-pair) · *method*
-- [is_cookie_av](#method-is-cookie-av) · *method*
-- [is_directive](#method-is-directive) · *method*
-- [consume_parameter](#method-consume-parameter) · *method*
-- [consume_extension_parameter](#method-consume-extension-parameter) · *method*
-- [for_each_parameter](#method-for-each-parameter) · *method*
-- [for_each_forwarded_pair](#method-for-each-forwarded-pair) · *method*
-- [for_each_list_element](#method-for-each-list-element) · *method*
-- [check_auth_param_list](#method-check-auth-param-list) · *method*
-- [check_credentials](#method-check-credentials) · *method*
-- [challenge_opens_param_list](#method-challenge-opens-param-list) · *method*
-- [check_challenge_list](#method-check-challenge-list) · *method*
-- [consume_product](#method-consume-product) · *method*
-- [check_product_list](#method-check-product-list) · *method*
-- [check_uri_host](#method-check-uri-host) · *method*
-- [is_uri_scheme](#method-is-uri-scheme) · *method*
-- [consume_uri_scheme](#method-consume-uri-scheme) · *method*
-- [consume_uri_pct_encoded](#method-consume-uri-pct-encoded) · *method*
-- [percent_decode_validate](#method-percent-decode-validate) · *method*
-- [percent_decode_in_place](#method-percent-decode-in-place) · *method*
-- [check_uri_userinfo](#method-check-uri-userinfo) · *method*
-- [check_host_port(sv, uri_host, port, type)](#method-check-host-port) · *method*
-- [check_host_port(sv)](#method-check-host-port-2) · *method*
-- [check_serialized_origin](#method-check-serialized-origin) · *method*
-- [check_uri_authority](#method-check-uri-authority) · *method*
-- [check_uri_reference](#method-check-uri-reference) · *method*
-- [split_authority_host_port](#method-split-authority-host-port) · *method*
-- [try_to_deserialize_as_authority_form](#method-try-to-deserialize-as-authority-form) · *method*
-- [try_to_deserialize_as_asterisk_form](#method-try-to-deserialize-as-asterisk-form) · *method*
-- [try_to_deserialize_as_origin_form](#method-try-to-deserialize-as-origin-form) · *method*
-- [default_port_for_scheme](#method-default-port-for-scheme) · *method*
-- [ports_equivalent](#method-ports-equivalent) · *method*
-- [try_to_deserialize_as_absolute_form](#method-try-to-deserialize-as-absolute-form) · *method*
-- [try_to_deserialize_as_absolute_path](#method-try-to-deserialize-as-absolute-path) · *method*
-- [try_to_deserialize_as_query](#method-try-to-deserialize-as-query) · *method*
-- [iequals](#method-iequals) · *method*
-- [split_query_parameters](#method-split-query-parameters) · *method*
+[host_type](#enum-host-type) ·
+[is_digit(c)](#method-is-digit) ·
+[is_digit(c)](#method-is-digit-2) ·
+[is_digits](#method-is-digits) ·
+[parse_size_t](#method-parse-size-t) ·
+[is_hex_digit(c)](#method-is-hex-digit) ·
+[is_hex_digit(c)](#method-is-hex-digit-2) ·
+[is_alpha(c)](#method-is-alpha) ·
+[is_alpha(c)](#method-is-alpha-2) ·
+[is_token(c)](#method-is-token) ·
+[is_token(c)](#method-is-token-2) ·
+[is_token(sv)](#method-is-token-3) ·
+[is_unreserved(c)](#method-is-unreserved) ·
+[is_unreserved(c)](#method-is-unreserved-2) ·
+[is_sub_delim(c)](#method-is-sub-delim) ·
+[is_sub_delim(c)](#method-is-sub-delim-2) ·
+[is_pchar(c)](#method-is-pchar) ·
+[is_pchar(c)](#method-is-pchar-2) ·
+[is_vchar(c)](#method-is-vchar) ·
+[is_vchar(c)](#method-is-vchar-2) ·
+[is_qdtext(c)](#method-is-qdtext) ·
+[is_qdtext(c)](#method-is-qdtext-2) ·
+[is_obs_text(c)](#method-is-obs-text) ·
+[is_obs_text(c)](#method-is-obs-text-2) ·
+[is_ctext(c)](#method-is-ctext) ·
+[is_ctext(c)](#method-is-ctext-2) ·
+[is_atext(c)](#method-is-atext) ·
+[is_atext(c)](#method-is-atext-2) ·
+[is_dtext(c)](#method-is-dtext) ·
+[is_dtext(c)](#method-is-dtext-2) ·
+[is_etagc(c)](#method-is-etagc) ·
+[is_etagc(c)](#method-is-etagc-2) ·
+[is_cookie_octet(c)](#method-is-cookie-octet) ·
+[is_cookie_octet(c)](#method-is-cookie-octet-2) ·
+[is_cookie_av_octet(c)](#method-is-cookie-av-octet) ·
+[is_cookie_av_octet(c)](#method-is-cookie-av-octet-2) ·
+[is_entity_tag](#method-is-entity-tag) ·
+[is_ows(c)](#method-is-ows) ·
+[is_ows(c)](#method-is-ows-2) ·
+[is_qvalue](#method-is-qvalue) ·
+[consume_weight](#method-consume-weight) ·
+[tolower_ascii(c)](#method-tolower-ascii) ·
+[tolower_ascii(c)](#method-tolower-ascii-2) ·
+[ows_ltrim](#method-ows-ltrim) ·
+[ows_rtrim](#method-ows-rtrim) ·
+[ows_trim](#method-ows-trim) ·
+[skip_n_hextets](#method-skip-n-hextets) ·
+[is_port](#method-is-port) ·
+[is_dec_octet(sv, digits, off)](#method-is-dec-octet) ·
+[is_dec_octet(sv)](#method-is-dec-octet-2) ·
+[is_ip_v_future](#method-is-ip-v-future) ·
+[is_ip_v6_address](#method-is-ip-v6-address) ·
+[is_ip_v4_address](#method-is-ip-v4-address) ·
+[is_ip_literal](#method-is-ip-literal) ·
+[is_reg_name](#method-is-reg-name) ·
+[is_token68](#method-is-token68) ·
+[is_base64_char](#method-is-base64-char) ·
+[check_base64_value](#method-check-base64-value) ·
+[consume_token](#method-consume-token) ·
+[consume_quoted_string](#method-consume-quoted-string) ·
+[consume_comment](#method-consume-comment) ·
+[consume_cfws](#method-consume-cfws) ·
+[consume_dot_atom](#method-consume-dot-atom) ·
+[consume_domain_literal](#method-consume-domain-literal) ·
+[consume_addr_spec](#method-consume-addr-spec) ·
+[consume_word](#method-consume-word) ·
+[check_mailbox](#method-check-mailbox) ·
+[consume_token_or_quoted_string](#method-consume-token-or-quoted-string) ·
+[is_cookie_value](#method-is-cookie-value) ·
+[is_cookie_pair](#method-is-cookie-pair) ·
+[is_cookie_av](#method-is-cookie-av) ·
+[is_directive](#method-is-directive) ·
+[consume_parameter](#method-consume-parameter) ·
+[consume_extension_parameter](#method-consume-extension-parameter) ·
+[for_each_parameter](#method-for-each-parameter) ·
+[for_each_forwarded_pair](#method-for-each-forwarded-pair) ·
+[for_each_list_element](#method-for-each-list-element) ·
+[check_auth_param_list](#method-check-auth-param-list) ·
+[check_credentials](#method-check-credentials) ·
+[challenge_opens_param_list](#method-challenge-opens-param-list) ·
+[check_challenge_list](#method-check-challenge-list) ·
+[consume_product](#method-consume-product) ·
+[check_product_list](#method-check-product-list) ·
+[check_uri_host](#method-check-uri-host) ·
+[is_uri_scheme](#method-is-uri-scheme) ·
+[consume_uri_scheme](#method-consume-uri-scheme) ·
+[consume_uri_pct_encoded](#method-consume-uri-pct-encoded) ·
+[percent_decode_validate](#method-percent-decode-validate) ·
+[percent_decode_in_place](#method-percent-decode-in-place) ·
+[check_uri_userinfo](#method-check-uri-userinfo) ·
+[check_host_port(sv, uri_host, port, type)](#method-check-host-port) ·
+[check_host_port(sv)](#method-check-host-port-2) ·
+[check_serialized_origin](#method-check-serialized-origin) ·
+[check_uri_authority](#method-check-uri-authority) ·
+[check_uri_reference](#method-check-uri-reference) ·
+[split_authority_host_port](#method-split-authority-host-port) ·
+[try_to_deserialize_as_authority_form](#method-try-to-deserialize-as-authority-form) ·
+[try_to_deserialize_as_asterisk_form](#method-try-to-deserialize-as-asterisk-form) ·
+[try_to_deserialize_as_origin_form](#method-try-to-deserialize-as-origin-form) ·
+[default_port_for_scheme](#method-default-port-for-scheme) ·
+[ports_equivalent](#method-ports-equivalent) ·
+[try_to_deserialize_as_absolute_form](#method-try-to-deserialize-as-absolute-form) ·
+[try_to_deserialize_as_absolute_path](#method-try-to-deserialize-as-absolute-path) ·
+[try_to_deserialize_as_query](#method-try-to-deserialize-as-query) ·
+[iequals](#method-iequals) ·
+[split_query_parameters](#method-split-query-parameters)
 
 <a id="constant-kf-token"></a>
 

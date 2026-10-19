@@ -1,24 +1,22 @@
-<a id="access-control-expose-headers-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_expose_headers/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_expose_headers/index.svg" alt="Index for access_control_expose_headers.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_expose_headers/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_expose_headers/index-dark.svg" alt="Index for access_control_expose_headers.h">
-  </a>
-</h1>
+<a id="access-control-expose-headers"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_expose_headers/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_expose_headers/index.svg" alt="access_control_expose_headers">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_expose_headers/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_expose_headers/index-dark.svg" alt="access_control_expose_headers">
+</a>
 
 **Header:** [include/protocol/http/common/headers/access_control_expose_headers.h](../../../../../../include/protocol/http/common/headers/access_control_expose_headers.h)
 
 |                                             access-control-expose-headers | | Fetch Standard S3.3.3 Access-Control-Expose-Headers                       | | The "Access-Control-Expose-Headers" response header indicates which       | | response headers can be exposed to frontend JavaScript as part of a CORS  | | response.
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [access_control_expose_headers](#type-access-control-expose-headers) · *type*
+[access_control_expose_headers](#type-access-control-expose-headers)
 
-**protocol::http::headers::access_control_expose_headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::access_control_expose_headers
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-access-control-expose-headers"></a>
 

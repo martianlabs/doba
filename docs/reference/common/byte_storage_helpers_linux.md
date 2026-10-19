@@ -1,28 +1,26 @@
-<a id="byte-storage-helpers-linux-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/byte_storage_helpers_linux/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/byte_storage_helpers_linux/index.svg" alt="Index for byte_storage_helpers_linux.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/byte_storage_helpers_linux/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/byte_storage_helpers_linux/index-dark.svg" alt="Index for byte_storage_helpers_linux.h">
-  </a>
-</h1>
+<a id="byte-storage-helpers-linux"></a>
+<a href="../../../resources/docs/reference/common/byte_storage_helpers_linux/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/byte_storage_helpers_linux/index.svg" alt="byte_storage_helpers_linux">
+</a>
+<a href="../../../resources/docs/reference/common/byte_storage_helpers_linux/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/byte_storage_helpers_linux/index-dark.svg" alt="byte_storage_helpers_linux">
+</a>
 
 **Header:** [include/common/byte_storage_helpers_linux.h](../../../include/common/byte_storage_helpers_linux.h)
 
 Provides the byte storage file type.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [byte_storage_file](#type-byte-storage-file) · *type*
+[byte_storage_file](#type-byte-storage-file)
 
-**common::byte_storage_file**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::byte_storage_file
 
-- [open](#method-open) · *method*
-- [write](#method-write) · *method*
-- [flush](#method-flush) · *method*
-- [read](#method-read) · *method*
-- [close](#method-close) · *method*
+[open](#method-open) ·
+[write](#method-write) ·
+[flush](#method-flush) ·
+[read](#method-read) ·
+[close](#method-close)
 
 <a id="type-byte-storage-file"></a>
 

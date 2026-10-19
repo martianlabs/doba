@@ -1,21 +1,19 @@
-<a id="header-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/header/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/header/index.svg" alt="Index for header.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/header/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/header/index-dark.svg" alt="Index for header.h">
-  </a>
-</h1>
+<a id="header"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/header/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/header/index.svg" alt="header">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/header/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/header/index-dark.svg" alt="header">
+</a>
 
 **Header:** [include/protocol/http/common/header.h](../../../../../include/protocol/http/common/header.h)
 
 This header declares the types and operations listed below.
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [header](#alias-header) · *alias*
-- [header_view](#alias-header-view) · *alias*
+[header](#alias-header) ·
+[header_view](#alias-header-view)
 
 <a id="alias-header"></a>
 

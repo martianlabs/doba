@@ -1,28 +1,26 @@
-<a id="router-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router/index.svg" alt="Index for router.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router/index-dark.svg" alt="Index for router.h">
-  </a>
-</h1>
+<a id="router"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router/index.svg" alt="router">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router/index-dark.svg" alt="router">
+</a>
 
 **Header:** [include/protocol/http/common/router.h](../../../../../include/protocol/http/common/router.h)
 
 Provides the http 1.1 router implementation.
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [router](#type-router) · *type*
+[router](#type-router)
 
-**protocol::http::router**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::router
 
-- [add&lt;Hty&gt;(method, route, handler)](#method-add) · *method*
-- [add&lt;Hty&gt;(method, route, handler, authenticate)](#method-add-2) · *method*
-- [add_controller](#method-add-controller) · *method*
-- [match](#method-match) · *method*
-- [allowed_methods](#method-allowed-methods) · *method*
+[add&lt;Hty&gt;(method, route, handler)](#method-add) ·
+[add&lt;Hty&gt;(method, route, handler, authenticate)](#method-add-2) ·
+[add_controller](#method-add-controller) ·
+[match](#method-match) ·
+[allowed_methods](#method-allowed-methods)
 
 <a id="type-router"></a>
 

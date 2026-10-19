@@ -1,24 +1,22 @@
-<a id="access-control-allow-credentials-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_credentials/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_credentials/index.svg" alt="Index for access_control_allow_credentials.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_credentials/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_credentials/index-dark.svg" alt="Index for access_control_allow_credentials.h">
-  </a>
-</h1>
+<a id="access-control-allow-credentials"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_credentials/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_credentials/index.svg" alt="access_control_allow_credentials">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_credentials/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_credentials/index-dark.svg" alt="access_control_allow_credentials">
+</a>
 
 **Header:** [include/protocol/http/common/headers/access_control_allow_credentials.h](../../../../../../include/protocol/http/common/headers/access_control_allow_credentials.h)
 
 |                                          access-control-allow-credentials | | Fetch S3.3.3 HTTP responses                                               | | The "Access-Control-Allow-Credentials" response header field indicates    | | whether the response can be shared when the request's credentials mode is | | "include".
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [access_control_allow_credentials](#type-access-control-allow-credentials) · *type*
+[access_control_allow_credentials](#type-access-control-allow-credentials)
 
-**protocol::http::headers::access_control_allow_credentials**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::access_control_allow_credentials
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-access-control-allow-credentials"></a>
 

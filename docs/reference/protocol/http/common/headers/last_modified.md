@@ -1,24 +1,22 @@
-<a id="last-modified-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index.svg" alt="Index for last_modified.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index-dark.svg" alt="Index for last_modified.h">
-  </a>
-</h1>
+<a id="last-modified"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index.svg" alt="last_modified">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index-dark.svg" alt="last_modified">
+</a>
 
 **Header:** [include/protocol/http/common/headers/last_modified.h](../../../../../../include/protocol/http/common/headers/last_modified.h)
 
 |                                                             last-modified | | RFC 9110 S8.8.2 Last-Modified                                             | | The "Last-Modified" header field in a response provides the date and time | | at which the origin server believes the selected representation was last  | | modified, as determined when request
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [last_modified](#type-last-modified) · *type*
+[last_modified](#type-last-modified)
 
-**protocol::http::headers::last_modified**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::last_modified
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-last-modified"></a>
 

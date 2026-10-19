@@ -1,25 +1,23 @@
-<a id="content-length-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/content_length/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/content_length/index.svg" alt="Index for content_length.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/content_length/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/content_length/index-dark.svg" alt="Index for content_length.h">
-  </a>
-</h1>
+<a id="content-length"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/content_length/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/content_length/index.svg" alt="content_length">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/content_length/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/content_length/index-dark.svg" alt="content_length">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/content_length.h](../../../../../../include/protocol/http/v11/headers/content_length.h)
 
 The "Content-Length" header field indicates the associated representation's data length as a decimal non-negative integer number of octets.
 
-**protocol::http::v11::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
 
-- [content_length](#type-content-length) · *type*
+[content_length](#type-content-length)
 
-**protocol::http::v11::headers::content_length**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::content_length
 
-- [check](#method-check) · *method*
-- [interpret](#method-interpret) · *method*
+[check](#method-check) ·
+[interpret](#method-interpret)
 
 <a id="type-content-length"></a>
 

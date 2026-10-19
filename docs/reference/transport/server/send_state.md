@@ -1,39 +1,29 @@
-<a id="send-state-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/send_state/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/send_state/index.svg" alt="Index for send_state.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/send_state/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/send_state/index-dark.svg" alt="Index for send_state.h">
-  </a>
-</h1>
+<a id="send-state"></a>
+<a href="../../../../resources/docs/reference/transport/server/send_state/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/send_state/index.svg" alt="send_state">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/send_state/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/send_state/index-dark.svg" alt="send_state">
+</a>
 
 **Header:** [include/transport/server/send_state.h](../../../../include/transport/server/send_state.h)
 
 This struct manages the state of outgoing data for a TCP connection. It maintains a buffer for inline data and a queue of sources for additional data to be sent. It provides methods to push new data, fill the buffer, consume sent data, and check if there is pending data to be sent.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [send_state](#type-send-state) · *type*
+[send_state](#type-send-state)
 
-**transport::server::send_state**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::send_state
 
-- [source_entry](#type-source-entry) · *type*
-
-**transport::server::send_state::source_entry**
-
-- [prefix](#field-prefix) · *field*
-- [source](#field-source) · *field*
-
-**transport::server::send_state**
-
-- [push](#method-push) · *method*
-- [fill](#method-fill) · *method*
-- [consume](#method-consume) · *method*
-- [queued](#method-queued) · *method*
-- [clear](#method-clear) · *method*
-- [buffer](#field-buffer) · *field*
-- [offset](#field-offset) · *field*
+[source_entry](source_entry.md) ·
+[push](#method-push) ·
+[fill](#method-fill) ·
+[consume](#method-consume) ·
+[queued](#method-queued) ·
+[clear](#method-clear) ·
+[buffer](#field-buffer) ·
+[offset](#field-offset)
 
 <a id="type-send-state"></a>
 
@@ -50,54 +40,6 @@ struct send_state { ... };
 This struct manages the state of outgoing data for a TCP connection. It maintains a buffer for inline data and a queue of sources for additional data to be sent. It provides methods to push new data, fill the buffer, consume sent data, and check if there is pending data to be sent.
 
 **Source:** [include/transport/server/send_state.h:53](../../../../include/transport/server/send_state.h#L53)
-
-<a id="type-source-entry"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> source_entry
-
-**TYPE** · *transport::server::send_state*
-
-**Declaration synopsis:**
-
-```cpp
-struct source_entry { ... };
-```
-
-Provides the source entry transport component.
-
-**Source:** [include/transport/server/send_state.h:57](../../../../include/transport/server/send_state.h#L57)
-
-<a id="field-prefix"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> prefix
-
-**FIELD** · *transport::server::send_state::source_entry*
-
-```cpp
-std::string prefix;
-```
-
-Prefix data to be sent before reading from the source (memory based)
-
-**Value:** No explicit initializer appears in this declaration.
-
-**Source:** [include/transport/server/send_state.h:59](../../../../include/transport/server/send_state.h#L59)
-
-<a id="field-source"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> source
-
-**FIELD** · *transport::server::send_state::source_entry*
-
-```cpp
-std::unique_ptr<common::reader> source;
-```
-
-Source reader for additional data (stream based)
-
-**Value:** No explicit initializer appears in this declaration.
-
-**Source:** [include/transport/server/send_state.h:61](../../../../include/transport/server/send_state.h#L61)
 
 <a id="method-push"></a>
 

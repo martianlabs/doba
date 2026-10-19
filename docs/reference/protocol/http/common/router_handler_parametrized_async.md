@@ -1,31 +1,26 @@
-<a id="router-handler-parametrized-async-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized_async/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized_async/index.svg" alt="Index for router_handler_parametrized_async.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized_async/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized_async/index-dark.svg" alt="Index for router_handler_parametrized_async.h">
-  </a>
-</h1>
+<a id="router-handler-parametrized-async"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized_async/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized_async/index.svg" alt="router_handler_parametrized_async">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized_async/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized_async/index-dark.svg" alt="router_handler_parametrized_async">
+</a>
 
 **Header:** [include/protocol/http/common/router_handler_parametrized_async.h](../../../../../include/protocol/http/common/router_handler_parametrized_async.h)
 
 Provides the router handler parametrized async protocol component.
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [router_handler_parametrized_async](#type-router-handler-parametrized-async) · *type*
+[router_handler_parametrized_async](#type-router-handler-parametrized-async) ·
+[make_router_handler_parametrized_async](#function-make-router-handler-parametrized-async)
 
-**protocol::http::router_handler_parametrized_async**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::router_handler_parametrized_async
 
-- [matcher_type](#alias-matcher-type) · *alias*
-- [callback_type](#alias-callback-type) · *alias*
-- [matches](#method-matches) · *method*
-- [invoke](#method-invoke) · *method*
-
-**protocol::http**
-
-- [make_router_handler_parametrized_async](#function-make-router-handler-parametrized-async) · *function*
+[matcher_type](#alias-matcher-type) ·
+[callback_type](#alias-callback-type) ·
+[matches](#method-matches) ·
+[invoke](#method-invoke)
 
 <a id="type-router-handler-parametrized-async"></a>
 

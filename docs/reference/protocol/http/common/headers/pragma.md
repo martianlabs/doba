@@ -1,24 +1,22 @@
-<a id="pragma-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/pragma/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/pragma/index.svg" alt="Index for pragma.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/pragma/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/pragma/index-dark.svg" alt="Index for pragma.h">
-  </a>
-</h1>
+<a id="pragma"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/pragma/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/pragma/index.svg" alt="pragma">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/pragma/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/pragma/index-dark.svg" alt="pragma">
+</a>
 
 **Header:** [include/protocol/http/common/headers/pragma.h](../../../../../../include/protocol/http/common/headers/pragma.h)
 
 |                                                                    pragma | | RFC 9111 S5.4 Pragma                                                      | | The "Pragma" request header field was originally defined for HTTP/1.0     | | caches, allowing clients to send a "no-cache" request before              | | Cache-Control existed.
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [pragma](#type-pragma) · *type*
+[pragma](#type-pragma)
 
-**protocol::http::headers::pragma**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::pragma
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-pragma"></a>
 

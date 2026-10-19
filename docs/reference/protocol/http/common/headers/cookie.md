@@ -1,24 +1,22 @@
-<a id="cookie-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/index.svg" alt="Index for cookie.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/index-dark.svg" alt="Index for cookie.h">
-  </a>
-</h1>
+<a id="cookie"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/index.svg" alt="cookie">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/index-dark.svg" alt="cookie">
+</a>
 
 **Header:** [include/protocol/http/common/headers/cookie.h](../../../../../../include/protocol/http/common/headers/cookie.h)
 
 |                                                                    cookie | | RFC 6265 S4.2 Cookie                                                      | | The "Cookie" header field is sent by a user agent in an HTTP request to   | | return stored cookies to the origin server. The field contains cookies    | | previously received from Set-Cookie
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [cookie](#type-cookie) · *type*
+[cookie](#type-cookie)
 
-**protocol::http::headers::cookie**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::cookie
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-cookie"></a>
 

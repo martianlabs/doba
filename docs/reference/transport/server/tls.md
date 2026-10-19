@@ -1,20 +1,18 @@
-<a id="tls-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tls/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tls/index.svg" alt="Index for tls.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tls/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tls/index-dark.svg" alt="Index for tls.h">
-  </a>
-</h1>
+<a id="tls"></a>
+<a href="../../../../resources/docs/reference/transport/server/tls/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tls/index.svg" alt="tls">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tls/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tls/index-dark.svg" alt="tls">
+</a>
 
 **Header:** [include/transport/server/tls.h](../../../../include/transport/server/tls.h)
 
 This class provides a TLS transport for an engine. It inherits from `basic_transport` and takes a `tls_policies` configuration and an engine factory when it is created.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [tls](#type-tls) · *type*
+[tls](#type-tls)
 
 <a id="type-tls"></a>
 

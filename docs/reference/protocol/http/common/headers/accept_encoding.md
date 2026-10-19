@@ -1,24 +1,22 @@
-<a id="accept-encoding-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_encoding/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_encoding/index.svg" alt="Index for accept_encoding.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_encoding/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_encoding/index-dark.svg" alt="Index for accept_encoding.h">
-  </a>
-</h1>
+<a id="accept-encoding"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_encoding/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_encoding/index.svg" alt="accept_encoding">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_encoding/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_encoding/index-dark.svg" alt="accept_encoding">
+</a>
 
 **Header:** [include/protocol/http/common/headers/accept_encoding.h](../../../../../../include/protocol/http/common/headers/accept_encoding.h)
 
 |                                                           accept-encoding | | RFC 9110 S12.5.3 Accept-Encoding                                          | | The "Accept-Encoding" header field indicates preferences regarding the    | | use of content codings.                                                   | | In a request, it identifies the cont
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [accept_encoding](#type-accept-encoding) · *type*
+[accept_encoding](#type-accept-encoding)
 
-**protocol::http::headers::accept_encoding**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::accept_encoding
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-accept-encoding"></a>
 

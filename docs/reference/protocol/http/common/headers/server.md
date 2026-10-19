@@ -1,24 +1,22 @@
-<a id="server-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/server/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/server/index.svg" alt="Index for server.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/server/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/server/index-dark.svg" alt="Index for server.h">
-  </a>
-</h1>
+<a id="server"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/server/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/server/index.svg" alt="server">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/server/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/server/index-dark.svg" alt="server">
+</a>
 
 **Header:** [include/protocol/http/common/headers/server.h](../../../../../../include/protocol/http/common/headers/server.h)
 
 |                                                                    server | | RFC 9110 S10.2.4 Server                                                   | | The "Server" header field contains information about the software used by | | the origin server to handle the request. It is commonly used by clients to| | identify the scope of interoperabili
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [server](#type-server) · *type*
+[server](#type-server)
 
-**protocol::http::headers::server**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::server
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-server"></a>
 

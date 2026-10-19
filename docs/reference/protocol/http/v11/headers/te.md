@@ -1,25 +1,23 @@
-<a id="te-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/te/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/te/index.svg" alt="Index for te.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/te/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/te/index-dark.svg" alt="Index for te.h">
-  </a>
-</h1>
+<a id="te"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/te/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/te/index.svg" alt="te">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/te/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/te/index-dark.svg" alt="te">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/te.h](../../../../../../include/protocol/http/v11/headers/te.h)
 
 The "TE" request header field describes the client's capabilities with regard to transfer codings and trailer sections.
 
-**protocol::http::v11::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
 
-- [te](#type-te) · *type*
+[te](#type-te)
 
-**protocol::http::v11::headers::te**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::te
 
-- [check](#method-check) · *method*
-- [interpret](#method-interpret) · *method*
+[check](#method-check) ·
+[interpret](#method-interpret)
 
 <a id="type-te"></a>
 

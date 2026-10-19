@@ -1,29 +1,27 @@
-<a id="tcp-windows-transport-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_transport/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_transport/index.svg" alt="Index for tcp_windows_transport.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_transport/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_transport/index-dark.svg" alt="Index for tcp_windows_transport.h">
-  </a>
-</h1>
+<a id="tcp-windows-transport"></a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_transport/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_transport/index.svg" alt="tcp_windows_transport">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_transport/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_transport/index-dark.svg" alt="tcp_windows_transport">
+</a>
 
 **Header:** [include/transport/server/tcp_windows_transport.h](../../../../include/transport/server/tcp_windows_transport.h)
 
 This class provides a basic transport for an engine. It’s a template that takes the engine, engine factory, connection, and policies types as parameters. It manages the worker that handles the transport, including starting, stopping, and quiescing it. You can also set callbacks for connection and disconnection events.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [basic_transport](#type-basic-transport) · *type*
+[basic_transport](#type-basic-transport)
 
-**transport::server::basic_transport**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::basic_transport
 
-- [policies_type](#alias-policies-type) · *alias*
-- [start](#method-start) · *method*
-- [stop](#method-stop) · *method*
-- [quiesce](#method-quiesce) · *method*
-- [set_on_connection](#method-set-on-connection) · *method*
-- [set_on_disconnection](#method-set-on-disconnection) · *method*
+[policies_type](#alias-policies-type) ·
+[start](#method-start) ·
+[stop](#method-stop) ·
+[quiesce](#method-quiesce) ·
+[set_on_connection](#method-set-on-connection) ·
+[set_on_disconnection](#method-set-on-disconnection)
 
 <a id="type-basic-transport"></a>
 

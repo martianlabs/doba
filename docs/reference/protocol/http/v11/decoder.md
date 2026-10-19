@@ -1,27 +1,25 @@
-<a id="decoder-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/decoder/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/decoder/index.svg" alt="Index for decoder.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/decoder/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/decoder/index-dark.svg" alt="Index for decoder.h">
-  </a>
-</h1>
+<a id="decoder"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/decoder/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/decoder/index.svg" alt="decoder">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/decoder/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/decoder/index-dark.svg" alt="decoder">
+</a>
 
 **Header:** [include/protocol/http/v11/decoder.h](../../../../../include/protocol/http/v11/decoder.h)
 
 Provides the http 1.1 decoder implementation.
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [decoder](#type-decoder) · *type*
+[decoder](#type-decoder)
 
-**protocol::http::v11::decoder**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::decoder
 
-- [deserialize](#method-deserialize) · *method*
-- [configuration](#method-configuration) · *method*
-- [make_response()](#method-make-response) · *method*
-- [make_response(head, body)](#method-make-response-2) · *method*
+[deserialize](#method-deserialize) ·
+[configuration](#method-configuration) ·
+[make_response()](#method-make-response) ·
+[make_response(head, body)](#method-make-response-2)
 
 <a id="type-decoder"></a>
 

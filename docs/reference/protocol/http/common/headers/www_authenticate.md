@@ -1,24 +1,22 @@
-<a id="www-authenticate-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/index.svg" alt="Index for www_authenticate.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/index-dark.svg" alt="Index for www_authenticate.h">
-  </a>
-</h1>
+<a id="www-authenticate"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/index.svg" alt="www_authenticate">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/index-dark.svg" alt="www_authenticate">
+</a>
 
 **Header:** [include/protocol/http/common/headers/www_authenticate.h](../../../../../../include/protocol/http/common/headers/www_authenticate.h)
 
 |                                                          www-authenticate | | RFC 9110 S11.6.1 WWW-Authenticate                                         | | The "WWW-Authenticate" response header field indicates the authentication | | scheme(s) and parameters applicable to the target resource.               | | A server generating a 401 (Unauthori
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [www_authenticate](#type-www-authenticate) · *type*
+[www_authenticate](#type-www-authenticate)
 
-**protocol::http::headers::www_authenticate**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::www_authenticate
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-www-authenticate"></a>
 

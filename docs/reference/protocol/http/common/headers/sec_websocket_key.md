@@ -1,24 +1,22 @@
-<a id="sec-websocket-key-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_key/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_key/index.svg" alt="Index for sec_websocket_key.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_key/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_key/index-dark.svg" alt="Index for sec_websocket_key.h">
-  </a>
-</h1>
+<a id="sec-websocket-key"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_key/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_key/index.svg" alt="sec_websocket_key">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_key/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_key/index-dark.svg" alt="sec_websocket_key">
+</a>
 
 **Header:** [include/protocol/http/common/headers/sec_websocket_key.h](../../../../../../include/protocol/http/common/headers/sec_websocket_key.h)
 
 |                                                         sec-websocket-key | | RFC 6455 S11.3.1 Sec-WebSocket-Key                                        | | The "Sec-WebSocket-Key" header field is used in the WebSocket opening     | | handshake. It is sent from the client to the server to provide part of    | | the information used by the server t
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [sec_websocket_key](#type-sec-websocket-key) · *type*
+[sec_websocket_key](#type-sec-websocket-key)
 
-**protocol::http::headers::sec_websocket_key**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::sec_websocket_key
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-sec-websocket-key"></a>
 

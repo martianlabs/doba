@@ -1,30 +1,28 @@
-<a id="engine-sync-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index.svg" alt="Index for engine_sync.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index-dark.svg" alt="Index for engine_sync.h">
-  </a>
-</h1>
+<a id="engine-sync"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index.svg" alt="engine_sync">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index-dark.svg" alt="engine_sync">
+</a>
 
 **Header:** [include/protocol/http/v11/engine_sync.h](../../../../../include/protocol/http/v11/engine_sync.h)
 
 The synchronous engine handles the processing of a single request and response in a blocking manner. It is designed for environments where asynchronous processing is not required or desired. It provides methods for executing the request against the router, building error responses, and serializing the response.
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [engine_sync](#type-engine-sync) · *type*
+[engine_sync](#type-engine-sync)
 
-**protocol::http::v11::engine_sync**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::engine_sync
 
-- [handle_request](#method-handle-request) · *method*
-- [handle_response](#method-handle-response) · *method*
-- [execute](#method-execute) · *method*
-- [authenticate](#method-authenticate) · *method*
-- [build_error_response](#method-build-error-response) · *method*
-- [serialize(response, close)](#method-serialize) · *method*
-- [serialize(request, response, close)](#method-serialize-2) · *method*
+[handle_request](#method-handle-request) ·
+[handle_response](#method-handle-response) ·
+[execute](#method-execute) ·
+[authenticate](#method-authenticate) ·
+[build_error_response](#method-build-error-response) ·
+[serialize(response, close)](#method-serialize) ·
+[serialize(request, response, close)](#method-serialize-2)
 
 <a id="type-engine-sync"></a>
 

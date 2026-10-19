@@ -1,26 +1,24 @@
-<a id="contracts-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/protocol/contracts/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/protocol/contracts/index.svg" alt="Index for contracts.h">
-  </a>
-  <a href="../../../resources/docs/reference/protocol/contracts/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/protocol/contracts/index-dark.svg" alt="Index for contracts.h">
-  </a>
-</h1>
+<a id="contracts"></a>
+<a href="../../../resources/docs/reference/protocol/contracts/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/protocol/contracts/index.svg" alt="contracts">
+</a>
+<a href="../../../resources/docs/reference/protocol/contracts/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/protocol/contracts/index-dark.svg" alt="contracts">
+</a>
 
 **Header:** [include/protocol/contracts.h](../../../include/protocol/contracts.h)
 
 This header declares the types and operations listed below.
 
-**protocol**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol
 
-- [send_delegate](#alias-send-delegate) · *alias*
+[send_delegate](#alias-send-delegate)
 
-**protocol::contracts**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::contracts
 
-- [engine](#concept-engine) · *concept*
-- [completion_engine](#concept-completion-engine) · *concept*
-- [engine_factory](#concept-engine-factory) · *concept*
+[engine](#concept-engine) ·
+[completion_engine](#concept-completion-engine) ·
+[engine_factory](#concept-engine-factory)
 
 <a id="alias-send-delegate"></a>
 

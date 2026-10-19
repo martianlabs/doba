@@ -1,24 +1,22 @@
-<a id="access-control-allow-methods-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_methods/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_methods/index.svg" alt="Index for access_control_allow_methods.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_methods/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_methods/index-dark.svg" alt="Index for access_control_allow_methods.h">
-  </a>
-</h1>
+<a id="access-control-allow-methods"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_methods/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_methods/index.svg" alt="access_control_allow_methods">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_methods/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_methods/index-dark.svg" alt="access_control_allow_methods">
+</a>
 
 **Header:** [include/protocol/http/common/headers/access_control_allow_methods.h](../../../../../../include/protocol/http/common/headers/access_control_allow_methods.h)
 
 |                                              access-control-allow-methods | | Fetch Standard S3.3.3 HTTP responses                                      | | The "Access-Control-Allow-Methods" response header field indicates which  | | HTTP methods are supported by the response URL for the purposes of the    | | CORS protocol.
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [access_control_allow_methods](#type-access-control-allow-methods) · *type*
+[access_control_allow_methods](#type-access-control-allow-methods)
 
-**protocol::http::headers::access_control_allow_methods**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::access_control_allow_methods
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-access-control-allow-methods"></a>
 

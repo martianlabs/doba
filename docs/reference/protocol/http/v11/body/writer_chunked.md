@@ -1,26 +1,24 @@
-<a id="writer-chunked-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index.svg" alt="Index for writer_chunked.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index-dark.svg" alt="Index for writer_chunked.h">
-  </a>
-</h1>
+<a id="writer-chunked"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index.svg" alt="writer_chunked">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index-dark.svg" alt="writer_chunked">
+</a>
 
 **Header:** [include/protocol/http/v11/body/writer_chunked.h](../../../../../../include/protocol/http/v11/body/writer_chunked.h)
 
 Encodes an outgoing chunked Transfer-Encoding body. Each call to write() wraps the caller-supplied raw payload into a single chunk: <hex-size>\r\n<payload>\r\n A zero-length payload is skipped (it would otherwise be mistaken for the terminating chunk). Call end() once, after the last write(), to emit the terminating "0\r\n\r\n" sequence (no
 
-**protocol::http::v11::body**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body
 
-- [writer_chunked](#type-writer-chunked) · *type*
+[writer_chunked](#type-writer-chunked)
 
-**protocol::http::v11::body::writer_chunked**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body::writer_chunked
 
-- [write(payload, dst)](#method-write) · *method*
-- [write(payload, dst)](#method-write-2) · *method*
-- [end](#method-end) · *method*
+[write(payload, dst)](#method-write) ·
+[write(payload, dst)](#method-write-2) ·
+[end](#method-end)
 
 <a id="type-writer-chunked"></a>
 

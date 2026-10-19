@@ -1,25 +1,23 @@
-<a id="x-forwarded-for-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/index.svg" alt="Index for x_forwarded_for.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/index-dark.svg" alt="Index for x_forwarded_for.h">
-  </a>
-</h1>
+<a id="x-forwarded-for"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/index.svg" alt="x_forwarded_for">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/index-dark.svg" alt="x_forwarded_for">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/x_forwarded_for.h](../../../../../../include/protocol/http/v11/headers/x_forwarded_for.h)
 
 |                                                           x-forwarded-for | | De-facto X-Forwarded-For                                                  | | The "X-Forwarded-For" header field is a de-facto request header used by   | | proxies, reverse proxies, load balancers, and gateways to identify the    | | originating client IP address and th
 
-**protocol::http::v11::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
 
-- [x_forwarded_for](#type-x-forwarded-for) · *type*
+[x_forwarded_for](#type-x-forwarded-for)
 
-**protocol::http::v11::headers::x_forwarded_for**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::x_forwarded_for
 
-- [check](#method-check) · *method*
-- [interpret](#method-interpret) · *method*
+[check](#method-check) ·
+[interpret](#method-interpret)
 
 <a id="type-x-forwarded-for"></a>
 

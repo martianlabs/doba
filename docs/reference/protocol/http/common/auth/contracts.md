@@ -1,20 +1,18 @@
-<a id="contracts-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/auth/contracts/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/contracts/index.svg" alt="Index for contracts.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/auth/contracts/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/contracts/index-dark.svg" alt="Index for contracts.h">
-  </a>
-</h1>
+<a id="contracts"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/contracts/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/contracts/index.svg" alt="contracts">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/contracts/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/contracts/index-dark.svg" alt="contracts">
+</a>
 
 **Header:** [include/protocol/http/common/auth/contracts.h](../../../../../../include/protocol/http/common/auth/contracts.h)
 
 This header declares the types and operations listed below.
 
-**protocol::http::auth::contracts**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::auth::contracts
 
-- [provider](#concept-provider) · *concept*
+[provider](#concept-provider)
 
 <a id="concept-provider"></a>
 

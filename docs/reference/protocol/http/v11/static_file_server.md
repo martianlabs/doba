@@ -1,24 +1,22 @@
-<a id="static-file-server-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/static_file_server/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/static_file_server/index.svg" alt="Index for static_file_server.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/static_file_server/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/static_file_server/index-dark.svg" alt="Index for static_file_server.h">
-  </a>
-</h1>
+<a id="static-file-server"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/static_file_server/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/static_file_server/index.svg" alt="static_file_server">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/static_file_server/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/static_file_server/index-dark.svg" alt="static_file_server">
+</a>
 
 **Header:** [include/protocol/http/v11/static_file_server.h](../../../../../include/protocol/http/v11/static_file_server.h)
 
 Server implementation.
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [static_file_server](#type-static-file-server) · *type*
+[static_file_server](#type-static-file-server)
 
-**protocol::http::v11::static_file_server**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::static_file_server
 
-- [register_routes](#method-register-routes) · *method*
+[register_routes](#method-register-routes)
 
 <a id="type-static-file-server"></a>
 

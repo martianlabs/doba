@@ -1,38 +1,36 @@
-<a id="tcp-connection-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_connection/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_connection/index.svg" alt="Index for tcp_connection.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_connection/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_connection/index-dark.svg" alt="Index for tcp_connection.h">
-  </a>
-</h1>
+<a id="tcp-connection"></a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_connection/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_connection/index.svg" alt="tcp_connection">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_connection/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_connection/index-dark.svg" alt="tcp_connection">
+</a>
 
 **Header:** [include/transport/server/tcp_connection.h](../../../../include/transport/server/tcp_connection.h)
 
 This struct keeps track of a TCP connection used by an engine. It stores the engine and an input buffer, and handles incoming data, and outgoing data. It also lets you check the connection status and manage the output buffers.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [tcp_connection](#type-tcp-connection) · *type*
+[tcp_connection](#type-tcp-connection)
 
-**transport::server::tcp_connection**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::tcp_connection
 
-- [shared_state](#alias-shared-state) · *alias*
-- [receive_buffer](#method-receive-buffer) · *method*
-- [process](#method-process) · *method*
-- [prepare_output](#method-prepare-output) · *method*
-- [output_bytes](#method-output-bytes) · *method*
-- [output_buffers](#method-output-buffers) · *method*
-- [output_sent](#method-output-sent) · *method*
-- [output_pending](#method-output-pending) · *method*
-- [established](#method-established) · *method*
-- [peer_closed](#method-peer-closed) · *method*
-- [eof](#method-eof) · *method*
-- [close_output](#method-close-output) · *method*
-- [engine](#field-engine) · *field*
-- [buffer](#field-buffer) · *field*
-- [capacity](#field-capacity) · *field*
+[shared_state](#alias-shared-state) ·
+[receive_buffer](#method-receive-buffer) ·
+[process](#method-process) ·
+[prepare_output](#method-prepare-output) ·
+[output_bytes](#method-output-bytes) ·
+[output_buffers](#method-output-buffers) ·
+[output_sent](#method-output-sent) ·
+[output_pending](#method-output-pending) ·
+[established](#method-established) ·
+[peer_closed](#method-peer-closed) ·
+[eof](#method-eof) ·
+[close_output](#method-close-output) ·
+[engine](#field-engine) ·
+[buffer](#field-buffer) ·
+[capacity](#field-capacity)
 
 <a id="type-tcp-connection"></a>
 

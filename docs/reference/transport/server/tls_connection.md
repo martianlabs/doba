@@ -1,39 +1,37 @@
-<a id="tls-connection-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tls_connection/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tls_connection/index.svg" alt="Index for tls_connection.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tls_connection/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tls_connection/index-dark.svg" alt="Index for tls_connection.h">
-  </a>
-</h1>
+<a id="tls-connection"></a>
+<a href="../../../../resources/docs/reference/transport/server/tls_connection/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tls_connection/index.svg" alt="tls_connection">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tls_connection/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tls_connection/index-dark.svg" alt="tls_connection">
+</a>
 
 **Header:** [include/transport/server/tls_connection.h](../../../../include/transport/server/tls_connection.h)
 
 This struct wraps an engine and a TLS session to handle an encrypted connection. It manages the encrypted and plaintext buffers, handles the TLS handshake, and processes incoming and outgoing data. It also lets you process received data, prepare output, and check the connection state.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [tls_connection](#type-tls-connection) · *type*
+[tls_connection](#type-tls-connection)
 
-**transport::server::tls_connection**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::tls_connection
 
-- [shared_state](#alias-shared-state) · *alias*
-- [receive_buffer](#method-receive-buffer) · *method*
-- [process](#method-process) · *method*
-- [prepare_output](#method-prepare-output) · *method*
-- [output_bytes](#method-output-bytes) · *method*
-- [output_buffers](#method-output-buffers) · *method*
-- [output_sent](#method-output-sent) · *method*
-- [output_pending](#method-output-pending) · *method*
-- [established](#method-established) · *method*
-- [peer_closed](#method-peer-closed) · *method*
-- [eof](#method-eof) · *method*
-- [close_output](#method-close-output) · *method*
-- [engine](#field-engine) · *field*
-- [buffer](#field-buffer) · *field*
-- [capacity](#field-capacity) · *field*
-- [size](#field-size) · *field*
+[shared_state](#alias-shared-state) ·
+[receive_buffer](#method-receive-buffer) ·
+[process](#method-process) ·
+[prepare_output](#method-prepare-output) ·
+[output_bytes](#method-output-bytes) ·
+[output_buffers](#method-output-buffers) ·
+[output_sent](#method-output-sent) ·
+[output_pending](#method-output-pending) ·
+[established](#method-established) ·
+[peer_closed](#method-peer-closed) ·
+[eof](#method-eof) ·
+[close_output](#method-close-output) ·
+[engine](#field-engine) ·
+[buffer](#field-buffer) ·
+[capacity](#field-capacity) ·
+[size](#field-size)
 
 <a id="type-tls-connection"></a>
 

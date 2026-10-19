@@ -1,42 +1,37 @@
-<a id="router-handler-parametrized-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized/index.svg" alt="Index for router_handler_parametrized.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized/index-dark.svg" alt="Index for router_handler_parametrized.h">
-  </a>
-</h1>
+<a id="router-handler-parametrized"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized/index.svg" alt="router_handler_parametrized">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized/index-dark.svg" alt="router_handler_parametrized">
+</a>
 
 **Header:** [include/protocol/http/common/router_handler_parametrized.h](../../../../../include/protocol/http/common/router_handler_parametrized.h)
 
 Provides the router handler parametrized protocol component.
 
-**protocol::http::detail**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::detail
 
-- [dependent_false_v](#constant-dependent-false-v) · *constant*
-- [extract_route_parameters](#function-extract-route-parameters) · *function*
-- [parse_route_parameter](#function-parse-route-parameter) · *function*
-- [matches_route_parameter](#function-matches-route-parameter) · *function*
-- [match_route_parameters_](#function-match-route-parameters) · *function*
-- [match_route_parameters](#function-match-route-parameters-2) · *function*
-- [parse_route_parameters_](#function-parse-route-parameters) · *function*
-- [invoke_route_handler](#function-invoke-route-handler) · *function*
+[dependent_false_v](#constant-dependent-false-v) ·
+[extract_route_parameters](#function-extract-route-parameters) ·
+[parse_route_parameter](#function-parse-route-parameter) ·
+[matches_route_parameter](#function-matches-route-parameter) ·
+[match_route_parameters_](#function-match-route-parameters) ·
+[match_route_parameters](#function-match-route-parameters-2) ·
+[parse_route_parameters_](#function-parse-route-parameters) ·
+[invoke_route_handler](#function-invoke-route-handler)
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [router_handler_parametrized](#type-router-handler-parametrized) · *type*
+[router_handler_parametrized](#type-router-handler-parametrized) ·
+[make_router_handler_parametrized](#function-make-router-handler-parametrized)
 
-**protocol::http::router_handler_parametrized**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::router_handler_parametrized
 
-- [matcher_type](#alias-matcher-type) · *alias*
-- [callback_type](#alias-callback-type) · *alias*
-- [matches](#method-matches) · *method*
-- [invoke](#method-invoke) · *method*
-
-**protocol::http**
-
-- [make_router_handler_parametrized](#function-make-router-handler-parametrized) · *function*
+[matcher_type](#alias-matcher-type) ·
+[callback_type](#alias-callback-type) ·
+[matches](#method-matches) ·
+[invoke](#method-invoke)
 
 <a id="constant-dependent-false-v"></a>
 

@@ -1,33 +1,31 @@
-<a id="console-logger-windows-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/console_logger_windows/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/console_logger_windows/index.svg" alt="Index for console_logger_windows.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/console_logger_windows/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/console_logger_windows/index-dark.svg" alt="Index for console_logger_windows.h">
-  </a>
-</h1>
+<a id="console-logger-windows"></a>
+<a href="../../../resources/docs/reference/common/console_logger_windows/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/console_logger_windows/index.svg" alt="console_logger_windows">
+</a>
+<a href="../../../resources/docs/reference/common/console_logger_windows/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/console_logger_windows/index-dark.svg" alt="console_logger_windows">
+</a>
 
 **Header:** [include/common/console_logger_windows.h](../../../include/common/console_logger_windows.h)
 
 Provides the console logger type.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [console_logger](#type-console-logger) · *type*
+[console_logger](#type-console-logger)
 
-**common::console_logger**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::console_logger
 
-- [debug(source)](#method-debug) · *method*
-- [debug(message, source)](#method-debug-2) · *method*
-- [info(source)](#method-info) · *method*
-- [info(message, source)](#method-info-2) · *method*
-- [warning(source)](#method-warning) · *method*
-- [warning(message, source)](#method-warning-2) · *method*
-- [error(source)](#method-error) · *method*
-- [error(message, source)](#method-error-2) · *method*
-- [critical(source)](#method-critical) · *method*
-- [critical(message, source)](#method-critical-2) · *method*
+[debug(source)](#method-debug) ·
+[debug(message, source)](#method-debug-2) ·
+[info(source)](#method-info) ·
+[info(message, source)](#method-info-2) ·
+[warning(source)](#method-warning) ·
+[warning(message, source)](#method-warning-2) ·
+[error(source)](#method-error) ·
+[error(message, source)](#method-error-2) ·
+[critical(source)](#method-critical) ·
+[critical(message, source)](#method-critical-2)
 
 <a id="type-console-logger"></a>
 

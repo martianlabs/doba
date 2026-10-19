@@ -1,24 +1,22 @@
-<a id="if-range-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_range/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_range/index.svg" alt="Index for if_range.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_range/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_range/index-dark.svg" alt="Index for if_range.h">
-  </a>
-</h1>
+<a id="if-range"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_range/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_range/index.svg" alt="if_range">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_range/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_range/index-dark.svg" alt="if_range">
+</a>
 
 **Header:** [include/protocol/http/common/headers/if_range.h](../../../../../../include/protocol/http/common/headers/if_range.h)
 
 |                                                                  if-range | | RFC 9110 S13.1.5 If-Range                                                 | | The "If-Range" header field provides a conditional mechanism specifically | | for requests that also contain a Range header field. It allows a client   | | holding a partial representation to
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [if_range](#type-if-range) · *type*
+[if_range](#type-if-range)
 
-**protocol::http::headers::if_range**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::if_range
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-if-range"></a>
 

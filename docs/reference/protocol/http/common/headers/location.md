@@ -1,24 +1,22 @@
-<a id="location-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/location/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/location/index.svg" alt="Index for location.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/location/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/location/index-dark.svg" alt="Index for location.h">
-  </a>
-</h1>
+<a id="location"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/location/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/location/index.svg" alt="location">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/location/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/location/index-dark.svg" alt="location">
+</a>
 
 **Header:** [include/protocol/http/common/headers/location.h](../../../../../../include/protocol/http/common/headers/location.h)
 
 |                                                                  location | | RFC 9110 S10.2.2 Location                                                 | | The "Location" header field is used in some responses to refer to a       | | specific resource in relation to the response. Its field value consists   | | of a single URI-reference.
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [location](#type-location) · *type*
+[location](#type-location)
 
-**protocol::http::headers::location**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::location
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-location"></a>
 

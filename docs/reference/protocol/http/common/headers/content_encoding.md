@@ -1,24 +1,22 @@
-<a id="content-encoding-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_encoding/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_encoding/index.svg" alt="Index for content_encoding.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_encoding/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_encoding/index-dark.svg" alt="Index for content_encoding.h">
-  </a>
-</h1>
+<a id="content-encoding"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_encoding/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_encoding/index.svg" alt="content_encoding">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_encoding/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_encoding/index-dark.svg" alt="content_encoding">
+</a>
 
 **Header:** [include/protocol/http/common/headers/content_encoding.h](../../../../../../include/protocol/http/common/headers/content_encoding.h)
 
 |                                                          content-encoding | | RFC 9110 S8.4 Content-Encoding                                            | | The "Content-Encoding" header field indicates which content codings have  | | been applied to a representation beyond those inherent in its media type. | | It therefore identifies the decoding
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [content_encoding](#type-content-encoding) · *type*
+[content_encoding](#type-content-encoding)
 
-**protocol::http::headers::content_encoding**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::content_encoding
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-content-encoding"></a>
 

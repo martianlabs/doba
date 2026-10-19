@@ -1,25 +1,23 @@
-<a id="x-forwarded-proto-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index.svg" alt="Index for x_forwarded_proto.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index-dark.svg" alt="Index for x_forwarded_proto.h">
-  </a>
-</h1>
+<a id="x-forwarded-proto"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index.svg" alt="x_forwarded_proto">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index-dark.svg" alt="x_forwarded_proto">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/x_forwarded_proto.h](../../../../../../include/protocol/http/v11/headers/x_forwarded_proto.h)
 
 De-facto X-Forwarded-Proto The "X-Forwarded-Proto" header field is a de-facto request header used by reverse proxies to disclose the protocol (scheme) used by the client to communicate with the proxy (typically "http" or "https").
 
-**protocol::http::v11::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
 
-- [x_forwarded_proto](#type-x-forwarded-proto) · *type*
+[x_forwarded_proto](#type-x-forwarded-proto)
 
-**protocol::http::v11::headers::x_forwarded_proto**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::x_forwarded_proto
 
-- [check](#method-check) · *method*
-- [interpret](#method-interpret) · *method*
+[check](#method-check) ·
+[interpret](#method-interpret)
 
 <a id="type-x-forwarded-proto"></a>
 

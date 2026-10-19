@@ -1,27 +1,25 @@
-<a id="writer-state-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/index.svg" alt="Index for writer_state.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/index-dark.svg" alt="Index for writer_state.h">
-  </a>
-</h1>
+<a id="writer-state"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/index.svg" alt="writer_state">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/index-dark.svg" alt="writer_state">
+</a>
 
 **Header:** [include/protocol/http/v11/body/writer_state.h](../../../../../../include/protocol/http/v11/body/writer_state.h)
 
 Result of a body writer write() call. consumed  - bytes taken from the input span (wire bytes, including any chunked framing). Caller advances its buffer by this amount; the remainder belongs to the next request. complete  - body fully accumulated; no further write() calls needed. has_error - a protocol or size-limit error was detected. error
 
-**protocol::http::v11::body**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body
 
-- [writer_state](#type-writer-state) · *type*
+[writer_state](#type-writer-state)
 
-**protocol::http::v11::body::writer_state**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body::writer_state
 
-- [consumed](#field-consumed) · *field*
-- [complete](#field-complete) · *field*
-- [has_error](#field-has-error) · *field*
-- [error](#field-error) · *field*
+[consumed](#field-consumed) ·
+[complete](#field-complete) ·
+[has_error](#field-has-error) ·
+[error](#field-error)
 
 <a id="type-writer-state"></a>
 

@@ -1,30 +1,28 @@
-<a id="filesystem-linux-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/filesystem_linux/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/filesystem_linux/index.svg" alt="Index for filesystem_linux.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/filesystem_linux/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/filesystem_linux/index-dark.svg" alt="Index for filesystem_linux.h">
-  </a>
-</h1>
+<a id="filesystem-linux"></a>
+<a href="../../../resources/docs/reference/common/filesystem_linux/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/filesystem_linux/index.svg" alt="filesystem_linux">
+</a>
+<a href="../../../resources/docs/reference/common/filesystem_linux/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/filesystem_linux/index-dark.svg" alt="filesystem_linux">
+</a>
 
 **Header:** [include/common/filesystem_linux.h](../../../include/common/filesystem_linux.h)
 
 Linux filesystem file implementation.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [filesystem_file](#type-filesystem-file) · *type*
+[filesystem_file](#type-filesystem-file)
 
-**common::filesystem_file**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::filesystem_file
 
-- [open](#method-open) · *method*
-- [read](#method-read) · *method*
-- [size](#method-size) · *method*
-- [is_open](#method-is-open) · *method*
-- [eof](#method-eof) · *method*
-- [failed](#method-failed) · *method*
-- [close](#method-close) · *method*
+[open](#method-open) ·
+[read](#method-read) ·
+[size](#method-size) ·
+[is_open](#method-is-open) ·
+[eof](#method-eof) ·
+[failed](#method-failed) ·
+[close](#method-close)
 
 <a id="type-filesystem-file"></a>
 

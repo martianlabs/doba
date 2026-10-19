@@ -1,31 +1,29 @@
-<a id="method-names-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/method_names/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/method_names/index.svg" alt="Index for method_names.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/method_names/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/method_names/index-dark.svg" alt="Index for method_names.h">
-  </a>
-</h1>
+<a id="method-names"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/method_names/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/method_names/index.svg" alt="method_names">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/method_names/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/method_names/index-dark.svg" alt="method_names">
+</a>
 
 **Header:** [include/protocol/http/common/method_names.h](../../../../../include/protocol/http/common/method_names.h)
 
 Provides the http 1.1 method names specification.
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [method_names](#type-method-names) · *type*
+[method_names](#type-method-names)
 
-**protocol::http::method_names**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::method_names
 
-- [kGet](#constant-kget) · *constant*
-- [kHead](#constant-khead) · *constant*
-- [kPost](#constant-kpost) · *constant*
-- [kPut](#constant-kput) · *constant*
-- [kDelete](#constant-kdelete) · *constant*
-- [kConnect](#constant-kconnect) · *constant*
-- [kOptions](#constant-koptions) · *constant*
-- [kTrace](#constant-ktrace) · *constant*
+[kGet](#constant-kget) ·
+[kHead](#constant-khead) ·
+[kPost](#constant-kpost) ·
+[kPut](#constant-kput) ·
+[kDelete](#constant-kdelete) ·
+[kConnect](#constant-kconnect) ·
+[kOptions](#constant-koptions) ·
+[kTrace](#constant-ktrace)
 
 <a id="type-method-names"></a>
 

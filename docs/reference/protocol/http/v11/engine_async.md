@@ -1,38 +1,36 @@
-<a id="engine-async-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index.svg" alt="Index for engine_async.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index-dark.svg" alt="Index for engine_async.h">
-  </a>
-</h1>
+<a id="engine-async"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index.svg" alt="engine_async">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index-dark.svg" alt="engine_async">
+</a>
 
 **Header:** [include/protocol/http/v11/engine_async.h](../../../../../include/protocol/http/v11/engine_async.h)
 
 The asynchronous engine manages the state of multiple concurrent requests and responses. It ensures that responses are sent in the order of their corresponding requests, even if they complete out of order. It also handles connection closing and resource management for pending requests.
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [engine_async](#type-engine-async) · *type*
+[engine_async](#type-engine-async)
 
-**protocol::http::v11::engine_async**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::engine_async
 
-- [handles](#method-handles) · *method*
-- [handle_request](#method-handle-request) · *method*
-- [handle_error](#method-handle-error) · *method*
-- [handle_interim](#method-handle-interim) · *method*
-- [set_on_send](#method-set-on-send) · *method*
-- [set_on_close](#method-set-on-close) · *method*
-- [reserve](#method-reserve) · *method*
-- [begin](#method-begin) · *method*
-- [end](#method-end) · *method*
-- [stop](#method-stop) · *method*
-- [closing](#method-closing) · *method*
-- [accepting](#method-accepting) · *method*
-- [idle](#method-idle) · *method*
-- [submit](#method-submit) · *method*
-- [close_now](#method-close-now) · *method*
+[handles](#method-handles) ·
+[handle_request](#method-handle-request) ·
+[handle_error](#method-handle-error) ·
+[handle_interim](#method-handle-interim) ·
+[set_on_send](#method-set-on-send) ·
+[set_on_close](#method-set-on-close) ·
+[reserve](#method-reserve) ·
+[begin](#method-begin) ·
+[end](#method-end) ·
+[stop](#method-stop) ·
+[closing](#method-closing) ·
+[accepting](#method-accepting) ·
+[idle](#method-idle) ·
+[submit](#method-submit) ·
+[close_now](#method-close-now)
 
 <a id="type-engine-async"></a>
 

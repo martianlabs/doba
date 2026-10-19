@@ -1,24 +1,22 @@
-<a id="from-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/from/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/from/index.svg" alt="Index for from.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/from/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/from/index-dark.svg" alt="Index for from.h">
-  </a>
-</h1>
+<a id="from"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/from/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/from/index.svg" alt="from">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/from/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/from/index-dark.svg" alt="from">
+</a>
 
 **Header:** [include/protocol/http/common/headers/from.h](../../../../../../include/protocol/http/common/headers/from.h)
 
 |                                                                      from | | RFC 9110 S10.1.2 From                                                     | | The "From" header field contains an Internet email address for a human    | | user who controls the requesting user agent. The address ought to be      | | machine-usable, as defined by "mailb
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [from](#type-from) · *type*
+[from](#type-from)
 
-**protocol::http::headers::from**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::from
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-from"></a>
 

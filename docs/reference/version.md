@@ -1,25 +1,23 @@
-<a id="version-h"></a>
-<h1>
-  <a href="../../resources/docs/reference/version/index.svg#gh-light-mode-only">
-    <img src="../../resources/docs/reference/version/index.svg" alt="Index for version.h">
-  </a>
-  <a href="../../resources/docs/reference/version/index-dark.svg#gh-dark-mode-only">
-    <img src="../../resources/docs/reference/version/index-dark.svg" alt="Index for version.h">
-  </a>
-</h1>
+<a id="version"></a>
+<a href="../../resources/docs/reference/version/index.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/version/index.svg" alt="version">
+</a>
+<a href="../../resources/docs/reference/version/index-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/version/index-dark.svg" alt="version">
+</a>
 
 **Header:** [include/version.h](../../include/version.h)
 
 Defines the preprocessor values listed below.
 
-**doba**
+### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> doba
 
-- [DOBA_VERSION_MAJOR](#macro-doba-version-major) · *macro*
-- [DOBA_VERSION_MINOR](#macro-doba-version-minor) · *macro*
-- [DOBA_VERSION_PATCH](#macro-doba-version-patch) · *macro*
-- [DOBA_VERSION_STRINGIFY_IMPL](#macro-doba-version-stringify-impl) · *macro*
-- [DOBA_VERSION_STRINGIFY](#macro-doba-version-stringify) · *macro*
-- [DOBA_VERSION](#macro-doba-version) · *macro*
+[DOBA_VERSION_MAJOR](#macro-doba-version-major) ·
+[DOBA_VERSION_MINOR](#macro-doba-version-minor) ·
+[DOBA_VERSION_PATCH](#macro-doba-version-patch) ·
+[DOBA_VERSION_STRINGIFY_IMPL](#macro-doba-version-stringify-impl) ·
+[DOBA_VERSION_STRINGIFY](#macro-doba-version-stringify) ·
+[DOBA_VERSION](#macro-doba-version)
 
 <a id="macro-doba-version-major"></a>
 

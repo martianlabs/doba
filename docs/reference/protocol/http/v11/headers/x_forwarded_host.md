@@ -1,25 +1,23 @@
-<a id="x-forwarded-host-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_host/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_host/index.svg" alt="Index for x_forwarded_host.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_host/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_host/index-dark.svg" alt="Index for x_forwarded_host.h">
-  </a>
-</h1>
+<a id="x-forwarded-host"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_host/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_host/index.svg" alt="x_forwarded_host">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_host/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_host/index-dark.svg" alt="x_forwarded_host">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/x_forwarded_host.h](../../../../../../include/protocol/http/v11/headers/x_forwarded_host.h)
 
 |                                                          x-forwarded-host | | Non-standard / de-facto X-Forwarded-Host                                  | | The "X-Forwarded-Host" header field is a de-facto request header used by  | | proxies, reverse proxies, load balancers, and CDNs to preserve the        | | original Host value requested by the
 
-**protocol::http::v11::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
 
-- [x_forwarded_host](#type-x-forwarded-host) · *type*
+[x_forwarded_host](#type-x-forwarded-host)
 
-**protocol::http::v11::headers::x_forwarded_host**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::x_forwarded_host
 
-- [check](#method-check) · *method*
-- [interpret](#method-interpret) · *method*
+[check](#method-check) ·
+[interpret](#method-interpret)
 
 <a id="type-x-forwarded-host"></a>
 

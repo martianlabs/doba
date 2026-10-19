@@ -1,40 +1,35 @@
-<a id="router-handler-signature-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index.svg" alt="Index for router_handler_signature.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index-dark.svg" alt="Index for router_handler_signature.h">
-  </a>
-</h1>
+<a id="router-handler-signature"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index.svg" alt="router_handler_signature">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index-dark.svg" alt="router_handler_signature">
+</a>
 
 **Header:** [include/protocol/http/common/router_handler_signature.h](../../../../../include/protocol/http/common/router_handler_signature.h)
 
 Provides the router handler signature protocol component.
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [router_handler_signature](#type-router-handler-signature) · *type*
-- [router_handler_signature_base](#type-router-handler-signature-base) · *type*
+[router_handler_signature](#type-router-handler-signature) ·
+[router_handler_signature_base](#type-router-handler-signature-base) ·
+[router_handler_signature](#type-router-handler-signature-retty-cty-reqty-resty-args-const) ·
+[router_handler_signature](#type-router-handler-signature-retty-cty-reqty-resty-args-const-noexcept) ·
+[router_handler_signature](#type-router-handler-signature-retty-cty-reqty-resty-args) ·
+[router_handler_signature](#type-router-handler-signature-retty-cty-reqty-resty-args-noexcept) ·
+[router_handler_lambda](#concept-router-handler-lambda)
 
-**protocol::http::router_handler_signature_base**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::router_handler_signature_base
 
-- [return_type](#alias-return-type) · *alias*
-- [request_type](#alias-request-type) · *alias*
-- [response_type](#alias-response-type) · *alias*
-- [parameter_count](#constant-parameter-count) · *constant*
-- [bind](#method-bind) · *method*
-- [make_parametrized](#method-make-parametrized) · *method*
-- [make_parametrized_async](#method-make-parametrized-async) · *method*
-- [check](#method-check) · *method*
-
-**protocol::http**
-
-- [router_handler_signature](#type-router-handler-signature-retty-cty-reqty-resty-args-const) · *type*
-- [router_handler_signature](#type-router-handler-signature-retty-cty-reqty-resty-args-const-noexcept) · *type*
-- [router_handler_signature](#type-router-handler-signature-retty-cty-reqty-resty-args) · *type*
-- [router_handler_signature](#type-router-handler-signature-retty-cty-reqty-resty-args-noexcept) · *type*
-- [router_handler_lambda](#concept-router-handler-lambda) · *concept*
+[return_type](#alias-return-type) ·
+[request_type](#alias-request-type) ·
+[response_type](#alias-response-type) ·
+[parameter_count](#constant-parameter-count) ·
+[bind](#method-bind) ·
+[make_parametrized](#method-make-parametrized) ·
+[make_parametrized_async](#method-make-parametrized-async) ·
+[check](#method-check)
 
 <a id="type-router-handler-signature"></a>
 

@@ -1,24 +1,22 @@
-<a id="if-none-match-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_none_match/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_none_match/index.svg" alt="Index for if_none_match.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_none_match/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_none_match/index-dark.svg" alt="Index for if_none_match.h">
-  </a>
-</h1>
+<a id="if-none-match"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_none_match/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_none_match/index.svg" alt="if_none_match">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_none_match/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_none_match/index-dark.svg" alt="if_none_match">
+</a>
 
 **Header:** [include/protocol/http/common/headers/if_none_match.h](../../../../../../include/protocol/http/common/headers/if_none_match.h)
 
 |                                                             if-none-match | | RFC 9110 S13.1.2 If-None-Match                                            | | The "If-None-Match" header field makes a request conditional on a         | | recipient cache or origin server either not having any current            | | representation of the target resourc
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [if_none_match](#type-if-none-match) · *type*
+[if_none_match](#type-if-none-match)
 
-**protocol::http::headers::if_none_match**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::if_none_match
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-if-none-match"></a>
 

@@ -1,24 +1,22 @@
-<a id="content-location-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_location/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_location/index.svg" alt="Index for content_location.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_location/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_location/index-dark.svg" alt="Index for content_location.h">
-  </a>
-</h1>
+<a id="content-location"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_location/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_location/index.svg" alt="content_location">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_location/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_location/index-dark.svg" alt="content_location">
+</a>
 
 **Header:** [include/protocol/http/common/headers/content_location.h](../../../../../../include/protocol/http/common/headers/content_location.h)
 
 |                                                          content-location | | RFC 9110 S8.7 Content-Location                                            | | The "Content-Location" header field references a URI that identifies a    | | resource corresponding to the representation enclosed in the message.     | | The identified resource is not neces
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [content_location](#type-content-location) · *type*
+[content_location](#type-content-location)
 
-**protocol::http::headers::content_location**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::content_location
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-content-location"></a>
 

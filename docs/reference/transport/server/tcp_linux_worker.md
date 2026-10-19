@@ -1,34 +1,32 @@
-<a id="tcp-linux-worker-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index.svg" alt="Index for tcp_linux_worker.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index-dark.svg" alt="Index for tcp_linux_worker.h">
-  </a>
-</h1>
+<a id="tcp-linux-worker"></a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index.svg" alt="tcp_linux_worker">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index-dark.svg" alt="tcp_linux_worker">
+</a>
 
 **Header:** [include/transport/server/tcp_linux_worker.h](../../../../include/transport/server/tcp_linux_worker.h)
 
 This struct represents a worker thread that handles TCP connections for an engine. It manages the `epoll` instance, listener socket, and event file descriptors. It also sets up, starts, and stops the worker, runs its thread, checks whether the current thread is that worker, and handles connection events.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [kStopEventId](#constant-kstopeventid) · *constant*
-- [kWorkEventId](#constant-kworkeventid) · *constant*
-- [kLstnrEventId](#constant-klstnreventid) · *constant*
-- [worker](#type-worker) · *type*
+[kStopEventId](#constant-kstopeventid) ·
+[kWorkEventId](#constant-kworkeventid) ·
+[kLstnrEventId](#constant-klstnreventid) ·
+[worker](#type-worker)
 
-**transport::server::worker**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::worker
 
-- [setup](#method-setup) · *method*
-- [start](#method-start) · *method*
-- [is_current_thread()](#method-is-current-thread) · *method*
-- [is_current_thread(cr_engine)](#method-is-current-thread-2) · *method*
-- [stop](#method-stop) · *method*
-- [request_stop](#method-request-stop) · *method*
-- [request_quiesce](#method-request-quiesce) · *method*
-- [wait_quiesced](#method-wait-quiesced) · *method*
+[setup](#method-setup) ·
+[start](#method-start) ·
+[is_current_thread()](#method-is-current-thread) ·
+[is_current_thread(cr_engine)](#method-is-current-thread-2) ·
+[stop](#method-stop) ·
+[request_stop](#method-request-stop) ·
+[request_quiesce](#method-request-quiesce) ·
+[wait_quiesced](#method-wait-quiesced)
 
 <a id="constant-kstopeventid"></a>
 

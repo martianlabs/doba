@@ -1,20 +1,18 @@
-<a id="contracts-h"></a>
-<h1>
-  <a href="../../resources/docs/reference/contracts/index.svg#gh-light-mode-only">
-    <img src="../../resources/docs/reference/contracts/index.svg" alt="Index for contracts.h">
-  </a>
-  <a href="../../resources/docs/reference/contracts/index-dark.svg#gh-dark-mode-only">
-    <img src="../../resources/docs/reference/contracts/index-dark.svg" alt="Index for contracts.h">
-  </a>
-</h1>
+<a id="contracts"></a>
+<a href="../../resources/docs/reference/contracts/index.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/contracts/index.svg" alt="contracts">
+</a>
+<a href="../../resources/docs/reference/contracts/index-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/contracts/index-dark.svg" alt="contracts">
+</a>
 
 **Header:** [include/contracts.h](../../include/contracts.h)
 
 This header declares the types and operations listed below.
 
-**contracts**
+### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> contracts
 
-- [http_server](#concept-http-server) · *concept*
+[http_server](#concept-http-server)
 
 <a id="concept-http-server"></a>
 

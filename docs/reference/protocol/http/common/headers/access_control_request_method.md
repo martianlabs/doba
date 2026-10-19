@@ -1,24 +1,22 @@
-<a id="access-control-request-method-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index.svg" alt="Index for access_control_request_method.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index-dark.svg" alt="Index for access_control_request_method.h">
-  </a>
-</h1>
+<a id="access-control-request-method"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index.svg" alt="access_control_request_method">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index-dark.svg" alt="access_control_request_method">
+</a>
 
 **Header:** [include/protocol/http/common/headers/access_control_request_method.h](../../../../../../include/protocol/http/common/headers/access_control_request_method.h)
 
 |                                             access-control-request-method | | Fetch S3.3.2 Access-Control-Request-Method                                | | The "Access-Control-Request-Method" request header field is used by a     | | user agent in a CORS-preflight request to indicate which HTTP method a    | | future CORS request to the same reso
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [access_control_request_method](#type-access-control-request-method) · *type*
+[access_control_request_method](#type-access-control-request-method)
 
-**protocol::http::headers::access_control_request_method**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::access_control_request_method
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-access-control-request-method"></a>
 

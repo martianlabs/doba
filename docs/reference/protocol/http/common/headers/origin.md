@@ -1,24 +1,22 @@
-<a id="origin-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/origin/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/origin/index.svg" alt="Index for origin.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/origin/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/origin/index-dark.svg" alt="Index for origin.h">
-  </a>
-</h1>
+<a id="origin"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/origin/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/origin/index.svg" alt="origin">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/origin/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/origin/index-dark.svg" alt="origin">
+</a>
 
 **Header:** [include/protocol/http/common/headers/origin.h](../../../../../../include/protocol/http/common/headers/origin.h)
 
 |                                                                    origin | | RFC 6454 S7 Origin                                                        | | The "Origin" header field indicates the origin or origins that caused the | | user agent to issue an HTTP request. It is mainly used by servers to make | | access-control decisions based on th
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [origin](#type-origin) · *type*
+[origin](#type-origin)
 
-**protocol::http::headers::origin**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::origin
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-origin"></a>
 

@@ -1,33 +1,28 @@
-<a id="hash-base-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/hash_base/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/hash_base/index.svg" alt="Index for hash_base.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/hash_base/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/hash_base/index-dark.svg" alt="Index for hash_base.h">
-  </a>
-</h1>
+<a id="hash-base"></a>
+<a href="../../../resources/docs/reference/common/hash_base/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/hash_base/index.svg" alt="hash_base">
+</a>
+<a href="../../../resources/docs/reference/common/hash_base/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/hash_base/index-dark.svg" alt="hash_base">
+</a>
 
 **Header:** [include/common/hash_base.h](../../../include/common/hash_base.h)
 
 This struct is needed for the hash_set/hash_map helpers. It performs an ASCII case-insensitive hash.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [ascii_to_lower](#function-ascii-to-lower) · *function*
-- [base_hash](#type-base-hash) · *type*
+[ascii_to_lower](#function-ascii-to-lower) ·
+[base_hash](#type-base-hash) ·
+[base_equal](#type-base-equal)
 
-**common::base_hash**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::base_hash
 
-- [is_transparent](#alias-is-transparent) · *alias*
+[is_transparent](#alias-is-transparent)
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::base_equal
 
-- [base_equal](#type-base-equal) · *type*
-
-**common::base_equal**
-
-- [is_transparent](#alias-is-transparent-2) · *alias*
+[is_transparent](#alias-is-transparent-2)
 
 <a id="function-ascii-to-lower"></a>
 

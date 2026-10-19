@@ -1,25 +1,23 @@
-<a id="transfer-encoding-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index.svg" alt="Index for transfer_encoding.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index-dark.svg" alt="Index for transfer_encoding.h">
-  </a>
-</h1>
+<a id="transfer-encoding"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index.svg" alt="transfer_encoding">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index-dark.svg" alt="transfer_encoding">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/transfer_encoding.h](../../../../../../include/protocol/http/v11/headers/transfer_encoding.h)
 
 The "Transfer-Encoding" header field lists the transfer coding names corresponding to the sequence of transfer codings that have been, or will be, applied to the content in order to form the message body.
 
-**protocol::http::v11::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
 
-- [transfer_encoding](#type-transfer-encoding) · *type*
+[transfer_encoding](#type-transfer-encoding)
 
-**protocol::http::v11::headers::transfer_encoding**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::transfer_encoding
 
-- [check](#method-check) · *method*
-- [interpret](#method-interpret) · *method*
+[check](#method-check) ·
+[interpret](#method-interpret)
 
 <a id="type-transfer-encoding"></a>
 

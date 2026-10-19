@@ -1,29 +1,27 @@
-<a id="engine-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/engine/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/engine/index.svg" alt="Index for engine.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/engine/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/engine/index-dark.svg" alt="Index for engine.h">
-  </a>
-</h1>
+<a id="engine"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/engine/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine/index.svg" alt="engine">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/engine/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine/index-dark.svg" alt="engine">
+</a>
 
 **Header:** [include/protocol/http/v11/engine.h](../../../../../include/protocol/http/v11/engine.h)
 
 HTTP/1.1 protocol engine.
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [engine](#type-engine) · *type*
+[engine](#type-engine)
 
-**protocol::http::v11::engine**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::engine
 
-- [policies_type](#alias-policies-type) · *alias*
-- [set_on_send](#method-set-on-send) · *method*
-- [set_on_close](#method-set-on-close) · *method*
-- [set_execution_capacity](#method-set-execution-capacity) · *method*
-- [stop](#method-stop) · *method*
-- [on_bytes_received](#method-on-bytes-received) · *method*
+[policies_type](#alias-policies-type) ·
+[set_on_send](#method-set-on-send) ·
+[set_on_close](#method-set-on-close) ·
+[set_execution_capacity](#method-set-execution-capacity) ·
+[stop](#method-stop) ·
+[on_bytes_received](#method-on-bytes-received)
 
 <a id="type-engine"></a>
 

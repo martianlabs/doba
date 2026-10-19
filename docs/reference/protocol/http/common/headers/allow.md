@@ -1,24 +1,22 @@
-<a id="allow-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/allow/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/allow/index.svg" alt="Index for allow.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/allow/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/allow/index-dark.svg" alt="Index for allow.h">
-  </a>
-</h1>
+<a id="allow"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/allow/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/allow/index.svg" alt="allow">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/allow/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/allow/index-dark.svg" alt="allow">
+</a>
 
 **Header:** [include/protocol/http/common/headers/allow.h](../../../../../../include/protocol/http/common/headers/allow.h)
 
 |                                                                     allow | | RFC 9110 S10.2.1 Allow                                                    | | The "Allow" header field lists the set of methods advertised as supported | | by the target resource. Its purpose is strictly to inform the recipient   | | of valid request methods associated
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [allow](#type-allow) · *type*
+[allow](#type-allow)
 
-**protocol::http::headers::allow**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::allow
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-allow"></a>
 

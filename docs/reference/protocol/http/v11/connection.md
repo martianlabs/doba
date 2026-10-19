@@ -1,33 +1,31 @@
-<a id="connection-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/connection/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/connection/index.svg" alt="Index for connection.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/connection/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/connection/index-dark.svg" alt="Index for connection.h">
-  </a>
-</h1>
+<a id="connection"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/connection/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/connection/index.svg" alt="connection">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/connection/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/connection/index-dark.svg" alt="connection">
+</a>
 
 **Header:** [include/protocol/http/v11/connection.h](../../../../../include/protocol/http/v11/connection.h)
 
 The hop-by-hop transport state that the semantic layer derives from a request. Framing and connection interpreters/rules read the parsed values of Connection, Transfer-Encoding, TE, Trailer, and Upgrade and mutate this state accordingly. It is deliberately separate from both the agnostic deserialization result and the request itself, because it
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [connection](#type-connection) · *type*
+[connection](#type-connection)
 
-**protocol::http::v11::connection**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::connection
 
-- [persistent](#field-persistent) · *field*
-- [close_requested](#field-close-requested) · *field*
-- [transfer_codings](#field-transfer-codings) · *field*
-- [chunked](#field-chunked) · *field*
-- [te_codings](#field-te-codings) · *field*
-- [accepts_trailers](#field-accepts-trailers) · *field*
-- [trailer_names](#field-trailer-names) · *field*
-- [upgrade_offer](#field-upgrade-offer) · *field*
-- [options](#field-options) · *field*
-- [expects_continue](#field-expects-continue) · *field*
+[persistent](#field-persistent) ·
+[close_requested](#field-close-requested) ·
+[transfer_codings](#field-transfer-codings) ·
+[chunked](#field-chunked) ·
+[te_codings](#field-te-codings) ·
+[accepts_trailers](#field-accepts-trailers) ·
+[trailer_names](#field-trailer-names) ·
+[upgrade_offer](#field-upgrade-offer) ·
+[options](#field-options) ·
+[expects_continue](#field-expects-continue)
 
 <a id="type-connection"></a>
 

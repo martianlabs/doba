@@ -1,20 +1,18 @@
-<a id="environment-windows-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/network/environment_windows/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/network/environment_windows/index.svg" alt="Index for environment_windows.h">
-  </a>
-  <a href="../../../resources/docs/reference/network/environment_windows/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/network/environment_windows/index-dark.svg" alt="Index for environment_windows.h">
-  </a>
-</h1>
+<a id="environment-windows"></a>
+<a href="../../../resources/docs/reference/network/environment_windows/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/network/environment_windows/index.svg" alt="environment_windows">
+</a>
+<a href="../../../resources/docs/reference/network/environment_windows/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/network/environment_windows/index-dark.svg" alt="environment_windows">
+</a>
 
 **Header:** [include/network/environment_windows.h](../../../include/network/environment_windows.h)
 
 Provides the environment type.
 
-**network::detail**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> network::detail
 
-- [environment](#type-environment) · *type*
+[environment](#type-environment)
 
 <a id="type-environment"></a>
 

@@ -1,29 +1,27 @@
-<a id="tcp-windows-worker-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_worker/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_worker/index.svg" alt="Index for tcp_windows_worker.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_worker/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_worker/index-dark.svg" alt="Index for tcp_windows_worker.h">
-  </a>
-</h1>
+<a id="tcp-windows-worker"></a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_worker/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_worker/index.svg" alt="tcp_windows_worker">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_worker/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_worker/index-dark.svg" alt="tcp_windows_worker">
+</a>
 
 **Header:** [include/transport/server/tcp_windows_worker.h](../../../../include/transport/server/tcp_windows_worker.h)
 
 This struct manages a pool of worker threads that handle TCP connections and data. It sets up a listener, accepts new connections, and creates a context for each one. It also lets you start, stop, or quiesce the workers and set callbacks for when connections are established or disconnected.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [worker](#type-worker) · *type*
+[worker](#type-worker)
 
-**transport::server::worker**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::worker
 
-- [policies_type](#alias-policies-type) · *alias*
-- [start](#method-start) · *method*
-- [stop](#method-stop) · *method*
-- [quiesce](#method-quiesce) · *method*
-- [set_on_connection](#method-set-on-connection) · *method*
-- [set_on_disconnection](#method-set-on-disconnection) · *method*
+[policies_type](#alias-policies-type) ·
+[start](#method-start) ·
+[stop](#method-stop) ·
+[quiesce](#method-quiesce) ·
+[set_on_connection](#method-set-on-connection) ·
+[set_on_disconnection](#method-set-on-disconnection)
 
 <a id="type-worker"></a>
 

@@ -1,27 +1,25 @@
-<a id="http-server-h"></a>
-<h1>
-  <a href="../../resources/docs/reference/http_server/index.svg#gh-light-mode-only">
-    <img src="../../resources/docs/reference/http_server/index.svg" alt="Index for http_server.h">
-  </a>
-  <a href="../../resources/docs/reference/http_server/index-dark.svg#gh-dark-mode-only">
-    <img src="../../resources/docs/reference/http_server/index-dark.svg" alt="Index for http_server.h">
-  </a>
-</h1>
+<a id="http-server"></a>
+<a href="../../resources/docs/reference/http_server/index.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/http_server/index.svg" alt="http_server">
+</a>
+<a href="../../resources/docs/reference/http_server/index-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/http_server/index-dark.svg" alt="http_server">
+</a>
 
 **Header:** [include/http_server.h](../../include/http_server.h)
 
 Combines an HTTP/1.1 router and protocol engine with a server transport. TCP is
 the default transport.
 
-**doba**
+### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> doba
 
-- [http_server](#type-http-server) · *type*
+[http_server](#type-http-server)
 
-**http_server**
+### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> http_server
 
-- [add_route&lt;Hty&gt;(method, route, handler)](#method-add-route) · *method*
-- [add_route&lt;Aty, Hty&gt;(method, route, handler)](#method-add-route-2) · *method*
-- [add_controller](#method-add-controller) · *method*
+[add_route&lt;Hty&gt;(method, route, handler)](#method-add-route) ·
+[add_route&lt;Aty, Hty&gt;(method, route, handler)](#method-add-route-2) ·
+[add_controller](#method-add-controller)
 
 <a id="type-http-server"></a>
 

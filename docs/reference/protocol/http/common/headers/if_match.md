@@ -1,24 +1,22 @@
-<a id="if-match-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_match/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_match/index.svg" alt="Index for if_match.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_match/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_match/index-dark.svg" alt="Index for if_match.h">
-  </a>
-</h1>
+<a id="if-match"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_match/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_match/index.svg" alt="if_match">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_match/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_match/index-dark.svg" alt="if_match">
+</a>
 
 **Header:** [include/protocol/http/common/headers/if_match.h](../../../../../../include/protocol/http/common/headers/if_match.h)
 
 |                                                                  if-match | | RFC 9110 S13.1.1 If-Match                                                 | | The "If-Match" header field makes the requested method conditional on the | | target resource having a current representation that satisfies the        | | supplied validator condition.
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [if_match](#type-if-match) · *type*
+[if_match](#type-if-match)
 
-**protocol::http::headers::if_match**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::if_match
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-if-match"></a>
 

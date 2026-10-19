@@ -1,25 +1,23 @@
-<a id="max-forwards-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index.svg" alt="Index for max_forwards.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index-dark.svg" alt="Index for max_forwards.h">
-  </a>
-</h1>
+<a id="max-forwards"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index.svg" alt="max_forwards">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index-dark.svg" alt="max_forwards">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/max_forwards.h](../../../../../../include/protocol/http/v11/headers/max_forwards.h)
 
 |                                                              max-forwards | | RFC 9110 S7.6.2 Max-Forwards                                              | | The "Max-Forwards" header field provides a mechanism with the TRACE and   | | OPTIONS request methods to limit the number of times that a request is    | | forwarded by proxies.
 
-**protocol::http::v11::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
 
-- [max_forwards](#type-max-forwards) · *type*
+[max_forwards](#type-max-forwards)
 
-**protocol::http::v11::headers::max_forwards**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::max_forwards
 
-- [check](#method-check) · *method*
-- [interpret](#method-interpret) · *method*
+[check](#method-check) ·
+[interpret](#method-interpret)
 
 <a id="type-max-forwards"></a>
 

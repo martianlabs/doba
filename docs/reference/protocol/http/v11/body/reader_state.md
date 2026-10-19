@@ -1,27 +1,25 @@
-<a id="reader-state-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_state/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_state/index.svg" alt="Index for reader_state.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_state/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_state/index-dark.svg" alt="Index for reader_state.h">
-  </a>
-</h1>
+<a id="reader-state"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_state/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_state/index.svg" alt="reader_state">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_state/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_state/index-dark.svg" alt="reader_state">
+</a>
 
 **Header:** [include/protocol/http/v11/body/reader_state.h](../../../../../../include/protocol/http/v11/body/reader_state.h)
 
 Result of a body reader read() call. produced  - bytes of decoded payload written into the caller-supplied output span during this call. Wire framing bytes consumed from the source reader are internal and not reported. complete  - body fully decoded; no further read() calls needed. has_error - a protocol or size-limit error was detected. error
 
-**protocol::http::v11::body**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body
 
-- [reader_state](#type-reader-state) · *type*
+[reader_state](#type-reader-state)
 
-**protocol::http::v11::body::reader_state**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body::reader_state
 
-- [produced](#field-produced) · *field*
-- [complete](#field-complete) · *field*
-- [has_error](#field-has-error) · *field*
-- [error](#field-error) · *field*
+[produced](#field-produced) ·
+[complete](#field-complete) ·
+[has_error](#field-has-error) ·
+[error](#field-error)
 
 <a id="type-reader-state"></a>
 

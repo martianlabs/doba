@@ -1,26 +1,24 @@
-<a id="tcp-windows-overlapped-accept-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/index.svg" alt="Index for tcp_windows_overlapped_accept.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/index-dark.svg" alt="Index for tcp_windows_overlapped_accept.h">
-  </a>
-</h1>
+<a id="tcp-windows-overlapped-accept"></a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/index.svg" alt="tcp_windows_overlapped_accept">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/index-dark.svg" alt="tcp_windows_overlapped_accept">
+</a>
 
 **Header:** [include/transport/server/tcp_windows_overlapped_accept.h](../../../../include/transport/server/tcp_windows_overlapped_accept.h)
 
 Windows overlapped accept operation.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [kAcceptAddressBytes](#constant-kacceptaddressbytes) · *constant*
-- [overlapped_accept](#type-overlapped-accept) · *type*
+[kAcceptAddressBytes](#constant-kacceptaddressbytes) ·
+[overlapped_accept](#type-overlapped-accept)
 
-**transport::server::overlapped_accept**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::overlapped_accept
 
-- [socket](#field-socket) · *field*
-- [addresses](#field-addresses) · *field*
+[socket](#field-socket) ·
+[addresses](#field-addresses)
 
 <a id="constant-kacceptaddressbytes"></a>
 

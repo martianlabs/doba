@@ -1,20 +1,18 @@
-<a id="date-server-helpers-windows-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/date_server_helpers_windows/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/date_server_helpers_windows/index.svg" alt="Index for date_server_helpers_windows.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/date_server_helpers_windows/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/date_server_helpers_windows/index-dark.svg" alt="Index for date_server_helpers_windows.h">
-  </a>
-</h1>
+<a id="date-server-helpers-windows"></a>
+<a href="../../../resources/docs/reference/common/date_server_helpers_windows/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/date_server_helpers_windows/index.svg" alt="date_server_helpers_windows">
+</a>
+<a href="../../../resources/docs/reference/common/date_server_helpers_windows/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/date_server_helpers_windows/index-dark.svg" alt="date_server_helpers_windows">
+</a>
 
 **Header:** [include/common/date_server_helpers_windows.h](../../../include/common/date_server_helpers_windows.h)
 
 This header declares the types and operations listed below.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [gm_time](#function-gm-time) · *function*
+[gm_time](#function-gm-time)
 
 <a id="function-gm-time"></a>
 

@@ -1,28 +1,26 @@
-<a id="router-match-result-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router_match_result/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router_match_result/index.svg" alt="Index for router_match_result.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router_match_result/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router_match_result/index-dark.svg" alt="Index for router_match_result.h">
-  </a>
-</h1>
+<a id="router-match-result"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_match_result/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_match_result/index.svg" alt="router_match_result">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_match_result/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_match_result/index-dark.svg" alt="router_match_result">
+</a>
 
 **Header:** [include/protocol/http/common/router_match_result.h](../../../../../include/protocol/http/common/router_match_result.h)
 
 Provides the router match result protocol component.
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [router_match_result](#type-router-match-result) · *type*
+[router_match_result](#type-router-match-result)
 
-**protocol::http::router_match_result**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::router_match_result
 
-- [handler](#field-handler) · *field*
-- [parametrized_handler](#field-parametrized-handler) · *field*
-- [async_handler](#field-async-handler) · *field*
-- [async_parametrized_handler](#field-async-parametrized-handler) · *field*
-- [authenticate](#field-authenticate) · *field*
+[handler](#field-handler) ·
+[parametrized_handler](#field-parametrized-handler) ·
+[async_handler](#field-async-handler) ·
+[async_parametrized_handler](#field-async-parametrized-handler) ·
+[authenticate](#field-authenticate)
 
 <a id="type-router-match-result"></a>
 

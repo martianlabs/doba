@@ -1,24 +1,22 @@
-<a id="sec-websocket-protocol-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/index.svg" alt="Index for sec_websocket_protocol.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/index-dark.svg" alt="Index for sec_websocket_protocol.h">
-  </a>
-</h1>
+<a id="sec-websocket-protocol"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/index.svg" alt="sec_websocket_protocol">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/index-dark.svg" alt="sec_websocket_protocol">
+</a>
 
 **Header:** [include/protocol/http/common/headers/sec_websocket_protocol.h](../../../../../../include/protocol/http/common/headers/sec_websocket_protocol.h)
 
 |                                                    sec-websocket-protocol | | RFC 6455 S11.3.4 Sec-WebSocket-Protocol                                   | | The "Sec-WebSocket-Protocol" header field is used in the WebSocket        | | opening handshake to negotiate the application-level subprotocol layered  | | over the WebSocket connection.
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [sec_websocket_protocol](#type-sec-websocket-protocol) · *type*
+[sec_websocket_protocol](#type-sec-websocket-protocol)
 
-**protocol::http::headers::sec_websocket_protocol**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::sec_websocket_protocol
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-sec-websocket-protocol"></a>
 

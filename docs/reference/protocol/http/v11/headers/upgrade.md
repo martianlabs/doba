@@ -1,25 +1,23 @@
-<a id="upgrade-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index.svg" alt="Index for upgrade.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index-dark.svg" alt="Index for upgrade.h">
-  </a>
-</h1>
+<a id="upgrade"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index.svg" alt="upgrade">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index-dark.svg" alt="upgrade">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/upgrade.h](../../../../../../include/protocol/http/v11/headers/upgrade.h)
 
 |                                                                   upgrade | | RFC 9110 S7.8 Upgrade                                                     | | The "Upgrade" header field provides a mechanism for transitioning from    | | HTTP/1.1 to another protocol on the same connection.                      | | A client MAY send a list of protocol
 
-**protocol::http::v11::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
 
-- [upgrade](#type-upgrade) · *type*
+[upgrade](#type-upgrade)
 
-**protocol::http::v11::headers::upgrade**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::upgrade
 
-- [check](#method-check) · *method*
-- [interpret](#method-interpret) · *method*
+[check](#method-check) ·
+[interpret](#method-interpret)
 
 <a id="type-upgrade"></a>
 

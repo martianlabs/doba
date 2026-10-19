@@ -1,24 +1,22 @@
-<a id="filesystem-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/filesystem/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/filesystem/index.svg" alt="Index for filesystem.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/filesystem/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/filesystem/index-dark.svg" alt="Index for filesystem.h">
-  </a>
-</h1>
+<a id="filesystem"></a>
+<a href="../../../resources/docs/reference/common/filesystem/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/filesystem/index.svg" alt="filesystem">
+</a>
+<a href="../../../resources/docs/reference/common/filesystem/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/filesystem/index-dark.svg" alt="filesystem">
+</a>
 
 **Header:** [include/common/filesystem.h](../../../include/common/filesystem.h)
 
 This header declares the types and operations listed below.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [filesystem_root](#function-filesystem-root) · *function*
+[filesystem_root](#function-filesystem-root)
 
-**common::detail**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::detail
 
-- [filesystem_relative_path](#function-filesystem-relative-path) · *function*
+[filesystem_relative_path](#function-filesystem-relative-path)
 
 <a id="function-filesystem-root"></a>
 

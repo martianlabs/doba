@@ -1,26 +1,24 @@
-<a id="task-scheduler-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/task_scheduler/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/task_scheduler/index.svg" alt="Index for task_scheduler.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/task_scheduler/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/task_scheduler/index-dark.svg" alt="Index for task_scheduler.h">
-  </a>
-</h1>
+<a id="task-scheduler"></a>
+<a href="../../../resources/docs/reference/common/task_scheduler/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/task_scheduler/index.svg" alt="task_scheduler">
+</a>
+<a href="../../../resources/docs/reference/common/task_scheduler/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/task_scheduler/index-dark.svg" alt="task_scheduler">
+</a>
 
 **Header:** [include/common/task_scheduler.h](../../../include/common/task_scheduler.h)
 
 Provides the task scheduler type.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [task_scheduler](#type-task-scheduler) · *type*
+[task_scheduler](#type-task-scheduler)
 
-**common::task_scheduler**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::task_scheduler
 
-- [owner](#field-owner) · *field*
-- [post](#field-post) · *field*
-- [schedule](#field-schedule) · *field*
+[owner](#field-owner) ·
+[post](#field-post) ·
+[schedule](#field-schedule)
 
 <a id="type-task-scheduler"></a>
 

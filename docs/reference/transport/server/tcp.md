@@ -1,29 +1,24 @@
-<a id="tcp-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tcp/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp/index.svg" alt="Index for tcp.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tcp/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp/index-dark.svg" alt="Index for tcp.h">
-  </a>
-</h1>
+<a id="tcp"></a>
+<a href="../../../../resources/docs/reference/transport/server/tcp/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp/index.svg" alt="tcp">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tcp/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp/index-dark.svg" alt="tcp">
+</a>
 
 **Header:** [include/transport/server/tcp.h](../../../../include/transport/server/tcp.h)
 
 Platform-independent transport delegate types.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [types](#type-types) · *type*
+[types](#type-types) ·
+[tcp](#type-tcp)
 
-**transport::server::types**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::types
 
-- [on_client_connected_delegate](#alias-on-client-connected-delegate) · *alias*
-- [on_client_disconnected_delegate](#alias-on-client-disconnected-delegate) · *alias*
-
-**transport::server**
-
-- [tcp](#type-tcp) · *type*
+[on_client_connected_delegate](#alias-on-client-connected-delegate) ·
+[on_client_disconnected_delegate](#alias-on-client-disconnected-delegate)
 
 <a id="type-types"></a>
 

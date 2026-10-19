@@ -1,20 +1,18 @@
-<a id="router-handler-static-async-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_static_async/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_static_async/index.svg" alt="Index for router_handler_static_async.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_static_async/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_static_async/index-dark.svg" alt="Index for router_handler_static_async.h">
-  </a>
-</h1>
+<a id="router-handler-static-async"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_static_async/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_static_async/index.svg" alt="router_handler_static_async">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_static_async/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_static_async/index-dark.svg" alt="router_handler_static_async">
+</a>
 
 **Header:** [include/protocol/http/common/router_handler_static_async.h](../../../../../include/protocol/http/common/router_handler_static_async.h)
 
 This header declares the types and operations listed below.
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [router_handler_static_async](#alias-router-handler-static-async) · *alias*
+[router_handler_static_async](#alias-router-handler-static-async)
 
 <a id="alias-router-handler-static-async"></a>
 

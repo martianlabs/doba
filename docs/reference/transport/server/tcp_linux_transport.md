@@ -1,29 +1,27 @@
-<a id="tcp-linux-transport-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_linux_transport/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_linux_transport/index.svg" alt="Index for tcp_linux_transport.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_linux_transport/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_linux_transport/index-dark.svg" alt="Index for tcp_linux_transport.h">
-  </a>
-</h1>
+<a id="tcp-linux-transport"></a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_linux_transport/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_transport/index.svg" alt="tcp_linux_transport">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_linux_transport/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_transport/index-dark.svg" alt="tcp_linux_transport">
+</a>
 
 **Header:** [include/transport/server/tcp_linux_transport.h](../../../../include/transport/server/tcp_linux_transport.h)
 
 This class provides a basic TCP transport for Linux. It manages the worker threads that handle incoming and outgoing connections, and lets you set callbacks for connection and disconnection events. Before starting the transport, it also sets up the buffer sizes and listen backlog.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [basic_transport](#type-basic-transport) · *type*
+[basic_transport](#type-basic-transport)
 
-**transport::server::basic_transport**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::basic_transport
 
-- [policies_type](#alias-policies-type) · *alias*
-- [start](#method-start) · *method*
-- [stop](#method-stop) · *method*
-- [quiesce](#method-quiesce) · *method*
-- [set_on_connection](#method-set-on-connection) · *method*
-- [set_on_disconnection](#method-set-on-disconnection) · *method*
+[policies_type](#alias-policies-type) ·
+[start](#method-start) ·
+[stop](#method-stop) ·
+[quiesce](#method-quiesce) ·
+[set_on_connection](#method-set-on-connection) ·
+[set_on_disconnection](#method-set-on-disconnection)
 
 <a id="type-basic-transport"></a>
 

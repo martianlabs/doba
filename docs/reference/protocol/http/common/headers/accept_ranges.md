@@ -1,24 +1,22 @@
-<a id="accept-ranges-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index.svg" alt="Index for accept_ranges.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index-dark.svg" alt="Index for accept_ranges.h">
-  </a>
-</h1>
+<a id="accept-ranges"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index.svg" alt="accept_ranges">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index-dark.svg" alt="accept_ranges">
+</a>
 
 **Header:** [include/protocol/http/common/headers/accept_ranges.h](../../../../../../include/protocol/http/common/headers/accept_ranges.h)
 
 |                                                             accept-ranges | | RFC 9110 S14.3 Accept-Ranges                                              | | The "Accept-Ranges" response header field indicates whether an upstream   | | server supports range requests for the target resource.                   | | A server that supports byte-range re
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [accept_ranges](#type-accept-ranges) · *type*
+[accept_ranges](#type-accept-ranges)
 
-**protocol::http::headers::accept_ranges**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::accept_ranges
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-accept-ranges"></a>
 

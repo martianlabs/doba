@@ -1,66 +1,64 @@
-<a id="reason-phrases-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index.svg" alt="Index for reason_phrases.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index-dark.svg" alt="Index for reason_phrases.h">
-  </a>
-</h1>
+<a id="reason-phrases"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index.svg" alt="reason_phrases">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index-dark.svg" alt="reason_phrases">
+</a>
 
 **Header:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 Defines the preprocessor values listed below.
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [RP_100_CONTINUE](#macro-rp-100-continue) · *macro*
-- [RP_101_SWITCHING_PROTOCOLS](#macro-rp-101-switching-protocols) · *macro*
-- [RP_200_OK](#macro-rp-200-ok) · *macro*
-- [RP_201_CREATED](#macro-rp-201-created) · *macro*
-- [RP_202_ACCEPTED](#macro-rp-202-accepted) · *macro*
-- [RP_203_NON_AUTHORITATIVE_INFORMATION](#macro-rp-203-non-authoritative-information) · *macro*
-- [RP_204_NO_CONTENT](#macro-rp-204-no-content) · *macro*
-- [RP_205_RESET_CONTENT](#macro-rp-205-reset-content) · *macro*
-- [RP_206_PARTIAL_CONTENT](#macro-rp-206-partial-content) · *macro*
-- [RP_300_MULTIPLE_CHOICES](#macro-rp-300-multiple-choices) · *macro*
-- [RP_301_MOVED_PERMANENTLY](#macro-rp-301-moved-permanently) · *macro*
-- [RP_302_FOUND](#macro-rp-302-found) · *macro*
-- [RP_303_SEE_OTHER](#macro-rp-303-see-other) · *macro*
-- [RP_304_NOT_MODIFIED](#macro-rp-304-not-modified) · *macro*
-- [RP_305_USE_PROXY](#macro-rp-305-use-proxy) · *macro*
-- [RP_306_UNUSED](#macro-rp-306-unused) · *macro*
-- [RP_307_TEMPORARY_REDIRECT](#macro-rp-307-temporary-redirect) · *macro*
-- [RP_308_PERMANENT_REDIRECT](#macro-rp-308-permanent-redirect) · *macro*
-- [RP_400_BAD_REQUEST](#macro-rp-400-bad-request) · *macro*
-- [RP_401_UNAUTHORIZED](#macro-rp-401-unauthorized) · *macro*
-- [RP_402_PAYMENT_REQUIRED](#macro-rp-402-payment-required) · *macro*
-- [RP_403_FORBIDDEN](#macro-rp-403-forbidden) · *macro*
-- [RP_404_NOT_FOUND](#macro-rp-404-not-found) · *macro*
-- [RP_405_METHOD_NOT_ALLOWED](#macro-rp-405-method-not-allowed) · *macro*
-- [RP_406_NOT_ACCEPTABLE](#macro-rp-406-not-acceptable) · *macro*
-- [RP_407_PROXY_AUTHENTICATION_REQUIRED](#macro-rp-407-proxy-authentication-required) · *macro*
-- [RP_408_REQUEST_TIMEOUT](#macro-rp-408-request-timeout) · *macro*
-- [RP_409_CONFLICT](#macro-rp-409-conflict) · *macro*
-- [RP_410_GONE](#macro-rp-410-gone) · *macro*
-- [RP_411_LENGTH_REQUIRED](#macro-rp-411-length-required) · *macro*
-- [RP_412_PRECONDITION_FAILED](#macro-rp-412-precondition-failed) · *macro*
-- [RP_413_CONTENT_TOO_LARGE](#macro-rp-413-content-too-large) · *macro*
-- [RP_414_URI_TOO_LONG](#macro-rp-414-uri-too-long) · *macro*
-- [RP_415_UNSUPPORTED_MEDIA_TYPE](#macro-rp-415-unsupported-media-type) · *macro*
-- [RP_416_RANGE_NOT_SATISFIABLE](#macro-rp-416-range-not-satisfiable) · *macro*
-- [RP_417_EXPECTATION_FAILED](#macro-rp-417-expectation-failed) · *macro*
-- [RP_418_IM_A_TEAPOT](#macro-rp-418-im-a-teapot) · *macro*
-- [RP_421_MISDIRECTED_REQUEST](#macro-rp-421-misdirected-request) · *macro*
-- [RP_422_UNPROCESSABLE_CONTENT](#macro-rp-422-unprocessable-content) · *macro*
-- [RP_426_UPGRADE_REQUIRED](#macro-rp-426-upgrade-required) · *macro*
-- [RP_431_REQUEST_HEADER_FIELDS_TOO_LARGE](#macro-rp-431-request-header-fields-too-large) · *macro*
-- [RP_500_INTERNAL_SERVER_ERROR](#macro-rp-500-internal-server-error) · *macro*
-- [RP_501_NOT_IMPLEMENTED](#macro-rp-501-not-implemented) · *macro*
-- [RP_502_BAD_GATEWAY](#macro-rp-502-bad-gateway) · *macro*
-- [RP_503_SERVICE_UNAVAILABLE](#macro-rp-503-service-unavailable) · *macro*
-- [RP_504_GATEWAY_TIMEOUT](#macro-rp-504-gateway-timeout) · *macro*
-- [RP_505_HTTP_VERSION_NOT_SUPPORTED](#macro-rp-505-http-version-not-supported) · *macro*
+[RP_100_CONTINUE](#macro-rp-100-continue) ·
+[RP_101_SWITCHING_PROTOCOLS](#macro-rp-101-switching-protocols) ·
+[RP_200_OK](#macro-rp-200-ok) ·
+[RP_201_CREATED](#macro-rp-201-created) ·
+[RP_202_ACCEPTED](#macro-rp-202-accepted) ·
+[RP_203_NON_AUTHORITATIVE_INFORMATION](#macro-rp-203-non-authoritative-information) ·
+[RP_204_NO_CONTENT](#macro-rp-204-no-content) ·
+[RP_205_RESET_CONTENT](#macro-rp-205-reset-content) ·
+[RP_206_PARTIAL_CONTENT](#macro-rp-206-partial-content) ·
+[RP_300_MULTIPLE_CHOICES](#macro-rp-300-multiple-choices) ·
+[RP_301_MOVED_PERMANENTLY](#macro-rp-301-moved-permanently) ·
+[RP_302_FOUND](#macro-rp-302-found) ·
+[RP_303_SEE_OTHER](#macro-rp-303-see-other) ·
+[RP_304_NOT_MODIFIED](#macro-rp-304-not-modified) ·
+[RP_305_USE_PROXY](#macro-rp-305-use-proxy) ·
+[RP_306_UNUSED](#macro-rp-306-unused) ·
+[RP_307_TEMPORARY_REDIRECT](#macro-rp-307-temporary-redirect) ·
+[RP_308_PERMANENT_REDIRECT](#macro-rp-308-permanent-redirect) ·
+[RP_400_BAD_REQUEST](#macro-rp-400-bad-request) ·
+[RP_401_UNAUTHORIZED](#macro-rp-401-unauthorized) ·
+[RP_402_PAYMENT_REQUIRED](#macro-rp-402-payment-required) ·
+[RP_403_FORBIDDEN](#macro-rp-403-forbidden) ·
+[RP_404_NOT_FOUND](#macro-rp-404-not-found) ·
+[RP_405_METHOD_NOT_ALLOWED](#macro-rp-405-method-not-allowed) ·
+[RP_406_NOT_ACCEPTABLE](#macro-rp-406-not-acceptable) ·
+[RP_407_PROXY_AUTHENTICATION_REQUIRED](#macro-rp-407-proxy-authentication-required) ·
+[RP_408_REQUEST_TIMEOUT](#macro-rp-408-request-timeout) ·
+[RP_409_CONFLICT](#macro-rp-409-conflict) ·
+[RP_410_GONE](#macro-rp-410-gone) ·
+[RP_411_LENGTH_REQUIRED](#macro-rp-411-length-required) ·
+[RP_412_PRECONDITION_FAILED](#macro-rp-412-precondition-failed) ·
+[RP_413_CONTENT_TOO_LARGE](#macro-rp-413-content-too-large) ·
+[RP_414_URI_TOO_LONG](#macro-rp-414-uri-too-long) ·
+[RP_415_UNSUPPORTED_MEDIA_TYPE](#macro-rp-415-unsupported-media-type) ·
+[RP_416_RANGE_NOT_SATISFIABLE](#macro-rp-416-range-not-satisfiable) ·
+[RP_417_EXPECTATION_FAILED](#macro-rp-417-expectation-failed) ·
+[RP_418_IM_A_TEAPOT](#macro-rp-418-im-a-teapot) ·
+[RP_421_MISDIRECTED_REQUEST](#macro-rp-421-misdirected-request) ·
+[RP_422_UNPROCESSABLE_CONTENT](#macro-rp-422-unprocessable-content) ·
+[RP_426_UPGRADE_REQUIRED](#macro-rp-426-upgrade-required) ·
+[RP_431_REQUEST_HEADER_FIELDS_TOO_LARGE](#macro-rp-431-request-header-fields-too-large) ·
+[RP_500_INTERNAL_SERVER_ERROR](#macro-rp-500-internal-server-error) ·
+[RP_501_NOT_IMPLEMENTED](#macro-rp-501-not-implemented) ·
+[RP_502_BAD_GATEWAY](#macro-rp-502-bad-gateway) ·
+[RP_503_SERVICE_UNAVAILABLE](#macro-rp-503-service-unavailable) ·
+[RP_504_GATEWAY_TIMEOUT](#macro-rp-504-gateway-timeout) ·
+[RP_505_HTTP_VERSION_NOT_SUPPORTED](#macro-rp-505-http-version-not-supported)
 
 <a id="macro-rp-100-continue"></a>
 

@@ -1,24 +1,22 @@
-<a id="routing-h"></a>
-<h1>
-  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index.svg#gh-light-mode-only">
-    <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index.svg" alt="Index for routing.h">
-  </a>
-  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index-dark.svg" alt="Index for routing.h">
-  </a>
-</h1>
+<a id="routing"></a>
+<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index.svg#gh-light-mode-only">
+  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index.svg" alt="routing">
+</a>
+<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index-dark.svg" alt="routing">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/rules/routing.h](../../../../../../../include/protocol/http/v11/headers/rules/routing.h)
 
 Transversal routing rules that reconcile the request-target with the Host header, which the intra-header Host interpreter cannot decide alone because it never sees the request line. Applied by deserialize() after the single header pass has populated the context.
 
-**protocol::http::v11::headers::rules**
+### <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::rules
 
-- [routing](#type-routing) · *type*
+[routing](#type-routing)
 
-**protocol::http::v11::headers::rules::routing**
+### <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::rules::routing
 
-- [apply](#method-apply) · *method*
+[apply](#method-apply)
 
 <a id="type-routing"></a>
 

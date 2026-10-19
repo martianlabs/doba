@@ -1,25 +1,23 @@
-<a id="reader-raw-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index.svg" alt="Index for reader_raw.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index-dark.svg" alt="Index for reader_raw.h">
-  </a>
-</h1>
+<a id="reader-raw"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index.svg" alt="reader_raw">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index-dark.svg" alt="reader_raw">
+</a>
 
 **Header:** [include/protocol/http/v11/body/reader_raw.h](../../../../../../include/protocol/http/v11/body/reader_raw.h)
 
 Decodes a Content-Length-framed body by pulling wire bytes from a common::reader source and filling the caller-supplied output span.
 
-**protocol::http::v11::body**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body
 
-- [reader_raw](#type-reader-raw) · *type*
+[reader_raw](#type-reader-raw)
 
-**protocol::http::v11::body::reader_raw**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body::reader_raw
 
-- [read](#method-read) · *method*
-- [take_view](#method-take-view) · *method*
+[read](#method-read) ·
+[take_view](#method-take-view)
 
 <a id="type-reader-raw"></a>
 

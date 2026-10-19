@@ -1,21 +1,19 @@
-<a id="query-parameter-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index.svg" alt="Index for query_parameter.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index-dark.svg" alt="Index for query_parameter.h">
-  </a>
-</h1>
+<a id="query-parameter"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index.svg" alt="query_parameter">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index-dark.svg" alt="query_parameter">
+</a>
 
 **Header:** [include/protocol/http/common/query_parameter.h](../../../../../include/protocol/http/common/query_parameter.h)
 
 This header declares the types and operations listed below.
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [query_parameter](#alias-query-parameter) · *alias*
-- [query_parameter_view](#alias-query-parameter-view) · *alias*
+[query_parameter](#alias-query-parameter) ·
+[query_parameter_view](#alias-query-parameter-view)
 
 <a id="alias-query-parameter"></a>
 

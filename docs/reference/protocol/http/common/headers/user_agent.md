@@ -1,24 +1,22 @@
-<a id="user-agent-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index.svg" alt="Index for user_agent.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index-dark.svg" alt="Index for user_agent.h">
-  </a>
-</h1>
+<a id="user-agent"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index.svg" alt="user_agent">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index-dark.svg" alt="user_agent">
+</a>
 
 **Header:** [include/protocol/http/common/headers/user_agent.h](../../../../../../include/protocol/http/common/headers/user_agent.h)
 
 |                                                                user-agent | | RFC 9110 S10.1.5 User-Agent                                               | | The "User-Agent" request header field contains information about the user | | agent originating the request. It can be used by servers to identify the  | | scope of reported interoperability p
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [user_agent](#type-user-agent) · *type*
+[user_agent](#type-user-agent)
 
-**protocol::http::headers::user_agent**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::user_agent
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-user-agent"></a>
 

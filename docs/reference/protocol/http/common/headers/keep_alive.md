@@ -1,24 +1,22 @@
-<a id="keep-alive-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index.svg" alt="Index for keep_alive.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index-dark.svg" alt="Index for keep_alive.h">
-  </a>
-</h1>
+<a id="keep-alive"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index.svg" alt="keep_alive">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index-dark.svg" alt="keep_alive">
+</a>
 
 **Header:** [include/protocol/http/common/headers/keep_alive.h](../../../../../../include/protocol/http/common/headers/keep_alive.h)
 
 |                                                                keep-alive | | RFC 2068 S19.7.1.1 The Keep-Alive Header                                  | | The "Keep-Alive" header field is a historical HTTP/1.0 extension used     | | with explicitly negotiated persistent connections. It can carry optional  | | connection persistence parameters wh
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [x_keep_alive](#type-x-keep-alive) · *type*
+[x_keep_alive](#type-x-keep-alive)
 
-**protocol::http::headers::x_keep_alive**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::x_keep_alive
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-x-keep-alive"></a>
 

@@ -1,25 +1,23 @@
-<a id="forwarded-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index.svg" alt="Index for forwarded.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index-dark.svg" alt="Index for forwarded.h">
-  </a>
-</h1>
+<a id="forwarded"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index.svg" alt="forwarded">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index-dark.svg" alt="forwarded">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/forwarded.h](../../../../../../include/protocol/http/v11/headers/forwarded.h)
 
 |                                                                 forwarded | | RFC 7239 S4 Forwarded                                                     | | The "Forwarded" header field is an optional request header field used by  | | proxies to disclose information that is altered or lost when a request    | | is forwarded. It can carry, for exam
 
-**protocol::http::v11::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
 
-- [forwarded](#type-forwarded) · *type*
+[forwarded](#type-forwarded)
 
-**protocol::http::v11::headers::forwarded**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::forwarded
 
-- [check](#method-check) · *method*
-- [interpret](#method-interpret) · *method*
+[check](#method-check) ·
+[interpret](#method-interpret)
 
 <a id="type-forwarded"></a>
 

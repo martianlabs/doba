@@ -1,20 +1,18 @@
-<a id="target-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/target/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/target/index.svg" alt="Index for target.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/target/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/target/index-dark.svg" alt="Index for target.h">
-  </a>
-</h1>
+<a id="target"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/target/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/target/index.svg" alt="target">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/target/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/target/index-dark.svg" alt="target">
+</a>
 
 **Header:** [include/protocol/http/common/target.h](../../../../../include/protocol/http/common/target.h)
 
 This header declares the types and operations listed below.
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [target](#enum-target) · *enum*
+[target](#enum-target)
 
 <a id="enum-target"></a>
 

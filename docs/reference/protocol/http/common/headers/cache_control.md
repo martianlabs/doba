@@ -1,24 +1,22 @@
-<a id="cache-control-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/index.svg" alt="Index for cache_control.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/index-dark.svg" alt="Index for cache_control.h">
-  </a>
-</h1>
+<a id="cache-control"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/index.svg" alt="cache_control">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/index-dark.svg" alt="cache_control">
+</a>
 
 **Header:** [include/protocol/http/common/headers/cache_control.h](../../../../../../include/protocol/http/common/headers/cache_control.h)
 
 |                                                             cache-control | | RFC 9111 S5.2 Cache-Control                                               | | The "Cache-Control" header field carries a comma-separated list of cache  | | directives along a request/response chain.                                | | Cache directives are unidirectional:
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [cache_control](#type-cache-control) · *type*
+[cache_control](#type-cache-control)
 
-**protocol::http::headers::cache_control**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::cache_control
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-cache-control"></a>
 

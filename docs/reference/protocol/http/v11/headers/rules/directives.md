@@ -1,24 +1,22 @@
-<a id="directives-h"></a>
-<h1>
-  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/directives/index.svg#gh-light-mode-only">
-    <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/directives/index.svg" alt="Index for directives.h">
-  </a>
-  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/directives/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/directives/index-dark.svg" alt="Index for directives.h">
-  </a>
-</h1>
+<a id="directives"></a>
+<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/directives/index.svg#gh-light-mode-only">
+  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/directives/index.svg" alt="directives">
+</a>
+<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/directives/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/directives/index-dark.svg" alt="directives">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/rules/directives.h](../../../../../../../include/protocol/http/v11/headers/rules/directives.h)
 
 The transversal "connection directives" rules: they relate the Connection option tokens (the hop-by-hop directives) to other headers, which the intra-header Connection interpreter cannot check alone because it never sees those other headers. Applied by deserialize() after the single header pass has populated the context. Named "directives" (not
 
-**protocol::http::v11::headers::rules**
+### <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::rules
 
-- [directives](#type-directives) · *type*
+[directives](#type-directives)
 
-**protocol::http::v11::headers::rules::directives**
+### <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::rules::directives
 
-- [apply](#method-apply) · *method*
+[apply](#method-apply)
 
 <a id="type-directives"></a>
 

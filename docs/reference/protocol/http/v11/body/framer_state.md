@@ -1,27 +1,25 @@
-<a id="framer-state-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_state/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_state/index.svg" alt="Index for framer_state.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_state/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_state/index-dark.svg" alt="Index for framer_state.h">
-  </a>
-</h1>
+<a id="framer-state"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_state/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_state/index.svg" alt="framer_state">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_state/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_state/index-dark.svg" alt="framer_state">
+</a>
 
 **Header:** [include/protocol/http/v11/body/framer_state.h](../../../../../../include/protocol/http/v11/body/framer_state.h)
 
 Result of a body framer consume() call. consumed  - bytes taken from the input span (wire bytes, including any chunked framing). Caller advances its buffer by this amount; the remainder belongs to the next request. complete  - body fully parsed; no further consume() calls needed. has_error - a protocol or size-limit error was detected. error     -
 
-**protocol::http::v11::body**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body
 
-- [framer_state](#type-framer-state) · *type*
+[framer_state](#type-framer-state)
 
-**protocol::http::v11::body::framer_state**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body::framer_state
 
-- [consumed](#field-consumed) · *field*
-- [complete](#field-complete) · *field*
-- [has_error](#field-has-error) · *field*
-- [error](#field-error) · *field*
+[consumed](#field-consumed) ·
+[complete](#field-complete) ·
+[has_error](#field-has-error) ·
+[error](#field-error)
 
 <a id="type-framer-state"></a>
 

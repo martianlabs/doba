@@ -1,30 +1,28 @@
-<a id="tcp-policies-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_policies/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_policies/index.svg" alt="Index for tcp_policies.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_policies/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_policies/index-dark.svg" alt="Index for tcp_policies.h">
-  </a>
-</h1>
+<a id="tcp-policies"></a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_policies/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_policies/index.svg" alt="tcp_policies">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_policies/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_policies/index-dark.svg" alt="tcp_policies">
+</a>
 
 **Header:** [include/transport/server/tcp_policies.h](../../../../include/transport/server/tcp_policies.h)
 
 TCP operating policies.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [tcp_policies](#type-tcp-policies) · *type*
+[tcp_policies](#type-tcp-policies)
 
-**transport::server::tcp_policies**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::tcp_policies
 
-- [kDefaultReceiveBufferCapacity](#constant-kdefaultreceivebuffercapacity) · *constant*
-- [receive_buffer_capacity](#field-receive-buffer-capacity) · *field*
-- [worker_count](#field-worker-count) · *field*
-- [listen_backlog](#field-listen-backlog) · *field*
-- [max_buffered_send_bytes](#field-max-buffered-send-bytes) · *field*
-- [ip](#field-ip) · *field*
-- [port](#field-port) · *field*
+[kDefaultReceiveBufferCapacity](#constant-kdefaultreceivebuffercapacity) ·
+[receive_buffer_capacity](#field-receive-buffer-capacity) ·
+[worker_count](#field-worker-count) ·
+[listen_backlog](#field-listen-backlog) ·
+[max_buffered_send_bytes](#field-max-buffered-send-bytes) ·
+[ip](#field-ip) ·
+[port](#field-port)
 
 <a id="type-tcp-policies"></a>
 

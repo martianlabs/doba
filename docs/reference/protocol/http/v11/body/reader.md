@@ -1,32 +1,30 @@
-<a id="reader-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index.svg" alt="Index for reader.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index-dark.svg" alt="Index for reader.h">
-  </a>
-</h1>
+<a id="reader"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index.svg" alt="reader">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index-dark.svg" alt="reader">
+</a>
 
 **Header:** [include/protocol/http/v11/body/reader.h](../../../../../../include/protocol/http/v11/body/reader.h)
 
 Holds a borrowed buffer or an owned file with the body decoder. (reader_chunked or reader_raw) matching the encoding actually used by the request (Transfer-Encoding: chunked vs Content-Length). This lets callers pull already-decoded payload bytes via read() without ever having to know which framing produced them.
 
-**protocol::http::v11::body**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body
 
-- [reader](#type-reader) · *type*
+[reader](#type-reader)
 
-**protocol::http::v11::body::reader**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body::reader
 
-- [chunked(source, extension_limit, trailer_limit)](#method-chunked) · *method*
-- [chunked(source, extension_limit, trailer_limit)](#method-chunked-2) · *method*
-- [raw(source, content_length)](#method-raw) · *method*
-- [raw(source, content_length)](#method-raw-2) · *method*
-- [read](#method-read) · *method*
-- [take_borrowed_raw](#method-take-borrowed-raw) · *method*
-- [raw(source, length)](#method-raw-3) · *method*
-- [chunked(source, extension_limit, trailer_limit)](#method-chunked-3) · *method*
-- [rebind_borrowed](#method-rebind-borrowed) · *method*
+[chunked(source, extension_limit, trailer_limit)](#method-chunked) ·
+[chunked(source, extension_limit, trailer_limit)](#method-chunked-2) ·
+[raw(source, content_length)](#method-raw) ·
+[raw(source, content_length)](#method-raw-2) ·
+[read](#method-read) ·
+[take_borrowed_raw](#method-take-borrowed-raw) ·
+[raw(source, length)](#method-raw-3) ·
+[chunked(source, extension_limit, trailer_limit)](#method-chunked-3) ·
+[rebind_borrowed](#method-rebind-borrowed)
 
 <a id="type-reader"></a>
 

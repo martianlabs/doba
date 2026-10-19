@@ -1,20 +1,18 @@
-<a id="deserialization-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/protocol/deserialization/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/protocol/deserialization/index.svg" alt="Index for deserialization.h">
-  </a>
-  <a href="../../../resources/docs/reference/protocol/deserialization/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/protocol/deserialization/index-dark.svg" alt="Index for deserialization.h">
-  </a>
-</h1>
+<a id="deserialization"></a>
+<a href="../../../resources/docs/reference/protocol/deserialization/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/protocol/deserialization/index.svg" alt="deserialization">
+</a>
+<a href="../../../resources/docs/reference/protocol/deserialization/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/protocol/deserialization/index-dark.svg" alt="deserialization">
+</a>
 
 **Header:** [include/protocol/deserialization.h](../../../include/protocol/deserialization.h)
 
 This header declares the types and operations listed below.
 
-**protocol**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol
 
-- [deserialization_status](#enum-deserialization-status) · *enum*
+[deserialization_status](#enum-deserialization-status)
 
 <a id="enum-deserialization-status"></a>
 

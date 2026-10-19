@@ -1,18 +1,18 @@
-<a id="date-server-helpers-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/date_server_helpers/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/date_server_helpers/index.svg" alt="Index for date_server_helpers.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/date_server_helpers/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/date_server_helpers/index-dark.svg" alt="Index for date_server_helpers.h">
-  </a>
-</h1>
+<a id="date-server-helpers"></a>
+<a href="../../../resources/docs/reference/common/date_server_helpers/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/date_server_helpers/index.svg" alt="date_server_helpers">
+</a>
+<a href="../../../resources/docs/reference/common/date_server_helpers/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/date_server_helpers/index-dark.svg" alt="date_server_helpers">
+</a>
 
 **Header:** [include/common/date_server_helpers.h](../../../include/common/date_server_helpers.h)
 
 Selects or forwards the platform-specific declarations included by this header.
 
-- [Exports](#exports)
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Exports
+
+[Exports](#exports)
 
 <a id="exports"></a>
 

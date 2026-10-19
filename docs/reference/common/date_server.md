@@ -1,27 +1,25 @@
-<a id="date-server-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/date_server/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/date_server/index.svg" alt="Index for date_server.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/date_server/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/date_server/index-dark.svg" alt="Index for date_server.h">
-  </a>
-</h1>
+<a id="date-server"></a>
+<a href="../../../resources/docs/reference/common/date_server/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/date_server/index.svg" alt="date_server">
+</a>
+<a href="../../../resources/docs/reference/common/date_server/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/date_server/index-dark.svg" alt="date_server">
+</a>
 
 **Header:** [include/common/date_server.h](../../../include/common/date_server.h)
 
 This specification holds for a [cross-platform] date server.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [date_server](#type-date-server) · *type*
+[date_server](#type-date-server)
 
-**common::date_server**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::date_server
 
-- [get](#method-get) · *method*
-- [start](#method-start) · *method*
-- [stop](#method-stop) · *method*
-- [current](#method-current) · *method*
+[get](#method-get) ·
+[start](#method-start) ·
+[stop](#method-stop) ·
+[current](#method-current)
 
 <a id="type-date-server"></a>
 

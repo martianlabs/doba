@@ -1,26 +1,24 @@
-<a id="authentication-result-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/auth/authentication_result/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/authentication_result/index.svg" alt="Index for authentication_result.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/auth/authentication_result/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/authentication_result/index-dark.svg" alt="Index for authentication_result.h">
-  </a>
-</h1>
+<a id="authentication-result"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/authentication_result/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/authentication_result/index.svg" alt="authentication_result">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/authentication_result/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/authentication_result/index-dark.svg" alt="authentication_result">
+</a>
 
 **Header:** [include/protocol/http/common/auth/authentication_result.h](../../../../../../include/protocol/http/common/auth/authentication_result.h)
 
 Provides the authentication result protocol component.
 
-**protocol::http::auth**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::auth
 
-- [authentication_status](#enum-authentication-status) · *enum*
-- [authentication_result](#type-authentication-result) · *type*
+[authentication_status](#enum-authentication-status) ·
+[authentication_result](#type-authentication-result)
 
-**protocol::http::auth::authentication_result**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::auth::authentication_result
 
-- [status](#field-status) · *field*
-- [challenge](#field-challenge) · *field*
+[status](#field-status) ·
+[challenge](#field-challenge)
 
 <a id="enum-authentication-status"></a>
 

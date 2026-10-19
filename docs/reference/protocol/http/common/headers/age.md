@@ -1,24 +1,22 @@
-<a id="age-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/age/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/age/index.svg" alt="Index for age.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/age/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/age/index-dark.svg" alt="Index for age.h">
-  </a>
-</h1>
+<a id="age"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/age/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/age/index.svg" alt="age">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/age/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/age/index-dark.svg" alt="age">
+</a>
 
 **Header:** [include/protocol/http/common/headers/age.h](../../../../../../include/protocol/http/common/headers/age.h)
 
 |                                                                       age | | RFC 9111 S5.1 Age                                                         | | The "Age" response header field conveys the sender's estimate of the time | | since the response was generated or successfully validated at the origin  | | server. Age values are calculated as
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [age](#type-age) · *type*
+[age](#type-age)
 
-**protocol::http::headers::age**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::age
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-age"></a>
 

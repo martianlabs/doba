@@ -1,24 +1,22 @@
-<a id="framing-h"></a>
-<h1>
-  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index.svg#gh-light-mode-only">
-    <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index.svg" alt="Index for framing.h">
-  </a>
-  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index-dark.svg" alt="Index for framing.h">
-  </a>
-</h1>
+<a id="framing"></a>
+<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index.svg#gh-light-mode-only">
+  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index.svg" alt="framing">
+</a>
+<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index-dark.svg" alt="framing">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/rules/framing.h](../../../../../../../include/protocol/http/v11/headers/rules/framing.h)
 
 Transversal framing rules that span Content-Length and Transfer-Encoding, which no single intra-header interpreter can decide because they need both headers at once. Applied by the coordinator after every intra-header interpreter has run and the context has been populated.
 
-**protocol::http::v11::headers::rules**
+### <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::rules
 
-- [framing](#type-framing) · *type*
+[framing](#type-framing)
 
-**protocol::http::v11::headers::rules::framing**
+### <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::rules::framing
 
-- [apply](#method-apply) · *method*
+[apply](#method-apply)
 
 <a id="type-framing"></a>
 

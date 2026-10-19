@@ -1,43 +1,41 @@
-<a id="policies-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/policies/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/policies/index.svg" alt="Index for policies.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/policies/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/policies/index-dark.svg" alt="Index for policies.h">
-  </a>
-</h1>
+<a id="policies"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/policies/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/policies/index.svg" alt="policies">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/policies/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/policies/index-dark.svg" alt="policies">
+</a>
 
 **Header:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 HTTP/1.1 resource limits, memory thresholds and feature switches. The defaults below preserve the standard server behavior. A limit of 0 means unlimited unless noted.
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [policies](#type-policies) · *type*
+[policies](#type-policies)
 
-**protocol::http::v11::policies**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::policies
 
-- [kDefaultMaxQueryParameters](#constant-kdefaultmaxqueryparameters) · *constant*
-- [kDefaultMaxChunkExtensionSize](#constant-kdefaultmaxchunkextensionsize) · *constant*
-- [kDefaultMaxTrailerSectionSize](#constant-kdefaultmaxtrailersectionsize) · *constant*
-- [kDefaultMaxRequestHeadSize](#constant-kdefaultmaxrequestheadsize) · *constant*
-- [kDefaultRequestBodyMemoryThreshold](#constant-kdefaultrequestbodymemorythreshold) · *constant*
-- [kDefaultMaxResponseHeadSize](#constant-kdefaultmaxresponseheadsize) · *constant*
-- [kDefaultResponseBodyMemoryThreshold](#constant-kdefaultresponsebodymemorythreshold) · *constant*
-- [max_request_body_size](#field-max-request-body-size) · *field*
-- [max_forwarding_hops](#field-max-forwarding-hops) · *field*
-- [max_transfer_codings](#field-max-transfer-codings) · *field*
-- [allow_chunked](#field-allow-chunked) · *field*
-- [allow_upgrade](#field-allow-upgrade) · *field*
-- [max_pending_requests](#field-max-pending-requests) · *field*
-- [max_query_parameters](#field-max-query-parameters) · *field*
-- [max_chunk_extension_size](#field-max-chunk-extension-size) · *field*
-- [max_trailer_section_size](#field-max-trailer-section-size) · *field*
-- [max_request_head_size](#field-max-request-head-size) · *field*
-- [request_body_memory_threshold](#field-request-body-memory-threshold) · *field*
-- [max_response_head_size](#field-max-response-head-size) · *field*
-- [response_body_memory_threshold](#field-response-body-memory-threshold) · *field*
+[kDefaultMaxQueryParameters](#constant-kdefaultmaxqueryparameters) ·
+[kDefaultMaxChunkExtensionSize](#constant-kdefaultmaxchunkextensionsize) ·
+[kDefaultMaxTrailerSectionSize](#constant-kdefaultmaxtrailersectionsize) ·
+[kDefaultMaxRequestHeadSize](#constant-kdefaultmaxrequestheadsize) ·
+[kDefaultRequestBodyMemoryThreshold](#constant-kdefaultrequestbodymemorythreshold) ·
+[kDefaultMaxResponseHeadSize](#constant-kdefaultmaxresponseheadsize) ·
+[kDefaultResponseBodyMemoryThreshold](#constant-kdefaultresponsebodymemorythreshold) ·
+[max_request_body_size](#field-max-request-body-size) ·
+[max_forwarding_hops](#field-max-forwarding-hops) ·
+[max_transfer_codings](#field-max-transfer-codings) ·
+[allow_chunked](#field-allow-chunked) ·
+[allow_upgrade](#field-allow-upgrade) ·
+[max_pending_requests](#field-max-pending-requests) ·
+[max_query_parameters](#field-max-query-parameters) ·
+[max_chunk_extension_size](#field-max-chunk-extension-size) ·
+[max_trailer_section_size](#field-max-trailer-section-size) ·
+[max_request_head_size](#field-max-request-head-size) ·
+[request_body_memory_threshold](#field-request-body-memory-threshold) ·
+[max_response_head_size](#field-max-response-head-size) ·
+[response_body_memory_threshold](#field-response-body-memory-threshold)
 
 <a id="type-policies"></a>
 

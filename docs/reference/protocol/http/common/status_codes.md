@@ -1,66 +1,64 @@
-<a id="status-codes-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/status_codes/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/status_codes/index.svg" alt="Index for status_codes.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/status_codes/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/status_codes/index-dark.svg" alt="Index for status_codes.h">
-  </a>
-</h1>
+<a id="status-codes"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/status_codes/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/status_codes/index.svg" alt="status_codes">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/status_codes/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/status_codes/index-dark.svg" alt="status_codes">
+</a>
 
 **Header:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 Defines the preprocessor values listed below.
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [SC_100_CONTINUE](#macro-sc-100-continue) · *macro*
-- [SC_101_SWITCHING_PROTOCOLS](#macro-sc-101-switching-protocols) · *macro*
-- [SC_200_OK](#macro-sc-200-ok) · *macro*
-- [SC_201_CREATED](#macro-sc-201-created) · *macro*
-- [SC_202_ACCEPTED](#macro-sc-202-accepted) · *macro*
-- [SC_203_NON_AUTHORITATIVE_INFORMATION](#macro-sc-203-non-authoritative-information) · *macro*
-- [SC_204_NO_CONTENT](#macro-sc-204-no-content) · *macro*
-- [SC_205_RESET_CONTENT](#macro-sc-205-reset-content) · *macro*
-- [SC_206_PARTIAL_CONTENT](#macro-sc-206-partial-content) · *macro*
-- [SC_300_MULTIPLE_CHOICES](#macro-sc-300-multiple-choices) · *macro*
-- [SC_301_MOVED_PERMANENTLY](#macro-sc-301-moved-permanently) · *macro*
-- [SC_302_FOUND](#macro-sc-302-found) · *macro*
-- [SC_303_SEE_OTHER](#macro-sc-303-see-other) · *macro*
-- [SC_304_NOT_MODIFIED](#macro-sc-304-not-modified) · *macro*
-- [SC_305_USE_PROXY](#macro-sc-305-use-proxy) · *macro*
-- [SC_306_UNUSED](#macro-sc-306-unused) · *macro*
-- [SC_307_TEMPORARY_REDIRECT](#macro-sc-307-temporary-redirect) · *macro*
-- [SC_308_PERMANENT_REDIRECT](#macro-sc-308-permanent-redirect) · *macro*
-- [SC_400_BAD_REQUEST](#macro-sc-400-bad-request) · *macro*
-- [SC_401_UNAUTHORIZED](#macro-sc-401-unauthorized) · *macro*
-- [SC_402_PAYMENT_REQUIRED](#macro-sc-402-payment-required) · *macro*
-- [SC_403_FORBIDDEN](#macro-sc-403-forbidden) · *macro*
-- [SC_404_NOT_FOUND](#macro-sc-404-not-found) · *macro*
-- [SC_405_METHOD_NOT_ALLOWED](#macro-sc-405-method-not-allowed) · *macro*
-- [SC_406_NOT_ACCEPTABLE](#macro-sc-406-not-acceptable) · *macro*
-- [SC_407_PROXY_AUTHENTICATION_REQUIRED](#macro-sc-407-proxy-authentication-required) · *macro*
-- [SC_408_REQUEST_TIMEOUT](#macro-sc-408-request-timeout) · *macro*
-- [SC_409_CONFLICT](#macro-sc-409-conflict) · *macro*
-- [SC_410_GONE](#macro-sc-410-gone) · *macro*
-- [SC_411_LENGTH_REQUIRED](#macro-sc-411-length-required) · *macro*
-- [SC_412_PRECONDITION_FAILED](#macro-sc-412-precondition-failed) · *macro*
-- [SC_413_CONTENT_TOO_LARGE](#macro-sc-413-content-too-large) · *macro*
-- [SC_414_URI_TOO_LONG](#macro-sc-414-uri-too-long) · *macro*
-- [SC_415_UNSUPPORTED_MEDIA_TYPE](#macro-sc-415-unsupported-media-type) · *macro*
-- [SC_416_RANGE_NOT_SATISFIABLE](#macro-sc-416-range-not-satisfiable) · *macro*
-- [SC_417_EXPECTATION_FAILED](#macro-sc-417-expectation-failed) · *macro*
-- [SC_418_IM_A_TEAPOT](#macro-sc-418-im-a-teapot) · *macro*
-- [SC_421_MISDIRECTED_REQUEST](#macro-sc-421-misdirected-request) · *macro*
-- [SC_422_UNPROCESSABLE_CONTENT](#macro-sc-422-unprocessable-content) · *macro*
-- [SC_426_UPGRADE_REQUIRED](#macro-sc-426-upgrade-required) · *macro*
-- [SC_431_REQUEST_HEADER_FIELDS_TOO_LARGE](#macro-sc-431-request-header-fields-too-large) · *macro*
-- [SC_500_INTERNAL_SERVER_ERROR](#macro-sc-500-internal-server-error) · *macro*
-- [SC_501_NOT_IMPLEMENTED](#macro-sc-501-not-implemented) · *macro*
-- [SC_502_BAD_GATEWAY](#macro-sc-502-bad-gateway) · *macro*
-- [SC_503_SERVICE_UNAVAILABLE](#macro-sc-503-service-unavailable) · *macro*
-- [SC_504_GATEWAY_TIMEOUT](#macro-sc-504-gateway-timeout) · *macro*
-- [SC_505_HTTP_VERSION_NOT_SUPPORTED](#macro-sc-505-http-version-not-supported) · *macro*
+[SC_100_CONTINUE](#macro-sc-100-continue) ·
+[SC_101_SWITCHING_PROTOCOLS](#macro-sc-101-switching-protocols) ·
+[SC_200_OK](#macro-sc-200-ok) ·
+[SC_201_CREATED](#macro-sc-201-created) ·
+[SC_202_ACCEPTED](#macro-sc-202-accepted) ·
+[SC_203_NON_AUTHORITATIVE_INFORMATION](#macro-sc-203-non-authoritative-information) ·
+[SC_204_NO_CONTENT](#macro-sc-204-no-content) ·
+[SC_205_RESET_CONTENT](#macro-sc-205-reset-content) ·
+[SC_206_PARTIAL_CONTENT](#macro-sc-206-partial-content) ·
+[SC_300_MULTIPLE_CHOICES](#macro-sc-300-multiple-choices) ·
+[SC_301_MOVED_PERMANENTLY](#macro-sc-301-moved-permanently) ·
+[SC_302_FOUND](#macro-sc-302-found) ·
+[SC_303_SEE_OTHER](#macro-sc-303-see-other) ·
+[SC_304_NOT_MODIFIED](#macro-sc-304-not-modified) ·
+[SC_305_USE_PROXY](#macro-sc-305-use-proxy) ·
+[SC_306_UNUSED](#macro-sc-306-unused) ·
+[SC_307_TEMPORARY_REDIRECT](#macro-sc-307-temporary-redirect) ·
+[SC_308_PERMANENT_REDIRECT](#macro-sc-308-permanent-redirect) ·
+[SC_400_BAD_REQUEST](#macro-sc-400-bad-request) ·
+[SC_401_UNAUTHORIZED](#macro-sc-401-unauthorized) ·
+[SC_402_PAYMENT_REQUIRED](#macro-sc-402-payment-required) ·
+[SC_403_FORBIDDEN](#macro-sc-403-forbidden) ·
+[SC_404_NOT_FOUND](#macro-sc-404-not-found) ·
+[SC_405_METHOD_NOT_ALLOWED](#macro-sc-405-method-not-allowed) ·
+[SC_406_NOT_ACCEPTABLE](#macro-sc-406-not-acceptable) ·
+[SC_407_PROXY_AUTHENTICATION_REQUIRED](#macro-sc-407-proxy-authentication-required) ·
+[SC_408_REQUEST_TIMEOUT](#macro-sc-408-request-timeout) ·
+[SC_409_CONFLICT](#macro-sc-409-conflict) ·
+[SC_410_GONE](#macro-sc-410-gone) ·
+[SC_411_LENGTH_REQUIRED](#macro-sc-411-length-required) ·
+[SC_412_PRECONDITION_FAILED](#macro-sc-412-precondition-failed) ·
+[SC_413_CONTENT_TOO_LARGE](#macro-sc-413-content-too-large) ·
+[SC_414_URI_TOO_LONG](#macro-sc-414-uri-too-long) ·
+[SC_415_UNSUPPORTED_MEDIA_TYPE](#macro-sc-415-unsupported-media-type) ·
+[SC_416_RANGE_NOT_SATISFIABLE](#macro-sc-416-range-not-satisfiable) ·
+[SC_417_EXPECTATION_FAILED](#macro-sc-417-expectation-failed) ·
+[SC_418_IM_A_TEAPOT](#macro-sc-418-im-a-teapot) ·
+[SC_421_MISDIRECTED_REQUEST](#macro-sc-421-misdirected-request) ·
+[SC_422_UNPROCESSABLE_CONTENT](#macro-sc-422-unprocessable-content) ·
+[SC_426_UPGRADE_REQUIRED](#macro-sc-426-upgrade-required) ·
+[SC_431_REQUEST_HEADER_FIELDS_TOO_LARGE](#macro-sc-431-request-header-fields-too-large) ·
+[SC_500_INTERNAL_SERVER_ERROR](#macro-sc-500-internal-server-error) ·
+[SC_501_NOT_IMPLEMENTED](#macro-sc-501-not-implemented) ·
+[SC_502_BAD_GATEWAY](#macro-sc-502-bad-gateway) ·
+[SC_503_SERVICE_UNAVAILABLE](#macro-sc-503-service-unavailable) ·
+[SC_504_GATEWAY_TIMEOUT](#macro-sc-504-gateway-timeout) ·
+[SC_505_HTTP_VERSION_NOT_SUPPORTED](#macro-sc-505-http-version-not-supported)
 
 <a id="macro-sc-100-continue"></a>
 

@@ -1,55 +1,53 @@
-<a id="request-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/request/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/request/index.svg" alt="Index for request.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/request/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/request/index-dark.svg" alt="Index for request.h">
-  </a>
-</h1>
+<a id="request"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/request/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/request/index.svg" alt="request">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/request/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/request/index-dark.svg" alt="request">
+</a>
 
 **Header:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 Provides the http 1.1 request implementation.
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [request](#type-request) · *type*
+[request](#type-request)
 
-**protocol::http::v11::request**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::request
 
-- [from](#method-from) · *method*
-- [get_method](#method-get-method) · *method*
-- [get_target](#method-get-target) · *method*
-- [get_absolute_path](#method-get-absolute-path) · *method*
-- [get_header(i)](#method-get-header) · *method*
-- [get_header(name)](#method-get-header-2) · *method*
-- [exist_header](#method-exist-header) · *method*
-- [get_headers_length](#method-get-headers-length) · *method*
-- [get_query_parameter(i)](#method-get-query-parameter) · *method*
-- [get_query_parameter(name)](#method-get-query-parameter-2) · *method*
-- [get_query_parameters_length](#method-get-query-parameters-length) · *method*
-- [has_host](#method-has-host) · *method*
-- [get_host](#method-get-host) · *method*
-- [get_host_port](#method-get-host-port) · *method*
-- [get_host_type](#method-get-host-type) · *method*
-- [has_target_authority](#method-has-target-authority) · *method*
-- [get_target_authority_host](#method-get-target-authority-host) · *method*
-- [get_target_authority_port](#method-get-target-authority-port) · *method*
-- [get_target_authority_type](#method-get-target-authority-type) · *method*
-- [get_body_reader](#method-get-body-reader) · *method*
-- [has_body_reader](#method-has-body-reader) · *method*
-- [wants_connection_close](#method-wants-connection-close) · *method*
-- [get_cookie](#method-get-cookie) · *method*
-- [get_cookies](#method-get-cookies) · *method*
-- [borrows_bytes](#method-borrows-bytes) · *method*
-- [make_owned](#method-make-owned) · *method*
-- [rebase_bytes](#method-rebase-bytes) · *method*
-- [body_is_stored](#method-body-is-stored) · *method*
-- [body_wire_size](#method-body-wire-size) · *method*
-- [begin_body](#method-begin-body) · *method*
-- [append_body](#method-append-body) · *method*
-- [finish_body](#method-finish-body) · *method*
+[from](#method-from) ·
+[get_method](#method-get-method) ·
+[get_target](#method-get-target) ·
+[get_absolute_path](#method-get-absolute-path) ·
+[get_header(i)](#method-get-header) ·
+[get_header(name)](#method-get-header-2) ·
+[exist_header](#method-exist-header) ·
+[get_headers_length](#method-get-headers-length) ·
+[get_query_parameter(i)](#method-get-query-parameter) ·
+[get_query_parameter(name)](#method-get-query-parameter-2) ·
+[get_query_parameters_length](#method-get-query-parameters-length) ·
+[has_host](#method-has-host) ·
+[get_host](#method-get-host) ·
+[get_host_port](#method-get-host-port) ·
+[get_host_type](#method-get-host-type) ·
+[has_target_authority](#method-has-target-authority) ·
+[get_target_authority_host](#method-get-target-authority-host) ·
+[get_target_authority_port](#method-get-target-authority-port) ·
+[get_target_authority_type](#method-get-target-authority-type) ·
+[get_body_reader](#method-get-body-reader) ·
+[has_body_reader](#method-has-body-reader) ·
+[wants_connection_close](#method-wants-connection-close) ·
+[get_cookie](#method-get-cookie) ·
+[get_cookies](#method-get-cookies) ·
+[borrows_bytes](#method-borrows-bytes) ·
+[make_owned](#method-make-owned) ·
+[rebase_bytes](#method-rebase-bytes) ·
+[body_is_stored](#method-body-is-stored) ·
+[body_wire_size](#method-body-wire-size) ·
+[begin_body](#method-begin-body) ·
+[append_body](#method-append-body) ·
+[finish_body](#method-finish-body)
 
 <a id="type-request"></a>
 

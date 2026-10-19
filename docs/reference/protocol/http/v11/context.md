@@ -1,36 +1,34 @@
-<a id="context-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/context/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/context/index.svg" alt="Index for context.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/context/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/context/index-dark.svg" alt="Index for context.h">
-  </a>
-</h1>
+<a id="context"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/context/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/context/index.svg" alt="context">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/context/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/context/index-dark.svg" alt="context">
+</a>
 
 **Header:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
 
 The aggregated view the transversal rules operate on. Where an intra- header interpreter sees a single header in isolation, a rule needs to reason across several: whether a header was present at all, how two headers combine, and the connection/policy state the interpreters already derived. deserialize() fills this context during its single header
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [context](#type-context) · *type*
+[context](#type-context)
 
-**protocol::http::v11::context**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::context
 
-- [policies](#type-policies) · *type*
-- [connection](#field-connection) · *field*
-- [has_content_length](#field-has-content-length) · *field*
-- [multiple_content_length](#field-multiple-content-length) · *field*
-- [content_length](#field-content-length) · *field*
-- [has_transfer_encoding](#field-has-transfer-encoding) · *field*
-- [has_host](#field-has-host) · *field*
-- [multiple_host](#field-multiple-host) · *field*
-- [host](#field-host) · *field*
-- [has_target_authority](#field-has-target-authority) · *field*
-- [target_authority](#field-target-authority) · *field*
-- [forwarding_hops](#field-forwarding-hops) · *field*
-- [rejection_reason](#field-rejection-reason) · *field*
+[policies](context_policies.md) ·
+[connection](#field-connection) ·
+[has_content_length](#field-has-content-length) ·
+[multiple_content_length](#field-multiple-content-length) ·
+[content_length](#field-content-length) ·
+[has_transfer_encoding](#field-has-transfer-encoding) ·
+[has_host](#field-has-host) ·
+[multiple_host](#field-multiple-host) ·
+[host](#field-host) ·
+[has_target_authority](#field-has-target-authority) ·
+[target_authority](#field-target-authority) ·
+[forwarding_hops](#field-forwarding-hops) ·
+[rejection_reason](#field-rejection-reason)
 
 <a id="type-context"></a>
 
@@ -47,22 +45,6 @@ struct context { ... };
 The aggregated view the transversal rules operate on. Where an intra- header interpreter sees a single header in isolation, a rule needs to reason across several: whether a header was present at all, how two headers combine, and the connection/policy state the interpreters already derived. deserialize() fills this context during its single header
 
 **Source:** [include/protocol/http/v11/context.h:58](../../../../../include/protocol/http/v11/context.h#L58)
-
-<a id="type-policies"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> policies
-
-**TYPE** · *protocol::http::v11::context*
-
-**Declaration synopsis:**
-
-```cpp
-struct policies { ... };
-```
-
-Policies coming from the inbound configuration; they are not derived from the request.
-
-**Source:** [include/protocol/http/v11/context.h:61](../../../../../include/protocol/http/v11/context.h#L61)
 
 <a id="field-connection"></a>
 

@@ -1,24 +1,22 @@
-<a id="set-cookie-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/set_cookie/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/set_cookie/index.svg" alt="Index for set_cookie.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/set_cookie/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/set_cookie/index-dark.svg" alt="Index for set_cookie.h">
-  </a>
-</h1>
+<a id="set-cookie"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/set_cookie/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/set_cookie/index.svg" alt="set_cookie">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/set_cookie/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/set_cookie/index-dark.svg" alt="set_cookie">
+</a>
 
 **Header:** [include/protocol/http/common/headers/set_cookie.h](../../../../../../include/protocol/http/common/headers/set_cookie.h)
 
 |                                                               set-cookie  | | RFC 6265 S4.1 Set-Cookie                                                  | | The "Set-Cookie" response header field is used to send a cookie from the  | | server to the user agent. The user agent stores the cookie together with  | | its attributes and can return the co
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [set_cookie](#type-set-cookie) · *type*
+[set_cookie](#type-set-cookie)
 
-**protocol::http::headers::set_cookie**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::set_cookie
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-set-cookie"></a>
 

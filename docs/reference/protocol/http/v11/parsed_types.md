@@ -1,102 +1,73 @@
-<a id="parsed-types-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/parsed_types/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/parsed_types/index.svg" alt="Index for parsed_types.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/parsed_types/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/parsed_types/index-dark.svg" alt="Index for parsed_types.h">
-  </a>
-</h1>
+<a id="parsed-types"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/parsed_types/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/parsed_types/index.svg" alt="parsed_types">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/parsed_types/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/parsed_types/index-dark.svg" alt="parsed_types">
+</a>
 
 **Header:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 The zero-copy product of a "host [ ":" port ]" value (the shape shared by the Host header and an authority-form request-target). "host" is the uri-host substring (bracketed colons of an IP-literal are kept intact); "type" classifies it; "port" is the raw *DIGIT run after the ":" (empty when no port is present). Both "host" and "port" may be empty
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [parsed_host_port](#type-parsed-host-port) · *type*
+[parsed_host_port](#type-parsed-host-port) ·
+[parsed_token_list](#type-parsed-token-list) ·
+[parsed_parameter_list](#type-parsed-parameter-list) ·
+[parsed_scalar](#type-parsed-scalar) ·
+[parsed_via_element](#type-parsed-via-element) ·
+[parsed_via_list](#type-parsed-via-list) ·
+[parsed_forwarded_pair](#type-parsed-forwarded-pair) ·
+[parsed_forwarded_element](#type-parsed-forwarded-element) ·
+[parsed_forwarded_list](#type-parsed-forwarded-list) ·
+[parsed_host_port_list](#type-parsed-host-port-list)
 
-**protocol::http::v11::parsed_host_port**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::parsed_host_port
 
-- [host](#field-host) · *field*
-- [port](#field-port) · *field*
-- [type](#field-type) · *field*
-- [scheme](#field-scheme) · *field*
+[host](#field-host) ·
+[port](#field-port) ·
+[type](#field-type) ·
+[scheme](#field-scheme)
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::parsed_token_list
 
-- [parsed_token_list](#type-parsed-token-list) · *type*
+[elements](#field-elements)
 
-**protocol::http::v11::parsed_token_list**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::parsed_parameter_list
 
-- [elements](#field-elements) · *field*
+[elements](#field-elements-2)
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::parsed_scalar
 
-- [parsed_parameter_list](#type-parsed-parameter-list) · *type*
+[value](#field-value)
 
-**protocol::http::v11::parsed_parameter_list**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::parsed_via_element
 
-- [elements](#field-elements-2) · *field*
+[received_protocol](#field-received-protocol) ·
+[received_by](#field-received-by) ·
+[comment](#field-comment)
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::parsed_via_list
 
-- [parsed_scalar](#type-parsed-scalar) · *type*
+[elements](#field-elements-3)
 
-**protocol::http::v11::parsed_scalar**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::parsed_forwarded_pair
 
-- [value](#field-value) · *field*
+[name](#field-name) ·
+[value](#field-value-2)
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::parsed_forwarded_element
 
-- [parsed_via_element](#type-parsed-via-element) · *type*
+[pairs](#field-pairs)
 
-**protocol::http::v11::parsed_via_element**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::parsed_forwarded_list
 
-- [received_protocol](#field-received-protocol) · *field*
-- [received_by](#field-received-by) · *field*
-- [comment](#field-comment) · *field*
+[elements](#field-elements-4)
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::parsed_host_port_list
 
-- [parsed_via_list](#type-parsed-via-list) · *type*
-
-**protocol::http::v11::parsed_via_list**
-
-- [elements](#field-elements-3) · *field*
-
-**protocol::http::v11**
-
-- [parsed_forwarded_pair](#type-parsed-forwarded-pair) · *type*
-
-**protocol::http::v11::parsed_forwarded_pair**
-
-- [name](#field-name) · *field*
-- [value](#field-value-2) · *field*
-
-**protocol::http::v11**
-
-- [parsed_forwarded_element](#type-parsed-forwarded-element) · *type*
-
-**protocol::http::v11::parsed_forwarded_element**
-
-- [pairs](#field-pairs) · *field*
-
-**protocol::http::v11**
-
-- [parsed_forwarded_list](#type-parsed-forwarded-list) · *type*
-
-**protocol::http::v11::parsed_forwarded_list**
-
-- [elements](#field-elements-4) · *field*
-
-**protocol::http::v11**
-
-- [parsed_host_port_list](#type-parsed-host-port-list) · *type*
-
-**protocol::http::v11::parsed_host_port_list**
-
-- [elements](#field-elements-5) · *field*
+[elements](#field-elements-5)
 
 <a id="type-parsed-host-port"></a>
 

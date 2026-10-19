@@ -1,24 +1,22 @@
-<a id="expires-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/expires/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/expires/index.svg" alt="Index for expires.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/expires/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/expires/index-dark.svg" alt="Index for expires.h">
-  </a>
-</h1>
+<a id="expires"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/expires/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/expires/index.svg" alt="expires">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/expires/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/expires/index-dark.svg" alt="expires">
+</a>
 
 **Header:** [include/protocol/http/common/headers/expires.h](../../../../../../include/protocol/http/common/headers/expires.h)
 
 |                                                                   expires | | RFC 9111 S5.3 Expires                                                     | | The "Expires" response header field gives the date/time after which the   | | response is considered stale. It is part of the HTTP caching model and is | | used to compute an explicit freshnes
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [expires](#type-expires) · *type*
+[expires](#type-expires)
 
-**protocol::http::headers::expires**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::expires
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-expires"></a>
 

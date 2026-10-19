@@ -1,25 +1,23 @@
-<a id="expect-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index.svg" alt="Index for expect.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index-dark.svg" alt="Index for expect.h">
-  </a>
-</h1>
+<a id="expect"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index.svg" alt="expect">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index-dark.svg" alt="expect">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/expect.h](../../../../../../include/protocol/http/v11/headers/expect.h)
 
 The "Expect" header field in a request indicates a set of behaviors ("expectations") that need to be supported by the server in order to properly handle the request.
 
-**protocol::http::v11::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
 
-- [expect](#type-expect) · *type*
+[expect](#type-expect)
 
-**protocol::http::v11::headers::expect**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::expect
 
-- [check](#method-check) · *method*
-- [interpret](#method-interpret) · *method*
+[check](#method-check) ·
+[interpret](#method-interpret)
 
 <a id="type-expect"></a>
 

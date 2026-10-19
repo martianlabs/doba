@@ -1,42 +1,37 @@
-<a id="byte-storage-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/byte_storage/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/byte_storage/index.svg" alt="Index for byte_storage.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/byte_storage/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/byte_storage/index-dark.svg" alt="Index for byte_storage.h">
-  </a>
-</h1>
+<a id="byte-storage"></a>
+<a href="../../../resources/docs/reference/common/byte_storage/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/byte_storage/index.svg" alt="byte_storage">
+</a>
+<a href="../../../resources/docs/reference/common/byte_storage/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/byte_storage/index-dark.svg" alt="byte_storage">
+</a>
 
 **Header:** [include/common/byte_storage.h](../../../include/common/byte_storage.h)
 
 Provides the byte storage options type.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [byte_storage_options](#type-byte-storage-options) · *type*
+[byte_storage_options](#type-byte-storage-options) ·
+[byte_storage](#type-byte-storage)
 
-**common::byte_storage_options**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::byte_storage_options
 
-- [kDefaultSpillToDiskThreshold](#constant-kdefaultspilltodiskthreshold) · *constant*
-- [spill_to_disk_threshold](#field-spill-to-disk-threshold) · *field*
-- [spill_dir](#field-spill-dir) · *field*
+[kDefaultSpillToDiskThreshold](#constant-kdefaultspilltodiskthreshold) ·
+[spill_to_disk_threshold](#field-spill-to-disk-threshold) ·
+[spill_dir](#field-spill-dir)
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::byte_storage
 
-- [byte_storage](#type-byte-storage) · *type*
-
-**common::byte_storage**
-
-- [read](#method-read) · *method*
-- [write](#method-write) · *method*
-- [spill](#method-spill) · *method*
-- [unlink_file](#method-unlink-file) · *method*
-- [finish](#method-finish) · *method*
-- [fetch](#method-fetch) · *method*
-- [total_size](#method-total-size) · *method*
-- [exhausted](#method-exhausted) · *method*
-- [ok](#method-ok) · *method*
+[read](#method-read) ·
+[write](#method-write) ·
+[spill](#method-spill) ·
+[unlink_file](#method-unlink-file) ·
+[finish](#method-finish) ·
+[fetch](#method-fetch) ·
+[total_size](#method-total-size) ·
+[exhausted](#method-exhausted) ·
+[ok](#method-ok)
 
 <a id="type-byte-storage-options"></a>
 

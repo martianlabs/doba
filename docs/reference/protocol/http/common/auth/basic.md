@@ -1,24 +1,22 @@
-<a id="basic-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index.svg" alt="Index for basic.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index-dark.svg" alt="Index for basic.h">
-  </a>
-</h1>
+<a id="basic"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index.svg" alt="basic">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index-dark.svg" alt="basic">
+</a>
 
 **Header:** [include/protocol/http/common/auth/basic.h](../../../../../../include/protocol/http/common/auth/basic.h)
 
 Validates HTTP Basic credentials through a user-supplied callback.
 
-**protocol::http::auth**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::auth
 
-- [basic](#type-basic) · *type*
+[basic](#type-basic)
 
-**protocol::http::auth::basic**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::auth::basic
 
-- [authenticate](#method-authenticate) · *method*
+[authenticate](#method-authenticate)
 
 <a id="type-basic"></a>
 

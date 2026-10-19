@@ -1,20 +1,18 @@
-<a id="rejection-reason-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index.svg" alt="Index for rejection_reason.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index-dark.svg" alt="Index for rejection_reason.h">
-  </a>
-</h1>
+<a id="rejection-reason"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index.svg" alt="rejection_reason">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index-dark.svg" alt="rejection_reason">
+</a>
 
 **Header:** [include/protocol/http/v11/rejection_reason.h](../../../../../include/protocol/http/v11/rejection_reason.h)
 
 This header declares the types and operations listed below.
 
-**protocol::http::v11**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
-- [rejection_reason](#enum-rejection-reason) · *enum*
+[rejection_reason](#enum-rejection-reason)
 
 <a id="enum-rejection-reason"></a>
 

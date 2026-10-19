@@ -1,20 +1,18 @@
-<a id="reader-error-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index.svg" alt="Index for reader_error.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index-dark.svg" alt="Index for reader_error.h">
-  </a>
-</h1>
+<a id="reader-error"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index.svg" alt="reader_error">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index-dark.svg" alt="reader_error">
+</a>
 
 **Header:** [include/protocol/http/v11/body/reader_error.h](../../../../../../include/protocol/http/v11/body/reader_error.h)
 
 This header declares the types and operations listed below.
 
-**protocol::http::v11::body**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body
 
-- [reader_error](#enum-reader-error) · *enum*
+[reader_error](#enum-reader-error)
 
 <a id="enum-reader-error"></a>
 

@@ -1,24 +1,22 @@
-<a id="retry-after-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/retry_after/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/retry_after/index.svg" alt="Index for retry_after.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/retry_after/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/retry_after/index-dark.svg" alt="Index for retry_after.h">
-  </a>
-</h1>
+<a id="retry-after"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/retry_after/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/retry_after/index.svg" alt="retry_after">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/retry_after/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/retry_after/index-dark.svg" alt="retry_after">
+</a>
 
 **Header:** [include/protocol/http/common/headers/retry_after.h](../../../../../../include/protocol/http/common/headers/retry_after.h)
 
 |                                                               retry-after | | RFC 9110 S10.2.3 Retry-After                                              | | The "Retry-After" response header field indicates how long the user agent | | ought to wait before making a follow-up request.                          | | The field value can be either an HTT
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [retry_after](#type-retry-after) · *type*
+[retry_after](#type-retry-after)
 
-**protocol::http::headers::retry_after**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::retry_after
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-retry-after"></a>
 

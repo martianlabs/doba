@@ -1,24 +1,22 @@
-<a id="date-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/date/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/date/index.svg" alt="Index for date.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/date/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/date/index-dark.svg" alt="Index for date.h">
-  </a>
-</h1>
+<a id="date"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/date/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/date/index.svg" alt="date">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/date/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/date/index-dark.svg" alt="date">
+</a>
 
 **Header:** [include/protocol/http/common/headers/date.h](../../../../../../include/protocol/http/common/headers/date.h)
 
 The "Date" header field represents the date and time at which the message was originated. Its field value is an HTTP-date, as defined in RFC 9110 Section 5.6.7 ("Date/Time Formats").
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [date](#type-date) · *type*
+[date](#type-date)
 
-**protocol::http::headers::date**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::date
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-date"></a>
 

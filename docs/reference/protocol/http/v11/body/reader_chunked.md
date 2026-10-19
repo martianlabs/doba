@@ -1,26 +1,24 @@
-<a id="reader-chunked-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index.svg" alt="Index for reader_chunked.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index-dark.svg" alt="Index for reader_chunked.h">
-  </a>
-</h1>
+<a id="reader-chunked"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index.svg" alt="reader_chunked">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index-dark.svg" alt="reader_chunked">
+</a>
 
 **Header:** [include/protocol/http/v11/body/reader_chunked.h](../../../../../../include/protocol/http/v11/body/reader_chunked.h)
 
 Decodes a chunked Transfer-Encoding body (as accumulated verbatim by framer_chunked) by pulling wire bytes on demand from a common::reader source and filling the caller-supplied output span.
 
-**protocol::http::v11::body**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body
 
-- [reader_chunked](#type-reader-chunked) · *type*
+[reader_chunked](#type-reader-chunked)
 
-**protocol::http::v11::body::reader_chunked**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body::reader_chunked
 
-- [kDefaultMaxChunkExtensionSize](#constant-kdefaultmaxchunkextensionsize) · *constant*
-- [kDefaultMaxTrailerSectionSize](#constant-kdefaultmaxtrailersectionsize) · *constant*
-- [read](#method-read) · *method*
+[kDefaultMaxChunkExtensionSize](#constant-kdefaultmaxchunkextensionsize) ·
+[kDefaultMaxTrailerSectionSize](#constant-kdefaultmaxtrailersectionsize) ·
+[read](#method-read)
 
 <a id="type-reader-chunked"></a>
 

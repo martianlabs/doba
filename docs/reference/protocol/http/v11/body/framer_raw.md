@@ -1,24 +1,22 @@
-<a id="framer-raw-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index.svg" alt="Index for framer_raw.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index-dark.svg" alt="Index for framer_raw.h">
-  </a>
-</h1>
+<a id="framer-raw"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index.svg" alt="framer_raw">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index-dark.svg" alt="framer_raw">
+</a>
 
 **Header:** [include/protocol/http/v11/body/framer_raw.h](../../../../../../include/protocol/http/v11/body/framer_raw.h)
 
 Detects the Content-Length-framed body boundary within an already-wire- encoded input buffer.
 
-**protocol::http::v11::body**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body
 
-- [framer_raw](#type-framer-raw) · *type*
+[framer_raw](#type-framer-raw)
 
-**protocol::http::v11::body::framer_raw**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body::framer_raw
 
-- [consume](#method-consume) · *method*
+[consume](#method-consume)
 
 <a id="type-framer-raw"></a>
 

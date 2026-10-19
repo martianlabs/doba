@@ -1,26 +1,24 @@
-<a id="framer-chunked-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/index.svg" alt="Index for framer_chunked.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/index-dark.svg" alt="Index for framer_chunked.h">
-  </a>
-</h1>
+<a id="framer-chunked"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/index.svg" alt="framer_chunked">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/index-dark.svg" alt="framer_chunked">
+</a>
 
 **Header:** [include/protocol/http/v11/body/framer_chunked.h](../../../../../../include/protocol/http/v11/body/framer_chunked.h)
 
 Validates a chunked Transfer-Encoding body.
 
-**protocol::http::v11::body**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body
 
-- [framer_chunked](#type-framer-chunked) · *type*
+[framer_chunked](#type-framer-chunked)
 
-**protocol::http::v11::body::framer_chunked**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body::framer_chunked
 
-- [kDefaultMaxChunkExtensionSize](#constant-kdefaultmaxchunkextensionsize) · *constant*
-- [kDefaultMaxTrailerSectionSize](#constant-kdefaultmaxtrailersectionsize) · *constant*
-- [consume](#method-consume) · *method*
+[kDefaultMaxChunkExtensionSize](#constant-kdefaultmaxchunkextensionsize) ·
+[kDefaultMaxTrailerSectionSize](#constant-kdefaultmaxtrailersectionsize) ·
+[consume](#method-consume)
 
 <a id="type-framer-chunked"></a>
 

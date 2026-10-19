@@ -1,24 +1,22 @@
-<a id="if-unmodified-since-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index.svg" alt="Index for if_unmodified_since.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index-dark.svg" alt="Index for if_unmodified_since.h">
-  </a>
-</h1>
+<a id="if-unmodified-since"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index.svg" alt="if_unmodified_since">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index-dark.svg" alt="if_unmodified_since">
+</a>
 
 **Header:** [include/protocol/http/common/headers/if_unmodified_since.h](../../../../../../include/protocol/http/common/headers/if_unmodified_since.h)
 
 |                                                       if-unmodified-since | | RFC 9110 S13.1.4 If-Unmodified-Since                                      | | The "If-Unmodified-Since" header field makes a request conditional on the | | selected representation's last modification date being earlier than or    | | equal to the date provided in the fi
 
-**protocol::http::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
 
-- [if_unmodified_since](#type-if-unmodified-since) · *type*
+[if_unmodified_since](#type-if-unmodified-since)
 
-**protocol::http::headers::if_unmodified_since**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::if_unmodified_since
 
-- [check](#method-check) · *method*
+[check](#method-check)
 
 <a id="type-if-unmodified-since"></a>
 

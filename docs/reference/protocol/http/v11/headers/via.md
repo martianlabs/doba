@@ -1,25 +1,23 @@
-<a id="via-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/via/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/via/index.svg" alt="Index for via.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/via/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/via/index-dark.svg" alt="Index for via.h">
-  </a>
-</h1>
+<a id="via"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/via/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/via/index.svg" alt="via">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/via/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/via/index-dark.svg" alt="via">
+</a>
 
 **Header:** [include/protocol/http/v11/headers/via.h](../../../../../../include/protocol/http/v11/headers/via.h)
 
 |                                                                       via | | RFC 9110 S7.6.3 Via                                                       | | The "Via" header field indicates the presence of intermediate protocols   | | and recipients between the user agent and the server on requests, or      | | between the origin server and the cl
 
-**protocol::http::v11::headers**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
 
-- [via](#type-via) · *type*
+[via](#type-via)
 
-**protocol::http::v11::headers::via**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::via
 
-- [check](#method-check) · *method*
-- [interpret](#method-interpret) · *method*
+[check](#method-check) ·
+[interpret](#method-interpret)
 
 <a id="type-via"></a>
 

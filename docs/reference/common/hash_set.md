@@ -1,20 +1,18 @@
-<a id="hash-set-h"></a>
-<h1>
-  <a href="../../../resources/docs/reference/common/hash_set/index.svg#gh-light-mode-only">
-    <img src="../../../resources/docs/reference/common/hash_set/index.svg" alt="Index for hash_set.h">
-  </a>
-  <a href="../../../resources/docs/reference/common/hash_set/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../resources/docs/reference/common/hash_set/index-dark.svg" alt="Index for hash_set.h">
-  </a>
-</h1>
+<a id="hash-set"></a>
+<a href="../../../resources/docs/reference/common/hash_set/index.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/hash_set/index.svg" alt="hash_set">
+</a>
+<a href="../../../resources/docs/reference/common/hash_set/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/hash_set/index-dark.svg" alt="hash_set">
+</a>
 
 **Header:** [include/common/hash_set.h](../../../include/common/hash_set.h)
 
 This header declares the types and operations listed below.
 
-**common**
+### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
 
-- [hash_set](#alias-hash-set) · *alias*
+[hash_set](#alias-hash-set)
 
 <a id="alias-hash-set"></a>
 

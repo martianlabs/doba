@@ -1,20 +1,18 @@
-<a id="https-server-h"></a>
-<h1>
-  <a href="../../resources/docs/reference/https_server/index.svg#gh-light-mode-only">
-    <img src="../../resources/docs/reference/https_server/index.svg" alt="Index for https_server.h">
-  </a>
-  <a href="../../resources/docs/reference/https_server/index-dark.svg#gh-dark-mode-only">
-    <img src="../../resources/docs/reference/https_server/index-dark.svg" alt="Index for https_server.h">
-  </a>
-</h1>
+<a id="https-server"></a>
+<a href="../../resources/docs/reference/https_server/index.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/https_server/index.svg" alt="https_server">
+</a>
+<a href="../../resources/docs/reference/https_server/index-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/https_server/index-dark.svg" alt="https_server">
+</a>
 
 **Header:** [include/https_server.h](../../include/https_server.h)
 
 Composes a TLS HTTP/1.1 routing with a protocol engine and transport.
 
-**doba**
+### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> doba
 
-- [https_server](#type-https-server) · *type*
+[https_server](#type-https-server)
 
 <a id="type-https-server"></a>
 

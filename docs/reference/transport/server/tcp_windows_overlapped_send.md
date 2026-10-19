@@ -1,28 +1,26 @@
-<a id="tcp-windows-overlapped-send-h"></a>
-<h1>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index.svg#gh-light-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index.svg" alt="Index for tcp_windows_overlapped_send.h">
-  </a>
-  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index-dark.svg" alt="Index for tcp_windows_overlapped_send.h">
-  </a>
-</h1>
+<a id="tcp-windows-overlapped-send"></a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index.svg" alt="tcp_windows_overlapped_send">
+</a>
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index-dark.svg" alt="tcp_windows_overlapped_send">
+</a>
 
 **Header:** [include/transport/server/tcp_windows_overlapped_send.h](../../../../include/transport/server/tcp_windows_overlapped_send.h)
 
 Provides the context transport component.
 
-**transport::server**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-- [context](#type-context) · *type*
-- [overlapped_send](#type-overlapped-send) · *type*
+[context](#type-context) ·
+[overlapped_send](#type-overlapped-send)
 
-**transport::server::overlapped_send**
+### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::overlapped_send
 
-- [ctx](#field-ctx) · *field*
-- [buffers](#field-buffers) · *field*
-- [buffer_count](#field-buffer-count) · *field*
-- [submitted_size](#field-submitted-size) · *field*
+[ctx](#field-ctx) ·
+[buffers](#field-buffers) ·
+[buffer_count](#field-buffer-count) ·
+[submitted_size](#field-submitted-size)
 
 <a id="type-context"></a>
 

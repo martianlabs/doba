@@ -1,26 +1,24 @@
-<a id="writer-raw-h"></a>
-<h1>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index.svg#gh-light-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index.svg" alt="Index for writer_raw.h">
-  </a>
-  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index-dark.svg" alt="Index for writer_raw.h">
-  </a>
-</h1>
+<a id="writer-raw"></a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index.svg" alt="writer_raw">
+</a>
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index-dark.svg" alt="writer_raw">
+</a>
 
 **Header:** [include/protocol/http/v11/body/writer_raw.h](../../../../../../include/protocol/http/v11/body/writer_raw.h)
 
 Encodes an outgoing Content-Length-framed body: the raw framing is a pure passthrough, so this simply forwards the caller-supplied payload bytes verbatim into the destination common::writer.
 
-**protocol::http::v11::body**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body
 
-- [writer_raw](#type-writer-raw) · *type*
+[writer_raw](#type-writer-raw)
 
-**protocol::http::v11::body::writer_raw**
+### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::body::writer_raw
 
-- [write(payload, dst)](#method-write) · *method*
-- [write(payload, dst)](#method-write-2) · *method*
-- [end](#method-end) · *method*
+[write(payload, dst)](#method-write) ·
+[write(payload, dst)](#method-write-2) ·
+[end](#method-end)
 
 <a id="type-writer-raw"></a>
 

@@ -1,62 +1,60 @@
-<a id="header-names-h"></a>
-<h1>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/header_names/index.svg#gh-light-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/header_names/index.svg" alt="Index for header_names.h">
-  </a>
-  <a href="../../../../../resources/docs/reference/protocol/http/common/header_names/index-dark.svg#gh-dark-mode-only">
-    <img src="../../../../../resources/docs/reference/protocol/http/common/header_names/index-dark.svg" alt="Index for header_names.h">
-  </a>
-</h1>
+<a id="header-names"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/header_names/index.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/header_names/index.svg" alt="header_names">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/common/header_names/index-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/header_names/index-dark.svg" alt="header_names">
+</a>
 
 **Header:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 Provides the http 1.1 header names specification.
 
-**protocol::http**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
-- [header_names](#type-header-names) · *type*
+[header_names](#type-header-names)
 
-**protocol::http::header_names**
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::header_names
 
-- [kConnection](#constant-kconnection) · *constant*
-- [kDate](#constant-kdate) · *constant*
-- [kVia](#constant-kvia) · *constant*
-- [kCacheControl](#constant-kcachecontrol) · *constant*
-- [kPragma](#constant-kpragma) · *constant*
-- [kWarning](#constant-kwarning) · *constant*
-- [kHost](#constant-khost) · *constant*
-- [kUserAgent](#constant-kuseragent) · *constant*
-- [kAccept](#constant-kaccept) · *constant*
-- [kAcceptEncoding](#constant-kacceptencoding) · *constant*
-- [kAcceptLanguage](#constant-kacceptlanguage) · *constant*
-- [kAuthorization](#constant-kauthorization) · *constant*
-- [kExpect](#constant-kexpect) · *constant*
-- [kFrom](#constant-kfrom) · *constant*
-- [kIfMatch](#constant-kifmatch) · *constant*
-- [kIfNoneMatch](#constant-kifnonematch) · *constant*
-- [kIfModifiedSince](#constant-kifmodifiedsince) · *constant*
-- [kIfUnmodifiedSince](#constant-kifunmodifiedsince) · *constant*
-- [kRange](#constant-krange) · *constant*
-- [kReferer](#constant-kreferer) · *constant*
-- [kTe](#constant-kte) · *constant*
-- [kUpgrade](#constant-kupgrade) · *constant*
-- [kCookie](#constant-kcookie) · *constant*
-- [kLocation](#constant-klocation) · *constant*
-- [kServer](#constant-kserver) · *constant*
-- [kVary](#constant-kvary) · *constant*
-- [kWwwAuthenticate](#constant-kwwwauthenticate) · *constant*
-- [kContentLength](#constant-kcontentlength) · *constant*
-- [kContentType](#constant-kcontenttype) · *constant*
-- [kContentEncoding](#constant-kcontentencoding) · *constant*
-- [kContentLanguage](#constant-kcontentlanguage) · *constant*
-- [kContentRange](#constant-kcontentrange) · *constant*
-- [kTrailer](#constant-ktrailer) · *constant*
-- [kTransferEncoding](#constant-ktransferencoding) · *constant*
-- [kAllow](#constant-kallow) · *constant*
-- [kRetryAfter](#constant-kretryafter) · *constant*
-- [kAcceptRanges](#constant-kacceptranges) · *constant*
-- [kETag](#constant-ketag) · *constant*
-- [kLastModified](#constant-klastmodified) · *constant*
+[kConnection](#constant-kconnection) ·
+[kDate](#constant-kdate) ·
+[kVia](#constant-kvia) ·
+[kCacheControl](#constant-kcachecontrol) ·
+[kPragma](#constant-kpragma) ·
+[kWarning](#constant-kwarning) ·
+[kHost](#constant-khost) ·
+[kUserAgent](#constant-kuseragent) ·
+[kAccept](#constant-kaccept) ·
+[kAcceptEncoding](#constant-kacceptencoding) ·
+[kAcceptLanguage](#constant-kacceptlanguage) ·
+[kAuthorization](#constant-kauthorization) ·
+[kExpect](#constant-kexpect) ·
+[kFrom](#constant-kfrom) ·
+[kIfMatch](#constant-kifmatch) ·
+[kIfNoneMatch](#constant-kifnonematch) ·
+[kIfModifiedSince](#constant-kifmodifiedsince) ·
+[kIfUnmodifiedSince](#constant-kifunmodifiedsince) ·
+[kRange](#constant-krange) ·
+[kReferer](#constant-kreferer) ·
+[kTe](#constant-kte) ·
+[kUpgrade](#constant-kupgrade) ·
+[kCookie](#constant-kcookie) ·
+[kLocation](#constant-klocation) ·
+[kServer](#constant-kserver) ·
+[kVary](#constant-kvary) ·
+[kWwwAuthenticate](#constant-kwwwauthenticate) ·
+[kContentLength](#constant-kcontentlength) ·
+[kContentType](#constant-kcontenttype) ·
+[kContentEncoding](#constant-kcontentencoding) ·
+[kContentLanguage](#constant-kcontentlanguage) ·
+[kContentRange](#constant-kcontentrange) ·
+[kTrailer](#constant-ktrailer) ·
+[kTransferEncoding](#constant-ktransferencoding) ·
+[kAllow](#constant-kallow) ·
+[kRetryAfter](#constant-kretryafter) ·
+[kAcceptRanges](#constant-kacceptranges) ·
+[kETag](#constant-ketag) ·
+[kLastModified](#constant-klastmodified)
 
 <a id="type-header-names"></a>
 
