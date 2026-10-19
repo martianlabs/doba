@@ -21,6 +21,13 @@ cmake -S benchmarks/http/v11/httparena -B build/http/v11/httparena
 cmake --build build/http/v11/httparena --config Release
 ```
 
+The gzip handler reuses one zlib context per worker thread and resets it
+for each response. JSON and compressed bytes are generated for every request;
+there is no response cache. The context releases its memory when the worker
+thread exits. Keeping these allocations trades retained per-thread memory
+for avoiding allocation and release on every response. Compression parameters
+remain unchanged.
+
 The adapter listens on port 8080 for HTTP/1.1 and port 8081 for HTTP/1.1 over
 TLS. It implements `GET /baseline11`, `POST /baseline11`, `GET /delay/:ms`,
 `GET /json/:count`, `GET /static/*` and `POST /echo`. The delay route suspends

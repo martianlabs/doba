@@ -66,6 +66,28 @@ namespace {
 namespace common = martianlabs::doba::common;
 using martianlabs::doba::protocol::http::helpers;
 
+// Each worker reuses zlib's allocations; reset starts an independent gzip
+// member for every response. No JSON or compressed response is cached.
+struct gzip_context {
+  z_stream stream{};
+  bool initialized{false};
+
+  gzip_context() = default;
+  gzip_context(const gzip_context&) = delete;
+  gzip_context& operator=(const gzip_context&) = delete;
+  ~gzip_context() {
+    if (initialized) deflateEnd(&stream);
+  }
+
+  bool reset() {
+    if (initialized) return deflateReset(&stream) == Z_OK;
+    initialized = deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
+                              MAX_WBITS + 16, MAX_MEM_LEVEL,
+                              Z_DEFAULT_STRATEGY) == Z_OK;
+    return initialized;
+  }
+};
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] encoding_weights                                         ( function ) |
@@ -496,13 +518,12 @@ int main() {
         std::string_view body(buffer.GetString(), buffer.GetSize());
         res.add_header("Content-Type", "application/json");
         if (gzip) {
-          z_stream stream{};
-          if (deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
-                           MAX_WBITS + 16, MAX_MEM_LEVEL,
-                           Z_DEFAULT_STRATEGY) != Z_OK) {
+          thread_local gzip_context compressor;
+          if (!compressor.reset()) {
             res.internal_server_error_500();
             return;
           }
+          auto& stream = compressor.stream;
           std::string compressed(deflateBound(&stream, body.size()), '\0');
           stream.next_in = reinterpret_cast<Bytef*>(
               const_cast<char*>(body.data()));
@@ -510,7 +531,6 @@ int main() {
           stream.next_out = reinterpret_cast<Bytef*>(compressed.data());
           stream.avail_out = static_cast<uInt>(compressed.size());
           const int result = deflate(&stream, Z_FINISH);
-          deflateEnd(&stream);
           if (result != Z_STREAM_END) {
             res.internal_server_error_500();
             return;
