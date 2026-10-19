@@ -1,0 +1,122 @@
+<a id="version-h"></a>
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/version/index-dark.svg">
+    <img src="../../resources/docs/reference/version/index.svg" alt="Index for version.h">
+  </picture>
+</h1>
+
+**Header:** [include/version.h](../../include/version.h)
+
+Defines the preprocessor values listed below.
+
+**doba**
+
+- [DOBA_VERSION_MAJOR](#macro-doba-version-major) · *macro*
+- [DOBA_VERSION_MINOR](#macro-doba-version-minor) · *macro*
+- [DOBA_VERSION_PATCH](#macro-doba-version-patch) · *macro*
+- [DOBA_VERSION_STRINGIFY_IMPL](#macro-doba-version-stringify-impl) · *macro*
+- [DOBA_VERSION_STRINGIFY](#macro-doba-version-stringify) · *macro*
+- [DOBA_VERSION](#macro-doba-version) · *macro*
+
+<a id="macro-doba-version-major"></a>
+
+## DOBA_VERSION_MAJOR
+
+🟠 **MACRO** · *doba*
+
+```cpp
+#define DOBA_VERSION_MAJOR 0
+```
+
+Defines the doba version major preprocessor value.
+
+**Value:** `0`
+
+**Source:** [include/version.h:28](../../include/version.h#L28)
+
+<a id="macro-doba-version-minor"></a>
+
+## DOBA_VERSION_MINOR
+
+🟠 **MACRO** · *doba*
+
+```cpp
+#define DOBA_VERSION_MINOR 1
+```
+
+Defines the doba version minor preprocessor value.
+
+**Value:** `1`
+
+**Source:** [include/version.h:29](../../include/version.h#L29)
+
+<a id="macro-doba-version-patch"></a>
+
+## DOBA_VERSION_PATCH
+
+🟠 **MACRO** · *doba*
+
+```cpp
+#define DOBA_VERSION_PATCH 0
+```
+
+Defines the doba version patch preprocessor value.
+
+**Value:** `0`
+
+**Source:** [include/version.h:30](../../include/version.h#L30)
+
+<a id="macro-doba-version-stringify-impl"></a>
+
+## DOBA_VERSION_STRINGIFY_IMPL
+
+🟠 **MACRO** · *doba*
+
+```cpp
+#define DOBA_VERSION_STRINGIFY_IMPL(value) #value
+```
+
+Defines the doba version stringify impl preprocessor value.
+
+**Value:** `#value`
+
+**Source:** [include/version.h:31](../../include/version.h#L31)
+
+<a id="macro-doba-version-stringify"></a>
+
+## DOBA_VERSION_STRINGIFY
+
+🟠 **MACRO** · *doba*
+
+```cpp
+#define DOBA_VERSION_STRINGIFY(value) DOBA_VERSION_STRINGIFY_IMPL(value)
+```
+
+Defines the doba version stringify preprocessor value.
+
+**Value:** `DOBA_VERSION_STRINGIFY_IMPL(value)`
+
+**Source:** [include/version.h:32](../../include/version.h#L32)
+
+<a id="macro-doba-version"></a>
+
+## DOBA_VERSION
+
+🟠 **MACRO** · *doba*
+
+```cpp
+#define DOBA_VERSION \
+  DOBA_VERSION_STRINGIFY(DOBA_VERSION_MAJOR) "." \
+  DOBA_VERSION_STRINGIFY(DOBA_VERSION_MINOR) "." \
+  DOBA_VERSION_STRINGIFY(DOBA_VERSION_PATCH)
+```
+
+Defines the doba version preprocessor value.
+
+**Value:** `\
+  DOBA_VERSION_STRINGIFY(DOBA_VERSION_MAJOR) "." \
+  DOBA_VERSION_STRINGIFY(DOBA_VERSION_MINOR) "." \
+  DOBA_VERSION_STRINGIFY(DOBA_VERSION_PATCH)`
+
+**Source:** [include/version.h:33](../../include/version.h#L33)

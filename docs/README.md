@@ -33,5 +33,5 @@ server running. The [guide index](guide/README.md) shows where to go next.
 </h2>
 
 Need an exact signature or lifecycle rule? Start with
-[HTTP server](reference/http/server.md), or browse the
-[reference index](reference/README.md) as more pages arrive.
+[HTTP server](reference/http_server.md), or browse the
+[reference index](reference/README.md) by header.

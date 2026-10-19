@@ -1,0 +1,53 @@
+<a id="writer-error-h"></a>
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_error/index-dark.svg">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_error/index.svg" alt="Index for writer_error.h">
+  </picture>
+</h1>
+
+**Header:** [include/protocol/http/v11/body/writer_error.h](../../../../../../include/protocol/http/v11/body/writer_error.h)
+
+This header declares the types and operations listed below.
+
+**protocol::http::v11::body**
+
+- [writer_error](#enum-writer-error) · *enum*
+
+<a id="enum-writer-error"></a>
+
+## writer_error
+
+🟠 **ENUM** · *protocol::http::v11::body*
+
+```cpp
+enum class writer_error : std::uint8_t {
+  none,
+  io_error,
+  invalid_chunk_size,
+  chunk_size_overflow,
+  invalid_chunk_crlf,
+  invalid_trailer,
+  chunked_incomplete,
+  raw_size_limit_exceeded,
+  chunk_extension_size_limit_exceeded,
+  trailer_size_limit_exceeded
+};
+```
+
+Error codes shared by writer_raw and writer_chunked.
+
+**Values:**
+
+- **none:** None. Declaration: `none`.
+- **io_error:** Io error. Declaration: `io_error`.
+- **invalid_chunk_size:** Invalid chunk size. Declaration: `invalid_chunk_size`.
+- **chunk_size_overflow:** Chunk size overflow. Declaration: `chunk_size_overflow`.
+- **invalid_chunk_crlf:** Invalid chunk crlf. Declaration: `invalid_chunk_crlf`.
+- **invalid_trailer:** Invalid trailer. Declaration: `invalid_trailer`.
+- **chunked_incomplete:** Chunked incomplete. Declaration: `chunked_incomplete`.
+- **raw_size_limit_exceeded:** Raw size limit exceeded. Declaration: `raw_size_limit_exceeded`.
+- **chunk_extension_size_limit_exceeded:** Chunk extension size limit exceeded. Declaration: `chunk_extension_size_limit_exceeded`.
+- **trailer_size_limit_exceeded:** Trailer size limit exceeded. Declaration: `trailer_size_limit_exceeded`.
+
+**Source:** [include/protocol/http/v11/body/writer_error.h:55](../../../../../../include/protocol/http/v11/body/writer_error.h#L55)

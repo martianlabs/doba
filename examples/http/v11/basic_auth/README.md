@@ -3,8 +3,8 @@
 Register a Basic provider with an application validator, then select
 it for **GET /private**. **GET /health** stays public. See the
 [source](main.cpp) for the complete server and the
-[authentication reference](../../../../docs/reference/http/authentication.md)
-for the provider contract.
+[Basic API reference](../../../../docs/reference/protocol/http/common/auth/basic.md)
+for its constructor and authentication method.
 
 The hard-coded credentials are for this demo. Use TLS to protect credentials
 in deployments; the [HTTPS example](../https_hello_world/README.md) shows

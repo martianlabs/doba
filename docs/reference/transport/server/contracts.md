@@ -1,0 +1,187 @@
+<a id="contracts-h"></a>
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/contracts/index-dark.svg">
+    <img src="../../../../resources/docs/reference/transport/server/contracts/index.svg" alt="Index for contracts.h">
+  </picture>
+</h1>
+
+**Header:** [include/transport/server/contracts.h](../../../../include/transport/server/contracts.h)
+
+Provides the execution work transport component.
+
+**transport::server**
+
+- [execution_work](#type-execution-work) · *type*
+
+**transport::server::execution_work**
+
+- [context](#field-context) · *field*
+- [run](#field-run) · *field*
+
+**transport::server**
+
+- [execution_capacity](#type-execution-capacity) · *type*
+
+**transport::server::execution_capacity**
+
+- [owner](#field-owner) · *field*
+- [submit](#field-submit) · *field*
+
+**transport::server::contracts**
+
+- [execution_receiver](#concept-execution-receiver) · *concept*
+- [transport](#concept-transport) · *concept*
+
+<a id="type-execution-work"></a>
+
+## execution_work
+
+🟠 **TYPE** · *transport::server*
+
+**Declaration synopsis:**
+
+```cpp
+struct execution_work { ... };
+```
+
+Provides the execution work transport component.
+
+**Source:** [include/transport/server/contracts.h:41](../../../../include/transport/server/contracts.h#L41)
+
+<a id="field-context"></a>
+
+## context
+
+🟠 **FIELD** · *transport::server::execution_work*
+
+```cpp
+void* context{nullptr};
+```
+
+Stores the context value.
+
+**Value:** `{nullptr}`
+
+**Source:** [include/transport/server/contracts.h:42](../../../../include/transport/server/contracts.h#L42)
+
+<a id="field-run"></a>
+
+## run
+
+🟠 **FIELD** · *transport::server::execution_work*
+
+```cpp
+void (*run)(void*) noexcept{nullptr};
+```
+
+Stores the run value.
+
+**Value:** `{nullptr}`
+
+**Source:** [include/transport/server/contracts.h:43](../../../../include/transport/server/contracts.h#L43)
+
+<a id="type-execution-capacity"></a>
+
+## execution_capacity
+
+🟠 **TYPE** · *transport::server*
+
+**Declaration synopsis:**
+
+```cpp
+struct execution_capacity { ... };
+```
+
+While active, accepted work runs once, no earlier than its threshold.
+
+**Source:** [include/transport/server/contracts.h:53](../../../../include/transport/server/contracts.h#L53)
+
+<a id="field-owner"></a>
+
+## owner
+
+🟠 **FIELD** · *transport::server::execution_capacity*
+
+```cpp
+void* owner{nullptr};
+```
+
+Stores the owner value.
+
+**Value:** `{nullptr}`
+
+**Source:** [include/transport/server/contracts.h:54](../../../../include/transport/server/contracts.h#L54)
+
+<a id="field-submit"></a>
+
+## submit
+
+🟠 **FIELD** · *transport::server::execution_capacity*
+
+```cpp
+void (*submit)(void*, std::chrono::steady_clock::time_point,
+                 execution_work){nullptr};
+```
+
+Stores the submit value.
+
+**Value:** `{nullptr}`
+
+**Source:** [include/transport/server/contracts.h:55](../../../../include/transport/server/contracts.h#L55)
+
+<a id="concept-execution-receiver"></a>
+
+## execution_receiver
+
+🟠 **CONCEPT** · *transport::server::contracts*
+
+```cpp
+template <typename ENty>
+concept execution_receiver =
+    requires(ENty& engine, execution_capacity execution) {
+      { engine.set_execution_capacity(execution) } -> std::same_as<void>;
+    };
+```
+
+Checks the compile-time requirements for execution receiver.
+
+**Template parameters:**
+
+- **ENty:** `typename ENty`.
+
+**Source:** [include/transport/server/contracts.h:67](../../../../include/transport/server/contracts.h#L67)
+
+<a id="concept-transport"></a>
+
+## transport
+
+🟠 **CONCEPT** · *transport::server::contracts*
+
+```cpp
+template <typename TRty, typename ENty, typename FNty>
+concept transport =
+    protocol::contracts::engine_factory<FNty, ENty> &&
+    std::constructible_from<TRty, typename TRty::policies_type, FNty> &&
+    requires(TRty& tr, std::function<void()> callback) {
+      typename TRty::policies_type;
+      // Set the callback for when a connection is established
+      { tr.set_on_connection(std::move(callback)) } -> std::same_as<void>;
+      // Set the callback for when a connection is disconnected
+      { tr.set_on_disconnection(std::move(callback)) } -> std::same_as<void>;
+      // Start the transport
+      { tr.start() } -> std::same_as<void>;
+      // Stop the transport
+      { tr.stop() } -> std::same_as<void>;
+    };
+```
+
+This concept defines the requirements for a transport type. It requires that the transport type is constructible from its policies and an engine factory, and that it provides methods for setting callbacks for connection and disconnection events, as well as starting and stopping the transport.
+
+**Template parameters:**
+
+- **TRty:** `typename TRty`.
+- **ENty:** `typename ENty`.
+- **FNty:** `typename FNty`.
+
+**Source:** [include/transport/server/contracts.h:84](../../../../include/transport/server/contracts.h#L84)

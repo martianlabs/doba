@@ -1,0 +1,55 @@
+<a id="authentication-info-h"></a>
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/headers/authentication_info/index-dark.svg">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/authentication_info/index.svg" alt="Index for authentication_info.h">
+  </picture>
+</h1>
+
+**Header:** [include/protocol/http/common/headers/authentication_info.h](../../../../../../include/protocol/http/common/headers/authentication_info.h)
+
+|                                                       authentication-info | | RFC 9110 S11.6.3 Authentication-Info                                      | | The "Authentication-Info" response header field allows an HTTP            | | authentication scheme to communicate information after the client's       | | authentication credentials have been
+
+**protocol::http::headers**
+
+- [authentication_info](#type-authentication-info) · *type*
+
+**protocol::http::headers::authentication_info**
+
+- [check](#method-check) · *method*
+
+<a id="type-authentication-info"></a>
+
+## authentication_info
+
+🟠 **TYPE** · *protocol::http::headers*
+
+**Declaration synopsis:**
+
+```cpp
+class authentication_info { ... };
+```
+
+|                                                       authentication-info | | RFC 9110 S11.6.3 Authentication-Info                                      | | The "Authentication-Info" response header field allows an HTTP            | | authentication scheme to communicate information after the client's       | | authentication credentials have been
+
+**Source:** [include/protocol/http/common/headers/authentication_info.h:117](../../../../../../include/protocol/http/common/headers/authentication_info.h#L117)
+
+<a id="method-check"></a>
+
+## check
+
+🟠 **METHOD** · *protocol::http::headers::authentication_info*
+
+```cpp
+static constexpr bool check(std::string_view sv);
+```
+
+Checks whether a value follows the HTTP authentication-info header syntax.
+
+**Parameters:**
+
+- **sv:** Text to check or parse. Declaration: `std::string_view sv`.
+
+**Returns:** A boolean result; see the operation description for its meaning.
+
+**Source:** [include/protocol/http/common/headers/authentication_info.h:122](../../../../../../include/protocol/http/common/headers/authentication_info.h#L122)

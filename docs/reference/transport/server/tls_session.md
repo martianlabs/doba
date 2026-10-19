@@ -1,0 +1,384 @@
+<a id="tls-session-h"></a>
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/tls_session/index-dark.svg">
+    <img src="../../../../resources/docs/reference/transport/server/tls_session/index.svg" alt="Index for tls_session.h">
+  </picture>
+</h1>
+
+**Header:** [include/transport/server/tls_session.h](../../../../include/transport/server/tls_session.h)
+
+This class manages the TLS session for a single connection. It handles the handshake, encrypts and decrypts data, and manages the encrypted and plaintext buffers. It also lets you read and write data, check the session state, and shut it down cleanly.
+
+**transport::server**
+
+- [tls_context](#alias-tls-context) · *alias*
+- [make_tls_context](#function-make-tls-context) · *function*
+- [tls_session](#type-tls-session) · *type*
+
+**transport::server::tls_session**
+
+- [status](#enum-status) · *enum*
+- [result](#type-result) · *type*
+
+**transport::server::tls_session::result**
+
+- [state](#field-state) · *field*
+- [size](#field-size) · *field*
+
+**transport::server::tls_session**
+
+- [tls_session](#constructor-tls-session) · *constructor*
+- [handshake](#method-handshake) · *method*
+- [receive](#method-receive) · *method*
+- [read](#method-read) · *method*
+- [write](#method-write) · *method*
+- [shutdown](#method-shutdown) · *method*
+- [drain](#method-drain) · *method*
+- [output_bytes](#method-output-bytes) · *method*
+- [output_sent](#method-output-sent) · *method*
+- [pending](#method-pending) · *method*
+- [established](#method-established) · *method*
+- [failed](#method-failed) · *method*
+
+<a id="alias-tls-context"></a>
+
+## tls_context
+
+🟠 **ALIAS** · *transport::server*
+
+```cpp
+using tls_context = std::shared_ptr<SSL_CTX>;
+```
+
+Alias for `std::shared_ptr<SSL_CTX>`.
+
+**Source:** [include/transport/server/tls_session.h:45](../../../../include/transport/server/tls_session.h#L45)
+
+<a id="function-make-tls-context"></a>
+
+## make_tls_context
+
+🟠 **FUNCTION** · *transport::server*
+
+```cpp
+inline tls_context make_tls_context(const tls_policies& configuration);
+```
+
+Creates tls context.
+
+**Parameters:**
+
+- **configuration:** Configuration for this component. Declaration: `const tls_policies& configuration`.
+
+**Returns:** A value of type `tls_context`.
+
+**Errors:** Directly throws `std::runtime_error`. Calls made by this operation may propagate additional errors.
+
+**Source:** [include/transport/server/tls_session.h:52](../../../../include/transport/server/tls_session.h#L52)
+
+<a id="type-tls-session"></a>
+
+## tls_session
+
+🟠 **TYPE** · *transport::server*
+
+**Declaration synopsis:**
+
+```cpp
+class tls_session { ... };
+```
+
+This class manages the TLS session for a single connection. It handles the handshake, encrypts and decrypts data, and manages the encrypted and plaintext buffers. It also lets you read and write data, check the session state, and shut it down cleanly.
+
+**Source:** [include/transport/server/tls_session.h:89](../../../../include/transport/server/tls_session.h#L89)
+
+<a id="enum-status"></a>
+
+## status
+
+🟠 **ENUM** · *transport::server::tls_session*
+
+```cpp
+enum class status { ready, need_input, need_output, closed, failed };
+```
+
+Enumerates status values.
+
+**Values:**
+
+- **ready:** Ready. Declaration: `ready`.
+- **need_input:** Need input. Declaration: `need_input`.
+- **need_output:** Need output. Declaration: `need_output`.
+- **closed:** Closed. Declaration: `closed`.
+- **failed:** Failed. Declaration: `failed`.
+
+**Source:** [include/transport/server/tls_session.h:94](../../../../include/transport/server/tls_session.h#L94)
+
+<a id="type-result"></a>
+
+## result
+
+🟠 **TYPE** · *transport::server::tls_session*
+
+**Declaration synopsis:**
+
+```cpp
+struct result { ... };
+```
+
+Provides the result transport component.
+
+**Source:** [include/transport/server/tls_session.h:95](../../../../include/transport/server/tls_session.h#L95)
+
+<a id="field-state"></a>
+
+## state
+
+🟠 **FIELD** · *transport::server::tls_session::result*
+
+```cpp
+status state;
+```
+
+Stores the state value.
+
+**Value:** No explicit initializer appears in this declaration.
+
+**Source:** [include/transport/server/tls_session.h:96](../../../../include/transport/server/tls_session.h#L96)
+
+<a id="field-size"></a>
+
+## size
+
+🟠 **FIELD** · *transport::server::tls_session::result*
+
+```cpp
+std::size_t size;
+```
+
+Stores the size value.
+
+**Value:** No explicit initializer appears in this declaration.
+
+**Source:** [include/transport/server/tls_session.h:97](../../../../include/transport/server/tls_session.h#L97)
+
+<a id="constructor-tls-session"></a>
+
+## tls_session
+
+🟠 **CONSTRUCTOR** · *transport::server::tls_session*
+
+```cpp
+tls_session(tls_context context, std::size_t send_capacity,
+              std::size_t network_bio_capacity =
+                  tls_policies::kDefaultNetworkBioBufferCapacity);
+```
+
+Constructs a tls_session value.
+
+**Parameters:**
+
+- **context:** Context for this operation. Declaration: `tls_context context`.
+- **send_capacity:** Initial value supplied to the constructor. Declaration: `std::size_t send_capacity`.
+- **network_bio_capacity:** Initial value supplied to the constructor. Declaration: `std::size_t network_bio_capacity = tls_policies::kDefaultNetworkBioBufferCapacity`.
+
+**Errors:** Directly throws `std::runtime_error`. Calls made by this operation may propagate additional errors.
+
+**Source:** [include/transport/server/tls_session.h:102](../../../../include/transport/server/tls_session.h#L102)
+
+<a id="method-handshake"></a>
+
+## handshake
+
+🟠 **METHOD** · *transport::server::tls_session*
+
+```cpp
+status handshake();
+```
+
+Runs the TLS handshake and returns the session status. If it fails, it returns `failed`. If it needs more data to read or send, it returns `need_input` or `need_output`. If the handshake succeeds, it returns `ready`.
+
+**Returns:** A value of type `status`.
+
+**Source:** [include/transport/server/tls_session.h:132](../../../../include/transport/server/tls_session.h#L132)
+
+<a id="method-receive"></a>
+
+## receive
+
+🟠 **METHOD** · *transport::server::tls_session*
+
+```cpp
+std::size_t receive(std::span<const char> bytes);
+```
+
+Receives encrypted data from the network and passes it to the TLS session. Returns the number of bytes received, or 0 if the session fails.
+
+**Parameters:**
+
+- **bytes:** Byte sequence or byte count for this operation. Declaration: `std::span<const char> bytes`.
+
+**Returns:** The number of bytes processed.
+
+**Source:** [include/transport/server/tls_session.h:150](../../../../include/transport/server/tls_session.h#L150)
+
+<a id="method-read"></a>
+
+## read
+
+🟠 **METHOD** · *transport::server::tls_session*
+
+```cpp
+result read(std::span<char> bytes);
+```
+
+Reads decrypted data from the TLS session into the given buffer. It returns a `result` with the session status and number of bytes read. If the session fails, it returns `failed`. If it needs more data to read or send, it returns `need_input` or `need_output`. If all goes well, it returns `ready`.
+
+**Parameters:**
+
+- **bytes:** Byte sequence or byte count for this operation. Declaration: `std::span<char> bytes`.
+
+**Returns:** A value of type `result`.
+
+**Source:** [include/transport/server/tls_session.h:170](../../../../include/transport/server/tls_session.h#L170)
+
+<a id="method-write"></a>
+
+## write
+
+🟠 **METHOD** · *transport::server::tls_session*
+
+```cpp
+result write(std::span<const char> bytes);
+```
+
+Writes plaintext data to the TLS session to be encrypted. It returns a `result` with the session status and number of bytes written. If the session fails, it returns `failed`. If it needs more data to read or send, it returns `need_input` or `need_output`. Otherwise, it returns `ready`.
+
+**Parameters:**
+
+- **bytes:** Byte sequence or byte count for this operation. Declaration: `std::span<const char> bytes`.
+
+**Returns:** A value of type `result`.
+
+**Source:** [include/transport/server/tls_session.h:194](../../../../include/transport/server/tls_session.h#L194)
+
+<a id="method-shutdown"></a>
+
+## shutdown
+
+🟠 **METHOD** · *transport::server::tls_session*
+
+```cpp
+status shutdown();
+```
+
+Shuts down the TLS session cleanly. Returns `ready` when it’s done, `need_output` if there’s more data to send, or `failed` if shutdown doesn’t work.
+
+**Returns:** A value of type `status`.
+
+**Source:** [include/transport/server/tls_session.h:235](../../../../include/transport/server/tls_session.h#L235)
+
+<a id="method-drain"></a>
+
+## drain
+
+🟠 **METHOD** · *transport::server::tls_session*
+
+```cpp
+std::size_t drain(std::span<char> bytes);
+```
+
+Shuts down the TLS session cleanly. Returns `ready` when it’s done, `need_output` if there’s more data to send, or `failed` if shutdown doesn’t work.
+
+**Parameters:**
+
+- **bytes:** Byte sequence or byte count for this operation. Declaration: `std::span<char> bytes`.
+
+**Returns:** The number of bytes processed.
+
+**Source:** [include/transport/server/tls_session.h:256](../../../../include/transport/server/tls_session.h#L256)
+
+<a id="method-output-bytes"></a>
+
+## output_bytes
+
+🟠 **METHOD** · *transport::server::tls_session*
+
+```cpp
+std::span<char> output_bytes();
+```
+
+Returns a span of encrypted data that’s ready to send. It uses the network BIO to find the current output buffer and offset.
+
+**Returns:** A `std::span<char>` view of the selected buffer.
+
+**Source:** [include/transport/server/tls_session.h:273](../../../../include/transport/server/tls_session.h#L273)
+
+<a id="method-output-sent"></a>
+
+## output_sent
+
+🟠 **METHOD** · *transport::server::tls_session*
+
+```cpp
+void output_sent(std::size_t size);
+```
+
+Tells the session how many bytes were sent. It updates the network BIO and returns true.
+
+**Parameters:**
+
+- **size:** Number of elements or bytes, according to the declared type. Declaration: `std::size_t size`.
+
+**Returns:** No value (`void`).
+
+**Source:** [include/transport/server/tls_session.h:286](../../../../include/transport/server/tls_session.h#L286)
+
+<a id="method-pending"></a>
+
+## pending
+
+🟠 **METHOD** · *transport::server::tls_session*
+
+```cpp
+std::size_t pending() const;
+```
+
+Returns the number of bytes pending in the network BIO.
+
+**Returns:** The pending count or size.
+
+**Source:** [include/transport/server/tls_session.h:296](../../../../include/transport/server/tls_session.h#L296)
+
+<a id="method-established"></a>
+
+## established
+
+🟠 **METHOD** · *transport::server::tls_session*
+
+```cpp
+bool established() const;
+```
+
+Returns true if the TLS session is established and ready for data.
+
+**Returns:** A boolean result; see the operation description for its meaning.
+
+**Source:** [include/transport/server/tls_session.h:305](../../../../include/transport/server/tls_session.h#L305)
+
+<a id="method-failed"></a>
+
+## failed
+
+🟠 **METHOD** · *transport::server::tls_session*
+
+```cpp
+bool failed() const;
+```
+
+Returns true if the TLS session has failed.
+
+**Returns:** A boolean result; see the operation description for its meaning.
+
+**Source:** [include/transport/server/tls_session.h:314](../../../../include/transport/server/tls_session.h#L314)

@@ -1,0 +1,138 @@
+<a id="tls-policies-h"></a>
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/tls_policies/index-dark.svg">
+    <img src="../../../../resources/docs/reference/transport/server/tls_policies/index.svg" alt="Index for tls_policies.h">
+  </picture>
+</h1>
+
+**Header:** [include/transport/server/tls_policies.h](../../../../include/transport/server/tls_policies.h)
+
+Provides the tls policies transport component.
+
+**transport::server**
+
+- [tls_policies](#type-tls-policies) · *type*
+
+**transport::server::tls_policies**
+
+- [kDefaultEncryptedReceiveBufferCapacity](#constant-kdefaultencryptedreceivebuffercapacity) · *constant*
+- [kDefaultNetworkBioBufferCapacity](#constant-kdefaultnetworkbiobuffercapacity) · *constant*
+- [certificate_file](#field-certificate-file) · *field*
+- [private_key_file](#field-private-key-file) · *field*
+- [encrypted_receive_buffer_capacity](#field-encrypted-receive-buffer-capacity) · *field*
+- [network_bio_buffer_capacity](#field-network-bio-buffer-capacity) · *field*
+
+<a id="type-tls-policies"></a>
+
+## tls_policies
+
+🟠 **TYPE** · *transport::server*
+
+**Declaration synopsis:**
+
+```cpp
+struct tls_policies : tcp_policies { ... };
+```
+
+Provides the tls policies transport component.
+
+**Source:** [include/transport/server/tls_policies.h:39](../../../../include/transport/server/tls_policies.h#L39)
+
+<a id="constant-kdefaultencryptedreceivebuffercapacity"></a>
+
+## kDefaultEncryptedReceiveBufferCapacity
+
+🟠 **CONSTANT** · *transport::server::tls_policies*
+
+```cpp
+static constexpr std::size_t kDefaultEncryptedReceiveBufferCapacity =
+      17 * 1024;
+```
+
+Encrypted socket input capacity per connection, in bytes.
+
+**Value:** `17 * 1024`
+
+**Source:** [include/transport/server/tls_policies.h:41](../../../../include/transport/server/tls_policies.h#L41)
+
+<a id="constant-kdefaultnetworkbiobuffercapacity"></a>
+
+## kDefaultNetworkBioBufferCapacity
+
+🟠 **CONSTANT** · *transport::server::tls_policies*
+
+```cpp
+static constexpr std::size_t kDefaultNetworkBioBufferCapacity = 17 * 1024;
+```
+
+Maximum TLS BIO buffer capacity, in bytes.
+
+**Value:** `17 * 1024`
+
+**Source:** [include/transport/server/tls_policies.h:44](../../../../include/transport/server/tls_policies.h#L44)
+
+<a id="field-certificate-file"></a>
+
+## certificate_file
+
+🟠 **FIELD** · *transport::server::tls_policies*
+
+```cpp
+std::string certificate_file;
+```
+
+Path to the server certificate chain in PEM format.
+
+**Value:** No explicit initializer appears in this declaration.
+
+**Source:** [include/transport/server/tls_policies.h:46](../../../../include/transport/server/tls_policies.h#L46)
+
+<a id="field-private-key-file"></a>
+
+## private_key_file
+
+🟠 **FIELD** · *transport::server::tls_policies*
+
+```cpp
+std::string private_key_file;
+```
+
+Path to the matching private key in PEM format.
+
+**Value:** No explicit initializer appears in this declaration.
+
+**Source:** [include/transport/server/tls_policies.h:48](../../../../include/transport/server/tls_policies.h#L48)
+
+<a id="field-encrypted-receive-buffer-capacity"></a>
+
+## encrypted_receive_buffer_capacity
+
+🟠 **FIELD** · *transport::server::tls_policies*
+
+```cpp
+std::size_t encrypted_receive_buffer_capacity =
+      kDefaultEncryptedReceiveBufferCapacity;
+```
+
+Encrypted receive capacity per connection (must be positive).
+
+**Value:** `kDefaultEncryptedReceiveBufferCapacity`
+
+**Source:** [include/transport/server/tls_policies.h:50](../../../../include/transport/server/tls_policies.h#L50)
+
+<a id="field-network-bio-buffer-capacity"></a>
+
+## network_bio_buffer_capacity
+
+🟠 **FIELD** · *transport::server::tls_policies*
+
+```cpp
+std::size_t network_bio_buffer_capacity = kDefaultNetworkBioBufferCapacity;
+```
+
+Network BIO capacity per connection (must be positive).
+
+**Value:** `kDefaultNetworkBioBufferCapacity`
+
+**Source:** [include/transport/server/tls_policies.h:53](../../../../include/transport/server/tls_policies.h#L53)
