@@ -28,7 +28,7 @@
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::common::gm_time;
+using martianlabs::doba::common::detail::gm_time;
 }  // namespace
 
 // +===========================================================================+

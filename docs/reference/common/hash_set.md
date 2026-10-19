@@ -30,7 +30,7 @@ This header declares the types and operations listed below.
 
 ```cpp
 template <typename KEty>
-using hash_set = std::unordered_set<KEty, base_hash, base_equal>;
+using hash_set = std::unordered_set<KEty, detail::base_hash, detail::base_equal>;
 ```
 
 Provides a generic hash based set.

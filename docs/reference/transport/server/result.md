@@ -8,18 +8,11 @@
 
 **Header:** [include/transport/server/tls_session.h](../../../../include/transport/server/tls_session.h)
 
-**Declared in:** [tls_session](tls_session.md#type-tls-session)
+**Declared in:** [tls_session](tls_session.md#implementation)
 
-Provides the result transport component.
+Implementation support for doba. These declarations are internal and are not part of the supported public API.
 
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::tls_session
-
-[result](#type-result)
-
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::tls_session::result
-
-[state](#field-state) ·
-[size](#field-size)
+[Internal implementation](#implementation)
 
 <a id="api"></a>
 <a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
@@ -29,50 +22,10 @@ Provides the result transport component.
   <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
-<a id="type-result"></a>
+<a id="implementation"></a>
 
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> result
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Internal implementation
 
-**TYPE** · *transport::server::tls_session*
+**INTERNAL HEADER**
 
-**Declaration synopsis:**
-
-```cpp
-struct result { ... };
-```
-
-Provides the result transport component.
-
-**Source:** [include/transport/server/tls_session.h:95](../../../../include/transport/server/tls_session.h#L95)
-
-<a id="field-state"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> state
-
-**FIELD** · *transport::server::tls_session::result*
-
-```cpp
-status state;
-```
-
-Stores the state value.
-
-**Value:** No explicit initializer appears in this declaration.
-
-**Source:** [include/transport/server/tls_session.h:96](../../../../include/transport/server/tls_session.h#L96)
-
-<a id="field-size"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> size
-
-**FIELD** · *transport::server::tls_session::result*
-
-```cpp
-std::size_t size;
-```
-
-Stores the size value.
-
-**Value:** No explicit initializer appears in this declaration.
-
-**Source:** [include/transport/server/tls_session.h:97](../../../../include/transport/server/tls_session.h#L97)
+Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.

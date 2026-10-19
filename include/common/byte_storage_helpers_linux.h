@@ -32,7 +32,7 @@
 #include <utility>
 #include <vector>
 
-namespace martianlabs::doba::common {
+namespace martianlabs::doba::common::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] byte_storage_file [linux]                                   ( class ) |
@@ -124,6 +124,6 @@ class byte_storage_file {
   // +-------------------------------------------------------------------------+
   int file_{-1};
 };
-}  // namespace martianlabs::doba::common
+}  // namespace martianlabs::doba::common::detail
 
 #endif

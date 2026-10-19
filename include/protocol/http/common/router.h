@@ -76,7 +76,7 @@ class router {
   // | and handler.                                                            |
   // +-------------------------------------------------------------------------+
   template <typename Hty>
-    requires router_handler_lambda<Hty>
+    requires detail::router_handler_lambda<Hty>
   void add(std::string_view method, std::string_view route, Hty handler) {
     add(method, route, std::move(handler), {});
   }
@@ -85,12 +85,12 @@ class router {
   // | [>] add                                                      ( public ) |
   // +-------------------------------------------------------------------------+
   template <typename Hty>
-    requires router_handler_lambda<Hty>
+    requires detail::router_handler_lambda<Hty>
   void add(std::string_view method, std::string_view route, Hty handler,
            std::function<auth::authentication_result(const RQty&)>
                authenticate) {
     using signature =
-        router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
+        detail::router_handler_signature<decltype(&std::decay_t<Hty>::operator())>;
     signature::template check<RQty, RSty>();
     constexpr bool asynchronous =
         std::same_as<typename signature::return_type, common::task<void>>;
@@ -217,12 +217,12 @@ class router {
       if (static_method != method) continue;
       for (const auto& route : handlers) {
         if (route.path != path) continue;
-        if (auto handler = std::get_if<router_handler_static<RQty, RSty>>(
+        if (auto handler = std::get_if<detail::router_handler_static<RQty, RSty>>(
                 &route.handler)) {
           return {handler, nullptr, nullptr, nullptr, &route.authenticate};
         }
         return {nullptr, nullptr,
-                std::get_if<router_handler_static_async<RQty, RSty>>(
+                std::get_if<detail::router_handler_static_async<RQty, RSty>>(
                     &route.handler),
                 nullptr, &route.authenticate};
       }
@@ -235,12 +235,12 @@ class router {
             handler.handler);
         if (!matches) continue;
         if (auto selected =
-                std::get_if<router_handler_parametrized<RQty, RSty>>(
+                std::get_if<detail::router_handler_parametrized<RQty, RSty>>(
                     &handler.handler)) {
           return {nullptr, selected, nullptr, nullptr, &handler.authenticate};
         }
         return {nullptr, nullptr, nullptr,
-                std::get_if<router_handler_parametrized_async<RQty, RSty>>(
+                std::get_if<detail::router_handler_parametrized_async<RQty, RSty>>(
                     &handler.handler), &handler.authenticate};
       }
     }
@@ -248,12 +248,12 @@ class router {
       if (wildcard_method != method) continue;
       for (const auto& route : handlers) {
         if (!path.starts_with(route.path)) continue;
-        if (auto handler = std::get_if<router_handler_static<RQty, RSty>>(
+        if (auto handler = std::get_if<detail::router_handler_static<RQty, RSty>>(
                 &route.handler)) {
           return {handler, nullptr, nullptr, nullptr, &route.authenticate};
         }
         return {nullptr, nullptr,
-                std::get_if<router_handler_static_async<RQty, RSty>>(
+                std::get_if<detail::router_handler_static_async<RQty, RSty>>(
                     &route.handler),
                 nullptr, &route.authenticate};
       }
@@ -321,11 +321,11 @@ class router {
   // +=========================================================================+
   // | [>] USINGs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  using handler_type = std::variant<router_handler_static<RQty, RSty>,
-                                    router_handler_static_async<RQty, RSty>>;
+  using handler_type = std::variant<detail::router_handler_static<RQty, RSty>,
+                                    detail::router_handler_static_async<RQty, RSty>>;
   using parametrized_handler_type =
-      std::variant<router_handler_parametrized<RQty, RSty>,
-                   router_handler_parametrized_async<RQty, RSty>>;
+      std::variant<detail::router_handler_parametrized<RQty, RSty>,
+                   detail::router_handler_parametrized_async<RQty, RSty>>;
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
   // +-------------------------------------------------------------------------+

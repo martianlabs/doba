@@ -44,7 +44,7 @@
 #include "transport/server/contracts.h"
 #include "transport/server/tcp_connection.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] context                                                    ( struct ) |
@@ -429,6 +429,6 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   bool notified_{false};
   std::atomic<bool> engine_complete_{false};
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

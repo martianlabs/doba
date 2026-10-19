@@ -75,7 +75,7 @@ class engine {
          std::function<void()> on_async_finished = {})
       : router_{router},
         decoder_{configuration},
-        async_{std::make_shared<engine_async>(
+        async_{std::make_shared<detail::engine_async>(
             configuration.max_pending_requests, std::move(on_async_started),
             std::move(on_async_finished))} {}
   engine(const engine&) = delete;
@@ -146,7 +146,7 @@ class engine {
                                  *result.response);
               if (!submitted) return;
             } else {
-              engine_sync<RQty, RSty, ROty>::handle_response(
+              detail::engine_sync<RQty, RSty, ROty>::handle_response(
                   *result.response, rejected, on_send_);
               if (rejected) query_for_close();
             }
@@ -161,14 +161,14 @@ class engine {
           path = request.get_absolute_path();
           match = router_.match(request.get_method(), path);
         }
-        if (!synchronous_ || engine_async::handles(match)) {
+        if (!synchronous_ || detail::engine_async::handles(match)) {
           synchronous_ = false;
           if (!async_->handle_request(decoder_, router_, request, match, path,
                                       execution_, async_, closed_,
                                       response_head_, response_body_)) {
             return;
           }
-        } else if (engine_sync<RQty, RSty, ROty>::handle_request(
+        } else if (detail::engine_sync<RQty, RSty, ROty>::handle_request(
                        decoder_, router_, request, match, on_send_,
                        response_head_, response_body_)) {
           query_for_close();
@@ -201,7 +201,7 @@ class engine {
   std::string response_head_;
   std::string response_body_;
   std::function<void()> on_close_;
-  std::shared_ptr<engine_async> async_;
+  std::shared_ptr<detail::engine_async> async_;
   transport::server::execution_capacity execution_;
   protocol::send_delegate on_send_;
   bool closed_{false};

@@ -127,7 +127,7 @@ struct memory_transport {
 std::string send_request(std::string_view method = "GET",
                          std::string_view path = "/") {
   return memory_transport<http::engine<http::request, http::response>,
-                          http::engine_factory<
+                          http::detail::engine_factory<
                               http::engine<http::request, http::response>,
                               router<http::request, http::response>>>::instance
       ->receive(std::string(method) + " " + std::string(path) +
@@ -200,7 +200,7 @@ DOBA_TEST("HTTP server builds transport after route registration") {
       value;
   DOBA_EXPECT_EQUAL((
       memory_transport<http::engine<http::request, http::response>,
-                       http::engine_factory<
+                       http::detail::engine_factory<
                            http::engine<http::request, http::response>,
                            router<http::request, http::response>>>::instance),
       nullptr);
@@ -210,7 +210,7 @@ DOBA_TEST("HTTP server builds transport after route registration") {
   value.start();
   DOBA_EXPECT((
       memory_transport<http::engine<http::request, http::response>,
-                       http::engine_factory<
+                       http::detail::engine_factory<
                            http::engine<http::request, http::response>,
                            router<http::request, http::response>>>::instance !=
       nullptr));
@@ -259,7 +259,7 @@ DOBA_TEST("server suppresses error bodies only for known HEAD requests") {
   const auto bytes =
       memory_transport<
           http::engine<http::request, http::response>,
-          http::engine_factory<http::engine<http::request, http::response>,
+          http::detail::engine_factory<http::engine<http::request, http::response>,
                                router<http::request, http::response>>>::instance
           ->receive(
               "HEAD / HTTP/1.1\r\nHost: example.com\r\n"
@@ -269,7 +269,7 @@ DOBA_TEST("server suppresses error bodies only for known HEAD requests") {
   DOBA_EXPECT((
       memory_transport<
           http::engine<http::request, http::response>,
-          http::engine_factory<http::engine<http::request, http::response>,
+          http::detail::engine_factory<http::engine<http::request, http::response>,
                                router<http::request, http::response>>>::instance
           ->closed));
 }
@@ -294,7 +294,7 @@ DOBA_TEST("failed starts release the date server") {
   });
   memory_transport<
       http::engine<http::request, http::response>,
-      http::engine_factory<http::engine<http::request, http::response>,
+      http::detail::engine_factory<http::engine<http::request, http::response>,
                            router<http::request, http::response>>>::instance
       ->fail = false;
   value.start();
@@ -323,18 +323,18 @@ DOBA_TEST("server accepts new connections after handler failure") {
   DOBA_EXPECT((
       memory_transport<
           http::engine<http::request, http::response>,
-          http::engine_factory<http::engine<http::request, http::response>,
+          http::detail::engine_factory<http::engine<http::request, http::response>,
                                router<http::request, http::response>>>::instance
           ->closed));
   DOBA_EXPECT(send_request().empty());
   memory_transport<
       http::engine<http::request, http::response>,
-      http::engine_factory<http::engine<http::request, http::response>,
+      http::detail::engine_factory<http::engine<http::request, http::response>,
                            router<http::request, http::response>>>::instance
       ->stop();
   memory_transport<
       http::engine<http::request, http::response>,
-      http::engine_factory<http::engine<http::request, http::response>,
+      http::detail::engine_factory<http::engine<http::request, http::response>,
                            router<http::request, http::response>>>::instance
       ->start();
   DOBA_EXPECT(send_request().starts_with("HTTP/1.1 200 "));
@@ -380,7 +380,7 @@ DOBA_TEST("server rejects route registration during startup") {
   auto resume_signal = resume.get_future().share();
   memory_transport<
       http::engine<http::request, http::response>,
-      http::engine_factory<http::engine<http::request, http::response>,
+      http::detail::engine_factory<http::engine<http::request, http::response>,
                            router<http::request, http::response>>>::on_start =
       [&]() {
         entered.set_value();
@@ -408,7 +408,7 @@ DOBA_TEST("server rejects route registration during startup") {
   const bool rejected = registration.get();
   memory_transport<
       http::engine<http::request, http::response>,
-      http::engine_factory<http::engine<http::request, http::response>,
+      http::detail::engine_factory<http::engine<http::request, http::response>,
                            router<http::request, http::response>>>::on_start =
       {};
   value.stop();

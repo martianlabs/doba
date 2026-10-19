@@ -29,7 +29,7 @@
 
 #include "common/task.h"
 
-namespace martianlabs::doba::protocol::http {
+namespace martianlabs::doba::protocol::http::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] router_handler_static_async                                 ( using ) |
@@ -42,6 +42,6 @@ namespace martianlabs::doba::protocol::http {
 template <typename RQty, typename RSty>
 using router_handler_static_async =
     std::function<common::task<void>(const RQty&, RSty&)>;
-}  // namespace martianlabs::doba::protocol::http
+}  // namespace martianlabs::doba::protocol::http::detail
 
 #endif

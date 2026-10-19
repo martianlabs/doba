@@ -61,13 +61,13 @@ template <typename RQty = protocol::http::v11::request,
            (protocol::http::auth::contracts::provider<AUty, RQty> && ...)
 class http_server
     : public server<
-          ENty, TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>> {
+          ENty, TRty<ENty, protocol::http::v11::detail::engine_factory<ENty, ROty>>> {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   explicit http_server(
-      typename TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>::
+      typename TRty<ENty, protocol::http::v11::detail::engine_factory<ENty, ROty>>::
           policies_type transport_configuration = {},
       typename ENty::policies_type engine_configuration = {})
     requires(sizeof...(AUty) == 0)
@@ -75,14 +75,14 @@ class http_server
                     std::move(engine_configuration), std::tuple<>{}) {}
 
   explicit http_server(
-      typename TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>::
+      typename TRty<ENty, protocol::http::v11::detail::engine_factory<ENty, ROty>>::
           policies_type transport_configuration,
       typename ENty::policies_type engine_configuration,
       std::tuple<AUty...> authentication)
       : server<ENty,
-               TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>>{
+               TRty<ENty, protocol::http::v11::detail::engine_factory<ENty, ROty>>>{
             std::move(transport_configuration),
-            protocol::http::v11::make_engine_factory<ENty>(
+            protocol::http::v11::detail::make_engine_factory<ENty>(
                 std::move(engine_configuration), this->router_)},
         authentication_(std::move(authentication)) {
     // +-----------------------------------------------------------------------+
@@ -122,7 +122,7 @@ class http_server
   // | Adds a route to the server's router.                                    |
   // +-------------------------------------------------------------------------+
   template <typename Hty>
-    requires protocol::http::router_handler_lambda<Hty>
+    requires protocol::http::detail::router_handler_lambda<Hty>
   http_server& add_route(std::string_view method, std::string_view route,
                          Hty handler) {
     std::lock_guard<std::mutex> lock(registration_mutex_);
@@ -136,7 +136,7 @@ class http_server
   // | [>] add_route                                                ( public ) |
   // +-------------------------------------------------------------------------+
   template <typename Aty, typename Hty>
-    requires protocol::http::router_handler_lambda<Hty> &&
+    requires protocol::http::detail::router_handler_lambda<Hty> &&
              (std::same_as<Aty, AUty> || ...)
   http_server& add_route(std::string_view method, std::string_view route,
                          Hty handler) {

@@ -52,7 +52,7 @@
 #include "transport/server/tcp_windows_context.h"
 #include "transport/server/tcp_windows_overlapped_accept.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] worker                                                     ( struct ) |
@@ -907,6 +907,6 @@ struct worker {
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

@@ -10,6 +10,13 @@
 
 Provides the router match result protocol component.
 
+This result is part of the custom-router integration contract. Its handler
+references borrow entries owned by the router; keep those entries valid while
+the engine uses a match. The *detail* handler types in these fields are
+implementation adapters, not supported handler-construction APIs. Register
+handlers through *router::add*; a custom router can delegate to a public router,
+as shown in [custom_http_router](../../../../../examples/http/v11/custom_http_router/README.md).
+
 ### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
 [router_match_result](#type-router-match-result)
@@ -59,7 +66,7 @@ Provides the router match result protocol component.
 **FIELD** · *protocol::http::router_match_result*
 
 ```cpp
-const router_handler_static<RQty, RSty>* handler{nullptr};
+const detail::router_handler_static<RQty, RSty>* handler{nullptr};
 ```
 
 Stores the handler value.
@@ -75,7 +82,7 @@ Stores the handler value.
 **FIELD** · *protocol::http::router_match_result*
 
 ```cpp
-const router_handler_parametrized<RQty, RSty>* parametrized_handler{nullptr};
+const detail::router_handler_parametrized<RQty, RSty>* parametrized_handler{nullptr};
 ```
 
 Stores the parametrized handler value.
@@ -91,7 +98,7 @@ Stores the parametrized handler value.
 **FIELD** · *protocol::http::router_match_result*
 
 ```cpp
-const router_handler_static_async<RQty, RSty>* async_handler{nullptr};
+const detail::router_handler_static_async<RQty, RSty>* async_handler{nullptr};
 ```
 
 Stores the async handler value.
@@ -107,7 +114,7 @@ Stores the async handler value.
 **FIELD** · *protocol::http::router_match_result*
 
 ```cpp
-const router_handler_parametrized_async<RQty, RSty>*
+const detail::router_handler_parametrized_async<RQty, RSty>*
       async_parametrized_handler{nullptr};
 ```
 

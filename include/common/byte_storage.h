@@ -251,7 +251,7 @@ class byte_storage {
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   std::string mem_;
-  byte_storage_file file_;
+  detail::byte_storage_file file_;
   std::filesystem::path spill_path_;
   std::size_t spill_to_disk_threshold_{
       byte_storage_options::kDefaultSpillToDiskThreshold};

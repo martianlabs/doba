@@ -8,11 +8,9 @@
 
 **Header:** [include/common/date_server_helpers.h](../../../include/common/date_server_helpers.h)
 
-Selects or forwards the platform-specific declarations included by this header.
+Implementation support for doba. These declarations are internal and are not part of the supported public API.
 
-### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Exports
-
-[Exports](#exports)
+[Internal implementation](#implementation)
 
 <a id="api"></a>
 <a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
@@ -22,12 +20,10 @@ Selects or forwards the platform-specific declarations included by this header.
   <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
-<a id="exports"></a>
+<a id="implementation"></a>
 
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Exports
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Internal implementation
 
-**HEADER**
+**INTERNAL HEADER**
 
-- [platform.h](../platform.md)
-- [common/date_server_helpers_windows.h](date_server_helpers_windows.md)
-- [common/date_server_helpers_linux.h](date_server_helpers_linux.md)
+Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.

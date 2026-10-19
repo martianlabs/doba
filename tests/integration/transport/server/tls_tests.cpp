@@ -286,8 +286,8 @@ DOBA_TEST("tls uses configured encrypted and BIO capacities") {
   configuration.encrypted_receive_buffer_capacity = 8192;
   configuration.network_bio_buffer_capacity = 4096;
   auto factory = []() { return byte_engine{}; };
-  tr::tls_connection<byte_engine> connection(
-      4096, 65536, factory, tr::make_tls_context(configuration),
+  tr::detail::tls_connection<byte_engine> connection(
+      4096, 65536, factory, tr::detail::make_tls_context(configuration),
       configuration.encrypted_receive_buffer_capacity,
       configuration.network_bio_buffer_capacity);
   DOBA_EXPECT_EQUAL(connection.capacity, 8192);
@@ -300,7 +300,7 @@ DOBA_TEST("tls uses configured encrypted and BIO capacities") {
     }
     bool rejected = false;
     try {
-      tr::make_tls_context(invalid);
+      tr::detail::make_tls_context(invalid);
     } catch (const std::runtime_error&) {
       rejected = true;
     }

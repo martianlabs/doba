@@ -29,7 +29,7 @@
 
 #include "transport/server/tcp_windows_worker.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] basic_transport                                             ( class ) |
@@ -104,6 +104,6 @@ class basic_transport {
   // +-------------------------------------------------------------------------+
   worker<ENty, FAty, CNty, POty> worker_;
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

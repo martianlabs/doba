@@ -34,8 +34,8 @@
 
 namespace {
 using martianlabs::doba::common::task;
-using martianlabs::doba::protocol::http::make_router_handler_parametrized_async;
-using martianlabs::doba::protocol::http::router_handler_parametrized_async;
+using martianlabs::doba::protocol::http::detail::make_router_handler_parametrized_async;
+using martianlabs::doba::protocol::http::detail::router_handler_parametrized_async;
 using martianlabs::doba::tests::unit::router_empty_request;
 using martianlabs::doba::tests::unit::router_value_response;
 }  // namespace

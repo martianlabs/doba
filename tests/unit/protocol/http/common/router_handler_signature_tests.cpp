@@ -31,7 +31,7 @@
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::protocol::http::router_handler_lambda;
+using martianlabs::doba::protocol::http::detail::router_handler_lambda;
 using martianlabs::doba::tests::unit::router_empty_request;
 using martianlabs::doba::tests::unit::router_empty_response;
 }  // namespace
@@ -55,7 +55,7 @@ DOBA_TEST("handler concepts require a request and response") {
 DOBA_TEST("mutable handler signatures retain their argument count") {
   auto sync = [](const router_empty_request&, router_empty_response&,
                  int) mutable {};
-  using namespace martianlabs::doba::protocol::http;
+  using namespace martianlabs::doba::protocol::http::detail;
   static_assert(router_handler_lambda<decltype(sync)>);
   DOBA_EXPECT_EQUAL(router_handler_signature<
                         decltype(&decltype(sync)::operator())>::parameter_count,
@@ -79,7 +79,7 @@ DOBA_TEST("noexcept qualifiers preserve routing parameter counts") {
                  int) noexcept {};
   auto mutable_sync = [](const router_empty_request&, router_empty_response&,
                          int) mutable noexcept {};
-  using namespace martianlabs::doba::protocol::http;
+  using namespace martianlabs::doba::protocol::http::detail;
   static_assert(router_handler_lambda<decltype(sync)>);
   static_assert(router_handler_lambda<decltype(mutable_sync)>);
   DOBA_EXPECT_EQUAL(router_handler_signature<
@@ -146,7 +146,7 @@ struct signature_controller {
 // | [>] controller signature binding                            ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("bound controller methods retain argument and noexcept contracts") {
-  using namespace martianlabs::doba::protocol::http;
+  using namespace martianlabs::doba::protocol::http::detail;
   auto handler =
       router_handler_signature<decltype(&signature_controller::get)>::bind(
           std::make_shared<signature_controller>(), &signature_controller::get);

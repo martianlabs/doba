@@ -29,7 +29,7 @@
 
 #include "protocol/http/common/router_handler_signature.h"
 
-namespace martianlabs::doba::protocol::http {
+namespace martianlabs::doba::protocol::http::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] router_handler_static                                       ( using ) |
@@ -41,6 +41,6 @@ namespace martianlabs::doba::protocol::http {
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty>
 using router_handler_static = std::function<void(const RQty&, RSty&)>;
-}  // namespace martianlabs::doba::protocol::http
+}  // namespace martianlabs::doba::protocol::http::detail
 
 #endif

@@ -33,7 +33,7 @@
 
 namespace {
 using martianlabs::doba::common::task;
-using martianlabs::doba::protocol::http::router_handler_static_async;
+using martianlabs::doba::protocol::http::detail::router_handler_static_async;
 using martianlabs::doba::tests::unit::router_empty_request;
 using martianlabs::doba::tests::unit::router_empty_response;
 }  // namespace

@@ -8,11 +8,9 @@
 
 **Header:** [include/common/date_server_helpers_windows.h](../../../include/common/date_server_helpers_windows.h)
 
-This header declares the types and operations listed below.
+Implementation support for doba. These declarations are internal and are not part of the supported public API.
 
-### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
-
-[gm_time](#function-gm-time)
+[Internal implementation](#implementation)
 
 <a id="api"></a>
 <a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
@@ -22,23 +20,10 @@ This header declares the types and operations listed below.
   <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
-<a id="function-gm-time"></a>
+<a id="implementation"></a>
 
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> gm_time
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Internal implementation
 
-**FUNCTION** · *common*
+**INTERNAL HEADER**
 
-```cpp
-static errno_t gm_time(struct tm* const gmt, time_t const* const now);
-```
-
-Converts a time value to UTC calendar fields.
-
-**Parameters:**
-
-- **gmt:** Output UTC calendar structure. Declaration: `struct tm* const gmt`.
-- **now:** Input timestamp. Declaration: `time_t const* const now`.
-
-**Returns:** A value of type `errno_t`.
-
-**Source:** [include/common/date_server_helpers_windows.h:36](../../../include/common/date_server_helpers_windows.h#L36)
+Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.

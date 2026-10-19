@@ -41,9 +41,9 @@ namespace {
 // | [>] usings                                                    ( public )  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-using martianlabs::doba::transport::server::make_tls_context;
+using martianlabs::doba::transport::server::detail::make_tls_context;
 using martianlabs::doba::transport::server::tls_policies;
-using martianlabs::doba::transport::server::tls_session;
+using martianlabs::doba::transport::server::detail::tls_session;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

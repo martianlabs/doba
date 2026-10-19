@@ -10,6 +10,12 @@
 
 Provides the http 1.1 response implementation.
 
+The construction factories, serialization and body-suppression operations also
+serve [the response integration contract](contracts.md#concept-response).
+They remain public so custom responses can work with the generic engine. A
+response constructed with borrowed output strings must not outlive those
+strings or reuse them before the transport has preserved the serialized output.
+
 ### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
 [response](#type-response)

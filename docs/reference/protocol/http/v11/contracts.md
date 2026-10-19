@@ -10,12 +10,6 @@
 
 This header declares the types and operations listed below.
 
-### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
-
-[make_engine_factory&lt;ENty, ROty&gt;(configuration, routes)](#function-make-engine-factory) ·
-[make_engine_factory&lt;ENty, ROty&gt;(configuration, routes, on_async_started, on_async_finished)](#function-make-engine-factory-2) ·
-[engine_factory](#alias-engine-factory)
-
 ### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::contracts
 
 [request](#concept-request) ·
@@ -29,87 +23,6 @@ This header declares the types and operations listed below.
 <a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
   <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
-
-<a id="function-make-engine-factory"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> make_engine_factory
-
-**FUNCTION** · *protocol::http::v11*
-
-```cpp
-template <protocol::contracts::engine ENty, typename ROty>
-auto make_engine_factory(typename ENty::policies_type configuration,
-                         const ROty& routes);
-```
-
-Creates a factory function for engines.
-
-**Template parameters:**
-
-- **ENty:** `protocol::contracts::engine ENty`.
-- **ROty:** `typename ROty`.
-
-**Parameters:**
-
-- **configuration:** Configuration for this component. Declaration: `typename ENty::policies_type configuration`.
-- **routes:** Route collection used for dispatch. Declaration: `const ROty& routes`.
-
-**Returns:** A callable that constructs `ENty` with the captured configuration and referenced routes.
-
-**Source:** [include/protocol/http/v11/contracts.h:60](../../../../../include/protocol/http/v11/contracts.h#L60)
-
-<a id="function-make-engine-factory-2"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> make_engine_factory
-
-**FUNCTION** · *protocol::http::v11*
-
-```cpp
-template <protocol::contracts::engine ENty, typename ROty>
-auto make_engine_factory(typename ENty::policies_type configuration,
-                         const ROty& routes,
-                         std::function<void()> on_async_started,
-                         std::function<void()> on_async_finished);
-```
-
-Creates a factory function for engines providing asynchronous callbacks.
-
-**Template parameters:**
-
-- **ENty:** `protocol::contracts::engine ENty`.
-- **ROty:** `typename ROty`.
-
-**Parameters:**
-
-- **configuration:** Configuration for this component. Declaration: `typename ENty::policies_type configuration`.
-- **routes:** Route collection used for dispatch. Declaration: `const ROty& routes`.
-- **on_async_started:** Callback for the named event. Declaration: `std::function<void()> on_async_started`.
-- **on_async_finished:** Callback for the named event. Declaration: `std::function<void()> on_async_finished`.
-
-**Returns:** A callable that constructs `ENty` with the captured configuration and referenced routes.
-
-**Source:** [include/protocol/http/v11/contracts.h:75](../../../../../include/protocol/http/v11/contracts.h#L75)
-
-<a id="alias-engine-factory"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> engine_factory
-
-**ALIAS** · *protocol::http::v11*
-
-```cpp
-template <protocol::contracts::engine ENty, typename ROty>
-using engine_factory = decltype(make_engine_factory<ENty>(
-    std::declval<typename ENty::policies_type>(), std::declval<const ROty&>()));
-```
-
-Type of the engine factory function.
-
-**Template parameters:**
-
-- **ENty:** `protocol::contracts::engine ENty`.
-- **ROty:** `typename ROty`.
-
-**Source:** [include/protocol/http/v11/contracts.h:94](../../../../../include/protocol/http/v11/contracts.h#L94)
 
 <a id="concept-request"></a>
 
@@ -189,7 +102,7 @@ Checks the compile-time requirements for request.
 
 - **RQty:** `typename RQty`.
 
-**Source:** [include/protocol/http/v11/contracts.h:104](../../../../../include/protocol/http/v11/contracts.h#L104)
+**Source:** [include/protocol/http/v11/contracts.h:107](../../../../../include/protocol/http/v11/contracts.h#L107)
 
 <a id="concept-response"></a>
 
@@ -290,7 +203,7 @@ Checks the compile-time requirements for response.
 
 - **RSty:** `typename RSty`.
 
-**Source:** [include/protocol/http/v11/contracts.h:173](../../../../../include/protocol/http/v11/contracts.h#L173)
+**Source:** [include/protocol/http/v11/contracts.h:176](../../../../../include/protocol/http/v11/contracts.h#L176)
 
 <a id="concept-router"></a>
 
@@ -326,4 +239,4 @@ Checks the compile-time requirements for router.
 - **RQty:** `typename RQty`.
 - **RSty:** `typename RSty`.
 
-**Source:** [include/protocol/http/v11/contracts.h:263](../../../../../include/protocol/http/v11/contracts.h#L263)
+**Source:** [include/protocol/http/v11/contracts.h:266](../../../../../include/protocol/http/v11/contracts.h#L266)

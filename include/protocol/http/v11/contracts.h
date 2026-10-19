@@ -49,6 +49,7 @@
 #include "protocol/http/v11/results.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
+namespace detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] make_engine_factory                                      ( function ) |
@@ -93,6 +94,8 @@ auto make_engine_factory(typename ENty::policies_type configuration,
 template <protocol::contracts::engine ENty, typename ROty>
 using engine_factory = decltype(make_engine_factory<ENty>(
     std::declval<typename ENty::policies_type>(), std::declval<const ROty&>()));
+
+}  // namespace detail
 
 namespace contracts {
 // /////////////////////////////////////////////////////////////////////////////

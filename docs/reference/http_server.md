@@ -49,7 +49,7 @@ template <typename RQty = protocol::http::v11::request,
            (protocol::http::auth::contracts::provider<AUty, RQty> && ...)
 class http_server
     : public server<
-          ENty, TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>> { ... };
+          ENty, TRty<ENty, protocol::http::v11::detail::engine_factory<ENty, ROty>>> { ... };
 ```
 
 Combines routing, the HTTP/1.1 engine, and the selected transport in one server.
@@ -73,7 +73,7 @@ Combines routing, the HTTP/1.1 engine, and the selected transport in one server.
 
 ```cpp
 template <typename Hty>
-    requires protocol::http::router_handler_lambda<Hty>
+    requires protocol::http::detail::router_handler_lambda<Hty>
   http_server& add_route(std::string_view method, std::string_view route,
                          Hty handler);
 ```
@@ -104,7 +104,7 @@ Registers an HTTP method and route pattern with a handler.
 
 ```cpp
 template <typename Aty, typename Hty>
-    requires protocol::http::router_handler_lambda<Hty> &&
+    requires protocol::http::detail::router_handler_lambda<Hty> &&
              (std::same_as<Aty, AUty> || ...)
   http_server& add_route(std::string_view method, std::string_view route,
                          Hty handler);

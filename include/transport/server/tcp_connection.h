@@ -39,7 +39,7 @@
 #include "common/reader.h"
 #include "protocol/contracts.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tcp_connection                                             ( struct ) |
@@ -155,6 +155,6 @@ struct tcp_connection {
   std::unique_ptr<char[]> buffer;
   const std::size_t capacity;
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

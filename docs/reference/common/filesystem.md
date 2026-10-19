@@ -14,10 +14,6 @@ This header declares the types and operations listed below.
 
 [filesystem_root](#function-filesystem-root)
 
-### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::detail
-
-[filesystem_relative_path](#function-filesystem-relative-path)
-
 <a id="api"></a>
 <a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
   <img src="../../../resources/docs/reference/api.svg" alt="API">
@@ -47,25 +43,3 @@ Returns the canonical path of the given directory, or an empty path if the direc
 **Returns:** A value of type `std::filesystem::path`.
 
 **Source:** [include/common/filesystem.h:44](../../../include/common/filesystem.h#L44)
-
-<a id="function-filesystem-relative-path"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> filesystem_relative_path
-
-**FUNCTION** · *common::detail*
-
-```cpp
-inline bool filesystem_relative_path(std::string_view path,
-                                     std::error_code& error);
-```
-
-Returns true if the given path is a valid relative path, false otherwise. The error code is set to indicate the reason for failure.
-
-**Parameters:**
-
-- **path:** Filesystem path or route path, according to the call. Declaration: `std::string_view path`.
-- **error:** Error value to report or inspect. Declaration: `std::error_code& error`.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/common/filesystem.h:65](../../../include/common/filesystem.h#L65)

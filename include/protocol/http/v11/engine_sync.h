@@ -39,7 +39,7 @@
 #include "protocol/http/common/router.h"
 #include "protocol/http/common/router_match_result.h"
 
-namespace martianlabs::doba::protocol::http::v11 {
+namespace martianlabs::doba::protocol::http::v11::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] engine_sync                                                ( struct ) |
@@ -235,6 +235,6 @@ struct engine_sync {
     return serialized;
   }
 };
-}  // namespace martianlabs::doba::protocol::http::v11
+}  // namespace martianlabs::doba::protocol::http::v11::detail
 
 #endif

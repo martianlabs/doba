@@ -36,7 +36,7 @@
 
 #include "transport/server/tls_policies.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tls_context                                                 ( alias ) |
@@ -354,6 +354,6 @@ class tls_session {
   std::size_t write_retry_size_{0};
   bool shutdown_sent_{false};
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

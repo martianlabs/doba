@@ -33,7 +33,7 @@
 #include "transport/server/tcp_connection.h"
 #include "transport/server/tcp_policies.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] types                                                      ( struct ) |
@@ -47,7 +47,7 @@ struct types {
   // On client disconnected delegate type
   using on_client_disconnected_delegate = std::function<void()>;
 };
-} // namespace martianlabs::doba::transport::server
+} // namespace martianlabs::doba::transport::server::detail
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -77,13 +77,13 @@ namespace martianlabs::doba::transport::server {
 template <protocol::contracts::engine ENty,
           protocol::contracts::engine_factory<ENty> FAty>
 class tcp
-    : public basic_transport<ENty, FAty, tcp_connection<ENty>, tcp_policies> {
+    : public detail::basic_transport<ENty, FAty, detail::tcp_connection<ENty>, tcp_policies> {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   explicit tcp(tcp_policies configuration, FAty create_engine)
-      : basic_transport<ENty, FAty, tcp_connection<ENty>, tcp_policies>(
+      : detail::basic_transport<ENty, FAty, detail::tcp_connection<ENty>, tcp_policies>(
             std::move(configuration), std::move(create_engine), nullptr) {}
 };
 }  // namespace martianlabs::doba::transport::server

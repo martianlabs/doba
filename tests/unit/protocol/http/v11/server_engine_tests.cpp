@@ -341,7 +341,7 @@ static_assert(
 static_assert(
     std::same_as<typename tr::tcp<
                      http::engine<http::request, http::response>,
-                     http::engine_factory<
+                     http::detail::engine_factory<
                          http::engine<http::request, http::response>,
                          router<http::request, http::response>>>::policies_type,
                  tr::tcp_policies>);
@@ -510,7 +510,7 @@ DOBA_TEST("engine factories preserve policies and independence") {
   http::policies configuration;
   configuration.max_request_body_size = 1;
   auto factory =
-      http::make_engine_factory<http::engine<http::request, http::response>>(
+      http::detail::make_engine_factory<http::engine<http::request, http::response>>(
           configuration, routes);
   configuration.max_request_body_size = 100;
   auto first = factory();

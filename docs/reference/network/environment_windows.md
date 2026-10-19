@@ -8,11 +8,9 @@
 
 **Header:** [include/network/environment_windows.h](../../../include/network/environment_windows.h)
 
-Provides the environment type.
+Implementation support for doba. These declarations are internal and are not part of the supported public API.
 
-### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> network::detail
-
-[environment](#type-environment)
+[Internal implementation](#implementation)
 
 <a id="api"></a>
 <a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
@@ -22,18 +20,10 @@ Provides the environment type.
   <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
-<a id="type-environment"></a>
+<a id="implementation"></a>
 
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> environment
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Internal implementation
 
-**TYPE** · *network::detail*
+**INTERNAL HEADER**
 
-**Declaration synopsis:**
-
-```cpp
-class environment { ... };
-```
-
-Provides the environment type.
-
-**Source:** [include/network/environment_windows.h:36](../../../include/network/environment_windows.h#L36)
+Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.

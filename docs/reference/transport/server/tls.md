@@ -8,7 +8,7 @@
 
 **Header:** [include/transport/server/tls.h](../../../../include/transport/server/tls.h)
 
-This class provides a TLS transport for an engine. It inherits from `basic_transport` and takes a `tls_policies` configuration and an engine factory when it is created.
+This class provides a TLS transport for an engine. It inherits from `detail::basic_transport` and takes a `tls_policies` configuration and an engine factory when it is created.
 
 ### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
@@ -34,10 +34,10 @@ This class provides a TLS transport for an engine. It inherits from `basic_trans
 template <protocol::contracts::engine ENty,
           protocol::contracts::engine_factory<ENty> FAty>
 class tls
-    : public basic_transport<ENty, FAty, tls_connection<ENty>, tls_policies> { ... };
+    : public detail::basic_transport<ENty, FAty, detail::tls_connection<ENty>, tls_policies> { ... };
 ```
 
-This class provides a TLS transport for an engine. It inherits from `basic_transport` and takes a `tls_policies` configuration and an engine factory when it is created.
+This class provides a TLS transport for an engine. It inherits from `detail::basic_transport` and takes a `tls_policies` configuration and an engine factory when it is created.
 
 **Template parameters:**
 

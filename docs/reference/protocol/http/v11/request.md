@@ -10,6 +10,13 @@
 
 Provides the http 1.1 request implementation.
 
+Operations such as *from*, *make_owned*, *rebase_bytes* and the body-building
+methods are protocol integration hooks required by [the request contract](contracts.md#concept-request).
+Custom request implementations must provide them. Application handlers normally
+use the read accessors. Borrowed bytes remain valid only while their owner keeps
+them alive and unchanged; *make_owned* must run before an asynchronous handler
+can retain views beyond the input callback.
+
 ### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
 [request](#type-request)

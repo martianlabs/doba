@@ -8,11 +8,9 @@
 
 **Header:** [include/protocol/http/common/router_handler_static.h](../../../../../include/protocol/http/common/router_handler_static.h)
 
-This header declares the types and operations listed below.
+Implementation support for doba. These declarations are internal and are not part of the supported public API.
 
-### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
-
-[router_handler_static](#alias-router-handler-static)
+[Internal implementation](#implementation)
 
 <a id="api"></a>
 <a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
@@ -22,22 +20,10 @@ This header declares the types and operations listed below.
   <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
-<a id="alias-router-handler-static"></a>
+<a id="implementation"></a>
 
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router_handler_static
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Internal implementation
 
-**ALIAS** · *protocol::http*
+**INTERNAL HEADER**
 
-```cpp
-template <typename RQty, typename RSty>
-using router_handler_static = std::function<void(const RQty&, RSty&)>;
-```
-
-Alias for `std::function<void(const RQty&, RSty&)>`.
-
-**Template parameters:**
-
-- **RQty:** `typename RQty`.
-- **RSty:** `typename RSty`.
-
-**Source:** [include/protocol/http/common/router_handler_static.h:43](../../../../../include/protocol/http/common/router_handler_static.h#L43)
+Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.

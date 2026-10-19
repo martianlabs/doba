@@ -36,7 +36,7 @@
 #include "protocol/http/common/router_handler_parametrized.h"
 #include "protocol/http/common/router_handler_parametrized_async.h"
 
-namespace martianlabs::doba::protocol::http {
+namespace martianlabs::doba::protocol::http::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] router_handler_signature                       ( forward-declaration) |
@@ -215,6 +215,6 @@ concept router_handler_lambda = requires {
       std::remove_reference_t<typename router_handler_signature<
           decltype(&std::decay_t<Hty>::operator())>::response_type>>;
 };
-}  // namespace martianlabs::doba::protocol::http
+}  // namespace martianlabs::doba::protocol::http::detail
 
 #endif

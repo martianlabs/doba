@@ -47,15 +47,15 @@ namespace martianlabs::doba::transport::server {
 template <protocol::contracts::engine ENty,
           protocol::contracts::engine_factory<ENty> FAty>
 class tls
-    : public basic_transport<ENty, FAty, tls_connection<ENty>, tls_policies> {
+    : public detail::basic_transport<ENty, FAty, detail::tls_connection<ENty>, tls_policies> {
  public:
   // +=========================================================================+
   // | CONSTRUCTORs/DESTRUCTORs                                     ( public ) |
   // +-------------------------------------------------------------------------+
   explicit tls(tls_policies configuration, FAty create_engine)
-      : basic_transport<ENty, FAty, tls_connection<ENty>, tls_policies>(
+      : detail::basic_transport<ENty, FAty, detail::tls_connection<ENty>, tls_policies>(
             configuration, std::move(create_engine),
-            make_tls_context(configuration)) {}
+            detail::make_tls_context(configuration)) {}
 };
 }  // namespace martianlabs::doba::transport::server
 

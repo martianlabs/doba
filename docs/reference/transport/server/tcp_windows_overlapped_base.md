@@ -8,16 +8,9 @@
 
 **Header:** [include/transport/server/tcp_windows_overlapped_base.h](../../../../include/transport/server/tcp_windows_overlapped_base.h)
 
-Base state for Windows overlapped I/O.
+Implementation support for doba. These declarations are internal and are not part of the supported public API.
 
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
-
-[io_type](#enum-io-type) ·
-[overlapped_base](#type-overlapped-base)
-
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::overlapped_base
-
-[get_type](#method-get-type)
+[Internal implementation](#implementation)
 
 <a id="api"></a>
 <a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
@@ -27,55 +20,10 @@ Base state for Windows overlapped I/O.
   <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
-<a id="enum-io-type"></a>
+<a id="implementation"></a>
 
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> io_type
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Internal implementation
 
-**ENUM** · *transport::server*
+**INTERNAL HEADER**
 
-```cpp
-enum class io_type : uint8_t { kAccept, kSend, kReceive, kOutput };
-```
-
-Enumerates io type values.
-
-**Values:**
-
-- **kAccept:** Accept. Declaration: `kAccept`.
-- **kSend:** Send. Declaration: `kSend`.
-- **kReceive:** Receive. Declaration: `kReceive`.
-- **kOutput:** Output. Declaration: `kOutput`.
-
-**Source:** [include/transport/server/tcp_windows_overlapped_base.h:38](../../../../include/transport/server/tcp_windows_overlapped_base.h#L38)
-
-<a id="type-overlapped-base"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> overlapped_base
-
-**TYPE** · *transport::server*
-
-**Declaration synopsis:**
-
-```cpp
-struct overlapped_base : OVERLAPPED { ... };
-```
-
-Base state for Windows overlapped I/O.
-
-**Source:** [include/transport/server/tcp_windows_overlapped_base.h:47](../../../../include/transport/server/tcp_windows_overlapped_base.h#L47)
-
-<a id="method-get-type"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_type
-
-**METHOD** · *transport::server::overlapped_base*
-
-```cpp
-io_type get_type() const;
-```
-
-Returns type.
-
-**Returns:** A value of type `io_type`.
-
-**Source:** [include/transport/server/tcp_windows_overlapped_base.h:55](../../../../include/transport/server/tcp_windows_overlapped_base.h#L55)
+Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.

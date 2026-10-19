@@ -49,7 +49,7 @@
 #include "protocol/http/v11/results.h"
 #include "transport/server/contracts.h"
 
-namespace martianlabs::doba::protocol::http::v11 {
+namespace martianlabs::doba::protocol::http::v11::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] engine_async                                                ( class ) |
@@ -486,6 +486,6 @@ class engine_async {
   std::mutex completion_mutex_;
   std::map<std::size_t, slot> pending_;
 };
-}  // namespace martianlabs::doba::protocol::http::v11
+}  // namespace martianlabs::doba::protocol::http::v11::detail
 
 #endif

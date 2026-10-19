@@ -8,11 +8,9 @@
 
 **Header:** [include/common/date_server_helpers_linux.h](../../../include/common/date_server_helpers_linux.h)
 
-Provides the tm type.
+Implementation support for doba. These declarations are internal and are not part of the supported public API.
 
-### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
-
-[tm](#type-tm)
+[Internal implementation](#implementation)
 
 <a id="api"></a>
 <a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
@@ -22,18 +20,10 @@ Provides the tm type.
   <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
-<a id="type-tm"></a>
+<a id="implementation"></a>
 
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> tm
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Internal implementation
 
-**TYPE** · *common*
+**INTERNAL HEADER**
 
-**Declaration synopsis:**
-
-```cpp
-struct tm { ... };
-```
-
-Provides the tm type.
-
-**Source:** [include/common/date_server_helpers_linux.h:36](../../../include/common/date_server_helpers_linux.h#L36)
+Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.

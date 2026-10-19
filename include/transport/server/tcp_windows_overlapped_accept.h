@@ -28,7 +28,7 @@
 #include "platform.h"
 #include "transport/server/tcp_windows_overlapped_base.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] CONSTANTs                                                  ( public ) |
@@ -56,6 +56,6 @@ struct overlapped_accept : overlapped_base {
   SOCKET socket{INVALID_SOCKET};
   CHAR addresses[(kAcceptAddressBytes * 2)]{0};
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

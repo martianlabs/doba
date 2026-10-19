@@ -36,7 +36,7 @@
 
 namespace {
 using martianlabs::doba::tests::spill_directory;
-using martianlabs::doba::common::byte_storage_file;
+using martianlabs::doba::common::detail::byte_storage_file;
 
 }  // namespace
 

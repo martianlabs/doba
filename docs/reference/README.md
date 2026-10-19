@@ -8,7 +8,15 @@
   </a>
 </h1>
 
-Looking for a precise signature or a default? Start with the header that owns it. Every public header under *include/* has a matching page here. For a walkthrough, see the [guide](../guide/README.md).
+Looking for a precise signature or a default? Start with the header that owns it. The index lists supported public headers; implementation-only headers retain short status pages. For a walkthrough, see the [guide](../guide/README.md).
+
+Implementation declarations live in *detail* namespaces and are not supported API.
+**Compatibility:** the handler factories and signature adapters, engine dispatch
+helpers, platform connection machinery, engine-factory helpers, TLS session
+construction, and hashing/date/temp-file helpers have moved out of their former
+public namespaces. Use route registration, public server/transport constructors,
+and the documented customization contracts. No compatibility aliases retain the
+old names; the processing behavior is unchanged.
 
 <a name="common"></a>
 <h2>
@@ -21,22 +29,15 @@ Looking for a precise signature or a default? Start with the header that owns it
 </h2>
 
 - [common/byte_storage.h](common/byte_storage.md)
-- [common/byte_storage_helpers.h](common/byte_storage_helpers.md)
-- [common/byte_storage_helpers_linux.h](common/byte_storage_helpers_linux.md)
-- [common/byte_storage_helpers_windows.h](common/byte_storage_helpers_windows.md)
 - [common/console_line_linux.h](common/console_line_linux.md)
 - [common/console_line_windows.h](common/console_line_windows.md)
 - [common/console_logger.h](common/console_logger.md)
 - [common/console_logger_linux.h](common/console_logger_linux.md)
 - [common/console_logger_windows.h](common/console_logger_windows.md)
 - [common/date_server.h](common/date_server.md)
-- [common/date_server_helpers.h](common/date_server_helpers.md)
-- [common/date_server_helpers_linux.h](common/date_server_helpers_linux.md)
-- [common/date_server_helpers_windows.h](common/date_server_helpers_windows.md)
 - [common/filesystem.h](common/filesystem.md)
 - [common/filesystem_linux.h](common/filesystem_linux.md)
 - [common/filesystem_windows.h](common/filesystem_windows.md)
-- [common/hash_base.h](common/hash_base.md)
 - [common/hash_map.h](common/hash_map.md)
 - [common/hash_set.h](common/hash_set.md)
 - [common/reader.h](common/reader.md)
@@ -77,9 +78,6 @@ Looking for a precise signature or a default? Start with the header that owns it
   </a>
 </h2>
 
-- [network/environment.h](network/environment.md)
-- [network/environment_linux.h](network/environment_linux.md)
-- [network/environment_windows.h](network/environment_windows.md)
 
 <a name="protocol"></a>
 <h2>
@@ -155,12 +153,6 @@ Looking for a precise signature or a default? Start with the header that owns it
 - [protocol/http/common/method_names.h](protocol/http/common/method_names.md)
 - [protocol/http/common/query_parameter.h](protocol/http/common/query_parameter.md)
 - [protocol/http/common/router.h](protocol/http/common/router.md)
-- [protocol/http/common/router_controller_routes.h](protocol/http/common/router_controller_routes.md)
-- [protocol/http/common/router_handler_parametrized.h](protocol/http/common/router_handler_parametrized.md)
-- [protocol/http/common/router_handler_parametrized_async.h](protocol/http/common/router_handler_parametrized_async.md)
-- [protocol/http/common/router_handler_signature.h](protocol/http/common/router_handler_signature.md)
-- [protocol/http/common/router_handler_static.h](protocol/http/common/router_handler_static.md)
-- [protocol/http/common/router_handler_static_async.h](protocol/http/common/router_handler_static_async.md)
 - [protocol/http/common/router_match_result.h](protocol/http/common/router_match_result.md)
 - [protocol/http/common/status_codes.h](protocol/http/common/status_codes.md)
 - [protocol/http/common/target.h](protocol/http/common/target.md)
@@ -184,8 +176,6 @@ Looking for a precise signature or a default? Start with the header that owns it
 - [protocol/http/v11/contracts.h](protocol/http/v11/contracts.md)
 - [protocol/http/v11/decoder.h](protocol/http/v11/decoder.md)
 - [protocol/http/v11/engine.h](protocol/http/v11/engine.md)
-- [protocol/http/v11/engine_async.h](protocol/http/v11/engine_async.md)
-- [protocol/http/v11/engine_sync.h](protocol/http/v11/engine_sync.md)
 - [protocol/http/v11/headers/connection.h](protocol/http/v11/headers/connection.md)
 - [protocol/http/v11/headers/content_length.h](protocol/http/v11/headers/content_length.md)
 - [protocol/http/v11/headers/expect.h](protocol/http/v11/headers/expect.md)
@@ -226,23 +216,7 @@ Looking for a precise signature or a default? Start with the header that owns it
 </h2>
 
 - [transport/server/contracts.h](transport/server/contracts.md)
-- [transport/server/send_state.h](transport/server/send_state.md)
-  - [send_state::source_entry](transport/server/source_entry.md)
 - [transport/server/tcp.h](transport/server/tcp.md)
-- [transport/server/tcp_connection.h](transport/server/tcp_connection.md)
-- [transport/server/tcp_linux_context.h](transport/server/tcp_linux_context.md)
-- [transport/server/tcp_linux_transport.h](transport/server/tcp_linux_transport.md)
-- [transport/server/tcp_linux_worker.h](transport/server/tcp_linux_worker.md)
 - [transport/server/tcp_policies.h](transport/server/tcp_policies.md)
-- [transport/server/tcp_windows_context.h](transport/server/tcp_windows_context.md)
-- [transport/server/tcp_windows_overlapped_accept.h](transport/server/tcp_windows_overlapped_accept.md)
-- [transport/server/tcp_windows_overlapped_base.h](transport/server/tcp_windows_overlapped_base.md)
-- [transport/server/tcp_windows_overlapped_receive.h](transport/server/tcp_windows_overlapped_receive.md)
-- [transport/server/tcp_windows_overlapped_send.h](transport/server/tcp_windows_overlapped_send.md)
-- [transport/server/tcp_windows_transport.h](transport/server/tcp_windows_transport.md)
-- [transport/server/tcp_windows_worker.h](transport/server/tcp_windows_worker.md)
 - [transport/server/tls.h](transport/server/tls.md)
-- [transport/server/tls_connection.h](transport/server/tls_connection.md)
 - [transport/server/tls_policies.h](transport/server/tls_policies.md)
-- [transport/server/tls_session.h](transport/server/tls_session.md)
-  - [tls_session::result](transport/server/result.md)

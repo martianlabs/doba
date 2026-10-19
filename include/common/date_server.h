@@ -152,7 +152,7 @@ class date_server {
   // +-------------------------------------------------------------------------+
   static void write_date(char* out, std::time_t now) noexcept {
     std::tm gmt{};
-    gm_time(&gmt, &now);
+    detail::gm_time(&gmt, &now);
     std::memcpy(out + 0, kWeekDays[gmt.tm_wday], 3);
     out[3] = ',';
     out[4] = ' ';

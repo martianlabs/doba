@@ -44,8 +44,8 @@ namespace {
 // /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::protocol::send_delegate;
 using martianlabs::doba::common::reader;
-using martianlabs::doba::transport::server::tcp_connection;
-using martianlabs::doba::transport::server::send_state;
+using martianlabs::doba::transport::server::detail::tcp_connection;
+using martianlabs::doba::transport::server::detail::send_state;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

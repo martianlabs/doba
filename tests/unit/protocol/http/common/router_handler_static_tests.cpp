@@ -31,7 +31,7 @@
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::protocol::http::router_handler_static;
+using martianlabs::doba::protocol::http::detail::router_handler_static;
 using martianlabs::doba::tests::unit::router_empty_request;
 using martianlabs::doba::tests::unit::router_empty_response;
 }  // namespace

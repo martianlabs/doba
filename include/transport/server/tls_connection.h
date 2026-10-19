@@ -38,7 +38,7 @@
 #include "transport/server/tcp_connection.h"
 #include "transport/server/tls_session.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tls_connection                                             ( struct ) |
@@ -260,6 +260,6 @@ struct tls_connection {
   bool shutdown_complete_{false};
   bool peer_closed_{false};
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

@@ -38,7 +38,7 @@
 #include "common/reader.h"
 #include "protocol/contracts.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] send_state                                                 ( struct ) |
@@ -198,6 +198,6 @@ struct send_state {
   std::size_t source_reservation_{0};
   bool active_from_source_{false};
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

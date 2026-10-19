@@ -8,17 +8,11 @@
 
 **Header:** [include/transport/server/tcp.h](../../../../include/transport/server/tcp.h)
 
-Platform-independent transport delegate types.
+The public TCP transport. Platform workers, connection state and dispatch helpers are internal implementation details.
 
 ### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
-[types](#type-types) ·
 [tcp](#type-tcp)
-
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::types
-
-[on_client_connected_delegate](#alias-on-client-connected-delegate) ·
-[on_client_disconnected_delegate](#alias-on-client-disconnected-delegate)
 
 <a id="api"></a>
 <a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
@@ -27,50 +21,6 @@ Platform-independent transport delegate types.
 <a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
   <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
-
-<a id="type-types"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> types
-
-**TYPE** · *transport::server*
-
-**Declaration synopsis:**
-
-```cpp
-struct types { ... };
-```
-
-Platform-independent transport delegate types.
-
-**Source:** [include/transport/server/tcp.h:44](../../../../include/transport/server/tcp.h#L44)
-
-<a id="alias-on-client-connected-delegate"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> on_client_connected_delegate
-
-**ALIAS** · *transport::server::types*
-
-```cpp
-using on_client_connected_delegate = std::function<void()>;
-```
-
-On client connected delegate type
-
-**Source:** [include/transport/server/tcp.h:46](../../../../include/transport/server/tcp.h#L46)
-
-<a id="alias-on-client-disconnected-delegate"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> on_client_disconnected_delegate
-
-**ALIAS** · *transport::server::types*
-
-```cpp
-using on_client_disconnected_delegate = std::function<void()>;
-```
-
-On client disconnected delegate type
-
-**Source:** [include/transport/server/tcp.h:48](../../../../include/transport/server/tcp.h#L48)
 
 <a id="type-tcp"></a>
 
@@ -84,10 +34,10 @@ On client disconnected delegate type
 template <protocol::contracts::engine ENty,
           protocol::contracts::engine_factory<ENty> FAty>
 class tcp
-    : public basic_transport<ENty, FAty, tcp_connection<ENty>, tcp_policies> { ... };
+    : public detail::basic_transport<ENty, FAty, detail::tcp_connection<ENty>, tcp_policies> { ... };
 ```
 
-This class provides a TCP transport for an engine. It inherits from `basic_transport` and takes a `tcp_policies` configuration and an engine factory when it is created.
+This class provides a TCP transport for an engine. It inherits from `detail::basic_transport` and takes a `tcp_policies` configuration and an engine factory when it is created.
 
 **Template parameters:**
 

@@ -46,7 +46,7 @@
 #include "transport/server/tcp_windows_overlapped_receive.h"
 #include "transport/server/tcp_windows_overlapped_send.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] context                                                    ( struct ) |
@@ -619,6 +619,6 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   bool engine_complete_{false};
   WSABUF ovr_wsa_{0};
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

@@ -10,25 +10,6 @@
 
 Provides the http 1.1 helper functions.
 
-### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::detail
-
-[kF_token](#constant-kf-token) ·
-[kF_vchar](#constant-kf-vchar) ·
-[kF_obs_text](#constant-kf-obs-text) ·
-[kF_ows](#constant-kf-ows) ·
-[kF_pchar](#constant-kf-pchar) ·
-[kF_qdtext](#constant-kf-qdtext) ·
-[kF_ctext](#constant-kf-ctext) ·
-[kF_etagc](#constant-kf-etagc) ·
-[kF_cookie](#constant-kf-cookie) ·
-[kF_cookie_av](#constant-kf-cookie-av) ·
-[kF_atext](#constant-kf-atext) ·
-[kF_dtext](#constant-kf-dtext) ·
-[kF_hexdig](#constant-kf-hexdig) ·
-[kF_unreserv](#constant-kf-unreserv) ·
-[build_char_flags](#function-build-char-flags) ·
-[kCharFlags](#constant-kcharflags)
-
 ### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http
 
 [helpers](#type-helpers)
@@ -36,55 +17,55 @@ Provides the http 1.1 helper functions.
 ### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::helpers
 
 [host_type](#enum-host-type) ·
-[is_digit(c)](#method-is-digit) ·
-[is_digit(c)](#method-is-digit-2) ·
+[is_digit](#method-is-digit) ·
+[is_digit](#method-is-digit-2) ·
 [is_digits](#method-is-digits) ·
 [parse_size_t](#method-parse-size-t) ·
-[is_hex_digit(c)](#method-is-hex-digit) ·
-[is_hex_digit(c)](#method-is-hex-digit-2) ·
-[is_alpha(c)](#method-is-alpha) ·
-[is_alpha(c)](#method-is-alpha-2) ·
-[is_token(c)](#method-is-token) ·
-[is_token(c)](#method-is-token-2) ·
-[is_token(sv)](#method-is-token-3) ·
-[is_unreserved(c)](#method-is-unreserved) ·
-[is_unreserved(c)](#method-is-unreserved-2) ·
-[is_sub_delim(c)](#method-is-sub-delim) ·
-[is_sub_delim(c)](#method-is-sub-delim-2) ·
-[is_pchar(c)](#method-is-pchar) ·
-[is_pchar(c)](#method-is-pchar-2) ·
-[is_vchar(c)](#method-is-vchar) ·
-[is_vchar(c)](#method-is-vchar-2) ·
-[is_qdtext(c)](#method-is-qdtext) ·
-[is_qdtext(c)](#method-is-qdtext-2) ·
-[is_obs_text(c)](#method-is-obs-text) ·
-[is_obs_text(c)](#method-is-obs-text-2) ·
-[is_ctext(c)](#method-is-ctext) ·
-[is_ctext(c)](#method-is-ctext-2) ·
-[is_atext(c)](#method-is-atext) ·
-[is_atext(c)](#method-is-atext-2) ·
-[is_dtext(c)](#method-is-dtext) ·
-[is_dtext(c)](#method-is-dtext-2) ·
-[is_etagc(c)](#method-is-etagc) ·
-[is_etagc(c)](#method-is-etagc-2) ·
-[is_cookie_octet(c)](#method-is-cookie-octet) ·
-[is_cookie_octet(c)](#method-is-cookie-octet-2) ·
-[is_cookie_av_octet(c)](#method-is-cookie-av-octet) ·
-[is_cookie_av_octet(c)](#method-is-cookie-av-octet-2) ·
+[is_hex_digit](#method-is-hex-digit) ·
+[is_hex_digit](#method-is-hex-digit-2) ·
+[is_alpha](#method-is-alpha) ·
+[is_alpha](#method-is-alpha-2) ·
+[is_token](#method-is-token) ·
+[is_token](#method-is-token-2) ·
+[is_token](#method-is-token-3) ·
+[is_unreserved](#method-is-unreserved) ·
+[is_unreserved](#method-is-unreserved-2) ·
+[is_sub_delim](#method-is-sub-delim) ·
+[is_sub_delim](#method-is-sub-delim-2) ·
+[is_pchar](#method-is-pchar) ·
+[is_pchar](#method-is-pchar-2) ·
+[is_vchar](#method-is-vchar) ·
+[is_vchar](#method-is-vchar-2) ·
+[is_qdtext](#method-is-qdtext) ·
+[is_qdtext](#method-is-qdtext-2) ·
+[is_obs_text](#method-is-obs-text) ·
+[is_obs_text](#method-is-obs-text-2) ·
+[is_ctext](#method-is-ctext) ·
+[is_ctext](#method-is-ctext-2) ·
+[is_atext](#method-is-atext) ·
+[is_atext](#method-is-atext-2) ·
+[is_dtext](#method-is-dtext) ·
+[is_dtext](#method-is-dtext-2) ·
+[is_etagc](#method-is-etagc) ·
+[is_etagc](#method-is-etagc-2) ·
+[is_cookie_octet](#method-is-cookie-octet) ·
+[is_cookie_octet](#method-is-cookie-octet-2) ·
+[is_cookie_av_octet](#method-is-cookie-av-octet) ·
+[is_cookie_av_octet](#method-is-cookie-av-octet-2) ·
 [is_entity_tag](#method-is-entity-tag) ·
-[is_ows(c)](#method-is-ows) ·
-[is_ows(c)](#method-is-ows-2) ·
+[is_ows](#method-is-ows) ·
+[is_ows](#method-is-ows-2) ·
 [is_qvalue](#method-is-qvalue) ·
 [consume_weight](#method-consume-weight) ·
-[tolower_ascii(c)](#method-tolower-ascii) ·
-[tolower_ascii(c)](#method-tolower-ascii-2) ·
+[tolower_ascii](#method-tolower-ascii) ·
+[tolower_ascii](#method-tolower-ascii-2) ·
 [ows_ltrim](#method-ows-ltrim) ·
 [ows_rtrim](#method-ows-rtrim) ·
 [ows_trim](#method-ows-trim) ·
 [skip_n_hextets](#method-skip-n-hextets) ·
 [is_port](#method-is-port) ·
-[is_dec_octet(sv, digits, off)](#method-is-dec-octet) ·
-[is_dec_octet(sv)](#method-is-dec-octet-2) ·
+[is_dec_octet](#method-is-dec-octet) ·
+[is_dec_octet](#method-is-dec-octet-2) ·
 [is_ip_v_future](#method-is-ip-v-future) ·
 [is_ip_v6_address](#method-is-ip-v6-address) ·
 [is_ip_v4_address](#method-is-ip-v4-address) ·
@@ -125,8 +106,8 @@ Provides the http 1.1 helper functions.
 [percent_decode_validate](#method-percent-decode-validate) ·
 [percent_decode_in_place](#method-percent-decode-in-place) ·
 [check_uri_userinfo](#method-check-uri-userinfo) ·
-[check_host_port(sv, uri_host, port, type)](#method-check-host-port) ·
-[check_host_port(sv)](#method-check-host-port-2) ·
+[check_host_port](#method-check-host-port) ·
+[check_host_port](#method-check-host-port-2) ·
 [check_serialized_origin](#method-check-serialized-origin) ·
 [check_uri_authority](#method-check-uri-authority) ·
 [check_uri_reference](#method-check-uri-reference) ·
@@ -149,264 +130,6 @@ Provides the http 1.1 helper functions.
 <a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
   <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
-
-<a id="constant-kf-token"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_token
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr std::uint16_t kF_token = 0x0001;
-```
-
-Provides the http 1.1 helper functions. Each bit encodes one RFC character-class predicate for a byte value. kCharFlags[c] is a bitmask; is_X(c) reduces to a single table lookup and a bitmask test (2 instructions) instead of a chain of comparisons. The table is 256 * 2 = 512 bytes; fits in one L1 cache line group and is shared across
-
-**Value:** `0x0001`
-
-**Source:** [include/protocol/http/common/helpers.h:54](../../../../../include/protocol/http/common/helpers.h#L54)
-
-<a id="constant-kf-vchar"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_vchar
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr std::uint16_t kF_vchar = 0x0002;
-```
-
-Defines the f vchar constant.
-
-**Value:** `0x0002`
-
-**Source:** [include/protocol/http/common/helpers.h:55](../../../../../include/protocol/http/common/helpers.h#L55)
-
-<a id="constant-kf-obs-text"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_obs_text
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr std::uint16_t kF_obs_text = 0x0004;
-```
-
-Defines the f obs text constant.
-
-**Value:** `0x0004`
-
-**Source:** [include/protocol/http/common/helpers.h:56](../../../../../include/protocol/http/common/helpers.h#L56)
-
-<a id="constant-kf-ows"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_ows
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr std::uint16_t kF_ows = 0x0008;
-```
-
-Defines the f ows constant.
-
-**Value:** `0x0008`
-
-**Source:** [include/protocol/http/common/helpers.h:57](../../../../../include/protocol/http/common/helpers.h#L57)
-
-<a id="constant-kf-pchar"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_pchar
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr std::uint16_t kF_pchar = 0x0010;
-```
-
-Defines the f pchar constant.
-
-**Value:** `0x0010`
-
-**Source:** [include/protocol/http/common/helpers.h:58](../../../../../include/protocol/http/common/helpers.h#L58)
-
-<a id="constant-kf-qdtext"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_qdtext
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr std::uint16_t kF_qdtext = 0x0020;
-```
-
-Defines the f qdtext constant.
-
-**Value:** `0x0020`
-
-**Source:** [include/protocol/http/common/helpers.h:59](../../../../../include/protocol/http/common/helpers.h#L59)
-
-<a id="constant-kf-ctext"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_ctext
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr std::uint16_t kF_ctext = 0x0040;
-```
-
-Defines the f ctext constant.
-
-**Value:** `0x0040`
-
-**Source:** [include/protocol/http/common/helpers.h:60](../../../../../include/protocol/http/common/helpers.h#L60)
-
-<a id="constant-kf-etagc"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_etagc
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr std::uint16_t kF_etagc = 0x0080;
-```
-
-Defines the f etagc constant.
-
-**Value:** `0x0080`
-
-**Source:** [include/protocol/http/common/helpers.h:61](../../../../../include/protocol/http/common/helpers.h#L61)
-
-<a id="constant-kf-cookie"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_cookie
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr std::uint16_t kF_cookie = 0x0100;
-```
-
-Defines the f cookie constant.
-
-**Value:** `0x0100`
-
-**Source:** [include/protocol/http/common/helpers.h:62](../../../../../include/protocol/http/common/helpers.h#L62)
-
-<a id="constant-kf-cookie-av"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_cookie_av
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr std::uint16_t kF_cookie_av = 0x0200;
-```
-
-Defines the f cookie av constant.
-
-**Value:** `0x0200`
-
-**Source:** [include/protocol/http/common/helpers.h:63](../../../../../include/protocol/http/common/helpers.h#L63)
-
-<a id="constant-kf-atext"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_atext
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr std::uint16_t kF_atext = 0x0400;
-```
-
-Defines the f atext constant.
-
-**Value:** `0x0400`
-
-**Source:** [include/protocol/http/common/helpers.h:64](../../../../../include/protocol/http/common/helpers.h#L64)
-
-<a id="constant-kf-dtext"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_dtext
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr std::uint16_t kF_dtext = 0x0800;
-```
-
-Defines the f dtext constant.
-
-**Value:** `0x0800`
-
-**Source:** [include/protocol/http/common/helpers.h:65](../../../../../include/protocol/http/common/helpers.h#L65)
-
-<a id="constant-kf-hexdig"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_hexdig
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr std::uint16_t kF_hexdig = 0x1000;
-```
-
-Defines the f hexdig constant.
-
-**Value:** `0x1000`
-
-**Source:** [include/protocol/http/common/helpers.h:66](../../../../../include/protocol/http/common/helpers.h#L66)
-
-<a id="constant-kf-unreserv"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_unreserv
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr std::uint16_t kF_unreserv = 0x2000;
-```
-
-Defines the f unreserv constant.
-
-**Value:** `0x2000`
-
-**Source:** [include/protocol/http/common/helpers.h:67](../../../../../include/protocol/http/common/helpers.h#L67)
-
-<a id="function-build-char-flags"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> build_char_flags
-
-**FUNCTION** · *protocol::http::detail*
-
-```cpp
-static constexpr std::array<std::uint16_t, 256> build_char_flags() noexcept;
-```
-
-The table is built at compile time, so the compiler can optimize it into a static data segment.
-
-**Returns:** A value of type `std::array<std::uint16_t, 256>`.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/protocol/http/common/helpers.h:75](../../../../../include/protocol/http/common/helpers.h#L75)
-
-<a id="constant-kcharflags"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kCharFlags
-
-**CONSTANT** · *protocol::http::detail*
-
-```cpp
-static constexpr auto kCharFlags = build_char_flags();
-```
-
-Defines the char flags constant.
-
-**Value:** `build_char_flags()`
-
-**Source:** [include/protocol/http/common/helpers.h:140](../../../../../include/protocol/http/common/helpers.h#L140)
 
 <a id="type-helpers"></a>
 

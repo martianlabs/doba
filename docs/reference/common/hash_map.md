@@ -30,7 +30,7 @@ This header declares the types and operations listed below.
 
 ```cpp
 template <typename KEty, typename VAty>
-using hash_map = std::unordered_map<KEty, VAty, base_hash, base_equal>;
+using hash_map = std::unordered_map<KEty, VAty, detail::base_hash, detail::base_equal>;
 ```
 
 Provides a generic hash based map.

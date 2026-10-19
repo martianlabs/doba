@@ -60,7 +60,7 @@ Provides the http 1.1 router implementation.
 
 ```cpp
 template <typename Hty>
-    requires router_handler_lambda<Hty>
+    requires detail::router_handler_lambda<Hty>
   void add(std::string_view method, std::string_view route, Hty handler);
 ```
 
@@ -88,7 +88,7 @@ Adds a route to the router with the specified HTTP method, route path, and handl
 
 ```cpp
 template <typename Hty>
-    requires router_handler_lambda<Hty>
+    requires detail::router_handler_lambda<Hty>
   void add(std::string_view method, std::string_view route, Hty handler,
            std::function<auth::authentication_result(const RQty&)>
                authenticate);

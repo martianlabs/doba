@@ -32,7 +32,7 @@
 #include "protocol/contracts.h"
 #include "transport/server/tcp_windows_overlapped_base.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] FORWARDs                                                   ( public ) |
@@ -64,6 +64,6 @@ struct overlapped_send : overlapped_base {
   DWORD buffer_count{0};
   std::size_t submitted_size{0};
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif
