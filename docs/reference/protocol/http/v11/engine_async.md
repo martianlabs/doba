@@ -32,6 +32,14 @@ The asynchronous engine manages the state of multiple concurrent requests and re
 [submit](#method-submit) ·
 [close_now](#method-close-now)
 
+<a id="api-details"></a>
+<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+</a>
+<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+</a>
+
 <a id="type-engine-async"></a>
 
 ## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> engine_async

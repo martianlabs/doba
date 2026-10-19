@@ -142,6 +142,14 @@ Provides the http 1.1 helper functions.
 [iequals](#method-iequals) ·
 [split_query_parameters](#method-split-query-parameters)
 
+<a id="api-details"></a>
+<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+</a>
+<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+</a>
+
 <a id="constant-kf-token"></a>
 
 ## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_token

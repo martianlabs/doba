@@ -23,12 +23,12 @@
     <use href="#g88" transform="translate(796.18 49.00) scale(17.0000 -17.0000)" />
   </g>
   <g fill="#172433">
-    <use href="#g97" transform="translate(20.00 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g99" transform="translate(36.93 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g99" transform="translate(49.71 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g101" transform="translate(62.49 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g112" transform="translate(77.43 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g116" transform="translate(94.41 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g97" transform="translate(0.00 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g99" transform="translate(16.93 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g99" transform="translate(29.71 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g101" transform="translate(42.49 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g112" transform="translate(57.43 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g116" transform="translate(74.41 51.00) scale(30.0000 -30.0000)" />
   </g>
   <path d="M0 69H898" stroke="#8c9eb2" stroke-width="1" />
 </svg>

@@ -25,13 +25,13 @@
     <use href="#g88" transform="translate(796.18 49.00) scale(17.0000 -17.0000)" />
   </g>
   <g fill="#172433">
-    <use href="#g102" transform="translate(20.00 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g114" transform="translate(30.59 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g97" transform="translate(42.49 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g109" transform="translate(59.42 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g105" transform="translate(83.75 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g110" transform="translate(91.61 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g103" transform="translate(108.08 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g102" transform="translate(0.00 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g114" transform="translate(10.59 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g97" transform="translate(22.49 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g109" transform="translate(39.42 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g105" transform="translate(63.75 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g110" transform="translate(71.61 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g103" transform="translate(88.08 51.00) scale(30.0000 -30.0000)" />
   </g>
   <path d="M0 69H898" stroke="#8c9eb2" stroke-width="1" />
 </svg>

@@ -86,6 +86,14 @@ Provides the http 1.1 response implementation.
 [gateway_timeout_504](#method-gateway-timeout-504) ·
 [http_version_not_supported_505](#method-http-version-not-supported-505)
 
+<a id="api-details"></a>
+<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+</a>
+<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+</a>
+
 <a id="type-response"></a>
 
 ## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> response

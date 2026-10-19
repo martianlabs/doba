@@ -14,6 +14,14 @@ This header declares the types and operations listed below.
 
 [router_handler_static](#alias-router-handler-static)
 
+<a id="api-details"></a>
+<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+</a>
+<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+</a>
+
 <a id="alias-router-handler-static"></a>
 
 ## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router_handler_static

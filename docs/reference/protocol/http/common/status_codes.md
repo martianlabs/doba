@@ -60,6 +60,14 @@ Defines the preprocessor values listed below.
 [SC_504_GATEWAY_TIMEOUT](#macro-sc-504-gateway-timeout) ·
 [SC_505_HTTP_VERSION_NOT_SUPPORTED](#macro-sc-505-http-version-not-supported)
 
+<a id="api-details"></a>
+<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+</a>
+<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+</a>
+
 <a id="macro-sc-100-continue"></a>
 
 ## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_100_CONTINUE

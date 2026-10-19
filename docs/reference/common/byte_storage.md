@@ -33,6 +33,14 @@ Provides the byte storage options type.
 [exhausted](#method-exhausted) ·
 [ok](#method-ok)
 
+<a id="api-details"></a>
+<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+</a>
+<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+</a>
+
 <a id="type-byte-storage-options"></a>
 
 ## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> byte_storage_options

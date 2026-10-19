@@ -34,6 +34,14 @@ This struct holds an engine's TCP connection state. It manages the socket and in
 [notify_disconnection](#method-notify-disconnection) ·
 [retirement_next](#field-retirement-next)
 
+<a id="api-details"></a>
+<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+</a>
+<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+</a>
+
 <a id="type-context"></a>
 
 ## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> context

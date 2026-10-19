@@ -21,6 +21,14 @@ Result of a body writer write() call. consumed  - bytes taken from the input spa
 [has_error](#field-has-error) ·
 [error](#field-error)
 
+<a id="api-details"></a>
+<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+</a>
+<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+</a>
+
 <a id="type-writer-state"></a>
 
 ## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> writer_state

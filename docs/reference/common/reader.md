@@ -27,6 +27,14 @@ This class provides a reader interface for reading bytes from a byte_storage bac
 [size](#method-size) ·
 [read_all](#method-read-all)
 
+<a id="api-details"></a>
+<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+</a>
+<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+</a>
+
 <a id="type-reader"></a>
 
 ## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> reader

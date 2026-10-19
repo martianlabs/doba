@@ -28,6 +28,14 @@ This struct represents a worker thread that handles TCP connections for an engin
 [request_quiesce](#method-request-quiesce) ·
 [wait_quiesced](#method-wait-quiesced)
 
+<a id="api-details"></a>
+<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+</a>
+<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+</a>
+
 <a id="constant-kstopeventid"></a>
 
 ## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kStopEventId

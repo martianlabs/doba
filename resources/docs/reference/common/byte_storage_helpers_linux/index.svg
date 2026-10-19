@@ -35,32 +35,32 @@
     <use href="#g88" transform="translate(796.18 49.00) scale(17.0000 -17.0000)" />
   </g>
   <g fill="#172433">
-    <use href="#g98" transform="translate(20.00 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g121" transform="translate(36.75 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g116" transform="translate(52.19 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g101" transform="translate(63.09 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g95" transform="translate(78.03 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g115" transform="translate(90.69 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g116" transform="translate(103.59 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g111" transform="translate(114.50 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g114" transform="translate(129.99 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g97" transform="translate(141.89 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g103" transform="translate(158.82 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g101" transform="translate(175.79 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g95" transform="translate(190.73 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g104" transform="translate(203.39 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g101" transform="translate(220.01 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g108" transform="translate(234.95 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g112" transform="translate(242.45 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g101" transform="translate(259.43 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g114" transform="translate(274.37 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g115" transform="translate(286.26 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g95" transform="translate(299.17 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g108" transform="translate(311.83 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g105" transform="translate(319.33 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g110" transform="translate(327.19 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g117" transform="translate(343.66 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g120" transform="translate(360.10 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g98" transform="translate(0.00 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g121" transform="translate(16.75 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g116" transform="translate(32.19 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g101" transform="translate(43.09 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g95" transform="translate(58.03 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g115" transform="translate(70.69 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g116" transform="translate(83.59 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g111" transform="translate(94.50 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g114" transform="translate(109.99 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g97" transform="translate(121.89 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g103" transform="translate(138.82 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g101" transform="translate(155.79 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g95" transform="translate(170.73 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g104" transform="translate(183.39 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g101" transform="translate(200.01 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g108" transform="translate(214.95 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g112" transform="translate(222.45 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g101" transform="translate(239.43 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g114" transform="translate(254.37 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g115" transform="translate(266.26 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g95" transform="translate(279.17 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g108" transform="translate(291.83 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g105" transform="translate(299.33 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g110" transform="translate(307.19 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g117" transform="translate(323.66 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g120" transform="translate(340.10 51.00) scale(30.0000 -30.0000)" />
   </g>
   <path d="M0 69H898" stroke="#8c9eb2" stroke-width="1" />
 </svg>

@@ -25,17 +25,17 @@
     <use href="#g88" transform="translate(796.18 49.00) scale(17.0000 -17.0000)" />
   </g>
   <g fill="#172433">
-    <use href="#g114" transform="translate(20.00 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g101" transform="translate(31.89 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g116" transform="translate(46.84 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g114" transform="translate(57.74 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g121" transform="translate(69.63 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g95" transform="translate(85.07 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g97" transform="translate(97.73 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g102" transform="translate(114.66 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g116" transform="translate(125.25 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g101" transform="translate(136.16 51.00) scale(30.0000 -30.0000)" />
-    <use href="#g114" transform="translate(151.10 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g114" transform="translate(0.00 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g101" transform="translate(11.89 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g116" transform="translate(26.84 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g114" transform="translate(37.74 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g121" transform="translate(49.63 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g95" transform="translate(65.07 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g97" transform="translate(77.73 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g102" transform="translate(94.66 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g116" transform="translate(105.25 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g101" transform="translate(116.16 51.00) scale(30.0000 -30.0000)" />
+    <use href="#g114" transform="translate(131.10 51.00) scale(30.0000 -30.0000)" />
   </g>
   <path d="M0 69H898" stroke="#8c9eb2" stroke-width="1" />
 </svg>

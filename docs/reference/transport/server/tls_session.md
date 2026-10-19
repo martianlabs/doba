@@ -32,6 +32,14 @@ This class manages the TLS session for a single connection. It handles the hands
 [established](#method-established) ·
 [failed](#method-failed)
 
+<a id="api-details"></a>
+<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+</a>
+<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+</a>
+
 <a id="alias-tls-context"></a>
 
 ## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> tls_context

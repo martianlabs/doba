@@ -21,6 +21,14 @@ the default transport.
 [add_route&lt;Aty, Hty&gt;(method, route, handler)](#method-add-route-2) ·
 [add_controller](#method-add-controller)
 
+<a id="api-details"></a>
+<a href="../../resources/docs/reference/api-details.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/api-details.svg" alt="API details">
+</a>
+<a href="../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/api-details-dark.svg" alt="API details">
+</a>
+
 <a id="type-http-server"></a>
 
 ## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> http_server
