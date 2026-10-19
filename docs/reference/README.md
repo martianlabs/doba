@@ -10,7 +10,15 @@
 
 Looking for a precise signature or a default? Start with the header that owns it. Every public header under *include/* has a matching page here. For a walkthrough, see the [guide](../guide/README.md).
 
-**common**
+<a name="common"></a>
+<h2>
+  <a href="../../resources/docs/reference/h2-common.svg#gh-light-mode-only">
+    <img src="../../resources/docs/reference/h2-common.svg" alt="common">
+  </a>
+  <a href="../../resources/docs/reference/h2-common-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/reference/h2-common-dark.svg" alt="common">
+  </a>
+</h2>
 
 - [common/byte_storage.h](common/byte_storage.md)
 - [common/byte_storage_helpers.h](common/byte_storage_helpers.md)
@@ -42,7 +50,15 @@ Looking for a precise signature or a default? Start with the header that owns it
 - [common/task_scheduler.h](common/task_scheduler.md)
 - [common/writer.h](common/writer.md)
 
-**Top level**
+<a name="top-level"></a>
+<h2>
+  <a href="../../resources/docs/reference/h2-top-level.svg#gh-light-mode-only">
+    <img src="../../resources/docs/reference/h2-top-level.svg" alt="top-level">
+  </a>
+  <a href="../../resources/docs/reference/h2-top-level-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/reference/h2-top-level-dark.svg" alt="top-level">
+  </a>
+</h2>
 
 - [contracts.h](contracts.md)
 - [http_server.h](http_server.md)
@@ -51,13 +67,29 @@ Looking for a precise signature or a default? Start with the header that owns it
 - [server.h](server.md)
 - [version.h](version.md)
 
-**network**
+<a name="network"></a>
+<h2>
+  <a href="../../resources/docs/reference/h2-network.svg#gh-light-mode-only">
+    <img src="../../resources/docs/reference/h2-network.svg" alt="network">
+  </a>
+  <a href="../../resources/docs/reference/h2-network-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/reference/h2-network-dark.svg" alt="network">
+  </a>
+</h2>
 
 - [network/environment.h](network/environment.md)
 - [network/environment_linux.h](network/environment_linux.md)
 - [network/environment_windows.h](network/environment_windows.md)
 
-**protocol**
+<a name="protocol"></a>
+<h2>
+  <a href="../../resources/docs/reference/h2-protocol.svg#gh-light-mode-only">
+    <img src="../../resources/docs/reference/h2-protocol.svg" alt="protocol">
+  </a>
+  <a href="../../resources/docs/reference/h2-protocol-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/reference/h2-protocol-dark.svg" alt="protocol">
+  </a>
+</h2>
 
 - [protocol/contracts.h](protocol/contracts.md)
 - [protocol/deserialization.h](protocol/deserialization.md)
@@ -183,7 +215,15 @@ Looking for a precise signature or a default? Start with the header that owns it
 - [protocol/http/v11/status_lines.h](protocol/http/v11/status_lines.md)
 - [protocol/http/v11/verdict.h](protocol/http/v11/verdict.md)
 
-**transport**
+<a name="transport"></a>
+<h2>
+  <a href="../../resources/docs/reference/h2-transport.svg#gh-light-mode-only">
+    <img src="../../resources/docs/reference/h2-transport.svg" alt="transport">
+  </a>
+  <a href="../../resources/docs/reference/h2-transport-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/reference/h2-transport-dark.svg" alt="transport">
+  </a>
+</h2>
 
 - [transport/server/contracts.h](transport/server/contracts.md)
 - [transport/server/send_state.h](transport/server/send_state.md)
