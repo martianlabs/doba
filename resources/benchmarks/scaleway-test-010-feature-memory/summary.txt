@@ -1,0 +1,838 @@
+===== Summary =====
+HttpArena: 8977be2721a5aba7b320345cddfcd6f6b654e698
+Servers: doba, dusty, tako, fulmine, actix, morojs, bun, fiber, elysia, ntex, genhttp-ioxide, libuvcpp, hono-bun, vertx, genhttp
+Profiles: baseline, pipelined, limited-conn, latency-10k, latency-1m, latency-500k-8cpu, async, json-comp, json-tls, 8gbit, static-tls | official RUNS=3
+Results: selected by upstream from its repetitions; NOT averages across runs.
+Session: /home/ubuntu/tests/sessions/20261019T090150Z-2a8e1173
+VALIDATION: profile-scoped official checks on the measured image; not a payload audit under load.
+HOST TUNING: upstream system_tune per profile; effective settings checked before server start. Mixed native/Docker generators; see REFERENCE MODEL.
+HOST RESTORATION: verified | record: host-tuning.json
+REFERENCE MODEL: INCOMPLETE / NOT VERIFIED | gcannon/wrk native; zrk and servers Docker; upstream profile affinity.
+REFERENCE EVIDENCE: run.json + per-job *.reference.jsonl; source-pinned local tools, not certified public-host binaries.
+REFERENCE DIFFERENCE: CPU/cache/memory/kernel may differ from the published host.
+REFERENCE DIFFERENCE: Local reproducible source selection checked 2026-10-07 and retained after HttpArena migration review 2026-10-16 (generator Dockerfiles, workload requests, benchmark profiles and measurement scripts unchanged). NOT proof of the exact binaries on the public benchmark host. gcannon follows the source used by upstream, wrk is pinned to 4.2.0, liburing is upstream's 2.9 dependency. zrk matches the pinned HttpArena Dockerfile release/checksum.
+SUCCESS: 159 | SKIPPED: 3 | FAILED: 3 | PENDING: 0
+doba/baseline: Doba 7e5cf5dd4e8d2fc87617b117a16136c076b1c0a1
+MEASUREMENT WARNING doba/baseline: #8 9.026 update-alternatives: warning: skip creation of /usr/share/man/man1/c++.1.gz because associated file /usr/share/man/man1/g++.1.gz (of link group c++) doesn't exist
+doba/pipelined: Doba 7e5cf5dd4e8d2fc87617b117a16136c076b1c0a1
+doba/limited-conn: Doba 7e5cf5dd4e8d2fc87617b117a16136c076b1c0a1
+doba/latency-10k: Doba 7e5cf5dd4e8d2fc87617b117a16136c076b1c0a1
+doba/latency-1m: Doba 7e5cf5dd4e8d2fc87617b117a16136c076b1c0a1
+doba/latency-500k-8cpu: Doba 7e5cf5dd4e8d2fc87617b117a16136c076b1c0a1
+MEASUREMENT WARNING doba/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.9777 (target 500000/s)
+MEASUREMENT WARNING doba/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+doba/async: Doba 7e5cf5dd4e8d2fc87617b117a16136c076b1c0a1
+doba/json-comp: Doba 7e5cf5dd4e8d2fc87617b117a16136c076b1c0a1
+MEASUREMENT WARNING doba/json-comp: Errors: connect 0, read 1, timeout 0
+doba/json-tls: Doba 7e5cf5dd4e8d2fc87617b117a16136c076b1c0a1
+doba/8gbit: Doba 7e5cf5dd4e8d2fc87617b117a16136c076b1c0a1
+doba/static-tls: Doba 7e5cf5dd4e8d2fc87617b117a16136c076b1c0a1
+MEASUREMENT WARNING dusty/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.9522 (target 500000/s)
+MEASUREMENT WARNING dusty/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 14, timeout 0
+MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 10, timeout 0
+MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 5, timeout 0
+SKIPPED: dusty/static-tls: not subscribed in meta.json
+MEASUREMENT WARNING tako/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.9496 (target 500000/s)
+MEASUREMENT WARNING tako/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING tako/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING tako/8gbit: [warn] offered rate fell short: rate_ratio=0.9682 (target 50000/s)
+MEASUREMENT WARNING tako/8gbit: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING fulmine/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7843 (target 500000/s)
+MEASUREMENT WARNING fulmine/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING fulmine/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING fulmine/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING fulmine/json-comp: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING actix/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.8954 (target 500000/s)
+MEASUREMENT WARNING actix/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING morojs/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.8680 (target 500000/s)
+MEASUREMENT WARNING morojs/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING morojs/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING morojs/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING bun/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7625 (target 500000/s)
+MEASUREMENT WARNING bun/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING fiber/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7413 (target 500000/s)
+MEASUREMENT WARNING fiber/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING fiber/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING fiber/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING fiber/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING elysia/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6279 (target 500000/s)
+MEASUREMENT WARNING elysia/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING elysia/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING elysia/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING elysia/json-comp: Errors: connect 0, read 2, timeout 0
+SKIPPED: ntex/pipelined: not subscribed in meta.json
+MEASUREMENT WARNING ntex/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6598 (target 500000/s)
+MEASUREMENT WARNING ntex/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 9, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 7, timeout 0
+SKIPPED: ntex/static-tls: not subscribed in meta.json
+MEASUREMENT WARNING genhttp-ioxide/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.9470 (target 500000/s)
+MEASUREMENT WARNING genhttp-ioxide/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING genhttp-ioxide/json-comp: Errors: connect 0, read 9, timeout 0
+MEASUREMENT WARNING genhttp-ioxide/json-comp: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING genhttp-ioxide/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING genhttp-ioxide/json-comp: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING genhttp-ioxide/json-comp: Errors: connect 0, read 8, timeout 0
+MEASUREMENT WARNING genhttp-ioxide/json-comp: Errors: connect 0, read 10, timeout 0
+FAILED: genhttp-ioxide/json-tls: official server did not become ready; no measurement was run. Inspect 119-genhttp-ioxide-json-tls.log
+FAILED: genhttp-ioxide/8gbit: official server did not become ready; no measurement was run. Inspect 120-genhttp-ioxide-8gbit.log
+FAILED: genhttp-ioxide/static-tls: official server did not become ready; no measurement was run. Inspect 121-genhttp-ioxide-static-tls.log
+MEASUREMENT WARNING libuvcpp/baseline: #7 9.442 update-alternatives: warning: skip creation of /usr/share/man/man1/c++.1.gz because associated file /usr/share/man/man1/g++.1.gz (of link group c++) doesn't exist
+MEASUREMENT WARNING libuvcpp/baseline: #10 0.202 hint: of your new repositories, which will suppress this warning, call:
+MEASUREMENT WARNING libuvcpp/baseline: #11 24.01 CMake Warning at build/_deps/uvcpp-ngtcp2-src/crypto/CMakeLists.txt:31 (message):
+MEASUREMENT WARNING libuvcpp/baseline: #11 24.01 CMake Warning at build/_deps/uvcpp-ngtcp2-src/crypto/CMakeLists.txt:37 (message):
+MEASUREMENT WARNING libuvcpp/baseline: #11 33.54 CMake Warning:
+MEASUREMENT WARNING libuvcpp/baseline: #11 34.13 /src/src/webapp/uvcpp_log_console.cpp:111:57: warning: ':' directive output may be truncated writing 1 byte into a region of size between 0 and 16 [-Wformat-truncation=]
+MEASUREMENT WARNING libuvcpp/baseline: #11 34.93 /src/src/webapp/uvcpp_log_console.cpp:111:57: warning: ':' directive output may be truncated writing 1 byte into a region of size between 0 and 16 [-Wformat-truncation=]
+MEASUREMENT WARNING libuvcpp/baseline: #11 35.73 /src/build/_deps/libuv-src/src/unix/linux.c:2354:47: warning: '/cpu.max' directive output may be truncated writing 8 bytes into a region of size between 1 and 256 [-Wformat-truncation=]
+MEASUREMENT WARNING libuvcpp/baseline: #11 35.84 /src/build/_deps/libuv-src/src/unix/linux.c:2354:47: warning: '/cpu.max' directive output may be truncated writing 8 bytes into a region of size between 1 and 256 [-Wformat-truncation=]
+MEASUREMENT WARNING libuvcpp/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.5558 (target 500000/s)
+MEASUREMENT WARNING libuvcpp/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING libuvcpp/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING libuvcpp/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING libuvcpp/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING hono-bun/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6762 (target 500000/s)
+MEASUREMENT WARNING hono-bun/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING hono-bun/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING hono-bun/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING vertx/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7106 (target 500000/s)
+MEASUREMENT WARNING vertx/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING vertx/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING genhttp/baseline: #10 1.302 /source/genhttp.csproj : warning NU1510: PackageReference Microsoft.Extensions.Caching.Abstractions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.
+MEASUREMENT WARNING genhttp/baseline: #12 1.237 /source/genhttp.csproj : warning NU1510: PackageReference Microsoft.Extensions.Caching.Abstractions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.
+MEASUREMENT WARNING genhttp/baseline: #12 1.357 /source/genhttp.csproj : warning NU1510: PackageReference Microsoft.Extensions.Caching.Abstractions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.
+MEASUREMENT WARNING genhttp/baseline: #12 2.797 /source/Tests/Crud.cs(32,31): warning CS8602: Dereference of a possibly null reference. [/source/genhttp.csproj]
+MEASUREMENT WARNING genhttp/baseline: #12 2.797 /source/Tests/Crud.cs(76,43): warning CS8600: Converting null literal or possible null value to non-nullable type. [/source/genhttp.csproj]
+MEASUREMENT WARNING genhttp/baseline: #12 2.797 /source/Tests/Crud.cs(79,54): warning CS8604: Possible null reference argument for parameter 'content' in 'StringContent.StringContent(string content, ContentType? contentType = null)'. [/source/genhttp.csproj]
+MEASUREMENT WARNING genhttp/baseline: #12 2.797 /source/Tests/Crud.cs(104,31): warning CS8602: Dereference of a possibly null reference. [/source/genhttp.csproj]
+MEASUREMENT WARNING genhttp/baseline: #12 2.797 /source/Tests/Crud.cs(110,37): warning CS8604: Possible null reference argument for parameter 'value' in 'NpgsqlParameter NpgsqlParameterCollection.AddWithValue(object value)'. [/source/genhttp.csproj]
+MEASUREMENT WARNING genhttp/baseline: #12 2.797 /source/Tests/Crud.cs(125,31): warning CS8602: Dereference of a possibly null reference. [/source/genhttp.csproj]
+MEASUREMENT WARNING genhttp/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6514 (target 500000/s)
+MEASUREMENT WARNING genhttp/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 105, timeout 0
+MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 102, timeout 0
+MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 13, timeout 0
+MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 113, timeout 0
+MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 139, timeout 0
+
+HTTP/1.1 TOTAL WITH COMPLETENESS (LOCAL session field)
+League: flagship + emerging; standard shown; default scoring (no memory bonus/rescale).
+Uses this session's gen_leaderboard_data.py and latency_score.py, not a local scoring formula.
+Not the public leaderboard: normalization uses ONLY the measured participants.
+A local 1000-point leader can still miss a fixed-rate target; inspect measurement status below.
+Missing, skipped, failed or unrequested profiles add no points; no reweighting.
+COMPLETENESS ENABLED: upstream factor applied to the total using session metadata.
+INCOMPLETE genhttp-ioxide: missing full scored coverage for json-tls, 8gbit
++------+----------------+---------+------------+---------------+
+| Rank | Server         | Total   | Cmp factor | Full profiles |
++------+----------------+---------+------------+---------------+
+| 1    | doba           | 7140.29 | 0.975      | 8/8           |
+| 2    | dusty          | 6554.30 | 1.000      | 8/8           |
+| 3    | tako           | 6531.70 | 1.000      | 8/8           |
+| 4    | fulmine.js     | 6468.53 | 1.000      | 8/8           |
+| 5    | actix          | 6426.23 | 1.000      | 8/8           |
+| 6    | morojs         | 6129.21 | 1.000      | 8/8           |
+| 7    | bun            | 6019.74 | 0.975      | 8/8           |
+| 8    | fiber          | 5660.83 | 1.000      | 8/8           |
+| 9    | elysia         | 5576.61 | 1.000      | 8/8           |
+| 10   | genhttp-ioxide | 5510.06 | 1.000      | 6/8           |
+| 11   | ntex           | 5412.35 | 1.000      | 8/8           |
+| 12   | libuvcpp       | 5328.29 | 1.000      | 8/8           |
+| 13   | hono-bun       | 5136.85 | 1.000      | 8/8           |
+| 14   | vertx          | 4971.82 | 1.000      | 8/8           |
+| 15   | genhttp        | 4550.32 | 1.000      | 8/8           |
++------+----------------+---------+------------+---------------+
+
+PROFILE SCORE: baseline (scored connections: 4096)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+----------------+--------------+-----------+
+| Rank | Server         | Points /1000 | Mean RPS  |
++------+----------------+--------------+-----------+
+| 1    | doba           | 1000.00      | 3,748,233 |
+| 2    | dusty          | 948.36       | 3,554,685 |
+| 3    | genhttp-ioxide | 943.56       | 3,536,688 |
+| 4    | tako           | 913.18       | 3,422,803 |
+| 5    | actix          | 850.28       | 3,187,045 |
+| 6    | morojs         | 746.37       | 2,797,573 |
+| 7    | fiber          | 733.84       | 2,750,609 |
+| 8    | bun            | 651.00       | 2,440,081 |
+| 9    | fulmine.js     | 649.16       | 2,433,221 |
+| 10   | vertx          | 624.67       | 2,341,424 |
+| 11   | ntex           | 622.43       | 2,333,005 |
+| 12   | hono-bun       | 597.73       | 2,240,445 |
+| 13   | libuvcpp       | 588.88       | 2,207,252 |
+| 14   | genhttp        | 575.55       | 2,157,304 |
+| 15   | elysia         | 574.74       | 2,154,252 |
++------+----------------+--------------+-----------+
+
+REFERENCE ONLY: pipelined does not contribute to the framework HTTP/1.1 composite.
+
+PROFILE SCORE: limited-conn (scored connections: 4096)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+----------------+--------------+-----------+
+| Rank | Server         | Points /1000 | Mean RPS  |
++------+----------------+--------------+-----------+
+| 1    | doba           | 1000.00      | 3,019,401 |
+| 2    | genhttp-ioxide | 939.57       | 2,836,929 |
+| 3    | tako           | 878.86       | 2,653,626 |
+| 4    | morojs         | 738.85       | 2,230,882 |
+| 5    | fiber          | 711.17       | 2,147,293 |
+| 6    | bun            | 681.98       | 2,059,173 |
+| 7    | fulmine.js     | 676.01       | 2,041,137 |
+| 8    | hono-bun       | 633.16       | 1,911,770 |
+| 9    | elysia         | 604.34       | 1,824,731 |
+| 10   | dusty          | 603.76       | 1,823,006 |
+| 11   | libuvcpp       | 575.80       | 1,738,572 |
+| 12   | ntex           | 411.19       | 1,241,544 |
+| 13   | actix          | 392.57       | 1,185,337 |
+| 14   | genhttp        | 374.97       | 1,132,174 |
+| 15   | vertx          | 200.10       | 604,191   |
++------+----------------+--------------+-----------+
+
+PROFILE SCORE: async (scored connections: 32000)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+----------------+--------------+-----------+
+| Rank | Server         | Points /1000 | Mean RPS  |
++------+----------------+--------------+-----------+
+| 1    | doba           | 1000.00      | 2,662,935 |
+| 2    | actix          | 933.66       | 2,486,271 |
+| 3    | tako           | 929.11       | 2,474,155 |
+| 4    | dusty          | 923.36       | 2,458,856 |
+| 5    | fulmine.js     | 885.43       | 2,357,833 |
+| 6    | genhttp-ioxide | 854.43       | 2,275,304 |
+| 7    | morojs         | 834.18       | 2,221,366 |
+| 8    | bun            | 810.86       | 2,159,257 |
+| 9    | vertx          | 701.11       | 1,867,010 |
+| 10   | elysia         | 670.08       | 1,784,382 |
+| 11   | hono-bun       | 649.23       | 1,728,866 |
+| 12   | libuvcpp       | 619.79       | 1,650,457 |
+| 13   | fiber          | 599.12       | 1,595,411 |
+| 14   | genhttp        | 464.67       | 1,237,383 |
+| 15   | ntex           | 361.53       | 962,736   |
++------+----------------+--------------+-----------+
+
+PROFILE SCORE: latency-10k (scored connections: 1024)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+----------------+--------------+----------+------------+
+| Rank | Server         | Points /1000 | Mean RPS | Score /100 |
++------+----------------+--------------+----------+------------+
+| 1    | doba           | 1000.00      | 9,983    | 99.26      |
+| 2    | genhttp-ioxide | 982.48       | 9,983    | 97.52      |
+| 3    | dusty          | 872.96       | 9,983    | 86.65      |
+| 4    | tako           | 844.88       | 9,984    | 83.86      |
+| 5    | actix          | 780.30       | 9,983    | 77.45      |
+| 6    | fiber          | 761.09       | 9,983    | 75.55      |
+| 7    | morojs         | 747.29       | 9,983    | 74.18      |
+| 8    | ntex           | 736.31       | 9,983    | 73.09      |
+| 9    | libuvcpp       | 732.48       | 9,983    | 72.71      |
+| 10   | vertx          | 723.50       | 9,983    | 71.82      |
+| 11   | bun            | 718.18       | 9,985    | 71.29      |
+| 12   | fulmine.js     | 705.35       | 9,983    | 70.01      |
+| 13   | hono-bun       | 657.48       | 9,983    | 65.26      |
+| 14   | elysia         | 642.16       | 9,982    | 63.74      |
+| 15   | genhttp        | 618.29       | 9,982    | 61.37      |
++------+----------------+--------------+----------+------------+
+
+PROFILE SCORE: latency-1m (scored connections: 1024)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+----------------+--------------+----------+------------+
+| Rank | Server         | Points /1000 | Mean RPS | Score /100 |
++------+----------------+--------------+----------+------------+
+| 1    | doba           | 1000.00      | 998,287  | 100.00     |
+| 2    | genhttp-ioxide | 946.33       | 998,314  | 94.63      |
+| 3    | tako           | 944.60       | 997,976  | 94.46      |
+| 4    | actix          | 921.74       | 998,247  | 92.17      |
+| 5    | dusty          | 893.61       | 998,323  | 89.36      |
+| 6    | morojs         | 879.88       | 998,060  | 87.99      |
+| 7    | fulmine.js     | 849.32       | 998,460  | 84.93      |
+| 8    | vertx          | 801.86       | 998,178  | 80.19      |
+| 9    | ntex           | 793.02       | 998,377  | 79.30      |
+| 10   | libuvcpp       | 743.55       | 998,393  | 74.36      |
+| 11   | fiber          | 734.88       | 998,269  | 73.49      |
+| 12   | hono-bun       | 726.90       | 998,165  | 72.69      |
+| 13   | elysia         | 690.45       | 998,340  | 69.04      |
+| 14   | bun            | 685.71       | 998,143  | 68.57      |
+| 15   | genhttp        | 558.14       | 998,393  | 55.81      |
++------+----------------+--------------+----------+------------+
+
+REFERENCE ONLY: latency-500k-8cpu does not contribute to the framework HTTP/1.1 composite.
+
+PROFILE SCORE: json-comp (scored connections: 4096, 16384)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+----------------+--------------+----------+----------------+--------------+
+| Rank | Server         | Points /1000 | Mean RPS | Bytes/response | Adjusted RPS |
++------+----------------+--------------+----------+----------------+--------------+
+| 1    | bun            | 1000.00      | 549,902  | 1337.01        | 461,587.62   |
+| 2    | dusty          | 954.99       | 498,759  | 1302.98        | 440,811.13   |
+| 3    | fulmine.js     | 868.96       | 569,982  | 1460.24        | 401,101.53   |
+| 4    | genhttp-ioxide | 843.69       | 724,308  | 1670.56        | 389,437.87   |
+| 5    | elysia         | 765.79       | 433,201  | 1356.07        | 353,481.35   |
+| 6    | ntex           | 673.43       | 595,176  | 1695.00        | 310,846.25   |
+| 7    | libuvcpp       | 653.94       | 410,864  | 1429.14        | 301,849.28   |
+| 8    | morojs         | 645.63       | 360,384  | 1347.05        | 298,016.51   |
+| 9    | fiber          | 635.74       | 345,690  | 1329.53        | 293,447.85   |
+| 10   | vertx          | 625.05       | 318,356  | 1286.74        | 288,517.61   |
+| 11   | actix          | 624.57       | 576,460  | 1732.16        | 288,292.92   |
+| 12   | genhttp        | 601.75       | 545,214  | 1716.21        | 277,758.73   |
+| 13   | tako           | 481.81       | 222,396  | 1224.95        | 222,396.00   |
+| 14   | doba           | 415.21       | 228,652  | 1337.97        | 191,655.31   |
+| 15   | hono-bun       | 413.66       | 242,741  | 1381.16        | 190,938.26   |
++------+----------------+--------------+----------+----------------+--------------+
+
+PROFILE SCORE: json-tls (scored connections: 4096)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+------------+--------------+-----------+
+| Rank | Server     | Points /1000 | Mean RPS  |
++------+------------+--------------+-----------+
+| 1    | fulmine.js | 1000.00      | 1,533,624 |
+| 2    | actix      | 929.98       | 1,426,237 |
+| 3    | ntex       | 920.45       | 1,411,628 |
+| 4    | elysia     | 914.24       | 1,402,096 |
+| 5    | doba       | 908.17       | 1,392,789 |
+| 6    | bun        | 859.02       | 1,317,421 |
+| 7    | morojs     | 730.14       | 1,119,766 |
+| 8    | hono-bun   | 712.10       | 1,092,098 |
+| 9    | fiber      | 672.07       | 1,030,707 |
+| 10   | genhttp    | 645.19       | 989,482   |
+| 11   | dusty      | 625.45       | 959,207   |
+| 12   | tako       | 621.75       | 953,525   |
+| 13   | libuvcpp   | 601.24       | 922,083   |
+| 14   | vertx      | 528.08       | 809,871   |
++------+------------+--------------+-----------+
+
+PROFILE SCORE: 8gbit (scored connections: 512)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+------------+--------------+----------+------------+
+| Rank | Server     | Points /1000 | Mean RPS | Score /100 |
++------+------------+--------------+----------+------------+
+| 1    | doba       | 1000.00      | 49,348   | 99.23      |
+| 2    | actix      | 993.13       | 49,366   | 98.55      |
+| 3    | tako       | 917.52       | 48,412   | 91.05      |
+| 4    | ntex       | 893.99       | 49,362   | 88.71      |
+| 5    | fulmine.js | 834.30       | 49,303   | 82.79      |
+| 6    | fiber      | 812.93       | 49,308   | 80.67      |
+| 7    | libuvcpp   | 812.60       | 49,470   | 80.64      |
+| 8    | morojs     | 806.86       | 49,370   | 80.07      |
+| 9    | vertx      | 767.44       | 49,229   | 76.16      |
+| 10   | bun        | 767.35       | 49,371   | 76.15      |
+| 11   | hono-bun   | 746.59       | 49,387   | 74.09      |
+| 12   | dusty      | 731.81       | 49,159   | 72.62      |
+| 13   | elysia     | 714.82       | 49,388   | 70.93      |
+| 14   | genhttp    | 711.76       | 49,382   | 70.63      |
++------+------------+--------------+----------+------------+
+
+REFERENCE ONLY: static-tls does not contribute to the framework HTTP/1.1 composite.
+
+MEASUREMENT DETAILS (per connection count; not composite standings)
+
+THROUGHPUT DETAIL: baseline (4096 connections)
++-----------+----------------+--------------+---------+---------+--------+
+| RPS order | Server         | Selected RPS | vs best | CPU     | Memory |
++-----------+----------------+--------------+---------+---------+--------+
+| 1         | doba           | 3,748,233    | 100.0%  | 6144.7% | 108MiB |
+| 2         | dusty          | 3,554,685    | 94.8%   | 6584.9% | 202MiB |
+| 3         | genhttp-ioxide | 3,536,688    | 94.4%   | 6131.2% | 2.2GiB |
+| 4         | tako           | 3,422,803    | 91.3%   | 6209.5% | 113MiB |
+| 5         | actix          | 3,187,045    | 85.0%   | 6614.5% | 161MiB |
+| 6         | morojs         | 2,797,573    | 74.6%   | 6642.0% | 3.9GiB |
+| 7         | fiber          | 2,750,609    | 73.4%   | 6298.5% | 356MiB |
+| 8         | bun            | 2,440,081    | 65.1%   | 6168.7% | 1.1GiB |
+| 9         | fulmine        | 2,433,221    | 64.9%   | 6278.9% | 2.5GiB |
+| 10        | vertx          | 2,341,424    | 62.5%   | 6203.3% | 4.3GiB |
+| 11        | ntex           | 2,333,005    | 62.2%   | 6694.9% | 153MiB |
+| 12        | hono-bun       | 2,240,445    | 59.8%   | 6198.8% | 1.2GiB |
+| 13        | libuvcpp       | 2,207,252    | 58.9%   | 6249.4% | 133MiB |
+| 14        | genhttp        | 2,157,304    | 57.6%   | 5669.5% | 615MiB |
+| 15        | elysia         | 2,154,252    | 57.5%   | 6625.2% | 1.7GiB |
++-----------+----------------+--------------+---------+---------+--------+
+LATENCY: values saved by upstream for its selected repetition
++----------------+--------+--------+
+| Server         | Avg    | p99    |
++----------------+--------+--------+
+| doba           | 1.09ms | 2.04ms |
+| dusty          | 1.09ms | 1.83ms |
+| genhttp-ioxide | 1.16ms | 1.77ms |
+| tako           | 1.20ms | 2.19ms |
+| actix          | 1.19ms | 2.21ms |
+| morojs         | 1.46ms | 2.62ms |
+| fiber          | 1.49ms | 3.27ms |
+| bun            | 1.68ms | 3.41ms |
+| fulmine        | 1.69ms | 2.26ms |
+| vertx          | 1.75ms | 3.92ms |
+| ntex           | 1.76ms | 2.15ms |
+| hono-bun       | 1.83ms | 3.50ms |
+| libuvcpp       | 1.86ms | 2.56ms |
+| genhttp        | 1.89ms | 4.72ms |
+| elysia         | 1.90ms | 3.93ms |
++----------------+--------+--------+
+
+THROUGHPUT DETAIL: pipelined (4096 connections)
++-----------+----------------+--------------+---------+---------+--------+
+| RPS order | Server         | Selected RPS | vs best | CPU     | Memory |
++-----------+----------------+--------------+---------+---------+--------+
+| 1         | morojs         | 41,520,816   | 100.0%  | 6603.4% | 3.8GiB |
+| 2         | fulmine        | 36,660,627   | 88.3%   | 6241.8% | 2.0GiB |
+| 3         | doba           | 28,127,187   | 67.7%   | 6284.3% | 130MiB |
+| 4         | genhttp-ioxide | 26,880,368   | 64.7%   | 6125.9% | 2.3GiB |
+| 5         | tako           | 24,558,336   | 59.1%   | 6658.9% | 126MiB |
+| 6         | fiber          | 21,412,320   | 51.6%   | 6629.5% | 368MiB |
+| 7         | actix          | 20,035,910   | 48.3%   | 6624.9% | 217MiB |
+| 8         | genhttp        | 19,401,625   | 46.7%   | 5775.1% | 388MiB |
+| 9         | vertx          | 13,497,708   | 32.5%   | 6084.3% | 5.8GiB |
+| 10        | libuvcpp       | 9,028,451    | 21.7%   | 6267.7% | 178MiB |
+| 11        | bun            | 5,415,498    | 13.0%   | 6207.1% | 369MiB |
+| 12        | dusty          | 4,645,280    | 11.2%   | 6095.2% | 206MiB |
+| 13        | hono-bun       | 3,139,523    | 7.6%    | 6262.5% | 1.2GiB |
+| 14        | elysia         | 2,966,650    | 7.1%    | 6656.5% | 1.6GiB |
++-----------+----------------+--------------+---------+---------+--------+
+LATENCY: values saved by upstream for its selected repetition
++----------------+---------+---------+
+| Server         | Avg     | p99     |
++----------------+---------+---------+
+| morojs         | 1.58ms  | 2.72ms  |
+| fulmine        | 1.79ms  | 2.22ms  |
+| doba           | 2.33ms  | 3.46ms  |
+| genhttp-ioxide | 2.44ms  | 3.94ms  |
+| tako           | 2.67ms  | 2.75ms  |
+| fiber          | 3.06ms  | 6.60ms  |
+| actix          | 3.09ms  | 3.37ms  |
+| genhttp        | 3.38ms  | 6.57ms  |
+| vertx          | 4.86ms  | 8.35ms  |
+| libuvcpp       | 7.28ms  | 9.07ms  |
+| bun            | 12.10ms | 17.00ms |
+| dusty          | 12.70ms | 33.40ms |
+| hono-bun       | 20.85ms | 27.30ms |
+| elysia         | 22.09ms | 31.70ms |
++----------------+---------+---------+
+
+THROUGHPUT DETAIL: limited-conn (4096 connections)
++-----------+----------------+--------------+---------+---------+--------+
+| RPS order | Server         | Selected RPS | vs best | CPU     | Memory |
++-----------+----------------+--------------+---------+---------+--------+
+| 1         | doba           | 3,019,401    | 100.0%  | 5860.1% | 112MiB |
+| 2         | genhttp-ioxide | 2,836,929    | 94.0%   | 5945.4% | 2.4GiB |
+| 3         | tako           | 2,653,626    | 87.9%   | 6108.5% | 162MiB |
+| 4         | morojs         | 2,230,882    | 73.9%   | 6088.8% | 4.0GiB |
+| 5         | fiber          | 2,147,293    | 71.1%   | 6051.8% | 882MiB |
+| 6         | bun            | 2,059,173    | 68.2%   | 6065.7% | 1.2GiB |
+| 7         | fulmine        | 2,041,137    | 67.6%   | 6150.6% | 2.6GiB |
+| 8         | hono-bun       | 1,911,770    | 63.3%   | 6469.7% | 1.3GiB |
+| 9         | elysia         | 1,824,731    | 60.4%   | 6500.1% | 1.7GiB |
+| 10        | dusty          | 1,823,006    | 60.4%   | 5935.9% | 48MiB  |
+| 11        | libuvcpp       | 1,738,572    | 57.6%   | 6529.7% | 125MiB |
+| 12        | ntex           | 1,241,544    | 41.1%   | 4900.7% | 86MiB  |
+| 13        | actix          | 1,185,337    | 39.3%   | 3279.5% | 90MiB  |
+| 14        | genhttp        | 1,132,174    | 37.5%   | 4567.9% | 459MiB |
+| 15        | vertx          | 604,191      | 20.0%   | 2083.7% | 2.4GiB |
++-----------+----------------+--------------+---------+---------+--------+
+LATENCY: values saved by upstream for its selected repetition
++----------------+--------+---------+
+| Server         | Avg    | p99     |
++----------------+--------+---------+
+| doba           | 1.27ms | 11.10ms |
+| genhttp-ioxide | 1.42ms | 3.92ms  |
+| tako           | 1.52ms | 3.04ms  |
+| morojs         | 1.82ms | 6.42ms  |
+| fiber          | 1.90ms | 6.79ms  |
+| bun            | 1.98ms | 7.46ms  |
+| fulmine        | 2.00ms | 8.17ms  |
+| hono-bun       | 2.13ms | 7.59ms  |
+| elysia         | 2.24ms | 8.07ms  |
+| dusty          | 773us  | 5.76ms  |
+| libuvcpp       | 2.33ms | 37.50ms |
+| ntex           | 3.29ms | 33.00ms |
+| actix          | 1.12ms | 8.75ms  |
+| genhttp        | 2.04ms | 20.50ms |
+| vertx          | 6.74ms | 71.80ms |
++----------------+--------+---------+
+
+FIXED RATE: latency-10k (1024 connections)
+Official score formula, normalized to THIS session only (not the public leaderboard).
+Upstream rules: full rate credit at 95%; missing CPU contributes zero CPU points.
++------+----------------+-------+------------+-------+-------+--------+
+| Rank | Server         | Score | CPU us/req | RPS   | Rate  | Status |
++------+----------------+-------+------------+-------+-------+--------+
+| 1    | doba           | 99.26 | 26.489     | 9,983 | 99.8% | OK     |
+| 2    | genhttp-ioxide | 97.52 | 27.624     | 9,983 | 99.8% | OK     |
+| 3    | dusty          | 86.65 | 33.932     | 9,983 | 99.8% | OK     |
+| 4    | tako           | 83.86 | 36.539     | 9,984 | 99.8% | OK     |
+| 5    | actix          | 77.45 | 42.743     | 9,983 | 99.8% | OK     |
+| 6    | fiber          | 75.55 | 48.734     | 9,983 | 99.8% | OK     |
+| 7    | morojs         | 74.18 | 47.373     | 9,983 | 99.8% | OK     |
+| 8    | ntex           | 73.09 | 48.657     | 9,983 | 99.8% | OK     |
+| 9    | libuvcpp       | 72.71 | 49.976     | 9,983 | 99.8% | OK     |
+| 10   | vertx          | 71.82 | 50.300     | 9,983 | 99.8% | OK     |
+| 11   | bun            | 71.29 | 57.971     | 9,985 | 99.9% | OK     |
+| 12   | fulmine        | 70.01 | 54.253     | 9,983 | 99.8% | OK     |
+| 13   | hono-bun       | 65.26 | 68.361     | 9,983 | 99.8% | OK     |
+| 14   | elysia         | 63.74 | 72.349     | 9,982 | 99.8% | OK     |
+| 15   | genhttp        | 61.37 | 107.729    | 9,982 | 99.8% | OK     |
++------+----------------+-------+------------+-------+-------+--------+
+LATENCY: values saved by upstream for its selected repetition
++----------------+---------+---------+----------+
+| Server         | Avg     | p99     | p99.9    |
++----------------+---------+---------+----------+
+| doba           | 76.5us  | 128.0us | 532.0us  |
+| genhttp-ioxide | 74.5us  | 127.0us | 732.0us  |
+| dusty          | 87.0us  | 137.0us | 4486.0us |
+| tako           | 86.6us  | 139.0us | 508.0us  |
+| actix          | 94.7us  | 146.0us | 528.0us  |
+| fiber          | 82.2us  | 132.0us | 379.0us  |
+| morojs         | 95.6us  | 152.0us | 907.0us  |
+| ntex           | 97.9us  | 156.0us | 601.0us  |
+| libuvcpp       | 95.1us  | 155.0us | 435.0us  |
+| vertx          | 102.3us | 152.0us | 1426.0us |
+| bun            | 79.7us  | 142.0us | 392.0us  |
+| fulmine        | 99.9us  | 158.0us | 629.0us  |
+| hono-bun       | 97.3us  | 158.0us | 394.0us  |
+| elysia         | 100.6us | 162.0us | 736.0us  |
+| genhttp        | 81.1us  | 113.0us | 564.0us  |
++----------------+---------+---------+----------+
+
+FIXED RATE: latency-1m (1024 connections)
+Official score formula, normalized to THIS session only (not the public leaderboard).
+Upstream rules: full rate credit at 95%; missing CPU contributes zero CPU points.
++------+----------------+--------+------------+---------+-------+--------+
+| Rank | Server         | Score  | CPU us/req | RPS     | Rate  | Status |
++------+----------------+--------+------------+---------+-------+--------+
+| 1    | doba           | 100.00 | 17.623     | 998,287 | 99.8% | OK     |
+| 2    | genhttp-ioxide | 94.63  | 18.967     | 998,314 | 99.8% | OK     |
+| 3    | tako           | 94.46  | 19.424     | 997,976 | 99.8% | OK     |
+| 4    | actix          | 92.17  | 20.207     | 998,247 | 99.8% | OK     |
+| 5    | dusty          | 89.36  | 21.912     | 998,323 | 99.8% | OK     |
+| 6    | morojs         | 87.99  | 21.384     | 998,060 | 99.8% | OK     |
+| 7    | fulmine        | 84.93  | 23.452     | 998,460 | 99.9% | OK     |
+| 8    | vertx          | 80.19  | 24.984     | 998,178 | 99.8% | OK     |
+| 9    | ntex           | 79.30  | 26.419     | 998,377 | 99.8% | OK     |
+| 10   | libuvcpp       | 74.36  | 29.874     | 998,393 | 99.8% | OK     |
+| 11   | fiber          | 73.49  | 31.956     | 998,269 | 99.8% | OK     |
+| 12   | hono-bun       | 72.69  | 28.290     | 998,165 | 99.8% | OK     |
+| 13   | elysia         | 69.04  | 29.442     | 998,340 | 99.8% | OK     |
+| 14   | bun            | 68.57  | 32.780     | 998,143 | 99.8% | OK     |
+| 15   | genhttp        | 55.81  | 33.523     | 998,393 | 99.8% | OK     |
++------+----------------+--------+------------+---------+-------+--------+
+LATENCY: values saved by upstream for its selected repetition
++----------------+---------+----------+-----------+
+| Server         | Avg     | p99      | p99.9     |
++----------------+---------+----------+-----------+
+| doba           | 63.8us  | 92.0us   | 159.0us   |
+| genhttp-ioxide | 73.4us  | 100.0us  | 4858.0us  |
+| tako           | 68.6us  | 95.0us   | 275.0us   |
+| actix          | 70.8us  | 100.0us  | 677.0us   |
+| dusty          | 66.9us  | 101.0us  | 156.0us   |
+| morojs         | 81.6us  | 107.0us  | 7658.0us  |
+| fulmine        | 76.2us  | 112.0us  | 2061.0us  |
+| vertx          | 91.5us  | 127.0us  | 7318.0us  |
+| ntex           | 84.1us  | 123.0us  | 1704.0us  |
+| libuvcpp       | 85.9us  | 156.0us  | 676.0us   |
+| fiber          | 78.8us  | 151.0us  | 435.0us   |
+| hono-bun       | 90.1us  | 338.0us  | 1804.0us  |
+| elysia         | 100.3us | 479.0us  | 5430.0us  |
+| bun            | 96.4us  | 265.0us  | 7310.0us  |
+| genhttp        | 150.3us | 2013.0us | 11148.0us |
++----------------+---------+----------+-----------+
+
+FIXED RATE: latency-500k-8cpu (1024 connections)
+Official score formula, normalized to THIS session only (not the public leaderboard).
+Upstream rules: full rate credit at 95%; missing CPU contributes zero CPU points.
+WARNING: inspect rate penalties, missing CPU and topology fallback before interpreting scores.
++------+----------------+-------+------------+---------+-------+--------------+
+| Rank | Server         | Score | CPU us/req | RPS     | Rate  | Status       |
++------+----------------+-------+------------+---------+-------+--------------+
+| 1    | doba           | 99.17 | 16.032     | 488,868 | 97.8% | OK           |
+| 2    | tako           | 87.31 | 16.793     | 474,811 | 95.0% | RATE PENALTY |
+| 3    | dusty          | 84.82 | 16.732     | 476,109 | 95.2% | OK           |
+| 4    | genhttp-ioxide | 84.20 | 16.740     | 473,503 | 94.7% | RATE PENALTY |
+| 5    | actix          | 70.43 | 17.800     | 447,696 | 89.5% | RATE PENALTY |
+| 6    | morojs         | 62.55 | 18.402     | 433,985 | 86.8% | RATE PENALTY |
+| 7    | fulmine        | 48.28 | 20.352     | 392,170 | 78.4% | RATE PENALTY |
+| 8    | bun            | 46.02 | 20.902     | 381,228 | 76.2% | RATE PENALTY |
+| 9    | fiber          | 43.28 | 21.531     | 370,663 | 74.1% | RATE PENALTY |
+| 10   | vertx          | 40.80 | 22.423     | 355,286 | 71.1% | RATE PENALTY |
+| 11   | genhttp        | 37.90 | 21.569     | 325,721 | 65.1% | RATE PENALTY |
+| 12   | hono-bun       | 36.95 | 23.506     | 338,110 | 67.6% | RATE PENALTY |
+| 13   | ntex           | 35.68 | 24.155     | 329,883 | 66.0% | RATE PENALTY |
+| 14   | elysia         | 32.43 | 25.310     | 313,951 | 62.8% | RATE PENALTY |
+| 15   | libuvcpp       | 26.22 | 28.730     | 277,881 | 55.6% | RATE PENALTY |
++------+----------------+-------+------------+---------+-------+--------------+
+LATENCY: values saved by upstream for its selected repetition
++----------------+-------------+-------------+-------------+
+| Server         | Avg         | p99         | p99.9       |
++----------------+-------------+-------------+-------------+
+| doba           | 198759.0us  | 1288704.0us | 1387008.0us |
+| tako           | 517640.9us  | 1025280.0us | 1073664.0us |
+| dusty          | 471402.3us  | 2857984.0us | 3503104.0us |
+| genhttp-ioxide | 490286.2us  | 2786304.0us | 2970624.0us |
+| actix          | 1018556.3us | 2085376.0us | 2169856.0us |
+| morojs         | 1289026.6us | 3863552.0us | 4174848.0us |
+| fulmine        | 2099122.6us | 5236736.0us | 5462016.0us |
+| bun            | 2347076.2us | 5400576.0us | 5756928.0us |
+| fiber          | 2524264.2us | 6641664.0us | 7538688.0us |
+| vertx          | 2888355.1us | 5691392.0us | 5752832.0us |
+| genhttp        | 3476633.3us | 6879232.0us | 6977536.0us |
+| hono-bun       | 3214063.2us | 7481344.0us | 8083456.0us |
+| ntex           | 3390600.6us | 6719488.0us | 6871040.0us |
+| elysia         | 3665336.3us | 8392704.0us | 9048064.0us |
+| libuvcpp       | 4358933.5us | 9555968.0us | 9949184.0us |
++----------------+-------------+-------------+-------------+
+
+THROUGHPUT DETAIL: async (32000 connections)
++-----------+----------------+--------------+---------+---------+---------+
+| RPS order | Server         | Selected RPS | vs best | CPU     | Memory  |
++-----------+----------------+--------------+---------+---------+---------+
+| 1         | doba           | 2,662,935    | 100.0%  | 6276.4% | 449MiB  |
+| 2         | actix          | 2,486,271    | 93.4%   | 4995.7% | 909MiB  |
+| 3         | tako           | 2,474,155    | 92.9%   | 5311.5% | 906MiB  |
+| 4         | dusty          | 2,458,856    | 92.3%   | 5562.3% | 1.4GiB  |
+| 5         | fulmine        | 2,357,833    | 88.5%   | 6345.7% | 5.6GiB  |
+| 6         | genhttp-ioxide | 2,275,304    | 85.4%   | 6272.7% | 6.7GiB  |
+| 7         | morojs         | 2,221,366    | 83.4%   | 6109.4% | 4.4GiB  |
+| 8         | bun            | 2,159,257    | 81.1%   | 6174.3% | 1.5GiB  |
+| 9         | vertx          | 1,867,010    | 70.1%   | 6193.2% | 14.7GiB |
+| 10        | elysia         | 1,784,382    | 67.0%   | 6227.9% | 2.1GiB  |
+| 11        | hono-bun       | 1,728,866    | 64.9%   | 6159.7% | 1.9GiB  |
+| 12        | libuvcpp       | 1,650,457    | 62.0%   | 6323.4% | 510MiB  |
+| 13        | fiber          | 1,595,411    | 59.9%   | 4166.4% | 1.0GiB  |
+| 14        | genhttp        | 1,237,383    | 46.5%   | 4652.6% | 2.9GiB  |
+| 15        | ntex           | 962,736      | 36.2%   | 2892.9% | 787MiB  |
++-----------+----------------+--------------+---------+---------+---------+
+LATENCY: values saved by upstream for its selected repetition
++----------------+---------+---------+
+| Server         | Avg     | p99     |
++----------------+---------+---------+
+| doba           | 12.18ms | 14.30ms |
+| actix          | 13.51ms | 15.90ms |
+| tako           | 13.00ms | 14.50ms |
+| dusty          | 12.95ms | 16.30ms |
+| fulmine        | 13.58ms | 15.70ms |
+| genhttp-ioxide | 14.07ms | 19.60ms |
+| morojs         | 14.47ms | 19.80ms |
+| bun            | 14.90ms | 22.90ms |
+| vertx          | 17.20ms | 28.80ms |
+| elysia         | 17.94ms | 28.10ms |
+| hono-bun       | 18.69ms | 28.00ms |
+| libuvcpp       | 19.30ms | 22.30ms |
+| fiber          | 20.36ms | 29.80ms |
+| genhttp        | 25.23ms | 46.00ms |
+| ntex           | 30.90ms | 35.10ms |
++----------------+---------+---------+
+
+THROUGHPUT DETAIL: json-comp (4096 connections)
+Raw throughput detail only; compression-weighted ranking is in PROFILE SCORE above.
++-----------+----------------+--------------+---------+---------+--------+-------------+
+| RPS order | Server         | Selected RPS | vs best | CPU     | Memory | Bandwidth   |
++-----------+----------------+--------------+---------+---------+--------+-------------+
+| 1         | genhttp-ioxide | 735,737      | 100.0%  | 6451.6% | 2.4GiB | 1.23GB/s    |
+| 2         | ntex           | 603,721      | 82.1%   | 6159.1% | 217MiB | 1.01GB/s    |
+| 3         | actix          | 578,946      | 78.7%   | 6104.9% | 244MiB | 1002.78MB/s |
+| 4         | fulmine        | 569,759      | 77.4%   | 6461.8% | 8.3GiB | 832.02MB/s  |
+| 5         | bun            | 548,676      | 74.6%   | 5898.0% | 1.1GiB | 733.60MB/s  |
+| 6         | genhttp        | 539,669      | 73.4%   | 5774.6% | 684MiB | 926.16MB/s  |
+| 7         | dusty          | 498,739      | 67.8%   | 6516.3% | 171MiB | 649.79MB/s  |
+| 8         | elysia         | 432,039      | 58.7%   | 6423.3% | 1.8GiB | 585.88MB/s  |
+| 9         | libuvcpp       | 414,629      | 56.4%   | 6462.0% | 142MiB | 592.56MB/s  |
+| 10        | morojs         | 361,052      | 49.1%   | 6114.7% | 8.5GiB | 486.35MB/s  |
+| 11        | fiber          | 344,900      | 46.9%   | 6416.1% | 825MiB | 458.59MB/s  |
+| 12        | vertx          | 320,643      | 43.6%   | 5985.5% | 5.5GiB | 412.58MB/s  |
+| 13        | hono-bun       | 241,577      | 32.8%   | 6140.8% | 1.4GiB | 333.64MB/s  |
+| 14        | tako           | 223,800      | 30.4%   | 6096.2% | 250MiB | 274.15MB/s  |
+| 15        | doba           | 174,548      | 23.7%   | 5871.2% | 123MiB | 233.51MB/s  |
++-----------+----------------+--------------+---------+---------+--------+-------------+
+LATENCY: values saved by upstream for its selected repetition
++----------------+---------+----------+
+| Server         | Avg     | p99      |
++----------------+---------+----------+
+| genhttp-ioxide | 5.56ms  | 14.40ms  |
+| ntex           | 6.77ms  | 37.70ms  |
+| actix          | 5.89ms  | 27.70ms  |
+| fulmine        | 7.18ms  | 21.00ms  |
+| bun            | 7.46ms  | 19.80ms  |
+| genhttp        | 7.09ms  | 25.00ms  |
+| dusty          | 2.79ms  | 52.10ms  |
+| elysia         | 9.47ms  | 21.50ms  |
+| libuvcpp       | 9.69ms  | 245.90ms |
+| morojs         | 11.32ms | 34.40ms  |
+| fiber          | 11.85ms | 35.20ms  |
+| vertx          | 12.77ms | 35.70ms  |
+| hono-bun       | 16.93ms | 37.00ms  |
+| tako           | 18.28ms | 28.10ms  |
+| doba           | 22.58ms | 504.90ms |
++----------------+---------+----------+
+
+THROUGHPUT DETAIL: json-comp (16384 connections)
+Raw throughput detail only; compression-weighted ranking is in PROFILE SCORE above.
++-----------+----------------+--------------+---------+---------+---------+-------------+
+| RPS order | Server         | Selected RPS | vs best | CPU     | Memory  | Bandwidth   |
++-----------+----------------+--------------+---------+---------+---------+-------------+
+| 1         | genhttp-ioxide | 712,878      | 100.0%  | 6083.2% | 3.8GiB  | 1.19GB/s    |
+| 2         | ntex           | 586,632      | 82.3%   | 6091.5% | 375MiB  | 1007.65MB/s |
+| 3         | actix          | 573,974      | 80.5%   | 6107.9% | 548MiB  | 994.26MB/s  |
+| 4         | fulmine        | 570,206      | 80.0%   | 6133.2% | 8.0GiB  | 832.60MB/s  |
+| 5         | bun            | 551,127      | 77.3%   | 6241.2% | 1.2GiB  | 736.85MB/s  |
+| 6         | genhttp        | 550,759      | 77.3%   | 5961.0% | 1.7GiB  | 945.24MB/s  |
+| 7         | dusty          | 498,779      | 70.0%   | 6528.6% | 243MiB  | 649.96MB/s  |
+| 8         | elysia         | 434,363      | 60.9%   | 6524.1% | 1.8GiB  | 589.02MB/s  |
+| 9         | libuvcpp       | 407,098      | 57.1%   | 6076.3% | 115MiB  | 581.80MB/s  |
+| 10        | morojs         | 359,717      | 50.5%   | 6116.2% | 9.6GiB  | 484.56MB/s  |
+| 11        | fiber          | 346,480      | 48.6%   | 6528.0% | 1.7GiB  | 460.62MB/s  |
+| 12        | vertx          | 316,068      | 44.3%   | 6018.4% | 12.1GiB | 406.70MB/s  |
+| 13        | doba           | 282,756      | 39.7%   | 6481.5% | 211MiB  | 378.35MB/s  |
+| 14        | hono-bun       | 243,905      | 34.2%   | 6080.0% | 1.5GiB  | 336.89MB/s  |
+| 15        | tako           | 220,992      | 31.0%   | 6496.0% | 592MiB  | 270.70MB/s  |
++-----------+----------------+--------------+---------+---------+---------+-------------+
+LATENCY: values saved by upstream for its selected repetition
++----------------+---------+----------+
+| Server         | Avg     | p99      |
++----------------+---------+----------+
+| genhttp-ioxide | 22.96ms | 49.10ms  |
+| ntex           | 23.73ms | 59.20ms  |
+| actix          | 22.93ms | 49.90ms  |
+| fulmine        | 28.72ms | 70.30ms  |
+| bun            | 29.74ms | 56.10ms  |
+| genhttp        | 25.23ms | 70.70ms  |
+| dusty          | 3.31ms  | 52.40ms  |
+| elysia         | 37.66ms | 64.20ms  |
+| libuvcpp       | 24.43ms | 516.80ms |
+| morojs         | 45.41ms | 101.10ms |
+| fiber          | 47.07ms | 81.80ms  |
+| vertx          | 51.69ms | 108.20ms |
+| doba           | 53.43ms | 868.90ms |
+| hono-bun       | 66.88ms | 106.30ms |
+| tako           | 73.74ms | 124.70ms |
++----------------+---------+----------+
+
+THROUGHPUT DETAIL: json-tls (4096 connections)
++-----------+----------+--------------+---------+---------+--------+
+| RPS order | Server   | Selected RPS | vs best | CPU     | Memory |
++-----------+----------+--------------+---------+---------+--------+
+| 1         | fulmine  | 1,533,624    | 100.0%  | 6512.1% | 7.4GiB |
+| 2         | actix    | 1,426,237    | 93.0%   | 6514.0% | 249MiB |
+| 3         | ntex     | 1,411,628    | 92.0%   | 6139.5% | 164MiB |
+| 4         | elysia   | 1,402,096    | 91.4%   | 6501.2% | 1.3GiB |
+| 5         | doba     | 1,392,789    | 90.8%   | 6508.8% | 615MiB |
+| 6         | bun      | 1,317,421    | 85.9%   | 5861.2% | 994MiB |
+| 7         | morojs   | 1,119,766    | 73.0%   | 6533.3% | 4.1GiB |
+| 8         | hono-bun | 1,092,098    | 71.2%   | 6266.2% | 1.3GiB |
+| 9         | fiber    | 1,030,707    | 67.2%   | 6152.8% | 736MiB |
+| 10        | genhttp  | 989,482      | 64.5%   | 5829.2% | 1.2GiB |
+| 11        | dusty    | 959,207      | 62.5%   | 6304.2% | 800MiB |
+| 12        | tako     | 953,525      | 62.2%   | 4282.5% | 244MiB |
+| 13        | libuvcpp | 922,083      | 60.1%   | 6549.5% | 674MiB |
+| 14        | vertx    | 809,871      | 52.8%   | 6425.0% | 9.1GiB |
++-----------+----------+--------------+---------+---------+--------+
+LATENCY: values saved by upstream for its selected repetition
+Upstream p99 field contains wrk MAX, not a measured percentile. HTTP status fields are assumed by its parser.
++----------+--------+-----------+
+| Server   | Avg    | Max (wrk) |
++----------+--------+-----------+
+| fulmine  | 2.65ms | 66.76ms   |
+| actix    | 2.90ms | 69.21ms   |
+| ntex     | 2.87ms | 49.79ms   |
+| elysia   | 2.92ms | 101.99ms  |
+| doba     | 2.90ms | 56.79ms   |
+| bun      | 3.20ms | 61.74ms   |
+| morojs   | 3.62ms | 48.85ms   |
+| hono-bun | 3.73ms | 111.75ms  |
+| fiber    | 4.21ms | 154.77ms  |
+| genhttp  | 4.10ms | 51.35ms   |
+| dusty    | 3.77ms | 91.94ms   |
+| tako     | 3.29ms | 22.87ms   |
+| libuvcpp | 4.40ms | 51.21ms   |
+| vertx    | 5.70ms | 195.23ms  |
++----------+--------+-----------+
+
+FIXED RATE: 8gbit (512 connections)
+Official score formula, normalized to THIS session only (not the public leaderboard).
+Upstream rules: full rate credit at 95%; missing CPU contributes zero CPU points.
++------+----------+-------+------------+--------+-------+--------+
+| Rank | Server   | Score | CPU us/req | RPS    | Rate  | Status |
++------+----------+-------+------------+--------+-------+--------+
+| 1    | doba     | 99.23 | 43.037     | 49,348 | 98.7% | OK     |
+| 2    | actix    | 98.55 | 44.320     | 49,366 | 98.7% | OK     |
+| 3    | tako     | 91.05 | 50.765     | 48,412 | 96.8% | OK     |
+| 4    | ntex     | 88.71 | 53.997     | 49,362 | 98.7% | OK     |
+| 5    | fulmine  | 82.79 | 59.417     | 49,303 | 98.6% | OK     |
+| 6    | fiber    | 80.67 | 64.734     | 49,308 | 98.6% | OK     |
+| 7    | libuvcpp | 80.64 | 64.331     | 49,470 | 98.9% | OK     |
+| 8    | morojs   | 80.07 | 62.830     | 49,370 | 98.7% | OK     |
+| 9    | vertx    | 76.16 | 68.853     | 49,229 | 98.5% | OK     |
+| 10   | bun      | 76.15 | 74.824     | 49,371 | 98.7% | OK     |
+| 11   | hono-bun | 74.09 | 76.967     | 49,387 | 98.8% | OK     |
+| 12   | dusty    | 72.62 | 74.201     | 49,159 | 98.3% | OK     |
+| 13   | elysia   | 70.93 | 82.736     | 49,388 | 98.8% | OK     |
+| 14   | genhttp  | 70.63 | 95.513     | 49,382 | 98.8% | OK     |
++------+----------+-------+------------+--------+-------+--------+
+LATENCY: values saved by upstream for its selected repetition
++----------+---------+---------+-----------+
+| Server   | Avg     | p99     | p99.9     |
++----------+---------+---------+-----------+
+| doba     | 92.8us  | 111.0us | 7738.0us  |
+| actix    | 88.1us  | 105.0us | 3209.0us  |
+| tako     | 91.2us  | 137.0us | 1270.0us  |
+| ntex     | 94.9us  | 115.0us | 3331.0us  |
+| fulmine  | 111.9us | 132.0us | 11228.0us |
+| fiber    | 103.7us | 131.0us | 5930.0us  |
+| libuvcpp | 103.7us | 140.0us | 2635.0us  |
+| morojs   | 116.0us | 146.0us | 12452.0us |
+| vertx    | 115.0us | 193.0us | 7846.0us  |
+| bun      | 98.2us  | 156.0us | 3221.0us  |
+| hono-bun | 104.0us | 186.0us | 6342.0us  |
+| dusty    | 143.7us | 141.0us | 14884.0us |
+| elysia   | 109.7us | 221.0us | 4466.0us  |
+| genhttp  | 101.8us | 115.0us | 7070.0us  |
++----------+---------+---------+-----------+
+
+THROUGHPUT DETAIL: static-tls (1024 connections)
++-----------+----------+--------------+---------+---------+--------+
+| RPS order | Server   | Selected RPS | vs best | CPU     | Memory |
++-----------+----------+--------------+---------+---------+--------+
+| 1         | fulmine  | 849,365      | 100.0%  | 6529.2% | 3.2GiB |
+| 2         | fiber    | 662,712      | 78.0%   | 6457.3% | 551MiB |
+| 3         | bun      | 617,565      | 72.7%   | 6272.0% | 1.1GiB |
+| 4         | elysia   | 593,333      | 69.9%   | 6499.5% | 1.9GiB |
+| 5         | genhttp  | 507,214      | 59.7%   | 5821.9% | 460MiB |
+| 6         | hono-bun | 318,735      | 37.5%   | 6482.1% | 1.4GiB |
+| 7         | libuvcpp | 294,089      | 34.6%   | 5514.1% | 431MiB |
+| 8         | vertx    | 230,697      | 27.2%   | 6238.0% | 1.7GiB |
+| 9         | doba     | 174,783      | 20.6%   | 6329.2% | 234MiB |
+| 10        | tako     | 157,386      | 18.5%   | 3099.2% | 171MiB |
+| 11        | actix    | 76,895       | 9.1%    | 5777.2% | 4.6GiB |
+| 12        | morojs   | 65,726       | 7.7%    | 5679.1% | 4.4GiB |
++-----------+----------+--------------+---------+---------+--------+
+LATENCY: values saved by upstream for its selected repetition
+Upstream p99 field contains wrk MAX, not a measured percentile. HTTP status fields are assumed by its parser.
++----------+---------+-----------+
+| Server   | Avg     | Max (wrk) |
++----------+---------+-----------+
+| fulmine  | 1.20ms  | 19.30ms   |
+| fiber    | 1.59ms  | 36.07ms   |
+| bun      | 1.72ms  | 44.58ms   |
+| elysia   | 1.77ms  | 26.82ms   |
+| genhttp  | 2.16ms  | 37.69ms   |
+| hono-bun | 3.24ms  | 26.97ms   |
+| libuvcpp | 3.47ms  | 16.26ms   |
+| vertx    | 4.49ms  | 50.58ms   |
+| doba     | 6.26ms  | 37.40ms   |
+| tako     | 5.98ms  | 37.87ms   |
+| actix    | 17.09ms | 459.68ms  |
+| morojs   | 15.56ms | 41.52ms   |
++----------+---------+-----------+
+
+Official formulas on local data; not published/certified HttpArena results.
