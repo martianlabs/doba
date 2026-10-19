@@ -1,4 +1,12 @@
-# Reference
+<a name="reference"></a>
+<h1>
+  <a href="../../resources/docs/reference/h1-reference.svg#gh-light-mode-only">
+    <img src="../../resources/docs/reference/h1-reference.svg" alt="Reference">
+  </a>
+  <a href="../../resources/docs/reference/h1-reference-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/reference/h1-reference-dark.svg" alt="Reference">
+  </a>
+</h1>
 
 Looking for a precise signature or a default? Start with the header that owns it. Every public header under *include/* has a matching page here. For a walkthrough, see the [guide](../guide/README.md).
 
