@@ -1,9 +1,11 @@
 <a id="expect-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index.svg" alt="Index for expect.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index-dark.svg" alt="Index for expect.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/headers/expect.h](../../../../../../include/protocol/http/v11/headers/expect.h)
@@ -21,9 +23,9 @@ The "Expect" header field in a request indicates a set of behaviors ("expectatio
 
 <a id="type-expect"></a>
 
-## expect
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> expect
 
-🟠 **TYPE** · *protocol::http::v11::headers*
+**TYPE** · *protocol::http::v11::headers*
 
 **Declaration synopsis:**
 
@@ -37,9 +39,9 @@ The "Expect" header field in a request indicates a set of behaviors ("expectatio
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::v11::headers::expect*
+**METHOD** · *protocol::http::v11::headers::expect*
 
 ```cpp
 static bool check(std::string_view sv, parsed_parameter_list& out);
@@ -58,9 +60,9 @@ Checks whether a value follows the HTTP expect header syntax.
 
 <a id="method-interpret"></a>
 
-## interpret
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> interpret
 
-🟠 **METHOD** · *protocol::http::v11::headers::expect*
+**METHOD** · *protocol::http::v11::headers::expect*
 
 ```cpp
 static constexpr verdict interpret(

@@ -1,9 +1,11 @@
 <a id="routing-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index-dark.svg">
+  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index.svg#gh-light-mode-only">
     <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index.svg" alt="Index for routing.h">
-  </picture>
+  </a>
+  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index-dark.svg" alt="Index for routing.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/headers/rules/routing.h](../../../../../../../include/protocol/http/v11/headers/rules/routing.h)
@@ -20,9 +22,9 @@ Transversal routing rules that reconcile the request-target with the Host header
 
 <a id="type-routing"></a>
 
-## routing
+## <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> routing
 
-🟠 **TYPE** · *protocol::http::v11::headers::rules*
+**TYPE** · *protocol::http::v11::headers::rules*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ Transversal routing rules that reconcile the request-target with the Host header
 
 <a id="method-apply"></a>
 
-## apply
+## <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> apply
 
-🟠 **METHOD** · *protocol::http::v11::headers::rules::routing*
+**METHOD** · *protocol::http::v11::headers::rules::routing*
 
 ```cpp
 static constexpr verdict apply(const context& ctx);

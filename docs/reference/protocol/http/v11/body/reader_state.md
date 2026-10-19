@@ -1,9 +1,11 @@
 <a id="reader-state-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_state/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_state/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_state/index.svg" alt="Index for reader_state.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_state/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_state/index-dark.svg" alt="Index for reader_state.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/body/reader_state.h](../../../../../../include/protocol/http/v11/body/reader_state.h)
@@ -23,9 +25,9 @@ Result of a body reader read() call. produced  - bytes of decoded payload writte
 
 <a id="type-reader-state"></a>
 
-## reader_state
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> reader_state
 
-🟠 **TYPE** · *protocol::http::v11::body*
+**TYPE** · *protocol::http::v11::body*
 
 **Declaration synopsis:**
 
@@ -39,9 +41,9 @@ Result of a body reader read() call. produced  - bytes of decoded payload writte
 
 <a id="field-produced"></a>
 
-## produced
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> produced
 
-🟠 **FIELD** · *protocol::http::v11::body::reader_state*
+**FIELD** · *protocol::http::v11::body::reader_state*
 
 ```cpp
 std::size_t produced = 0;
@@ -55,9 +57,9 @@ Bytes of decoded payload written into the output span during this call.
 
 <a id="field-complete"></a>
 
-## complete
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> complete
 
-🟠 **FIELD** · *protocol::http::v11::body::reader_state*
+**FIELD** · *protocol::http::v11::body::reader_state*
 
 ```cpp
 bool complete = false;
@@ -71,9 +73,9 @@ Body fully decoded; no further read() calls needed.
 
 <a id="field-has-error"></a>
 
-## has_error
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> has_error
 
-🟠 **FIELD** · *protocol::http::v11::body::reader_state*
+**FIELD** · *protocol::http::v11::body::reader_state*
 
 ```cpp
 bool has_error = false;
@@ -87,9 +89,9 @@ A protocol or size-limit error was detected.
 
 <a id="field-error"></a>
 
-## error
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> error
 
-🟠 **FIELD** · *protocol::http::v11::body::reader_state*
+**FIELD** · *protocol::http::v11::body::reader_state*
 
 ```cpp
 reader_error error = reader_error::none;

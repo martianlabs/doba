@@ -1,9 +1,11 @@
 <a id="signaler-windows-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/common/signaler_windows/index-dark.svg">
+  <a href="../../../resources/docs/reference/common/signaler_windows/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/common/signaler_windows/index.svg" alt="Index for signaler_windows.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/common/signaler_windows/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/common/signaler_windows/index-dark.svg" alt="Index for signaler_windows.h">
+  </a>
 </h1>
 
 **Header:** [include/common/signaler_windows.h](../../../include/common/signaler_windows.h)
@@ -20,9 +22,9 @@ Provides the signaler type.
 
 <a id="type-signaler"></a>
 
-## signaler
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> signaler
 
-🟠 **TYPE** · *common*
+**TYPE** · *common*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ Provides the signaler type.
 
 <a id="method-wait"></a>
 
-## wait
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> wait
 
-🟠 **METHOD** · *common::signaler*
+**METHOD** · *common::signaler*
 
 ```cpp
 static void wait();

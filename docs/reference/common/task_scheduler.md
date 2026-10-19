@@ -1,9 +1,11 @@
 <a id="task-scheduler-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/common/task_scheduler/index-dark.svg">
+  <a href="../../../resources/docs/reference/common/task_scheduler/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/common/task_scheduler/index.svg" alt="Index for task_scheduler.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/common/task_scheduler/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/common/task_scheduler/index-dark.svg" alt="Index for task_scheduler.h">
+  </a>
 </h1>
 
 **Header:** [include/common/task_scheduler.h](../../../include/common/task_scheduler.h)
@@ -22,9 +24,9 @@ Provides the task scheduler type.
 
 <a id="type-task-scheduler"></a>
 
-## task_scheduler
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> task_scheduler
 
-🟠 **TYPE** · *common*
+**TYPE** · *common*
 
 **Declaration synopsis:**
 
@@ -38,9 +40,9 @@ Provides the task scheduler type.
 
 <a id="field-owner"></a>
 
-## owner
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> owner
 
-🟠 **FIELD** · *common::task_scheduler*
+**FIELD** · *common::task_scheduler*
 
 ```cpp
 void* owner{nullptr};
@@ -54,9 +56,9 @@ Stores the owner value.
 
 <a id="field-post"></a>
 
-## post
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> post
 
-🟠 **FIELD** · *common::task_scheduler*
+**FIELD** · *common::task_scheduler*
 
 ```cpp
 void (*post)(void*, std::coroutine_handle<>){nullptr};
@@ -70,9 +72,9 @@ Stores the post value.
 
 <a id="field-schedule"></a>
 
-## schedule
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> schedule
 
-🟠 **FIELD** · *common::task_scheduler*
+**FIELD** · *common::task_scheduler*
 
 ```cpp
 void (*schedule)(void*, std::chrono::steady_clock::time_point,

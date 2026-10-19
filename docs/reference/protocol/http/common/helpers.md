@@ -1,9 +1,11 @@
 <a id="helpers-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/common/helpers/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/common/helpers/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/common/helpers/index.svg" alt="Index for helpers.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/common/helpers/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/common/helpers/index-dark.svg" alt="Index for helpers.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/helpers.h](../../../../../include/protocol/http/common/helpers.h)
@@ -144,9 +146,9 @@ Provides the http 1.1 helper functions.
 
 <a id="constant-kf-token"></a>
 
-## kF_token
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_token
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::uint16_t kF_token = 0x0001;
@@ -160,9 +162,9 @@ Provides the http 1.1 helper functions. Each bit encodes one RFC character-class
 
 <a id="constant-kf-vchar"></a>
 
-## kF_vchar
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_vchar
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::uint16_t kF_vchar = 0x0002;
@@ -176,9 +178,9 @@ Defines the f vchar constant.
 
 <a id="constant-kf-obs-text"></a>
 
-## kF_obs_text
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_obs_text
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::uint16_t kF_obs_text = 0x0004;
@@ -192,9 +194,9 @@ Defines the f obs text constant.
 
 <a id="constant-kf-ows"></a>
 
-## kF_ows
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_ows
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::uint16_t kF_ows = 0x0008;
@@ -208,9 +210,9 @@ Defines the f ows constant.
 
 <a id="constant-kf-pchar"></a>
 
-## kF_pchar
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_pchar
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::uint16_t kF_pchar = 0x0010;
@@ -224,9 +226,9 @@ Defines the f pchar constant.
 
 <a id="constant-kf-qdtext"></a>
 
-## kF_qdtext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_qdtext
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::uint16_t kF_qdtext = 0x0020;
@@ -240,9 +242,9 @@ Defines the f qdtext constant.
 
 <a id="constant-kf-ctext"></a>
 
-## kF_ctext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_ctext
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::uint16_t kF_ctext = 0x0040;
@@ -256,9 +258,9 @@ Defines the f ctext constant.
 
 <a id="constant-kf-etagc"></a>
 
-## kF_etagc
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_etagc
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::uint16_t kF_etagc = 0x0080;
@@ -272,9 +274,9 @@ Defines the f etagc constant.
 
 <a id="constant-kf-cookie"></a>
 
-## kF_cookie
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_cookie
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::uint16_t kF_cookie = 0x0100;
@@ -288,9 +290,9 @@ Defines the f cookie constant.
 
 <a id="constant-kf-cookie-av"></a>
 
-## kF_cookie_av
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_cookie_av
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::uint16_t kF_cookie_av = 0x0200;
@@ -304,9 +306,9 @@ Defines the f cookie av constant.
 
 <a id="constant-kf-atext"></a>
 
-## kF_atext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_atext
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::uint16_t kF_atext = 0x0400;
@@ -320,9 +322,9 @@ Defines the f atext constant.
 
 <a id="constant-kf-dtext"></a>
 
-## kF_dtext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_dtext
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::uint16_t kF_dtext = 0x0800;
@@ -336,9 +338,9 @@ Defines the f dtext constant.
 
 <a id="constant-kf-hexdig"></a>
 
-## kF_hexdig
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_hexdig
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::uint16_t kF_hexdig = 0x1000;
@@ -352,9 +354,9 @@ Defines the f hexdig constant.
 
 <a id="constant-kf-unreserv"></a>
 
-## kF_unreserv
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kF_unreserv
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::uint16_t kF_unreserv = 0x2000;
@@ -368,9 +370,9 @@ Defines the f unreserv constant.
 
 <a id="function-build-char-flags"></a>
 
-## build_char_flags
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> build_char_flags
 
-🟠 **FUNCTION** · *protocol::http::detail*
+**FUNCTION** · *protocol::http::detail*
 
 ```cpp
 static constexpr std::array<std::uint16_t, 256> build_char_flags() noexcept;
@@ -386,9 +388,9 @@ The table is built at compile time, so the compiler can optimize it into a stati
 
 <a id="constant-kcharflags"></a>
 
-## kCharFlags
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kCharFlags
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 static constexpr auto kCharFlags = build_char_flags();
@@ -402,9 +404,9 @@ Defines the char flags constant.
 
 <a id="type-helpers"></a>
 
-## helpers
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> helpers
 
-🟠 **TYPE** · *protocol::http*
+**TYPE** · *protocol::http*
 
 **Declaration synopsis:**
 
@@ -418,9 +420,9 @@ Provides the http 1.1 helper functions.
 
 <a id="enum-host-type"></a>
 
-## host_type
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> host_type
 
-🟠 **ENUM** · *protocol::http::helpers*
+**ENUM** · *protocol::http::helpers*
 
 ```cpp
 enum class host_type { kUnknown, kIpLiteral, kIpV4Address, kRegName };
@@ -439,9 +441,9 @@ Enumerates host type values.
 
 <a id="method-is-digit"></a>
 
-## is_digit
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_digit
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_digit(unsigned char c) noexcept;
@@ -461,9 +463,9 @@ DIGIT = %x30-39    ; "0" - "9"
 
 <a id="method-is-digit-2"></a>
 
-## is_digit
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_digit
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_digit(char c) noexcept;
@@ -483,9 +485,9 @@ Reports whether digit applies.
 
 <a id="method-is-digits"></a>
 
-## is_digits
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_digits
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_digits(std::string_view sv) noexcept;
@@ -505,9 +507,9 @@ static constexpr bool is_digits(std::string_view sv) noexcept;
 
 <a id="method-parse-size-t"></a>
 
-## parse_size_t
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parse_size_t
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool parse_size_t(std::string_view sv,
@@ -529,9 +531,9 @@ Validates that sv is a non-empty run of decimal digits (exactly like is_digits) 
 
 <a id="method-is-hex-digit"></a>
 
-## is_hex_digit
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_hex_digit
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_hex_digit(unsigned char c) noexcept;
@@ -551,9 +553,9 @@ HEXDIG = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
 
 <a id="method-is-hex-digit-2"></a>
 
-## is_hex_digit
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_hex_digit
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_hex_digit(char c) noexcept;
@@ -573,9 +575,9 @@ Reports whether hex digit applies.
 
 <a id="method-is-alpha"></a>
 
-## is_alpha
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_alpha
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_alpha(unsigned char c) noexcept;
@@ -595,9 +597,9 @@ ALPHA = %x41-5A / %x61-7A ; A-Z / a-z
 
 <a id="method-is-alpha-2"></a>
 
-## is_alpha
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_alpha
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_alpha(char c) noexcept;
@@ -617,9 +619,9 @@ Reports whether alpha applies.
 
 <a id="method-is-token"></a>
 
-## is_token
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_token
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_token(unsigned char c) noexcept;
@@ -639,9 +641,9 @@ token  = 1*tchar
 
 <a id="method-is-token-2"></a>
 
-## is_token
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_token
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_token(char c) noexcept;
@@ -661,9 +663,9 @@ Reports whether token applies.
 
 <a id="method-is-token-3"></a>
 
-## is_token
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_token
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_token(std::string_view sv) noexcept;
@@ -683,9 +685,9 @@ token = 1*tchar Validates that sv, as a whole, is exactly one token: non-empty, 
 
 <a id="method-is-unreserved"></a>
 
-## is_unreserved
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_unreserved
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_unreserved(unsigned char c) noexcept;
@@ -705,9 +707,9 @@ unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~" ALPHA      = %x41-5A / %x61-7
 
 <a id="method-is-unreserved-2"></a>
 
-## is_unreserved
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_unreserved
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_unreserved(char c) noexcept;
@@ -727,9 +729,9 @@ Reports whether unreserved applies.
 
 <a id="method-is-sub-delim"></a>
 
-## is_sub_delim
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_sub_delim
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_sub_delim(unsigned char c) noexcept;
@@ -749,9 +751,9 @@ sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
 
 <a id="method-is-sub-delim-2"></a>
 
-## is_sub_delim
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_sub_delim
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_sub_delim(char c) noexcept;
@@ -771,9 +773,9 @@ Reports whether sub delim applies.
 
 <a id="method-is-pchar"></a>
 
-## is_pchar
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_pchar
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_pchar(unsigned char c) noexcept;
@@ -793,9 +795,9 @@ pchar = unreserved / pct-encoded / sub-delims / ":" / "@" unreserved  = ALPHA / 
 
 <a id="method-is-pchar-2"></a>
 
-## is_pchar
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_pchar
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_pchar(char c) noexcept;
@@ -815,9 +817,9 @@ Reports whether pchar applies.
 
 <a id="method-is-vchar"></a>
 
-## is_vchar
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_vchar
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_vchar(unsigned char c) noexcept;
@@ -837,9 +839,9 @@ VCHAR = %x21-7E ; visible (printing) characters
 
 <a id="method-is-vchar-2"></a>
 
-## is_vchar
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_vchar
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_vchar(char c) noexcept;
@@ -859,9 +861,9 @@ Reports whether vchar applies.
 
 <a id="method-is-qdtext"></a>
 
-## is_qdtext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_qdtext
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_qdtext(unsigned char c) noexcept;
@@ -881,9 +883,9 @@ qdtext = HTAB / SP / "!" / %x23-5B / %x5D-7E / obs-text HTAB     = %x09 SP      
 
 <a id="method-is-qdtext-2"></a>
 
-## is_qdtext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_qdtext
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_qdtext(char c) noexcept;
@@ -903,9 +905,9 @@ Reports whether qdtext applies.
 
 <a id="method-is-obs-text"></a>
 
-## is_obs_text
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_obs_text
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_obs_text(unsigned char c) noexcept;
@@ -925,9 +927,9 @@ obs-text = %x80-FF Note: obs-text represents obsolete text allowed for backward 
 
 <a id="method-is-obs-text-2"></a>
 
-## is_obs_text
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_obs_text
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_obs_text(char c) noexcept;
@@ -947,9 +949,9 @@ Reports whether obs text applies.
 
 <a id="method-is-ctext"></a>
 
-## is_ctext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ctext
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_ctext(unsigned char c) noexcept;
@@ -969,9 +971,9 @@ ctext = HTAB / SP / %x21-27 / %x2A-5B / %x5D-7E / obs-text HTAB     = %x09 SP   
 
 <a id="method-is-ctext-2"></a>
 
-## is_ctext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ctext
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_ctext(char c) noexcept;
@@ -991,9 +993,9 @@ Reports whether ctext applies.
 
 <a id="method-is-atext"></a>
 
-## is_atext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_atext
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_atext(unsigned char c) noexcept;
@@ -1013,9 +1015,9 @@ atext = ALPHA / DIGIT / "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "/
 
 <a id="method-is-atext-2"></a>
 
-## is_atext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_atext
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_atext(char c) noexcept;
@@ -1035,9 +1037,9 @@ Reports whether atext applies.
 
 <a id="method-is-dtext"></a>
 
-## is_dtext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_dtext
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_dtext(unsigned char c) noexcept;
@@ -1057,9 +1059,9 @@ dtext = %d33-90 / %d94-126 / obs-dtext The unquoted character set allowed inside
 
 <a id="method-is-dtext-2"></a>
 
-## is_dtext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_dtext
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_dtext(char c) noexcept;
@@ -1079,9 +1081,9 @@ Reports whether dtext applies.
 
 <a id="method-is-etagc"></a>
 
-## is_etagc
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_etagc
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_etagc(unsigned char c) noexcept;
@@ -1101,9 +1103,9 @@ etagc = %x21 / %x23-7E / obs-text ; VCHAR except DQUOTE, plus obs-text VCHAR    
 
 <a id="method-is-etagc-2"></a>
 
-## is_etagc
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_etagc
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_etagc(char c) noexcept;
@@ -1123,9 +1125,9 @@ Reports whether etagc applies.
 
 <a id="method-is-cookie-octet"></a>
 
-## is_cookie_octet
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_cookie_octet
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_cookie_octet(unsigned char c) noexcept;
@@ -1145,9 +1147,9 @@ cookie-octet = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E ; US-ASCII character
 
 <a id="method-is-cookie-octet-2"></a>
 
-## is_cookie_octet
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_cookie_octet
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_cookie_octet(char c) noexcept;
@@ -1167,9 +1169,9 @@ Reports whether cookie octet applies.
 
 <a id="method-is-cookie-av-octet"></a>
 
-## is_cookie_av_octet
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_cookie_av_octet
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_cookie_av_octet(unsigned char c) noexcept;
@@ -1189,9 +1191,9 @@ Both path-value and extension-av are defined as any CHAR except CTLs or a ";". C
 
 <a id="method-is-cookie-av-octet-2"></a>
 
-## is_cookie_av_octet
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_cookie_av_octet
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_cookie_av_octet(char c) noexcept;
@@ -1211,9 +1213,9 @@ Reports whether cookie av octet applies.
 
 <a id="method-is-entity-tag"></a>
 
-## is_entity_tag
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_entity_tag
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_entity_tag(std::string_view sv) noexcept;
@@ -1233,9 +1235,9 @@ entity-tag = [ weak ] opaque-tag weak       = %s"W/" opaque-tag = DQUOTE *etagc 
 
 <a id="method-is-ows"></a>
 
-## is_ows
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ows
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_ows(unsigned char c) noexcept;
@@ -1255,9 +1257,9 @@ OWS = *( SP / HTAB ) SP   = %x20 HTAB = %x09 Note: OWS is allowed only where exp
 
 <a id="method-is-ows-2"></a>
 
-## is_ows
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ows
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_ows(char c) noexcept;
@@ -1277,9 +1279,9 @@ Reports whether ows applies.
 
 <a id="method-is-qvalue"></a>
 
-## is_qvalue
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_qvalue
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_qvalue(std::string_view sv) noexcept;
@@ -1299,9 +1301,9 @@ qvalue             | ( "0" [ "." 0*3DIGIT ] ) / | ( "1" [ "." 0*3("0") ] )
 
 <a id="method-consume-weight"></a>
 
-## consume_weight
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_weight
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool consume_weight(std::string_view sv) noexcept;
@@ -1321,9 +1323,9 @@ weight = OWS ";" OWS "q=" qvalue Validates that sv is exactly one weight paramet
 
 <a id="method-tolower-ascii"></a>
 
-## tolower_ascii
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> tolower_ascii
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr unsigned char tolower_ascii(unsigned char c) noexcept;
@@ -1343,9 +1345,9 @@ Converts character to its lower-case version.
 
 <a id="method-tolower-ascii-2"></a>
 
-## tolower_ascii
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> tolower_ascii
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr char tolower_ascii(char c) noexcept;
@@ -1365,9 +1367,9 @@ Converts an ASCII character to lowercase.
 
 <a id="method-ows-ltrim"></a>
 
-## ows_ltrim
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ows_ltrim
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr void ows_ltrim(std::string_view& sv) noexcept;
@@ -1387,9 +1389,9 @@ Performs OWS trimming on the left side of the provided string_view.
 
 <a id="method-ows-rtrim"></a>
 
-## ows_rtrim
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ows_rtrim
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr void ows_rtrim(std::string_view& sv) noexcept;
@@ -1409,9 +1411,9 @@ Performs OWS trimming on the right side of the provided string_view.
 
 <a id="method-ows-trim"></a>
 
-## ows_trim
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ows_trim
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr void ows_trim(std::string_view& sv) noexcept;
@@ -1431,9 +1433,9 @@ Performs OWS trimming on left & right sides of the provided string_view.
 
 <a id="method-skip-n-hextets"></a>
 
-## skip_n_hextets
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> skip_n_hextets
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr int skip_n_hextets(std::string_view sv);
@@ -1451,9 +1453,9 @@ h16            | 1*4HEXDIG
 
 <a id="method-is-port"></a>
 
-## is_port
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_port
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_port(std::string_view sv);
@@ -1471,9 +1473,9 @@ port           | *DIGIT
 
 <a id="method-is-dec-octet"></a>
 
-## is_dec_octet
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_dec_octet
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_dec_octet(std::string_view sv, std::size_t digits,
@@ -1494,9 +1496,9 @@ dec-octet      | DIGIT                    ; 0-9 | / %x31-39 DIGIT          ; 10-
 
 <a id="method-is-dec-octet-2"></a>
 
-## is_dec_octet
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_dec_octet
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_dec_octet(std::string_view sv) noexcept;
@@ -1516,9 +1518,9 @@ dec-octet = DIGIT                 ; 0-9 / %x31-39 DIGIT         ; 10-99 / "1" 2D
 
 <a id="method-is-ip-v-future"></a>
 
-## is_ip_v_future
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ip_v_future
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_ip_v_future(std::string_view sv);
@@ -1536,9 +1538,9 @@ IPvFuture    | "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
 
 <a id="method-is-ip-v6-address"></a>
 
-## is_ip_v6_address
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ip_v6_address
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_ip_v6_address(std::string_view sv);
@@ -1556,9 +1558,9 @@ IPv6address    | 6( h16 ":" ) ls32 | / "::" 5( h16 ":" ) ls32 | / [ h16 ] "::" 4
 
 <a id="method-is-ip-v4-address"></a>
 
-## is_ip_v4_address
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ip_v4_address
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_ip_v4_address(std::string_view sv);
@@ -1576,9 +1578,9 @@ IPv4address    | dec-octet "." dec-octet "." dec-octet "." dec-octet
 
 <a id="method-is-ip-literal"></a>
 
-## is_ip_literal
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ip_literal
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_ip_literal(std::string_view sv);
@@ -1596,9 +1598,9 @@ IP-literal     | "[" ( IPv6address / IPvFuture ) "]"
 
 <a id="method-is-reg-name"></a>
 
-## is_reg_name
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_reg_name
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_reg_name(std::string_view sv);
@@ -1616,9 +1618,9 @@ reg-name       | *( unreserved / pct-encoded / sub-delims )
 
 <a id="method-is-token68"></a>
 
-## is_token68
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_token68
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_token68(std::string_view sv) noexcept;
@@ -1638,9 +1640,9 @@ token68 = 1*( ALPHA / DIGIT / "-" / "." / "_" / "~" / "+" / "/" ) *"=" Validates
 
 <a id="method-is-base64-char"></a>
 
-## is_base64_char
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_base64_char
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_base64_char(char c) noexcept;
@@ -1660,9 +1662,9 @@ base64-character = ALPHA / DIGIT / "+" / "/"
 
 <a id="method-check-base64-value"></a>
 
-## check_base64_value
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_base64_value
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool check_base64_value(std::string_view sv) noexcept;
@@ -1682,9 +1684,9 @@ base64-value-non-empty = ( 1*base64-data [ base64-padding ] ) / base64-padding b
 
 <a id="method-consume-token"></a>
 
-## consume_token
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_token
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr std::string_view consume_token(
@@ -1705,9 +1707,9 @@ method  | token token   | 1*tchar tchar   | "!" / "#" / "$" / "%" / "&" / "'" / 
 
 <a id="method-consume-quoted-string"></a>
 
-## consume_quoted_string
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_quoted_string
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr std::string_view consume_quoted_string(
@@ -1728,9 +1730,9 @@ quoted-string = DQUOTE *( qdtext / quoted-pair ) DQUOTE quoted-pair   = "\" ( HT
 
 <a id="method-consume-comment"></a>
 
-## consume_comment
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_comment
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr std::string_view consume_comment(
@@ -1751,9 +1753,9 @@ comment     = "(" *( ctext / quoted-pair / comment ) ")" quoted-pair = "\" ( HTA
 
 <a id="method-consume-cfws"></a>
 
-## consume_cfws
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_cfws
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool consume_cfws(std::string_view sv,
@@ -1775,9 +1777,9 @@ CFWS = (1*([FWS] comment) [FWS]) / FWS FWS  = ([*WSP CRLF] 1*WSP) / obs-FWS WSP 
 
 <a id="method-consume-dot-atom"></a>
 
-## consume_dot_atom
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_dot_atom
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool consume_dot_atom(std::string_view sv,
@@ -1799,9 +1801,9 @@ dot-atom      = [CFWS] dot-atom-text [CFWS] dot-atom-text = 1*atext *( "." 1*ate
 
 <a id="method-consume-domain-literal"></a>
 
-## consume_domain_literal
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_domain_literal
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool consume_domain_literal(std::string_view sv,
@@ -1823,9 +1825,9 @@ domain-literal = [CFWS] "[" *([FWS] dtext) [FWS] "]" [CFWS] Consumes a single do
 
 <a id="method-consume-addr-spec"></a>
 
-## consume_addr_spec
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_addr_spec
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool consume_addr_spec(std::string_view sv,
@@ -1847,9 +1849,9 @@ addr-spec  = local-part "@" domain local-part = dot-atom / quoted-string / obs-l
 
 <a id="method-consume-word"></a>
 
-## consume_word
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_word
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool consume_word(std::string_view sv,
@@ -1871,9 +1873,9 @@ word          = atom / quoted-string atom          = [CFWS] 1*atext [CFWS] quote
 
 <a id="method-check-mailbox"></a>
 
-## check_mailbox
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_mailbox
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool check_mailbox(std::string_view sv) noexcept;
@@ -1893,9 +1895,9 @@ mailbox      = name-addr / addr-spec name-addr    = [display-name] angle-addr an
 
 <a id="method-consume-token-or-quoted-string"></a>
 
-## consume_token_or_quoted_string
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_token_or_quoted_string
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr std::string_view consume_token_or_quoted_string(
@@ -1916,9 +1918,9 @@ value = token / quoted-string Consumes a quoted-string (via consume_quoted_strin
 
 <a id="method-is-cookie-value"></a>
 
-## is_cookie_value
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_cookie_value
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_cookie_value(std::string_view sv) noexcept;
@@ -1938,9 +1940,9 @@ cookie-value = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE ) Validates that sv
 
 <a id="method-is-cookie-pair"></a>
 
-## is_cookie_pair
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_cookie_pair
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_cookie_pair(std::string_view sv) noexcept;
@@ -1960,9 +1962,9 @@ cookie-pair  = cookie-name "=" cookie-value cookie-name  = token cookie-value = 
 
 <a id="method-is-cookie-av"></a>
 
-## is_cookie_av
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_cookie_av
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_cookie_av(std::string_view sv) noexcept;
@@ -1982,9 +1984,9 @@ cookie-av    = expires-av / max-age-av / domain-av / path-av / secure-av / httpo
 
 <a id="method-is-directive"></a>
 
-## is_directive
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_directive
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_directive(std::string_view sv) noexcept;
@@ -2004,9 +2006,9 @@ directive = token [ "=" ( token / quoted-string ) ] Validates that sv, as a whol
 
 <a id="method-consume-parameter"></a>
 
-## consume_parameter
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_parameter
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool consume_parameter(std::string_view sv,
@@ -2030,9 +2032,9 @@ parameter       = parameter-name "=" parameter-value parameter-name  = token par
 
 <a id="method-consume-extension-parameter"></a>
 
-## consume_extension_parameter
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_extension_parameter
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool consume_extension_parameter(
@@ -2054,9 +2056,9 @@ extension-param = token [ "=" ( token / quoted-string ) ] Consumes a single exte
 
 <a id="method-for-each-parameter"></a>
 
-## for_each_parameter
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> for_each_parameter
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 template <typename ParameterConsumer>
@@ -2083,9 +2085,9 @@ parameters = *( OWS ";" OWS [ parameter ] ) Iterates the ";"-delimited parameter
 
 <a id="method-for-each-forwarded-pair"></a>
 
-## for_each_forwarded_pair
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> for_each_forwarded_pair
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 template <typename PairConsumer>
@@ -2110,9 +2112,9 @@ forwarded-element = [ forwarded-pair ] *( ";" [ forwarded-pair ] ) Iterates the 
 
 <a id="method-for-each-list-element"></a>
 
-## for_each_list_element
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> for_each_list_element
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 template <typename ElementConsumer>
@@ -2137,9 +2139,9 @@ template <typename ElementConsumer>
 
 <a id="method-check-auth-param-list"></a>
 
-## check_auth_param_list
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_auth_param_list
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool check_auth_param_list(std::string_view sv) noexcept;
@@ -2159,9 +2161,9 @@ Authentication-Info = #auth-param auth-param          = token BWS "=" BWS ( toke
 
 <a id="method-check-credentials"></a>
 
-## check_credentials
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_credentials
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool check_credentials(std::string_view sv) noexcept;
@@ -2181,9 +2183,9 @@ credentials = auth-scheme [ 1*SP ( token68 / #auth-param ) ] auth-scheme = token
 
 <a id="method-challenge-opens-param-list"></a>
 
-## challenge_opens_param_list
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> challenge_opens_param_list
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool challenge_opens_param_list(
@@ -2204,9 +2206,9 @@ Given a single, already-trimmed challenge element that is known to be a valid ch
 
 <a id="method-check-challenge-list"></a>
 
-## check_challenge_list
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_challenge_list
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool check_challenge_list(std::string_view sv) noexcept;
@@ -2226,9 +2228,9 @@ WWW-Authenticate  = #challenge Proxy-Authenticate = #challenge challenge        
 
 <a id="method-consume-product"></a>
 
-## consume_product
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_product
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr std::string_view consume_product(
@@ -2249,9 +2251,9 @@ product         = token [ "/" product-version ] product-version = token Consumes
 
 <a id="method-check-product-list"></a>
 
-## check_product_list
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_product_list
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool check_product_list(std::string_view sv) noexcept;
@@ -2271,9 +2273,9 @@ product-list = product *( RWS ( product / comment ) ) RWS          = 1*( SP / HT
 
 <a id="method-check-uri-host"></a>
 
-## check_uri_host
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_uri_host
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static host_type check_uri_host(std::string_view sv);
@@ -2291,9 +2293,9 @@ uri-host       | IP-literal / IPv4address / reg-name
 
 <a id="method-is-uri-scheme"></a>
 
-## is_uri_scheme
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_uri_scheme
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool is_uri_scheme(std::string_view sv) noexcept;
@@ -2313,9 +2315,9 @@ scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ) Validates that sv, as a whol
 
 <a id="method-consume-uri-scheme"></a>
 
-## consume_uri_scheme
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_uri_scheme
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool consume_uri_scheme(std::string_view sv,
@@ -2337,9 +2339,9 @@ scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ) Detects an optional leading 
 
 <a id="method-consume-uri-pct-encoded"></a>
 
-## consume_uri_pct_encoded
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_uri_pct_encoded
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool consume_uri_pct_encoded(std::string_view sv,
@@ -2361,9 +2363,9 @@ pct-encoded = "%" HEXDIG HEXDIG Assumes sv[i] == '%'. On success, advances 'i' p
 
 <a id="method-percent-decode-validate"></a>
 
-## percent_decode_validate
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> percent_decode_validate
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool percent_decode_validate(std::string_view sv) noexcept;
@@ -2383,9 +2385,9 @@ Read-only counterpart of 'percent_decode_in_place'. Scans every well-formed "%HH
 
 <a id="method-percent-decode-in-place"></a>
 
-## percent_decode_in_place
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> percent_decode_in_place
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr void percent_decode_in_place(
@@ -2406,9 +2408,9 @@ Decodes every well-formed "%HH" pct-encoded triplet within 'sv' back into its ra
 
 <a id="method-check-uri-userinfo"></a>
 
-## check_uri_userinfo
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_uri_userinfo
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool check_uri_userinfo(std::string_view sv) noexcept;
@@ -2428,9 +2430,9 @@ userinfo = *( unreserved / pct-encoded / sub-delims / ":" )
 
 <a id="method-check-host-port"></a>
 
-## check_host_port
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_host_port
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool check_host_port(std::string_view sv,
@@ -2456,9 +2458,9 @@ host = IP-literal / IPv4address / reg-name port = *DIGIT Validates that sv, as a
 
 <a id="method-check-host-port-2"></a>
 
-## check_host_port
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_host_port
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool check_host_port(std::string_view sv) noexcept;
@@ -2478,9 +2480,9 @@ Checks host port.
 
 <a id="method-check-serialized-origin"></a>
 
-## check_serialized_origin
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_serialized_origin
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool check_serialized_origin(std::string_view sv) noexcept;
@@ -2500,9 +2502,9 @@ serialized-origin = scheme "://" host [ ":" port ] Validates that sv, as a whole
 
 <a id="method-check-uri-authority"></a>
 
-## check_uri_authority
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_uri_authority
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool check_uri_authority(std::string_view sv) noexcept;
@@ -2522,9 +2524,9 @@ authority = [ userinfo "@" ] host [ ":" port ]
 
 <a id="method-check-uri-reference"></a>
 
-## check_uri_reference
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_uri_reference
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool check_uri_reference(std::string_view sv,
@@ -2546,9 +2548,9 @@ URI-reference = URI / relative-ref URI           = scheme ":" hier-part [ "?" qu
 
 <a id="method-split-authority-host-port"></a>
 
-## split_authority_host_port
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> split_authority_host_port
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool split_authority_host_port(
@@ -2572,9 +2574,9 @@ Splits a "uri-host [ ':' port ]" sequence into its uri-host substring and the po
 
 <a id="method-try-to-deserialize-as-authority-form"></a>
 
-## try_to_deserialize_as_authority_form
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> try_to_deserialize_as_authority_form
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr deserialization_status try_to_deserialize_as_authority_form(
@@ -2600,9 +2602,9 @@ authority-form | uri-host ":" port uri-host       | IP-literal / IPv4address / r
 
 <a id="method-try-to-deserialize-as-asterisk-form"></a>
 
-## try_to_deserialize_as_asterisk_form
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> try_to_deserialize_as_asterisk_form
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr deserialization_status try_to_deserialize_as_asterisk_form(
@@ -2624,9 +2626,9 @@ asterisk-form  | "*"
 
 <a id="method-try-to-deserialize-as-origin-form"></a>
 
-## try_to_deserialize_as_origin_form
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> try_to_deserialize_as_origin_form
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr deserialization_status try_to_deserialize_as_origin_form(
@@ -2651,9 +2653,9 @@ origin-form    | absolute-path [ "?" query ]
 
 <a id="method-default-port-for-scheme"></a>
 
-## default_port_for_scheme
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> default_port_for_scheme
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr std::string_view default_port_for_scheme(
@@ -2674,9 +2676,9 @@ to when the authority omits one ("80" for "http", "443" for "https", matched cas
 
 <a id="method-ports-equivalent"></a>
 
-## ports_equivalent
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ports_equivalent
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool ports_equivalent(std::string_view scheme,
@@ -2700,9 +2702,9 @@ True when two port views denote the same effective port for "scheme". Equal raw 
 
 <a id="method-try-to-deserialize-as-absolute-form"></a>
 
-## try_to_deserialize_as_absolute_form
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> try_to_deserialize_as_absolute_form
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr deserialization_status try_to_deserialize_as_absolute_form(
@@ -2734,9 +2736,9 @@ absolute-form  | absolute-URI absolute-URI   | scheme ":" hier-part [ "?" query 
 
 <a id="method-try-to-deserialize-as-absolute-path"></a>
 
-## try_to_deserialize_as_absolute_path
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> try_to_deserialize_as_absolute_path
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr deserialization_status try_to_deserialize_as_absolute_path(
@@ -2760,9 +2762,9 @@ absolute-path  | 1*( "/" segment ) segment        | *pchar pchar          | unre
 
 <a id="method-try-to-deserialize-as-query"></a>
 
-## try_to_deserialize_as_query
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> try_to_deserialize_as_query
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr deserialization_status try_to_deserialize_as_query(
@@ -2786,9 +2788,9 @@ query          | *( pchar / "/" / "?" ) pchar          | unreserved / pct-encode
 
 <a id="method-iequals"></a>
 
-## iequals
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> iequals
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr bool iequals(std::string_view a, std::string_view b);
@@ -2807,9 +2809,9 @@ Compares two string_views for case-insensitive equality.
 
 <a id="method-split-query-parameters"></a>
 
-## split_query_parameters
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> split_query_parameters
 
-🟠 **METHOD** · *protocol::http::helpers*
+**METHOD** · *protocol::http::helpers*
 
 ```cpp
 static constexpr std::size_t split_query_parameters(

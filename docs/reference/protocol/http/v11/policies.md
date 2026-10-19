@@ -1,9 +1,11 @@
 <a id="policies-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/v11/policies/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/policies/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/v11/policies/index.svg" alt="Index for policies.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/policies/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/v11/policies/index-dark.svg" alt="Index for policies.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
@@ -39,9 +41,9 @@ HTTP/1.1 resource limits, memory thresholds and feature switches. The defaults b
 
 <a id="type-policies"></a>
 
-## policies
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> policies
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -55,9 +57,9 @@ HTTP/1.1 resource limits, memory thresholds and feature switches. The defaults b
 
 <a id="constant-kdefaultmaxqueryparameters"></a>
 
-## kDefaultMaxQueryParameters
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDefaultMaxQueryParameters
 
-🟠 **CONSTANT** · *protocol::http::v11::policies*
+**CONSTANT** · *protocol::http::v11::policies*
 
 ```cpp
 static constexpr std::size_t kDefaultMaxQueryParameters = 128;
@@ -71,9 +73,9 @@ Defines the default max query parameters constant.
 
 <a id="constant-kdefaultmaxchunkextensionsize"></a>
 
-## kDefaultMaxChunkExtensionSize
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDefaultMaxChunkExtensionSize
 
-🟠 **CONSTANT** · *protocol::http::v11::policies*
+**CONSTANT** · *protocol::http::v11::policies*
 
 ```cpp
 static constexpr std::size_t kDefaultMaxChunkExtensionSize = 1024;
@@ -87,9 +89,9 @@ Default maximum chunk extension bytes per chunk.
 
 <a id="constant-kdefaultmaxtrailersectionsize"></a>
 
-## kDefaultMaxTrailerSectionSize
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDefaultMaxTrailerSectionSize
 
-🟠 **CONSTANT** · *protocol::http::v11::policies*
+**CONSTANT** · *protocol::http::v11::policies*
 
 ```cpp
 static constexpr std::size_t kDefaultMaxTrailerSectionSize = 4096;
@@ -103,9 +105,9 @@ Default maximum trailer section bytes per chunked body.
 
 <a id="constant-kdefaultmaxrequestheadsize"></a>
 
-## kDefaultMaxRequestHeadSize
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDefaultMaxRequestHeadSize
 
-🟠 **CONSTANT** · *protocol::http::v11::policies*
+**CONSTANT** · *protocol::http::v11::policies*
 
 ```cpp
 static constexpr std::size_t kDefaultMaxRequestHeadSize = 4 * 1024;
@@ -119,9 +121,9 @@ Maximum accepted request head bytes.
 
 <a id="constant-kdefaultrequestbodymemorythreshold"></a>
 
-## kDefaultRequestBodyMemoryThreshold
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDefaultRequestBodyMemoryThreshold
 
-🟠 **CONSTANT** · *protocol::http::v11::policies*
+**CONSTANT** · *protocol::http::v11::policies*
 
 ```cpp
 static constexpr std::size_t kDefaultRequestBodyMemoryThreshold = 16 * 1024;
@@ -135,9 +137,9 @@ Request body wire bytes retained before spilling to disk.
 
 <a id="constant-kdefaultmaxresponseheadsize"></a>
 
-## kDefaultMaxResponseHeadSize
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDefaultMaxResponseHeadSize
 
-🟠 **CONSTANT** · *protocol::http::v11::policies*
+**CONSTANT** · *protocol::http::v11::policies*
 
 ```cpp
 static constexpr std::size_t kDefaultMaxResponseHeadSize = 4 * 1024;
@@ -151,9 +153,9 @@ Maximum serialized response head bytes.
 
 <a id="constant-kdefaultresponsebodymemorythreshold"></a>
 
-## kDefaultResponseBodyMemoryThreshold
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDefaultResponseBodyMemoryThreshold
 
-🟠 **CONSTANT** · *protocol::http::v11::policies*
+**CONSTANT** · *protocol::http::v11::policies*
 
 ```cpp
 static constexpr std::size_t kDefaultResponseBodyMemoryThreshold = 16 * 1024;
@@ -167,9 +169,9 @@ Response body bytes kept inline before using a writer.
 
 <a id="field-max-request-body-size"></a>
 
-## max_request_body_size
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_request_body_size
 
-🟠 **FIELD** · *protocol::http::v11::policies*
+**FIELD** · *protocol::http::v11::policies*
 
 ```cpp
 std::size_t max_request_body_size = 16 * 1024 * 1024;
@@ -183,9 +185,9 @@ Maximum accepted body size, in octets (0 means unlimited).
 
 <a id="field-max-forwarding-hops"></a>
 
-## max_forwarding_hops
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_forwarding_hops
 
-🟠 **FIELD** · *protocol::http::v11::policies*
+**FIELD** · *protocol::http::v11::policies*
 
 ```cpp
 std::size_t max_forwarding_hops = 32;
@@ -199,9 +201,9 @@ Maximum number of forwarding hops accepted across Via / Forwarded / X-Forwarded-
 
 <a id="field-max-transfer-codings"></a>
 
-## max_transfer_codings
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_transfer_codings
 
-🟠 **FIELD** · *protocol::http::v11::policies*
+**FIELD** · *protocol::http::v11::policies*
 
 ```cpp
 std::size_t max_transfer_codings = 4;
@@ -215,9 +217,9 @@ Maximum number of transfer-codings accepted in Transfer-Encoding (0 means unlimi
 
 <a id="field-allow-chunked"></a>
 
-## allow_chunked
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> allow_chunked
 
-🟠 **FIELD** · *protocol::http::v11::policies*
+**FIELD** · *protocol::http::v11::policies*
 
 ```cpp
 bool allow_chunked = true;
@@ -231,9 +233,9 @@ Whether the server allows requests carrying a chunked Transfer-Encoding.
 
 <a id="field-allow-upgrade"></a>
 
-## allow_upgrade
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> allow_upgrade
 
-🟠 **FIELD** · *protocol::http::v11::policies*
+**FIELD** · *protocol::http::v11::policies*
 
 ```cpp
 bool allow_upgrade = true;
@@ -247,9 +249,9 @@ Whether the server allows protocol upgrades offered via Upgrade. NOTE: no protoc
 
 <a id="field-max-pending-requests"></a>
 
-## max_pending_requests
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_pending_requests
 
-🟠 **FIELD** · *protocol::http::v11::policies*
+**FIELD** · *protocol::http::v11::policies*
 
 ```cpp
 std::size_t max_pending_requests = 32;
@@ -263,9 +265,9 @@ Maximum requests awaiting ordered response delivery (0 means unlimited).
 
 <a id="field-max-query-parameters"></a>
 
-## max_query_parameters
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_query_parameters
 
-🟠 **FIELD** · *protocol::http::v11::policies*
+**FIELD** · *protocol::http::v11::policies*
 
 ```cpp
 std::size_t max_query_parameters = kDefaultMaxQueryParameters;
@@ -279,9 +281,9 @@ Maximum query parameter pairs (0 means unlimited).
 
 <a id="field-max-chunk-extension-size"></a>
 
-## max_chunk_extension_size
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_chunk_extension_size
 
-🟠 **FIELD** · *protocol::http::v11::policies*
+**FIELD** · *protocol::http::v11::policies*
 
 ```cpp
 std::size_t max_chunk_extension_size = kDefaultMaxChunkExtensionSize;
@@ -295,9 +297,9 @@ Maximum chunk extension bytes (0 means unlimited).
 
 <a id="field-max-trailer-section-size"></a>
 
-## max_trailer_section_size
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_trailer_section_size
 
-🟠 **FIELD** · *protocol::http::v11::policies*
+**FIELD** · *protocol::http::v11::policies*
 
 ```cpp
 std::size_t max_trailer_section_size = kDefaultMaxTrailerSectionSize;
@@ -311,9 +313,9 @@ Maximum trailer section bytes (0 means unlimited).
 
 <a id="field-max-request-head-size"></a>
 
-## max_request_head_size
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_request_head_size
 
-🟠 **FIELD** · *protocol::http::v11::policies*
+**FIELD** · *protocol::http::v11::policies*
 
 ```cpp
 std::size_t max_request_head_size = kDefaultMaxRequestHeadSize;
@@ -327,9 +329,9 @@ Maximum request head bytes (must be positive).
 
 <a id="field-request-body-memory-threshold"></a>
 
-## request_body_memory_threshold
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> request_body_memory_threshold
 
-🟠 **FIELD** · *protocol::http::v11::policies*
+**FIELD** · *protocol::http::v11::policies*
 
 ```cpp
 std::size_t request_body_memory_threshold =
@@ -344,9 +346,9 @@ Request body wire bytes kept in memory (0 spills immediately).
 
 <a id="field-max-response-head-size"></a>
 
-## max_response_head_size
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_response_head_size
 
-🟠 **FIELD** · *protocol::http::v11::policies*
+**FIELD** · *protocol::http::v11::policies*
 
 ```cpp
 std::size_t max_response_head_size = kDefaultMaxResponseHeadSize;
@@ -360,9 +362,9 @@ Maximum response head bytes (must be positive).
 
 <a id="field-response-body-memory-threshold"></a>
 
-## response_body_memory_threshold
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> response_body_memory_threshold
 
-🟠 **FIELD** · *protocol::http::v11::policies*
+**FIELD** · *protocol::http::v11::policies*
 
 ```cpp
 std::size_t response_body_memory_threshold =

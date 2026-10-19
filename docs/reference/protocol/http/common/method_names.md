@@ -1,9 +1,11 @@
 <a id="method-names-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/common/method_names/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/common/method_names/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/common/method_names/index.svg" alt="Index for method_names.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/common/method_names/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/common/method_names/index-dark.svg" alt="Index for method_names.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/method_names.h](../../../../../include/protocol/http/common/method_names.h)
@@ -27,9 +29,9 @@ Provides the http 1.1 method names specification.
 
 <a id="type-method-names"></a>
 
-## method_names
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> method_names
 
-🟠 **TYPE** · *protocol::http*
+**TYPE** · *protocol::http*
 
 **Declaration synopsis:**
 
@@ -43,9 +45,9 @@ Provides the http 1.1 method names specification.
 
 <a id="constant-kget"></a>
 
-## kGet
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kGet
 
-🟠 **CONSTANT** · *protocol::http::method_names*
+**CONSTANT** · *protocol::http::method_names*
 
 ```cpp
 static constexpr char kGet[] = "GET";
@@ -59,9 +61,9 @@ Method  | Description GET     | Transfer a current representation of the target 
 
 <a id="constant-khead"></a>
 
-## kHead
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kHead
 
-🟠 **CONSTANT** · *protocol::http::method_names*
+**CONSTANT** · *protocol::http::method_names*
 
 ```cpp
 static constexpr char kHead[] = "HEAD";
@@ -75,9 +77,9 @@ Defines the head constant.
 
 <a id="constant-kpost"></a>
 
-## kPost
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kPost
 
-🟠 **CONSTANT** · *protocol::http::method_names*
+**CONSTANT** · *protocol::http::method_names*
 
 ```cpp
 static constexpr char kPost[] = "POST";
@@ -91,9 +93,9 @@ Defines the post constant.
 
 <a id="constant-kput"></a>
 
-## kPut
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kPut
 
-🟠 **CONSTANT** · *protocol::http::method_names*
+**CONSTANT** · *protocol::http::method_names*
 
 ```cpp
 static constexpr char kPut[] = "PUT";
@@ -107,9 +109,9 @@ Defines the put constant.
 
 <a id="constant-kdelete"></a>
 
-## kDelete
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDelete
 
-🟠 **CONSTANT** · *protocol::http::method_names*
+**CONSTANT** · *protocol::http::method_names*
 
 ```cpp
 static constexpr char kDelete[] = "DELETE";
@@ -123,9 +125,9 @@ Defines the delete constant.
 
 <a id="constant-kconnect"></a>
 
-## kConnect
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kConnect
 
-🟠 **CONSTANT** · *protocol::http::method_names*
+**CONSTANT** · *protocol::http::method_names*
 
 ```cpp
 static constexpr char kConnect[] = "CONNECT";
@@ -139,9 +141,9 @@ Defines the connect constant.
 
 <a id="constant-koptions"></a>
 
-## kOptions
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kOptions
 
-🟠 **CONSTANT** · *protocol::http::method_names*
+**CONSTANT** · *protocol::http::method_names*
 
 ```cpp
 static constexpr char kOptions[] = "OPTIONS";
@@ -155,9 +157,9 @@ Defines the options constant.
 
 <a id="constant-ktrace"></a>
 
-## kTrace
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kTrace
 
-🟠 **CONSTANT** · *protocol::http::method_names*
+**CONSTANT** · *protocol::http::method_names*
 
 ```cpp
 static constexpr char kTrace[] = "TRACE";

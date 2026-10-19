@@ -1,9 +1,11 @@
 <a id="last-modified-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index.svg" alt="Index for last_modified.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index-dark.svg" alt="Index for last_modified.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/headers/last_modified.h](../../../../../../include/protocol/http/common/headers/last_modified.h)
@@ -20,9 +22,9 @@
 
 <a id="type-last-modified"></a>
 
-## last_modified
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> last_modified
 
-🟠 **TYPE** · *protocol::http::headers*
+**TYPE** · *protocol::http::headers*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ class last_modified { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::headers::last_modified*
+**METHOD** · *protocol::http::headers::last_modified*
 
 ```cpp
 static constexpr bool check(std::string_view sv);

@@ -1,9 +1,11 @@
 <a id="upgrade-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index.svg" alt="Index for upgrade.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index-dark.svg" alt="Index for upgrade.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/headers/upgrade.h](../../../../../../include/protocol/http/v11/headers/upgrade.h)
@@ -21,9 +23,9 @@
 
 <a id="type-upgrade"></a>
 
-## upgrade
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> upgrade
 
-🟠 **TYPE** · *protocol::http::v11::headers*
+**TYPE** · *protocol::http::v11::headers*
 
 **Declaration synopsis:**
 
@@ -37,9 +39,9 @@ class upgrade { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::v11::headers::upgrade*
+**METHOD** · *protocol::http::v11::headers::upgrade*
 
 ```cpp
 static bool check(std::string_view sv, parsed_token_list& out);
@@ -58,9 +60,9 @@ Checks whether a value follows the HTTP upgrade header syntax.
 
 <a id="method-interpret"></a>
 
-## interpret
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> interpret
 
-🟠 **METHOD** · *protocol::http::v11::headers::upgrade*
+**METHOD** · *protocol::http::v11::headers::upgrade*
 
 ```cpp
 static constexpr verdict interpret(const parsed_token_list& token_list,

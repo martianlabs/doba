@@ -1,9 +1,11 @@
 <a id="reason-phrases-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index.svg" alt="Index for reason_phrases.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index-dark.svg" alt="Index for reason_phrases.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
@@ -62,9 +64,9 @@ Defines the preprocessor values listed below.
 
 <a id="macro-rp-100-continue"></a>
 
-## RP_100_CONTINUE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_100_CONTINUE
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_100_CONTINUE Continue
@@ -78,9 +80,9 @@ Code | Reason Phrase 100  | Continue 101  | Switching Protocols 200  | OK 201  |
 
 <a id="macro-rp-101-switching-protocols"></a>
 
-## RP_101_SWITCHING_PROTOCOLS
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_101_SWITCHING_PROTOCOLS
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_101_SWITCHING_PROTOCOLS Switching Protocols
@@ -94,9 +96,9 @@ Expands to the HTTP 101 switching protocols reason-phrase tokens.
 
 <a id="macro-rp-200-ok"></a>
 
-## RP_200_OK
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_200_OK
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_200_OK OK
@@ -110,9 +112,9 @@ Expands to the HTTP 200 ok reason-phrase tokens.
 
 <a id="macro-rp-201-created"></a>
 
-## RP_201_CREATED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_201_CREATED
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_201_CREATED Created
@@ -126,9 +128,9 @@ Expands to the HTTP 201 created reason-phrase tokens.
 
 <a id="macro-rp-202-accepted"></a>
 
-## RP_202_ACCEPTED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_202_ACCEPTED
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_202_ACCEPTED Accepted
@@ -142,9 +144,9 @@ Expands to the HTTP 202 accepted reason-phrase tokens.
 
 <a id="macro-rp-203-non-authoritative-information"></a>
 
-## RP_203_NON_AUTHORITATIVE_INFORMATION
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_203_NON_AUTHORITATIVE_INFORMATION
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_203_NON_AUTHORITATIVE_INFORMATION Non-Authoritative Information
@@ -158,9 +160,9 @@ Expands to the HTTP 203 non authoritative information reason-phrase tokens.
 
 <a id="macro-rp-204-no-content"></a>
 
-## RP_204_NO_CONTENT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_204_NO_CONTENT
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_204_NO_CONTENT No Content
@@ -174,9 +176,9 @@ Expands to the HTTP 204 no content reason-phrase tokens.
 
 <a id="macro-rp-205-reset-content"></a>
 
-## RP_205_RESET_CONTENT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_205_RESET_CONTENT
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_205_RESET_CONTENT Reset Content
@@ -190,9 +192,9 @@ Expands to the HTTP 205 reset content reason-phrase tokens.
 
 <a id="macro-rp-206-partial-content"></a>
 
-## RP_206_PARTIAL_CONTENT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_206_PARTIAL_CONTENT
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_206_PARTIAL_CONTENT Partial Content
@@ -206,9 +208,9 @@ Expands to the HTTP 206 partial content reason-phrase tokens.
 
 <a id="macro-rp-300-multiple-choices"></a>
 
-## RP_300_MULTIPLE_CHOICES
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_300_MULTIPLE_CHOICES
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_300_MULTIPLE_CHOICES Multiple Choices
@@ -222,9 +224,9 @@ Expands to the HTTP 300 multiple choices reason-phrase tokens.
 
 <a id="macro-rp-301-moved-permanently"></a>
 
-## RP_301_MOVED_PERMANENTLY
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_301_MOVED_PERMANENTLY
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_301_MOVED_PERMANENTLY Moved Permanently
@@ -238,9 +240,9 @@ Expands to the HTTP 301 moved permanently reason-phrase tokens.
 
 <a id="macro-rp-302-found"></a>
 
-## RP_302_FOUND
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_302_FOUND
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_302_FOUND Found
@@ -254,9 +256,9 @@ Expands to the HTTP 302 found reason-phrase tokens.
 
 <a id="macro-rp-303-see-other"></a>
 
-## RP_303_SEE_OTHER
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_303_SEE_OTHER
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_303_SEE_OTHER See Other
@@ -270,9 +272,9 @@ Expands to the HTTP 303 see other reason-phrase tokens.
 
 <a id="macro-rp-304-not-modified"></a>
 
-## RP_304_NOT_MODIFIED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_304_NOT_MODIFIED
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_304_NOT_MODIFIED Not Modified
@@ -286,9 +288,9 @@ Expands to the HTTP 304 not modified reason-phrase tokens.
 
 <a id="macro-rp-305-use-proxy"></a>
 
-## RP_305_USE_PROXY
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_305_USE_PROXY
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_305_USE_PROXY Use Proxy
@@ -302,9 +304,9 @@ Expands to the HTTP 305 use proxy reason-phrase tokens.
 
 <a id="macro-rp-306-unused"></a>
 
-## RP_306_UNUSED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_306_UNUSED
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_306_UNUSED Unused
@@ -318,9 +320,9 @@ Expands to the HTTP 306 unused reason-phrase tokens.
 
 <a id="macro-rp-307-temporary-redirect"></a>
 
-## RP_307_TEMPORARY_REDIRECT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_307_TEMPORARY_REDIRECT
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_307_TEMPORARY_REDIRECT Temporary Redirect
@@ -334,9 +336,9 @@ Expands to the HTTP 307 temporary redirect reason-phrase tokens.
 
 <a id="macro-rp-308-permanent-redirect"></a>
 
-## RP_308_PERMANENT_REDIRECT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_308_PERMANENT_REDIRECT
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_308_PERMANENT_REDIRECT Permanent Redirect
@@ -350,9 +352,9 @@ Expands to the HTTP 308 permanent redirect reason-phrase tokens.
 
 <a id="macro-rp-400-bad-request"></a>
 
-## RP_400_BAD_REQUEST
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_400_BAD_REQUEST
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_400_BAD_REQUEST Bad Request
@@ -366,9 +368,9 @@ Expands to the HTTP 400 bad request reason-phrase tokens.
 
 <a id="macro-rp-401-unauthorized"></a>
 
-## RP_401_UNAUTHORIZED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_401_UNAUTHORIZED
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_401_UNAUTHORIZED Unauthorized
@@ -382,9 +384,9 @@ Expands to the HTTP 401 unauthorized reason-phrase tokens.
 
 <a id="macro-rp-402-payment-required"></a>
 
-## RP_402_PAYMENT_REQUIRED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_402_PAYMENT_REQUIRED
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_402_PAYMENT_REQUIRED Payment Required
@@ -398,9 +400,9 @@ Expands to the HTTP 402 payment required reason-phrase tokens.
 
 <a id="macro-rp-403-forbidden"></a>
 
-## RP_403_FORBIDDEN
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_403_FORBIDDEN
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_403_FORBIDDEN Forbidden
@@ -414,9 +416,9 @@ Expands to the HTTP 403 forbidden reason-phrase tokens.
 
 <a id="macro-rp-404-not-found"></a>
 
-## RP_404_NOT_FOUND
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_404_NOT_FOUND
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_404_NOT_FOUND Not Found
@@ -430,9 +432,9 @@ Expands to the HTTP 404 not found reason-phrase tokens.
 
 <a id="macro-rp-405-method-not-allowed"></a>
 
-## RP_405_METHOD_NOT_ALLOWED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_405_METHOD_NOT_ALLOWED
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_405_METHOD_NOT_ALLOWED Method Not Allowed
@@ -446,9 +448,9 @@ Expands to the HTTP 405 method not allowed reason-phrase tokens.
 
 <a id="macro-rp-406-not-acceptable"></a>
 
-## RP_406_NOT_ACCEPTABLE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_406_NOT_ACCEPTABLE
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_406_NOT_ACCEPTABLE Not Acceptable
@@ -462,9 +464,9 @@ Expands to the HTTP 406 not acceptable reason-phrase tokens.
 
 <a id="macro-rp-407-proxy-authentication-required"></a>
 
-## RP_407_PROXY_AUTHENTICATION_REQUIRED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_407_PROXY_AUTHENTICATION_REQUIRED
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_407_PROXY_AUTHENTICATION_REQUIRED Proxy Authentication Required
@@ -478,9 +480,9 @@ Expands to the HTTP 407 proxy authentication required reason-phrase tokens.
 
 <a id="macro-rp-408-request-timeout"></a>
 
-## RP_408_REQUEST_TIMEOUT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_408_REQUEST_TIMEOUT
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_408_REQUEST_TIMEOUT Request Timeout
@@ -494,9 +496,9 @@ Expands to the HTTP 408 request timeout reason-phrase tokens.
 
 <a id="macro-rp-409-conflict"></a>
 
-## RP_409_CONFLICT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_409_CONFLICT
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_409_CONFLICT Conflict
@@ -510,9 +512,9 @@ Expands to the HTTP 409 conflict reason-phrase tokens.
 
 <a id="macro-rp-410-gone"></a>
 
-## RP_410_GONE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_410_GONE
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_410_GONE Gone
@@ -526,9 +528,9 @@ Expands to the HTTP 410 gone reason-phrase tokens.
 
 <a id="macro-rp-411-length-required"></a>
 
-## RP_411_LENGTH_REQUIRED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_411_LENGTH_REQUIRED
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_411_LENGTH_REQUIRED Length Required
@@ -542,9 +544,9 @@ Expands to the HTTP 411 length required reason-phrase tokens.
 
 <a id="macro-rp-412-precondition-failed"></a>
 
-## RP_412_PRECONDITION_FAILED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_412_PRECONDITION_FAILED
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_412_PRECONDITION_FAILED Precondition Failed
@@ -558,9 +560,9 @@ Expands to the HTTP 412 precondition failed reason-phrase tokens.
 
 <a id="macro-rp-413-content-too-large"></a>
 
-## RP_413_CONTENT_TOO_LARGE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_413_CONTENT_TOO_LARGE
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_413_CONTENT_TOO_LARGE Content Too Large
@@ -574,9 +576,9 @@ Expands to the HTTP 413 content too large reason-phrase tokens.
 
 <a id="macro-rp-414-uri-too-long"></a>
 
-## RP_414_URI_TOO_LONG
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_414_URI_TOO_LONG
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_414_URI_TOO_LONG URI Too Long
@@ -590,9 +592,9 @@ Expands to the HTTP 414 uri too long reason-phrase tokens.
 
 <a id="macro-rp-415-unsupported-media-type"></a>
 
-## RP_415_UNSUPPORTED_MEDIA_TYPE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_415_UNSUPPORTED_MEDIA_TYPE
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_415_UNSUPPORTED_MEDIA_TYPE Unsupported Media Type
@@ -606,9 +608,9 @@ Expands to the HTTP 415 unsupported media type reason-phrase tokens.
 
 <a id="macro-rp-416-range-not-satisfiable"></a>
 
-## RP_416_RANGE_NOT_SATISFIABLE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_416_RANGE_NOT_SATISFIABLE
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_416_RANGE_NOT_SATISFIABLE Range Not Satisfiable
@@ -622,9 +624,9 @@ Expands to the HTTP 416 range not satisfiable reason-phrase tokens.
 
 <a id="macro-rp-417-expectation-failed"></a>
 
-## RP_417_EXPECTATION_FAILED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_417_EXPECTATION_FAILED
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_417_EXPECTATION_FAILED Expectation Failed
@@ -638,9 +640,9 @@ Expands to the HTTP 417 expectation failed reason-phrase tokens.
 
 <a id="macro-rp-418-im-a-teapot"></a>
 
-## RP_418_IM_A_TEAPOT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_418_IM_A_TEAPOT
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_418_IM_A_TEAPOT Im a teapot
@@ -654,9 +656,9 @@ Expands to the HTTP 418 im a teapot reason-phrase tokens.
 
 <a id="macro-rp-421-misdirected-request"></a>
 
-## RP_421_MISDIRECTED_REQUEST
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_421_MISDIRECTED_REQUEST
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_421_MISDIRECTED_REQUEST Misdirected Request
@@ -670,9 +672,9 @@ Expands to the HTTP 421 misdirected request reason-phrase tokens.
 
 <a id="macro-rp-422-unprocessable-content"></a>
 
-## RP_422_UNPROCESSABLE_CONTENT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_422_UNPROCESSABLE_CONTENT
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_422_UNPROCESSABLE_CONTENT Unprocessable Content
@@ -686,9 +688,9 @@ Expands to the HTTP 422 unprocessable content reason-phrase tokens.
 
 <a id="macro-rp-426-upgrade-required"></a>
 
-## RP_426_UPGRADE_REQUIRED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_426_UPGRADE_REQUIRED
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_426_UPGRADE_REQUIRED Upgrade Required
@@ -702,9 +704,9 @@ Expands to the HTTP 426 upgrade required reason-phrase tokens.
 
 <a id="macro-rp-431-request-header-fields-too-large"></a>
 
-## RP_431_REQUEST_HEADER_FIELDS_TOO_LARGE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_431_REQUEST_HEADER_FIELDS_TOO_LARGE
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_431_REQUEST_HEADER_FIELDS_TOO_LARGE Request Header Fields Too Large
@@ -718,9 +720,9 @@ Expands to the HTTP 431 request header fields too large reason-phrase tokens.
 
 <a id="macro-rp-500-internal-server-error"></a>
 
-## RP_500_INTERNAL_SERVER_ERROR
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_500_INTERNAL_SERVER_ERROR
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_500_INTERNAL_SERVER_ERROR Internal Server Error
@@ -734,9 +736,9 @@ Expands to the HTTP 500 internal server error reason-phrase tokens.
 
 <a id="macro-rp-501-not-implemented"></a>
 
-## RP_501_NOT_IMPLEMENTED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_501_NOT_IMPLEMENTED
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_501_NOT_IMPLEMENTED Not Implemented
@@ -750,9 +752,9 @@ Expands to the HTTP 501 not implemented reason-phrase tokens.
 
 <a id="macro-rp-502-bad-gateway"></a>
 
-## RP_502_BAD_GATEWAY
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_502_BAD_GATEWAY
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_502_BAD_GATEWAY Bad Gateway
@@ -766,9 +768,9 @@ Expands to the HTTP 502 bad gateway reason-phrase tokens.
 
 <a id="macro-rp-503-service-unavailable"></a>
 
-## RP_503_SERVICE_UNAVAILABLE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_503_SERVICE_UNAVAILABLE
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_503_SERVICE_UNAVAILABLE Service Unavailable
@@ -782,9 +784,9 @@ Expands to the HTTP 503 service unavailable reason-phrase tokens.
 
 <a id="macro-rp-504-gateway-timeout"></a>
 
-## RP_504_GATEWAY_TIMEOUT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_504_GATEWAY_TIMEOUT
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_504_GATEWAY_TIMEOUT Gateway Timeout
@@ -798,9 +800,9 @@ Expands to the HTTP 504 gateway timeout reason-phrase tokens.
 
 <a id="macro-rp-505-http-version-not-supported"></a>
 
-## RP_505_HTTP_VERSION_NOT_SUPPORTED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> RP_505_HTTP_VERSION_NOT_SUPPORTED
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define RP_505_HTTP_VERSION_NOT_SUPPORTED HTTP Version Not Supported

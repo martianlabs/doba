@@ -1,9 +1,11 @@
 <a id="x-forwarded-proto-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index.svg" alt="Index for x_forwarded_proto.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index-dark.svg" alt="Index for x_forwarded_proto.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/headers/x_forwarded_proto.h](../../../../../../include/protocol/http/v11/headers/x_forwarded_proto.h)
@@ -21,9 +23,9 @@ De-facto X-Forwarded-Proto The "X-Forwarded-Proto" header field is a de-facto re
 
 <a id="type-x-forwarded-proto"></a>
 
-## x_forwarded_proto
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> x_forwarded_proto
 
-🟠 **TYPE** · *protocol::http::v11::headers*
+**TYPE** · *protocol::http::v11::headers*
 
 **Declaration synopsis:**
 
@@ -37,9 +39,9 @@ De-facto X-Forwarded-Proto The "X-Forwarded-Proto" header field is a de-facto re
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::v11::headers::x_forwarded_proto*
+**METHOD** · *protocol::http::v11::headers::x_forwarded_proto*
 
 ```cpp
 static bool check(std::string_view sv, parsed_token_list& out);
@@ -58,9 +60,9 @@ Checks whether a value follows the HTTP x-forwarded-proto header syntax.
 
 <a id="method-interpret"></a>
 
-## interpret
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> interpret
 
-🟠 **METHOD** · *protocol::http::v11::headers::x_forwarded_proto*
+**METHOD** · *protocol::http::v11::headers::x_forwarded_proto*
 
 ```cpp
 static constexpr verdict interpret(const parsed_token_list&, v11::connection&,

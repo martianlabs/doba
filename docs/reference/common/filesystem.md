@@ -1,9 +1,11 @@
 <a id="filesystem-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/common/filesystem/index-dark.svg">
+  <a href="../../../resources/docs/reference/common/filesystem/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/common/filesystem/index.svg" alt="Index for filesystem.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/common/filesystem/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/common/filesystem/index-dark.svg" alt="Index for filesystem.h">
+  </a>
 </h1>
 
 **Header:** [include/common/filesystem.h](../../../include/common/filesystem.h)
@@ -20,9 +22,9 @@ This header declares the types and operations listed below.
 
 <a id="function-filesystem-root"></a>
 
-## filesystem_root
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> filesystem_root
 
-🟠 **FUNCTION** · *common*
+**FUNCTION** · *common*
 
 ```cpp
 inline std::filesystem::path filesystem_root(const std::filesystem::path& path,
@@ -42,9 +44,9 @@ Returns the canonical path of the given directory, or an empty path if the direc
 
 <a id="function-filesystem-relative-path"></a>
 
-## filesystem_relative_path
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> filesystem_relative_path
 
-🟠 **FUNCTION** · *common::detail*
+**FUNCTION** · *common::detail*
 
 ```cpp
 inline bool filesystem_relative_path(std::string_view path,

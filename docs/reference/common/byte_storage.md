@@ -1,9 +1,11 @@
 <a id="byte-storage-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/common/byte_storage/index-dark.svg">
+  <a href="../../../resources/docs/reference/common/byte_storage/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/common/byte_storage/index.svg" alt="Index for byte_storage.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/common/byte_storage/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/common/byte_storage/index-dark.svg" alt="Index for byte_storage.h">
+  </a>
 </h1>
 
 **Header:** [include/common/byte_storage.h](../../../include/common/byte_storage.h)
@@ -26,13 +28,6 @@ Provides the byte storage options type.
 
 **common::byte_storage**
 
-- [byte_storage()](#constructor-byte-storage) · *constructor*
-- [byte_storage(opts)](#constructor-byte-storage-2) · *constructor*
-- [byte_storage(byte_storage)](#constructor-byte-storage-3) · *constructor*
-- [byte_storage(in)](#constructor-byte-storage-4) · *constructor*
-- [~byte_storage](#destructor-destructor-byte-storage) · *destructor*
-- [operator=(byte_storage)](#operator-operator) · *operator*
-- [operator=(in)](#operator-operator-2) · *operator*
 - [read](#method-read) · *method*
 - [write](#method-write) · *method*
 - [spill](#method-spill) · *method*
@@ -45,9 +40,9 @@ Provides the byte storage options type.
 
 <a id="type-byte-storage-options"></a>
 
-## byte_storage_options
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> byte_storage_options
 
-🟠 **TYPE** · *common*
+**TYPE** · *common*
 
 **Declaration synopsis:**
 
@@ -61,9 +56,9 @@ Provides the byte storage options type.
 
 <a id="constant-kdefaultspilltodiskthreshold"></a>
 
-## kDefaultSpillToDiskThreshold
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDefaultSpillToDiskThreshold
 
-🟠 **CONSTANT** · *common::byte_storage_options*
+**CONSTANT** · *common::byte_storage_options*
 
 ```cpp
 static constexpr std::size_t kDefaultSpillToDiskThreshold = 128 * 1024;
@@ -77,9 +72,9 @@ Defines the default spill to disk threshold constant.
 
 <a id="field-spill-to-disk-threshold"></a>
 
-## spill_to_disk_threshold
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> spill_to_disk_threshold
 
-🟠 **FIELD** · *common::byte_storage_options*
+**FIELD** · *common::byte_storage_options*
 
 ```cpp
 std::size_t spill_to_disk_threshold = kDefaultSpillToDiskThreshold;
@@ -93,9 +88,9 @@ Stores the spill to disk threshold value.
 
 <a id="field-spill-dir"></a>
 
-## spill_dir
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> spill_dir
 
-🟠 **FIELD** · *common::byte_storage_options*
+**FIELD** · *common::byte_storage_options*
 
 ```cpp
 std::string spill_dir;
@@ -109,9 +104,9 @@ Stores the spill dir value.
 
 <a id="type-byte-storage"></a>
 
-## byte_storage
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> byte_storage
 
-🟠 **TYPE** · *common*
+**TYPE** · *common*
 
 **Declaration synopsis:**
 
@@ -123,141 +118,11 @@ This class provides a storage backend for bytes, with optional spilling to disk 
 
 **Source:** [include/common/byte_storage.h:60](../../../include/common/byte_storage.h#L60)
 
-<a id="constructor-byte-storage"></a>
-
-## byte_storage
-
-🟠 **CONSTRUCTOR** · *common::byte_storage*
-
-```cpp
-byte_storage() = default;
-```
-
-Constructs a byte_storage value.
-
-**Source:** [include/common/byte_storage.h:65](../../../include/common/byte_storage.h#L65)
-
-<a id="constructor-byte-storage-2"></a>
-
-## byte_storage
-
-🟠 **CONSTRUCTOR** · *common::byte_storage*
-
-```cpp
-explicit byte_storage(byte_storage_options opts);
-```
-
-Constructs a byte_storage value.
-
-**Parameters:**
-
-- **opts:** Storage options; defaults to their default values. Declaration: `byte_storage_options opts`.
-
-**Source:** [include/common/byte_storage.h:66](../../../include/common/byte_storage.h#L66)
-
-<a id="constructor-byte-storage-3"></a>
-
-## byte_storage
-
-🟠 **CONSTRUCTOR** · *common::byte_storage*
-
-```cpp
-byte_storage(const byte_storage&) = delete;
-```
-
-Disallows this form of common::byte_storage construction.
-
-**Parameters:**
-
-- **byte_storage:** Source object to copy or move. Declaration: `const byte_storage&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/common/byte_storage.h:69](../../../include/common/byte_storage.h#L69)
-
-<a id="constructor-byte-storage-4"></a>
-
-## byte_storage
-
-🟠 **CONSTRUCTOR** · *common::byte_storage*
-
-```cpp
-byte_storage(byte_storage&& in) noexcept;
-```
-
-Constructs a byte_storage value.
-
-**Parameters:**
-
-- **in:** Input value to move or inspect. Declaration: `byte_storage&& in`.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/byte_storage.h:70](../../../include/common/byte_storage.h#L70)
-
-<a id="destructor-destructor-byte-storage"></a>
-
-## ~byte_storage
-
-🟠 **DESTRUCTOR** · *common::byte_storage*
-
-```cpp
-~byte_storage();
-```
-
-Destroys the byte_storage object.
-
-**Source:** [include/common/byte_storage.h:71](../../../include/common/byte_storage.h#L71)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *common::byte_storage*
-
-```cpp
-byte_storage& operator=(const byte_storage&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **byte_storage:** Source object to copy or move. Declaration: `const byte_storage&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/common/byte_storage.h:75](../../../include/common/byte_storage.h#L75)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *common::byte_storage*
-
-```cpp
-byte_storage& operator=(byte_storage&& in) noexcept;
-```
-
-Implements operator= for byte_storage.
-
-**Parameters:**
-
-- **in:** Input value to move or inspect. Declaration: `byte_storage&& in`.
-
-**Returns:** A reference to the updated object.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/byte_storage.h:76](../../../include/common/byte_storage.h#L76)
-
 <a id="method-read"></a>
 
-## read
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> read
 
-🟠 **METHOD** · *common::byte_storage*
+**METHOD** · *common::byte_storage*
 
 ```cpp
 std::size_t read(char* out, std::size_t want);
@@ -276,9 +141,9 @@ Reads data.
 
 <a id="method-write"></a>
 
-## write
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> write
 
-🟠 **METHOD** · *common::byte_storage*
+**METHOD** · *common::byte_storage*
 
 ```cpp
 bool write(const char* ptr, std::size_t len);
@@ -297,9 +162,9 @@ Writes data.
 
 <a id="method-spill"></a>
 
-## spill
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> spill
 
-🟠 **METHOD** · *common::byte_storage*
+**METHOD** · *common::byte_storage*
 
 ```cpp
 bool spill();
@@ -313,9 +178,9 @@ Moves buffered data to file-backed storage.
 
 <a id="method-unlink-file"></a>
 
-## unlink_file
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> unlink_file
 
-🟠 **METHOD** · *common::byte_storage*
+**METHOD** · *common::byte_storage*
 
 ```cpp
 void unlink_file() noexcept;
@@ -331,9 +196,9 @@ The open handle remains readable after removing the temporary name.
 
 <a id="method-finish"></a>
 
-## finish
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> finish
 
-🟠 **METHOD** · *common::byte_storage*
+**METHOD** · *common::byte_storage*
 
 ```cpp
 void finish(std::size_t stored) noexcept;
@@ -353,9 +218,9 @@ Finalizes the buffered data or output stream.
 
 <a id="method-fetch"></a>
 
-## fetch
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> fetch
 
-🟠 **METHOD** · *common::byte_storage*
+**METHOD** · *common::byte_storage*
 
 ```cpp
 bool fetch(std::byte& b);
@@ -373,9 +238,9 @@ Fetches the requested value.
 
 <a id="method-total-size"></a>
 
-## total_size
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> total_size
 
-🟠 **METHOD** · *common::byte_storage*
+**METHOD** · *common::byte_storage*
 
 ```cpp
 [[nodiscard]] std::optional<std::size_t> total_size() const noexcept;
@@ -391,9 +256,9 @@ Returns the total data size.
 
 <a id="method-exhausted"></a>
 
-## exhausted
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> exhausted
 
-🟠 **METHOD** · *common::byte_storage*
+**METHOD** · *common::byte_storage*
 
 ```cpp
 [[nodiscard]] bool exhausted() const noexcept;
@@ -409,9 +274,9 @@ Reports whether the exhausted condition holds.
 
 <a id="method-ok"></a>
 
-## ok
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ok
 
-🟠 **METHOD** · *common::byte_storage*
+**METHOD** · *common::byte_storage*
 
 ```cpp
 [[nodiscard]] bool ok() const noexcept;

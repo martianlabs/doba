@@ -1,9 +1,11 @@
 <a id="user-agent-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index.svg" alt="Index for user_agent.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index-dark.svg" alt="Index for user_agent.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/headers/user_agent.h](../../../../../../include/protocol/http/common/headers/user_agent.h)
@@ -20,9 +22,9 @@
 
 <a id="type-user-agent"></a>
 
-## user_agent
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> user_agent
 
-🟠 **TYPE** · *protocol::http::headers*
+**TYPE** · *protocol::http::headers*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ class user_agent { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::headers::user_agent*
+**METHOD** · *protocol::http::headers::user_agent*
 
 ```cpp
 static constexpr bool check(std::string_view sv);

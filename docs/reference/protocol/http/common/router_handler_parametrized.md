@@ -1,9 +1,11 @@
 <a id="router-handler-parametrized-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized/index.svg" alt="Index for router_handler_parametrized.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_parametrized/index-dark.svg" alt="Index for router_handler_parametrized.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/router_handler_parametrized.h](../../../../../include/protocol/http/common/router_handler_parametrized.h)
@@ -29,7 +31,6 @@ Provides the router handler parametrized protocol component.
 
 - [matcher_type](#alias-matcher-type) · *alias*
 - [callback_type](#alias-callback-type) · *alias*
-- [router_handler_parametrized](#constructor-router-handler-parametrized) · *constructor*
 - [matches](#method-matches) · *method*
 - [invoke](#method-invoke) · *method*
 
@@ -39,9 +40,9 @@ Provides the router handler parametrized protocol component.
 
 <a id="constant-dependent-false-v"></a>
 
-## dependent_false_v
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> dependent_false_v
 
-🟠 **CONSTANT** · *protocol::http::detail*
+**CONSTANT** · *protocol::http::detail*
 
 ```cpp
 template <typename>
@@ -56,9 +57,9 @@ Defines the dependent false v constant.
 
 <a id="function-extract-route-parameters"></a>
 
-## extract_route_parameters
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> extract_route_parameters
 
-🟠 **FUNCTION** · *protocol::http::detail*
+**FUNCTION** · *protocol::http::detail*
 
 ```cpp
 template <std::size_t N>
@@ -84,9 +85,9 @@ Extracts named values from a matching route.
 
 <a id="function-parse-route-parameter"></a>
 
-## parse_route_parameter
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parse_route_parameter
 
-🟠 **FUNCTION** · *protocol::http::detail*
+**FUNCTION** · *protocol::http::detail*
 
 ```cpp
 template <typename T>
@@ -110,9 +111,9 @@ Parses route parameter.
 
 <a id="function-matches-route-parameter"></a>
 
-## matches_route_parameter
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> matches_route_parameter
 
-🟠 **FUNCTION** · *protocol::http::detail*
+**FUNCTION** · *protocol::http::detail*
 
 ```cpp
 template <typename T>
@@ -135,9 +136,9 @@ Checks whether one route parameter matches.
 
 <a id="function-match-route-parameters"></a>
 
-## match_route_parameters_
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> match_route_parameters_
 
-🟠 **FUNCTION** · *protocol::http::detail*
+**FUNCTION** · *protocol::http::detail*
 
 ```cpp
 template <typename... Args, std::size_t... I>
@@ -164,9 +165,9 @@ Matches and converts route parameter values.
 
 <a id="function-match-route-parameters-2"></a>
 
-## match_route_parameters
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> match_route_parameters
 
-🟠 **FUNCTION** · *protocol::http::detail*
+**FUNCTION** · *protocol::http::detail*
 
 ```cpp
 template <typename... Args>
@@ -190,9 +191,9 @@ Matches and converts route parameter values.
 
 <a id="function-parse-route-parameters"></a>
 
-## parse_route_parameters_
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parse_route_parameters_
 
-🟠 **FUNCTION** · *protocol::http::detail*
+**FUNCTION** · *protocol::http::detail*
 
 ```cpp
 template <typename... Args, std::size_t... I>
@@ -220,9 +221,9 @@ Parses route parameters .
 
 <a id="function-invoke-route-handler"></a>
 
-## invoke_route_handler
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> invoke_route_handler
 
-🟠 **FUNCTION** · *protocol::http::detail*
+**FUNCTION** · *protocol::http::detail*
 
 ```cpp
 template <typename Hty, typename RQty, typename RSty, typename... Args>
@@ -255,9 +256,9 @@ Invokes the route handler with converted parameters.
 
 <a id="type-router-handler-parametrized"></a>
 
-## router_handler_parametrized
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router_handler_parametrized
 
-🟠 **TYPE** · *protocol::http*
+**TYPE** · *protocol::http*
 
 **Declaration synopsis:**
 
@@ -277,9 +278,9 @@ Provides the router handler parametrized protocol component.
 
 <a id="alias-matcher-type"></a>
 
-## matcher_type
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> matcher_type
 
-🟠 **ALIAS** · *protocol::http::router_handler_parametrized*
+**ALIAS** · *protocol::http::router_handler_parametrized*
 
 ```cpp
 using matcher_type = bool (*)(std::string_view, std::string_view);
@@ -291,9 +292,9 @@ Alias for `bool (*)(std::string_view, std::string_view)`.
 
 <a id="alias-callback-type"></a>
 
-## callback_type
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> callback_type
 
-🟠 **ALIAS** · *protocol::http::router_handler_parametrized*
+**ALIAS** · *protocol::http::router_handler_parametrized*
 
 ```cpp
 using callback_type = std::function<void(const RQty&, RSty&, std::string_view,
@@ -304,32 +305,11 @@ Alias for `std::function<void(const RQty&, RSty&, std::string_view, std::string_
 
 **Source:** [include/protocol/http/common/router_handler_parametrized.h:264](../../../../../include/protocol/http/common/router_handler_parametrized.h#L264)
 
-<a id="constructor-router-handler-parametrized"></a>
-
-## router_handler_parametrized
-
-🟠 **CONSTRUCTOR** · *protocol::http::router_handler_parametrized*
-
-```cpp
-router_handler_parametrized(std::string pattern, matcher_type matcher,
-                              callback_type callback);
-```
-
-Constructs a router_handler_parametrized value.
-
-**Parameters:**
-
-- **pattern:** Pattern used for matching. Declaration: `std::string pattern`.
-- **matcher:** Initial value supplied to the constructor. Declaration: `matcher_type matcher`.
-- **callback:** Callable invoked when the corresponding event occurs. Declaration: `callback_type callback`.
-
-**Source:** [include/protocol/http/common/router_handler_parametrized.h:269](../../../../../include/protocol/http/common/router_handler_parametrized.h#L269)
-
 <a id="method-matches"></a>
 
-## matches
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> matches
 
-🟠 **METHOD** · *protocol::http::router_handler_parametrized*
+**METHOD** · *protocol::http::router_handler_parametrized*
 
 ```cpp
 [[nodiscard]] bool matches(std::string_view path) const;
@@ -347,9 +327,9 @@ Checks whether the value matches this pattern.
 
 <a id="method-invoke"></a>
 
-## invoke
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> invoke
 
-🟠 **METHOD** · *protocol::http::router_handler_parametrized*
+**METHOD** · *protocol::http::router_handler_parametrized*
 
 ```cpp
 void invoke(const RQty& req, RSty& res, std::string_view path) const;
@@ -369,9 +349,9 @@ Invokes the stored callable.
 
 <a id="function-make-router-handler-parametrized"></a>
 
-## make_router_handler_parametrized
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> make_router_handler_parametrized
 
-🟠 **FUNCTION** · *protocol::http*
+**FUNCTION** · *protocol::http*
 
 ```cpp
 template <typename RQty, typename RSty, typename... Args, typename Hty>

@@ -1,9 +1,11 @@
 <a id="hash-set-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/common/hash_set/index-dark.svg">
+  <a href="../../../resources/docs/reference/common/hash_set/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/common/hash_set/index.svg" alt="Index for hash_set.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/common/hash_set/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/common/hash_set/index-dark.svg" alt="Index for hash_set.h">
+  </a>
 </h1>
 
 **Header:** [include/common/hash_set.h](../../../include/common/hash_set.h)
@@ -16,9 +18,9 @@ This header declares the types and operations listed below.
 
 <a id="alias-hash-set"></a>
 
-## hash_set
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> hash_set
 
-🟠 **ALIAS** · *common*
+**ALIAS** · *common*
 
 ```cpp
 template <typename KEty>

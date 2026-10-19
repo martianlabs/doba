@@ -1,9 +1,11 @@
 <a id="task-awaiters-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/common/task_awaiters/index-dark.svg">
+  <a href="../../../resources/docs/reference/common/task_awaiters/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/common/task_awaiters/index.svg" alt="Index for task_awaiters.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/common/task_awaiters/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/common/task_awaiters/index-dark.svg" alt="Index for task_awaiters.h">
+  </a>
 </h1>
 
 **Header:** [include/common/task_awaiters.h](../../../include/common/task_awaiters.h)
@@ -38,9 +40,9 @@ Provides the yield awaiter type.
 
 <a id="type-yield-awaiter"></a>
 
-## yield_awaiter
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> yield_awaiter
 
-🟠 **TYPE** · *common*
+**TYPE** · *common*
 
 **Declaration synopsis:**
 
@@ -54,9 +56,9 @@ Provides the yield awaiter type.
 
 <a id="method-await-ready"></a>
 
-## await_ready
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> await_ready
 
-🟠 **METHOD** · *common::yield_awaiter*
+**METHOD** · *common::yield_awaiter*
 
 ```cpp
 bool await_ready() const noexcept;
@@ -72,9 +74,9 @@ Implements the coroutine await_ready hook.
 
 <a id="method-await-suspend"></a>
 
-## await_suspend
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> await_suspend
 
-🟠 **METHOD** · *common::yield_awaiter*
+**METHOD** · *common::yield_awaiter*
 
 ```cpp
 template <typename Pty>
@@ -99,9 +101,9 @@ Implements the coroutine await_suspend hook.
 
 <a id="method-await-resume"></a>
 
-## await_resume
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> await_resume
 
-🟠 **METHOD** · *common::yield_awaiter*
+**METHOD** · *common::yield_awaiter*
 
 ```cpp
 void await_resume() const noexcept;
@@ -117,9 +119,9 @@ Implements the coroutine await_resume hook.
 
 <a id="function-yield"></a>
 
-## yield
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> yield
 
-🟠 **FUNCTION** · *common*
+**FUNCTION** · *common*
 
 ```cpp
 inline yield_awaiter yield() noexcept;
@@ -135,9 +137,9 @@ Yields a value to the awaiting coroutine.
 
 <a id="type-sleep-awaiter"></a>
 
-## sleep_awaiter
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> sleep_awaiter
 
-🟠 **TYPE** · *common*
+**TYPE** · *common*
 
 **Declaration synopsis:**
 
@@ -151,9 +153,9 @@ Provides the sleep awaiter type.
 
 <a id="field-duration"></a>
 
-## duration
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> duration
 
-🟠 **FIELD** · *common::sleep_awaiter*
+**FIELD** · *common::sleep_awaiter*
 
 ```cpp
 std::chrono::steady_clock::duration duration;
@@ -167,9 +169,9 @@ Stores the duration value.
 
 <a id="method-await-ready-2"></a>
 
-## await_ready
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> await_ready
 
-🟠 **METHOD** · *common::sleep_awaiter*
+**METHOD** · *common::sleep_awaiter*
 
 ```cpp
 bool await_ready() const noexcept;
@@ -185,9 +187,9 @@ Implements the coroutine await_ready hook.
 
 <a id="method-await-suspend-2"></a>
 
-## await_suspend
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> await_suspend
 
-🟠 **METHOD** · *common::sleep_awaiter*
+**METHOD** · *common::sleep_awaiter*
 
 ```cpp
 template <typename Pty>
@@ -212,9 +214,9 @@ Implements the coroutine await_suspend hook.
 
 <a id="method-await-resume-2"></a>
 
-## await_resume
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> await_resume
 
-🟠 **METHOD** · *common::sleep_awaiter*
+**METHOD** · *common::sleep_awaiter*
 
 ```cpp
 void await_resume() const noexcept;
@@ -230,9 +232,9 @@ Implements the coroutine await_resume hook.
 
 <a id="function-sleep-for"></a>
 
-## sleep_for
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> sleep_for
 
-🟠 **FUNCTION** · *common*
+**FUNCTION** · *common*
 
 ```cpp
 inline sleep_awaiter sleep_for(

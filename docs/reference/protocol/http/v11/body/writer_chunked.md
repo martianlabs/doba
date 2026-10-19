@@ -1,9 +1,11 @@
 <a id="writer-chunked-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index.svg" alt="Index for writer_chunked.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index-dark.svg" alt="Index for writer_chunked.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/body/writer_chunked.h](../../../../../../include/protocol/http/v11/body/writer_chunked.h)
@@ -22,9 +24,9 @@ Encodes an outgoing chunked Transfer-Encoding body. Each call to write() wraps t
 
 <a id="type-writer-chunked"></a>
 
-## writer_chunked
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> writer_chunked
 
-🟠 **TYPE** · *protocol::http::v11::body*
+**TYPE** · *protocol::http::v11::body*
 
 **Declaration synopsis:**
 
@@ -38,9 +40,9 @@ Encodes an outgoing chunked Transfer-Encoding body. Each call to write() wraps t
 
 <a id="method-write"></a>
 
-## write
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> write
 
-🟠 **METHOD** · *protocol::http::v11::body::writer_chunked*
+**METHOD** · *protocol::http::v11::body::writer_chunked*
 
 ```cpp
 bool write(std::span<const std::byte> payload, common::writer& dst);
@@ -59,9 +61,9 @@ Encodes payload as a single chunk and writes it into dst.
 
 <a id="method-write-2"></a>
 
-## write
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> write
 
-🟠 **METHOD** · *protocol::http::v11::body::writer_chunked*
+**METHOD** · *protocol::http::v11::body::writer_chunked*
 
 ```cpp
 bool write(std::string_view payload, common::writer& dst);
@@ -80,9 +82,9 @@ Writes data.
 
 <a id="method-end"></a>
 
-## end
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> end
 
-🟠 **METHOD** · *protocol::http::v11::body::writer_chunked*
+**METHOD** · *protocol::http::v11::body::writer_chunked*
 
 ```cpp
 bool end(common::writer& dst);

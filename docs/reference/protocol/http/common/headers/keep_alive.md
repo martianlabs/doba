@@ -1,9 +1,11 @@
 <a id="keep-alive-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index.svg" alt="Index for keep_alive.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index-dark.svg" alt="Index for keep_alive.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/headers/keep_alive.h](../../../../../../include/protocol/http/common/headers/keep_alive.h)
@@ -20,9 +22,9 @@
 
 <a id="type-x-keep-alive"></a>
 
-## x_keep_alive
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> x_keep_alive
 
-🟠 **TYPE** · *protocol::http::headers*
+**TYPE** · *protocol::http::headers*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ class x_keep_alive { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::headers::x_keep_alive*
+**METHOD** · *protocol::http::headers::x_keep_alive*
 
 ```cpp
 static constexpr bool check(std::string_view sv);

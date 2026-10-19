@@ -1,9 +1,11 @@
 <a name="documentation"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/index/h1-documentation-dark.svg">
+  <a href="../resources/docs/index/h1-documentation.svg#gh-light-mode-only">
     <img src="../resources/docs/index/h1-documentation.svg" alt="Documentation">
-  </picture>
+  </a>
+  <a href="../resources/docs/index/h1-documentation-dark.svg#gh-dark-mode-only">
+    <img src="../resources/docs/index/h1-documentation-dark.svg" alt="Documentation">
+  </a>
 </h1>
 
 New to doba? Pick a path:
@@ -14,10 +16,12 @@ New to doba? Pick a path:
 
 <a name="guide"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/index/h2-guide-dark.svg">
+  <a href="../resources/docs/index/h2-guide.svg#gh-light-mode-only">
     <img src="../resources/docs/index/h2-guide.svg" alt="Guide">
-  </picture>
+  </a>
+  <a href="../resources/docs/index/h2-guide-dark.svg#gh-dark-mode-only">
+    <img src="../resources/docs/index/h2-guide-dark.svg" alt="Guide">
+  </a>
 </h2>
 
 Want to make doba answer a request? Start with
@@ -26,10 +30,12 @@ server running. The [guide index](guide/README.md) shows where to go next.
 
 <a name="reference"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/index/h2-reference-dark.svg">
+  <a href="../resources/docs/index/h2-reference.svg#gh-light-mode-only">
     <img src="../resources/docs/index/h2-reference.svg" alt="Reference">
-  </picture>
+  </a>
+  <a href="../resources/docs/index/h2-reference-dark.svg#gh-dark-mode-only">
+    <img src="../resources/docs/index/h2-reference-dark.svg" alt="Reference">
+  </a>
 </h2>
 
 Need an exact signature or lifecycle rule? Start with

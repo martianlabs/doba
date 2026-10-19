@@ -1,9 +1,11 @@
 <a id="engine-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/v11/engine/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/engine/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/v11/engine/index.svg" alt="Index for engine.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/engine/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/v11/engine/index-dark.svg" alt="Index for engine.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/engine.h](../../../../../include/protocol/http/v11/engine.h)
@@ -17,12 +19,6 @@ HTTP/1.1 protocol engine.
 **protocol::http::v11::engine**
 
 - [policies_type](#alias-policies-type) · *alias*
-- [engine(configuration, router, on_async_started, on_async_finished)](#constructor-engine) · *constructor*
-- [engine(engine)](#constructor-engine-2) · *constructor*
-- [engine(engine)](#constructor-engine-3) · *constructor*
-- [~engine](#destructor-destructor-engine) · *destructor*
-- [operator=(engine)](#operator-operator) · *operator*
-- [operator=(engine)](#operator-operator-2) · *operator*
 - [set_on_send](#method-set-on-send) · *method*
 - [set_on_close](#method-set-on-close) · *method*
 - [set_execution_capacity](#method-set-execution-capacity) · *method*
@@ -31,9 +27,9 @@ HTTP/1.1 protocol engine.
 
 <a id="type-engine"></a>
 
-## engine
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> engine
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -56,9 +52,9 @@ HTTP/1.1 protocol engine.
 
 <a id="alias-policies-type"></a>
 
-## policies_type
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> policies_type
 
-🟠 **ALIAS** · *protocol::http::v11::engine*
+**ALIAS** · *protocol::http::v11::engine*
 
 ```cpp
 using policies_type = v11::policies;
@@ -68,132 +64,11 @@ Alias for `v11::policies`.
 
 **Source:** [include/protocol/http/v11/engine.h:69](../../../../../include/protocol/http/v11/engine.h#L69)
 
-<a id="constructor-engine"></a>
-
-## engine
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::engine*
-
-```cpp
-engine(policies_type configuration, const ROty& router,
-         std::function<void()> on_async_started = {},
-         std::function<void()> on_async_finished = {});
-```
-
-Constructs a engine value.
-
-**Parameters:**
-
-- **configuration:** Configuration for this component. Declaration: `policies_type configuration`.
-- **router:** Router used for request dispatch. Declaration: `const ROty& router`.
-- **on_async_started:** Callback for the named event. Declaration: `std::function<void()> on_async_started = {}`.
-- **on_async_finished:** Callback for the named event. Declaration: `std::function<void()> on_async_finished = {}`.
-
-**Source:** [include/protocol/http/v11/engine.h:73](../../../../../include/protocol/http/v11/engine.h#L73)
-
-<a id="constructor-engine-2"></a>
-
-## engine
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::engine*
-
-```cpp
-engine(const engine&) = delete;
-```
-
-Disallows this form of protocol::http::v11::engine construction.
-
-**Parameters:**
-
-- **engine:** Source object to copy or move. Declaration: `const engine&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/engine.h:81](../../../../../include/protocol/http/v11/engine.h#L81)
-
-<a id="constructor-engine-3"></a>
-
-## engine
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::engine*
-
-```cpp
-engine(engine&&) noexcept = delete;
-```
-
-Disallows this form of protocol::http::v11::engine construction.
-
-**Parameters:**
-
-- **engine:** Source object to copy or move. Declaration: `engine&&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/engine.h:82](../../../../../include/protocol/http/v11/engine.h#L82)
-
-<a id="destructor-destructor-engine"></a>
-
-## ~engine
-
-🟠 **DESTRUCTOR** · *protocol::http::v11::engine*
-
-```cpp
-~engine() = default;
-```
-
-Destroys the engine object.
-
-**Source:** [include/protocol/http/v11/engine.h:83](../../../../../include/protocol/http/v11/engine.h#L83)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::engine*
-
-```cpp
-engine& operator=(const engine&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **engine:** Source object to copy or move. Declaration: `const engine&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/engine.h:87](../../../../../include/protocol/http/v11/engine.h#L87)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::engine*
-
-```cpp
-engine& operator=(engine&&) noexcept = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **engine:** Source object to copy or move. Declaration: `engine&&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/engine.h:88](../../../../../include/protocol/http/v11/engine.h#L88)
-
 <a id="method-set-on-send"></a>
 
-## set_on_send
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> set_on_send
 
-🟠 **METHOD** · *protocol::http::v11::engine*
+**METHOD** · *protocol::http::v11::engine*
 
 ```cpp
 void set_on_send(protocol::send_delegate output);
@@ -211,9 +86,9 @@ Let's set the 'on_send' callback to send data to the transport.
 
 <a id="method-set-on-close"></a>
 
-## set_on_close
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> set_on_close
 
-🟠 **METHOD** · *protocol::http::v11::engine*
+**METHOD** · *protocol::http::v11::engine*
 
 ```cpp
 void set_on_close(std::function<void()> close);
@@ -231,9 +106,9 @@ Let's set the 'on_close' callback to close the transport.
 
 <a id="method-set-execution-capacity"></a>
 
-## set_execution_capacity
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> set_execution_capacity
 
-🟠 **METHOD** · *protocol::http::v11::engine*
+**METHOD** · *protocol::http::v11::engine*
 
 ```cpp
 void set_execution_capacity(
@@ -254,9 +129,9 @@ Sets the execution capacity for the engine.
 
 <a id="method-stop"></a>
 
-## stop
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> stop
 
-🟠 **METHOD** · *protocol::http::v11::engine*
+**METHOD** · *protocol::http::v11::engine*
 
 ```cpp
 bool stop(std::function<void()> completed);
@@ -274,9 +149,9 @@ Stops the engine lifecycle.
 
 <a id="method-on-bytes-received"></a>
 
-## on_bytes_received
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> on_bytes_received
 
-🟠 **METHOD** · *protocol::http::v11::engine*
+**METHOD** · *protocol::http::v11::engine*
 
 ```cpp
 void on_bytes_received(const char* buffer, std::size_t size);

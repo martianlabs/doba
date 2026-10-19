@@ -1,9 +1,11 @@
 <a id="engine-sync-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index.svg" alt="Index for engine_sync.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index-dark.svg" alt="Index for engine_sync.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/engine_sync.h](../../../../../include/protocol/http/v11/engine_sync.h)
@@ -16,12 +18,6 @@ The synchronous engine handles the processing of a single request and response i
 
 **protocol::http::v11::engine_sync**
 
-- [engine_sync()](#constructor-engine-sync) · *constructor*
-- [engine_sync(engine_sync)](#constructor-engine-sync-2) · *constructor*
-- [engine_sync(engine_sync)](#constructor-engine-sync-3) · *constructor*
-- [~engine_sync](#destructor-destructor-engine-sync) · *destructor*
-- [operator=(engine_sync)](#operator-operator) · *operator*
-- [operator=(engine_sync)](#operator-operator-2) · *operator*
 - [handle_request](#method-handle-request) · *method*
 - [handle_response](#method-handle-response) · *method*
 - [execute](#method-execute) · *method*
@@ -32,9 +28,9 @@ The synchronous engine handles the processing of a single request and response i
 
 <a id="type-engine-sync"></a>
 
-## engine_sync
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> engine_sync
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -53,123 +49,11 @@ The synchronous engine handles the processing of a single request and response i
 
 **Source:** [include/protocol/http/v11/engine_sync.h:54](../../../../../include/protocol/http/v11/engine_sync.h#L54)
 
-<a id="constructor-engine-sync"></a>
-
-## engine_sync
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::engine_sync*
-
-```cpp
-engine_sync() = default;
-```
-
-Constructs a engine_sync value.
-
-**Source:** [include/protocol/http/v11/engine_sync.h:58](../../../../../include/protocol/http/v11/engine_sync.h#L58)
-
-<a id="constructor-engine-sync-2"></a>
-
-## engine_sync
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::engine_sync*
-
-```cpp
-engine_sync(const engine_sync&) = delete;
-```
-
-Disallows this form of protocol::http::v11::engine_sync construction.
-
-**Parameters:**
-
-- **engine_sync:** Source object to copy or move. Declaration: `const engine_sync&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/engine_sync.h:59](../../../../../include/protocol/http/v11/engine_sync.h#L59)
-
-<a id="constructor-engine-sync-3"></a>
-
-## engine_sync
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::engine_sync*
-
-```cpp
-engine_sync(engine_sync&&) noexcept = delete;
-```
-
-Disallows this form of protocol::http::v11::engine_sync construction.
-
-**Parameters:**
-
-- **engine_sync:** Source object to copy or move. Declaration: `engine_sync&&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/engine_sync.h:60](../../../../../include/protocol/http/v11/engine_sync.h#L60)
-
-<a id="destructor-destructor-engine-sync"></a>
-
-## ~engine_sync
-
-🟠 **DESTRUCTOR** · *protocol::http::v11::engine_sync*
-
-```cpp
-~engine_sync() = default;
-```
-
-Destroys the engine_sync object.
-
-**Source:** [include/protocol/http/v11/engine_sync.h:61](../../../../../include/protocol/http/v11/engine_sync.h#L61)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::engine_sync*
-
-```cpp
-engine_sync& operator=(const engine_sync&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **engine_sync:** Source object to copy or move. Declaration: `const engine_sync&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/engine_sync.h:65](../../../../../include/protocol/http/v11/engine_sync.h#L65)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::engine_sync*
-
-```cpp
-engine_sync& operator=(engine_sync&&) noexcept = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **engine_sync:** Source object to copy or move. Declaration: `engine_sync&&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/engine_sync.h:66](../../../../../include/protocol/http/v11/engine_sync.h#L66)
-
 <a id="method-handle-request"></a>
 
-## handle_request
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> handle_request
 
-🟠 **METHOD** · *protocol::http::v11::engine_sync*
+**METHOD** · *protocol::http::v11::engine_sync*
 
 ```cpp
 static bool handle_request(decoder<RQty, RSty>& owner, const ROty& router,
@@ -197,9 +81,9 @@ Handles an incoming request synchronously. It executes the request against the r
 
 <a id="method-handle-response"></a>
 
-## handle_response
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> handle_response
 
-🟠 **METHOD** · *protocol::http::v11::engine_sync*
+**METHOD** · *protocol::http::v11::engine_sync*
 
 ```cpp
 static void handle_response(RSty& response, bool close,
@@ -220,9 +104,9 @@ Handles a response synchronously. It serializes the response and submits it to t
 
 <a id="method-execute"></a>
 
-## execute
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> execute
 
-🟠 **METHOD** · *protocol::http::v11::engine_sync*
+**METHOD** · *protocol::http::v11::engine_sync*
 
 ```cpp
 static void execute(
@@ -246,9 +130,9 @@ Executes the request against the router and builds the response. It handles diff
 
 <a id="method-authenticate"></a>
 
-## authenticate
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> authenticate
 
-🟠 **METHOD** · *protocol::http::v11::engine_sync*
+**METHOD** · *protocol::http::v11::engine_sync*
 
 ```cpp
 static bool authenticate(const router_match_result<RQty, RSty>& match,
@@ -271,9 +155,9 @@ Authenticates the supplied request.
 
 <a id="method-build-error-response"></a>
 
-## build_error_response
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> build_error_response
 
-🟠 **METHOD** · *protocol::http::v11::engine_sync*
+**METHOD** · *protocol::http::v11::engine_sync*
 
 ```cpp
 static void build_error_response(RSty& response);
@@ -291,9 +175,9 @@ Builds a generic error response with a 500 Internal Server Error status. It sets
 
 <a id="method-serialize"></a>
 
-## serialize
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> serialize
 
-🟠 **METHOD** · *protocol::http::v11::engine_sync*
+**METHOD** · *protocol::http::v11::engine_sync*
 
 ```cpp
 static serialization_result serialize(RSty& response, bool close);
@@ -312,9 +196,9 @@ Serializes the response. If the connection should be closed, it sets the "Connec
 
 <a id="method-serialize-2"></a>
 
-## serialize
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> serialize
 
-🟠 **METHOD** · *protocol::http::v11::engine_sync*
+**METHOD** · *protocol::http::v11::engine_sync*
 
 ```cpp
 static serialization_result serialize(const RQty& request, RSty& response,

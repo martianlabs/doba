@@ -3472,7 +3472,6 @@ DOBA_TEST("decoder rejects zero head limits") {
     bool rejected = false;
     try {
       decoder<request, response> value(configuration);
-      std::string_view value_input;
     } catch (const std::invalid_argument&) {
       rejected = true;
     }
@@ -3548,7 +3547,6 @@ DOBA_TEST("owned response survives decoder destruction") {
   std::optional<response> retained;
   {
     decoder<request, response> value;
-    std::string_view value_input;
     retained.emplace(value.make_response());
     retained->ok_200().set_header("Date", "fixed").set_body("independent");
   }

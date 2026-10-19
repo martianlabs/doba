@@ -1,9 +1,11 @@
 <a id="router-match-result-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/common/router_match_result/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/common/router_match_result/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/common/router_match_result/index.svg" alt="Index for router_match_result.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/common/router_match_result/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/common/router_match_result/index-dark.svg" alt="Index for router_match_result.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/router_match_result.h](../../../../../include/protocol/http/common/router_match_result.h)
@@ -21,13 +23,12 @@ Provides the router match result protocol component.
 - [async_handler](#field-async-handler) · *field*
 - [async_parametrized_handler](#field-async-parametrized-handler) · *field*
 - [authenticate](#field-authenticate) · *field*
-- [operator bool](#operator-operator-bool) · *operator*
 
 <a id="type-router-match-result"></a>
 
-## router_match_result
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router_match_result
 
-🟠 **TYPE** · *protocol::http*
+**TYPE** · *protocol::http*
 
 **Declaration synopsis:**
 
@@ -47,9 +48,9 @@ Provides the router match result protocol component.
 
 <a id="field-handler"></a>
 
-## handler
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> handler
 
-🟠 **FIELD** · *protocol::http::router_match_result*
+**FIELD** · *protocol::http::router_match_result*
 
 ```cpp
 const router_handler_static<RQty, RSty>* handler{nullptr};
@@ -63,9 +64,9 @@ Stores the handler value.
 
 <a id="field-parametrized-handler"></a>
 
-## parametrized_handler
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parametrized_handler
 
-🟠 **FIELD** · *protocol::http::router_match_result*
+**FIELD** · *protocol::http::router_match_result*
 
 ```cpp
 const router_handler_parametrized<RQty, RSty>* parametrized_handler{nullptr};
@@ -79,9 +80,9 @@ Stores the parametrized handler value.
 
 <a id="field-async-handler"></a>
 
-## async_handler
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> async_handler
 
-🟠 **FIELD** · *protocol::http::router_match_result*
+**FIELD** · *protocol::http::router_match_result*
 
 ```cpp
 const router_handler_static_async<RQty, RSty>* async_handler{nullptr};
@@ -95,9 +96,9 @@ Stores the async handler value.
 
 <a id="field-async-parametrized-handler"></a>
 
-## async_parametrized_handler
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> async_parametrized_handler
 
-🟠 **FIELD** · *protocol::http::router_match_result*
+**FIELD** · *protocol::http::router_match_result*
 
 ```cpp
 const router_handler_parametrized_async<RQty, RSty>*
@@ -112,9 +113,9 @@ Stores the async parametrized handler value.
 
 <a id="field-authenticate"></a>
 
-## authenticate
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> authenticate
 
-🟠 **FIELD** · *protocol::http::router_match_result*
+**FIELD** · *protocol::http::router_match_result*
 
 ```cpp
 const std::function<auth::authentication_result(const RQty&)>*
@@ -126,19 +127,3 @@ Stores the authenticate value.
 **Value:** `{nullptr}`
 
 **Source:** [include/protocol/http/common/router_match_result.h:49](../../../../../include/protocol/http/common/router_match_result.h#L49)
-
-<a id="operator-operator-bool"></a>
-
-## operator bool
-
-🟠 **OPERATOR** · *protocol::http::router_match_result*
-
-```cpp
-[[nodiscard]] explicit operator bool() const;
-```
-
-Implements operator bool for router_match_result.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/protocol/http/common/router_match_result.h:51](../../../../../include/protocol/http/common/router_match_result.h#L51)

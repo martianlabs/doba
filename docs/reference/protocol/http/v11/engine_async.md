@@ -1,9 +1,11 @@
 <a id="engine-async-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index.svg" alt="Index for engine_async.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index-dark.svg" alt="Index for engine_async.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/engine_async.h](../../../../../include/protocol/http/v11/engine_async.h)
@@ -16,12 +18,6 @@ The asynchronous engine manages the state of multiple concurrent requests and re
 
 **protocol::http::v11::engine_async**
 
-- [engine_async(max_pending_requests, on_async_started, on_async_finished)](#constructor-engine-async) · *constructor*
-- [engine_async(engine_async)](#constructor-engine-async-2) · *constructor*
-- [engine_async(engine_async)](#constructor-engine-async-3) · *constructor*
-- [~engine_async](#destructor-destructor-engine-async) · *destructor*
-- [operator=(engine_async)](#operator-operator) · *operator*
-- [operator=(engine_async)](#operator-operator-2) · *operator*
 - [handles](#method-handles) · *method*
 - [handle_request](#method-handle-request) · *method*
 - [handle_error](#method-handle-error) · *method*
@@ -40,9 +36,9 @@ The asynchronous engine manages the state of multiple concurrent requests and re
 
 <a id="type-engine-async"></a>
 
-## engine_async
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> engine_async
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -54,131 +50,11 @@ The asynchronous engine manages the state of multiple concurrent requests and re
 
 **Source:** [include/protocol/http/v11/engine_async.h:62](../../../../../include/protocol/http/v11/engine_async.h#L62)
 
-<a id="constructor-engine-async"></a>
-
-## engine_async
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::engine_async*
-
-```cpp
-explicit engine_async(std::size_t max_pending_requests,
-                        std::function<void()> on_async_started,
-                        std::function<void()> on_async_finished);
-```
-
-Constructs a engine_async value.
-
-**Parameters:**
-
-- **max_pending_requests:** Initial value supplied to the constructor. Declaration: `std::size_t max_pending_requests`.
-- **on_async_started:** Callback for the named event. Declaration: `std::function<void()> on_async_started`.
-- **on_async_finished:** Callback for the named event. Declaration: `std::function<void()> on_async_finished`.
-
-**Source:** [include/protocol/http/v11/engine_async.h:67](../../../../../include/protocol/http/v11/engine_async.h#L67)
-
-<a id="constructor-engine-async-2"></a>
-
-## engine_async
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::engine_async*
-
-```cpp
-engine_async(const engine_async&) = delete;
-```
-
-Disallows this form of protocol::http::v11::engine_async construction.
-
-**Parameters:**
-
-- **engine_async:** Source object to copy or move. Declaration: `const engine_async&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/engine_async.h:73](../../../../../include/protocol/http/v11/engine_async.h#L73)
-
-<a id="constructor-engine-async-3"></a>
-
-## engine_async
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::engine_async*
-
-```cpp
-engine_async(engine_async&&) noexcept = delete;
-```
-
-Disallows this form of protocol::http::v11::engine_async construction.
-
-**Parameters:**
-
-- **engine_async:** Source object to copy or move. Declaration: `engine_async&&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/engine_async.h:74](../../../../../include/protocol/http/v11/engine_async.h#L74)
-
-<a id="destructor-destructor-engine-async"></a>
-
-## ~engine_async
-
-🟠 **DESTRUCTOR** · *protocol::http::v11::engine_async*
-
-```cpp
-~engine_async() = default;
-```
-
-Destroys the engine_async object.
-
-**Source:** [include/protocol/http/v11/engine_async.h:75](../../../../../include/protocol/http/v11/engine_async.h#L75)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::engine_async*
-
-```cpp
-engine_async& operator=(const engine_async&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **engine_async:** Source object to copy or move. Declaration: `const engine_async&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/engine_async.h:79](../../../../../include/protocol/http/v11/engine_async.h#L79)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::engine_async*
-
-```cpp
-engine_async& operator=(engine_async&&) noexcept = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **engine_async:** Source object to copy or move. Declaration: `engine_async&&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/engine_async.h:80](../../../../../include/protocol/http/v11/engine_async.h#L80)
-
 <a id="method-handles"></a>
 
-## handles
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> handles
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 template <typename Match>
@@ -201,9 +77,9 @@ Determines if the given router match result indicates that the request should be
 
 <a id="method-handle-request"></a>
 
-## handle_request
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> handle_request
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 template <typename RQty, typename RSty, typename ROty>
@@ -243,9 +119,9 @@ Handles an incoming request. If the request is to be handled asynchronously, it 
 
 <a id="method-handle-error"></a>
 
-## handle_error
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> handle_error
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 template <typename RQty, typename RSty, typename ROty>
@@ -271,9 +147,9 @@ Handles an error response. It serializes the response and submits it to the tran
 
 <a id="method-handle-interim"></a>
 
-## handle_interim
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> handle_interim
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 template <typename RQty, typename RSty, typename ROty>
@@ -298,9 +174,9 @@ Handles an interim response. It serializes the response and submits it to the tr
 
 <a id="method-set-on-send"></a>
 
-## set_on_send
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> set_on_send
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 void set_on_send(protocol::send_delegate output);
@@ -318,9 +194,9 @@ Sets on send.
 
 <a id="method-set-on-close"></a>
 
-## set_on_close
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> set_on_close
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 void set_on_close(std::function<void()> close);
@@ -338,9 +214,9 @@ Sets on close.
 
 <a id="method-reserve"></a>
 
-## reserve
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> reserve
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 std::optional<std::size_t> reserve();
@@ -354,9 +230,9 @@ Reserves a position for a new request. If the maximum number of pending requests
 
 <a id="method-begin"></a>
 
-## begin
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> begin
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 void begin() noexcept;
@@ -372,9 +248,9 @@ Increments the count of active asynchronous operations. This should be called wh
 
 <a id="method-end"></a>
 
-## end
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> end
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 void end();
@@ -388,9 +264,9 @@ Decrements the count of active asynchronous operations. If this was the last act
 
 <a id="method-stop"></a>
 
-## stop
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> stop
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 bool stop(std::function<void()> completed);
@@ -408,9 +284,9 @@ Initiates the stopping process for the engine. It sets the stopping flag and, if
 
 <a id="method-closing"></a>
 
-## closing
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> closing
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 bool closing() const noexcept;
@@ -426,9 +302,9 @@ Returns whether the engine is in the process of closing the connection.
 
 <a id="method-accepting"></a>
 
-## accepting
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> accepting
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 bool accepting() const noexcept;
@@ -444,9 +320,9 @@ Returns whether the engine is in the process of accepting new connections.
 
 <a id="method-idle"></a>
 
-## idle
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> idle
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 bool idle() const noexcept;
@@ -462,9 +338,9 @@ Returns whether the engine is idle, meaning it is accepting new connections, has
 
 <a id="method-submit"></a>
 
-## submit
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> submit
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 void submit(std::size_t position, serialization_result result, bool final,
@@ -486,9 +362,9 @@ Submits a serialized response to the transport. It ensures that responses are se
 
 <a id="method-close-now"></a>
 
-## close_now
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> close_now
 
-🟠 **METHOD** · *protocol::http::v11::engine_async*
+**METHOD** · *protocol::http::v11::engine_async*
 
 ```cpp
 void close_now();

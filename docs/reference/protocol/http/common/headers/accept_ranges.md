@@ -1,9 +1,11 @@
 <a id="accept-ranges-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index.svg" alt="Index for accept_ranges.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index-dark.svg" alt="Index for accept_ranges.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/headers/accept_ranges.h](../../../../../../include/protocol/http/common/headers/accept_ranges.h)
@@ -20,9 +22,9 @@
 
 <a id="type-accept-ranges"></a>
 
-## accept_ranges
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> accept_ranges
 
-🟠 **TYPE** · *protocol::http::headers*
+**TYPE** · *protocol::http::headers*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ class accept_ranges { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::headers::accept_ranges*
+**METHOD** · *protocol::http::headers::accept_ranges*
 
 ```cpp
 static constexpr bool check(std::string_view sv);

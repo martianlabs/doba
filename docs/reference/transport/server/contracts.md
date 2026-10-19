@@ -1,9 +1,11 @@
 <a id="contracts-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/contracts/index-dark.svg">
+  <a href="../../../../resources/docs/reference/transport/server/contracts/index.svg#gh-light-mode-only">
     <img src="../../../../resources/docs/reference/transport/server/contracts/index.svg" alt="Index for contracts.h">
-  </picture>
+  </a>
+  <a href="../../../../resources/docs/reference/transport/server/contracts/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/docs/reference/transport/server/contracts/index-dark.svg" alt="Index for contracts.h">
+  </a>
 </h1>
 
 **Header:** [include/transport/server/contracts.h](../../../../include/transport/server/contracts.h)
@@ -35,9 +37,9 @@ Provides the execution work transport component.
 
 <a id="type-execution-work"></a>
 
-## execution_work
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> execution_work
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -51,9 +53,9 @@ Provides the execution work transport component.
 
 <a id="field-context"></a>
 
-## context
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> context
 
-🟠 **FIELD** · *transport::server::execution_work*
+**FIELD** · *transport::server::execution_work*
 
 ```cpp
 void* context{nullptr};
@@ -67,9 +69,9 @@ Stores the context value.
 
 <a id="field-run"></a>
 
-## run
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> run
 
-🟠 **FIELD** · *transport::server::execution_work*
+**FIELD** · *transport::server::execution_work*
 
 ```cpp
 void (*run)(void*) noexcept{nullptr};
@@ -83,9 +85,9 @@ Stores the run value.
 
 <a id="type-execution-capacity"></a>
 
-## execution_capacity
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> execution_capacity
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -99,9 +101,9 @@ While active, accepted work runs once, no earlier than its threshold.
 
 <a id="field-owner"></a>
 
-## owner
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> owner
 
-🟠 **FIELD** · *transport::server::execution_capacity*
+**FIELD** · *transport::server::execution_capacity*
 
 ```cpp
 void* owner{nullptr};
@@ -115,9 +117,9 @@ Stores the owner value.
 
 <a id="field-submit"></a>
 
-## submit
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> submit
 
-🟠 **FIELD** · *transport::server::execution_capacity*
+**FIELD** · *transport::server::execution_capacity*
 
 ```cpp
 void (*submit)(void*, std::chrono::steady_clock::time_point,
@@ -132,9 +134,9 @@ Stores the submit value.
 
 <a id="concept-execution-receiver"></a>
 
-## execution_receiver
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> execution_receiver
 
-🟠 **CONCEPT** · *transport::server::contracts*
+**CONCEPT** · *transport::server::contracts*
 
 ```cpp
 template <typename ENty>
@@ -154,9 +156,9 @@ Checks the compile-time requirements for execution receiver.
 
 <a id="concept-transport"></a>
 
-## transport
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport
 
-🟠 **CONCEPT** · *transport::server::contracts*
+**CONCEPT** · *transport::server::contracts*
 
 ```cpp
 template <typename TRty, typename ENty, typename FNty>

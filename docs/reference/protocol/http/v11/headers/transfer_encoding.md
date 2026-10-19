@@ -1,9 +1,11 @@
 <a id="transfer-encoding-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index.svg" alt="Index for transfer_encoding.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index-dark.svg" alt="Index for transfer_encoding.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/headers/transfer_encoding.h](../../../../../../include/protocol/http/v11/headers/transfer_encoding.h)
@@ -21,9 +23,9 @@ The "Transfer-Encoding" header field lists the transfer coding names correspondi
 
 <a id="type-transfer-encoding"></a>
 
-## transfer_encoding
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transfer_encoding
 
-🟠 **TYPE** · *protocol::http::v11::headers*
+**TYPE** · *protocol::http::v11::headers*
 
 **Declaration synopsis:**
 
@@ -37,9 +39,9 @@ The "Transfer-Encoding" header field lists the transfer coding names correspondi
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::v11::headers::transfer_encoding*
+**METHOD** · *protocol::http::v11::headers::transfer_encoding*
 
 ```cpp
 static bool check(std::string_view sv, parsed_parameter_list& out);
@@ -58,9 +60,9 @@ Checks whether a value follows the HTTP transfer-encoding header syntax.
 
 <a id="method-interpret"></a>
 
-## interpret
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> interpret
 
-🟠 **METHOD** · *protocol::http::v11::headers::transfer_encoding*
+**METHOD** · *protocol::http::v11::headers::transfer_encoding*
 
 ```cpp
 static constexpr verdict interpret(

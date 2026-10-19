@@ -1,9 +1,11 @@
 <a id="results-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/v11/results/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/results/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/v11/results/index.svg" alt="Index for results.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/results/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/v11/results/index-dark.svg" alt="Index for results.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/results.h](../../../../../include/protocol/http/v11/results.h)
@@ -16,12 +18,6 @@ HTTP/1.1 decoding result for the selected request and response types.
 
 **protocol::http::v11::deserialization_result**
 
-- [deserialization_result()](#constructor-deserialization-result) · *constructor*
-- [deserialization_result(code)](#constructor-deserialization-result-2) · *constructor*
-- [deserialization_result(deserialization_result)](#constructor-deserialization-result-3) · *constructor*
-- [deserialization_result(deserialization_result)](#constructor-deserialization-result-4) · *constructor*
-- [operator=(deserialization_result)](#operator-operator) · *operator*
-- [operator=(deserialization_result)](#operator-operator-2) · *operator*
 - [code](#field-code) · *field*
 - [request](#field-request) · *field*
 - [response](#field-response) · *field*
@@ -38,9 +34,9 @@ HTTP/1.1 decoding result for the selected request and response types.
 
 <a id="type-deserialization-result"></a>
 
-## deserialization_result
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> deserialization_result
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -58,119 +54,11 @@ HTTP/1.1 decoding result for the selected request and response types.
 
 **Source:** [include/protocol/http/v11/results.h:44](../../../../../include/protocol/http/v11/results.h#L44)
 
-<a id="constructor-deserialization-result"></a>
-
-## deserialization_result
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::deserialization_result*
-
-```cpp
-deserialization_result();
-```
-
-Constructs a deserialization_result value.
-
-**Source:** [include/protocol/http/v11/results.h:48](../../../../../include/protocol/http/v11/results.h#L48)
-
-<a id="constructor-deserialization-result-2"></a>
-
-## deserialization_result
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::deserialization_result*
-
-```cpp
-deserialization_result(deserialization_status code);
-```
-
-Constructs a deserialization_result value.
-
-**Parameters:**
-
-- **code:** Initial value supplied to the constructor. Declaration: `deserialization_status code`.
-
-**Source:** [include/protocol/http/v11/results.h:49](../../../../../include/protocol/http/v11/results.h#L49)
-
-<a id="constructor-deserialization-result-3"></a>
-
-## deserialization_result
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::deserialization_result*
-
-```cpp
-deserialization_result(const deserialization_result&) = default;
-```
-
-Constructs a deserialization_result value.
-
-**Parameters:**
-
-- **deserialization_result:** Source object to copy or move. Declaration: `const deserialization_result&`.
-
-**Source:** [include/protocol/http/v11/results.h:50](../../../../../include/protocol/http/v11/results.h#L50)
-
-<a id="constructor-deserialization-result-4"></a>
-
-## deserialization_result
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::deserialization_result*
-
-```cpp
-deserialization_result(deserialization_result&&) = default;
-```
-
-Constructs a deserialization_result value.
-
-**Parameters:**
-
-- **deserialization_result:** Source object to copy or move. Declaration: `deserialization_result&&`.
-
-**Source:** [include/protocol/http/v11/results.h:51](../../../../../include/protocol/http/v11/results.h#L51)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::deserialization_result*
-
-```cpp
-deserialization_result& operator=(const deserialization_result&) = default;
-```
-
-Uses the compiler-generated operator= operation.
-
-**Parameters:**
-
-- **deserialization_result:** Source object to copy or move. Declaration: `const deserialization_result&`.
-
-**Returns:** A reference to the updated object.
-
-**Source:** [include/protocol/http/v11/results.h:55](../../../../../include/protocol/http/v11/results.h#L55)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::deserialization_result*
-
-```cpp
-deserialization_result& operator=(deserialization_result&&) = default;
-```
-
-Uses the compiler-generated operator= operation.
-
-**Parameters:**
-
-- **deserialization_result:** Source object to copy or move. Declaration: `deserialization_result&&`.
-
-**Returns:** A reference to the updated object.
-
-**Source:** [include/protocol/http/v11/results.h:56](../../../../../include/protocol/http/v11/results.h#L56)
-
 <a id="field-code"></a>
 
-## code
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> code
 
-🟠 **FIELD** · *protocol::http::v11::deserialization_result*
+**FIELD** · *protocol::http::v11::deserialization_result*
 
 ```cpp
 deserialization_status code = deserialization_status::kInvalidSource;
@@ -184,9 +72,9 @@ Stores the code value.
 
 <a id="field-request"></a>
 
-## request
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> request
 
-🟠 **FIELD** · *protocol::http::v11::deserialization_result*
+**FIELD** · *protocol::http::v11::deserialization_result*
 
 ```cpp
 std::optional<RQty> request;
@@ -200,9 +88,9 @@ Stores the request value.
 
 <a id="field-response"></a>
 
-## response
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> response
 
-🟠 **FIELD** · *protocol::http::v11::deserialization_result*
+**FIELD** · *protocol::http::v11::deserialization_result*
 
 ```cpp
 std::optional<RSty> response;
@@ -216,9 +104,9 @@ Stores the response value.
 
 <a id="type-serialization-result"></a>
 
-## serialization_result
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> serialization_result
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -232,9 +120,9 @@ Borrows head and body bytes and owns an optional source. The transport copies bo
 
 <a id="field-head"></a>
 
-## head
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> head
 
-🟠 **FIELD** · *protocol::http::v11::serialization_result*
+**FIELD** · *protocol::http::v11::serialization_result*
 
 ```cpp
 std::string_view head;
@@ -248,9 +136,9 @@ Stores the head value.
 
 <a id="field-body"></a>
 
-## body
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> body
 
-🟠 **FIELD** · *protocol::http::v11::serialization_result*
+**FIELD** · *protocol::http::v11::serialization_result*
 
 ```cpp
 std::string_view body;
@@ -264,9 +152,9 @@ Stores the body value.
 
 <a id="field-source"></a>
 
-## source
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> source
 
-🟠 **FIELD** · *protocol::http::v11::serialization_result*
+**FIELD** · *protocol::http::v11::serialization_result*
 
 ```cpp
 std::unique_ptr<common::reader> source;

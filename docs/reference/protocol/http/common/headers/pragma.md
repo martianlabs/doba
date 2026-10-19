@@ -1,9 +1,11 @@
 <a id="pragma-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/headers/pragma/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/pragma/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/pragma/index.svg" alt="Index for pragma.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/pragma/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/pragma/index-dark.svg" alt="Index for pragma.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/headers/pragma.h](../../../../../../include/protocol/http/common/headers/pragma.h)
@@ -20,9 +22,9 @@
 
 <a id="type-pragma"></a>
 
-## pragma
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> pragma
 
-🟠 **TYPE** · *protocol::http::headers*
+**TYPE** · *protocol::http::headers*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ class pragma { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::headers::pragma*
+**METHOD** · *protocol::http::headers::pragma*
 
 ```cpp
 static constexpr bool check(std::string_view sv);

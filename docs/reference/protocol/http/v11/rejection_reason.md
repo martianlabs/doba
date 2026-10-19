@@ -1,9 +1,11 @@
 <a id="rejection-reason-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index.svg" alt="Index for rejection_reason.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index-dark.svg" alt="Index for rejection_reason.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/rejection_reason.h](../../../../../include/protocol/http/v11/rejection_reason.h)
@@ -16,9 +18,9 @@ This header declares the types and operations listed below.
 
 <a id="enum-rejection-reason"></a>
 
-## rejection_reason
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> rejection_reason
 
-🟠 **ENUM** · *protocol::http::v11*
+**ENUM** · *protocol::http::v11*
 
 ```cpp
 enum class rejection_reason {

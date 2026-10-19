@@ -1,9 +1,11 @@
 <a id="router-controller-routes-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index.svg" alt="Index for router_controller_routes.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index-dark.svg" alt="Index for router_controller_routes.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/router_controller_routes.h](../../../../../include/protocol/http/common/router_controller_routes.h)
@@ -20,18 +22,15 @@ Provides the router protocol component.
 
 **protocol::http::detail::router_controller_routes**
 
-- [router_controller_routes(instance)](#constructor-router-controller-routes) · *constructor*
-- [router_controller_routes(router_controller_routes)](#constructor-router-controller-routes-2) · *constructor*
-- [operator=](#operator-operator) · *operator*
 - [add](#method-add) · *method*
 - [empty](#method-empty) · *method*
 - [apply](#method-apply) · *method*
 
 <a id="type-router"></a>
 
-## router
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router
 
-🟠 **TYPE** · *protocol::http*
+**TYPE** · *protocol::http*
 
 **Declaration synopsis:**
 
@@ -51,9 +50,9 @@ Provides the router protocol component.
 
 <a id="type-router-controller-routes"></a>
 
-## router_controller_routes
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router_controller_routes
 
-🟠 **TYPE** · *protocol::http::detail*
+**TYPE** · *protocol::http::detail*
 
 **Declaration synopsis:**
 
@@ -72,71 +71,11 @@ Provides the router controller routes protocol component.
 
 **Source:** [include/protocol/http/common/router_controller_routes.h:54](../../../../../include/protocol/http/common/router_controller_routes.h#L54)
 
-<a id="constructor-router-controller-routes"></a>
-
-## router_controller_routes
-
-🟠 **CONSTRUCTOR** · *protocol::http::detail::router_controller_routes*
-
-```cpp
-explicit router_controller_routes(std::shared_ptr<CTty> instance);
-```
-
-Constructs a router_controller_routes value.
-
-**Parameters:**
-
-- **instance:** Object instance to bind to the member function. Declaration: `std::shared_ptr<CTty> instance`.
-
-**Source:** [include/protocol/http/common/router_controller_routes.h:59](../../../../../include/protocol/http/common/router_controller_routes.h#L59)
-
-<a id="constructor-router-controller-routes-2"></a>
-
-## router_controller_routes
-
-🟠 **CONSTRUCTOR** · *protocol::http::detail::router_controller_routes*
-
-```cpp
-router_controller_routes(const router_controller_routes&) = delete;
-```
-
-Disallows this form of protocol::http::detail::router_controller_routes construction.
-
-**Parameters:**
-
-- **router_controller_routes:** Source object to copy or move. Declaration: `const router_controller_routes&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/common/router_controller_routes.h:61](../../../../../include/protocol/http/common/router_controller_routes.h#L61)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::detail::router_controller_routes*
-
-```cpp
-router_controller_routes& operator=(const router_controller_routes&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **router_controller_routes:** Source object to copy or move. Declaration: `const router_controller_routes&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/common/router_controller_routes.h:65](../../../../../include/protocol/http/common/router_controller_routes.h#L65)
-
 <a id="method-add"></a>
 
-## add
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> add
 
-🟠 **METHOD** · *protocol::http::detail::router_controller_routes*
+**METHOD** · *protocol::http::detail::router_controller_routes*
 
 ```cpp
 template <typename Mty>
@@ -162,9 +101,9 @@ Adds the requested value.
 
 <a id="method-empty"></a>
 
-## empty
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> empty
 
-🟠 **METHOD** · *protocol::http::detail::router_controller_routes*
+**METHOD** · *protocol::http::detail::router_controller_routes*
 
 ```cpp
 bool empty() const;
@@ -178,9 +117,9 @@ Reports whether the empty condition holds.
 
 <a id="method-apply"></a>
 
-## apply
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> apply
 
-🟠 **METHOD** · *protocol::http::detail::router_controller_routes*
+**METHOD** · *protocol::http::detail::router_controller_routes*
 
 ```cpp
 void apply(router<RQty, RSty>& target);

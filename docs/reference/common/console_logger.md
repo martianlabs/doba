@@ -1,9 +1,11 @@
 <a id="console-logger-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/common/console_logger/index-dark.svg">
+  <a href="../../../resources/docs/reference/common/console_logger/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/common/console_logger/index.svg" alt="Index for console_logger.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/common/console_logger/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/common/console_logger/index-dark.svg" alt="Index for console_logger.h">
+  </a>
 </h1>
 
 **Header:** [include/common/console_logger.h](../../../include/common/console_logger.h)
@@ -25,9 +27,9 @@ Provides the console logger options type.
 
 <a id="enum-console-log-level"></a>
 
-## console_log_level
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> console_log_level
 
-🟠 **ENUM** · *common*
+**ENUM** · *common*
 
 ```cpp
 enum class console_log_level { kDebug, kInfo, kWarning, kError, kCritical };
@@ -47,9 +49,9 @@ Enumerates console log level values.
 
 <a id="enum-console-log-color"></a>
 
-## console_log_color
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> console_log_color
 
-🟠 **ENUM** · *common*
+**ENUM** · *common*
 
 ```cpp
 enum class console_log_color {
@@ -83,9 +85,9 @@ Enumerates console log color values.
 
 <a id="type-console-logger-options"></a>
 
-## console_logger_options
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> console_logger_options
 
-🟠 **TYPE** · *common*
+**TYPE** · *common*
 
 **Declaration synopsis:**
 
@@ -99,9 +101,9 @@ Provides the console logger options type.
 
 <a id="field-show-name"></a>
 
-## show_name
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> show_name
 
-🟠 **FIELD** · *common::console_logger_options*
+**FIELD** · *common::console_logger_options*
 
 ```cpp
 bool show_name{true};
@@ -115,9 +117,9 @@ Stores the show name value.
 
 <a id="field-show-timestamp"></a>
 
-## show_timestamp
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> show_timestamp
 
-🟠 **FIELD** · *common::console_logger_options*
+**FIELD** · *common::console_logger_options*
 
 ```cpp
 bool show_timestamp{true};
@@ -131,9 +133,9 @@ Stores the show timestamp value.
 
 <a id="field-show-function"></a>
 
-## show_function
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> show_function
 
-🟠 **FIELD** · *common::console_logger_options*
+**FIELD** · *common::console_logger_options*
 
 ```cpp
 bool show_function{true};
@@ -147,9 +149,9 @@ Stores the show function value.
 
 <a id="field-show-line"></a>
 
-## show_line
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> show_line
 
-🟠 **FIELD** · *common::console_logger_options*
+**FIELD** · *common::console_logger_options*
 
 ```cpp
 bool show_line{true};

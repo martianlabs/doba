@@ -1,9 +1,11 @@
 <a id="proxy-connection-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/headers/proxy_connection/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/proxy_connection/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/proxy_connection/index.svg" alt="Index for proxy_connection.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/proxy_connection/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/proxy_connection/index-dark.svg" alt="Index for proxy_connection.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/headers/proxy_connection.h](../../../../../../include/protocol/http/common/headers/proxy_connection.h)
@@ -20,9 +22,9 @@
 
 <a id="type-x-proxy-connection"></a>
 
-## x_proxy_connection
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> x_proxy_connection
 
-🟠 **TYPE** · *protocol::http::headers*
+**TYPE** · *protocol::http::headers*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ class x_proxy_connection { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::headers::x_proxy_connection*
+**METHOD** · *protocol::http::headers::x_proxy_connection*
 
 ```cpp
 static constexpr bool check(std::string_view sv);

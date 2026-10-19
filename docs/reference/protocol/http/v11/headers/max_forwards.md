@@ -1,9 +1,11 @@
 <a id="max-forwards-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index.svg" alt="Index for max_forwards.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index-dark.svg" alt="Index for max_forwards.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/headers/max_forwards.h](../../../../../../include/protocol/http/v11/headers/max_forwards.h)
@@ -21,9 +23,9 @@
 
 <a id="type-max-forwards"></a>
 
-## max_forwards
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_forwards
 
-🟠 **TYPE** · *protocol::http::v11::headers*
+**TYPE** · *protocol::http::v11::headers*
 
 **Declaration synopsis:**
 
@@ -37,9 +39,9 @@ class max_forwards { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::v11::headers::max_forwards*
+**METHOD** · *protocol::http::v11::headers::max_forwards*
 
 ```cpp
 static constexpr bool check(std::string_view sv, std::size_t& out);
@@ -58,9 +60,9 @@ Checks whether a value follows the HTTP max-forwards header syntax.
 
 <a id="method-interpret"></a>
 
-## interpret
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> interpret
 
-🟠 **METHOD** · *protocol::http::v11::headers::max_forwards*
+**METHOD** · *protocol::http::v11::headers::max_forwards*
 
 ```cpp
 static constexpr verdict interpret(const std::size_t&,

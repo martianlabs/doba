@@ -1,9 +1,11 @@
 <a id="tls-session-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/tls_session/index-dark.svg">
+  <a href="../../../../resources/docs/reference/transport/server/tls_session/index.svg#gh-light-mode-only">
     <img src="../../../../resources/docs/reference/transport/server/tls_session/index.svg" alt="Index for tls_session.h">
-  </picture>
+  </a>
+  <a href="../../../../resources/docs/reference/transport/server/tls_session/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/docs/reference/transport/server/tls_session/index-dark.svg" alt="Index for tls_session.h">
+  </a>
 </h1>
 
 **Header:** [include/transport/server/tls_session.h](../../../../include/transport/server/tls_session.h)
@@ -28,7 +30,6 @@ This class manages the TLS session for a single connection. It handles the hands
 
 **transport::server::tls_session**
 
-- [tls_session](#constructor-tls-session) · *constructor*
 - [handshake](#method-handshake) · *method*
 - [receive](#method-receive) · *method*
 - [read](#method-read) · *method*
@@ -43,9 +44,9 @@ This class manages the TLS session for a single connection. It handles the hands
 
 <a id="alias-tls-context"></a>
 
-## tls_context
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> tls_context
 
-🟠 **ALIAS** · *transport::server*
+**ALIAS** · *transport::server*
 
 ```cpp
 using tls_context = std::shared_ptr<SSL_CTX>;
@@ -57,9 +58,9 @@ Alias for `std::shared_ptr<SSL_CTX>`.
 
 <a id="function-make-tls-context"></a>
 
-## make_tls_context
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> make_tls_context
 
-🟠 **FUNCTION** · *transport::server*
+**FUNCTION** · *transport::server*
 
 ```cpp
 inline tls_context make_tls_context(const tls_policies& configuration);
@@ -79,9 +80,9 @@ Creates tls context.
 
 <a id="type-tls-session"></a>
 
-## tls_session
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> tls_session
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -95,9 +96,9 @@ This class manages the TLS session for a single connection. It handles the hands
 
 <a id="enum-status"></a>
 
-## status
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> status
 
-🟠 **ENUM** · *transport::server::tls_session*
+**ENUM** · *transport::server::tls_session*
 
 ```cpp
 enum class status { ready, need_input, need_output, closed, failed };
@@ -117,9 +118,9 @@ Enumerates status values.
 
 <a id="type-result"></a>
 
-## result
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> result
 
-🟠 **TYPE** · *transport::server::tls_session*
+**TYPE** · *transport::server::tls_session*
 
 **Declaration synopsis:**
 
@@ -133,9 +134,9 @@ Provides the result transport component.
 
 <a id="field-state"></a>
 
-## state
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> state
 
-🟠 **FIELD** · *transport::server::tls_session::result*
+**FIELD** · *transport::server::tls_session::result*
 
 ```cpp
 status state;
@@ -149,9 +150,9 @@ Stores the state value.
 
 <a id="field-size"></a>
 
-## size
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> size
 
-🟠 **FIELD** · *transport::server::tls_session::result*
+**FIELD** · *transport::server::tls_session::result*
 
 ```cpp
 std::size_t size;
@@ -163,35 +164,11 @@ Stores the size value.
 
 **Source:** [include/transport/server/tls_session.h:97](../../../../include/transport/server/tls_session.h#L97)
 
-<a id="constructor-tls-session"></a>
-
-## tls_session
-
-🟠 **CONSTRUCTOR** · *transport::server::tls_session*
-
-```cpp
-tls_session(tls_context context, std::size_t send_capacity,
-              std::size_t network_bio_capacity =
-                  tls_policies::kDefaultNetworkBioBufferCapacity);
-```
-
-Constructs a tls_session value.
-
-**Parameters:**
-
-- **context:** Context for this operation. Declaration: `tls_context context`.
-- **send_capacity:** Initial value supplied to the constructor. Declaration: `std::size_t send_capacity`.
-- **network_bio_capacity:** Initial value supplied to the constructor. Declaration: `std::size_t network_bio_capacity = tls_policies::kDefaultNetworkBioBufferCapacity`.
-
-**Errors:** Directly throws `std::runtime_error`. Calls made by this operation may propagate additional errors.
-
-**Source:** [include/transport/server/tls_session.h:102](../../../../include/transport/server/tls_session.h#L102)
-
 <a id="method-handshake"></a>
 
-## handshake
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> handshake
 
-🟠 **METHOD** · *transport::server::tls_session*
+**METHOD** · *transport::server::tls_session*
 
 ```cpp
 status handshake();
@@ -205,9 +182,9 @@ Runs the TLS handshake and returns the session status. If it fails, it returns `
 
 <a id="method-receive"></a>
 
-## receive
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> receive
 
-🟠 **METHOD** · *transport::server::tls_session*
+**METHOD** · *transport::server::tls_session*
 
 ```cpp
 std::size_t receive(std::span<const char> bytes);
@@ -225,9 +202,9 @@ Receives encrypted data from the network and passes it to the TLS session. Retur
 
 <a id="method-read"></a>
 
-## read
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> read
 
-🟠 **METHOD** · *transport::server::tls_session*
+**METHOD** · *transport::server::tls_session*
 
 ```cpp
 result read(std::span<char> bytes);
@@ -245,9 +222,9 @@ Reads decrypted data from the TLS session into the given buffer. It returns a `r
 
 <a id="method-write"></a>
 
-## write
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> write
 
-🟠 **METHOD** · *transport::server::tls_session*
+**METHOD** · *transport::server::tls_session*
 
 ```cpp
 result write(std::span<const char> bytes);
@@ -265,9 +242,9 @@ Writes plaintext data to the TLS session to be encrypted. It returns a `result` 
 
 <a id="method-shutdown"></a>
 
-## shutdown
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> shutdown
 
-🟠 **METHOD** · *transport::server::tls_session*
+**METHOD** · *transport::server::tls_session*
 
 ```cpp
 status shutdown();
@@ -281,9 +258,9 @@ Shuts down the TLS session cleanly. Returns `ready` when it’s done, `need_outp
 
 <a id="method-drain"></a>
 
-## drain
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> drain
 
-🟠 **METHOD** · *transport::server::tls_session*
+**METHOD** · *transport::server::tls_session*
 
 ```cpp
 std::size_t drain(std::span<char> bytes);
@@ -301,9 +278,9 @@ Shuts down the TLS session cleanly. Returns `ready` when it’s done, `need_outp
 
 <a id="method-output-bytes"></a>
 
-## output_bytes
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> output_bytes
 
-🟠 **METHOD** · *transport::server::tls_session*
+**METHOD** · *transport::server::tls_session*
 
 ```cpp
 std::span<char> output_bytes();
@@ -317,9 +294,9 @@ Returns a span of encrypted data that’s ready to send. It uses the network BIO
 
 <a id="method-output-sent"></a>
 
-## output_sent
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> output_sent
 
-🟠 **METHOD** · *transport::server::tls_session*
+**METHOD** · *transport::server::tls_session*
 
 ```cpp
 void output_sent(std::size_t size);
@@ -337,9 +314,9 @@ Tells the session how many bytes were sent. It updates the network BIO and retur
 
 <a id="method-pending"></a>
 
-## pending
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> pending
 
-🟠 **METHOD** · *transport::server::tls_session*
+**METHOD** · *transport::server::tls_session*
 
 ```cpp
 std::size_t pending() const;
@@ -353,9 +330,9 @@ Returns the number of bytes pending in the network BIO.
 
 <a id="method-established"></a>
 
-## established
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> established
 
-🟠 **METHOD** · *transport::server::tls_session*
+**METHOD** · *transport::server::tls_session*
 
 ```cpp
 bool established() const;
@@ -369,9 +346,9 @@ Returns true if the TLS session is established and ready for data.
 
 <a id="method-failed"></a>
 
-## failed
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> failed
 
-🟠 **METHOD** · *transport::server::tls_session*
+**METHOD** · *transport::server::tls_session*
 
 ```cpp
 bool failed() const;

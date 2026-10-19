@@ -1,9 +1,11 @@
 <a id="framer-raw-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index.svg" alt="Index for framer_raw.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index-dark.svg" alt="Index for framer_raw.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/body/framer_raw.h](../../../../../../include/protocol/http/v11/body/framer_raw.h)
@@ -16,14 +18,13 @@ Detects the Content-Length-framed body boundary within an already-wire- encoded 
 
 **protocol::http::v11::body::framer_raw**
 
-- [framer_raw](#constructor-framer-raw) · *constructor*
 - [consume](#method-consume) · *method*
 
 <a id="type-framer-raw"></a>
 
-## framer_raw
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> framer_raw
 
-🟠 **TYPE** · *protocol::http::v11::body*
+**TYPE** · *protocol::http::v11::body*
 
 **Declaration synopsis:**
 
@@ -35,29 +36,11 @@ Detects the Content-Length-framed body boundary within an already-wire- encoded 
 
 **Source:** [include/protocol/http/v11/body/framer_raw.h:48](../../../../../../include/protocol/http/v11/body/framer_raw.h#L48)
 
-<a id="constructor-framer-raw"></a>
-
-## framer_raw
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::body::framer_raw*
-
-```cpp
-explicit framer_raw(std::size_t content_length);
-```
-
-Constructs a framer_raw value.
-
-**Parameters:**
-
-- **content_length:** Size or length limit for the named data. Declaration: `std::size_t content_length`.
-
-**Source:** [include/protocol/http/v11/body/framer_raw.h:53](../../../../../../include/protocol/http/v11/body/framer_raw.h#L53)
-
 <a id="method-consume"></a>
 
-## consume
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume
 
-🟠 **METHOD** · *protocol::http::v11::body::framer_raw*
+**METHOD** · *protocol::http::v11::body::framer_raw*
 
 ```cpp
 framer_state consume(std::span<const std::byte> input);

@@ -1,9 +1,11 @@
 <a id="writer-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index.svg" alt="Index for writer.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index-dark.svg" alt="Index for writer.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/body/writer.h](../../../../../../include/protocol/http/v11/body/writer.h)
@@ -18,10 +20,6 @@ Owns the wire-level common::writer sink together with the body encoder (writer_c
 
 - [chunked](#method-chunked) · *method*
 - [raw](#method-raw) · *method*
-- [body_writer(body_writer)](#constructor-body-writer) · *constructor*
-- [body_writer(body_writer)](#constructor-body-writer-2) · *constructor*
-- [operator=(body_writer)](#operator-operator) · *operator*
-- [operator=(body_writer)](#operator-operator-2) · *operator*
 - [write(payload)](#method-write) · *method*
 - [write(payload)](#method-write-2) · *method*
 - [end](#method-end) · *method*
@@ -31,9 +29,9 @@ Owns the wire-level common::writer sink together with the body encoder (writer_c
 
 <a id="type-body-writer"></a>
 
-## body_writer
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> body_writer
 
-🟠 **TYPE** · *protocol::http::v11::body*
+**TYPE** · *protocol::http::v11::body*
 
 **Declaration synopsis:**
 
@@ -47,9 +45,9 @@ Owns the wire-level common::writer sink together with the body encoder (writer_c
 
 <a id="method-chunked"></a>
 
-## chunked
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> chunked
 
-🟠 **METHOD** · *protocol::http::v11::body::body_writer*
+**METHOD** · *protocol::http::v11::body::body_writer*
 
 ```cpp
 static body_writer chunked(common::byte_storage_options opts = {});
@@ -67,9 +65,9 @@ Creates a reader or writer for chunked transfer encoding.
 
 <a id="method-raw"></a>
 
-## raw
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> raw
 
-🟠 **METHOD** · *protocol::http::v11::body::body_writer*
+**METHOD** · *protocol::http::v11::body::body_writer*
 
 ```cpp
 static body_writer raw(common::byte_storage_options opts = {});
@@ -85,95 +83,11 @@ Creates a reader or writer for an unchunked body.
 
 **Source:** [include/protocol/http/v11/body/writer.h:60](../../../../../../include/protocol/http/v11/body/writer.h#L60)
 
-<a id="constructor-body-writer"></a>
-
-## body_writer
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::body::body_writer*
-
-```cpp
-body_writer(const body_writer&) = delete;
-```
-
-Disallows this form of protocol::http::v11::body::body_writer construction.
-
-**Parameters:**
-
-- **body_writer:** Source object to copy or move. Declaration: `const body_writer&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/body/writer.h:63](../../../../../../include/protocol/http/v11/body/writer.h#L63)
-
-<a id="constructor-body-writer-2"></a>
-
-## body_writer
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::body::body_writer*
-
-```cpp
-body_writer(body_writer&&) noexcept = default;
-```
-
-Constructs a body_writer value.
-
-**Parameters:**
-
-- **body_writer:** Source object to copy or move. Declaration: `body_writer&&`.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/protocol/http/v11/body/writer.h:64](../../../../../../include/protocol/http/v11/body/writer.h#L64)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::body::body_writer*
-
-```cpp
-body_writer& operator=(const body_writer&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **body_writer:** Source object to copy or move. Declaration: `const body_writer&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/body/writer.h:68](../../../../../../include/protocol/http/v11/body/writer.h#L68)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::body::body_writer*
-
-```cpp
-body_writer& operator=(body_writer&&) noexcept = default;
-```
-
-Uses the compiler-generated operator= operation.
-
-**Parameters:**
-
-- **body_writer:** Source object to copy or move. Declaration: `body_writer&&`.
-
-**Returns:** A reference to the updated object.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/protocol/http/v11/body/writer.h:69](../../../../../../include/protocol/http/v11/body/writer.h#L69)
-
 <a id="method-write"></a>
 
-## write
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> write
 
-🟠 **METHOD** · *protocol::http::v11::body::body_writer*
+**METHOD** · *protocol::http::v11::body::body_writer*
 
 ```cpp
 bool write(std::span<const std::byte> payload);
@@ -191,9 +105,9 @@ Encodes the caller-supplied raw payload using the framing selected at constructi
 
 <a id="method-write-2"></a>
 
-## write
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> write
 
-🟠 **METHOD** · *protocol::http::v11::body::body_writer*
+**METHOD** · *protocol::http::v11::body::body_writer*
 
 ```cpp
 bool write(std::string_view payload);
@@ -211,9 +125,9 @@ Writes data.
 
 <a id="method-end"></a>
 
-## end
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> end
 
-🟠 **METHOD** · *protocol::http::v11::body::body_writer*
+**METHOD** · *protocol::http::v11::body::body_writer*
 
 ```cpp
 bool end();
@@ -227,9 +141,9 @@ Finalizes the body framing (emits the terminating chunk for chunked encoding; a 
 
 <a id="method-release"></a>
 
-## release
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> release
 
-🟠 **METHOD** · *protocol::http::v11::body::body_writer*
+**METHOD** · *protocol::http::v11::body::body_writer*
 
 ```cpp
 [[nodiscard]] common::byte_storage release();
@@ -243,9 +157,9 @@ Finalizes the framing and the underlying storage, then hands over the accumulate
 
 <a id="method-is-chunked"></a>
 
-## is_chunked
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_chunked
 
-🟠 **METHOD** · *protocol::http::v11::body::body_writer*
+**METHOD** · *protocol::http::v11::body::body_writer*
 
 ```cpp
 [[nodiscard]] bool is_chunked() const noexcept;
@@ -261,9 +175,9 @@ Reports whether this instance was constructed via chunked() (as opposed to raw()
 
 <a id="method-bytes-written"></a>
 
-## bytes_written
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> bytes_written
 
-🟠 **METHOD** · *protocol::http::v11::body::body_writer*
+**METHOD** · *protocol::http::v11::body::body_writer*
 
 ```cpp
 [[nodiscard]] std::size_t bytes_written() const noexcept;

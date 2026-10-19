@@ -1,9 +1,11 @@
 <a id="contracts-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/protocol/contracts/index-dark.svg">
+  <a href="../../../resources/docs/reference/protocol/contracts/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/protocol/contracts/index.svg" alt="Index for contracts.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/protocol/contracts/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/protocol/contracts/index-dark.svg" alt="Index for contracts.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/contracts.h](../../../include/protocol/contracts.h)
@@ -22,9 +24,9 @@ This header declares the types and operations listed below.
 
 <a id="alias-send-delegate"></a>
 
-## send_delegate
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> send_delegate
 
-🟠 **ALIAS** · *protocol*
+**ALIAS** · *protocol*
 
 ```cpp
 using send_delegate = std::function<void(std::string_view, std::string_view,
@@ -37,9 +39,9 @@ A function that takes the head and body data, plus an optional source.
 
 <a id="concept-engine"></a>
 
-## engine
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> engine
 
-🟠 **CONCEPT** · *protocol::contracts*
+**CONCEPT** · *protocol::contracts*
 
 ```cpp
 template <typename ENty>
@@ -63,9 +65,9 @@ Protocol engine contract. Input callbacks are serialized per connection and stop
 
 <a id="concept-completion-engine"></a>
 
-## completion_engine
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> completion_engine
 
-🟠 **CONCEPT** · *protocol::contracts*
+**CONCEPT** · *protocol::contracts*
 
 ```cpp
 template <typename ENty>
@@ -85,9 +87,9 @@ A stopped engine reports when all work accepted by it has completed. A false res
 
 <a id="concept-engine-factory"></a>
 
-## engine_factory
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> engine_factory
 
-🟠 **CONCEPT** · *protocol::contracts*
+**CONCEPT** · *protocol::contracts*
 
 ```cpp
 template <typename FNty, typename ENty>

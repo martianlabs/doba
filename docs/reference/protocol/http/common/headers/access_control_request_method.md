@@ -1,9 +1,11 @@
 <a id="access-control-request-method-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index.svg" alt="Index for access_control_request_method.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index-dark.svg" alt="Index for access_control_request_method.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/headers/access_control_request_method.h](../../../../../../include/protocol/http/common/headers/access_control_request_method.h)
@@ -20,9 +22,9 @@
 
 <a id="type-access-control-request-method"></a>
 
-## access_control_request_method
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> access_control_request_method
 
-🟠 **TYPE** · *protocol::http::headers*
+**TYPE** · *protocol::http::headers*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ class access_control_request_method { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::headers::access_control_request_method*
+**METHOD** · *protocol::http::headers::access_control_request_method*
 
 ```cpp
 static constexpr bool check(std::string_view sv);

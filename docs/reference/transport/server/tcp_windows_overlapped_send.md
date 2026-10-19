@@ -1,9 +1,11 @@
 <a id="tcp-windows-overlapped-send-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index-dark.svg">
+  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index.svg#gh-light-mode-only">
     <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index.svg" alt="Index for tcp_windows_overlapped_send.h">
-  </picture>
+  </a>
+  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index-dark.svg" alt="Index for tcp_windows_overlapped_send.h">
+  </a>
 </h1>
 
 **Header:** [include/transport/server/tcp_windows_overlapped_send.h](../../../../include/transport/server/tcp_windows_overlapped_send.h)
@@ -17,7 +19,6 @@ Provides the context transport component.
 
 **transport::server::overlapped_send**
 
-- [overlapped_send](#constructor-overlapped-send) · *constructor*
 - [ctx](#field-ctx) · *field*
 - [buffers](#field-buffers) · *field*
 - [buffer_count](#field-buffer-count) · *field*
@@ -25,9 +26,9 @@ Provides the context transport component.
 
 <a id="type-context"></a>
 
-## context
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> context
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -47,9 +48,9 @@ Provides the context transport component.
 
 <a id="type-overlapped-send"></a>
 
-## overlapped_send
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> overlapped_send
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -67,31 +68,11 @@ Windows overlapped send operation.
 
 **Source:** [include/transport/server/tcp_windows_overlapped_send.h:52](../../../../include/transport/server/tcp_windows_overlapped_send.h#L52)
 
-<a id="constructor-overlapped-send"></a>
-
-## overlapped_send
-
-🟠 **CONSTRUCTOR** · *transport::server::overlapped_send*
-
-```cpp
-overlapped_send(std::shared_ptr<context<ENty, CNty>> context,
-                  io_type type = io_type::kSend);
-```
-
-Constructs a overlapped_send value.
-
-**Parameters:**
-
-- **context:** Context for this operation. Declaration: `std::shared_ptr<context<ENty, CNty>> context`.
-- **type:** Type or classification to store or inspect. Declaration: `io_type type = io_type::kSend`.
-
-**Source:** [include/transport/server/tcp_windows_overlapped_send.h:56](../../../../include/transport/server/tcp_windows_overlapped_send.h#L56)
-
 <a id="field-ctx"></a>
 
-## ctx
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ctx
 
-🟠 **FIELD** · *transport::server::overlapped_send*
+**FIELD** · *transport::server::overlapped_send*
 
 ```cpp
 std::shared_ptr<context<ENty, CNty>> ctx;
@@ -105,9 +86,9 @@ Stores the ctx value.
 
 <a id="field-buffers"></a>
 
-## buffers
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> buffers
 
-🟠 **FIELD** · *transport::server::overlapped_send*
+**FIELD** · *transport::server::overlapped_send*
 
 ```cpp
 std::array<WSABUF, 1> buffers{};
@@ -121,9 +102,9 @@ Stores the buffers value.
 
 <a id="field-buffer-count"></a>
 
-## buffer_count
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> buffer_count
 
-🟠 **FIELD** · *transport::server::overlapped_send*
+**FIELD** · *transport::server::overlapped_send*
 
 ```cpp
 DWORD buffer_count{0};
@@ -137,9 +118,9 @@ Stores the buffer count value.
 
 <a id="field-submitted-size"></a>
 
-## submitted_size
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> submitted_size
 
-🟠 **FIELD** · *transport::server::overlapped_send*
+**FIELD** · *transport::server::overlapped_send*
 
 ```cpp
 std::size_t submitted_size{0};

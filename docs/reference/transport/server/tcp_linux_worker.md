@@ -1,9 +1,11 @@
 <a id="tcp-linux-worker-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index-dark.svg">
+  <a href="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index.svg#gh-light-mode-only">
     <img src="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index.svg" alt="Index for tcp_linux_worker.h">
-  </picture>
+  </a>
+  <a href="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index-dark.svg" alt="Index for tcp_linux_worker.h">
+  </a>
 </h1>
 
 **Header:** [include/transport/server/tcp_linux_worker.h](../../../../include/transport/server/tcp_linux_worker.h)
@@ -19,12 +21,6 @@ This struct represents a worker thread that handles TCP connections for an engin
 
 **transport::server::worker**
 
-- [worker(configuration, create_engine, on_connection, on_disconnection, …)](#constructor-worker) · *constructor*
-- [worker(worker)](#constructor-worker-2) · *constructor*
-- [worker(worker)](#constructor-worker-3) · *constructor*
-- [~worker](#destructor-destructor-worker) · *destructor*
-- [operator=(worker)](#operator-operator) · *operator*
-- [operator=(worker)](#operator-operator-2) · *operator*
 - [setup](#method-setup) · *method*
 - [start](#method-start) · *method*
 - [is_current_thread()](#method-is-current-thread) · *method*
@@ -36,9 +32,9 @@ This struct represents a worker thread that handles TCP connections for an engin
 
 <a id="constant-kstopeventid"></a>
 
-## kStopEventId
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kStopEventId
 
-🟠 **CONSTANT** · *transport::server*
+**CONSTANT** · *transport::server*
 
 ```cpp
 static constexpr uint64_t kStopEventId = 0;
@@ -52,9 +48,9 @@ Defines the stop event id constant.
 
 <a id="constant-kworkeventid"></a>
 
-## kWorkEventId
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kWorkEventId
 
-🟠 **CONSTANT** · *transport::server*
+**CONSTANT** · *transport::server*
 
 ```cpp
 static constexpr uint64_t kWorkEventId = 1;
@@ -68,9 +64,9 @@ Defines the work event id constant.
 
 <a id="constant-klstnreventid"></a>
 
-## kLstnrEventId
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kLstnrEventId
 
-🟠 **CONSTANT** · *transport::server*
+**CONSTANT** · *transport::server*
 
 ```cpp
 static constexpr uint64_t kLstnrEventId = std::numeric_limits<uint64_t>::max();
@@ -84,9 +80,9 @@ Defines the lstnr event id constant.
 
 <a id="type-worker"></a>
 
-## worker
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> worker
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -108,134 +104,11 @@ This struct represents a worker thread that handles TCP connections for an engin
 
 **Source:** [include/transport/server/tcp_linux_worker.h:80](../../../../include/transport/server/tcp_linux_worker.h#L80)
 
-<a id="constructor-worker"></a>
-
-## worker
-
-🟠 **CONSTRUCTOR** · *transport::server::worker*
-
-```cpp
-worker(POty configuration, const FAty& create_engine,
-         types::on_client_connected_delegate on_connection,
-         types::on_client_disconnected_delegate on_disconnection,
-         typename CNty::shared_state shared_state);
-```
-
-Constructs a worker value.
-
-**Parameters:**
-
-- **configuration:** Configuration for this component. Declaration: `POty configuration`.
-- **create_engine:** Initial value supplied to the constructor. Declaration: `const FAty& create_engine`.
-- **on_connection:** Callback for the named event. Declaration: `types::on_client_connected_delegate on_connection`.
-- **on_disconnection:** Callback for the named event. Declaration: `types::on_client_disconnected_delegate on_disconnection`.
-- **shared_state:** Initial value supplied to the constructor. Declaration: `typename CNty::shared_state shared_state`.
-
-**Source:** [include/transport/server/tcp_linux_worker.h:85](../../../../include/transport/server/tcp_linux_worker.h#L85)
-
-<a id="constructor-worker-2"></a>
-
-## worker
-
-🟠 **CONSTRUCTOR** · *transport::server::worker*
-
-```cpp
-worker(const worker&) = delete;
-```
-
-Disallows this form of transport::server::worker construction.
-
-**Parameters:**
-
-- **worker:** Source object to copy or move. Declaration: `const worker&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/transport/server/tcp_linux_worker.h:94](../../../../include/transport/server/tcp_linux_worker.h#L94)
-
-<a id="constructor-worker-3"></a>
-
-## worker
-
-🟠 **CONSTRUCTOR** · *transport::server::worker*
-
-```cpp
-worker(worker&&) noexcept = delete;
-```
-
-Disallows this form of transport::server::worker construction.
-
-**Parameters:**
-
-- **worker:** Source object to copy or move. Declaration: `worker&&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/transport/server/tcp_linux_worker.h:95](../../../../include/transport/server/tcp_linux_worker.h#L95)
-
-<a id="destructor-destructor-worker"></a>
-
-## ~worker
-
-🟠 **DESTRUCTOR** · *transport::server::worker*
-
-```cpp
-~worker();
-```
-
-Destroys the worker object.
-
-**Source:** [include/transport/server/tcp_linux_worker.h:96](../../../../include/transport/server/tcp_linux_worker.h#L96)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *transport::server::worker*
-
-```cpp
-worker& operator=(const worker&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **worker:** Source object to copy or move. Declaration: `const worker&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/transport/server/tcp_linux_worker.h:100](../../../../include/transport/server/tcp_linux_worker.h#L100)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *transport::server::worker*
-
-```cpp
-worker& operator=(worker&&) noexcept = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **worker:** Source object to copy or move. Declaration: `worker&&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/transport/server/tcp_linux_worker.h:101](../../../../include/transport/server/tcp_linux_worker.h#L101)
-
 <a id="method-setup"></a>
 
-## setup
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> setup
 
-🟠 **METHOD** · *transport::server::worker*
+**METHOD** · *transport::server::worker*
 
 ```cpp
 void setup(in_addr ip, uint16_t port);
@@ -256,9 +129,9 @@ Sets up the worker by creating the `epoll` instance, event file descriptors, and
 
 <a id="method-start"></a>
 
-## start
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> start
 
-🟠 **METHOD** · *transport::server::worker*
+**METHOD** · *transport::server::worker*
 
 ```cpp
 void start();
@@ -272,9 +145,9 @@ Starts the worker lifecycle.
 
 <a id="method-is-current-thread"></a>
 
-## is_current_thread
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_current_thread
 
-🟠 **METHOD** · *transport::server::worker*
+**METHOD** · *transport::server::worker*
 
 ```cpp
 bool is_current_thread() const;
@@ -288,9 +161,9 @@ Reports whether current thread applies.
 
 <a id="method-is-current-thread-2"></a>
 
-## is_current_thread
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_current_thread
 
-🟠 **METHOD** · *transport::server::worker*
+**METHOD** · *transport::server::worker*
 
 ```cpp
 static bool is_current_thread(const FAty& cr_engine);
@@ -308,9 +181,9 @@ Reports whether current thread applies.
 
 <a id="method-stop"></a>
 
-## stop
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> stop
 
-🟠 **METHOD** · *transport::server::worker*
+**METHOD** · *transport::server::worker*
 
 ```cpp
 void stop();
@@ -326,9 +199,9 @@ Stops the worker lifecycle.
 
 <a id="method-request-stop"></a>
 
-## request_stop
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> request_stop
 
-🟠 **METHOD** · *transport::server::worker*
+**METHOD** · *transport::server::worker*
 
 ```cpp
 void request_stop();
@@ -342,9 +215,9 @@ Asks the worker to stop by setting the `stopping_` flag and writing to the stop 
 
 <a id="method-request-quiesce"></a>
 
-## request_quiesce
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> request_quiesce
 
-🟠 **METHOD** · *transport::server::worker*
+**METHOD** · *transport::server::worker*
 
 ```cpp
 void request_quiesce();
@@ -358,9 +231,9 @@ Requests quiescence and signals the worker's stop event descriptor. Call while t
 
 <a id="method-wait-quiesced"></a>
 
-## wait_quiesced
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> wait_quiesced
 
-🟠 **METHOD** · *transport::server::worker*
+**METHOD** · *transport::server::worker*
 
 ```cpp
 void wait_quiesced() const;

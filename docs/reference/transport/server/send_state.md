@@ -1,9 +1,11 @@
 <a id="send-state-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/send_state/index-dark.svg">
+  <a href="../../../../resources/docs/reference/transport/server/send_state/index.svg#gh-light-mode-only">
     <img src="../../../../resources/docs/reference/transport/server/send_state/index.svg" alt="Index for send_state.h">
-  </picture>
+  </a>
+  <a href="../../../../resources/docs/reference/transport/server/send_state/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/docs/reference/transport/server/send_state/index-dark.svg" alt="Index for send_state.h">
+  </a>
 </h1>
 
 **Header:** [include/transport/server/send_state.h](../../../../include/transport/server/send_state.h)
@@ -25,7 +27,6 @@ This struct manages the state of outgoing data for a TCP connection. It maintain
 
 **transport::server::send_state**
 
-- [send_state](#constructor-send-state) · *constructor*
 - [push](#method-push) · *method*
 - [fill](#method-fill) · *method*
 - [consume](#method-consume) · *method*
@@ -36,9 +37,9 @@ This struct manages the state of outgoing data for a TCP connection. It maintain
 
 <a id="type-send-state"></a>
 
-## send_state
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> send_state
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -52,9 +53,9 @@ This struct manages the state of outgoing data for a TCP connection. It maintain
 
 <a id="type-source-entry"></a>
 
-## source_entry
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> source_entry
 
-🟠 **TYPE** · *transport::server::send_state*
+**TYPE** · *transport::server::send_state*
 
 **Declaration synopsis:**
 
@@ -68,9 +69,9 @@ Provides the source entry transport component.
 
 <a id="field-prefix"></a>
 
-## prefix
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> prefix
 
-🟠 **FIELD** · *transport::server::send_state::source_entry*
+**FIELD** · *transport::server::send_state::source_entry*
 
 ```cpp
 std::string prefix;
@@ -84,9 +85,9 @@ Prefix data to be sent before reading from the source (memory based)
 
 <a id="field-source"></a>
 
-## source
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> source
 
-🟠 **FIELD** · *transport::server::send_state::source_entry*
+**FIELD** · *transport::server::send_state::source_entry*
 
 ```cpp
 std::unique_ptr<common::reader> source;
@@ -98,29 +99,11 @@ Source reader for additional data (stream based)
 
 **Source:** [include/transport/server/send_state.h:61](../../../../include/transport/server/send_state.h#L61)
 
-<a id="constructor-send-state"></a>
-
-## send_state
-
-🟠 **CONSTRUCTOR** · *transport::server::send_state*
-
-```cpp
-explicit send_state(std::size_t capacity);
-```
-
-Constructs a send_state value.
-
-**Parameters:**
-
-- **capacity:** Available capacity in the destination. Declaration: `std::size_t capacity`.
-
-**Source:** [include/transport/server/send_state.h:66](../../../../include/transport/server/send_state.h#L66)
-
 <a id="method-push"></a>
 
-## push
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> push
 
-🟠 **METHOD** · *transport::server::send_state*
+**METHOD** · *transport::server::send_state*
 
 ```cpp
 bool push(std::string_view head, std::string_view body,
@@ -141,9 +124,9 @@ Tries to add a new data entry to the send state. It checks whether there is enou
 
 <a id="method-fill"></a>
 
-## fill
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> fill
 
-🟠 **METHOD** · *transport::server::send_state*
+**METHOD** · *transport::server::send_state*
 
 ```cpp
 bool fill();
@@ -157,9 +140,9 @@ Fills the buffer with data from the pending buffer or the sources queue. First, 
 
 <a id="method-consume"></a>
 
-## consume
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume
 
-🟠 **METHOD** · *transport::server::send_state*
+**METHOD** · *transport::server::send_state*
 
 ```cpp
 bool consume(std::size_t sent);
@@ -177,9 +160,9 @@ Removes the requested number of bytes from the buffer. If that’s more than the
 
 <a id="method-queued"></a>
 
-## queued
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> queued
 
-🟠 **METHOD** · *transport::server::send_state*
+**METHOD** · *transport::server::send_state*
 
 ```cpp
 bool queued() const;
@@ -193,9 +176,9 @@ Checks whether there’s any data waiting to be sent. Returns true if the pendin
 
 <a id="method-clear"></a>
 
-## clear
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> clear
 
-🟠 **METHOD** · *transport::server::send_state*
+**METHOD** · *transport::server::send_state*
 
 ```cpp
 void clear();
@@ -209,9 +192,9 @@ Clears the send state by removing all pending data and resetting the buffer, off
 
 <a id="field-buffer"></a>
 
-## buffer
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> buffer
 
-🟠 **FIELD** · *transport::server::send_state*
+**FIELD** · *transport::server::send_state*
 
 ```cpp
 std::string buffer;
@@ -225,9 +208,9 @@ Stores the buffer value.
 
 <a id="field-offset"></a>
 
-## offset
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> offset
 
-🟠 **FIELD** · *transport::server::send_state*
+**FIELD** · *transport::server::send_state*
 
 ```cpp
 std::size_t offset{0};

@@ -1,9 +1,11 @@
 <a id="header-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/common/header/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/common/header/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/common/header/index.svg" alt="Index for header.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/common/header/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/common/header/index-dark.svg" alt="Index for header.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/header.h](../../../../../include/protocol/http/common/header.h)
@@ -17,9 +19,9 @@ This header declares the types and operations listed below.
 
 <a id="alias-header"></a>
 
-## header
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> header
 
-🟠 **ALIAS** · *protocol::http*
+**ALIAS** · *protocol::http*
 
 ```cpp
 using header = std::pair<std::string, std::string>;
@@ -31,9 +33,9 @@ A header is a key-value pair of strings. The key is the header name
 
 <a id="alias-header-view"></a>
 
-## header_view
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> header_view
 
-🟠 **ALIAS** · *protocol::http*
+**ALIAS** · *protocol::http*
 
 ```cpp
 using header_view = std::pair<std::string_view, std::string_view>;

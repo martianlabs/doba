@@ -1,9 +1,11 @@
 <a id="hash-map-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/common/hash_map/index-dark.svg">
+  <a href="../../../resources/docs/reference/common/hash_map/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/common/hash_map/index.svg" alt="Index for hash_map.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/common/hash_map/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/common/hash_map/index-dark.svg" alt="Index for hash_map.h">
+  </a>
 </h1>
 
 **Header:** [include/common/hash_map.h](../../../include/common/hash_map.h)
@@ -16,9 +18,9 @@ This header declares the types and operations listed below.
 
 <a id="alias-hash-map"></a>
 
-## hash_map
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> hash_map
 
-🟠 **ALIAS** · *common*
+**ALIAS** · *common*
 
 ```cpp
 template <typename KEty, typename VAty>

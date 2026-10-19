@@ -1,9 +1,11 @@
 <a id="if-unmodified-since-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index.svg" alt="Index for if_unmodified_since.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index-dark.svg" alt="Index for if_unmodified_since.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/headers/if_unmodified_since.h](../../../../../../include/protocol/http/common/headers/if_unmodified_since.h)
@@ -20,9 +22,9 @@
 
 <a id="type-if-unmodified-since"></a>
 
-## if_unmodified_since
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> if_unmodified_since
 
-🟠 **TYPE** · *protocol::http::headers*
+**TYPE** · *protocol::http::headers*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ class if_unmodified_since { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::headers::if_unmodified_since*
+**METHOD** · *protocol::http::headers::if_unmodified_since*
 
 ```cpp
 static constexpr bool check(std::string_view sv);

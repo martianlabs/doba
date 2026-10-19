@@ -1,9 +1,11 @@
 <a id="reader-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index.svg" alt="Index for reader.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index-dark.svg" alt="Index for reader.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/body/reader.h](../../../../../../include/protocol/http/v11/body/reader.h)
@@ -16,10 +18,6 @@ Holds a borrowed buffer or an owned file with the body decoder. (reader_chunked 
 
 **protocol::http::v11::body::reader**
 
-- [reader(reader)](#constructor-reader) · *constructor*
-- [reader(reader)](#constructor-reader-2) · *constructor*
-- [operator=(reader)](#operator-operator) · *operator*
-- [operator=(reader)](#operator-operator-2) · *operator*
 - [chunked(source, extension_limit, trailer_limit)](#method-chunked) · *method*
 - [chunked(source, extension_limit, trailer_limit)](#method-chunked-2) · *method*
 - [raw(source, content_length)](#method-raw) · *method*
@@ -32,9 +30,9 @@ Holds a borrowed buffer or an owned file with the body decoder. (reader_chunked 
 
 <a id="type-reader"></a>
 
-## reader
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> reader
 
-🟠 **TYPE** · *protocol::http::v11::body*
+**TYPE** · *protocol::http::v11::body*
 
 **Declaration synopsis:**
 
@@ -46,95 +44,11 @@ Holds a borrowed buffer or an owned file with the body decoder. (reader_chunked 
 
 **Source:** [include/protocol/http/v11/body/reader.h:52](../../../../../../include/protocol/http/v11/body/reader.h#L52)
 
-<a id="constructor-reader"></a>
-
-## reader
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::body::reader*
-
-```cpp
-reader(const reader&) = delete;
-```
-
-Disallows this form of protocol::http::v11::body::reader construction.
-
-**Parameters:**
-
-- **reader:** Reader to use or move into this object. Declaration: `const reader&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/body/reader.h:57](../../../../../../include/protocol/http/v11/body/reader.h#L57)
-
-<a id="constructor-reader-2"></a>
-
-## reader
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::body::reader*
-
-```cpp
-reader(reader&&) noexcept = default;
-```
-
-Constructs a reader value.
-
-**Parameters:**
-
-- **reader:** Reader to use or move into this object. Declaration: `reader&&`.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/protocol/http/v11/body/reader.h:58](../../../../../../include/protocol/http/v11/body/reader.h#L58)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::body::reader*
-
-```cpp
-reader& operator=(const reader&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **reader:** Reader to use or move into this object. Declaration: `const reader&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/body/reader.h:62](../../../../../../include/protocol/http/v11/body/reader.h#L62)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::body::reader*
-
-```cpp
-reader& operator=(reader&&) noexcept = default;
-```
-
-Uses the compiler-generated operator= operation.
-
-**Parameters:**
-
-- **reader:** Reader to use or move into this object. Declaration: `reader&&`.
-
-**Returns:** A reference to the updated object.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/protocol/http/v11/body/reader.h:63](../../../../../../include/protocol/http/v11/body/reader.h#L63)
-
 <a id="method-chunked"></a>
 
-## chunked
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> chunked
 
-🟠 **METHOD** · *protocol::http::v11::body::reader*
+**METHOD** · *protocol::http::v11::body::reader*
 
 ```cpp
 static reader chunked(
@@ -161,9 +75,9 @@ Creates a reader for a chunked Transfer-Encoding from a borrowed span source. Th
 
 <a id="method-chunked-2"></a>
 
-## chunked
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> chunked
 
-🟠 **METHOD** · *protocol::http::v11::body::reader*
+**METHOD** · *protocol::http::v11::body::reader*
 
 ```cpp
 static reader chunked(
@@ -190,9 +104,9 @@ Creates a reader for a chunked Transfer-Encoding from a file source. The extensi
 
 <a id="method-raw"></a>
 
-## raw
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> raw
 
-🟠 **METHOD** · *protocol::http::v11::body::reader*
+**METHOD** · *protocol::http::v11::body::reader*
 
 ```cpp
 static reader raw(std::span<const std::byte> source,
@@ -214,9 +128,9 @@ Creates a reader for a raw Transfer-Encoding from a borrowed span source. The co
 
 <a id="method-raw-2"></a>
 
-## raw
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> raw
 
-🟠 **METHOD** · *protocol::http::v11::body::reader*
+**METHOD** · *protocol::http::v11::body::reader*
 
 ```cpp
 static reader raw(common::filesystem_file&& source,
@@ -238,9 +152,9 @@ Creates a reader for a raw Transfer-Encoding from a file source. The content_len
 
 <a id="method-read"></a>
 
-## read
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> read
 
-🟠 **METHOD** · *protocol::http::v11::body::reader*
+**METHOD** · *protocol::http::v11::body::reader*
 
 ```cpp
 reader_state read(std::span<std::byte> output);
@@ -258,9 +172,9 @@ Pulls wire bytes from the owned source, decodes them using the encoding selected
 
 <a id="method-take-borrowed-raw"></a>
 
-## take_borrowed_raw
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> take_borrowed_raw
 
-🟠 **METHOD** · *protocol::http::v11::body::reader*
+**METHOD** · *protocol::http::v11::body::reader*
 
 ```cpp
 std::optional<std::span<const std::byte>> take_borrowed_raw(
@@ -279,9 +193,9 @@ Creates a raw reader over borrowed bytes.
 
 <a id="method-raw-3"></a>
 
-## raw
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> raw
 
-🟠 **METHOD** · *protocol::http::v11::body::reader*
+**METHOD** · *protocol::http::v11::body::reader*
 
 ```cpp
 static reader raw(common::byte_storage source, std::size_t length);
@@ -300,9 +214,9 @@ Takes ownership of wire bytes, including any temporary backing file.
 
 <a id="method-chunked-3"></a>
 
-## chunked
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> chunked
 
-🟠 **METHOD** · *protocol::http::v11::body::reader*
+**METHOD** · *protocol::http::v11::body::reader*
 
 ```cpp
 static reader chunked(common::byte_storage source,
@@ -324,9 +238,9 @@ Creates a reader or writer for chunked transfer encoding.
 
 <a id="method-rebind-borrowed"></a>
 
-## rebind_borrowed
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> rebind_borrowed
 
-🟠 **METHOD** · *protocol::http::v11::body::reader*
+**METHOD** · *protocol::http::v11::body::reader*
 
 ```cpp
 void rebind_borrowed(std::span<const std::byte> source) noexcept;

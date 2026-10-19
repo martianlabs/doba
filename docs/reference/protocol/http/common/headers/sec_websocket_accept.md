@@ -1,9 +1,11 @@
 <a id="sec-websocket-accept-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_accept/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_accept/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_accept/index.svg" alt="Index for sec_websocket_accept.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_accept/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_accept/index-dark.svg" alt="Index for sec_websocket_accept.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/headers/sec_websocket_accept.h](../../../../../../include/protocol/http/common/headers/sec_websocket_accept.h)
@@ -20,9 +22,9 @@
 
 <a id="type-sec-websocket-accept"></a>
 
-## sec_websocket_accept
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> sec_websocket_accept
 
-🟠 **TYPE** · *protocol::http::headers*
+**TYPE** · *protocol::http::headers*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ class sec_websocket_accept { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::headers::sec_websocket_accept*
+**METHOD** · *protocol::http::headers::sec_websocket_accept*
 
 ```cpp
 static constexpr bool check(std::string_view sv);

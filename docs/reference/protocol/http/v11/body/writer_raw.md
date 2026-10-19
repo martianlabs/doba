@@ -1,9 +1,11 @@
 <a id="writer-raw-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index.svg" alt="Index for writer_raw.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index-dark.svg" alt="Index for writer_raw.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/body/writer_raw.h](../../../../../../include/protocol/http/v11/body/writer_raw.h)
@@ -22,9 +24,9 @@ Encodes an outgoing Content-Length-framed body: the raw framing is a pure passth
 
 <a id="type-writer-raw"></a>
 
-## writer_raw
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> writer_raw
 
-🟠 **TYPE** · *protocol::http::v11::body*
+**TYPE** · *protocol::http::v11::body*
 
 **Declaration synopsis:**
 
@@ -38,9 +40,9 @@ Encodes an outgoing Content-Length-framed body: the raw framing is a pure passth
 
 <a id="method-write"></a>
 
-## write
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> write
 
-🟠 **METHOD** · *protocol::http::v11::body::writer_raw*
+**METHOD** · *protocol::http::v11::body::writer_raw*
 
 ```cpp
 static bool write(std::span<const std::byte> payload, common::writer& dst);
@@ -59,9 +61,9 @@ Writes the given raw payload bytes into dst, unchanged.
 
 <a id="method-write-2"></a>
 
-## write
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> write
 
-🟠 **METHOD** · *protocol::http::v11::body::writer_raw*
+**METHOD** · *protocol::http::v11::body::writer_raw*
 
 ```cpp
 static bool write(std::string_view payload, common::writer& dst);
@@ -80,9 +82,9 @@ Writes data.
 
 <a id="method-end"></a>
 
-## end
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> end
 
-🟠 **METHOD** · *protocol::http::v11::body::writer_raw*
+**METHOD** · *protocol::http::v11::body::writer_raw*
 
 ```cpp
 static bool end(common::writer&);

@@ -1,9 +1,11 @@
 <a id="host-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index.svg" alt="Index for host.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index-dark.svg" alt="Index for host.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/headers/host.h](../../../../../../include/protocol/http/v11/headers/host.h)
@@ -21,9 +23,9 @@ The "Host" header field in a request provides the host and optional port informa
 
 <a id="type-host"></a>
 
-## host
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> host
 
-🟠 **TYPE** · *protocol::http::v11::headers*
+**TYPE** · *protocol::http::v11::headers*
 
 **Declaration synopsis:**
 
@@ -37,9 +39,9 @@ The "Host" header field in a request provides the host and optional port informa
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::v11::headers::host*
+**METHOD** · *protocol::http::v11::headers::host*
 
 ```cpp
 static constexpr bool check(std::string_view sv, parsed_host_port& out);
@@ -58,9 +60,9 @@ Checks whether a value follows the HTTP host header syntax.
 
 <a id="method-interpret"></a>
 
-## interpret
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> interpret
 
-🟠 **METHOD** · *protocol::http::v11::headers::host*
+**METHOD** · *protocol::http::v11::headers::host*
 
 ```cpp
 static constexpr verdict interpret(const parsed_host_port&, v11::connection&,

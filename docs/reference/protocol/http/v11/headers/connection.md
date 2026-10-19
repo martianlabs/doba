@@ -1,9 +1,11 @@
 <a id="connection-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/headers/connection/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/connection/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/connection/index.svg" alt="Index for connection.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/connection/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/connection/index-dark.svg" alt="Index for connection.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/headers/connection.h](../../../../../../include/protocol/http/v11/headers/connection.h)
@@ -21,9 +23,9 @@ The "Connection" header field allows the sender to list control options that are
 
 <a id="type-connection"></a>
 
-## connection
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> connection
 
-🟠 **TYPE** · *protocol::http::v11::headers*
+**TYPE** · *protocol::http::v11::headers*
 
 **Declaration synopsis:**
 
@@ -37,9 +39,9 @@ The "Connection" header field allows the sender to list control options that are
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::v11::headers::connection*
+**METHOD** · *protocol::http::v11::headers::connection*
 
 ```cpp
 static bool check(std::string_view sv, parsed_token_list& out);
@@ -58,9 +60,9 @@ Checks whether a value follows the HTTP connection header syntax.
 
 <a id="method-interpret"></a>
 
-## interpret
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> interpret
 
-🟠 **METHOD** · *protocol::http::v11::headers::connection*
+**METHOD** · *protocol::http::v11::headers::connection*
 
 ```cpp
 static constexpr verdict interpret(const parsed_token_list& token_list,

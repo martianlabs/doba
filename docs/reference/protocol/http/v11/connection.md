@@ -1,9 +1,11 @@
 <a id="connection-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/v11/connection/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/connection/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/v11/connection/index.svg" alt="Index for connection.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/connection/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/v11/connection/index-dark.svg" alt="Index for connection.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/connection.h](../../../../../include/protocol/http/v11/connection.h)
@@ -29,9 +31,9 @@ The hop-by-hop transport state that the semantic layer derives from a request. F
 
 <a id="type-connection"></a>
 
-## connection
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> connection
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -45,9 +47,9 @@ The hop-by-hop transport state that the semantic layer derives from a request. F
 
 <a id="field-persistent"></a>
 
-## persistent
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> persistent
 
-🟠 **FIELD** · *protocol::http::v11::connection*
+**FIELD** · *protocol::http::v11::connection*
 
 ```cpp
 bool persistent = true;
@@ -61,9 +63,9 @@ Whether the connection is to be kept alive after the current message. HTTP/1.1 d
 
 <a id="field-close-requested"></a>
 
-## close_requested
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> close_requested
 
-🟠 **FIELD** · *protocol::http::v11::connection*
+**FIELD** · *protocol::http::v11::connection*
 
 ```cpp
 bool close_requested = false;
@@ -77,9 +79,9 @@ Whether "Connection: close" was requested for this connection.
 
 <a id="field-transfer-codings"></a>
 
-## transfer_codings
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transfer_codings
 
-🟠 **FIELD** · *protocol::http::v11::connection*
+**FIELD** · *protocol::http::v11::connection*
 
 ```cpp
 std::vector<std::string_view> transfer_codings;
@@ -93,9 +95,9 @@ The transfer-coding names of Transfer-Encoding, in order (outermost last).
 
 <a id="field-chunked"></a>
 
-## chunked
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> chunked
 
-🟠 **FIELD** · *protocol::http::v11::connection*
+**FIELD** · *protocol::http::v11::connection*
 
 ```cpp
 bool chunked = false;
@@ -109,9 +111,9 @@ Whether the final transfer-coding is "chunked" (message framing is then delimite
 
 <a id="field-te-codings"></a>
 
-## te_codings
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> te_codings
 
-🟠 **FIELD** · *protocol::http::v11::connection*
+**FIELD** · *protocol::http::v11::connection*
 
 ```cpp
 std::vector<std::string_view> te_codings;
@@ -125,9 +127,9 @@ The transfer-coding names the client is willing to accept (TE), in order.
 
 <a id="field-accepts-trailers"></a>
 
-## accepts_trailers
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> accepts_trailers
 
-🟠 **FIELD** · *protocol::http::v11::connection*
+**FIELD** · *protocol::http::v11::connection*
 
 ```cpp
 bool accepts_trailers = false;
@@ -141,9 +143,9 @@ Whether the client signalled acceptance of the "trailers" TE token.
 
 <a id="field-trailer-names"></a>
 
-## trailer_names
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> trailer_names
 
-🟠 **FIELD** · *protocol::http::v11::connection*
+**FIELD** · *protocol::http::v11::connection*
 
 ```cpp
 std::vector<std::string_view> trailer_names;
@@ -157,9 +159,9 @@ The header field names announced in the Trailer header, in order.
 
 <a id="field-upgrade-offer"></a>
 
-## upgrade_offer
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> upgrade_offer
 
-🟠 **FIELD** · *protocol::http::v11::connection*
+**FIELD** · *protocol::http::v11::connection*
 
 ```cpp
 std::vector<std::string_view> upgrade_offer;
@@ -173,9 +175,9 @@ The protocols offered in the Upgrade header, in order (empty when absent). Parse
 
 <a id="field-options"></a>
 
-## options
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> options
 
-🟠 **FIELD** · *protocol::http::v11::connection*
+**FIELD** · *protocol::http::v11::connection*
 
 ```cpp
 std::vector<std::string_view> options;
@@ -189,9 +191,9 @@ Every connection-option token named by Connection, in order. These name header f
 
 <a id="field-expects-continue"></a>
 
-## expects_continue
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> expects_continue
 
-🟠 **FIELD** · *protocol::http::v11::connection*
+**FIELD** · *protocol::http::v11::connection*
 
 ```cpp
 bool expects_continue = false;

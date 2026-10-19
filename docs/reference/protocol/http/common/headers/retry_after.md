@@ -1,9 +1,11 @@
 <a id="retry-after-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/headers/retry_after/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/retry_after/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/retry_after/index.svg" alt="Index for retry_after.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/retry_after/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/retry_after/index-dark.svg" alt="Index for retry_after.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/headers/retry_after.h](../../../../../../include/protocol/http/common/headers/retry_after.h)
@@ -20,9 +22,9 @@
 
 <a id="type-retry-after"></a>
 
-## retry_after
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> retry_after
 
-🟠 **TYPE** · *protocol::http::headers*
+**TYPE** · *protocol::http::headers*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ class retry_after { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::headers::retry_after*
+**METHOD** · *protocol::http::headers::retry_after*
 
 ```cpp
 static constexpr bool check(std::string_view sv);

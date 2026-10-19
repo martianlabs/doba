@@ -1,9 +1,11 @@
 <a id="deserialization-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/protocol/deserialization/index-dark.svg">
+  <a href="../../../resources/docs/reference/protocol/deserialization/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/protocol/deserialization/index.svg" alt="Index for deserialization.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/protocol/deserialization/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/protocol/deserialization/index-dark.svg" alt="Index for deserialization.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/deserialization.h](../../../include/protocol/deserialization.h)
@@ -16,9 +18,9 @@ This header declares the types and operations listed below.
 
 <a id="enum-deserialization-status"></a>
 
-## deserialization_status
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> deserialization_status
 
-🟠 **ENUM** · *protocol*
+**ENUM** · *protocol*
 
 ```cpp
 enum class deserialization_status {

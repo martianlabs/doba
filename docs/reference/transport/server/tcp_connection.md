@@ -1,9 +1,11 @@
 <a id="tcp-connection-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/tcp_connection/index-dark.svg">
+  <a href="../../../../resources/docs/reference/transport/server/tcp_connection/index.svg#gh-light-mode-only">
     <img src="../../../../resources/docs/reference/transport/server/tcp_connection/index.svg" alt="Index for tcp_connection.h">
-  </picture>
+  </a>
+  <a href="../../../../resources/docs/reference/transport/server/tcp_connection/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/docs/reference/transport/server/tcp_connection/index-dark.svg" alt="Index for tcp_connection.h">
+  </a>
 </h1>
 
 **Header:** [include/transport/server/tcp_connection.h](../../../../include/transport/server/tcp_connection.h)
@@ -17,8 +19,6 @@ This struct keeps track of a TCP connection used by an engine. It stores the eng
 **transport::server::tcp_connection**
 
 - [shared_state](#alias-shared-state) · *alias*
-- [tcp_connection&lt;FAty&gt;(buffer_size, create_engine)](#constructor-tcp-connection) · *constructor*
-- [tcp_connection&lt;FAty&gt;(buffer_size, size_t, create_engine, shared_state)](#constructor-tcp-connection-2) · *constructor*
 - [receive_buffer](#method-receive-buffer) · *method*
 - [process](#method-process) · *method*
 - [prepare_output](#method-prepare-output) · *method*
@@ -36,9 +36,9 @@ This struct keeps track of a TCP connection used by an engine. It stores the eng
 
 <a id="type-tcp-connection"></a>
 
-## tcp_connection
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> tcp_connection
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -57,9 +57,9 @@ This struct keeps track of a TCP connection used by an engine. It stores the eng
 
 <a id="alias-shared-state"></a>
 
-## shared_state
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> shared_state
 
-🟠 **ALIAS** · *transport::server::tcp_connection*
+**ALIAS** · *transport::server::tcp_connection*
 
 ```cpp
 using shared_state = std::nullptr_t;
@@ -69,62 +69,11 @@ Alias for `std::nullptr_t`.
 
 **Source:** [include/transport/server/tcp_connection.h:61](../../../../include/transport/server/tcp_connection.h#L61)
 
-<a id="constructor-tcp-connection"></a>
-
-## tcp_connection
-
-🟠 **CONSTRUCTOR** · *transport::server::tcp_connection*
-
-```cpp
-template <protocol::contracts::engine_factory<ENty> FAty>
-  tcp_connection(std::size_t buffer_size, const FAty& create_engine);
-```
-
-Constructs a tcp_connection value.
-
-**Template parameters:**
-
-- **FAty:** `protocol::contracts::engine_factory<ENty> FAty`.
-
-**Parameters:**
-
-- **buffer_size:** Size or length limit for the named data. Declaration: `std::size_t buffer_size`.
-- **create_engine:** Initial value supplied to the constructor. Declaration: `const FAty& create_engine`.
-
-**Source:** [include/transport/server/tcp_connection.h:66](../../../../include/transport/server/tcp_connection.h#L66)
-
-<a id="constructor-tcp-connection-2"></a>
-
-## tcp_connection
-
-🟠 **CONSTRUCTOR** · *transport::server::tcp_connection*
-
-```cpp
-template <protocol::contracts::engine_factory<ENty> FAty>
-  tcp_connection(std::size_t buffer_size, std::size_t,
-                 const FAty& create_engine, shared_state);
-```
-
-Constructs a tcp_connection value.
-
-**Template parameters:**
-
-- **FAty:** `protocol::contracts::engine_factory<ENty> FAty`.
-
-**Parameters:**
-
-- **buffer_size:** Size or length limit for the named data. Declaration: `std::size_t buffer_size`.
-- **size_t:** Size value. Declaration: `std::size_t`.
-- **create_engine:** Initial value supplied to the constructor. Declaration: `const FAty& create_engine`.
-- **shared_state:** Initial value supplied to the constructor. Declaration: `shared_state`.
-
-**Source:** [include/transport/server/tcp_connection.h:71](../../../../include/transport/server/tcp_connection.h#L71)
-
 <a id="method-receive-buffer"></a>
 
-## receive_buffer
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> receive_buffer
 
-🟠 **METHOD** · *transport::server::tcp_connection*
+**METHOD** · *transport::server::tcp_connection*
 
 ```cpp
 std::span<char> receive_buffer() noexcept;
@@ -140,9 +89,9 @@ Processes the received bytes in the input buffer using the engine.
 
 <a id="method-process"></a>
 
-## process
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> process
 
-🟠 **METHOD** · *transport::server::tcp_connection*
+**METHOD** · *transport::server::tcp_connection*
 
 ```cpp
 void process(std::size_t received);
@@ -162,9 +111,9 @@ Processes pending connection input and output.
 
 <a id="method-prepare-output"></a>
 
-## prepare_output
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> prepare_output
 
-🟠 **METHOD** · *transport::server::tcp_connection*
+**METHOD** · *transport::server::tcp_connection*
 
 ```cpp
 bool prepare_output(send_state& output);
@@ -182,9 +131,9 @@ Gets the output buffer ready to send data. If it already contains unsent bytes, 
 
 <a id="method-output-bytes"></a>
 
-## output_bytes
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> output_bytes
 
-🟠 **METHOD** · *transport::server::tcp_connection*
+**METHOD** · *transport::server::tcp_connection*
 
 ```cpp
 std::span<char> output_bytes(send_state& output);
@@ -202,9 +151,9 @@ Returns a span of the unsent bytes in the output buffer. If there are no unsent 
 
 <a id="method-output-buffers"></a>
 
-## output_buffers
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> output_buffers
 
-🟠 **METHOD** · *transport::server::tcp_connection*
+**METHOD** · *transport::server::tcp_connection*
 
 ```cpp
 std::size_t output_buffers(send_state& output,
@@ -224,9 +173,9 @@ Fills the provided array of buffers with the unsent bytes in the output buffer.
 
 <a id="method-output-sent"></a>
 
-## output_sent
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> output_sent
 
-🟠 **METHOD** · *transport::server::tcp_connection*
+**METHOD** · *transport::server::tcp_connection*
 
 ```cpp
 bool output_sent(send_state& output, std::size_t sent);
@@ -245,9 +194,9 @@ Updates the output buffer after sending the specified number of bytes.
 
 <a id="method-output-pending"></a>
 
-## output_pending
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> output_pending
 
-🟠 **METHOD** · *transport::server::tcp_connection*
+**METHOD** · *transport::server::tcp_connection*
 
 ```cpp
 bool output_pending(const send_state& output) const;
@@ -265,9 +214,9 @@ Checks if there are any unsent bytes in the output buffer.
 
 <a id="method-established"></a>
 
-## established
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> established
 
-🟠 **METHOD** · *transport::server::tcp_connection*
+**METHOD** · *transport::server::tcp_connection*
 
 ```cpp
 bool established() const;
@@ -281,9 +230,9 @@ Reports whether the connection is established.
 
 <a id="method-peer-closed"></a>
 
-## peer_closed
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> peer_closed
 
-🟠 **METHOD** · *transport::server::tcp_connection*
+**METHOD** · *transport::server::tcp_connection*
 
 ```cpp
 bool peer_closed() const;
@@ -297,9 +246,9 @@ Reports whether the remote peer closed the connection.
 
 <a id="method-eof"></a>
 
-## eof
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> eof
 
-🟠 **METHOD** · *transport::server::tcp_connection*
+**METHOD** · *transport::server::tcp_connection*
 
 ```cpp
 bool eof() const;
@@ -313,9 +262,9 @@ Reports whether the eof condition holds.
 
 <a id="method-close-output"></a>
 
-## close_output
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> close_output
 
-🟠 **METHOD** · *transport::server::tcp_connection*
+**METHOD** · *transport::server::tcp_connection*
 
 ```cpp
 bool close_output();
@@ -329,9 +278,9 @@ Closes output.
 
 <a id="field-engine"></a>
 
-## engine
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> engine
 
-🟠 **FIELD** · *transport::server::tcp_connection*
+**FIELD** · *transport::server::tcp_connection*
 
 ```cpp
 ENty engine;
@@ -345,9 +294,9 @@ Stores the engine value.
 
 <a id="field-buffer"></a>
 
-## buffer
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> buffer
 
-🟠 **FIELD** · *transport::server::tcp_connection*
+**FIELD** · *transport::server::tcp_connection*
 
 ```cpp
 std::unique_ptr<char[]> buffer;
@@ -361,9 +310,9 @@ Stores the buffer value.
 
 <a id="field-capacity"></a>
 
-## capacity
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> capacity
 
-🟠 **FIELD** · *transport::server::tcp_connection*
+**FIELD** · *transport::server::tcp_connection*
 
 ```cpp
 const std::size_t capacity;

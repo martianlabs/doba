@@ -1,9 +1,11 @@
 <a id="access-control-max-age-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_max_age/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_max_age/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_max_age/index.svg" alt="Index for access_control_max_age.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_max_age/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_max_age/index-dark.svg" alt="Index for access_control_max_age.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/headers/access_control_max_age.h](../../../../../../include/protocol/http/common/headers/access_control_max_age.h)
@@ -20,9 +22,9 @@
 
 <a id="type-access-control-max-age"></a>
 
-## access_control_max_age
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> access_control_max_age
 
-🟠 **TYPE** · *protocol::http::headers*
+**TYPE** · *protocol::http::headers*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ class access_control_max_age { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::headers::access_control_max_age*
+**METHOD** · *protocol::http::headers::access_control_max_age*
 
 ```cpp
 static constexpr bool check(std::string_view sv);

@@ -1,9 +1,11 @@
 <a id="signaler-linux-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/common/signaler_linux/index-dark.svg">
+  <a href="../../../resources/docs/reference/common/signaler_linux/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/common/signaler_linux/index.svg" alt="Index for signaler_linux.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/common/signaler_linux/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/common/signaler_linux/index-dark.svg" alt="Index for signaler_linux.h">
+  </a>
 </h1>
 
 **Header:** [include/common/signaler_linux.h](../../../include/common/signaler_linux.h)
@@ -20,9 +22,9 @@ Provides the signaler type.
 
 <a id="type-signaler"></a>
 
-## signaler
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> signaler
 
-🟠 **TYPE** · *common*
+**TYPE** · *common*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ Provides the signaler type.
 
 <a id="method-wait"></a>
 
-## wait
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> wait
 
-🟠 **METHOD** · *common::signaler*
+**METHOD** · *common::signaler*
 
 ```cpp
 static void wait();

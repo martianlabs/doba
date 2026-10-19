@@ -1,9 +1,11 @@
 <a id="tcp-policies-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/tcp_policies/index-dark.svg">
+  <a href="../../../../resources/docs/reference/transport/server/tcp_policies/index.svg#gh-light-mode-only">
     <img src="../../../../resources/docs/reference/transport/server/tcp_policies/index.svg" alt="Index for tcp_policies.h">
-  </picture>
+  </a>
+  <a href="../../../../resources/docs/reference/transport/server/tcp_policies/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/docs/reference/transport/server/tcp_policies/index-dark.svg" alt="Index for tcp_policies.h">
+  </a>
 </h1>
 
 **Header:** [include/transport/server/tcp_policies.h](../../../../include/transport/server/tcp_policies.h)
@@ -26,9 +28,9 @@ TCP operating policies.
 
 <a id="type-tcp-policies"></a>
 
-## tcp_policies
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> tcp_policies
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -42,9 +44,9 @@ TCP operating policies.
 
 <a id="constant-kdefaultreceivebuffercapacity"></a>
 
-## kDefaultReceiveBufferCapacity
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDefaultReceiveBufferCapacity
 
-🟠 **CONSTANT** · *transport::server::tcp_policies*
+**CONSTANT** · *transport::server::tcp_policies*
 
 ```cpp
 static constexpr std::size_t kDefaultReceiveBufferCapacity = 4 * 1024;
@@ -58,9 +60,9 @@ Default receive buffer capacity, in bytes.
 
 <a id="field-receive-buffer-capacity"></a>
 
-## receive_buffer_capacity
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> receive_buffer_capacity
 
-🟠 **FIELD** · *transport::server::tcp_policies*
+**FIELD** · *transport::server::tcp_policies*
 
 ```cpp
 std::size_t receive_buffer_capacity = kDefaultReceiveBufferCapacity;
@@ -74,9 +76,9 @@ Receive I/O block size per connection, in bytes (must be positive). Engines rece
 
 <a id="field-worker-count"></a>
 
-## worker_count
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> worker_count
 
-🟠 **FIELD** · *transport::server::tcp_policies*
+**FIELD** · *transport::server::tcp_policies*
 
 ```cpp
 std::size_t worker_count = 0;
@@ -90,9 +92,9 @@ Number of workers (0 selects automatically).
 
 <a id="field-listen-backlog"></a>
 
-## listen_backlog
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> listen_backlog
 
-🟠 **FIELD** · *transport::server::tcp_policies*
+**FIELD** · *transport::server::tcp_policies*
 
 ```cpp
 int listen_backlog = 0;
@@ -106,9 +108,9 @@ Requested pending connection queue size (0 uses the system default).
 
 <a id="field-max-buffered-send-bytes"></a>
 
-## max_buffered_send_bytes
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_buffered_send_bytes
 
-🟠 **FIELD** · *transport::server::tcp_policies*
+**FIELD** · *transport::server::tcp_policies*
 
 ```cpp
 std::size_t max_buffered_send_bytes = 1024 * 1024;
@@ -122,9 +124,9 @@ Queued send reservations plus the entire active batch, per connection. Also boun
 
 <a id="field-ip"></a>
 
-## ip
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ip
 
-🟠 **FIELD** · *transport::server::tcp_policies*
+**FIELD** · *transport::server::tcp_policies*
 
 ```cpp
 std::string ip;
@@ -138,9 +140,9 @@ IPv4 bind address and port (1-65535); both must be set.
 
 <a id="field-port"></a>
 
-## port
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> port
 
-🟠 **FIELD** · *transport::server::tcp_policies*
+**FIELD** · *transport::server::tcp_policies*
 
 ```cpp
 std::string port;

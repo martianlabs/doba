@@ -1,9 +1,11 @@
 <a id="task-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/common/task/index-dark.svg">
+  <a href="../../../resources/docs/reference/common/task/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/common/task/index.svg" alt="Index for task.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/common/task/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/common/task/index-dark.svg" alt="Index for task.h">
+  </a>
 </h1>
 
 **Header:** [include/common/task.h](../../../include/common/task.h)
@@ -43,20 +45,14 @@ Provides the task type.
 **common::task**
 
 - [handle_type](#alias-handle-type) · *alias*
-- [task(handle)](#constructor-task) · *constructor*
-- [task(task)](#constructor-task-2) · *constructor*
-- [task(other)](#constructor-task-3) · *constructor*
-- [~task](#destructor-destructor-task) · *destructor*
-- [operator=(task)](#operator-operator) · *operator*
-- [operator=(other)](#operator-operator-2) · *operator*
 - [start(completion)](#method-start) · *method*
 - [start(completion, scheduler)](#method-start-2) · *method*
 
 <a id="type-task"></a>
 
-## task
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> task
 
-🟠 **TYPE** · *common*
+**TYPE** · *common*
 
 **Declaration synopsis:**
 
@@ -75,9 +71,9 @@ Provides the task type.
 
 <a id="type-promise-type"></a>
 
-## promise_type
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> promise_type
 
-🟠 **TYPE** · *common::task*
+**TYPE** · *common::task*
 
 **Declaration synopsis:**
 
@@ -91,9 +87,9 @@ Provides the promise type type.
 
 <a id="method-get-return-object"></a>
 
-## get_return_object
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_return_object
 
-🟠 **METHOD** · *common::task::promise_type*
+**METHOD** · *common::task::promise_type*
 
 ```cpp
 task get_return_object() noexcept;
@@ -109,9 +105,9 @@ Returns return object.
 
 <a id="method-initial-suspend"></a>
 
-## initial_suspend
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> initial_suspend
 
-🟠 **METHOD** · *common::task::promise_type*
+**METHOD** · *common::task::promise_type*
 
 ```cpp
 std::suspend_always initial_suspend() noexcept;
@@ -127,9 +123,9 @@ Controls whether a new coroutine suspends initially.
 
 <a id="type-final-awaiter"></a>
 
-## final_awaiter
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> final_awaiter
 
-🟠 **TYPE** · *common::task::promise_type*
+**TYPE** · *common::task::promise_type*
 
 **Declaration synopsis:**
 
@@ -143,9 +139,9 @@ Provides the final awaiter type.
 
 <a id="field-promise"></a>
 
-## promise
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> promise
 
-🟠 **FIELD** · *common::task::promise_type::final_awaiter*
+**FIELD** · *common::task::promise_type::final_awaiter*
 
 ```cpp
 promise_type& promise;
@@ -159,9 +155,9 @@ Stores the promise value.
 
 <a id="method-await-ready"></a>
 
-## await_ready
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> await_ready
 
-🟠 **METHOD** · *common::task::promise_type::final_awaiter*
+**METHOD** · *common::task::promise_type::final_awaiter*
 
 ```cpp
 bool await_ready() noexcept;
@@ -177,9 +173,9 @@ Implements the coroutine await_ready hook.
 
 <a id="method-await-suspend"></a>
 
-## await_suspend
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> await_suspend
 
-🟠 **METHOD** · *common::task::promise_type::final_awaiter*
+**METHOD** · *common::task::promise_type::final_awaiter*
 
 ```cpp
 void await_suspend(std::coroutine_handle<>) noexcept;
@@ -199,9 +195,9 @@ Implements the coroutine await_suspend hook.
 
 <a id="method-await-resume"></a>
 
-## await_resume
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> await_resume
 
-🟠 **METHOD** · *common::task::promise_type::final_awaiter*
+**METHOD** · *common::task::promise_type::final_awaiter*
 
 ```cpp
 void await_resume() noexcept;
@@ -217,9 +213,9 @@ Implements the coroutine await_resume hook.
 
 <a id="method-final-suspend"></a>
 
-## final_suspend
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> final_suspend
 
-🟠 **METHOD** · *common::task::promise_type*
+**METHOD** · *common::task::promise_type*
 
 ```cpp
 final_awaiter final_suspend() noexcept;
@@ -235,9 +231,9 @@ Controls whether a coroutine suspends at completion.
 
 <a id="method-return-void"></a>
 
-## return_void
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> return_void
 
-🟠 **METHOD** · *common::task::promise_type*
+**METHOD** · *common::task::promise_type*
 
 ```cpp
 void return_void() noexcept;
@@ -253,9 +249,9 @@ Completes a coroutine without a result value.
 
 <a id="method-unhandled-exception"></a>
 
-## unhandled_exception
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> unhandled_exception
 
-🟠 **METHOD** · *common::task::promise_type*
+**METHOD** · *common::task::promise_type*
 
 ```cpp
 void unhandled_exception() noexcept;
@@ -271,9 +267,9 @@ Records an uncaught coroutine exception.
 
 <a id="field-completion"></a>
 
-## completion
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> completion
 
-🟠 **FIELD** · *common::task::promise_type*
+**FIELD** · *common::task::promise_type*
 
 ```cpp
 std::function<void(std::exception_ptr)> completion;
@@ -287,9 +283,9 @@ Stores the completion value.
 
 <a id="field-error"></a>
 
-## error
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> error
 
-🟠 **FIELD** · *common::task::promise_type*
+**FIELD** · *common::task::promise_type*
 
 ```cpp
 std::exception_ptr error;
@@ -303,9 +299,9 @@ Stores the error value.
 
 <a id="field-scheduler"></a>
 
-## scheduler
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> scheduler
 
-🟠 **FIELD** · *common::task::promise_type*
+**FIELD** · *common::task::promise_type*
 
 ```cpp
 task_scheduler scheduler;
@@ -319,9 +315,9 @@ Stores the scheduler value.
 
 <a id="alias-handle-type"></a>
 
-## handle_type
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> handle_type
 
-🟠 **ALIAS** · *common::task*
+**ALIAS** · *common::task*
 
 ```cpp
 using handle_type = std::coroutine_handle<promise_type>;
@@ -331,129 +327,11 @@ Alias for `std::coroutine_handle<promise_type>`.
 
 **Source:** [include/common/task.h:79](../../../include/common/task.h#L79)
 
-<a id="constructor-task"></a>
-
-## task
-
-🟠 **CONSTRUCTOR** · *common::task*
-
-```cpp
-explicit task(handle_type handle) noexcept;
-```
-
-Constructs a task value.
-
-**Parameters:**
-
-- **handle:** Handle to the coroutine or operating-system object. Declaration: `handle_type handle`.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/task.h:83](../../../include/common/task.h#L83)
-
-<a id="constructor-task-2"></a>
-
-## task
-
-🟠 **CONSTRUCTOR** · *common::task*
-
-```cpp
-task(const task&) = delete;
-```
-
-Disallows this form of common::task construction.
-
-**Parameters:**
-
-- **task:** Source object to copy or move. Declaration: `const task&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/common/task.h:84](../../../include/common/task.h#L84)
-
-<a id="constructor-task-3"></a>
-
-## task
-
-🟠 **CONSTRUCTOR** · *common::task*
-
-```cpp
-task(task&& other) noexcept;
-```
-
-Constructs a task value.
-
-**Parameters:**
-
-- **other:** Source task to move from. Declaration: `task&& other`.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/task.h:85](../../../include/common/task.h#L85)
-
-<a id="destructor-destructor-task"></a>
-
-## ~task
-
-🟠 **DESTRUCTOR** · *common::task*
-
-```cpp
-~task();
-```
-
-Destroys the task object.
-
-**Source:** [include/common/task.h:86](../../../include/common/task.h#L86)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *common::task*
-
-```cpp
-task& operator=(const task&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **task:** Source object to copy or move. Declaration: `const task&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/common/task.h:92](../../../include/common/task.h#L92)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *common::task*
-
-```cpp
-task& operator=(task&& other) noexcept;
-```
-
-Implements operator= for task.
-
-**Parameters:**
-
-- **other:** Source task to move from. Declaration: `task&& other`.
-
-**Returns:** A reference to the updated object.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/task.h:93](../../../include/common/task.h#L93)
-
 <a id="method-start"></a>
 
-## start
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> start
 
-🟠 **METHOD** · *common::task*
+**METHOD** · *common::task*
 
 ```cpp
 void start(std::function<void(std::exception_ptr)> completion);
@@ -471,9 +349,9 @@ Starts the task lifecycle.
 
 <a id="method-start-2"></a>
 
-## start
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> start
 
-🟠 **METHOD** · *common::task*
+**METHOD** · *common::task*
 
 ```cpp
 void start(std::function<void(std::exception_ptr)> completion,

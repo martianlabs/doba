@@ -1,9 +1,11 @@
 <a id="router-handler-static-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/common/router_handler_static/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_static/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_static/index.svg" alt="Index for router_handler_static.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_static/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_static/index-dark.svg" alt="Index for router_handler_static.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/router_handler_static.h](../../../../../include/protocol/http/common/router_handler_static.h)
@@ -16,9 +18,9 @@ This header declares the types and operations listed below.
 
 <a id="alias-router-handler-static"></a>
 
-## router_handler_static
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router_handler_static
 
-🟠 **ALIAS** · *protocol::http*
+**ALIAS** · *protocol::http*
 
 ```cpp
 template <typename RQty, typename RSty>

@@ -1,9 +1,11 @@
 <a id="reader-error-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index.svg" alt="Index for reader_error.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index-dark.svg" alt="Index for reader_error.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/body/reader_error.h](../../../../../../include/protocol/http/v11/body/reader_error.h)
@@ -16,9 +18,9 @@ This header declares the types and operations listed below.
 
 <a id="enum-reader-error"></a>
 
-## reader_error
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> reader_error
 
-🟠 **ENUM** · *protocol::http::v11::body*
+**ENUM** · *protocol::http::v11::body*
 
 ```cpp
 enum class reader_error : std::uint8_t {

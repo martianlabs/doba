@@ -1,9 +1,11 @@
 <a id="tcp-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/tcp/index-dark.svg">
+  <a href="../../../../resources/docs/reference/transport/server/tcp/index.svg#gh-light-mode-only">
     <img src="../../../../resources/docs/reference/transport/server/tcp/index.svg" alt="Index for tcp.h">
-  </picture>
+  </a>
+  <a href="../../../../resources/docs/reference/transport/server/tcp/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/docs/reference/transport/server/tcp/index-dark.svg" alt="Index for tcp.h">
+  </a>
 </h1>
 
 **Header:** [include/transport/server/tcp.h](../../../../include/transport/server/tcp.h)
@@ -23,15 +25,11 @@ Platform-independent transport delegate types.
 
 - [tcp](#type-tcp) · *type*
 
-**transport::server::tcp**
-
-- [tcp](#constructor-tcp) · *constructor*
-
 <a id="type-types"></a>
 
-## types
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> types
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -45,9 +43,9 @@ Platform-independent transport delegate types.
 
 <a id="alias-on-client-connected-delegate"></a>
 
-## on_client_connected_delegate
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> on_client_connected_delegate
 
-🟠 **ALIAS** · *transport::server::types*
+**ALIAS** · *transport::server::types*
 
 ```cpp
 using on_client_connected_delegate = std::function<void()>;
@@ -59,9 +57,9 @@ On client connected delegate type
 
 <a id="alias-on-client-disconnected-delegate"></a>
 
-## on_client_disconnected_delegate
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> on_client_disconnected_delegate
 
-🟠 **ALIAS** · *transport::server::types*
+**ALIAS** · *transport::server::types*
 
 ```cpp
 using on_client_disconnected_delegate = std::function<void()>;
@@ -73,9 +71,9 @@ On client disconnected delegate type
 
 <a id="type-tcp"></a>
 
-## tcp
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> tcp
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -94,22 +92,3 @@ This class provides a TCP transport for an engine. It inherits from `basic_trans
 - **FAty:** `protocol::contracts::engine_factory<ENty> FAty`.
 
 **Source:** [include/transport/server/tcp.h:79](../../../../include/transport/server/tcp.h#L79)
-
-<a id="constructor-tcp"></a>
-
-## tcp
-
-🟠 **CONSTRUCTOR** · *transport::server::tcp*
-
-```cpp
-explicit tcp(tcp_policies configuration, FAty create_engine);
-```
-
-Constructs a tcp value.
-
-**Parameters:**
-
-- **configuration:** Configuration for this component. Declaration: `tcp_policies configuration`.
-- **create_engine:** Initial value supplied to the constructor. Declaration: `FAty create_engine`.
-
-**Source:** [include/transport/server/tcp.h:85](../../../../include/transport/server/tcp.h#L85)

@@ -1,9 +1,11 @@
 <a id="context-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/v11/context/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/context/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/v11/context/index.svg" alt="Index for context.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/context/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/v11/context/index-dark.svg" alt="Index for context.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
@@ -32,9 +34,9 @@ The aggregated view the transversal rules operate on. Where an intra- header int
 
 <a id="type-context"></a>
 
-## context
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> context
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -48,9 +50,9 @@ The aggregated view the transversal rules operate on. Where an intra- header int
 
 <a id="type-policies"></a>
 
-## policies
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> policies
 
-🟠 **TYPE** · *protocol::http::v11::context*
+**TYPE** · *protocol::http::v11::context*
 
 **Declaration synopsis:**
 
@@ -64,9 +66,9 @@ Policies coming from the inbound configuration; they are not derived from the re
 
 <a id="field-connection"></a>
 
-## connection
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> connection
 
-🟠 **FIELD** · *protocol::http::v11::context*
+**FIELD** · *protocol::http::v11::context*
 
 ```cpp
 v11::connection connection;
@@ -80,9 +82,9 @@ The mutable hop-by-hop connection state derived from the request.
 
 <a id="field-has-content-length"></a>
 
-## has_content_length
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> has_content_length
 
-🟠 **FIELD** · *protocol::http::v11::context*
+**FIELD** · *protocol::http::v11::context*
 
 ```cpp
 bool has_content_length = false;
@@ -96,9 +98,9 @@ Content-Length and Transfer-Encoding are mutually exclusive; the rules check for
 
 <a id="field-multiple-content-length"></a>
 
-## multiple_content_length
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> multiple_content_length
 
-🟠 **FIELD** · *protocol::http::v11::context*
+**FIELD** · *protocol::http::v11::context*
 
 ```cpp
 bool multiple_content_length = false;
@@ -112,9 +114,9 @@ Stores the multiple content length value.
 
 <a id="field-content-length"></a>
 
-## content_length
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> content_length
 
-🟠 **FIELD** · *protocol::http::v11::context*
+**FIELD** · *protocol::http::v11::context*
 
 ```cpp
 std::size_t content_length = 0;
@@ -128,9 +130,9 @@ Stores the content length value.
 
 <a id="field-has-transfer-encoding"></a>
 
-## has_transfer_encoding
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> has_transfer_encoding
 
-🟠 **FIELD** · *protocol::http::v11::context*
+**FIELD** · *protocol::http::v11::context*
 
 ```cpp
 bool has_transfer_encoding = false;
@@ -144,9 +146,9 @@ Stores the has transfer encoding value.
 
 <a id="field-has-host"></a>
 
-## has_host
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> has_host
 
-🟠 **FIELD** · *protocol::http::v11::context*
+**FIELD** · *protocol::http::v11::context*
 
 ```cpp
 bool has_host = false;
@@ -160,9 +162,9 @@ Host and Target-Authority are mutually exclusive; the rules check for their pres
 
 <a id="field-multiple-host"></a>
 
-## multiple_host
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> multiple_host
 
-🟠 **FIELD** · *protocol::http::v11::context*
+**FIELD** · *protocol::http::v11::context*
 
 ```cpp
 bool multiple_host = false;
@@ -176,9 +178,9 @@ Stores the multiple host value.
 
 <a id="field-host"></a>
 
-## host
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> host
 
-🟠 **FIELD** · *protocol::http::v11::context*
+**FIELD** · *protocol::http::v11::context*
 
 ```cpp
 parsed_host_port host;
@@ -192,9 +194,9 @@ Stores the host value.
 
 <a id="field-has-target-authority"></a>
 
-## has_target_authority
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> has_target_authority
 
-🟠 **FIELD** · *protocol::http::v11::context*
+**FIELD** · *protocol::http::v11::context*
 
 ```cpp
 bool has_target_authority = false;
@@ -208,9 +210,9 @@ Stores the has target authority value.
 
 <a id="field-target-authority"></a>
 
-## target_authority
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> target_authority
 
-🟠 **FIELD** · *protocol::http::v11::context*
+**FIELD** · *protocol::http::v11::context*
 
 ```cpp
 parsed_host_port target_authority;
@@ -224,9 +226,9 @@ Stores the target authority value.
 
 <a id="field-forwarding-hops"></a>
 
-## forwarding_hops
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> forwarding_hops
 
-🟠 **FIELD** · *protocol::http::v11::context*
+**FIELD** · *protocol::http::v11::context*
 
 ```cpp
 std::size_t forwarding_hops = 0;
@@ -240,9 +242,9 @@ The number of forwarding hops across Via / Forwarded / X-Forwarded-For.
 
 <a id="field-rejection-reason"></a>
 
-## rejection_reason
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> rejection_reason
 
-🟠 **FIELD** · *protocol::http::v11::context*
+**FIELD** · *protocol::http::v11::context*
 
 ```cpp
 martianlabs::doba::protocol::http::v11::rejection_reason rejection_reason =

@@ -1,9 +1,11 @@
 <a id="reader-chunked-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index.svg" alt="Index for reader_chunked.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index-dark.svg" alt="Index for reader_chunked.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/body/reader_chunked.h](../../../../../../include/protocol/http/v11/body/reader_chunked.h)
@@ -18,14 +20,13 @@ Decodes a chunked Transfer-Encoding body (as accumulated verbatim by framer_chun
 
 - [kDefaultMaxChunkExtensionSize](#constant-kdefaultmaxchunkextensionsize) · *constant*
 - [kDefaultMaxTrailerSectionSize](#constant-kdefaultmaxtrailersectionsize) · *constant*
-- [reader_chunked](#constructor-reader-chunked) · *constructor*
 - [read](#method-read) · *method*
 
 <a id="type-reader-chunked"></a>
 
-## reader_chunked
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> reader_chunked
 
-🟠 **TYPE** · *protocol::http::v11::body*
+**TYPE** · *protocol::http::v11::body*
 
 **Declaration synopsis:**
 
@@ -39,9 +40,9 @@ Decodes a chunked Transfer-Encoding body (as accumulated verbatim by framer_chun
 
 <a id="constant-kdefaultmaxchunkextensionsize"></a>
 
-## kDefaultMaxChunkExtensionSize
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDefaultMaxChunkExtensionSize
 
-🟠 **CONSTANT** · *protocol::http::v11::body::reader_chunked*
+**CONSTANT** · *protocol::http::v11::body::reader_chunked*
 
 ```cpp
 static constexpr std::size_t kDefaultMaxChunkExtensionSize =
@@ -56,9 +57,9 @@ Defines the default max chunk extension size constant.
 
 <a id="constant-kdefaultmaxtrailersectionsize"></a>
 
-## kDefaultMaxTrailerSectionSize
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDefaultMaxTrailerSectionSize
 
-🟠 **CONSTANT** · *protocol::http::v11::body::reader_chunked*
+**CONSTANT** · *protocol::http::v11::body::reader_chunked*
 
 ```cpp
 static constexpr std::size_t kDefaultMaxTrailerSectionSize =
@@ -71,31 +72,11 @@ Defines the default max trailer section size constant.
 
 **Source:** [include/protocol/http/v11/body/reader_chunked.h:96](../../../../../../include/protocol/http/v11/body/reader_chunked.h#L96)
 
-<a id="constructor-reader-chunked"></a>
-
-## reader_chunked
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::body::reader_chunked*
-
-```cpp
-reader_chunked(std::size_t extension_limit = kDefaultMaxChunkExtensionSize,
-                 std::size_t trailer_limit = kDefaultMaxTrailerSectionSize);
-```
-
-Constructs a reader_chunked value.
-
-**Parameters:**
-
-- **extension_limit:** Maximum chunk-extension size in bytes. Declaration: `std::size_t extension_limit = kDefaultMaxChunkExtensionSize`.
-- **trailer_limit:** Maximum trailer size in bytes. Declaration: `std::size_t trailer_limit = kDefaultMaxTrailerSectionSize`.
-
-**Source:** [include/protocol/http/v11/body/reader_chunked.h:101](../../../../../../include/protocol/http/v11/body/reader_chunked.h#L101)
-
 <a id="method-read"></a>
 
-## read
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> read
 
-🟠 **METHOD** · *protocol::http::v11::body::reader_chunked*
+**METHOD** · *protocol::http::v11::body::reader_chunked*
 
 ```cpp
 reader_state read(common::reader& src, std::span<std::byte> output);

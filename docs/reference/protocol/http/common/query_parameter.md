@@ -1,9 +1,11 @@
 <a id="query-parameter-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index.svg" alt="Index for query_parameter.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index-dark.svg" alt="Index for query_parameter.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/query_parameter.h](../../../../../include/protocol/http/common/query_parameter.h)
@@ -17,9 +19,9 @@ This header declares the types and operations listed below.
 
 <a id="alias-query-parameter"></a>
 
-## query_parameter
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> query_parameter
 
-🟠 **ALIAS** · *protocol::http*
+**ALIAS** · *protocol::http*
 
 ```cpp
 using query_parameter = std::pair<std::string, std::string>;
@@ -31,9 +33,9 @@ A query parameter is a key-value pair of strings. The key is the parameter name 
 
 <a id="alias-query-parameter-view"></a>
 
-## query_parameter_view
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> query_parameter_view
 
-🟠 **ALIAS** · *protocol::http*
+**ALIAS** · *protocol::http*
 
 ```cpp
 using query_parameter_view = std::pair<std::string_view, std::string_view>;

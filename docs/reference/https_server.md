@@ -1,9 +1,11 @@
 <a id="https-server-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/https_server/index-dark.svg">
+  <a href="../../resources/docs/reference/https_server/index.svg#gh-light-mode-only">
     <img src="../../resources/docs/reference/https_server/index.svg" alt="Index for https_server.h">
-  </picture>
+  </a>
+  <a href="../../resources/docs/reference/https_server/index-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/reference/https_server/index-dark.svg" alt="Index for https_server.h">
+  </a>
 </h1>
 
 **Header:** [include/https_server.h](../../include/https_server.h)
@@ -14,15 +16,11 @@ Composes a TLS HTTP/1.1 routing with a protocol engine and transport.
 
 - [https_server](#type-https-server) · *type*
 
-**https_server**
-
-- [https_server](#constructor-https-server) · *constructor*
-
 <a id="type-https-server"></a>
 
-## https_server
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> https_server
 
-🟠 **TYPE** · *doba*
+**TYPE** · *doba*
 
 **Declaration synopsis:**
 
@@ -49,18 +47,3 @@ Composes a TLS HTTP/1.1 routing with a protocol engine and transport.
 - **AUty:** `typename... AUty`.
 
 **Source:** [include/https_server.h:45](../../include/https_server.h#L45)
-
-<a id="constructor-https-server"></a>
-
-## https_server
-
-🟠 **CONSTRUCTOR** · *https_server*
-
-```cpp
-using http_server<RQty, RSty, ROty, ENty,
-                    transport::server::tls, AUty...>::http_server;
-```
-
-Inherits the HTTP server constructors with the TLS transport selected. See [http_server.h](http_server.md) for parameters and registration behavior.
-
-**Source:** [include/https_server.h:52](../../include/https_server.h#L52)

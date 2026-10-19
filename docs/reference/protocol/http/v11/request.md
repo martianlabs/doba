@@ -1,9 +1,11 @@
 <a id="request-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/v11/request/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/request/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/v11/request/index.svg" alt="Index for request.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/request/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/v11/request/index-dark.svg" alt="Index for request.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
@@ -16,12 +18,7 @@ Provides the http 1.1 request implementation.
 
 **protocol::http::v11::request**
 
-- [request(request)](#constructor-request) · *constructor*
-- [request(request)](#constructor-request-2) · *constructor*
-- [~request](#destructor-destructor-request) · *destructor*
 - [from](#method-from) · *method*
-- [operator=(request)](#operator-operator) · *operator*
-- [operator=(request)](#operator-operator-2) · *operator*
 - [get_method](#method-get-method) · *method*
 - [get_target](#method-get-target) · *method*
 - [get_absolute_path](#method-get-absolute-path) · *method*
@@ -56,9 +53,9 @@ Provides the http 1.1 request implementation.
 
 <a id="type-request"></a>
 
-## request
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> request
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -70,65 +67,11 @@ Provides the http 1.1 request implementation.
 
 **Source:** [include/protocol/http/v11/request.h:133](../../../../../include/protocol/http/v11/request.h#L133)
 
-<a id="constructor-request"></a>
-
-## request
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::request*
-
-```cpp
-request(const request&) = delete;
-```
-
-Disallows this form of protocol::http::v11::request construction.
-
-**Parameters:**
-
-- **request:** Request value to copy or move. Declaration: `const request&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/request.h:138](../../../../../include/protocol/http/v11/request.h#L138)
-
-<a id="constructor-request-2"></a>
-
-## request
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::request*
-
-```cpp
-request(request&&) noexcept = default;
-```
-
-Constructs a request value.
-
-**Parameters:**
-
-- **request:** Request value to copy or move. Declaration: `request&&`.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/protocol/http/v11/request.h:139](../../../../../include/protocol/http/v11/request.h#L139)
-
-<a id="destructor-destructor-request"></a>
-
-## ~request
-
-🟠 **DESTRUCTOR** · *protocol::http::v11::request*
-
-```cpp
-~request() = default;
-```
-
-Destroys the request object.
-
-**Source:** [include/protocol/http/v11/request.h:140](../../../../../include/protocol/http/v11/request.h#L140)
-
 <a id="method-from"></a>
 
-## from
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> from
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 static request from(
@@ -168,55 +111,11 @@ Constructs the value from the supplied input.
 
 **Source:** [include/protocol/http/v11/request.h:144](../../../../../include/protocol/http/v11/request.h#L144)
 
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::request*
-
-```cpp
-request& operator=(const request&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **request:** Request value to copy or move. Declaration: `const request&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/request.h:165](../../../../../include/protocol/http/v11/request.h#L165)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::request*
-
-```cpp
-request& operator=(request&&) noexcept = default;
-```
-
-Uses the compiler-generated operator= operation.
-
-**Parameters:**
-
-- **request:** Request value to copy or move. Declaration: `request&&`.
-
-**Returns:** A reference to the updated object.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/protocol/http/v11/request.h:166](../../../../../include/protocol/http/v11/request.h#L166)
-
 <a id="method-get-method"></a>
 
-## get_method
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_method
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_method() const;
@@ -230,9 +129,9 @@ Returns method.
 
 <a id="method-get-target"></a>
 
-## get_target
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_target
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_target() const;
@@ -246,9 +145,9 @@ Returns target.
 
 <a id="method-get-absolute-path"></a>
 
-## get_absolute_path
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_absolute_path
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_absolute_path() const;
@@ -262,9 +161,9 @@ Returns absolute path.
 
 <a id="method-get-header"></a>
 
-## get_header
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_header
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_header(std::size_t i) const;
@@ -282,9 +181,9 @@ Returns header.
 
 <a id="method-get-header-2"></a>
 
-## get_header
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_header
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_header(std::string_view name) const;
@@ -304,9 +203,9 @@ Returns header.
 
 <a id="method-exist-header"></a>
 
-## exist_header
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> exist_header
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto exist_header(std::string_view name) const;
@@ -324,9 +223,9 @@ Checks whether the named HTTP header exists.
 
 <a id="method-get-headers-length"></a>
 
-## get_headers_length
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_headers_length
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_headers_length() const;
@@ -340,9 +239,9 @@ Returns headers length.
 
 <a id="method-get-query-parameter"></a>
 
-## get_query_parameter
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_query_parameter
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_query_parameter(std::size_t i) const;
@@ -360,9 +259,9 @@ Returns query parameter.
 
 <a id="method-get-query-parameter-2"></a>
 
-## get_query_parameter
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_query_parameter
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_query_parameter(std::string_view name) const
@@ -381,9 +280,9 @@ Returns query parameter.
 
 <a id="method-get-query-parameters-length"></a>
 
-## get_query_parameters_length
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_query_parameters_length
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_query_parameters_length() const;
@@ -397,9 +296,9 @@ Returns query parameters length.
 
 <a id="method-has-host"></a>
 
-## has_host
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> has_host
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto has_host() const;
@@ -413,9 +312,9 @@ Reports whether host applies.
 
 <a id="method-get-host"></a>
 
-## get_host
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_host
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_host() const;
@@ -429,9 +328,9 @@ Returns host.
 
 <a id="method-get-host-port"></a>
 
-## get_host_port
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_host_port
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_host_port() const;
@@ -445,9 +344,9 @@ Returns host port.
 
 <a id="method-get-host-type"></a>
 
-## get_host_type
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_host_type
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_host_type() const;
@@ -461,9 +360,9 @@ Returns host type.
 
 <a id="method-has-target-authority"></a>
 
-## has_target_authority
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> has_target_authority
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto has_target_authority() const;
@@ -477,9 +376,9 @@ Reports whether target authority applies.
 
 <a id="method-get-target-authority-host"></a>
 
-## get_target_authority_host
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_target_authority_host
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_target_authority_host() const;
@@ -493,9 +392,9 @@ Returns target authority host.
 
 <a id="method-get-target-authority-port"></a>
 
-## get_target_authority_port
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_target_authority_port
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_target_authority_port() const;
@@ -509,9 +408,9 @@ Returns target authority port.
 
 <a id="method-get-target-authority-type"></a>
 
-## get_target_authority_type
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_target_authority_type
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_target_authority_type() const;
@@ -525,9 +424,9 @@ Returns target authority type.
 
 <a id="method-get-body-reader"></a>
 
-## get_body_reader
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_body_reader
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto get_body_reader() const;
@@ -541,9 +440,9 @@ Returns body reader.
 
 <a id="method-has-body-reader"></a>
 
-## has_body_reader
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> has_body_reader
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto has_body_reader() const;
@@ -557,9 +456,9 @@ Reports whether body reader applies.
 
 <a id="method-wants-connection-close"></a>
 
-## wants_connection_close
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> wants_connection_close
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 auto wants_connection_close() const;
@@ -573,9 +472,9 @@ Reports whether the connection should close.
 
 <a id="method-get-cookie"></a>
 
-## get_cookie
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_cookie
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 std::optional<std::string_view> get_cookie(std::string_view name) const;
@@ -593,9 +492,9 @@ Looks up a single cookie-pair by name in the (unparsed) Cookie header, if presen
 
 <a id="method-get-cookies"></a>
 
-## get_cookies
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_cookies
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 std::vector<std::pair<std::string_view, std::string_view>> get_cookies()
@@ -610,9 +509,9 @@ Returns every cookie-pair present in the (unparsed) Cookie header, or an empty v
 
 <a id="method-borrows-bytes"></a>
 
-## borrows_bytes
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> borrows_bytes
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 bool borrows_bytes() const noexcept;
@@ -628,9 +527,9 @@ Async execution must own its bytes before calling user code.
 
 <a id="method-make-owned"></a>
 
-## make_owned
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> make_owned
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 void make_owned();
@@ -646,9 +545,9 @@ Creates owned.
 
 <a id="method-rebase-bytes"></a>
 
-## rebase_bytes
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> rebase_bytes
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 void rebase_bytes(std::uintptr_t previous, const char* current) noexcept;
@@ -669,9 +568,9 @@ Rebases borrowed views onto a new byte buffer.
 
 <a id="method-body-is-stored"></a>
 
-## body_is_stored
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> body_is_stored
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 bool body_is_stored() const noexcept;
@@ -687,9 +586,9 @@ Reports whether body storage is present.
 
 <a id="method-body-wire-size"></a>
 
-## body_wire_size
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> body_wire_size
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 std::size_t body_wire_size() const noexcept;
@@ -705,9 +604,9 @@ Returns the body size on the wire, in bytes.
 
 <a id="method-begin-body"></a>
 
-## begin_body
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> begin_body
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 bool begin_body(std::size_t memory_threshold, std::size_t declared_size);
@@ -726,9 +625,9 @@ Inline wire bytes stay in the decoder; larger bodies use existing storage.
 
 <a id="method-append-body"></a>
 
-## append_body
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> append_body
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 bool append_body(std::string_view bytes);
@@ -746,9 +645,9 @@ Appends body.
 
 <a id="method-finish-body"></a>
 
-## finish_body
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> finish_body
 
-🟠 **METHOD** · *protocol::http::v11::request*
+**METHOD** · *protocol::http::v11::request*
 
 ```cpp
 bool finish_body(bool chunked, std::size_t content_length,

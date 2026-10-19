@@ -1,9 +1,11 @@
 <a id="forwarded-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index.svg" alt="Index for forwarded.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index-dark.svg" alt="Index for forwarded.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/headers/forwarded.h](../../../../../../include/protocol/http/v11/headers/forwarded.h)
@@ -21,9 +23,9 @@
 
 <a id="type-forwarded"></a>
 
-## forwarded
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> forwarded
 
-🟠 **TYPE** · *protocol::http::v11::headers*
+**TYPE** · *protocol::http::v11::headers*
 
 **Declaration synopsis:**
 
@@ -37,9 +39,9 @@ class forwarded { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::v11::headers::forwarded*
+**METHOD** · *protocol::http::v11::headers::forwarded*
 
 ```cpp
 static bool check(std::string_view sv, parsed_forwarded_list& out);
@@ -58,9 +60,9 @@ Checks whether a value follows the HTTP forwarded header syntax.
 
 <a id="method-interpret"></a>
 
-## interpret
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> interpret
 
-🟠 **METHOD** · *protocol::http::v11::headers::forwarded*
+**METHOD** · *protocol::http::v11::headers::forwarded*
 
 ```cpp
 static constexpr verdict interpret(

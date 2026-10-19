@@ -1,9 +1,11 @@
 <a id="tcp-linux-context-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/tcp_linux_context/index-dark.svg">
+  <a href="../../../../resources/docs/reference/transport/server/tcp_linux_context/index.svg#gh-light-mode-only">
     <img src="../../../../resources/docs/reference/transport/server/tcp_linux_context/index.svg" alt="Index for tcp_linux_context.h">
-  </picture>
+  </a>
+  <a href="../../../../resources/docs/reference/transport/server/tcp_linux_context/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/docs/reference/transport/server/tcp_linux_context/index-dark.svg" alt="Index for tcp_linux_context.h">
+  </a>
 </h1>
 
 **Header:** [include/transport/server/tcp_linux_context.h](../../../../include/transport/server/tcp_linux_context.h)
@@ -16,12 +18,6 @@ This struct holds an engine's TCP connection state. It manages the socket and in
 
 **transport::server::context**
 
-- [context&lt;FAty&gt;(in_socket, receive_buffer_capacity, send_buffer_size, create_engine, …)](#constructor-context) · *constructor*
-- [context(context)](#constructor-context-2) · *constructor*
-- [context(context)](#constructor-context-3) · *constructor*
-- [~context](#destructor-destructor-context) · *destructor*
-- [operator=(context)](#operator-operator) · *operator*
-- [operator=(context)](#operator-operator-2) · *operator*
 - [receive](#method-receive) · *method*
 - [connected](#method-connected) · *method*
 - [stop](#method-stop) · *method*
@@ -42,9 +38,9 @@ This struct holds an engine's TCP connection state. It manages the socket and in
 
 <a id="type-context"></a>
 
-## context
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> context
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -62,146 +58,11 @@ This struct holds an engine's TCP connection state. It manages the socket and in
 
 **Source:** [include/transport/server/tcp_linux_context.h:62](../../../../include/transport/server/tcp_linux_context.h#L62)
 
-<a id="constructor-context"></a>
-
-## context
-
-🟠 **CONSTRUCTOR** · *transport::server::context*
-
-```cpp
-template <protocol::contracts::engine_factory<ENty> FAty>
-  context(int in_socket, std::size_t receive_buffer_capacity,
-          std::size_t send_buffer_size, const FAty& create_engine,
-          types::on_client_connected_delegate on_connection,
-          types::on_client_disconnected_delegate on_disconnection,
-          typename CNty::shared_state shared_state,
-          std::size_t encrypted_receive_buffer_capacity = 0,
-          std::size_t network_bio_buffer_capacity = 0);
-```
-
-Constructs a context value.
-
-**Template parameters:**
-
-- **FAty:** `protocol::contracts::engine_factory<ENty> FAty`.
-
-**Parameters:**
-
-- **in_socket:** Initial value supplied to the constructor. Declaration: `int in_socket`.
-- **receive_buffer_capacity:** Initial value supplied to the constructor. Declaration: `std::size_t receive_buffer_capacity`.
-- **send_buffer_size:** Size or length limit for the named data. Declaration: `std::size_t send_buffer_size`.
-- **create_engine:** Initial value supplied to the constructor. Declaration: `const FAty& create_engine`.
-- **on_connection:** Callback for the named event. Declaration: `types::on_client_connected_delegate on_connection`.
-- **on_disconnection:** Callback for the named event. Declaration: `types::on_client_disconnected_delegate on_disconnection`.
-- **shared_state:** Initial value supplied to the constructor. Declaration: `typename CNty::shared_state shared_state`.
-- **encrypted_receive_buffer_capacity:** Initial value supplied to the constructor. Declaration: `std::size_t encrypted_receive_buffer_capacity = 0`.
-- **network_bio_buffer_capacity:** Initial value supplied to the constructor. Declaration: `std::size_t network_bio_buffer_capacity = 0`.
-
-**Source:** [include/transport/server/tcp_linux_context.h:67](../../../../include/transport/server/tcp_linux_context.h#L67)
-
-<a id="constructor-context-2"></a>
-
-## context
-
-🟠 **CONSTRUCTOR** · *transport::server::context*
-
-```cpp
-context(const context&) = delete;
-```
-
-Disallows this form of transport::server::context construction.
-
-**Parameters:**
-
-- **context:** Context for this operation. Declaration: `const context&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/transport/server/tcp_linux_context.h:92](../../../../include/transport/server/tcp_linux_context.h#L92)
-
-<a id="constructor-context-3"></a>
-
-## context
-
-🟠 **CONSTRUCTOR** · *transport::server::context*
-
-```cpp
-context(context&&) noexcept = delete;
-```
-
-Disallows this form of transport::server::context construction.
-
-**Parameters:**
-
-- **context:** Context for this operation. Declaration: `context&&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/transport/server/tcp_linux_context.h:93](../../../../include/transport/server/tcp_linux_context.h#L93)
-
-<a id="destructor-destructor-context"></a>
-
-## ~context
-
-🟠 **DESTRUCTOR** · *transport::server::context*
-
-```cpp
-~context() = default;
-```
-
-Destroys the context object.
-
-**Source:** [include/transport/server/tcp_linux_context.h:94](../../../../include/transport/server/tcp_linux_context.h#L94)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *transport::server::context*
-
-```cpp
-context& operator=(const context&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **context:** Context for this operation. Declaration: `const context&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/transport/server/tcp_linux_context.h:98](../../../../include/transport/server/tcp_linux_context.h#L98)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *transport::server::context*
-
-```cpp
-context& operator=(context&&) noexcept = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **context:** Context for this operation. Declaration: `context&&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/transport/server/tcp_linux_context.h:99](../../../../include/transport/server/tcp_linux_context.h#L99)
-
 <a id="method-receive"></a>
 
-## receive
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> receive
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 ssize_t receive();
@@ -215,9 +76,9 @@ Reads data from the socket and passes it to the engine. It returns the number of
 
 <a id="method-connected"></a>
 
-## connected
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> connected
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 void connected(int epoll_fd, execution_capacity execution = {});
@@ -236,9 +97,9 @@ Sets the epoll file descriptor and execution capacity on the engine, with its `o
 
 <a id="method-stop"></a>
 
-## stop
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> stop
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 void stop(bool stopping = false);
@@ -256,9 +117,9 @@ Stops the connection and closes the output. If `stopping` is true, it means some
 
 <a id="method-close"></a>
 
-## close
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> close
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 void close();
@@ -272,9 +133,9 @@ Closes the connection and its output by setting the `closing_` flag and calling 
 
 <a id="method-abort"></a>
 
-## abort
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> abort
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 void abort();
@@ -288,9 +149,9 @@ Aborts the connection by calling the internal `abort_()` method.
 
 <a id="method-can-receive"></a>
 
-## can_receive
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> can_receive
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 bool can_receive() const;
@@ -304,9 +165,9 @@ Returns true if the socket is valid and the connection isn’t closing, so it ca
 
 <a id="method-is-closed"></a>
 
-## is_closed
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_closed
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 bool is_closed() const;
@@ -320,9 +181,9 @@ Returns true if the socket is invalid, which means the connection is closed. Oth
 
 <a id="method-eof"></a>
 
-## eof
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> eof
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 bool eof() const;
@@ -336,9 +197,9 @@ Reports whether the eof condition holds.
 
 <a id="method-notify-connection"></a>
 
-## notify_connection
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> notify_connection
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 void notify_connection();
@@ -352,9 +213,9 @@ Lets the owner know the connection is up by calling `on_connection_`. It locks t
 
 <a id="method-send"></a>
 
-## send
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> send
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 void send(std::string_view head, std::string_view body,
@@ -375,9 +236,9 @@ Sends data over the connection, using a mutex to keep things thread-safe. If the
 
 <a id="method-send-pending"></a>
 
-## send_pending
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> send_pending
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 bool send_pending();
@@ -391,9 +252,9 @@ Sends any data waiting in the output buffer, while using a mutex to keep things 
 
 <a id="method-retire-socket"></a>
 
-## retire_socket
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> retire_socket
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 int retire_socket();
@@ -407,9 +268,9 @@ Retires the socket by locking the mutex and checking whether it’s still valid.
 
 <a id="method-stop-engine"></a>
 
-## stop_engine
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> stop_engine
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 bool stop_engine(std::function<void()> completed);
@@ -427,9 +288,9 @@ Stops protocol engine processing for this connection.
 
 <a id="method-mark-engine-complete"></a>
 
-## mark_engine_complete
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> mark_engine_complete
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 void mark_engine_complete() noexcept;
@@ -445,9 +306,9 @@ Marks protocol engine processing as complete.
 
 <a id="method-engine-complete"></a>
 
-## engine_complete
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> engine_complete
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 bool engine_complete() const noexcept;
@@ -463,9 +324,9 @@ Reports whether protocol engine processing is complete.
 
 <a id="method-notify-disconnection"></a>
 
-## notify_disconnection
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> notify_disconnection
 
-🟠 **METHOD** · *transport::server::context*
+**METHOD** · *transport::server::context*
 
 ```cpp
 void notify_disconnection();
@@ -479,9 +340,9 @@ Tells the owner the connection has been disconnected by calling `on_disconnectio
 
 <a id="field-retirement-next"></a>
 
-## retirement_next
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> retirement_next
 
-🟠 **FIELD** · *transport::server::context*
+**FIELD** · *transport::server::context*
 
 ```cpp
 context* retirement_next{nullptr};

@@ -1,9 +1,11 @@
 <a id="tcp-windows-overlapped-receive-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index-dark.svg">
+  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index.svg#gh-light-mode-only">
     <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index.svg" alt="Index for tcp_windows_overlapped_receive.h">
-  </picture>
+  </a>
+  <a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index-dark.svg" alt="Index for tcp_windows_overlapped_receive.h">
+  </a>
 </h1>
 
 **Header:** [include/transport/server/tcp_windows_overlapped_receive.h](../../../../include/transport/server/tcp_windows_overlapped_receive.h)
@@ -17,14 +19,13 @@ Provides the context transport component.
 
 **transport::server::overlapped_receive**
 
-- [overlapped_receive](#constructor-overlapped-receive) · *constructor*
 - [ctx](#field-ctx) · *field*
 
 <a id="type-context"></a>
 
-## context
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> context
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -44,9 +45,9 @@ Provides the context transport component.
 
 <a id="type-overlapped-receive"></a>
 
-## overlapped_receive
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> overlapped_receive
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -64,29 +65,11 @@ Windows overlapped receive operation.
 
 **Source:** [include/transport/server/tcp_windows_overlapped_receive.h:50](../../../../include/transport/server/tcp_windows_overlapped_receive.h#L50)
 
-<a id="constructor-overlapped-receive"></a>
-
-## overlapped_receive
-
-🟠 **CONSTRUCTOR** · *transport::server::overlapped_receive*
-
-```cpp
-overlapped_receive(std::shared_ptr<context<ENty, CNty>> context);
-```
-
-Constructs a overlapped_receive value.
-
-**Parameters:**
-
-- **context:** Context for this operation. Declaration: `std::shared_ptr<context<ENty, CNty>> context`.
-
-**Source:** [include/transport/server/tcp_windows_overlapped_receive.h:54](../../../../include/transport/server/tcp_windows_overlapped_receive.h#L54)
-
 <a id="field-ctx"></a>
 
-## ctx
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ctx
 
-🟠 **FIELD** · *transport::server::overlapped_receive*
+**FIELD** · *transport::server::overlapped_receive*
 
 ```cpp
 std::shared_ptr<context<ENty, CNty>> ctx;

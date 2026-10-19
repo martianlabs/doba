@@ -1,9 +1,11 @@
 <a id="tls-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/tls/index-dark.svg">
+  <a href="../../../../resources/docs/reference/transport/server/tls/index.svg#gh-light-mode-only">
     <img src="../../../../resources/docs/reference/transport/server/tls/index.svg" alt="Index for tls.h">
-  </picture>
+  </a>
+  <a href="../../../../resources/docs/reference/transport/server/tls/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/docs/reference/transport/server/tls/index-dark.svg" alt="Index for tls.h">
+  </a>
 </h1>
 
 **Header:** [include/transport/server/tls.h](../../../../include/transport/server/tls.h)
@@ -14,15 +16,11 @@ This class provides a TLS transport for an engine. It inherits from `basic_trans
 
 - [tls](#type-tls) · *type*
 
-**transport::server::tls**
-
-- [tls](#constructor-tls) · *constructor*
-
 <a id="type-tls"></a>
 
-## tls
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> tls
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -41,22 +39,3 @@ This class provides a TLS transport for an engine. It inherits from `basic_trans
 - **FAty:** `protocol::contracts::engine_factory<ENty> FAty`.
 
 **Source:** [include/transport/server/tls.h:49](../../../../include/transport/server/tls.h#L49)
-
-<a id="constructor-tls"></a>
-
-## tls
-
-🟠 **CONSTRUCTOR** · *transport::server::tls*
-
-```cpp
-explicit tls(tls_policies configuration, FAty create_engine);
-```
-
-| CONSTRUCTORs/DESTRUCTORs                                     ( public ) |
-
-**Parameters:**
-
-- **configuration:** Configuration for this component. Declaration: `tls_policies configuration`.
-- **create_engine:** Initial value supplied to the constructor. Declaration: `FAty create_engine`.
-
-**Source:** [include/transport/server/tls.h:55](../../../../include/transport/server/tls.h#L55)

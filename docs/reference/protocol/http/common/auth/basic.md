@@ -1,9 +1,11 @@
 <a id="basic-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index.svg" alt="Index for basic.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index-dark.svg" alt="Index for basic.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/auth/basic.h](../../../../../../include/protocol/http/common/auth/basic.h)
@@ -16,14 +18,13 @@ Validates HTTP Basic credentials through a user-supplied callback.
 
 **protocol::http::auth::basic**
 
-- [basic](#constructor-basic) · *constructor*
 - [authenticate](#method-authenticate) · *method*
 
 <a id="type-basic"></a>
 
-## basic
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> basic
 
-🟠 **TYPE** · *protocol::http::auth*
+**TYPE** · *protocol::http::auth*
 
 **Declaration synopsis:**
 
@@ -35,34 +36,11 @@ Validates HTTP Basic credentials through a user-supplied callback.
 
 **Source:** [include/protocol/http/common/auth/basic.h:43](../../../../../../include/protocol/http/common/auth/basic.h#L43)
 
-<a id="constructor-basic"></a>
-
-## basic
-
-🟠 **CONSTRUCTOR** · *protocol::http::auth::basic*
-
-```cpp
-explicit basic(
-      std::string_view realm,
-      std::function<bool(std::string_view, std::string_view)> validator);
-```
-
-Stores the Basic validator and builds a quoted realm for the challenge header.
-
-**Parameters:**
-
-- **realm:** Initial value supplied to the constructor. Declaration: `std::string_view realm`.
-- **validator:** Initial value supplied to the constructor. Declaration: `std::function<bool(std::string_view, std::string_view)> validator`.
-
-**Errors:** Throws `std::invalid_argument` for a missing validator or a realm containing non-printable or non-ASCII bytes. Allocation failures may propagate.
-
-**Source:** [include/protocol/http/common/auth/basic.h:48](../../../../../../include/protocol/http/common/auth/basic.h#L48)
-
 <a id="method-authenticate"></a>
 
-## authenticate
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> authenticate
 
-🟠 **METHOD** · *protocol::http::auth::basic*
+**METHOD** · *protocol::http::auth::basic*
 
 ```cpp
 template <typename RQty>

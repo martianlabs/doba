@@ -1,9 +1,11 @@
 <a id="reader-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/common/reader/index-dark.svg">
+  <a href="../../../resources/docs/reference/common/reader/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/common/reader/index.svg" alt="Index for reader.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/common/reader/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/common/reader/index-dark.svg" alt="Index for reader.h">
+  </a>
 </h1>
 
 **Header:** [include/common/reader.h](../../../include/common/reader.h)
@@ -16,13 +18,6 @@ This class provides a reader interface for reading bytes from a byte_storage bac
 
 **common::reader**
 
-- [reader()](#constructor-reader) · *constructor*
-- [reader(storage)](#constructor-reader-2) · *constructor*
-- [reader(file)](#constructor-reader-3) · *constructor*
-- [reader(reader)](#constructor-reader-4) · *constructor*
-- [reader(in)](#constructor-reader-5) · *constructor*
-- [operator=(reader)](#operator-operator) · *operator*
-- [operator=(in)](#operator-operator-2) · *operator*
 - [borrowed](#method-borrowed) · *method*
 - [rebind_borrowed](#method-rebind-borrowed) · *method*
 - [read](#method-read) · *method*
@@ -36,9 +31,9 @@ This class provides a reader interface for reading bytes from a byte_storage bac
 
 <a id="type-reader"></a>
 
-## reader
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> reader
 
-🟠 **TYPE** · *common*
+**TYPE** · *common*
 
 **Declaration synopsis:**
 
@@ -50,145 +45,11 @@ This class provides a reader interface for reading bytes from a byte_storage bac
 
 **Source:** [include/common/reader.h:51](../../../include/common/reader.h#L51)
 
-<a id="constructor-reader"></a>
-
-## reader
-
-🟠 **CONSTRUCTOR** · *common::reader*
-
-```cpp
-reader() = default;
-```
-
-Constructs a reader value.
-
-**Source:** [include/common/reader.h:56](../../../include/common/reader.h#L56)
-
-<a id="constructor-reader-2"></a>
-
-## reader
-
-🟠 **CONSTRUCTOR** · *common::reader*
-
-```cpp
-explicit reader(byte_storage storage);
-```
-
-Constructs a reader value.
-
-**Parameters:**
-
-- **storage:** Initial value supplied to the constructor. Declaration: `byte_storage storage`.
-
-**Source:** [include/common/reader.h:57](../../../include/common/reader.h#L57)
-
-<a id="constructor-reader-3"></a>
-
-## reader
-
-🟠 **CONSTRUCTOR** · *common::reader*
-
-```cpp
-explicit reader(filesystem_file file);
-```
-
-Constructs a reader value.
-
-**Parameters:**
-
-- **file:** File used by the operation. Declaration: `filesystem_file file`.
-
-**Source:** [include/common/reader.h:58](../../../include/common/reader.h#L58)
-
-<a id="constructor-reader-4"></a>
-
-## reader
-
-🟠 **CONSTRUCTOR** · *common::reader*
-
-```cpp
-reader(const reader&) = delete;
-```
-
-Disallows this form of common::reader construction.
-
-**Parameters:**
-
-- **reader:** Reader to use or move into this object. Declaration: `const reader&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/common/reader.h:59](../../../include/common/reader.h#L59)
-
-<a id="constructor-reader-5"></a>
-
-## reader
-
-🟠 **CONSTRUCTOR** · *common::reader*
-
-```cpp
-reader(reader&& in) noexcept;
-```
-
-Constructs a reader value.
-
-**Parameters:**
-
-- **in:** Input value to move or inspect. Declaration: `reader&& in`.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/reader.h:60](../../../include/common/reader.h#L60)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *common::reader*
-
-```cpp
-reader& operator=(const reader&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **reader:** Reader to use or move into this object. Declaration: `const reader&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/common/reader.h:76](../../../include/common/reader.h#L76)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *common::reader*
-
-```cpp
-reader& operator=(reader&& in) noexcept;
-```
-
-Implements operator= for reader.
-
-**Parameters:**
-
-- **in:** Input value to move or inspect. Declaration: `reader&& in`.
-
-**Returns:** A reference to the updated object.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/reader.h:77](../../../include/common/reader.h#L77)
-
 <a id="method-borrowed"></a>
 
-## borrowed
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> borrowed
 
-🟠 **METHOD** · *common::reader*
+**METHOD** · *common::reader*
 
 ```cpp
 static reader borrowed(std::span<const std::byte> source) noexcept;
@@ -208,9 +69,9 @@ Creates a non-owning reader over stable caller storage. The referenced bytes mus
 
 <a id="method-rebind-borrowed"></a>
 
-## rebind_borrowed
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> rebind_borrowed
 
-🟠 **METHOD** · *common::reader*
+**METHOD** · *common::reader*
 
 ```cpp
 void rebind_borrowed(std::span<const std::byte> source) noexcept;
@@ -230,9 +91,9 @@ Points borrowed byte views at the replacement buffer.
 
 <a id="method-read"></a>
 
-## read
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> read
 
-🟠 **METHOD** · *common::reader*
+**METHOD** · *common::reader*
 
 ```cpp
 std::size_t read(std::span<std::byte> output);
@@ -250,9 +111,9 @@ Reads data.
 
 <a id="method-fetch"></a>
 
-## fetch
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> fetch
 
-🟠 **METHOD** · *common::reader*
+**METHOD** · *common::reader*
 
 ```cpp
 bool fetch(std::byte& byte);
@@ -270,9 +131,9 @@ Fetches the requested value.
 
 <a id="method-eof"></a>
 
-## eof
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> eof
 
-🟠 **METHOD** · *common::reader*
+**METHOD** · *common::reader*
 
 ```cpp
 [[nodiscard]] bool eof() const noexcept;
@@ -288,9 +149,9 @@ Reports whether the eof condition holds.
 
 <a id="method-exhausted"></a>
 
-## exhausted
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> exhausted
 
-🟠 **METHOD** · *common::reader*
+**METHOD** · *common::reader*
 
 ```cpp
 [[nodiscard]] bool exhausted() const noexcept;
@@ -306,9 +167,9 @@ Reports whether the exhausted condition holds.
 
 <a id="method-failed"></a>
 
-## failed
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> failed
 
-🟠 **METHOD** · *common::reader*
+**METHOD** · *common::reader*
 
 ```cpp
 [[nodiscard]] bool failed() const noexcept;
@@ -324,9 +185,9 @@ Reports whether the failed condition holds.
 
 <a id="method-ok"></a>
 
-## ok
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ok
 
-🟠 **METHOD** · *common::reader*
+**METHOD** · *common::reader*
 
 ```cpp
 [[nodiscard]] bool ok() const noexcept;
@@ -342,9 +203,9 @@ Reports whether the ok condition holds.
 
 <a id="method-size"></a>
 
-## size
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> size
 
-🟠 **METHOD** · *common::reader*
+**METHOD** · *common::reader*
 
 ```cpp
 [[nodiscard]] std::optional<std::size_t> size() const noexcept;
@@ -360,9 +221,9 @@ Returns the current size.
 
 <a id="method-read-all"></a>
 
-## read_all
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> read_all
 
-🟠 **METHOD** · *common::reader*
+**METHOD** · *common::reader*
 
 ```cpp
 std::size_t read_all(std::string& out);

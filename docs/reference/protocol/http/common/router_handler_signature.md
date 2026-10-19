@@ -1,9 +1,11 @@
 <a id="router-handler-signature-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index.svg" alt="Index for router_handler_signature.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index-dark.svg" alt="Index for router_handler_signature.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/router_handler_signature.h](../../../../../include/protocol/http/common/router_handler_signature.h)
@@ -36,9 +38,9 @@ Provides the router handler signature protocol component.
 
 <a id="type-router-handler-signature"></a>
 
-## router_handler_signature
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router_handler_signature
 
-🟠 **TYPE** · *protocol::http*
+**TYPE** · *protocol::http*
 
 **Declaration synopsis:**
 
@@ -57,9 +59,9 @@ Provides the router handler signature protocol component.
 
 <a id="type-router-handler-signature-base"></a>
 
-## router_handler_signature_base
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router_handler_signature_base
 
-🟠 **TYPE** · *protocol::http*
+**TYPE** · *protocol::http*
 
 **Declaration synopsis:**
 
@@ -81,9 +83,9 @@ Provides the router handler signature base protocol component.
 
 <a id="alias-return-type"></a>
 
-## return_type
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> return_type
 
-🟠 **ALIAS** · *protocol::http::router_handler_signature_base*
+**ALIAS** · *protocol::http::router_handler_signature_base*
 
 ```cpp
 using return_type = LOty;
@@ -95,9 +97,9 @@ Alias for `LOty`.
 
 <a id="alias-request-type"></a>
 
-## request_type
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> request_type
 
-🟠 **ALIAS** · *protocol::http::router_handler_signature_base*
+**ALIAS** · *protocol::http::router_handler_signature_base*
 
 ```cpp
 using request_type = LQty;
@@ -109,9 +111,9 @@ Alias for `LQty`.
 
 <a id="alias-response-type"></a>
 
-## response_type
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> response_type
 
-🟠 **ALIAS** · *protocol::http::router_handler_signature_base*
+**ALIAS** · *protocol::http::router_handler_signature_base*
 
 ```cpp
 using response_type = LSty;
@@ -123,9 +125,9 @@ Alias for `LSty`.
 
 <a id="constant-parameter-count"></a>
 
-## parameter_count
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parameter_count
 
-🟠 **CONSTANT** · *protocol::http::router_handler_signature_base*
+**CONSTANT** · *protocol::http::router_handler_signature_base*
 
 ```cpp
 static constexpr std::size_t parameter_count = sizeof...(Args);
@@ -139,9 +141,9 @@ Defines the parameter count constant.
 
 <a id="method-bind"></a>
 
-## bind
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> bind
 
-🟠 **METHOD** · *protocol::http::router_handler_signature_base*
+**METHOD** · *protocol::http::router_handler_signature_base*
 
 ```cpp
 template <typename Cty, typename Mty>
@@ -166,9 +168,9 @@ This static method binds a controller instance and a member function to create a
 
 <a id="method-make-parametrized"></a>
 
-## make_parametrized
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> make_parametrized
 
-🟠 **METHOD** · *protocol::http::router_handler_signature_base*
+**METHOD** · *protocol::http::router_handler_signature_base*
 
 ```cpp
 template <typename RQty, typename RSty, typename Hty>
@@ -194,9 +196,9 @@ This static method creates a parametrized router handler using the provided patt
 
 <a id="method-make-parametrized-async"></a>
 
-## make_parametrized_async
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> make_parametrized_async
 
-🟠 **METHOD** · *protocol::http::router_handler_signature_base*
+**METHOD** · *protocol::http::router_handler_signature_base*
 
 ```cpp
 template <typename RQty, typename RSty, typename Hty>
@@ -222,9 +224,9 @@ Creates parametrized async.
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::router_handler_signature_base*
+**METHOD** · *protocol::http::router_handler_signature_base*
 
 ```cpp
 template <typename RQty, typename RSty>
@@ -244,9 +246,9 @@ This static method checks if the types of the handler's arguments match the expe
 
 <a id="type-router-handler-signature-retty-cty-reqty-resty-args-const"></a>
 
-## router_handler_signature
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router_handler_signature
 
-🟠 **TYPE** · *protocol::http*
+**TYPE** · *protocol::http*
 
 **Declaration synopsis:**
 
@@ -271,9 +273,9 @@ Provides the router handler signature<retty (cty::*)(reqty, resty, args...) cons
 
 <a id="type-router-handler-signature-retty-cty-reqty-resty-args-const-noexcept"></a>
 
-## router_handler_signature
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router_handler_signature
 
-🟠 **TYPE** · *protocol::http*
+**TYPE** · *protocol::http*
 
 **Declaration synopsis:**
 
@@ -300,9 +302,9 @@ Provides the router handler signature<retty (cty::*)(reqty, resty, args...)
 
 <a id="type-router-handler-signature-retty-cty-reqty-resty-args"></a>
 
-## router_handler_signature
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router_handler_signature
 
-🟠 **TYPE** · *protocol::http*
+**TYPE** · *protocol::http*
 
 **Declaration synopsis:**
 
@@ -327,9 +329,9 @@ Provides the router handler signature<retty (cty::*)(reqty, resty, args...)> pro
 
 <a id="type-router-handler-signature-retty-cty-reqty-resty-args-noexcept"></a>
 
-## router_handler_signature
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router_handler_signature
 
-🟠 **TYPE** · *protocol::http*
+**TYPE** · *protocol::http*
 
 **Declaration synopsis:**
 
@@ -354,9 +356,9 @@ Provides the router handler signature<retty (cty::*)(reqty, resty, args...) noex
 
 <a id="concept-router-handler-lambda"></a>
 
-## router_handler_lambda
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router_handler_lambda
 
-🟠 **CONCEPT** · *protocol::http*
+**CONCEPT** · *protocol::http*
 
 ```cpp
 template <typename Hty>

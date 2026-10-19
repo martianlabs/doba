@@ -1,9 +1,11 @@
 <a id="decoder-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/v11/decoder/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/decoder/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/v11/decoder/index.svg" alt="Index for decoder.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/decoder/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/v11/decoder/index-dark.svg" alt="Index for decoder.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/decoder.h](../../../../../include/protocol/http/v11/decoder.h)
@@ -16,12 +18,6 @@ Provides the http 1.1 decoder implementation.
 
 **protocol::http::v11::decoder**
 
-- [decoder(configuration)](#constructor-decoder) · *constructor*
-- [decoder(decoder)](#constructor-decoder-2) · *constructor*
-- [decoder(decoder)](#constructor-decoder-3) · *constructor*
-- [~decoder](#destructor-destructor-decoder) · *destructor*
-- [operator=(decoder)](#operator-operator) · *operator*
-- [operator=(decoder)](#operator-operator-2) · *operator*
 - [deserialize](#method-deserialize) · *method*
 - [configuration](#method-configuration) · *method*
 - [make_response()](#method-make-response) · *method*
@@ -29,9 +25,9 @@ Provides the http 1.1 decoder implementation.
 
 <a id="type-decoder"></a>
 
-## decoder
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> decoder
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -49,129 +45,11 @@ Provides the http 1.1 decoder implementation.
 
 **Source:** [include/protocol/http/v11/decoder.h:140](../../../../../include/protocol/http/v11/decoder.h#L140)
 
-<a id="constructor-decoder"></a>
-
-## decoder
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::decoder*
-
-```cpp
-explicit decoder(policies configuration = {});
-```
-
-Constructs a decoder value.
-
-**Parameters:**
-
-- **configuration:** Configuration for this component. Declaration: `policies configuration = {}`.
-
-**Errors:** Directly throws `std::invalid_argument`. Calls made by this operation may propagate additional errors.
-
-**Source:** [include/protocol/http/v11/decoder.h:150](../../../../../include/protocol/http/v11/decoder.h#L150)
-
-<a id="constructor-decoder-2"></a>
-
-## decoder
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::decoder*
-
-```cpp
-decoder(const decoder&) = delete;
-```
-
-Disallows this form of protocol::http::v11::decoder construction.
-
-**Parameters:**
-
-- **decoder:** Source object to copy or move. Declaration: `const decoder&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/decoder.h:157](../../../../../include/protocol/http/v11/decoder.h#L157)
-
-<a id="constructor-decoder-3"></a>
-
-## decoder
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::decoder*
-
-```cpp
-decoder(decoder&&) noexcept = delete;
-```
-
-Disallows this form of protocol::http::v11::decoder construction.
-
-**Parameters:**
-
-- **decoder:** Source object to copy or move. Declaration: `decoder&&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/decoder.h:158](../../../../../include/protocol/http/v11/decoder.h#L158)
-
-<a id="destructor-destructor-decoder"></a>
-
-## ~decoder
-
-🟠 **DESTRUCTOR** · *protocol::http::v11::decoder*
-
-```cpp
-~decoder() = default;
-```
-
-Destroys the decoder object.
-
-**Source:** [include/protocol/http/v11/decoder.h:159](../../../../../include/protocol/http/v11/decoder.h#L159)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::decoder*
-
-```cpp
-decoder& operator=(const decoder&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **decoder:** Source object to copy or move. Declaration: `const decoder&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/decoder.h:163](../../../../../include/protocol/http/v11/decoder.h#L163)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::v11::decoder*
-
-```cpp
-decoder& operator=(decoder&&) noexcept = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **decoder:** Source object to copy or move. Declaration: `decoder&&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/v11/decoder.h:164](../../../../../include/protocol/http/v11/decoder.h#L164)
-
 <a id="method-deserialize"></a>
 
-## deserialize
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> deserialize
 
-🟠 **METHOD** · *protocol::http::v11::decoder*
+**METHOD** · *protocol::http::v11::decoder*
 
 ```cpp
 deserialization_result<RQty, RSty> deserialize(
@@ -193,9 +71,9 @@ Consume one message, retaining only an unfinished message across calls.
 
 <a id="method-configuration"></a>
 
-## configuration
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> configuration
 
-🟠 **METHOD** · *protocol::http::v11::decoder*
+**METHOD** · *protocol::http::v11::decoder*
 
 ```cpp
 const policies& configuration() const noexcept;
@@ -211,9 +89,9 @@ Returns the decoder's configuration.
 
 <a id="method-make-response"></a>
 
-## make_response
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> make_response
 
-🟠 **METHOD** · *protocol::http::v11::decoder*
+**METHOD** · *protocol::http::v11::decoder*
 
 ```cpp
 RSty make_response();
@@ -227,9 +105,9 @@ Creates a response that owns its bytes, with the configured limits.
 
 <a id="method-make-response-2"></a>
 
-## make_response
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> make_response
 
-🟠 **METHOD** · *protocol::http::v11::decoder*
+**METHOD** · *protocol::http::v11::decoder*
 
 ```cpp
 RSty make_response(std::string& head, std::string& body);

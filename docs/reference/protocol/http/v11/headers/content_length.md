@@ -1,9 +1,11 @@
 <a id="content-length-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/headers/content_length/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/content_length/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/content_length/index.svg" alt="Index for content_length.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/content_length/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/content_length/index-dark.svg" alt="Index for content_length.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/headers/content_length.h](../../../../../../include/protocol/http/v11/headers/content_length.h)
@@ -21,9 +23,9 @@ The "Content-Length" header field indicates the associated representation's data
 
 <a id="type-content-length"></a>
 
-## content_length
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> content_length
 
-🟠 **TYPE** · *protocol::http::v11::headers*
+**TYPE** · *protocol::http::v11::headers*
 
 **Declaration synopsis:**
 
@@ -37,9 +39,9 @@ The "Content-Length" header field indicates the associated representation's data
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::v11::headers::content_length*
+**METHOD** · *protocol::http::v11::headers::content_length*
 
 ```cpp
 static constexpr bool check(std::string_view sv, std::size_t& out);
@@ -58,9 +60,9 @@ Checks whether a value follows the HTTP content-length header syntax.
 
 <a id="method-interpret"></a>
 
-## interpret
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> interpret
 
-🟠 **METHOD** · *protocol::http::v11::headers::content_length*
+**METHOD** · *protocol::http::v11::headers::content_length*
 
 ```cpp
 static constexpr verdict interpret(const std::size_t& len, v11::connection&,

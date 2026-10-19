@@ -1,9 +1,11 @@
 <a id="directives-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/directives/index-dark.svg">
+  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/directives/index.svg#gh-light-mode-only">
     <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/directives/index.svg" alt="Index for directives.h">
-  </picture>
+  </a>
+  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/directives/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/directives/index-dark.svg" alt="Index for directives.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/headers/rules/directives.h](../../../../../../../include/protocol/http/v11/headers/rules/directives.h)
@@ -20,9 +22,9 @@ The transversal "connection directives" rules: they relate the Connection option
 
 <a id="type-directives"></a>
 
-## directives
+## <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> directives
 
-🟠 **TYPE** · *protocol::http::v11::headers::rules*
+**TYPE** · *protocol::http::v11::headers::rules*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ The transversal "connection directives" rules: they relate the Connection option
 
 <a id="method-apply"></a>
 
-## apply
+## <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> apply
 
-🟠 **METHOD** · *protocol::http::v11::headers::rules::directives*
+**METHOD** · *protocol::http::v11::headers::rules::directives*
 
 ```cpp
 static constexpr verdict apply(const context& ctx);

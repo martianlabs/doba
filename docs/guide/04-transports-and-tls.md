@@ -1,9 +1,11 @@
 <a name="transports-and-tls"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h1-transports-and-tls-dark.svg">
+  <a href="../../resources/docs/guide/h1-transports-and-tls.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h1-transports-and-tls.svg" alt="Transports and TLS">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h1-transports-and-tls-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h1-transports-and-tls-dark.svg" alt="Transports and TLS">
+  </a>
 </h1>
 
 Your HTTP handlers deal with requests and responses. The transport deals with
@@ -12,10 +14,12 @@ TLS; both keep the same HTTP route API.
 
 <a name="tcp-by-default"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-tcp-by-default-dark.svg">
+  <a href="../../resources/docs/guide/h2-tcp-by-default.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-tcp-by-default.svg" alt="TCP by default">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-tcp-by-default-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-tcp-by-default-dark.svg" alt="TCP by default">
+  </a>
 </h2>
 
 **http_server<>** uses the TCP transport unless you choose another one. The
@@ -41,10 +45,12 @@ Linux, they use epoll. Your handlers do not need a platform-specific path.
 
 <a name="tcp-policies"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-tcp-policies-dark.svg">
+  <a href="../../resources/docs/guide/h2-tcp-policies.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-tcp-policies.svg" alt="TCP policies">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-tcp-policies-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-tcp-policies-dark.svg" alt="TCP policies">
+  </a>
 </h2>
 
 The first **http_server<>** constructor argument is a *tcp_policies* value. It
@@ -81,10 +87,12 @@ them; the limits chapter covers resource boundaries in more detail.
 
 <a name="switch-on-tls"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-switch-on-tls-dark.svg">
+  <a href="../../resources/docs/guide/h2-switch-on-tls.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-switch-on-tls.svg" alt="Switch on TLS">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-switch-on-tls-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-switch-on-tls-dark.svg" alt="Switch on TLS">
+  </a>
 </h2>
 
 TLS is an optional transport backed by OpenSSL. The
@@ -121,10 +129,12 @@ default to **17 KiB** per connection.
 
 <a name="try-https"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-try-https-dark.svg">
+  <a href="../../resources/docs/guide/h2-try-https.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-try-https.svg" alt="Try HTTPS">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-try-https-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-try-https-dark.svg" alt="Try HTTPS">
+  </a>
 </h2>
 
 From the repository root, enable TLS and build the example:

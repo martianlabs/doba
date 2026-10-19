@@ -1,9 +1,11 @@
 <a name="guide"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h1-guide-dark.svg">
+  <a href="../../resources/docs/guide/h1-guide.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h1-guide.svg" alt="Guide">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h1-guide-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h1-guide-dark.svg" alt="Guide">
+  </a>
 </h1>
 
 Want to see doba do something? Start at chapter 1, or jump straight to the bit

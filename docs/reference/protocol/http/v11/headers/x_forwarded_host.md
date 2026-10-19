@@ -1,9 +1,11 @@
 <a id="x-forwarded-host-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_host/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_host/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_host/index.svg" alt="Index for x_forwarded_host.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_host/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_host/index-dark.svg" alt="Index for x_forwarded_host.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/headers/x_forwarded_host.h](../../../../../../include/protocol/http/v11/headers/x_forwarded_host.h)
@@ -21,9 +23,9 @@
 
 <a id="type-x-forwarded-host"></a>
 
-## x_forwarded_host
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> x_forwarded_host
 
-🟠 **TYPE** · *protocol::http::v11::headers*
+**TYPE** · *protocol::http::v11::headers*
 
 **Declaration synopsis:**
 
@@ -37,9 +39,9 @@ class x_forwarded_host { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::v11::headers::x_forwarded_host*
+**METHOD** · *protocol::http::v11::headers::x_forwarded_host*
 
 ```cpp
 static constexpr bool check(std::string_view sv, parsed_host_port& out);
@@ -58,9 +60,9 @@ Checks whether a value follows the HTTP x-forwarded-host header syntax.
 
 <a id="method-interpret"></a>
 
-## interpret
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> interpret
 
-🟠 **METHOD** · *protocol::http::v11::headers::x_forwarded_host*
+**METHOD** · *protocol::http::v11::headers::x_forwarded_host*
 
 ```cpp
 static constexpr verdict interpret(const parsed_host_port&, v11::connection&,

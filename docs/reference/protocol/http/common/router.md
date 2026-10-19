@@ -1,9 +1,11 @@
 <a id="router-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/common/router/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/common/router/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/common/router/index.svg" alt="Index for router.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/common/router/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/common/router/index-dark.svg" alt="Index for router.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/router.h](../../../../../include/protocol/http/common/router.h)
@@ -16,12 +18,6 @@ Provides the http 1.1 router implementation.
 
 **protocol::http::router**
 
-- [router()](#constructor-router) · *constructor*
-- [router(router)](#constructor-router-2) · *constructor*
-- [router(router)](#constructor-router-3) · *constructor*
-- [~router](#destructor-destructor-router) · *destructor*
-- [operator=(router)](#operator-operator) · *operator*
-- [operator=(router)](#operator-operator-2) · *operator*
 - [add&lt;Hty&gt;(method, route, handler)](#method-add) · *method*
 - [add&lt;Hty&gt;(method, route, handler, authenticate)](#method-add-2) · *method*
 - [add_controller](#method-add-controller) · *method*
@@ -30,9 +26,9 @@ Provides the http 1.1 router implementation.
 
 <a id="type-router"></a>
 
-## router
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router
 
-🟠 **TYPE** · *protocol::http*
+**TYPE** · *protocol::http*
 
 **Declaration synopsis:**
 
@@ -50,123 +46,11 @@ Provides the http 1.1 router implementation.
 
 **Source:** [include/protocol/http/common/router.h:58](../../../../../include/protocol/http/common/router.h#L58)
 
-<a id="constructor-router"></a>
-
-## router
-
-🟠 **CONSTRUCTOR** · *protocol::http::router*
-
-```cpp
-router() = default;
-```
-
-Constructs a router value.
-
-**Source:** [include/protocol/http/common/router.h:63](../../../../../include/protocol/http/common/router.h#L63)
-
-<a id="constructor-router-2"></a>
-
-## router
-
-🟠 **CONSTRUCTOR** · *protocol::http::router*
-
-```cpp
-router(const router&) = delete;
-```
-
-Disallows this form of protocol::http::router construction.
-
-**Parameters:**
-
-- **router:** Router used for request dispatch. Declaration: `const router&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/common/router.h:64](../../../../../include/protocol/http/common/router.h#L64)
-
-<a id="constructor-router-3"></a>
-
-## router
-
-🟠 **CONSTRUCTOR** · *protocol::http::router*
-
-```cpp
-router(router&&) noexcept = delete;
-```
-
-Disallows this form of protocol::http::router construction.
-
-**Parameters:**
-
-- **router:** Router used for request dispatch. Declaration: `router&&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/common/router.h:65](../../../../../include/protocol/http/common/router.h#L65)
-
-<a id="destructor-destructor-router"></a>
-
-## ~router
-
-🟠 **DESTRUCTOR** · *protocol::http::router*
-
-```cpp
-~router() = default;
-```
-
-Destroys the router object.
-
-**Source:** [include/protocol/http/common/router.h:66](../../../../../include/protocol/http/common/router.h#L66)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::router*
-
-```cpp
-router& operator=(const router&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **router:** Router used for request dispatch. Declaration: `const router&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/common/router.h:70](../../../../../include/protocol/http/common/router.h#L70)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *protocol::http::router*
-
-```cpp
-router& operator=(router&&) noexcept = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **router:** Router used for request dispatch. Declaration: `router&&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/protocol/http/common/router.h:71](../../../../../include/protocol/http/common/router.h#L71)
-
 <a id="method-add"></a>
 
-## add
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> add
 
-🟠 **METHOD** · *protocol::http::router*
+**METHOD** · *protocol::http::router*
 
 ```cpp
 template <typename Hty>
@@ -192,9 +76,9 @@ Adds a route to the router with the specified HTTP method, route path, and handl
 
 <a id="method-add-2"></a>
 
-## add
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> add
 
-🟠 **METHOD** · *protocol::http::router*
+**METHOD** · *protocol::http::router*
 
 ```cpp
 template <typename Hty>
@@ -225,9 +109,9 @@ Adds the requested value.
 
 <a id="method-add-controller"></a>
 
-## add_controller
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> add_controller
 
-🟠 **METHOD** · *protocol::http::router*
+**METHOD** · *protocol::http::router*
 
 ```cpp
 template <typename CTty, typename... Args>
@@ -253,9 +137,9 @@ Adds a controller to the router. The controller must implement the 'register_rou
 
 <a id="method-match"></a>
 
-## match
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> match
 
-🟠 **METHOD** · *protocol::http::router*
+**METHOD** · *protocol::http::router*
 
 ```cpp
 [[nodiscard]]
@@ -276,9 +160,9 @@ Matches the given HTTP method and path against the registered routes.
 
 <a id="method-allowed-methods"></a>
 
-## allowed_methods
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> allowed_methods
 
-🟠 **METHOD** · *protocol::http::router*
+**METHOD** · *protocol::http::router*
 
 ```cpp
 [[nodiscard]]

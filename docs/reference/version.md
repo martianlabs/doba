@@ -1,9 +1,11 @@
 <a id="version-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/version/index-dark.svg">
+  <a href="../../resources/docs/reference/version/index.svg#gh-light-mode-only">
     <img src="../../resources/docs/reference/version/index.svg" alt="Index for version.h">
-  </picture>
+  </a>
+  <a href="../../resources/docs/reference/version/index-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/reference/version/index-dark.svg" alt="Index for version.h">
+  </a>
 </h1>
 
 **Header:** [include/version.h](../../include/version.h)
@@ -21,9 +23,9 @@ Defines the preprocessor values listed below.
 
 <a id="macro-doba-version-major"></a>
 
-## DOBA_VERSION_MAJOR
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> DOBA_VERSION_MAJOR
 
-🟠 **MACRO** · *doba*
+**MACRO** · *doba*
 
 ```cpp
 #define DOBA_VERSION_MAJOR 0
@@ -37,9 +39,9 @@ Defines the doba version major preprocessor value.
 
 <a id="macro-doba-version-minor"></a>
 
-## DOBA_VERSION_MINOR
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> DOBA_VERSION_MINOR
 
-🟠 **MACRO** · *doba*
+**MACRO** · *doba*
 
 ```cpp
 #define DOBA_VERSION_MINOR 1
@@ -53,9 +55,9 @@ Defines the doba version minor preprocessor value.
 
 <a id="macro-doba-version-patch"></a>
 
-## DOBA_VERSION_PATCH
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> DOBA_VERSION_PATCH
 
-🟠 **MACRO** · *doba*
+**MACRO** · *doba*
 
 ```cpp
 #define DOBA_VERSION_PATCH 0
@@ -69,9 +71,9 @@ Defines the doba version patch preprocessor value.
 
 <a id="macro-doba-version-stringify-impl"></a>
 
-## DOBA_VERSION_STRINGIFY_IMPL
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> DOBA_VERSION_STRINGIFY_IMPL
 
-🟠 **MACRO** · *doba*
+**MACRO** · *doba*
 
 ```cpp
 #define DOBA_VERSION_STRINGIFY_IMPL(value) #value
@@ -85,9 +87,9 @@ Defines the doba version stringify impl preprocessor value.
 
 <a id="macro-doba-version-stringify"></a>
 
-## DOBA_VERSION_STRINGIFY
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> DOBA_VERSION_STRINGIFY
 
-🟠 **MACRO** · *doba*
+**MACRO** · *doba*
 
 ```cpp
 #define DOBA_VERSION_STRINGIFY(value) DOBA_VERSION_STRINGIFY_IMPL(value)
@@ -101,9 +103,9 @@ Defines the doba version stringify preprocessor value.
 
 <a id="macro-doba-version"></a>
 
-## DOBA_VERSION
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> DOBA_VERSION
 
-🟠 **MACRO** · *doba*
+**MACRO** · *doba*
 
 ```cpp
 #define DOBA_VERSION \

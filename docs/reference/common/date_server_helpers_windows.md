@@ -1,9 +1,11 @@
 <a id="date-server-helpers-windows-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/common/date_server_helpers_windows/index-dark.svg">
+  <a href="../../../resources/docs/reference/common/date_server_helpers_windows/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/common/date_server_helpers_windows/index.svg" alt="Index for date_server_helpers_windows.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/common/date_server_helpers_windows/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/common/date_server_helpers_windows/index-dark.svg" alt="Index for date_server_helpers_windows.h">
+  </a>
 </h1>
 
 **Header:** [include/common/date_server_helpers_windows.h](../../../include/common/date_server_helpers_windows.h)
@@ -16,9 +18,9 @@ This header declares the types and operations listed below.
 
 <a id="function-gm-time"></a>
 
-## gm_time
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> gm_time
 
-🟠 **FUNCTION** · *common*
+**FUNCTION** · *common*
 
 ```cpp
 static errno_t gm_time(struct tm* const gmt, time_t const* const now);

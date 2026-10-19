@@ -1,9 +1,11 @@
 <a id="reader-raw-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index.svg" alt="Index for reader_raw.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index-dark.svg" alt="Index for reader_raw.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/body/reader_raw.h](../../../../../../include/protocol/http/v11/body/reader_raw.h)
@@ -16,15 +18,14 @@ Decodes a Content-Length-framed body by pulling wire bytes from a common::reader
 
 **protocol::http::v11::body::reader_raw**
 
-- [reader_raw](#constructor-reader-raw) · *constructor*
 - [read](#method-read) · *method*
 - [take_view](#method-take-view) · *method*
 
 <a id="type-reader-raw"></a>
 
-## reader_raw
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> reader_raw
 
-🟠 **TYPE** · *protocol::http::v11::body*
+**TYPE** · *protocol::http::v11::body*
 
 **Declaration synopsis:**
 
@@ -36,29 +37,11 @@ Decodes a Content-Length-framed body by pulling wire bytes from a common::reader
 
 **Source:** [include/protocol/http/v11/body/reader_raw.h:55](../../../../../../include/protocol/http/v11/body/reader_raw.h#L55)
 
-<a id="constructor-reader-raw"></a>
-
-## reader_raw
-
-🟠 **CONSTRUCTOR** · *protocol::http::v11::body::reader_raw*
-
-```cpp
-explicit reader_raw(std::size_t content_length);
-```
-
-Constructs a reader_raw value.
-
-**Parameters:**
-
-- **content_length:** Size or length limit for the named data. Declaration: `std::size_t content_length`.
-
-**Source:** [include/protocol/http/v11/body/reader_raw.h:60](../../../../../../include/protocol/http/v11/body/reader_raw.h#L60)
-
 <a id="method-read"></a>
 
-## read
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> read
 
-🟠 **METHOD** · *protocol::http::v11::body::reader_raw*
+**METHOD** · *protocol::http::v11::body::reader_raw*
 
 ```cpp
 reader_state read(common::reader& src, std::span<std::byte> output);
@@ -77,9 +60,9 @@ Pulls up to (expected_ - accumulated_) bytes from src into output. Returns immed
 
 <a id="method-take-view"></a>
 
-## take_view
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> take_view
 
-🟠 **METHOD** · *protocol::http::v11::body::reader_raw*
+**METHOD** · *protocol::http::v11::body::reader_raw*
 
 ```cpp
 std::optional<std::span<const std::byte>> take_view(

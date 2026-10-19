@@ -1,9 +1,11 @@
 <a name="core-model"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h1-core-model-dark.svg">
+  <a href="../../resources/docs/guide/h1-core-model.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h1-core-model.svg" alt="Core model">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h1-core-model-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h1-core-model-dark.svg" alt="Core model">
+  </a>
 </h1>
 
 doba has two pieces that work together without knowing each other's internals:
@@ -13,10 +15,12 @@ engine can run without a network socket.
 
 <a name="protocol-plus-transport"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-protocol-plus-transport-dark.svg">
+  <a href="../../resources/docs/guide/h2-protocol-plus-transport.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-protocol-plus-transport.svg" alt="Protocol plus transport">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-protocol-plus-transport-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-protocol-plus-transport-dark.svg" alt="Protocol plus transport">
+  </a>
 </h2>
 
 The **transport** handles connections and moves bytes. It passes incoming
@@ -32,10 +36,12 @@ at compile time.
 
 <a name="the-default-pair"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-the-default-pair-dark.svg">
+  <a href="../../resources/docs/guide/h2-the-default-pair.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-the-default-pair.svg" alt="The default pair">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-the-default-pair-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-the-default-pair-dark.svg" alt="The default pair">
+  </a>
 </h2>
 
 You already used this pairing in the
@@ -54,10 +60,12 @@ and TCP moves the bytes.
 
 <a name="protocol-contract"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-protocol-contract-dark.svg">
+  <a href="../../resources/docs/guide/h2-protocol-contract.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-protocol-contract.svg" alt="Protocol contract">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-protocol-contract-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-protocol-contract-dark.svg" alt="Protocol contract">
+  </a>
 </h2>
 
 A protocol engine understands the bytes for one connection. The
@@ -113,10 +121,12 @@ it safely.
 
 <a name="transport-contract"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-transport-contract-dark.svg">
+  <a href="../../resources/docs/guide/h2-transport-contract.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-transport-contract.svg" alt="Transport contract">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-transport-contract-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-transport-contract-dark.svg" alt="Transport contract">
+  </a>
 </h2>
 
 The [transport contract](../../include/transport/server/contracts.h) checks
@@ -146,10 +156,12 @@ enough or that those runtime steps happen in the right order.
 
 <a name="bring-a-protocol"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-bring-a-protocol-dark.svg">
+  <a href="../../resources/docs/guide/h2-bring-a-protocol.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-bring-a-protocol.svg" alt="Bring a protocol">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-bring-a-protocol-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-bring-a-protocol-dark.svg" alt="Bring a protocol">
+  </a>
 </h2>
 
 The [custom_protocol example](../../examples/protocol/custom_protocol/README.md)
@@ -171,10 +183,12 @@ only implements the protocol contract; it does not need socket code.
 
 <a name="bring-a-transport"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-bring-a-transport-dark.svg">
+  <a href="../../resources/docs/guide/h2-bring-a-transport.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-bring-a-transport.svg" alt="Bring a transport">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-bring-a-transport-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-bring-a-transport-dark.svg" alt="Bring a transport">
+  </a>
 </h2>
 
 The [custom_transport example][custom-transport] keeps doba's HTTP/1.1 engine

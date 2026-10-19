@@ -1,9 +1,11 @@
 <a id="http-server-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/http_server/index-dark.svg">
+  <a href="../../resources/docs/reference/http_server/index.svg#gh-light-mode-only">
     <img src="../../resources/docs/reference/http_server/index.svg" alt="Index for http_server.h">
-  </picture>
+  </a>
+  <a href="../../resources/docs/reference/http_server/index-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/reference/http_server/index-dark.svg" alt="Index for http_server.h">
+  </a>
 </h1>
 
 **Header:** [include/http_server.h](../../include/http_server.h)
@@ -17,18 +19,15 @@ the default transport.
 
 **http_server**
 
-- [http_server(transport_configuration, engine_configuration)](#constructor-http-server) · *constructor*
-- [http_server(transport_configuration, engine_configuration, authentication)](#constructor-http-server-2) · *constructor*
-- [~http_server](#destructor-destructor-http-server) · *destructor*
 - [add_route&lt;Hty&gt;(method, route, handler)](#method-add-route) · *method*
 - [add_route&lt;Aty, Hty&gt;(method, route, handler)](#method-add-route-2) · *method*
 - [add_controller](#method-add-controller) · *method*
 
 <a id="type-http-server"></a>
 
-## http_server
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> http_server
 
-🟠 **TYPE** · *doba*
+**TYPE** · *doba*
 
 **Declaration synopsis:**
 
@@ -60,72 +59,11 @@ Combines routing, the HTTP/1.1 engine, and the selected transport in one server.
 
 **Source:** [include/http_server.h:62](../../include/http_server.h#L62)
 
-<a id="constructor-http-server"></a>
-
-## http_server
-
-🟠 **CONSTRUCTOR** · *http_server*
-
-```cpp
-explicit http_server(
-      typename TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>::
-          policies_type transport_configuration = {},
-      typename ENty::policies_type engine_configuration = {})
-    requires(sizeof...(AUty) == 0);
-```
-
-Builds an HTTP/1.1 server without authentication providers. Both configuration arguments default to their policy defaults.
-
-**Parameters:**
-
-- **transport_configuration:** Transport policy values used to build the server. Declaration: `typename TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>:: policies_type transport_configuration = {}`.
-- **engine_configuration:** Protocol-engine policy values used to build the server. Declaration: `typename ENty::policies_type engine_configuration = {}`.
-
-**Source:** [include/http_server.h:69](../../include/http_server.h#L69)
-
-<a id="constructor-http-server-2"></a>
-
-## http_server
-
-🟠 **CONSTRUCTOR** · *http_server*
-
-```cpp
-explicit http_server(
-      typename TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>::
-          policies_type transport_configuration,
-      typename ENty::policies_type engine_configuration,
-      std::tuple<AUty...> authentication);
-```
-
-Builds the transport and HTTP/1.1 engine configuration and stores the authentication providers. Route registration remains open until the server starts.
-
-**Parameters:**
-
-- **transport_configuration:** Transport policy values used to build the server. Declaration: `typename TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>:: policies_type transport_configuration`.
-- **engine_configuration:** Protocol-engine policy values used to build the server. Declaration: `typename ENty::policies_type engine_configuration`.
-- **authentication:** Authentication providers stored by the server. Declaration: `std::tuple<AUty...> authentication`.
-
-**Source:** [include/http_server.h:77](../../include/http_server.h#L77)
-
-<a id="destructor-destructor-http-server"></a>
-
-## ~http_server
-
-🟠 **DESTRUCTOR** · *http_server*
-
-```cpp
-~http_server();
-```
-
-Stops the server before destroying it.
-
-**Source:** [include/http_server.h:118](../../include/http_server.h#L118)
-
 <a id="method-add-route"></a>
 
-## add_route
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> add_route
 
-🟠 **METHOD** · *http_server*
+**METHOD** · *http_server*
 
 ```cpp
 template <typename Hty>
@@ -154,9 +92,9 @@ Registers an HTTP method and route pattern with a handler.
 
 <a id="method-add-route-2"></a>
 
-## add_route
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> add_route
 
-🟠 **METHOD** · *http_server*
+**METHOD** · *http_server*
 
 ```cpp
 template <typename Aty, typename Hty>
@@ -187,9 +125,9 @@ Registers a route that authenticates requests with the provider selected by `Aty
 
 <a id="method-add-controller"></a>
 
-## add_controller
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> add_controller
 
-🟠 **METHOD** · *http_server*
+**METHOD** · *http_server*
 
 ```cpp
 template <typename CTty, typename... Args>

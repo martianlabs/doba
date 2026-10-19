@@ -1,9 +1,11 @@
 <a name="extending-doba"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h1-extending-doba-dark.svg">
+  <a href="../../resources/docs/guide/h1-extending-doba.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h1-extending-doba.svg" alt="Extending doba">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h1-extending-doba-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h1-extending-doba-dark.svg" alt="Extending doba">
+  </a>
 </h1>
 
 Want a protocol that isn't HTTP? Or a transport that doesn't use sockets?
@@ -13,10 +15,12 @@ small examples that put them to work.
 
 <a name="build-the-examples"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-build-the-examples-dark.svg">
+  <a href="../../resources/docs/guide/h2-build-the-examples.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-build-the-examples.svg" alt="Build the examples">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-build-the-examples-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-build-the-examples-dark.svg" alt="Build the examples">
+  </a>
 </h2>
 
 From the repository root, build both demos. They use plain TCP or memory,
@@ -33,10 +37,12 @@ for generators such as Visual Studio.
 
 <a name="your-own-protocol"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-your-own-protocol-dark.svg">
+  <a href="../../resources/docs/guide/h2-your-own-protocol.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-your-own-protocol.svg" alt="Your own protocol">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-your-own-protocol-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-your-own-protocol-dark.svg" alt="Your own protocol">
+  </a>
 </h2>
 
 The [custom_protocol example](../../examples/protocol/custom_protocol/README.md)
@@ -81,10 +87,12 @@ must enforce its own maximum line length.
 
 <a name="run-it-over-tcp"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-run-it-over-tcp-dark.svg">
+  <a href="../../resources/docs/guide/h2-run-it-over-tcp.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-run-it-over-tcp.svg" alt="Run it over TCP">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-run-it-over-tcp-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-run-it-over-tcp-dark.svg" alt="Run it over TCP">
+  </a>
 </h2>
 
 TCP needs a fresh engine for each connection, so the example gives the
@@ -119,10 +127,12 @@ with Ctrl+C when you're done.
 
 <a name="your-own-transport"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-your-own-transport-dark.svg">
+  <a href="../../resources/docs/guide/h2-your-own-transport.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-your-own-transport.svg" alt="Your own transport">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-your-own-transport-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-your-own-transport-dark.svg" alt="Your own transport">
+  </a>
 </h2>
 
 The [custom_transport example][custom-transport] flips the experiment: it
@@ -154,10 +164,12 @@ the transport stops.
 
 <a name="run-http-in-memory"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-run-http-in-memory-dark.svg">
+  <a href="../../resources/docs/guide/h2-run-http-in-memory.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-run-http-in-memory.svg" alt="Run HTTP in memory">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-run-http-in-memory-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-run-http-in-memory-dark.svg" alt="Run HTTP in memory">
+  </a>
 </h2>
 
 The HTTP server accepts the transport as its final template argument. The
@@ -189,10 +201,12 @@ It prints an HTTP response that starts with **HTTP/1.1 200** and ends with
 
 <a name="keep-the-boundary-safe"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-keep-the-boundary-safe-dark.svg">
+  <a href="../../resources/docs/guide/h2-keep-the-boundary-safe.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-keep-the-boundary-safe.svg" alt="Keep the boundary safe">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-keep-the-boundary-safe-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-keep-the-boundary-safe-dark.svg" alt="Keep the boundary safe">
+  </a>
 </h2>
 
 The examples are small on purpose. When you move beyond them, keep three

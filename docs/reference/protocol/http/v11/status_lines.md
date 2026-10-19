@@ -1,9 +1,11 @@
 <a id="status-lines-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index.svg" alt="Index for status_lines.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index-dark.svg" alt="Index for status_lines.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/status_lines.h](../../../../../include/protocol/http/v11/status_lines.h)
@@ -117,9 +119,9 @@ Provides the http 1.1 status lines.
 
 <a id="macro-str-value-raw"></a>
 
-## STR_VALUE_RAW
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> STR_VALUE_RAW
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define STR_VALUE_RAW(x) #x
@@ -133,9 +135,9 @@ Provides common-usage macros.
 
 <a id="macro-str-value"></a>
 
-## STR_VALUE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> STR_VALUE
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define STR_VALUE(x) STR_VALUE_RAW(x)
@@ -149,9 +151,9 @@ Defines the str value preprocessor value.
 
 <a id="macro-eas"></a>
 
-## EAS
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> EAS
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define EAS(x) x
@@ -165,9 +167,9 @@ Defines the eas preprocessor value.
 
 <a id="macro-sl"></a>
 
-## SL
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SL
 
-🟠 **MACRO** · *protocol::http::v11*
+**MACRO** · *protocol::http::v11*
 
 ```cpp
 #define SL(x) "HTTP/1.1 " STR_VALUE(SC_##x) " " STR_VALUE(RP_##x) "\r\n"
@@ -181,9 +183,9 @@ Defines the sl preprocessor value.
 
 <a id="type-status-lines"></a>
 
-## status_lines
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> status_lines
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -197,9 +199,9 @@ Provides the http 1.1 status lines.
 
 <a id="constant-k100"></a>
 
-## k100
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k100
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k100[] = EAS(SL(100_CONTINUE));
@@ -213,9 +215,9 @@ Defines the 100 constant.
 
 <a id="constant-k101"></a>
 
-## k101
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k101
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k101[] = EAS(SL(101_SWITCHING_PROTOCOLS));
@@ -229,9 +231,9 @@ Defines the 101 constant.
 
 <a id="constant-k200"></a>
 
-## k200
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k200
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k200[] = EAS(SL(200_OK));
@@ -245,9 +247,9 @@ Defines the 200 constant.
 
 <a id="constant-k201"></a>
 
-## k201
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k201
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k201[] = EAS(SL(201_CREATED));
@@ -261,9 +263,9 @@ Defines the 201 constant.
 
 <a id="constant-k202"></a>
 
-## k202
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k202
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k202[] = EAS(SL(202_ACCEPTED));
@@ -277,9 +279,9 @@ Defines the 202 constant.
 
 <a id="constant-k203"></a>
 
-## k203
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k203
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k203[] = EAS(SL(203_NON_AUTHORITATIVE_INFORMATION));
@@ -293,9 +295,9 @@ Defines the 203 constant.
 
 <a id="constant-k204"></a>
 
-## k204
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k204
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k204[] = EAS(SL(204_NO_CONTENT));
@@ -309,9 +311,9 @@ Defines the 204 constant.
 
 <a id="constant-k205"></a>
 
-## k205
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k205
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k205[] = EAS(SL(205_RESET_CONTENT));
@@ -325,9 +327,9 @@ Defines the 205 constant.
 
 <a id="constant-k206"></a>
 
-## k206
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k206
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k206[] = EAS(SL(206_PARTIAL_CONTENT));
@@ -341,9 +343,9 @@ Defines the 206 constant.
 
 <a id="constant-k300"></a>
 
-## k300
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k300
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k300[] = EAS(SL(300_MULTIPLE_CHOICES));
@@ -357,9 +359,9 @@ Defines the 300 constant.
 
 <a id="constant-k301"></a>
 
-## k301
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k301
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k301[] = EAS(SL(301_MOVED_PERMANENTLY));
@@ -373,9 +375,9 @@ Defines the 301 constant.
 
 <a id="constant-k302"></a>
 
-## k302
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k302
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k302[] = EAS(SL(302_FOUND));
@@ -389,9 +391,9 @@ Defines the 302 constant.
 
 <a id="constant-k303"></a>
 
-## k303
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k303
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k303[] = EAS(SL(303_SEE_OTHER));
@@ -405,9 +407,9 @@ Defines the 303 constant.
 
 <a id="constant-k304"></a>
 
-## k304
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k304
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k304[] = EAS(SL(304_NOT_MODIFIED));
@@ -421,9 +423,9 @@ Defines the 304 constant.
 
 <a id="constant-k305"></a>
 
-## k305
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k305
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k305[] = EAS(SL(305_USE_PROXY));
@@ -437,9 +439,9 @@ Defines the 305 constant.
 
 <a id="constant-k306"></a>
 
-## k306
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k306
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k306[] = EAS(SL(306_UNUSED));
@@ -453,9 +455,9 @@ Defines the 306 constant.
 
 <a id="constant-k307"></a>
 
-## k307
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k307
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k307[] = EAS(SL(307_TEMPORARY_REDIRECT));
@@ -469,9 +471,9 @@ Defines the 307 constant.
 
 <a id="constant-k308"></a>
 
-## k308
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k308
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k308[] = EAS(SL(308_PERMANENT_REDIRECT));
@@ -485,9 +487,9 @@ Defines the 308 constant.
 
 <a id="constant-k400"></a>
 
-## k400
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k400
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k400[] = EAS(SL(400_BAD_REQUEST));
@@ -501,9 +503,9 @@ Defines the 400 constant.
 
 <a id="constant-k401"></a>
 
-## k401
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k401
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k401[] = EAS(SL(401_UNAUTHORIZED));
@@ -517,9 +519,9 @@ Defines the 401 constant.
 
 <a id="constant-k402"></a>
 
-## k402
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k402
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k402[] = EAS(SL(402_PAYMENT_REQUIRED));
@@ -533,9 +535,9 @@ Defines the 402 constant.
 
 <a id="constant-k403"></a>
 
-## k403
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k403
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k403[] = EAS(SL(403_FORBIDDEN));
@@ -549,9 +551,9 @@ Defines the 403 constant.
 
 <a id="constant-k404"></a>
 
-## k404
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k404
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k404[] = EAS(SL(404_NOT_FOUND));
@@ -565,9 +567,9 @@ Defines the 404 constant.
 
 <a id="constant-k405"></a>
 
-## k405
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k405
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k405[] = EAS(SL(405_METHOD_NOT_ALLOWED));
@@ -581,9 +583,9 @@ Defines the 405 constant.
 
 <a id="constant-k406"></a>
 
-## k406
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k406
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k406[] = EAS(SL(406_NOT_ACCEPTABLE));
@@ -597,9 +599,9 @@ Defines the 406 constant.
 
 <a id="constant-k407"></a>
 
-## k407
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k407
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k407[] = EAS(SL(407_PROXY_AUTHENTICATION_REQUIRED));
@@ -613,9 +615,9 @@ Defines the 407 constant.
 
 <a id="constant-k408"></a>
 
-## k408
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k408
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k408[] = EAS(SL(408_REQUEST_TIMEOUT));
@@ -629,9 +631,9 @@ Defines the 408 constant.
 
 <a id="constant-k409"></a>
 
-## k409
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k409
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k409[] = EAS(SL(409_CONFLICT));
@@ -645,9 +647,9 @@ Defines the 409 constant.
 
 <a id="constant-k410"></a>
 
-## k410
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k410
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k410[] = EAS(SL(410_GONE));
@@ -661,9 +663,9 @@ Defines the 410 constant.
 
 <a id="constant-k411"></a>
 
-## k411
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k411
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k411[] = EAS(SL(411_LENGTH_REQUIRED));
@@ -677,9 +679,9 @@ Defines the 411 constant.
 
 <a id="constant-k412"></a>
 
-## k412
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k412
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k412[] = EAS(SL(412_PRECONDITION_FAILED));
@@ -693,9 +695,9 @@ Defines the 412 constant.
 
 <a id="constant-k413"></a>
 
-## k413
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k413
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k413[] = EAS(SL(413_CONTENT_TOO_LARGE));
@@ -709,9 +711,9 @@ Defines the 413 constant.
 
 <a id="constant-k414"></a>
 
-## k414
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k414
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k414[] = EAS(SL(414_URI_TOO_LONG));
@@ -725,9 +727,9 @@ Defines the 414 constant.
 
 <a id="constant-k415"></a>
 
-## k415
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k415
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k415[] = EAS(SL(415_UNSUPPORTED_MEDIA_TYPE));
@@ -741,9 +743,9 @@ Defines the 415 constant.
 
 <a id="constant-k416"></a>
 
-## k416
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k416
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k416[] = EAS(SL(416_RANGE_NOT_SATISFIABLE));
@@ -757,9 +759,9 @@ Defines the 416 constant.
 
 <a id="constant-k417"></a>
 
-## k417
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k417
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k417[] = EAS(SL(417_EXPECTATION_FAILED));
@@ -773,9 +775,9 @@ Defines the 417 constant.
 
 <a id="constant-k418"></a>
 
-## k418
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k418
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k418[] = EAS(SL(418_IM_A_TEAPOT));
@@ -789,9 +791,9 @@ Defines the 418 constant.
 
 <a id="constant-k421"></a>
 
-## k421
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k421
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k421[] = EAS(SL(421_MISDIRECTED_REQUEST));
@@ -805,9 +807,9 @@ Defines the 421 constant.
 
 <a id="constant-k422"></a>
 
-## k422
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k422
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k422[] = EAS(SL(422_UNPROCESSABLE_CONTENT));
@@ -821,9 +823,9 @@ Defines the 422 constant.
 
 <a id="constant-k426"></a>
 
-## k426
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k426
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k426[] = EAS(SL(426_UPGRADE_REQUIRED));
@@ -837,9 +839,9 @@ Defines the 426 constant.
 
 <a id="constant-k431"></a>
 
-## k431
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k431
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k431[] = EAS(SL(431_REQUEST_HEADER_FIELDS_TOO_LARGE));
@@ -853,9 +855,9 @@ Defines the 431 constant.
 
 <a id="constant-k500"></a>
 
-## k500
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k500
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k500[] = EAS(SL(500_INTERNAL_SERVER_ERROR));
@@ -869,9 +871,9 @@ Defines the 500 constant.
 
 <a id="constant-k501"></a>
 
-## k501
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k501
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k501[] = EAS(SL(501_NOT_IMPLEMENTED));
@@ -885,9 +887,9 @@ Defines the 501 constant.
 
 <a id="constant-k502"></a>
 
-## k502
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k502
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k502[] = EAS(SL(502_BAD_GATEWAY));
@@ -901,9 +903,9 @@ Defines the 502 constant.
 
 <a id="constant-k503"></a>
 
-## k503
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k503
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k503[] = EAS(SL(503_SERVICE_UNAVAILABLE));
@@ -917,9 +919,9 @@ Defines the 503 constant.
 
 <a id="constant-k504"></a>
 
-## k504
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k504
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k504[] = EAS(SL(504_GATEWAY_TIMEOUT));
@@ -933,9 +935,9 @@ Defines the 504 constant.
 
 <a id="constant-k505"></a>
 
-## k505
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k505
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr char k505[] = EAS(SL(505_HTTP_VERSION_NOT_SUPPORTED));
@@ -949,9 +951,9 @@ Defines the 505 constant.
 
 <a id="constant-k100sz"></a>
 
-## k100Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k100Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k100Sz = sizeof(k100) - 1;
@@ -965,9 +967,9 @@ Defines the 100 sz constant.
 
 <a id="constant-k101sz"></a>
 
-## k101Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k101Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k101Sz = sizeof(k101) - 1;
@@ -981,9 +983,9 @@ Defines the 101 sz constant.
 
 <a id="constant-k200sz"></a>
 
-## k200Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k200Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k200Sz = sizeof(k200) - 1;
@@ -997,9 +999,9 @@ Defines the 200 sz constant.
 
 <a id="constant-k201sz"></a>
 
-## k201Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k201Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k201Sz = sizeof(k201) - 1;
@@ -1013,9 +1015,9 @@ Defines the 201 sz constant.
 
 <a id="constant-k202sz"></a>
 
-## k202Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k202Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k202Sz = sizeof(k202) - 1;
@@ -1029,9 +1031,9 @@ Defines the 202 sz constant.
 
 <a id="constant-k203sz"></a>
 
-## k203Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k203Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k203Sz = sizeof(k203) - 1;
@@ -1045,9 +1047,9 @@ Defines the 203 sz constant.
 
 <a id="constant-k204sz"></a>
 
-## k204Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k204Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k204Sz = sizeof(k204) - 1;
@@ -1061,9 +1063,9 @@ Defines the 204 sz constant.
 
 <a id="constant-k205sz"></a>
 
-## k205Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k205Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k205Sz = sizeof(k205) - 1;
@@ -1077,9 +1079,9 @@ Defines the 205 sz constant.
 
 <a id="constant-k206sz"></a>
 
-## k206Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k206Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k206Sz = sizeof(k206) - 1;
@@ -1093,9 +1095,9 @@ Defines the 206 sz constant.
 
 <a id="constant-k300sz"></a>
 
-## k300Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k300Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k300Sz = sizeof(k300) - 1;
@@ -1109,9 +1111,9 @@ Defines the 300 sz constant.
 
 <a id="constant-k301sz"></a>
 
-## k301Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k301Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k301Sz = sizeof(k301) - 1;
@@ -1125,9 +1127,9 @@ Defines the 301 sz constant.
 
 <a id="constant-k302sz"></a>
 
-## k302Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k302Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k302Sz = sizeof(k302) - 1;
@@ -1141,9 +1143,9 @@ Defines the 302 sz constant.
 
 <a id="constant-k303sz"></a>
 
-## k303Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k303Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k303Sz = sizeof(k303) - 1;
@@ -1157,9 +1159,9 @@ Defines the 303 sz constant.
 
 <a id="constant-k304sz"></a>
 
-## k304Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k304Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k304Sz = sizeof(k304) - 1;
@@ -1173,9 +1175,9 @@ Defines the 304 sz constant.
 
 <a id="constant-k305sz"></a>
 
-## k305Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k305Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k305Sz = sizeof(k305) - 1;
@@ -1189,9 +1191,9 @@ Defines the 305 sz constant.
 
 <a id="constant-k306sz"></a>
 
-## k306Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k306Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k306Sz = sizeof(k306) - 1;
@@ -1205,9 +1207,9 @@ Defines the 306 sz constant.
 
 <a id="constant-k307sz"></a>
 
-## k307Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k307Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k307Sz = sizeof(k307) - 1;
@@ -1221,9 +1223,9 @@ Defines the 307 sz constant.
 
 <a id="constant-k308sz"></a>
 
-## k308Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k308Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k308Sz = sizeof(k308) - 1;
@@ -1237,9 +1239,9 @@ Defines the 308 sz constant.
 
 <a id="constant-k400sz"></a>
 
-## k400Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k400Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k400Sz = sizeof(k400) - 1;
@@ -1253,9 +1255,9 @@ Defines the 400 sz constant.
 
 <a id="constant-k401sz"></a>
 
-## k401Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k401Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k401Sz = sizeof(k401) - 1;
@@ -1269,9 +1271,9 @@ Defines the 401 sz constant.
 
 <a id="constant-k402sz"></a>
 
-## k402Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k402Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k402Sz = sizeof(k402) - 1;
@@ -1285,9 +1287,9 @@ Defines the 402 sz constant.
 
 <a id="constant-k403sz"></a>
 
-## k403Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k403Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k403Sz = sizeof(k403) - 1;
@@ -1301,9 +1303,9 @@ Defines the 403 sz constant.
 
 <a id="constant-k404sz"></a>
 
-## k404Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k404Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k404Sz = sizeof(k404) - 1;
@@ -1317,9 +1319,9 @@ Defines the 404 sz constant.
 
 <a id="constant-k405sz"></a>
 
-## k405Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k405Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k405Sz = sizeof(k405) - 1;
@@ -1333,9 +1335,9 @@ Defines the 405 sz constant.
 
 <a id="constant-k406sz"></a>
 
-## k406Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k406Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k406Sz = sizeof(k406) - 1;
@@ -1349,9 +1351,9 @@ Defines the 406 sz constant.
 
 <a id="constant-k407sz"></a>
 
-## k407Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k407Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k407Sz = sizeof(k407) - 1;
@@ -1365,9 +1367,9 @@ Defines the 407 sz constant.
 
 <a id="constant-k408sz"></a>
 
-## k408Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k408Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k408Sz = sizeof(k408) - 1;
@@ -1381,9 +1383,9 @@ Defines the 408 sz constant.
 
 <a id="constant-k409sz"></a>
 
-## k409Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k409Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k409Sz = sizeof(k409) - 1;
@@ -1397,9 +1399,9 @@ Defines the 409 sz constant.
 
 <a id="constant-k410sz"></a>
 
-## k410Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k410Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k410Sz = sizeof(k410) - 1;
@@ -1413,9 +1415,9 @@ Defines the 410 sz constant.
 
 <a id="constant-k411sz"></a>
 
-## k411Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k411Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k411Sz = sizeof(k411) - 1;
@@ -1429,9 +1431,9 @@ Defines the 411 sz constant.
 
 <a id="constant-k412sz"></a>
 
-## k412Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k412Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k412Sz = sizeof(k412) - 1;
@@ -1445,9 +1447,9 @@ Defines the 412 sz constant.
 
 <a id="constant-k413sz"></a>
 
-## k413Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k413Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k413Sz = sizeof(k413) - 1;
@@ -1461,9 +1463,9 @@ Defines the 413 sz constant.
 
 <a id="constant-k414sz"></a>
 
-## k414Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k414Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k414Sz = sizeof(k414) - 1;
@@ -1477,9 +1479,9 @@ Defines the 414 sz constant.
 
 <a id="constant-k415sz"></a>
 
-## k415Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k415Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k415Sz = sizeof(k415) - 1;
@@ -1493,9 +1495,9 @@ Defines the 415 sz constant.
 
 <a id="constant-k416sz"></a>
 
-## k416Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k416Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k416Sz = sizeof(k416) - 1;
@@ -1509,9 +1511,9 @@ Defines the 416 sz constant.
 
 <a id="constant-k417sz"></a>
 
-## k417Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k417Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k417Sz = sizeof(k417) - 1;
@@ -1525,9 +1527,9 @@ Defines the 417 sz constant.
 
 <a id="constant-k418sz"></a>
 
-## k418Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k418Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k418Sz = sizeof(k418) - 1;
@@ -1541,9 +1543,9 @@ Defines the 418 sz constant.
 
 <a id="constant-k421sz"></a>
 
-## k421Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k421Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k421Sz = sizeof(k421) - 1;
@@ -1557,9 +1559,9 @@ Defines the 421 sz constant.
 
 <a id="constant-k422sz"></a>
 
-## k422Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k422Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k422Sz = sizeof(k422) - 1;
@@ -1573,9 +1575,9 @@ Defines the 422 sz constant.
 
 <a id="constant-k426sz"></a>
 
-## k426Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k426Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k426Sz = sizeof(k426) - 1;
@@ -1589,9 +1591,9 @@ Defines the 426 sz constant.
 
 <a id="constant-k431sz"></a>
 
-## k431Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k431Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k431Sz = sizeof(k431) - 1;
@@ -1605,9 +1607,9 @@ Defines the 431 sz constant.
 
 <a id="constant-k500sz"></a>
 
-## k500Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k500Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k500Sz = sizeof(k500) - 1;
@@ -1621,9 +1623,9 @@ Defines the 500 sz constant.
 
 <a id="constant-k501sz"></a>
 
-## k501Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k501Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k501Sz = sizeof(k501) - 1;
@@ -1637,9 +1639,9 @@ Defines the 501 sz constant.
 
 <a id="constant-k502sz"></a>
 
-## k502Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k502Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k502Sz = sizeof(k502) - 1;
@@ -1653,9 +1655,9 @@ Defines the 502 sz constant.
 
 <a id="constant-k503sz"></a>
 
-## k503Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k503Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k503Sz = sizeof(k503) - 1;
@@ -1669,9 +1671,9 @@ Defines the 503 sz constant.
 
 <a id="constant-k504sz"></a>
 
-## k504Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k504Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k504Sz = sizeof(k504) - 1;
@@ -1685,9 +1687,9 @@ Defines the 504 sz constant.
 
 <a id="constant-k505sz"></a>
 
-## k505Sz
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> k505Sz
 
-🟠 **CONSTANT** · *protocol::http::v11::status_lines*
+**CONSTANT** · *protocol::http::v11::status_lines*
 
 ```cpp
 static constexpr std::size_t k505Sz = sizeof(k505) - 1;

@@ -1,9 +1,11 @@
 <a id="tls-policies-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../resources/docs/reference/transport/server/tls_policies/index-dark.svg">
+  <a href="../../../../resources/docs/reference/transport/server/tls_policies/index.svg#gh-light-mode-only">
     <img src="../../../../resources/docs/reference/transport/server/tls_policies/index.svg" alt="Index for tls_policies.h">
-  </picture>
+  </a>
+  <a href="../../../../resources/docs/reference/transport/server/tls_policies/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/docs/reference/transport/server/tls_policies/index-dark.svg" alt="Index for tls_policies.h">
+  </a>
 </h1>
 
 **Header:** [include/transport/server/tls_policies.h](../../../../include/transport/server/tls_policies.h)
@@ -25,9 +27,9 @@ Provides the tls policies transport component.
 
 <a id="type-tls-policies"></a>
 
-## tls_policies
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> tls_policies
 
-🟠 **TYPE** · *transport::server*
+**TYPE** · *transport::server*
 
 **Declaration synopsis:**
 
@@ -41,9 +43,9 @@ Provides the tls policies transport component.
 
 <a id="constant-kdefaultencryptedreceivebuffercapacity"></a>
 
-## kDefaultEncryptedReceiveBufferCapacity
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDefaultEncryptedReceiveBufferCapacity
 
-🟠 **CONSTANT** · *transport::server::tls_policies*
+**CONSTANT** · *transport::server::tls_policies*
 
 ```cpp
 static constexpr std::size_t kDefaultEncryptedReceiveBufferCapacity =
@@ -58,9 +60,9 @@ Encrypted socket input capacity per connection, in bytes.
 
 <a id="constant-kdefaultnetworkbiobuffercapacity"></a>
 
-## kDefaultNetworkBioBufferCapacity
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDefaultNetworkBioBufferCapacity
 
-🟠 **CONSTANT** · *transport::server::tls_policies*
+**CONSTANT** · *transport::server::tls_policies*
 
 ```cpp
 static constexpr std::size_t kDefaultNetworkBioBufferCapacity = 17 * 1024;
@@ -74,9 +76,9 @@ Maximum TLS BIO buffer capacity, in bytes.
 
 <a id="field-certificate-file"></a>
 
-## certificate_file
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> certificate_file
 
-🟠 **FIELD** · *transport::server::tls_policies*
+**FIELD** · *transport::server::tls_policies*
 
 ```cpp
 std::string certificate_file;
@@ -90,9 +92,9 @@ Path to the server certificate chain in PEM format.
 
 <a id="field-private-key-file"></a>
 
-## private_key_file
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> private_key_file
 
-🟠 **FIELD** · *transport::server::tls_policies*
+**FIELD** · *transport::server::tls_policies*
 
 ```cpp
 std::string private_key_file;
@@ -106,9 +108,9 @@ Path to the matching private key in PEM format.
 
 <a id="field-encrypted-receive-buffer-capacity"></a>
 
-## encrypted_receive_buffer_capacity
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> encrypted_receive_buffer_capacity
 
-🟠 **FIELD** · *transport::server::tls_policies*
+**FIELD** · *transport::server::tls_policies*
 
 ```cpp
 std::size_t encrypted_receive_buffer_capacity =
@@ -123,9 +125,9 @@ Encrypted receive capacity per connection (must be positive).
 
 <a id="field-network-bio-buffer-capacity"></a>
 
-## network_bio_buffer_capacity
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> network_bio_buffer_capacity
 
-🟠 **FIELD** · *transport::server::tls_policies*
+**FIELD** · *transport::server::tls_policies*
 
 ```cpp
 std::size_t network_bio_buffer_capacity = kDefaultNetworkBioBufferCapacity;

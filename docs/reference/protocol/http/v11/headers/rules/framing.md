@@ -1,9 +1,11 @@
 <a id="framing-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index-dark.svg">
+  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index.svg#gh-light-mode-only">
     <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index.svg" alt="Index for framing.h">
-  </picture>
+  </a>
+  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index-dark.svg" alt="Index for framing.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/headers/rules/framing.h](../../../../../../../include/protocol/http/v11/headers/rules/framing.h)
@@ -20,9 +22,9 @@ Transversal framing rules that span Content-Length and Transfer-Encoding, which 
 
 <a id="type-framing"></a>
 
-## framing
+## <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> framing
 
-🟠 **TYPE** · *protocol::http::v11::headers::rules*
+**TYPE** · *protocol::http::v11::headers::rules*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ Transversal framing rules that span Content-Length and Transfer-Encoding, which 
 
 <a id="method-apply"></a>
 
-## apply
+## <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> apply
 
-🟠 **METHOD** · *protocol::http::v11::headers::rules::framing*
+**METHOD** · *protocol::http::v11::headers::rules::framing*
 
 ```cpp
 static constexpr verdict apply(const context& ctx);

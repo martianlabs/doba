@@ -1,9 +1,11 @@
 <a id="content-encoding-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/headers/content_encoding/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_encoding/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_encoding/index.svg" alt="Index for content_encoding.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_encoding/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_encoding/index-dark.svg" alt="Index for content_encoding.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/headers/content_encoding.h](../../../../../../include/protocol/http/common/headers/content_encoding.h)
@@ -20,9 +22,9 @@
 
 <a id="type-content-encoding"></a>
 
-## content_encoding
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> content_encoding
 
-🟠 **TYPE** · *protocol::http::headers*
+**TYPE** · *protocol::http::headers*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ class content_encoding { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::headers::content_encoding*
+**METHOD** · *protocol::http::headers::content_encoding*
 
 ```cpp
 static constexpr bool check(std::string_view sv);

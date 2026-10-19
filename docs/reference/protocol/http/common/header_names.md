@@ -1,9 +1,11 @@
 <a id="header-names-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/common/header_names/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/common/header_names/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/common/header_names/index.svg" alt="Index for header_names.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/common/header_names/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/common/header_names/index-dark.svg" alt="Index for header_names.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
@@ -58,9 +60,9 @@ Provides the http 1.1 header names specification.
 
 <a id="type-header-names"></a>
 
-## header_names
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> header_names
 
-🟠 **TYPE** · *protocol::http*
+**TYPE** · *protocol::http*
 
 **Declaration synopsis:**
 
@@ -74,9 +76,9 @@ Provides the http 1.1 header names specification.
 
 <a id="constant-kconnection"></a>
 
-## kConnection
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kConnection
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kConnection[] = "Connection";
@@ -90,9 +92,9 @@ Header          |       Seccion      |          Tipo Connection             | RF
 
 <a id="constant-kdate"></a>
 
-## kDate
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDate
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kDate[] = "Date";
@@ -106,9 +108,9 @@ Defines the date constant.
 
 <a id="constant-kvia"></a>
 
-## kVia
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kVia
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kVia[] = "Via";
@@ -122,9 +124,9 @@ Defines the via constant.
 
 <a id="constant-kcachecontrol"></a>
 
-## kCacheControl
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kCacheControl
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kCacheControl[] = "Cache-Control";
@@ -138,9 +140,9 @@ Defines the cache control constant.
 
 <a id="constant-kpragma"></a>
 
-## kPragma
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kPragma
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kPragma[] = "Pragma";
@@ -154,9 +156,9 @@ Defines the pragma constant.
 
 <a id="constant-kwarning"></a>
 
-## kWarning
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kWarning
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kWarning[] = "Warning";
@@ -170,9 +172,9 @@ Defines the warning constant.
 
 <a id="constant-khost"></a>
 
-## kHost
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kHost
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kHost[] = "Host";
@@ -186,9 +188,9 @@ Defines the host constant.
 
 <a id="constant-kuseragent"></a>
 
-## kUserAgent
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kUserAgent
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kUserAgent[] = "User-agent";
@@ -202,9 +204,9 @@ Defines the user agent constant.
 
 <a id="constant-kaccept"></a>
 
-## kAccept
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kAccept
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kAccept[] = "Accept";
@@ -218,9 +220,9 @@ Defines the accept constant.
 
 <a id="constant-kacceptencoding"></a>
 
-## kAcceptEncoding
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kAcceptEncoding
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kAcceptEncoding[] = "Accept-Encoding";
@@ -234,9 +236,9 @@ Defines the accept encoding constant.
 
 <a id="constant-kacceptlanguage"></a>
 
-## kAcceptLanguage
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kAcceptLanguage
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kAcceptLanguage[] = "Accept-Language";
@@ -250,9 +252,9 @@ Defines the accept language constant.
 
 <a id="constant-kauthorization"></a>
 
-## kAuthorization
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kAuthorization
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kAuthorization[] = "Authorization";
@@ -266,9 +268,9 @@ Defines the authorization constant.
 
 <a id="constant-kexpect"></a>
 
-## kExpect
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kExpect
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kExpect[] = "Expect";
@@ -282,9 +284,9 @@ Defines the expect constant.
 
 <a id="constant-kfrom"></a>
 
-## kFrom
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kFrom
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kFrom[] = "From";
@@ -298,9 +300,9 @@ Defines the from constant.
 
 <a id="constant-kifmatch"></a>
 
-## kIfMatch
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kIfMatch
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kIfMatch[] = "If-Match";
@@ -314,9 +316,9 @@ Defines the if match constant.
 
 <a id="constant-kifnonematch"></a>
 
-## kIfNoneMatch
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kIfNoneMatch
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kIfNoneMatch[] = "If-None-Match";
@@ -330,9 +332,9 @@ Defines the if none match constant.
 
 <a id="constant-kifmodifiedsince"></a>
 
-## kIfModifiedSince
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kIfModifiedSince
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kIfModifiedSince[] = "If-Modified-Since";
@@ -346,9 +348,9 @@ Defines the if modified since constant.
 
 <a id="constant-kifunmodifiedsince"></a>
 
-## kIfUnmodifiedSince
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kIfUnmodifiedSince
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kIfUnmodifiedSince[] = "If-Unmodified-Since";
@@ -362,9 +364,9 @@ Defines the if unmodified since constant.
 
 <a id="constant-krange"></a>
 
-## kRange
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kRange
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kRange[] = "Range";
@@ -378,9 +380,9 @@ Defines the range constant.
 
 <a id="constant-kreferer"></a>
 
-## kReferer
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kReferer
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kReferer[] = "Referer";
@@ -394,9 +396,9 @@ Defines the referer constant.
 
 <a id="constant-kte"></a>
 
-## kTe
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kTe
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kTe[] = "TE";
@@ -410,9 +412,9 @@ Defines the te constant.
 
 <a id="constant-kupgrade"></a>
 
-## kUpgrade
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kUpgrade
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kUpgrade[] = "Upgrade";
@@ -426,9 +428,9 @@ Defines the upgrade constant.
 
 <a id="constant-kcookie"></a>
 
-## kCookie
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kCookie
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kCookie[] = "Cookie";
@@ -442,9 +444,9 @@ Defines the cookie constant.
 
 <a id="constant-klocation"></a>
 
-## kLocation
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kLocation
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kLocation[] = "Location";
@@ -458,9 +460,9 @@ Defines the location constant.
 
 <a id="constant-kserver"></a>
 
-## kServer
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kServer
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kServer[] = "Server";
@@ -474,9 +476,9 @@ Defines the server constant.
 
 <a id="constant-kvary"></a>
 
-## kVary
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kVary
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kVary[] = "Vary";
@@ -490,9 +492,9 @@ Defines the vary constant.
 
 <a id="constant-kwwwauthenticate"></a>
 
-## kWwwAuthenticate
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kWwwAuthenticate
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kWwwAuthenticate[] = "WWW-Authenticate";
@@ -506,9 +508,9 @@ Defines the www authenticate constant.
 
 <a id="constant-kcontentlength"></a>
 
-## kContentLength
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kContentLength
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kContentLength[] = "Content-Length";
@@ -522,9 +524,9 @@ Defines the content length constant.
 
 <a id="constant-kcontenttype"></a>
 
-## kContentType
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kContentType
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kContentType[] = "Content-Type";
@@ -538,9 +540,9 @@ Defines the content type constant.
 
 <a id="constant-kcontentencoding"></a>
 
-## kContentEncoding
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kContentEncoding
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kContentEncoding[] = "Content-Encoding";
@@ -554,9 +556,9 @@ Defines the content encoding constant.
 
 <a id="constant-kcontentlanguage"></a>
 
-## kContentLanguage
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kContentLanguage
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kContentLanguage[] = "Content-Language";
@@ -570,9 +572,9 @@ Defines the content language constant.
 
 <a id="constant-kcontentrange"></a>
 
-## kContentRange
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kContentRange
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kContentRange[] = "Content-Range";
@@ -586,9 +588,9 @@ Defines the content range constant.
 
 <a id="constant-ktrailer"></a>
 
-## kTrailer
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kTrailer
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kTrailer[] = "Trailer";
@@ -602,9 +604,9 @@ Defines the trailer constant.
 
 <a id="constant-ktransferencoding"></a>
 
-## kTransferEncoding
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kTransferEncoding
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kTransferEncoding[] = "Transfer-Encoding";
@@ -618,9 +620,9 @@ Defines the transfer encoding constant.
 
 <a id="constant-kallow"></a>
 
-## kAllow
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kAllow
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kAllow[] = "Allow";
@@ -634,9 +636,9 @@ Defines the allow constant.
 
 <a id="constant-kretryafter"></a>
 
-## kRetryAfter
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kRetryAfter
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kRetryAfter[] = "Retry-After";
@@ -650,9 +652,9 @@ Defines the retry after constant.
 
 <a id="constant-kacceptranges"></a>
 
-## kAcceptRanges
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kAcceptRanges
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kAcceptRanges[] = "Accept-Ranges";
@@ -666,9 +668,9 @@ Defines the accept ranges constant.
 
 <a id="constant-ketag"></a>
 
-## kETag
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kETag
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kETag[] = "ETAG";
@@ -682,9 +684,9 @@ Defines the etag constant.
 
 <a id="constant-klastmodified"></a>
 
-## kLastModified
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kLastModified
 
-🟠 **CONSTANT** · *protocol::http::header_names*
+**CONSTANT** · *protocol::http::header_names*
 
 ```cpp
 static constexpr char kLastModified[] = "Last-Modified";

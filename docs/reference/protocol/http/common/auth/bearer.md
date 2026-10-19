@@ -1,9 +1,11 @@
 <a id="bearer-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index.svg" alt="Index for bearer.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index-dark.svg" alt="Index for bearer.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/auth/bearer.h](../../../../../../include/protocol/http/common/auth/bearer.h)
@@ -16,14 +18,13 @@ Validates HTTP Bearer credentials through a user-supplied callback.
 
 **protocol::http::auth::bearer**
 
-- [bearer](#constructor-bearer) · *constructor*
 - [authenticate](#method-authenticate) · *method*
 
 <a id="type-bearer"></a>
 
-## bearer
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> bearer
 
-🟠 **TYPE** · *protocol::http::auth*
+**TYPE** · *protocol::http::auth*
 
 **Declaration synopsis:**
 
@@ -35,33 +36,11 @@ Validates HTTP Bearer credentials through a user-supplied callback.
 
 **Source:** [include/protocol/http/common/auth/bearer.h:43](../../../../../../include/protocol/http/common/auth/bearer.h#L43)
 
-<a id="constructor-bearer"></a>
-
-## bearer
-
-🟠 **CONSTRUCTOR** · *protocol::http::auth::bearer*
-
-```cpp
-explicit bearer(std::string_view realm,
-                  std::function<bool(std::string_view)> validator);
-```
-
-Stores the Bearer validator and builds a quoted realm for the challenge header.
-
-**Parameters:**
-
-- **realm:** Initial value supplied to the constructor. Declaration: `std::string_view realm`.
-- **validator:** Initial value supplied to the constructor. Declaration: `std::function<bool(std::string_view)> validator`.
-
-**Errors:** Throws `std::invalid_argument` for a missing validator or a realm containing non-printable or non-ASCII bytes. Allocation failures may propagate.
-
-**Source:** [include/protocol/http/common/auth/bearer.h:48](../../../../../../include/protocol/http/common/auth/bearer.h#L48)
-
 <a id="method-authenticate"></a>
 
-## authenticate
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> authenticate
 
-🟠 **METHOD** · *protocol::http::auth::bearer*
+**METHOD** · *protocol::http::auth::bearer*
 
 ```cpp
 template <typename RQty>

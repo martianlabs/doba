@@ -1,9 +1,11 @@
 <a id="parsed-types-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/v11/parsed_types/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/parsed_types/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/v11/parsed_types/index.svg" alt="Index for parsed_types.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/parsed_types/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/v11/parsed_types/index-dark.svg" alt="Index for parsed_types.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
@@ -98,9 +100,9 @@ The zero-copy product of a "host [ ":" port ]" value (the shape shared by the Ho
 
 <a id="type-parsed-host-port"></a>
 
-## parsed_host_port
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parsed_host_port
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -114,9 +116,9 @@ The zero-copy product of a "host [ ":" port ]" value (the shape shared by the Ho
 
 <a id="field-host"></a>
 
-## host
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> host
 
-🟠 **FIELD** · *protocol::http::v11::parsed_host_port*
+**FIELD** · *protocol::http::v11::parsed_host_port*
 
 ```cpp
 std::string_view host;
@@ -130,9 +132,9 @@ Stores the host value.
 
 <a id="field-port"></a>
 
-## port
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> port
 
-🟠 **FIELD** · *protocol::http::v11::parsed_host_port*
+**FIELD** · *protocol::http::v11::parsed_host_port*
 
 ```cpp
 std::string_view port;
@@ -146,9 +148,9 @@ Stores the port value.
 
 <a id="field-type"></a>
 
-## type
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> type
 
-🟠 **FIELD** · *protocol::http::v11::parsed_host_port*
+**FIELD** · *protocol::http::v11::parsed_host_port*
 
 ```cpp
 helpers::host_type type = helpers::host_type::kUnknown;
@@ -162,9 +164,9 @@ Stores the type value.
 
 <a id="field-scheme"></a>
 
-## scheme
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> scheme
 
-🟠 **FIELD** · *protocol::http::v11::parsed_host_port*
+**FIELD** · *protocol::http::v11::parsed_host_port*
 
 ```cpp
 std::string_view scheme;
@@ -178,9 +180,9 @@ Stores the scheme value.
 
 <a id="type-parsed-token-list"></a>
 
-## parsed_token_list
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parsed_token_list
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -194,9 +196,9 @@ The zero-copy product of a comma-separated token list (the shape shared by Conne
 
 <a id="field-elements"></a>
 
-## elements
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> elements
 
-🟠 **FIELD** · *protocol::http::v11::parsed_token_list*
+**FIELD** · *protocol::http::v11::parsed_token_list*
 
 ```cpp
 std::vector<std::string_view> elements;
@@ -210,9 +212,9 @@ Stores the elements value.
 
 <a id="type-parsed-parameter-list"></a>
 
-## parsed_parameter_list
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parsed_parameter_list
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -226,9 +228,9 @@ The zero-copy product of a comma-separated list whose elements each carry an opt
 
 <a id="field-elements-2"></a>
 
-## elements
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> elements
 
-🟠 **FIELD** · *protocol::http::v11::parsed_parameter_list*
+**FIELD** · *protocol::http::v11::parsed_parameter_list*
 
 ```cpp
 std::vector<std::string_view> elements;
@@ -242,9 +244,9 @@ Stores the elements value.
 
 <a id="type-parsed-scalar"></a>
 
-## parsed_scalar
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parsed_scalar
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -258,9 +260,9 @@ The zero-copy product of a single scalar field value (the shape shared by Expect
 
 <a id="field-value"></a>
 
-## value
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> value
 
-🟠 **FIELD** · *protocol::http::v11::parsed_scalar*
+**FIELD** · *protocol::http::v11::parsed_scalar*
 
 ```cpp
 std::string_view value;
@@ -274,9 +276,9 @@ Stores the value value.
 
 <a id="type-parsed-via-element"></a>
 
-## parsed_via_element
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parsed_via_element
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -290,9 +292,9 @@ received-protocol = [ protocol-name "/" ] protocol-version received-by       = p
 
 <a id="field-received-protocol"></a>
 
-## received_protocol
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> received_protocol
 
-🟠 **FIELD** · *protocol::http::v11::parsed_via_element*
+**FIELD** · *protocol::http::v11::parsed_via_element*
 
 ```cpp
 std::string_view received_protocol;
@@ -306,9 +308,9 @@ Stores the received protocol value.
 
 <a id="field-received-by"></a>
 
-## received_by
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> received_by
 
-🟠 **FIELD** · *protocol::http::v11::parsed_via_element*
+**FIELD** · *protocol::http::v11::parsed_via_element*
 
 ```cpp
 std::string_view received_by;
@@ -322,9 +324,9 @@ Stores the received by value.
 
 <a id="field-comment"></a>
 
-## comment
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> comment
 
-🟠 **FIELD** · *protocol::http::v11::parsed_via_element*
+**FIELD** · *protocol::http::v11::parsed_via_element*
 
 ```cpp
 std::string_view comment;
@@ -338,9 +340,9 @@ Stores the comment value.
 
 <a id="type-parsed-via-list"></a>
 
-## parsed_via_list
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parsed_via_list
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -354,9 +356,9 @@ The zero-copy product of a Via header: every list element in order.
 
 <a id="field-elements-3"></a>
 
-## elements
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> elements
 
-🟠 **FIELD** · *protocol::http::v11::parsed_via_list*
+**FIELD** · *protocol::http::v11::parsed_via_list*
 
 ```cpp
 std::vector<parsed_via_element> elements;
@@ -370,9 +372,9 @@ Stores the elements value.
 
 <a id="type-parsed-forwarded-pair"></a>
 
-## parsed_forwarded_pair
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parsed_forwarded_pair
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -386,9 +388,9 @@ The zero-copy product of a single Forwarded name=value pair. "name" is the raw p
 
 <a id="field-name"></a>
 
-## name
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> name
 
-🟠 **FIELD** · *protocol::http::v11::parsed_forwarded_pair*
+**FIELD** · *protocol::http::v11::parsed_forwarded_pair*
 
 ```cpp
 std::string_view name;
@@ -402,9 +404,9 @@ Stores the name value.
 
 <a id="field-value-2"></a>
 
-## value
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> value
 
-🟠 **FIELD** · *protocol::http::v11::parsed_forwarded_pair*
+**FIELD** · *protocol::http::v11::parsed_forwarded_pair*
 
 ```cpp
 std::string_view value;
@@ -418,9 +420,9 @@ Stores the value value.
 
 <a id="type-parsed-forwarded-element"></a>
 
-## parsed_forwarded_element
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parsed_forwarded_element
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -434,9 +436,9 @@ The zero-copy product of a single Forwarded list element: its ";"- separated nam
 
 <a id="field-pairs"></a>
 
-## pairs
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> pairs
 
-🟠 **FIELD** · *protocol::http::v11::parsed_forwarded_element*
+**FIELD** · *protocol::http::v11::parsed_forwarded_element*
 
 ```cpp
 std::vector<parsed_forwarded_pair> pairs;
@@ -450,9 +452,9 @@ Stores the pairs value.
 
 <a id="type-parsed-forwarded-list"></a>
 
-## parsed_forwarded_list
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parsed_forwarded_list
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -466,9 +468,9 @@ The zero-copy product of a Forwarded header: every list element in order.
 
 <a id="field-elements-4"></a>
 
-## elements
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> elements
 
-🟠 **FIELD** · *protocol::http::v11::parsed_forwarded_list*
+**FIELD** · *protocol::http::v11::parsed_forwarded_list*
 
 ```cpp
 std::vector<parsed_forwarded_element> elements;
@@ -482,9 +484,9 @@ Stores the elements value.
 
 <a id="type-parsed-host-port-list"></a>
 
-## parsed_host_port_list
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parsed_host_port_list
 
-🟠 **TYPE** · *protocol::http::v11*
+**TYPE** · *protocol::http::v11*
 
 **Declaration synopsis:**
 
@@ -498,9 +500,9 @@ de-facto X-Forwarded-Host - #( uri-host [ ":" port ] ) The zero-copy product of 
 
 <a id="field-elements-5"></a>
 
-## elements
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> elements
 
-🟠 **FIELD** · *protocol::http::v11::parsed_host_port_list*
+**FIELD** · *protocol::http::v11::parsed_host_port_list*
 
 ```cpp
 std::vector<parsed_host_port> elements;

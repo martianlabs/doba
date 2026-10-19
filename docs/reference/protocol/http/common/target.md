@@ -1,9 +1,11 @@
 <a id="target-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/common/target/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/common/target/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/common/target/index.svg" alt="Index for target.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/common/target/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/common/target/index-dark.svg" alt="Index for target.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/target.h](../../../../../include/protocol/http/common/target.h)
@@ -16,9 +18,9 @@ This header declares the types and operations listed below.
 
 <a id="enum-target"></a>
 
-## target
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> target
 
-🟠 **ENUM** · *protocol::http*
+**ENUM** · *protocol::http*
 
 ```cpp
 enum class target {

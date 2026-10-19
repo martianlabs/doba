@@ -1,9 +1,11 @@
 <a id="policy-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index-dark.svg">
+  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index.svg#gh-light-mode-only">
     <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index.svg" alt="Index for policy.h">
-  </picture>
+  </a>
+  <a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index-dark.svg" alt="Index for policy.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/headers/rules/policy.h](../../../../../../../include/protocol/http/v11/headers/rules/policy.h)
@@ -20,9 +22,9 @@ Inbound policy limits that span several headers Transversal policy rules that en
 
 <a id="type-policy"></a>
 
-## policy
+## <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> policy
 
-🟠 **TYPE** · *protocol::http::v11::headers::rules*
+**TYPE** · *protocol::http::v11::headers::rules*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ Inbound policy limits that span several headers Transversal policy rules that en
 
 <a id="method-apply"></a>
 
-## apply
+## <a href="../../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> apply
 
-🟠 **METHOD** · *protocol::http::v11::headers::rules::policy*
+**METHOD** · *protocol::http::v11::headers::rules::policy*
 
 ```cpp
 static constexpr verdict apply(const context& ctx);

@@ -1,9 +1,11 @@
 <a id="contracts-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/v11/contracts/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/contracts/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/v11/contracts/index.svg" alt="Index for contracts.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/v11/contracts/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/v11/contracts/index-dark.svg" alt="Index for contracts.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/v11/contracts.h](../../../../../include/protocol/http/v11/contracts.h)
@@ -24,9 +26,9 @@ This header declares the types and operations listed below.
 
 <a id="function-make-engine-factory"></a>
 
-## make_engine_factory
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> make_engine_factory
 
-🟠 **FUNCTION** · *protocol::http::v11*
+**FUNCTION** · *protocol::http::v11*
 
 ```cpp
 template <protocol::contracts::engine ENty, typename ROty>
@@ -52,9 +54,9 @@ Creates a factory function for engines.
 
 <a id="function-make-engine-factory-2"></a>
 
-## make_engine_factory
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> make_engine_factory
 
-🟠 **FUNCTION** · *protocol::http::v11*
+**FUNCTION** · *protocol::http::v11*
 
 ```cpp
 template <protocol::contracts::engine ENty, typename ROty>
@@ -84,9 +86,9 @@ Creates a factory function for engines providing asynchronous callbacks.
 
 <a id="alias-engine-factory"></a>
 
-## engine_factory
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> engine_factory
 
-🟠 **ALIAS** · *protocol::http::v11*
+**ALIAS** · *protocol::http::v11*
 
 ```cpp
 template <protocol::contracts::engine ENty, typename ROty>
@@ -105,9 +107,9 @@ Type of the engine factory function.
 
 <a id="concept-request"></a>
 
-## request
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> request
 
-🟠 **CONCEPT** · *protocol::http::v11::contracts*
+**CONCEPT** · *protocol::http::v11::contracts*
 
 ```cpp
 template <typename RQty>
@@ -185,9 +187,9 @@ Checks the compile-time requirements for request.
 
 <a id="concept-response"></a>
 
-## response
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> response
 
-🟠 **CONCEPT** · *protocol::http::v11::contracts*
+**CONCEPT** · *protocol::http::v11::contracts*
 
 ```cpp
 template <typename RSty>
@@ -286,9 +288,9 @@ Checks the compile-time requirements for response.
 
 <a id="concept-router"></a>
 
-## router
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router
 
-🟠 **CONCEPT** · *protocol::http::v11::contracts*
+**CONCEPT** · *protocol::http::v11::contracts*
 
 ```cpp
 template <typename ROty, typename RQty, typename RSty>

@@ -1,9 +1,11 @@
 <a id="access-control-allow-credentials-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_credentials/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_credentials/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_credentials/index.svg" alt="Index for access_control_allow_credentials.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_credentials/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_allow_credentials/index-dark.svg" alt="Index for access_control_allow_credentials.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/headers/access_control_allow_credentials.h](../../../../../../include/protocol/http/common/headers/access_control_allow_credentials.h)
@@ -20,9 +22,9 @@
 
 <a id="type-access-control-allow-credentials"></a>
 
-## access_control_allow_credentials
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> access_control_allow_credentials
 
-🟠 **TYPE** · *protocol::http::headers*
+**TYPE** · *protocol::http::headers*
 
 **Declaration synopsis:**
 
@@ -36,9 +38,9 @@ class access_control_allow_credentials { ... };
 
 <a id="method-check"></a>
 
-## check
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-🟠 **METHOD** · *protocol::http::headers::access_control_allow_credentials*
+**METHOD** · *protocol::http::headers::access_control_allow_credentials*
 
 ```cpp
 static constexpr bool check(std::string_view sv);

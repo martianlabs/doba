@@ -1,9 +1,11 @@
 <a id="console-logger-windows-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../resources/docs/reference/common/console_logger_windows/index-dark.svg">
+  <a href="../../../resources/docs/reference/common/console_logger_windows/index.svg#gh-light-mode-only">
     <img src="../../../resources/docs/reference/common/console_logger_windows/index.svg" alt="Index for console_logger_windows.h">
-  </picture>
+  </a>
+  <a href="../../../resources/docs/reference/common/console_logger_windows/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/docs/reference/common/console_logger_windows/index-dark.svg" alt="Index for console_logger_windows.h">
+  </a>
 </h1>
 
 **Header:** [include/common/console_logger_windows.h](../../../include/common/console_logger_windows.h)
@@ -16,12 +18,6 @@ Provides the console logger type.
 
 **common::console_logger**
 
-- [console_logger(name, options)](#constructor-console-logger) · *constructor*
-- [console_logger(console_logger)](#constructor-console-logger-2) · *constructor*
-- [console_logger(console_logger)](#constructor-console-logger-3) · *constructor*
-- [~console_logger](#destructor-destructor-console-logger) · *destructor*
-- [operator=(console_logger)](#operator-operator) · *operator*
-- [operator=(console_logger)](#operator-operator-2) · *operator*
 - [debug(source)](#method-debug) · *method*
 - [debug(message, source)](#method-debug-2) · *method*
 - [info(source)](#method-info) · *method*
@@ -35,9 +31,9 @@ Provides the console logger type.
 
 <a id="type-console-logger"></a>
 
-## console_logger
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> console_logger
 
-🟠 **TYPE** · *common*
+**TYPE** · *common*
 
 **Declaration synopsis:**
 
@@ -49,129 +45,11 @@ Provides the console logger type.
 
 **Source:** [include/common/console_logger_windows.h:47](../../../include/common/console_logger_windows.h#L47)
 
-<a id="constructor-console-logger"></a>
-
-## console_logger
-
-🟠 **CONSTRUCTOR** · *common::console_logger*
-
-```cpp
-explicit console_logger(std::string_view name,
-                          console_logger_options options = {});
-```
-
-Constructs a console_logger value.
-
-**Parameters:**
-
-- **name:** Name to match or store. Declaration: `std::string_view name`.
-- **options:** Initial value supplied to the constructor. Declaration: `console_logger_options options = {}`.
-
-**Source:** [include/common/console_logger_windows.h:53](../../../include/common/console_logger_windows.h#L53)
-
-<a id="constructor-console-logger-2"></a>
-
-## console_logger
-
-🟠 **CONSTRUCTOR** · *common::console_logger*
-
-```cpp
-console_logger(const console_logger&) = delete;
-```
-
-Disallows this form of common::console_logger construction.
-
-**Parameters:**
-
-- **console_logger:** Source object to copy or move. Declaration: `const console_logger&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/common/console_logger_windows.h:56](../../../include/common/console_logger_windows.h#L56)
-
-<a id="constructor-console-logger-3"></a>
-
-## console_logger
-
-🟠 **CONSTRUCTOR** · *common::console_logger*
-
-```cpp
-console_logger(console_logger&&) noexcept = delete;
-```
-
-Disallows this form of common::console_logger construction.
-
-**Parameters:**
-
-- **console_logger:** Source object to copy or move. Declaration: `console_logger&&`.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/common/console_logger_windows.h:57](../../../include/common/console_logger_windows.h#L57)
-
-<a id="destructor-destructor-console-logger"></a>
-
-## ~console_logger
-
-🟠 **DESTRUCTOR** · *common::console_logger*
-
-```cpp
-~console_logger() = default;
-```
-
-Destroys the console_logger object.
-
-**Source:** [include/common/console_logger_windows.h:58](../../../include/common/console_logger_windows.h#L58)
-
-<a id="operator-operator"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *common::console_logger*
-
-```cpp
-console_logger& operator=(const console_logger&) = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **console_logger:** Source object to copy or move. Declaration: `const console_logger&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/common/console_logger_windows.h:62](../../../include/common/console_logger_windows.h#L62)
-
-<a id="operator-operator-2"></a>
-
-## operator=
-
-🟠 **OPERATOR** · *common::console_logger*
-
-```cpp
-console_logger& operator=(console_logger&&) noexcept = delete;
-```
-
-Disallows this operator= operation.
-
-**Parameters:**
-
-- **console_logger:** Source object to copy or move. Declaration: `console_logger&&`.
-
-**Returns:** Unavailable: this operation is deleted.
-
-**Errors:** The operation cannot be called; it is deleted.
-
-**Source:** [include/common/console_logger_windows.h:63](../../../include/common/console_logger_windows.h#L63)
-
 <a id="method-debug"></a>
 
-## debug
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> debug
 
-🟠 **METHOD** · *common::console_logger*
+**METHOD** · *common::console_logger*
 
 ```cpp
 line debug(std::source_location source = std::source_location::current());
@@ -189,9 +67,9 @@ Writes a debug-level log message.
 
 <a id="method-debug-2"></a>
 
-## debug
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> debug
 
-🟠 **METHOD** · *common::console_logger*
+**METHOD** · *common::console_logger*
 
 ```cpp
 void debug(std::string_view message,
@@ -211,9 +89,9 @@ Writes a debug-level log message.
 
 <a id="method-info"></a>
 
-## info
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> info
 
-🟠 **METHOD** · *common::console_logger*
+**METHOD** · *common::console_logger*
 
 ```cpp
 line info(std::source_location source = std::source_location::current());
@@ -231,9 +109,9 @@ Writes an info-level log message.
 
 <a id="method-info-2"></a>
 
-## info
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> info
 
-🟠 **METHOD** · *common::console_logger*
+**METHOD** · *common::console_logger*
 
 ```cpp
 void info(std::string_view message,
@@ -253,9 +131,9 @@ Writes an info-level log message.
 
 <a id="method-warning"></a>
 
-## warning
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> warning
 
-🟠 **METHOD** · *common::console_logger*
+**METHOD** · *common::console_logger*
 
 ```cpp
 line warning(std::source_location source = std::source_location::current());
@@ -273,9 +151,9 @@ Writes a warning-level log message.
 
 <a id="method-warning-2"></a>
 
-## warning
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> warning
 
-🟠 **METHOD** · *common::console_logger*
+**METHOD** · *common::console_logger*
 
 ```cpp
 void warning(std::string_view message,
@@ -295,9 +173,9 @@ Writes a warning-level log message.
 
 <a id="method-error"></a>
 
-## error
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> error
 
-🟠 **METHOD** · *common::console_logger*
+**METHOD** · *common::console_logger*
 
 ```cpp
 line error(std::source_location source = std::source_location::current());
@@ -315,9 +193,9 @@ Writes an error-level log message.
 
 <a id="method-error-2"></a>
 
-## error
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> error
 
-🟠 **METHOD** · *common::console_logger*
+**METHOD** · *common::console_logger*
 
 ```cpp
 void error(std::string_view message,
@@ -337,9 +215,9 @@ Writes an error-level log message.
 
 <a id="method-critical"></a>
 
-## critical
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> critical
 
-🟠 **METHOD** · *common::console_logger*
+**METHOD** · *common::console_logger*
 
 ```cpp
 line critical(std::source_location source = std::source_location::current());
@@ -357,9 +235,9 @@ Writes a critical-level log message.
 
 <a id="method-critical-2"></a>
 
-## critical
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> critical
 
-🟠 **METHOD** · *common::console_logger*
+**METHOD** · *common::console_logger*
 
 ```cpp
 void critical(std::string_view message,

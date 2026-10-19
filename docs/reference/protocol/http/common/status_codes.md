@@ -1,9 +1,11 @@
 <a id="status-codes-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../resources/docs/reference/protocol/http/common/status_codes/index-dark.svg">
+  <a href="../../../../../resources/docs/reference/protocol/http/common/status_codes/index.svg#gh-light-mode-only">
     <img src="../../../../../resources/docs/reference/protocol/http/common/status_codes/index.svg" alt="Index for status_codes.h">
-  </picture>
+  </a>
+  <a href="../../../../../resources/docs/reference/protocol/http/common/status_codes/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../resources/docs/reference/protocol/http/common/status_codes/index-dark.svg" alt="Index for status_codes.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
@@ -62,9 +64,9 @@ Defines the preprocessor values listed below.
 
 <a id="macro-sc-100-continue"></a>
 
-## SC_100_CONTINUE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_100_CONTINUE
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_100_CONTINUE 100
@@ -78,9 +80,9 @@ Provides the http 1.1 status codes. Code | Reason Phrase 100  | Continue 101  | 
 
 <a id="macro-sc-101-switching-protocols"></a>
 
-## SC_101_SWITCHING_PROTOCOLS
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_101_SWITCHING_PROTOCOLS
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_101_SWITCHING_PROTOCOLS 101
@@ -94,9 +96,9 @@ Defines the HTTP 101 switching protocols status code.
 
 <a id="macro-sc-200-ok"></a>
 
-## SC_200_OK
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_200_OK
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_200_OK 200
@@ -110,9 +112,9 @@ Defines the HTTP 200 ok status code.
 
 <a id="macro-sc-201-created"></a>
 
-## SC_201_CREATED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_201_CREATED
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_201_CREATED 201
@@ -126,9 +128,9 @@ Defines the HTTP 201 created status code.
 
 <a id="macro-sc-202-accepted"></a>
 
-## SC_202_ACCEPTED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_202_ACCEPTED
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_202_ACCEPTED 202
@@ -142,9 +144,9 @@ Defines the HTTP 202 accepted status code.
 
 <a id="macro-sc-203-non-authoritative-information"></a>
 
-## SC_203_NON_AUTHORITATIVE_INFORMATION
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_203_NON_AUTHORITATIVE_INFORMATION
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_203_NON_AUTHORITATIVE_INFORMATION 203
@@ -158,9 +160,9 @@ Defines the HTTP 203 non authoritative information status code.
 
 <a id="macro-sc-204-no-content"></a>
 
-## SC_204_NO_CONTENT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_204_NO_CONTENT
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_204_NO_CONTENT 204
@@ -174,9 +176,9 @@ Defines the HTTP 204 no content status code.
 
 <a id="macro-sc-205-reset-content"></a>
 
-## SC_205_RESET_CONTENT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_205_RESET_CONTENT
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_205_RESET_CONTENT 205
@@ -190,9 +192,9 @@ Defines the HTTP 205 reset content status code.
 
 <a id="macro-sc-206-partial-content"></a>
 
-## SC_206_PARTIAL_CONTENT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_206_PARTIAL_CONTENT
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_206_PARTIAL_CONTENT 206
@@ -206,9 +208,9 @@ Defines the HTTP 206 partial content status code.
 
 <a id="macro-sc-300-multiple-choices"></a>
 
-## SC_300_MULTIPLE_CHOICES
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_300_MULTIPLE_CHOICES
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_300_MULTIPLE_CHOICES 300
@@ -222,9 +224,9 @@ Defines the HTTP 300 multiple choices status code.
 
 <a id="macro-sc-301-moved-permanently"></a>
 
-## SC_301_MOVED_PERMANENTLY
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_301_MOVED_PERMANENTLY
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_301_MOVED_PERMANENTLY 301
@@ -238,9 +240,9 @@ Defines the HTTP 301 moved permanently status code.
 
 <a id="macro-sc-302-found"></a>
 
-## SC_302_FOUND
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_302_FOUND
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_302_FOUND 302
@@ -254,9 +256,9 @@ Defines the HTTP 302 found status code.
 
 <a id="macro-sc-303-see-other"></a>
 
-## SC_303_SEE_OTHER
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_303_SEE_OTHER
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_303_SEE_OTHER 303
@@ -270,9 +272,9 @@ Defines the HTTP 303 see other status code.
 
 <a id="macro-sc-304-not-modified"></a>
 
-## SC_304_NOT_MODIFIED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_304_NOT_MODIFIED
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_304_NOT_MODIFIED 304
@@ -286,9 +288,9 @@ Defines the HTTP 304 not modified status code.
 
 <a id="macro-sc-305-use-proxy"></a>
 
-## SC_305_USE_PROXY
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_305_USE_PROXY
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_305_USE_PROXY 305
@@ -302,9 +304,9 @@ Defines the HTTP 305 use proxy status code.
 
 <a id="macro-sc-306-unused"></a>
 
-## SC_306_UNUSED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_306_UNUSED
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_306_UNUSED 306
@@ -318,9 +320,9 @@ Defines the HTTP 306 unused status code.
 
 <a id="macro-sc-307-temporary-redirect"></a>
 
-## SC_307_TEMPORARY_REDIRECT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_307_TEMPORARY_REDIRECT
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_307_TEMPORARY_REDIRECT 307
@@ -334,9 +336,9 @@ Defines the HTTP 307 temporary redirect status code.
 
 <a id="macro-sc-308-permanent-redirect"></a>
 
-## SC_308_PERMANENT_REDIRECT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_308_PERMANENT_REDIRECT
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_308_PERMANENT_REDIRECT 308
@@ -350,9 +352,9 @@ Defines the HTTP 308 permanent redirect status code.
 
 <a id="macro-sc-400-bad-request"></a>
 
-## SC_400_BAD_REQUEST
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_400_BAD_REQUEST
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_400_BAD_REQUEST 400
@@ -366,9 +368,9 @@ Defines the HTTP 400 bad request status code.
 
 <a id="macro-sc-401-unauthorized"></a>
 
-## SC_401_UNAUTHORIZED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_401_UNAUTHORIZED
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_401_UNAUTHORIZED 401
@@ -382,9 +384,9 @@ Defines the HTTP 401 unauthorized status code.
 
 <a id="macro-sc-402-payment-required"></a>
 
-## SC_402_PAYMENT_REQUIRED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_402_PAYMENT_REQUIRED
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_402_PAYMENT_REQUIRED 402
@@ -398,9 +400,9 @@ Defines the HTTP 402 payment required status code.
 
 <a id="macro-sc-403-forbidden"></a>
 
-## SC_403_FORBIDDEN
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_403_FORBIDDEN
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_403_FORBIDDEN 403
@@ -414,9 +416,9 @@ Defines the HTTP 403 forbidden status code.
 
 <a id="macro-sc-404-not-found"></a>
 
-## SC_404_NOT_FOUND
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_404_NOT_FOUND
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_404_NOT_FOUND 404
@@ -430,9 +432,9 @@ Defines the HTTP 404 not found status code.
 
 <a id="macro-sc-405-method-not-allowed"></a>
 
-## SC_405_METHOD_NOT_ALLOWED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_405_METHOD_NOT_ALLOWED
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_405_METHOD_NOT_ALLOWED 405
@@ -446,9 +448,9 @@ Defines the HTTP 405 method not allowed status code.
 
 <a id="macro-sc-406-not-acceptable"></a>
 
-## SC_406_NOT_ACCEPTABLE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_406_NOT_ACCEPTABLE
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_406_NOT_ACCEPTABLE 406
@@ -462,9 +464,9 @@ Defines the HTTP 406 not acceptable status code.
 
 <a id="macro-sc-407-proxy-authentication-required"></a>
 
-## SC_407_PROXY_AUTHENTICATION_REQUIRED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_407_PROXY_AUTHENTICATION_REQUIRED
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_407_PROXY_AUTHENTICATION_REQUIRED 407
@@ -478,9 +480,9 @@ Defines the HTTP 407 proxy authentication required status code.
 
 <a id="macro-sc-408-request-timeout"></a>
 
-## SC_408_REQUEST_TIMEOUT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_408_REQUEST_TIMEOUT
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_408_REQUEST_TIMEOUT 408
@@ -494,9 +496,9 @@ Defines the HTTP 408 request timeout status code.
 
 <a id="macro-sc-409-conflict"></a>
 
-## SC_409_CONFLICT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_409_CONFLICT
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_409_CONFLICT 409
@@ -510,9 +512,9 @@ Defines the HTTP 409 conflict status code.
 
 <a id="macro-sc-410-gone"></a>
 
-## SC_410_GONE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_410_GONE
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_410_GONE 410
@@ -526,9 +528,9 @@ Defines the HTTP 410 gone status code.
 
 <a id="macro-sc-411-length-required"></a>
 
-## SC_411_LENGTH_REQUIRED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_411_LENGTH_REQUIRED
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_411_LENGTH_REQUIRED 411
@@ -542,9 +544,9 @@ Defines the HTTP 411 length required status code.
 
 <a id="macro-sc-412-precondition-failed"></a>
 
-## SC_412_PRECONDITION_FAILED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_412_PRECONDITION_FAILED
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_412_PRECONDITION_FAILED 412
@@ -558,9 +560,9 @@ Defines the HTTP 412 precondition failed status code.
 
 <a id="macro-sc-413-content-too-large"></a>
 
-## SC_413_CONTENT_TOO_LARGE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_413_CONTENT_TOO_LARGE
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_413_CONTENT_TOO_LARGE 413
@@ -574,9 +576,9 @@ Defines the HTTP 413 content too large status code.
 
 <a id="macro-sc-414-uri-too-long"></a>
 
-## SC_414_URI_TOO_LONG
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_414_URI_TOO_LONG
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_414_URI_TOO_LONG 414
@@ -590,9 +592,9 @@ Defines the HTTP 414 uri too long status code.
 
 <a id="macro-sc-415-unsupported-media-type"></a>
 
-## SC_415_UNSUPPORTED_MEDIA_TYPE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_415_UNSUPPORTED_MEDIA_TYPE
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_415_UNSUPPORTED_MEDIA_TYPE 415
@@ -606,9 +608,9 @@ Defines the HTTP 415 unsupported media type status code.
 
 <a id="macro-sc-416-range-not-satisfiable"></a>
 
-## SC_416_RANGE_NOT_SATISFIABLE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_416_RANGE_NOT_SATISFIABLE
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_416_RANGE_NOT_SATISFIABLE 416
@@ -622,9 +624,9 @@ Defines the HTTP 416 range not satisfiable status code.
 
 <a id="macro-sc-417-expectation-failed"></a>
 
-## SC_417_EXPECTATION_FAILED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_417_EXPECTATION_FAILED
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_417_EXPECTATION_FAILED 417
@@ -638,9 +640,9 @@ Defines the HTTP 417 expectation failed status code.
 
 <a id="macro-sc-418-im-a-teapot"></a>
 
-## SC_418_IM_A_TEAPOT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_418_IM_A_TEAPOT
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_418_IM_A_TEAPOT 418
@@ -654,9 +656,9 @@ Defines the HTTP 418 im a teapot status code.
 
 <a id="macro-sc-421-misdirected-request"></a>
 
-## SC_421_MISDIRECTED_REQUEST
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_421_MISDIRECTED_REQUEST
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_421_MISDIRECTED_REQUEST 421
@@ -670,9 +672,9 @@ Defines the HTTP 421 misdirected request status code.
 
 <a id="macro-sc-422-unprocessable-content"></a>
 
-## SC_422_UNPROCESSABLE_CONTENT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_422_UNPROCESSABLE_CONTENT
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_422_UNPROCESSABLE_CONTENT 422
@@ -686,9 +688,9 @@ Defines the HTTP 422 unprocessable content status code.
 
 <a id="macro-sc-426-upgrade-required"></a>
 
-## SC_426_UPGRADE_REQUIRED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_426_UPGRADE_REQUIRED
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_426_UPGRADE_REQUIRED 426
@@ -702,9 +704,9 @@ Defines the HTTP 426 upgrade required status code.
 
 <a id="macro-sc-431-request-header-fields-too-large"></a>
 
-## SC_431_REQUEST_HEADER_FIELDS_TOO_LARGE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_431_REQUEST_HEADER_FIELDS_TOO_LARGE
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_431_REQUEST_HEADER_FIELDS_TOO_LARGE 431
@@ -718,9 +720,9 @@ Defines the HTTP 431 request header fields too large status code.
 
 <a id="macro-sc-500-internal-server-error"></a>
 
-## SC_500_INTERNAL_SERVER_ERROR
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_500_INTERNAL_SERVER_ERROR
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_500_INTERNAL_SERVER_ERROR 500
@@ -734,9 +736,9 @@ Defines the HTTP 500 internal server error status code.
 
 <a id="macro-sc-501-not-implemented"></a>
 
-## SC_501_NOT_IMPLEMENTED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_501_NOT_IMPLEMENTED
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_501_NOT_IMPLEMENTED 501
@@ -750,9 +752,9 @@ Defines the HTTP 501 not implemented status code.
 
 <a id="macro-sc-502-bad-gateway"></a>
 
-## SC_502_BAD_GATEWAY
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_502_BAD_GATEWAY
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_502_BAD_GATEWAY 502
@@ -766,9 +768,9 @@ Defines the HTTP 502 bad gateway status code.
 
 <a id="macro-sc-503-service-unavailable"></a>
 
-## SC_503_SERVICE_UNAVAILABLE
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_503_SERVICE_UNAVAILABLE
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_503_SERVICE_UNAVAILABLE 503
@@ -782,9 +784,9 @@ Defines the HTTP 503 service unavailable status code.
 
 <a id="macro-sc-504-gateway-timeout"></a>
 
-## SC_504_GATEWAY_TIMEOUT
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_504_GATEWAY_TIMEOUT
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_504_GATEWAY_TIMEOUT 504
@@ -798,9 +800,9 @@ Defines the HTTP 504 gateway timeout status code.
 
 <a id="macro-sc-505-http-version-not-supported"></a>
 
-## SC_505_HTTP_VERSION_NOT_SUPPORTED
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> SC_505_HTTP_VERSION_NOT_SUPPORTED
 
-🟠 **MACRO** · *protocol::http*
+**MACRO** · *protocol::http*
 
 ```cpp
 #define SC_505_HTTP_VERSION_NOT_SUPPORTED 505

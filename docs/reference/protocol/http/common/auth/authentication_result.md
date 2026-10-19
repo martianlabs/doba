@@ -1,9 +1,11 @@
 <a id="authentication-result-h"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../resources/docs/reference/protocol/http/common/auth/authentication_result/index-dark.svg">
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/auth/authentication_result/index.svg#gh-light-mode-only">
     <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/authentication_result/index.svg" alt="Index for authentication_result.h">
-  </picture>
+  </a>
+  <a href="../../../../../../resources/docs/reference/protocol/http/common/auth/authentication_result/index-dark.svg#gh-dark-mode-only">
+    <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/authentication_result/index-dark.svg" alt="Index for authentication_result.h">
+  </a>
 </h1>
 
 **Header:** [include/protocol/http/common/auth/authentication_result.h](../../../../../../include/protocol/http/common/auth/authentication_result.h)
@@ -22,9 +24,9 @@ Provides the authentication result protocol component.
 
 <a id="enum-authentication-status"></a>
 
-## authentication_status
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> authentication_status
 
-🟠 **ENUM** · *protocol::http::auth*
+**ENUM** · *protocol::http::auth*
 
 ```cpp
 enum class authentication_status {
@@ -48,9 +50,9 @@ Enumerates authentication status values.
 
 <a id="type-authentication-result"></a>
 
-## authentication_result
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> authentication_result
 
-🟠 **TYPE** · *protocol::http::auth*
+**TYPE** · *protocol::http::auth*
 
 **Declaration synopsis:**
 
@@ -64,9 +66,9 @@ Provides the authentication result protocol component.
 
 <a id="field-status"></a>
 
-## status
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> status
 
-🟠 **FIELD** · *protocol::http::auth::authentication_result*
+**FIELD** · *protocol::http::auth::authentication_result*
 
 ```cpp
 authentication_status status{authentication_status::kUnauthenticated};
@@ -80,9 +82,9 @@ Stores the status value.
 
 <a id="field-challenge"></a>
 
-## challenge
+## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> challenge
 
-🟠 **FIELD** · *protocol::http::auth::authentication_result*
+**FIELD** · *protocol::http::auth::authentication_result*
 
 ```cpp
 std::string challenge;

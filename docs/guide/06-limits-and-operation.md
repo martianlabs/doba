@@ -1,9 +1,11 @@
 <a name="limits-and-operation"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h1-limits-and-operation-dark.svg">
+  <a href="../../resources/docs/guide/h1-limits-and-operation.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h1-limits-and-operation.svg" alt="Limits and operation">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h1-limits-and-operation-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h1-limits-and-operation-dark.svg" alt="Limits and operation">
+  </a>
 </h1>
 
 A busy server needs boundaries. doba gives you one set of knobs for the
@@ -13,10 +15,12 @@ of head-scratching.
 
 <a name="two-sets-of-policies"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-two-sets-of-policies-dark.svg">
+  <a href="../../resources/docs/guide/h2-two-sets-of-policies.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-two-sets-of-policies.svg" alt="Two sets of policies">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-two-sets-of-policies-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-two-sets-of-policies-dark.svg" alt="Two sets of policies">
+  </a>
 </h2>
 
 The first **http_server<>** argument configures the transport. The second
@@ -42,10 +46,12 @@ configure them independently. The [TCP policy][tcp-policy] and
 
 <a name="limit-incoming-requests"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-limit-incoming-requests-dark.svg">
+  <a href="../../resources/docs/guide/h2-limit-incoming-requests.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-limit-incoming-requests.svg" alt="Limit incoming requests">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-limit-incoming-requests-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-limit-incoming-requests-dark.svg" alt="Limit incoming requests">
+  </a>
 </h2>
 
 *max_request_body_size* defaults to **16 MiB**. It caps accepted request body
@@ -89,10 +95,12 @@ to change them.
 
 <a name="memory-and-large-bodies"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-memory-and-large-bodies-dark.svg">
+  <a href="../../resources/docs/guide/h2-memory-and-large-bodies.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-memory-and-large-bodies.svg" alt="Memory and large bodies">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-memory-and-large-bodies-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-memory-and-large-bodies-dark.svg" alt="Memory and large bodies">
+  </a>
 </h2>
 
 The decoder normally reads the transport buffer directly. Requests borrow
@@ -189,10 +197,12 @@ before running another example on port **8080**.
 
 <a name="bound-work-in-flight"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-bound-work-in-flight-dark.svg">
+  <a href="../../resources/docs/guide/h2-bound-work-in-flight.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-bound-work-in-flight.svg" alt="Bound work in flight">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-bound-work-in-flight-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-bound-work-in-flight-dark.svg" alt="Bound work in flight">
+  </a>
 </h2>
 
 Body size is only one way a connection can use resources. Two more limits
@@ -214,10 +224,12 @@ explains the TCP side.
 
 <a name="start-and-stop"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-start-and-stop-dark.svg">
+  <a href="../../resources/docs/guide/h2-start-and-stop.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-start-and-stop.svg" alt="Start and stop">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-start-and-stop-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-start-and-stop-dark.svg" alt="Start and stop">
+  </a>
 </h2>
 
 Register routes before *start*. Starting opens the listener; doba rejects
