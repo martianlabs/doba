@@ -1,9 +1,9 @@
 <a id="decoder"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/decoder/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/decoder/index.svg" alt="decoder">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/decoder/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/decoder/title.svg" alt="decoder">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/decoder/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/decoder/index-dark.svg" alt="decoder">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/decoder/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/decoder/title-dark.svg" alt="decoder">
 </a>
 
 **Header:** [include/protocol/http/v11/decoder.h](../../../../../include/protocol/http/v11/decoder.h)
@@ -21,12 +21,12 @@ Provides the http 1.1 decoder implementation.
 [make_response()](#method-make-response) ·
 [make_response(head, body)](#method-make-response-2)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-decoder"></a>

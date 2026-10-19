@@ -1,9 +1,9 @@
 <a id="if-unmodified-since"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index.svg" alt="if_unmodified_since">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/title.svg" alt="if_unmodified_since">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/index-dark.svg" alt="if_unmodified_since">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/if_unmodified_since/title-dark.svg" alt="if_unmodified_since">
 </a>
 
 **Header:** [include/protocol/http/common/headers/if_unmodified_since.h](../../../../../../include/protocol/http/common/headers/if_unmodified_since.h)
@@ -18,12 +18,12 @@
 
 [check](#method-check)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-if-unmodified-since"></a>

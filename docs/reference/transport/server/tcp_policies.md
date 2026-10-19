@@ -1,9 +1,9 @@
 <a id="tcp-policies"></a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_policies/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_policies/index.svg" alt="tcp_policies">
+<a href="../../../../resources/docs/reference/transport/server/tcp_policies/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_policies/title.svg" alt="tcp_policies">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_policies/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_policies/index-dark.svg" alt="tcp_policies">
+<a href="../../../../resources/docs/reference/transport/server/tcp_policies/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_policies/title-dark.svg" alt="tcp_policies">
 </a>
 
 **Header:** [include/transport/server/tcp_policies.h](../../../../include/transport/server/tcp_policies.h)
@@ -24,12 +24,12 @@ TCP operating policies.
 [ip](#field-ip) ·
 [port](#field-port)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-tcp-policies"></a>

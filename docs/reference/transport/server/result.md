@@ -1,9 +1,9 @@
 <a id="result"></a>
-<a href="../../../../resources/docs/reference/transport/server/result/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/result/index.svg" alt="result">
+<a href="../../../../resources/docs/reference/transport/server/result/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/result/title.svg" alt="result">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/result/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/result/index-dark.svg" alt="result">
+<a href="../../../../resources/docs/reference/transport/server/result/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/result/title-dark.svg" alt="result">
 </a>
 
 **Header:** [include/transport/server/tls_session.h](../../../../include/transport/server/tls_session.h)
@@ -21,12 +21,12 @@ Provides the result transport component.
 [state](#field-state) ·
 [size](#field-size)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-result"></a>

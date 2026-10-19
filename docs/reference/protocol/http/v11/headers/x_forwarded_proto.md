@@ -1,9 +1,9 @@
 <a id="x-forwarded-proto"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index.svg" alt="x_forwarded_proto">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/title.svg" alt="x_forwarded_proto">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/index-dark.svg" alt="x_forwarded_proto">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_proto/title-dark.svg" alt="x_forwarded_proto">
 </a>
 
 **Header:** [include/protocol/http/v11/headers/x_forwarded_proto.h](../../../../../../include/protocol/http/v11/headers/x_forwarded_proto.h)
@@ -19,12 +19,12 @@ De-facto X-Forwarded-Proto The "X-Forwarded-Proto" header field is a de-facto re
 [check](#method-check) ·
 [interpret](#method-interpret)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-x-forwarded-proto"></a>

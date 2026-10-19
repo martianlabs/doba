@@ -1,9 +1,9 @@
 <a id="trailer"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/index.svg" alt="trailer">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/title.svg" alt="trailer">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/index-dark.svg" alt="trailer">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/trailer/title-dark.svg" alt="trailer">
 </a>
 
 **Header:** [include/protocol/http/v11/headers/trailer.h](../../../../../../include/protocol/http/v11/headers/trailer.h)
@@ -19,12 +19,12 @@ The "Trailer" header field provides a list of field names that the sender antici
 [check](#method-check) ·
 [interpret](#method-interpret)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-trailer"></a>

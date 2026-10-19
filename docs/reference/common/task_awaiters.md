@@ -1,9 +1,9 @@
 <a id="task-awaiters"></a>
-<a href="../../../resources/docs/reference/common/task_awaiters/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/task_awaiters/index.svg" alt="task_awaiters">
+<a href="../../../resources/docs/reference/common/task_awaiters/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/task_awaiters/title.svg" alt="task_awaiters">
 </a>
-<a href="../../../resources/docs/reference/common/task_awaiters/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/task_awaiters/index-dark.svg" alt="task_awaiters">
+<a href="../../../resources/docs/reference/common/task_awaiters/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/task_awaiters/title-dark.svg" alt="task_awaiters">
 </a>
 
 **Header:** [include/common/task_awaiters.h](../../../include/common/task_awaiters.h)
@@ -30,12 +30,12 @@ Provides the yield awaiter type.
 [await_suspend](#method-await-suspend-2) ·
 [await_resume](#method-await-resume-2)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-yield-awaiter"></a>

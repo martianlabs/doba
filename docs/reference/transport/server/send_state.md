@@ -1,9 +1,9 @@
 <a id="send-state"></a>
-<a href="../../../../resources/docs/reference/transport/server/send_state/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/send_state/index.svg" alt="send_state">
+<a href="../../../../resources/docs/reference/transport/server/send_state/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/send_state/title.svg" alt="send_state">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/send_state/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/send_state/index-dark.svg" alt="send_state">
+<a href="../../../../resources/docs/reference/transport/server/send_state/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/send_state/title-dark.svg" alt="send_state">
 </a>
 
 **Header:** [include/transport/server/send_state.h](../../../../include/transport/server/send_state.h)
@@ -25,12 +25,12 @@ This struct manages the state of outgoing data for a TCP connection. It maintain
 [buffer](#field-buffer) ·
 [offset](#field-offset)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-send-state"></a>

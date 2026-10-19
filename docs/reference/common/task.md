@@ -1,9 +1,9 @@
 <a id="task"></a>
-<a href="../../../resources/docs/reference/common/task/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/task/index.svg" alt="task">
+<a href="../../../resources/docs/reference/common/task/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/task/title.svg" alt="task">
 </a>
-<a href="../../../resources/docs/reference/common/task/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/task/index-dark.svg" alt="task">
+<a href="../../../resources/docs/reference/common/task/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/task/title-dark.svg" alt="task">
 </a>
 
 **Header:** [include/common/task.h](../../../include/common/task.h)
@@ -21,12 +21,12 @@ Provides the task type.
 [start(completion)](#method-start) ·
 [start(completion, scheduler)](#method-start-2)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-task"></a>

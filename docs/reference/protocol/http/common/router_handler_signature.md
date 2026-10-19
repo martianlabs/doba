@@ -1,9 +1,9 @@
 <a id="router-handler-signature"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index.svg" alt="router_handler_signature">
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/title.svg" alt="router_handler_signature">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/index-dark.svg" alt="router_handler_signature">
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_handler_signature/title-dark.svg" alt="router_handler_signature">
 </a>
 
 **Header:** [include/protocol/http/common/router_handler_signature.h](../../../../../include/protocol/http/common/router_handler_signature.h)
@@ -31,12 +31,12 @@ Provides the router handler signature protocol component.
 [make_parametrized_async](#method-make-parametrized-async) ·
 [check](#method-check)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-router-handler-signature"></a>

@@ -1,9 +1,9 @@
 <a id="x-forwarded-for"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/index.svg" alt="x_forwarded_for">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/title.svg" alt="x_forwarded_for">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/index-dark.svg" alt="x_forwarded_for">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/x_forwarded_for/title-dark.svg" alt="x_forwarded_for">
 </a>
 
 **Header:** [include/protocol/http/v11/headers/x_forwarded_for.h](../../../../../../include/protocol/http/v11/headers/x_forwarded_for.h)
@@ -19,12 +19,12 @@
 [check](#method-check) ·
 [interpret](#method-interpret)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-x-forwarded-for"></a>

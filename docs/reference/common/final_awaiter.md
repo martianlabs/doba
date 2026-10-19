@@ -1,9 +1,9 @@
 <a id="final-awaiter"></a>
-<a href="../../../resources/docs/reference/common/final_awaiter/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/final_awaiter/index.svg" alt="final_awaiter">
+<a href="../../../resources/docs/reference/common/final_awaiter/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/final_awaiter/title.svg" alt="final_awaiter">
 </a>
-<a href="../../../resources/docs/reference/common/final_awaiter/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/final_awaiter/index-dark.svg" alt="final_awaiter">
+<a href="../../../resources/docs/reference/common/final_awaiter/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/final_awaiter/title-dark.svg" alt="final_awaiter">
 </a>
 
 **Header:** [include/common/task.h](../../../include/common/task.h)
@@ -23,12 +23,12 @@ Provides the final awaiter type.
 [await_suspend](#method-await-suspend) ·
 [await_resume](#method-await-resume)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-final-awaiter"></a>

@@ -1,9 +1,9 @@
 <a id="accept-ranges"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index.svg" alt="accept_ranges">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/title.svg" alt="accept_ranges">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/index-dark.svg" alt="accept_ranges">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/accept_ranges/title-dark.svg" alt="accept_ranges">
 </a>
 
 **Header:** [include/protocol/http/common/headers/accept_ranges.h](../../../../../../include/protocol/http/common/headers/accept_ranges.h)
@@ -18,12 +18,12 @@
 
 [check](#method-check)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-accept-ranges"></a>

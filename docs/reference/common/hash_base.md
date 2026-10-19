@@ -1,9 +1,9 @@
 <a id="hash-base"></a>
-<a href="../../../resources/docs/reference/common/hash_base/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/hash_base/index.svg" alt="hash_base">
+<a href="../../../resources/docs/reference/common/hash_base/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/hash_base/title.svg" alt="hash_base">
 </a>
-<a href="../../../resources/docs/reference/common/hash_base/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/hash_base/index-dark.svg" alt="hash_base">
+<a href="../../../resources/docs/reference/common/hash_base/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/hash_base/title-dark.svg" alt="hash_base">
 </a>
 
 **Header:** [include/common/hash_base.h](../../../include/common/hash_base.h)
@@ -24,12 +24,12 @@ This struct is needed for the hash_set/hash_map helpers. It performs an ASCII ca
 
 [is_transparent](#alias-is-transparent-2)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="function-ascii-to-lower"></a>

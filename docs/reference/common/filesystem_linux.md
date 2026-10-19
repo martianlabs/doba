@@ -1,9 +1,9 @@
 <a id="filesystem-linux"></a>
-<a href="../../../resources/docs/reference/common/filesystem_linux/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/filesystem_linux/index.svg" alt="filesystem_linux">
+<a href="../../../resources/docs/reference/common/filesystem_linux/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/filesystem_linux/title.svg" alt="filesystem_linux">
 </a>
-<a href="../../../resources/docs/reference/common/filesystem_linux/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/filesystem_linux/index-dark.svg" alt="filesystem_linux">
+<a href="../../../resources/docs/reference/common/filesystem_linux/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/filesystem_linux/title-dark.svg" alt="filesystem_linux">
 </a>
 
 **Header:** [include/common/filesystem_linux.h](../../../include/common/filesystem_linux.h)
@@ -24,12 +24,12 @@ Linux filesystem file implementation.
 [failed](#method-failed) ·
 [close](#method-close)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-filesystem-file"></a>

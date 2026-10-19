@@ -1,9 +1,9 @@
 <a id="date-server-helpers-windows"></a>
-<a href="../../../resources/docs/reference/common/date_server_helpers_windows/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/date_server_helpers_windows/index.svg" alt="date_server_helpers_windows">
+<a href="../../../resources/docs/reference/common/date_server_helpers_windows/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/date_server_helpers_windows/title.svg" alt="date_server_helpers_windows">
 </a>
-<a href="../../../resources/docs/reference/common/date_server_helpers_windows/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/date_server_helpers_windows/index-dark.svg" alt="date_server_helpers_windows">
+<a href="../../../resources/docs/reference/common/date_server_helpers_windows/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/date_server_helpers_windows/title-dark.svg" alt="date_server_helpers_windows">
 </a>
 
 **Header:** [include/common/date_server_helpers_windows.h](../../../include/common/date_server_helpers_windows.h)
@@ -14,12 +14,12 @@ This header declares the types and operations listed below.
 
 [gm_time](#function-gm-time)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="function-gm-time"></a>

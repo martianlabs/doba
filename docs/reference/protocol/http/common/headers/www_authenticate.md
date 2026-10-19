@@ -1,9 +1,9 @@
 <a id="www-authenticate"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/index.svg" alt="www_authenticate">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/title.svg" alt="www_authenticate">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/index-dark.svg" alt="www_authenticate">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/www_authenticate/title-dark.svg" alt="www_authenticate">
 </a>
 
 **Header:** [include/protocol/http/common/headers/www_authenticate.h](../../../../../../include/protocol/http/common/headers/www_authenticate.h)
@@ -18,12 +18,12 @@
 
 [check](#method-check)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-www-authenticate"></a>

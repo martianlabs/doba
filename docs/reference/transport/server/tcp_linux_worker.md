@@ -1,9 +1,9 @@
 <a id="tcp-linux-worker"></a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index.svg" alt="tcp_linux_worker">
+<a href="../../../../resources/docs/reference/transport/server/tcp_linux_worker/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_worker/title.svg" alt="tcp_linux_worker">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_worker/index-dark.svg" alt="tcp_linux_worker">
+<a href="../../../../resources/docs/reference/transport/server/tcp_linux_worker/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_worker/title-dark.svg" alt="tcp_linux_worker">
 </a>
 
 **Header:** [include/transport/server/tcp_linux_worker.h](../../../../include/transport/server/tcp_linux_worker.h)
@@ -28,12 +28,12 @@ This struct represents a worker thread that handles TCP connections for an engin
 [request_quiesce](#method-request-quiesce) ·
 [wait_quiesced](#method-wait-quiesced)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="constant-kstopeventid"></a>

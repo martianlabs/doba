@@ -1,9 +1,9 @@
 <a id="header"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/header/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/header/index.svg" alt="header">
+<a href="../../../../../resources/docs/reference/protocol/http/common/header/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/header/title.svg" alt="header">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/header/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/header/index-dark.svg" alt="header">
+<a href="../../../../../resources/docs/reference/protocol/http/common/header/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/header/title-dark.svg" alt="header">
 </a>
 
 **Header:** [include/protocol/http/common/header.h](../../../../../include/protocol/http/common/header.h)
@@ -15,12 +15,12 @@ This header declares the types and operations listed below.
 [header](#alias-header) ·
 [header_view](#alias-header-view)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="alias-header"></a>

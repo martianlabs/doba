@@ -1,9 +1,9 @@
 <a id="status-codes"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/status_codes/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/status_codes/index.svg" alt="status_codes">
+<a href="../../../../../resources/docs/reference/protocol/http/common/status_codes/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/status_codes/title.svg" alt="status_codes">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/status_codes/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/status_codes/index-dark.svg" alt="status_codes">
+<a href="../../../../../resources/docs/reference/protocol/http/common/status_codes/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/status_codes/title-dark.svg" alt="status_codes">
 </a>
 
 **Header:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
@@ -60,12 +60,12 @@ Defines the preprocessor values listed below.
 [SC_504_GATEWAY_TIMEOUT](#macro-sc-504-gateway-timeout) ·
 [SC_505_HTTP_VERSION_NOT_SUPPORTED](#macro-sc-505-http-version-not-supported)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="macro-sc-100-continue"></a>

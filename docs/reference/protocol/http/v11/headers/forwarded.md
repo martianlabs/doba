@@ -1,9 +1,9 @@
 <a id="forwarded"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index.svg" alt="forwarded">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/title.svg" alt="forwarded">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/index-dark.svg" alt="forwarded">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/forwarded/title-dark.svg" alt="forwarded">
 </a>
 
 **Header:** [include/protocol/http/v11/headers/forwarded.h](../../../../../../include/protocol/http/v11/headers/forwarded.h)
@@ -19,12 +19,12 @@
 [check](#method-check) ·
 [interpret](#method-interpret)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-forwarded"></a>

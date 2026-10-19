@@ -1,9 +1,9 @@
 <a id="reader-raw"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index.svg" alt="reader_raw">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/title.svg" alt="reader_raw">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/index-dark.svg" alt="reader_raw">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_raw/title-dark.svg" alt="reader_raw">
 </a>
 
 **Header:** [include/protocol/http/v11/body/reader_raw.h](../../../../../../include/protocol/http/v11/body/reader_raw.h)
@@ -19,12 +19,12 @@ Decodes a Content-Length-framed body by pulling wire bytes from a common::reader
 [read](#method-read) ·
 [take_view](#method-take-view)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-reader-raw"></a>

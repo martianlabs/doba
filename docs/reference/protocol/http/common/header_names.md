@@ -1,9 +1,9 @@
 <a id="header-names"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/header_names/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/header_names/index.svg" alt="header_names">
+<a href="../../../../../resources/docs/reference/protocol/http/common/header_names/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/header_names/title.svg" alt="header_names">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/header_names/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/header_names/index-dark.svg" alt="header_names">
+<a href="../../../../../resources/docs/reference/protocol/http/common/header_names/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/header_names/title-dark.svg" alt="header_names">
 </a>
 
 **Header:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
@@ -56,12 +56,12 @@ Provides the http 1.1 header names specification.
 [kETag](#constant-ketag) ·
 [kLastModified](#constant-klastmodified)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-header-names"></a>

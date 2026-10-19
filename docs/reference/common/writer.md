@@ -1,9 +1,9 @@
 <a id="writer"></a>
-<a href="../../../resources/docs/reference/common/writer/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/writer/index.svg" alt="writer">
+<a href="../../../resources/docs/reference/common/writer/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/writer/title.svg" alt="writer">
 </a>
-<a href="../../../resources/docs/reference/common/writer/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/writer/index-dark.svg" alt="writer">
+<a href="../../../resources/docs/reference/common/writer/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/writer/title-dark.svg" alt="writer">
 </a>
 
 **Header:** [include/common/writer.h](../../../include/common/writer.h)
@@ -23,12 +23,12 @@ This class provides a writer interface for writing bytes to a byte_storage backe
 [ok](#method-ok) ·
 [release](#method-release)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-writer"></a>

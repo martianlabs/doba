@@ -1,9 +1,9 @@
 <a id="signaler"></a>
-<a href="../../../resources/docs/reference/common/signaler/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/signaler/index.svg" alt="signaler">
+<a href="../../../resources/docs/reference/common/signaler/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/signaler/title.svg" alt="signaler">
 </a>
-<a href="../../../resources/docs/reference/common/signaler/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/signaler/index-dark.svg" alt="signaler">
+<a href="../../../resources/docs/reference/common/signaler/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/signaler/title-dark.svg" alt="signaler">
 </a>
 
 **Header:** [include/common/signaler.h](../../../include/common/signaler.h)
@@ -14,12 +14,12 @@ Selects or forwards the platform-specific declarations included by this header.
 
 [Exports](#exports)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="exports"></a>

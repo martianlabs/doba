@@ -1,9 +1,9 @@
 <a id="status-lines"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index.svg" alt="status_lines">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/status_lines/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/status_lines/title.svg" alt="status_lines">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/status_lines/index-dark.svg" alt="status_lines">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/status_lines/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/status_lines/title-dark.svg" alt="status_lines">
 </a>
 
 **Header:** [include/protocol/http/v11/status_lines.h](../../../../../include/protocol/http/v11/status_lines.h)
@@ -115,12 +115,12 @@ Provides the http 1.1 status lines.
 [k504Sz](#constant-k504sz) ·
 [k505Sz](#constant-k505sz)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="macro-str-value-raw"></a>

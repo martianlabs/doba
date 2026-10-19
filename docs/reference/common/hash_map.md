@@ -1,9 +1,9 @@
 <a id="hash-map"></a>
-<a href="../../../resources/docs/reference/common/hash_map/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/hash_map/index.svg" alt="hash_map">
+<a href="../../../resources/docs/reference/common/hash_map/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/hash_map/title.svg" alt="hash_map">
 </a>
-<a href="../../../resources/docs/reference/common/hash_map/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/hash_map/index-dark.svg" alt="hash_map">
+<a href="../../../resources/docs/reference/common/hash_map/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/hash_map/title-dark.svg" alt="hash_map">
 </a>
 
 **Header:** [include/common/hash_map.h](../../../include/common/hash_map.h)
@@ -14,12 +14,12 @@ This header declares the types and operations listed below.
 
 [hash_map](#alias-hash-map)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="alias-hash-map"></a>

@@ -1,9 +1,9 @@
 <a id="console-line-windows"></a>
-<a href="../../../resources/docs/reference/common/console_line_windows/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/console_line_windows/index.svg" alt="console_line_windows">
+<a href="../../../resources/docs/reference/common/console_line_windows/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/console_line_windows/title.svg" alt="console_line_windows">
 </a>
-<a href="../../../resources/docs/reference/common/console_line_windows/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/console_line_windows/index-dark.svg" alt="console_line_windows">
+<a href="../../../resources/docs/reference/common/console_line_windows/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/console_line_windows/title-dark.svg" alt="console_line_windows">
 </a>
 
 **Header:** [include/common/console_line_windows.h](../../../include/common/console_line_windows.h)
@@ -14,12 +14,12 @@ Provides the line type.
 
 [line](#type-line)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-line"></a>

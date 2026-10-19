@@ -1,9 +1,9 @@
 <a id="server"></a>
-<a href="../../resources/docs/reference/server/index.svg#gh-light-mode-only">
-  <img src="../../resources/docs/reference/server/index.svg" alt="server">
+<a href="../../resources/docs/reference/server/title.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/server/title.svg" alt="server">
 </a>
-<a href="../../resources/docs/reference/server/index-dark.svg#gh-dark-mode-only">
-  <img src="../../resources/docs/reference/server/index-dark.svg" alt="server">
+<a href="../../resources/docs/reference/server/title-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/server/title-dark.svg" alt="server">
 </a>
 
 **Header:** [include/server.h](../../include/server.h)
@@ -19,12 +19,12 @@ Server class that manages the lifecycle of a transport server and its associated
 [start](#method-start) ·
 [stop](#method-stop)
 
-<a id="api-details"></a>
-<a href="../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-server"></a>

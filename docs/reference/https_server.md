@@ -1,9 +1,9 @@
 <a id="https-server"></a>
-<a href="../../resources/docs/reference/https_server/index.svg#gh-light-mode-only">
-  <img src="../../resources/docs/reference/https_server/index.svg" alt="https_server">
+<a href="../../resources/docs/reference/https_server/title.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/https_server/title.svg" alt="https_server">
 </a>
-<a href="../../resources/docs/reference/https_server/index-dark.svg#gh-dark-mode-only">
-  <img src="../../resources/docs/reference/https_server/index-dark.svg" alt="https_server">
+<a href="../../resources/docs/reference/https_server/title-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/https_server/title-dark.svg" alt="https_server">
 </a>
 
 **Header:** [include/https_server.h](../../include/https_server.h)
@@ -14,12 +14,12 @@ Composes a TLS HTTP/1.1 routing with a protocol engine and transport.
 
 [https_server](#type-https-server)
 
-<a id="api-details"></a>
-<a href="../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-https-server"></a>

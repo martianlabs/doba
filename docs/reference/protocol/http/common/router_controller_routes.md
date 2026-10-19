@@ -1,9 +1,9 @@
 <a id="router-controller-routes"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index.svg" alt="router_controller_routes">
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/title.svg" alt="router_controller_routes">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/index-dark.svg" alt="router_controller_routes">
+<a href="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/router_controller_routes/title-dark.svg" alt="router_controller_routes">
 </a>
 
 **Header:** [include/protocol/http/common/router_controller_routes.h](../../../../../include/protocol/http/common/router_controller_routes.h)
@@ -24,12 +24,12 @@ Provides the router protocol component.
 [empty](#method-empty) ·
 [apply](#method-apply)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-router"></a>

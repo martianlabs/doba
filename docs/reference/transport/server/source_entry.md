@@ -1,9 +1,9 @@
 <a id="source-entry"></a>
-<a href="../../../../resources/docs/reference/transport/server/source_entry/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/source_entry/index.svg" alt="source_entry">
+<a href="../../../../resources/docs/reference/transport/server/source_entry/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/source_entry/title.svg" alt="source_entry">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/source_entry/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/source_entry/index-dark.svg" alt="source_entry">
+<a href="../../../../resources/docs/reference/transport/server/source_entry/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/source_entry/title-dark.svg" alt="source_entry">
 </a>
 
 **Header:** [include/transport/server/send_state.h](../../../../include/transport/server/send_state.h)
@@ -21,12 +21,12 @@ Provides the source entry transport component.
 [prefix](#field-prefix) ·
 [source](#field-source)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-source-entry"></a>

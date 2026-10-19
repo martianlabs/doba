@@ -1,9 +1,9 @@
 <a id="context"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/context/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/context/index.svg" alt="context">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/context/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/context/title.svg" alt="context">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/context/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/context/index-dark.svg" alt="context">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/context/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/context/title-dark.svg" alt="context">
 </a>
 
 **Header:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
@@ -30,12 +30,12 @@ The aggregated view the transversal rules operate on. Where an intra- header int
 [forwarding_hops](#field-forwarding-hops) ·
 [rejection_reason](#field-rejection-reason)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-context"></a>

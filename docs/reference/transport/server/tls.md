@@ -1,9 +1,9 @@
 <a id="tls"></a>
-<a href="../../../../resources/docs/reference/transport/server/tls/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tls/index.svg" alt="tls">
+<a href="../../../../resources/docs/reference/transport/server/tls/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tls/title.svg" alt="tls">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/tls/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tls/index-dark.svg" alt="tls">
+<a href="../../../../resources/docs/reference/transport/server/tls/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tls/title-dark.svg" alt="tls">
 </a>
 
 **Header:** [include/transport/server/tls.h](../../../../include/transport/server/tls.h)
@@ -14,12 +14,12 @@ This class provides a TLS transport for an engine. It inherits from `basic_trans
 
 [tls](#type-tls)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-tls"></a>

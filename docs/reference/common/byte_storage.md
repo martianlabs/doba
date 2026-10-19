@@ -1,9 +1,9 @@
 <a id="byte-storage"></a>
-<a href="../../../resources/docs/reference/common/byte_storage/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/byte_storage/index.svg" alt="byte_storage">
+<a href="../../../resources/docs/reference/common/byte_storage/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/byte_storage/title.svg" alt="byte_storage">
 </a>
-<a href="../../../resources/docs/reference/common/byte_storage/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/byte_storage/index-dark.svg" alt="byte_storage">
+<a href="../../../resources/docs/reference/common/byte_storage/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/byte_storage/title-dark.svg" alt="byte_storage">
 </a>
 
 **Header:** [include/common/byte_storage.h](../../../include/common/byte_storage.h)
@@ -33,12 +33,12 @@ Provides the byte storage options type.
 [exhausted](#method-exhausted) ·
 [ok](#method-ok)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-byte-storage-options"></a>

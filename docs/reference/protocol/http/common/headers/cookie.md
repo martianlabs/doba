@@ -1,9 +1,9 @@
 <a id="cookie"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/index.svg" alt="cookie">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/title.svg" alt="cookie">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/index-dark.svg" alt="cookie">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cookie/title-dark.svg" alt="cookie">
 </a>
 
 **Header:** [include/protocol/http/common/headers/cookie.h](../../../../../../include/protocol/http/common/headers/cookie.h)
@@ -18,12 +18,12 @@
 
 [check](#method-check)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-cookie"></a>

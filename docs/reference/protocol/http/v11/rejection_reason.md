@@ -1,9 +1,9 @@
 <a id="rejection-reason"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index.svg" alt="rejection_reason">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/title.svg" alt="rejection_reason">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/index-dark.svg" alt="rejection_reason">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/rejection_reason/title-dark.svg" alt="rejection_reason">
 </a>
 
 **Header:** [include/protocol/http/v11/rejection_reason.h](../../../../../include/protocol/http/v11/rejection_reason.h)
@@ -14,12 +14,12 @@ This header declares the types and operations listed below.
 
 [rejection_reason](#enum-rejection-reason)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="enum-rejection-reason"></a>

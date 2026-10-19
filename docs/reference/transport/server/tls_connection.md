@@ -1,9 +1,9 @@
 <a id="tls-connection"></a>
-<a href="../../../../resources/docs/reference/transport/server/tls_connection/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tls_connection/index.svg" alt="tls_connection">
+<a href="../../../../resources/docs/reference/transport/server/tls_connection/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tls_connection/title.svg" alt="tls_connection">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/tls_connection/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tls_connection/index-dark.svg" alt="tls_connection">
+<a href="../../../../resources/docs/reference/transport/server/tls_connection/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tls_connection/title-dark.svg" alt="tls_connection">
 </a>
 
 **Header:** [include/transport/server/tls_connection.h](../../../../include/transport/server/tls_connection.h)
@@ -33,12 +33,12 @@ This struct wraps an engine and a TLS session to handle an encrypted connection.
 [capacity](#field-capacity) ·
 [size](#field-size)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-tls-connection"></a>

@@ -1,9 +1,9 @@
 <a id="method-names"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/method_names/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/method_names/index.svg" alt="method_names">
+<a href="../../../../../resources/docs/reference/protocol/http/common/method_names/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/method_names/title.svg" alt="method_names">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/method_names/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/method_names/index-dark.svg" alt="method_names">
+<a href="../../../../../resources/docs/reference/protocol/http/common/method_names/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/method_names/title-dark.svg" alt="method_names">
 </a>
 
 **Header:** [include/protocol/http/common/method_names.h](../../../../../include/protocol/http/common/method_names.h)
@@ -25,12 +25,12 @@ Provides the http 1.1 method names specification.
 [kOptions](#constant-koptions) ·
 [kTrace](#constant-ktrace)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-method-names"></a>

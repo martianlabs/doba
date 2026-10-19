@@ -1,9 +1,9 @@
 <a id="deserialization"></a>
-<a href="../../../resources/docs/reference/protocol/deserialization/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/protocol/deserialization/index.svg" alt="deserialization">
+<a href="../../../resources/docs/reference/protocol/deserialization/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/protocol/deserialization/title.svg" alt="deserialization">
 </a>
-<a href="../../../resources/docs/reference/protocol/deserialization/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/protocol/deserialization/index-dark.svg" alt="deserialization">
+<a href="../../../resources/docs/reference/protocol/deserialization/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/protocol/deserialization/title-dark.svg" alt="deserialization">
 </a>
 
 **Header:** [include/protocol/deserialization.h](../../../include/protocol/deserialization.h)
@@ -14,12 +14,12 @@ This header declares the types and operations listed below.
 
 [deserialization_status](#enum-deserialization-status)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="enum-deserialization-status"></a>

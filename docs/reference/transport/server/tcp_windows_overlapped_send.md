@@ -1,9 +1,9 @@
 <a id="tcp-windows-overlapped-send"></a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index.svg" alt="tcp_windows_overlapped_send">
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/title.svg" alt="tcp_windows_overlapped_send">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/index-dark.svg" alt="tcp_windows_overlapped_send">
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_send/title-dark.svg" alt="tcp_windows_overlapped_send">
 </a>
 
 **Header:** [include/transport/server/tcp_windows_overlapped_send.h](../../../../include/transport/server/tcp_windows_overlapped_send.h)
@@ -22,12 +22,12 @@ Provides the context transport component.
 [buffer_count](#field-buffer-count) ·
 [submitted_size](#field-submitted-size)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-context"></a>

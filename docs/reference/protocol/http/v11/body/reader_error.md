@@ -1,9 +1,9 @@
 <a id="reader-error"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index.svg" alt="reader_error">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/title.svg" alt="reader_error">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/index-dark.svg" alt="reader_error">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_error/title-dark.svg" alt="reader_error">
 </a>
 
 **Header:** [include/protocol/http/v11/body/reader_error.h](../../../../../../include/protocol/http/v11/body/reader_error.h)
@@ -14,12 +14,12 @@ This header declares the types and operations listed below.
 
 [reader_error](#enum-reader-error)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="enum-reader-error"></a>

@@ -1,9 +1,9 @@
 <a id="tcp-linux-context"></a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_linux_context/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_context/index.svg" alt="tcp_linux_context">
+<a href="../../../../resources/docs/reference/transport/server/tcp_linux_context/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_context/title.svg" alt="tcp_linux_context">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_linux_context/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_context/index-dark.svg" alt="tcp_linux_context">
+<a href="../../../../resources/docs/reference/transport/server/tcp_linux_context/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_context/title-dark.svg" alt="tcp_linux_context">
 </a>
 
 **Header:** [include/transport/server/tcp_linux_context.h](../../../../include/transport/server/tcp_linux_context.h)
@@ -34,12 +34,12 @@ This struct holds an engine's TCP connection state. It manages the socket and in
 [notify_disconnection](#method-notify-disconnection) ·
 [retirement_next](#field-retirement-next)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-context"></a>

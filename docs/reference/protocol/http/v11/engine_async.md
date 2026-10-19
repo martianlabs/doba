@@ -1,9 +1,9 @@
 <a id="engine-async"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index.svg" alt="engine_async">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/engine_async/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_async/title.svg" alt="engine_async">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_async/index-dark.svg" alt="engine_async">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/engine_async/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_async/title-dark.svg" alt="engine_async">
 </a>
 
 **Header:** [include/protocol/http/v11/engine_async.h](../../../../../include/protocol/http/v11/engine_async.h)
@@ -32,12 +32,12 @@ The asynchronous engine manages the state of multiple concurrent requests and re
 [submit](#method-submit) ·
 [close_now](#method-close-now)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-engine-async"></a>

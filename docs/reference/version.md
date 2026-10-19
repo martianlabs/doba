@@ -1,9 +1,9 @@
 <a id="version"></a>
-<a href="../../resources/docs/reference/version/index.svg#gh-light-mode-only">
-  <img src="../../resources/docs/reference/version/index.svg" alt="version">
+<a href="../../resources/docs/reference/version/title.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/version/title.svg" alt="version">
 </a>
-<a href="../../resources/docs/reference/version/index-dark.svg#gh-dark-mode-only">
-  <img src="../../resources/docs/reference/version/index-dark.svg" alt="version">
+<a href="../../resources/docs/reference/version/title-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/version/title-dark.svg" alt="version">
 </a>
 
 **Header:** [include/version.h](../../include/version.h)
@@ -19,12 +19,12 @@ Defines the preprocessor values listed below.
 [DOBA_VERSION_STRINGIFY](#macro-doba-version-stringify) ·
 [DOBA_VERSION](#macro-doba-version)
 
-<a id="api-details"></a>
-<a href="../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="macro-doba-version-major"></a>

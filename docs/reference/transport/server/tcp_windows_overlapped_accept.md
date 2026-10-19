@@ -1,9 +1,9 @@
 <a id="tcp-windows-overlapped-accept"></a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/index.svg" alt="tcp_windows_overlapped_accept">
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/title.svg" alt="tcp_windows_overlapped_accept">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/index-dark.svg" alt="tcp_windows_overlapped_accept">
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_accept/title-dark.svg" alt="tcp_windows_overlapped_accept">
 </a>
 
 **Header:** [include/transport/server/tcp_windows_overlapped_accept.h](../../../../include/transport/server/tcp_windows_overlapped_accept.h)
@@ -20,12 +20,12 @@ Windows overlapped accept operation.
 [socket](#field-socket) ·
 [addresses](#field-addresses)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="constant-kacceptaddressbytes"></a>

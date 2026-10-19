@@ -1,9 +1,9 @@
 <a id="sec-websocket-protocol"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/index.svg" alt="sec_websocket_protocol">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/title.svg" alt="sec_websocket_protocol">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/index-dark.svg" alt="sec_websocket_protocol">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/sec_websocket_protocol/title-dark.svg" alt="sec_websocket_protocol">
 </a>
 
 **Header:** [include/protocol/http/common/headers/sec_websocket_protocol.h](../../../../../../include/protocol/http/common/headers/sec_websocket_protocol.h)
@@ -18,12 +18,12 @@
 
 [check](#method-check)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-sec-websocket-protocol"></a>

@@ -1,9 +1,9 @@
 <a id="byte-storage-helpers"></a>
-<a href="../../../resources/docs/reference/common/byte_storage_helpers/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/byte_storage_helpers/index.svg" alt="byte_storage_helpers">
+<a href="../../../resources/docs/reference/common/byte_storage_helpers/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/byte_storage_helpers/title.svg" alt="byte_storage_helpers">
 </a>
-<a href="../../../resources/docs/reference/common/byte_storage_helpers/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/byte_storage_helpers/index-dark.svg" alt="byte_storage_helpers">
+<a href="../../../resources/docs/reference/common/byte_storage_helpers/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/byte_storage_helpers/title-dark.svg" alt="byte_storage_helpers">
 </a>
 
 **Header:** [include/common/byte_storage_helpers.h](../../../include/common/byte_storage_helpers.h)
@@ -14,12 +14,12 @@ Selects or forwards the platform-specific declarations included by this header.
 
 [Exports](#exports)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="exports"></a>

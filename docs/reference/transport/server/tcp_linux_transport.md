@@ -1,9 +1,9 @@
 <a id="tcp-linux-transport"></a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_linux_transport/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_transport/index.svg" alt="tcp_linux_transport">
+<a href="../../../../resources/docs/reference/transport/server/tcp_linux_transport/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_transport/title.svg" alt="tcp_linux_transport">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_linux_transport/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_transport/index-dark.svg" alt="tcp_linux_transport">
+<a href="../../../../resources/docs/reference/transport/server/tcp_linux_transport/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_linux_transport/title-dark.svg" alt="tcp_linux_transport">
 </a>
 
 **Header:** [include/transport/server/tcp_linux_transport.h](../../../../include/transport/server/tcp_linux_transport.h)
@@ -23,12 +23,12 @@ This class provides a basic TCP transport for Linux. It manages the worker threa
 [set_on_connection](#method-set-on-connection) ·
 [set_on_disconnection](#method-set-on-disconnection)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-basic-transport"></a>

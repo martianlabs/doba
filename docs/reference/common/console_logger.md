@@ -1,9 +1,9 @@
 <a id="console-logger"></a>
-<a href="../../../resources/docs/reference/common/console_logger/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/console_logger/index.svg" alt="console_logger">
+<a href="../../../resources/docs/reference/common/console_logger/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/console_logger/title.svg" alt="console_logger">
 </a>
-<a href="../../../resources/docs/reference/common/console_logger/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/console_logger/index-dark.svg" alt="console_logger">
+<a href="../../../resources/docs/reference/common/console_logger/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/console_logger/title-dark.svg" alt="console_logger">
 </a>
 
 **Header:** [include/common/console_logger.h](../../../include/common/console_logger.h)
@@ -23,12 +23,12 @@ Provides the console logger options type.
 [show_function](#field-show-function) ·
 [show_line](#field-show-line)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="enum-console-log-level"></a>

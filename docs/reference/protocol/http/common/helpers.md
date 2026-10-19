@@ -1,9 +1,9 @@
 <a id="helpers"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/helpers/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/helpers/index.svg" alt="helpers">
+<a href="../../../../../resources/docs/reference/protocol/http/common/helpers/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/helpers/title.svg" alt="helpers">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/helpers/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/helpers/index-dark.svg" alt="helpers">
+<a href="../../../../../resources/docs/reference/protocol/http/common/helpers/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/helpers/title-dark.svg" alt="helpers">
 </a>
 
 **Header:** [include/protocol/http/common/helpers.h](../../../../../include/protocol/http/common/helpers.h)
@@ -142,12 +142,12 @@ Provides the http 1.1 helper functions.
 [iequals](#method-iequals) ·
 [split_query_parameters](#method-split-query-parameters)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="constant-kf-token"></a>

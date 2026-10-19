@@ -1,9 +1,9 @@
 <a id="date-server-helpers"></a>
-<a href="../../../resources/docs/reference/common/date_server_helpers/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/date_server_helpers/index.svg" alt="date_server_helpers">
+<a href="../../../resources/docs/reference/common/date_server_helpers/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/date_server_helpers/title.svg" alt="date_server_helpers">
 </a>
-<a href="../../../resources/docs/reference/common/date_server_helpers/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/date_server_helpers/index-dark.svg" alt="date_server_helpers">
+<a href="../../../resources/docs/reference/common/date_server_helpers/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/date_server_helpers/title-dark.svg" alt="date_server_helpers">
 </a>
 
 **Header:** [include/common/date_server_helpers.h](../../../include/common/date_server_helpers.h)
@@ -14,12 +14,12 @@ Selects or forwards the platform-specific declarations included by this header.
 
 [Exports](#exports)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="exports"></a>

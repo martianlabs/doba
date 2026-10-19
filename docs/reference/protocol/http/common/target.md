@@ -1,9 +1,9 @@
 <a id="target"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/target/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/target/index.svg" alt="target">
+<a href="../../../../../resources/docs/reference/protocol/http/common/target/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/target/title.svg" alt="target">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/target/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/target/index-dark.svg" alt="target">
+<a href="../../../../../resources/docs/reference/protocol/http/common/target/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/target/title-dark.svg" alt="target">
 </a>
 
 **Header:** [include/protocol/http/common/target.h](../../../../../include/protocol/http/common/target.h)
@@ -14,12 +14,12 @@ This header declares the types and operations listed below.
 
 [target](#enum-target)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="enum-target"></a>

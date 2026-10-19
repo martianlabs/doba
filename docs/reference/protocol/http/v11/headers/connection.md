@@ -1,9 +1,9 @@
 <a id="connection"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/connection/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/connection/index.svg" alt="connection">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/connection/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/connection/title.svg" alt="connection">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/connection/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/connection/index-dark.svg" alt="connection">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/connection/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/connection/title-dark.svg" alt="connection">
 </a>
 
 **Header:** [include/protocol/http/v11/headers/connection.h](../../../../../../include/protocol/http/v11/headers/connection.h)
@@ -19,12 +19,12 @@ The "Connection" header field allows the sender to list control options that are
 [check](#method-check) ·
 [interpret](#method-interpret)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-connection"></a>

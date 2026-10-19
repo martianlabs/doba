@@ -1,9 +1,9 @@
 <a id="writer-state"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/index.svg" alt="writer_state">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/title.svg" alt="writer_state">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/index-dark.svg" alt="writer_state">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_state/title-dark.svg" alt="writer_state">
 </a>
 
 **Header:** [include/protocol/http/v11/body/writer_state.h](../../../../../../include/protocol/http/v11/body/writer_state.h)
@@ -21,12 +21,12 @@ Result of a body writer write() call. consumed  - bytes taken from the input spa
 [has_error](#field-has-error) ·
 [error](#field-error)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-writer-state"></a>

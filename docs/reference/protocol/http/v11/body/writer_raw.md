@@ -1,9 +1,9 @@
 <a id="writer-raw"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index.svg" alt="writer_raw">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/title.svg" alt="writer_raw">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/index-dark.svg" alt="writer_raw">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_raw/title-dark.svg" alt="writer_raw">
 </a>
 
 **Header:** [include/protocol/http/v11/body/writer_raw.h](../../../../../../include/protocol/http/v11/body/writer_raw.h)
@@ -20,12 +20,12 @@ Encodes an outgoing Content-Length-framed body: the raw framing is a pure passth
 [write(payload, dst)](#method-write-2) ·
 [end](#method-end)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-writer-raw"></a>

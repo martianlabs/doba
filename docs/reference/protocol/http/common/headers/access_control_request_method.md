@@ -1,9 +1,9 @@
 <a id="access-control-request-method"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index.svg" alt="access_control_request_method">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/title.svg" alt="access_control_request_method">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/index-dark.svg" alt="access_control_request_method">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/access_control_request_method/title-dark.svg" alt="access_control_request_method">
 </a>
 
 **Header:** [include/protocol/http/common/headers/access_control_request_method.h](../../../../../../include/protocol/http/common/headers/access_control_request_method.h)
@@ -18,12 +18,12 @@
 
 [check](#method-check)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-access-control-request-method"></a>

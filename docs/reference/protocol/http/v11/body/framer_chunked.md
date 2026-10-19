@@ -1,9 +1,9 @@
 <a id="framer-chunked"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/index.svg" alt="framer_chunked">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/title.svg" alt="framer_chunked">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/index-dark.svg" alt="framer_chunked">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_chunked/title-dark.svg" alt="framer_chunked">
 </a>
 
 **Header:** [include/protocol/http/v11/body/framer_chunked.h](../../../../../../include/protocol/http/v11/body/framer_chunked.h)
@@ -20,12 +20,12 @@ Validates a chunked Transfer-Encoding body.
 [kDefaultMaxTrailerSectionSize](#constant-kdefaultmaxtrailersectionsize) ·
 [consume](#method-consume)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-framer-chunked"></a>

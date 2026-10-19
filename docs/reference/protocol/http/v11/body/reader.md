@@ -1,9 +1,9 @@
 <a id="reader"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index.svg" alt="reader">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/title.svg" alt="reader">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/index-dark.svg" alt="reader">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader/title-dark.svg" alt="reader">
 </a>
 
 **Header:** [include/protocol/http/v11/body/reader.h](../../../../../../include/protocol/http/v11/body/reader.h)
@@ -26,12 +26,12 @@ Holds a borrowed buffer or an owned file with the body decoder. (reader_chunked 
 [chunked(source, extension_limit, trailer_limit)](#method-chunked-3) ·
 [rebind_borrowed](#method-rebind-borrowed)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-reader"></a>

@@ -1,9 +1,9 @@
 <a id="http-server"></a>
-<a href="../../resources/docs/reference/http_server/index.svg#gh-light-mode-only">
-  <img src="../../resources/docs/reference/http_server/index.svg" alt="http_server">
+<a href="../../resources/docs/reference/http_server/title.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/http_server/title.svg" alt="http_server">
 </a>
-<a href="../../resources/docs/reference/http_server/index-dark.svg#gh-dark-mode-only">
-  <img src="../../resources/docs/reference/http_server/index-dark.svg" alt="http_server">
+<a href="../../resources/docs/reference/http_server/title-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/http_server/title-dark.svg" alt="http_server">
 </a>
 
 **Header:** [include/http_server.h](../../include/http_server.h)
@@ -21,12 +21,12 @@ the default transport.
 [add_route&lt;Aty, Hty&gt;(method, route, handler)](#method-add-route-2) ·
 [add_controller](#method-add-controller)
 
-<a id="api-details"></a>
-<a href="../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-http-server"></a>

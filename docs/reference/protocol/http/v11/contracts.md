@@ -1,9 +1,9 @@
 <a id="contracts"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/contracts/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/contracts/index.svg" alt="contracts">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/contracts/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/contracts/title.svg" alt="contracts">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/contracts/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/contracts/index-dark.svg" alt="contracts">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/contracts/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/contracts/title-dark.svg" alt="contracts">
 </a>
 
 **Header:** [include/protocol/http/v11/contracts.h](../../../../../include/protocol/http/v11/contracts.h)
@@ -22,12 +22,12 @@ This header declares the types and operations listed below.
 [response](#concept-response) ·
 [router](#concept-router)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="function-make-engine-factory"></a>

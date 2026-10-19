@@ -1,9 +1,9 @@
 <a id="filesystem"></a>
-<a href="../../../resources/docs/reference/common/filesystem/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/filesystem/index.svg" alt="filesystem">
+<a href="../../../resources/docs/reference/common/filesystem/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/filesystem/title.svg" alt="filesystem">
 </a>
-<a href="../../../resources/docs/reference/common/filesystem/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/filesystem/index-dark.svg" alt="filesystem">
+<a href="../../../resources/docs/reference/common/filesystem/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/filesystem/title-dark.svg" alt="filesystem">
 </a>
 
 **Header:** [include/common/filesystem.h](../../../include/common/filesystem.h)
@@ -18,12 +18,12 @@ This header declares the types and operations listed below.
 
 [filesystem_relative_path](#function-filesystem-relative-path)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="function-filesystem-root"></a>

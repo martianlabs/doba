@@ -1,9 +1,9 @@
 <a id="environment-windows"></a>
-<a href="../../../resources/docs/reference/network/environment_windows/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/network/environment_windows/index.svg" alt="environment_windows">
+<a href="../../../resources/docs/reference/network/environment_windows/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/network/environment_windows/title.svg" alt="environment_windows">
 </a>
-<a href="../../../resources/docs/reference/network/environment_windows/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/network/environment_windows/index-dark.svg" alt="environment_windows">
+<a href="../../../resources/docs/reference/network/environment_windows/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/network/environment_windows/title-dark.svg" alt="environment_windows">
 </a>
 
 **Header:** [include/network/environment_windows.h](../../../include/network/environment_windows.h)
@@ -14,12 +14,12 @@ Provides the environment type.
 
 [environment](#type-environment)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-environment"></a>

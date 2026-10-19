@@ -1,9 +1,9 @@
 <a id="contracts"></a>
-<a href="../../../../resources/docs/reference/transport/server/contracts/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/contracts/index.svg" alt="contracts">
+<a href="../../../../resources/docs/reference/transport/server/contracts/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/contracts/title.svg" alt="contracts">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/contracts/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/contracts/index-dark.svg" alt="contracts">
+<a href="../../../../resources/docs/reference/transport/server/contracts/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/contracts/title-dark.svg" alt="contracts">
 </a>
 
 **Header:** [include/transport/server/contracts.h](../../../../include/transport/server/contracts.h)
@@ -30,12 +30,12 @@ Provides the execution work transport component.
 [execution_receiver](#concept-execution-receiver) ·
 [transport](#concept-transport)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-execution-work"></a>

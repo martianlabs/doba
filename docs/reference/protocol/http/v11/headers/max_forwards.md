@@ -1,9 +1,9 @@
 <a id="max-forwards"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index.svg" alt="max_forwards">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/title.svg" alt="max_forwards">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/index-dark.svg" alt="max_forwards">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/max_forwards/title-dark.svg" alt="max_forwards">
 </a>
 
 **Header:** [include/protocol/http/v11/headers/max_forwards.h](../../../../../../include/protocol/http/v11/headers/max_forwards.h)
@@ -19,12 +19,12 @@
 [check](#method-check) ·
 [interpret](#method-interpret)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-max-forwards"></a>

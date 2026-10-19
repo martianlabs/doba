@@ -1,9 +1,9 @@
 <a id="cache-control"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/index.svg" alt="cache_control">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/title.svg" alt="cache_control">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/index-dark.svg" alt="cache_control">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/cache_control/title-dark.svg" alt="cache_control">
 </a>
 
 **Header:** [include/protocol/http/common/headers/cache_control.h](../../../../../../include/protocol/http/common/headers/cache_control.h)
@@ -18,12 +18,12 @@
 
 [check](#method-check)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-cache-control"></a>

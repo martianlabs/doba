@@ -1,9 +1,9 @@
 <a id="upgrade"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index.svg" alt="upgrade">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/title.svg" alt="upgrade">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/index-dark.svg" alt="upgrade">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/upgrade/title-dark.svg" alt="upgrade">
 </a>
 
 **Header:** [include/protocol/http/v11/headers/upgrade.h](../../../../../../include/protocol/http/v11/headers/upgrade.h)
@@ -19,12 +19,12 @@
 [check](#method-check) ·
 [interpret](#method-interpret)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-upgrade"></a>

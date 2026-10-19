@@ -1,9 +1,9 @@
 <a id="date-server"></a>
-<a href="../../../resources/docs/reference/common/date_server/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/date_server/index.svg" alt="date_server">
+<a href="../../../resources/docs/reference/common/date_server/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/date_server/title.svg" alt="date_server">
 </a>
-<a href="../../../resources/docs/reference/common/date_server/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/date_server/index-dark.svg" alt="date_server">
+<a href="../../../resources/docs/reference/common/date_server/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/date_server/title-dark.svg" alt="date_server">
 </a>
 
 **Header:** [include/common/date_server.h](../../../include/common/date_server.h)
@@ -21,12 +21,12 @@ This specification holds for a [cross-platform] date server.
 [stop](#method-stop) ·
 [current](#method-current)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-date-server"></a>

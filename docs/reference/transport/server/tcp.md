@@ -1,9 +1,9 @@
 <a id="tcp"></a>
-<a href="../../../../resources/docs/reference/transport/server/tcp/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp/index.svg" alt="tcp">
+<a href="../../../../resources/docs/reference/transport/server/tcp/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp/title.svg" alt="tcp">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/tcp/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp/index-dark.svg" alt="tcp">
+<a href="../../../../resources/docs/reference/transport/server/tcp/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp/title-dark.svg" alt="tcp">
 </a>
 
 **Header:** [include/transport/server/tcp.h](../../../../include/transport/server/tcp.h)
@@ -20,12 +20,12 @@ Platform-independent transport delegate types.
 [on_client_connected_delegate](#alias-on-client-connected-delegate) ·
 [on_client_disconnected_delegate](#alias-on-client-disconnected-delegate)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-types"></a>

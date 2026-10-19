@@ -1,9 +1,9 @@
 <a id="writer"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index.svg" alt="writer">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/title.svg" alt="writer">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/index-dark.svg" alt="writer">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer/title-dark.svg" alt="writer">
 </a>
 
 **Header:** [include/protocol/http/v11/body/writer.h](../../../../../../include/protocol/http/v11/body/writer.h)
@@ -25,12 +25,12 @@ Owns the wire-level common::writer sink together with the body encoder (writer_c
 [is_chunked](#method-is-chunked) ·
 [bytes_written](#method-bytes-written)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-body-writer"></a>

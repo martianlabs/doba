@@ -1,9 +1,9 @@
 <a id="user-agent"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index.svg" alt="user_agent">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/title.svg" alt="user_agent">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/index-dark.svg" alt="user_agent">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/user_agent/title-dark.svg" alt="user_agent">
 </a>
 
 **Header:** [include/protocol/http/common/headers/user_agent.h](../../../../../../include/protocol/http/common/headers/user_agent.h)
@@ -18,12 +18,12 @@
 
 [check](#method-check)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-user-agent"></a>

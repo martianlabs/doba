@@ -1,9 +1,9 @@
 <a id="framer-raw"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index.svg" alt="framer_raw">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/title.svg" alt="framer_raw">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/index-dark.svg" alt="framer_raw">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/framer_raw/title-dark.svg" alt="framer_raw">
 </a>
 
 **Header:** [include/protocol/http/v11/body/framer_raw.h](../../../../../../include/protocol/http/v11/body/framer_raw.h)
@@ -18,12 +18,12 @@ Detects the Content-Length-framed body boundary within an already-wire- encoded 
 
 [consume](#method-consume)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-framer-raw"></a>

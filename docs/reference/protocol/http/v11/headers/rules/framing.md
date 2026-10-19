@@ -1,9 +1,9 @@
 <a id="framing"></a>
-<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index.svg#gh-light-mode-only">
-  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index.svg" alt="framing">
+<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/title.svg#gh-light-mode-only">
+  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/title.svg" alt="framing">
 </a>
-<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/index-dark.svg" alt="framing">
+<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/framing/title-dark.svg" alt="framing">
 </a>
 
 **Header:** [include/protocol/http/v11/headers/rules/framing.h](../../../../../../../include/protocol/http/v11/headers/rules/framing.h)
@@ -18,12 +18,12 @@ Transversal framing rules that span Content-Length and Transfer-Encoding, which 
 
 [apply](#method-apply)
 
-<a id="api-details"></a>
-<a href="../../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-framing"></a>

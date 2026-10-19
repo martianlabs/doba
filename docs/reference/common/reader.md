@@ -1,9 +1,9 @@
 <a id="reader"></a>
-<a href="../../../resources/docs/reference/common/reader/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/reader/index.svg" alt="reader">
+<a href="../../../resources/docs/reference/common/reader/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/reader/title.svg" alt="reader">
 </a>
-<a href="../../../resources/docs/reference/common/reader/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/reader/index-dark.svg" alt="reader">
+<a href="../../../resources/docs/reference/common/reader/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/reader/title-dark.svg" alt="reader">
 </a>
 
 **Header:** [include/common/reader.h](../../../include/common/reader.h)
@@ -27,12 +27,12 @@ This class provides a reader interface for reading bytes from a byte_storage bac
 [size](#method-size) ·
 [read_all](#method-read-all)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-reader"></a>

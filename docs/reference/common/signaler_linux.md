@@ -1,9 +1,9 @@
 <a id="signaler-linux"></a>
-<a href="../../../resources/docs/reference/common/signaler_linux/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/signaler_linux/index.svg" alt="signaler_linux">
+<a href="../../../resources/docs/reference/common/signaler_linux/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/signaler_linux/title.svg" alt="signaler_linux">
 </a>
-<a href="../../../resources/docs/reference/common/signaler_linux/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/signaler_linux/index-dark.svg" alt="signaler_linux">
+<a href="../../../resources/docs/reference/common/signaler_linux/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/signaler_linux/title-dark.svg" alt="signaler_linux">
 </a>
 
 **Header:** [include/common/signaler_linux.h](../../../include/common/signaler_linux.h)
@@ -18,12 +18,12 @@ Provides the signaler type.
 
 [wait](#method-wait)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-signaler"></a>

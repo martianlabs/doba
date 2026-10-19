@@ -1,9 +1,9 @@
 <a id="filesystem-windows"></a>
-<a href="../../../resources/docs/reference/common/filesystem_windows/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/filesystem_windows/index.svg" alt="filesystem_windows">
+<a href="../../../resources/docs/reference/common/filesystem_windows/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/filesystem_windows/title.svg" alt="filesystem_windows">
 </a>
-<a href="../../../resources/docs/reference/common/filesystem_windows/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/filesystem_windows/index-dark.svg" alt="filesystem_windows">
+<a href="../../../resources/docs/reference/common/filesystem_windows/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/filesystem_windows/title-dark.svg" alt="filesystem_windows">
 </a>
 
 **Header:** [include/common/filesystem_windows.h](../../../include/common/filesystem_windows.h)
@@ -24,12 +24,12 @@ Windows filesystem file implementation.
 [failed](#method-failed) ·
 [close](#method-close)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-filesystem-file"></a>

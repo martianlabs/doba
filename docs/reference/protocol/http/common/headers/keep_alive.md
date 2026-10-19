@@ -1,9 +1,9 @@
 <a id="keep-alive"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index.svg" alt="keep_alive">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/title.svg" alt="keep_alive">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/index-dark.svg" alt="keep_alive">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/keep_alive/title-dark.svg" alt="keep_alive">
 </a>
 
 **Header:** [include/protocol/http/common/headers/keep_alive.h](../../../../../../include/protocol/http/common/headers/keep_alive.h)
@@ -18,12 +18,12 @@
 
 [check](#method-check)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-x-keep-alive"></a>

@@ -1,9 +1,9 @@
 <a id="environment"></a>
-<a href="../../../resources/docs/reference/network/environment/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/network/environment/index.svg" alt="environment">
+<a href="../../../resources/docs/reference/network/environment/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/network/environment/title.svg" alt="environment">
 </a>
-<a href="../../../resources/docs/reference/network/environment/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/network/environment/index-dark.svg" alt="environment">
+<a href="../../../resources/docs/reference/network/environment/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/network/environment/title-dark.svg" alt="environment">
 </a>
 
 **Header:** [include/network/environment.h](../../../include/network/environment.h)
@@ -14,12 +14,12 @@ Selects or forwards the platform-specific declarations included by this header.
 
 [Exports](#exports)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="exports"></a>

@@ -1,9 +1,9 @@
 <a id="writer-chunked"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index.svg" alt="writer_chunked">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/title.svg" alt="writer_chunked">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/index-dark.svg" alt="writer_chunked">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/writer_chunked/title-dark.svg" alt="writer_chunked">
 </a>
 
 **Header:** [include/protocol/http/v11/body/writer_chunked.h](../../../../../../include/protocol/http/v11/body/writer_chunked.h)
@@ -20,12 +20,12 @@ Encodes an outgoing chunked Transfer-Encoding body. Each call to write() wraps t
 [write(payload, dst)](#method-write-2) ·
 [end](#method-end)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-writer-chunked"></a>

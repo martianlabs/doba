@@ -1,9 +1,9 @@
 <a id="query-parameter"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index.svg" alt="query_parameter">
+<a href="../../../../../resources/docs/reference/protocol/http/common/query_parameter/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/query_parameter/title.svg" alt="query_parameter">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/common/query_parameter/index-dark.svg" alt="query_parameter">
+<a href="../../../../../resources/docs/reference/protocol/http/common/query_parameter/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/common/query_parameter/title-dark.svg" alt="query_parameter">
 </a>
 
 **Header:** [include/protocol/http/common/query_parameter.h](../../../../../include/protocol/http/common/query_parameter.h)
@@ -15,12 +15,12 @@ This header declares the types and operations listed below.
 [query_parameter](#alias-query-parameter) ·
 [query_parameter_view](#alias-query-parameter-view)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="alias-query-parameter"></a>

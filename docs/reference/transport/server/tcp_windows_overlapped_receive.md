@@ -1,9 +1,9 @@
 <a id="tcp-windows-overlapped-receive"></a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index.svg" alt="tcp_windows_overlapped_receive">
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/title.svg" alt="tcp_windows_overlapped_receive">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/index-dark.svg" alt="tcp_windows_overlapped_receive">
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_receive/title-dark.svg" alt="tcp_windows_overlapped_receive">
 </a>
 
 **Header:** [include/transport/server/tcp_windows_overlapped_receive.h](../../../../include/transport/server/tcp_windows_overlapped_receive.h)
@@ -19,12 +19,12 @@ Provides the context transport component.
 
 [ctx](#field-ctx)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-context"></a>

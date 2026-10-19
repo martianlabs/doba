@@ -1,9 +1,9 @@
 <a id="expect"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index.svg" alt="expect">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/title.svg" alt="expect">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/index-dark.svg" alt="expect">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/expect/title-dark.svg" alt="expect">
 </a>
 
 **Header:** [include/protocol/http/v11/headers/expect.h](../../../../../../include/protocol/http/v11/headers/expect.h)
@@ -19,12 +19,12 @@ The "Expect" header field in a request indicates a set of behaviors ("expectatio
 [check](#method-check) ·
 [interpret](#method-interpret)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-expect"></a>

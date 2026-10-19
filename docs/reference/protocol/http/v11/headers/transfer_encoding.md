@@ -1,9 +1,9 @@
 <a id="transfer-encoding"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index.svg" alt="transfer_encoding">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/title.svg" alt="transfer_encoding">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/index-dark.svg" alt="transfer_encoding">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/transfer_encoding/title-dark.svg" alt="transfer_encoding">
 </a>
 
 **Header:** [include/protocol/http/v11/headers/transfer_encoding.h](../../../../../../include/protocol/http/v11/headers/transfer_encoding.h)
@@ -19,12 +19,12 @@ The "Transfer-Encoding" header field lists the transfer coding names correspondi
 [check](#method-check) ·
 [interpret](#method-interpret)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-transfer-encoding"></a>

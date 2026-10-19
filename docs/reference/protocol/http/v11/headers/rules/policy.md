@@ -1,9 +1,9 @@
 <a id="policy"></a>
-<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index.svg#gh-light-mode-only">
-  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index.svg" alt="policy">
+<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/title.svg#gh-light-mode-only">
+  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/title.svg" alt="policy">
 </a>
-<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/index-dark.svg" alt="policy">
+<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/policy/title-dark.svg" alt="policy">
 </a>
 
 **Header:** [include/protocol/http/v11/headers/rules/policy.h](../../../../../../../include/protocol/http/v11/headers/rules/policy.h)
@@ -18,12 +18,12 @@ Inbound policy limits that span several headers Transversal policy rules that en
 
 [apply](#method-apply)
 
-<a id="api-details"></a>
-<a href="../../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-policy"></a>

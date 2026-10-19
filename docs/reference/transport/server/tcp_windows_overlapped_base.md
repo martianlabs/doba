@@ -1,9 +1,9 @@
 <a id="tcp-windows-overlapped-base"></a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/index.svg" alt="tcp_windows_overlapped_base">
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/title.svg" alt="tcp_windows_overlapped_base">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/index-dark.svg" alt="tcp_windows_overlapped_base">
+<a href="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_windows_overlapped_base/title-dark.svg" alt="tcp_windows_overlapped_base">
 </a>
 
 **Header:** [include/transport/server/tcp_windows_overlapped_base.h](../../../../include/transport/server/tcp_windows_overlapped_base.h)
@@ -19,12 +19,12 @@ Base state for Windows overlapped I/O.
 
 [get_type](#method-get-type)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="enum-io-type"></a>

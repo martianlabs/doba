@@ -1,9 +1,9 @@
 <a id="content-language"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/index.svg" alt="content_language">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/title.svg" alt="content_language">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/index-dark.svg" alt="content_language">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/content_language/title-dark.svg" alt="content_language">
 </a>
 
 **Header:** [include/protocol/http/common/headers/content_language.h](../../../../../../include/protocol/http/common/headers/content_language.h)
@@ -18,12 +18,12 @@
 
 [check](#method-check)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-content-language"></a>

@@ -1,9 +1,9 @@
 <a id="host"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index.svg" alt="host">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/title.svg" alt="host">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/index-dark.svg" alt="host">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/headers/host/title-dark.svg" alt="host">
 </a>
 
 **Header:** [include/protocol/http/v11/headers/host.h](../../../../../../include/protocol/http/v11/headers/host.h)
@@ -19,12 +19,12 @@ The "Host" header field in a request provides the host and optional port informa
 [check](#method-check) ·
 [interpret](#method-interpret)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-host"></a>

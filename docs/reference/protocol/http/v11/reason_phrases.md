@@ -1,9 +1,9 @@
 <a id="reason-phrases"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index.svg" alt="reason_phrases">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/title.svg" alt="reason_phrases">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/index-dark.svg" alt="reason_phrases">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/reason_phrases/title-dark.svg" alt="reason_phrases">
 </a>
 
 **Header:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
@@ -60,12 +60,12 @@ Defines the preprocessor values listed below.
 [RP_504_GATEWAY_TIMEOUT](#macro-rp-504-gateway-timeout) ·
 [RP_505_HTTP_VERSION_NOT_SUPPORTED](#macro-rp-505-http-version-not-supported)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="macro-rp-100-continue"></a>

@@ -1,9 +1,9 @@
 <a id="last-modified"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index.svg" alt="last_modified">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/title.svg" alt="last_modified">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/index-dark.svg" alt="last_modified">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/last_modified/title-dark.svg" alt="last_modified">
 </a>
 
 **Header:** [include/protocol/http/common/headers/last_modified.h](../../../../../../include/protocol/http/common/headers/last_modified.h)
@@ -18,12 +18,12 @@
 
 [check](#method-check)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-last-modified"></a>

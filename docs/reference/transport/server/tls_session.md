@@ -1,9 +1,9 @@
 <a id="tls-session"></a>
-<a href="../../../../resources/docs/reference/transport/server/tls_session/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tls_session/index.svg" alt="tls_session">
+<a href="../../../../resources/docs/reference/transport/server/tls_session/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tls_session/title.svg" alt="tls_session">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/tls_session/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tls_session/index-dark.svg" alt="tls_session">
+<a href="../../../../resources/docs/reference/transport/server/tls_session/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tls_session/title-dark.svg" alt="tls_session">
 </a>
 
 **Header:** [include/transport/server/tls_session.h](../../../../include/transport/server/tls_session.h)
@@ -32,12 +32,12 @@ This class manages the TLS session for a single connection. It handles the hands
 [established](#method-established) ·
 [failed](#method-failed)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="alias-tls-context"></a>

@@ -1,9 +1,9 @@
 <a id="bearer"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index.svg" alt="bearer">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/title.svg" alt="bearer">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/index-dark.svg" alt="bearer">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/bearer/title-dark.svg" alt="bearer">
 </a>
 
 **Header:** [include/protocol/http/common/auth/bearer.h](../../../../../../include/protocol/http/common/auth/bearer.h)
@@ -18,12 +18,12 @@ Validates HTTP Bearer credentials through a user-supplied callback.
 
 [authenticate](#method-authenticate)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-bearer"></a>

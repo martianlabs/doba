@@ -1,9 +1,9 @@
 <a id="range"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/range/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/range/index.svg" alt="range">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/range/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/range/title.svg" alt="range">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/range/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/range/index-dark.svg" alt="range">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/range/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/range/title-dark.svg" alt="range">
 </a>
 
 **Header:** [include/protocol/http/common/headers/range.h](../../../../../../include/protocol/http/common/headers/range.h)
@@ -18,12 +18,12 @@
 
 [check](#method-check)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-range"></a>

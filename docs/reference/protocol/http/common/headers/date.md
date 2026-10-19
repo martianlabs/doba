@@ -1,9 +1,9 @@
 <a id="date"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/date/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/date/index.svg" alt="date">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/date/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/date/title.svg" alt="date">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/date/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/date/index-dark.svg" alt="date">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/headers/date/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/headers/date/title-dark.svg" alt="date">
 </a>
 
 **Header:** [include/protocol/http/common/headers/date.h](../../../../../../include/protocol/http/common/headers/date.h)
@@ -18,12 +18,12 @@ The "Date" header field represents the date and time at which the message was or
 
 [check](#method-check)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-date"></a>

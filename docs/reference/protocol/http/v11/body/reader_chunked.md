@@ -1,9 +1,9 @@
 <a id="reader-chunked"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index.svg" alt="reader_chunked">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/title.svg" alt="reader_chunked">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/index-dark.svg" alt="reader_chunked">
+<a href="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/v11/body/reader_chunked/title-dark.svg" alt="reader_chunked">
 </a>
 
 **Header:** [include/protocol/http/v11/body/reader_chunked.h](../../../../../../include/protocol/http/v11/body/reader_chunked.h)
@@ -20,12 +20,12 @@ Decodes a chunked Transfer-Encoding body (as accumulated verbatim by framer_chun
 [kDefaultMaxTrailerSectionSize](#constant-kdefaultmaxtrailersectionsize) ·
 [read](#method-read)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-reader-chunked"></a>

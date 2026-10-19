@@ -1,9 +1,9 @@
 <a id="basic"></a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index.svg" alt="basic">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/title.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/title.svg" alt="basic">
 </a>
-<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/index-dark.svg" alt="basic">
+<a href="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/protocol/http/common/auth/basic/title-dark.svg" alt="basic">
 </a>
 
 **Header:** [include/protocol/http/common/auth/basic.h](../../../../../../include/protocol/http/common/auth/basic.h)
@@ -18,12 +18,12 @@ Validates HTTP Basic credentials through a user-supplied callback.
 
 [authenticate](#method-authenticate)
 
-<a id="api-details"></a>
-<a href="../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-basic"></a>

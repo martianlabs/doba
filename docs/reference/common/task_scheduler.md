@@ -1,9 +1,9 @@
 <a id="task-scheduler"></a>
-<a href="../../../resources/docs/reference/common/task_scheduler/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/task_scheduler/index.svg" alt="task_scheduler">
+<a href="../../../resources/docs/reference/common/task_scheduler/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/task_scheduler/title.svg" alt="task_scheduler">
 </a>
-<a href="../../../resources/docs/reference/common/task_scheduler/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/task_scheduler/index-dark.svg" alt="task_scheduler">
+<a href="../../../resources/docs/reference/common/task_scheduler/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/task_scheduler/title-dark.svg" alt="task_scheduler">
 </a>
 
 **Header:** [include/common/task_scheduler.h](../../../include/common/task_scheduler.h)
@@ -20,12 +20,12 @@ Provides the task scheduler type.
 [post](#field-post) ·
 [schedule](#field-schedule)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-task-scheduler"></a>

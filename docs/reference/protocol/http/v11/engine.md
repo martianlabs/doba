@@ -1,9 +1,9 @@
 <a id="engine"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/engine/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine/index.svg" alt="engine">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/engine/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine/title.svg" alt="engine">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/engine/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine/index-dark.svg" alt="engine">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/engine/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine/title-dark.svg" alt="engine">
 </a>
 
 **Header:** [include/protocol/http/v11/engine.h](../../../../../include/protocol/http/v11/engine.h)
@@ -23,12 +23,12 @@ HTTP/1.1 protocol engine.
 [stop](#method-stop) ·
 [on_bytes_received](#method-on-bytes-received)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-engine"></a>

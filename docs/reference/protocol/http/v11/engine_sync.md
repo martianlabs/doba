@@ -1,9 +1,9 @@
 <a id="engine-sync"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index.svg" alt="engine_sync">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/title.svg" alt="engine_sync">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/index-dark.svg" alt="engine_sync">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine_sync/title-dark.svg" alt="engine_sync">
 </a>
 
 **Header:** [include/protocol/http/v11/engine_sync.h](../../../../../include/protocol/http/v11/engine_sync.h)
@@ -24,12 +24,12 @@ The synchronous engine handles the processing of a single request and response i
 [serialize(response, close)](#method-serialize) ·
 [serialize(request, response, close)](#method-serialize-2)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-engine-sync"></a>

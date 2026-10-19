@@ -1,9 +1,9 @@
 <a id="tcp-connection"></a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_connection/index.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_connection/index.svg" alt="tcp_connection">
+<a href="../../../../resources/docs/reference/transport/server/tcp_connection/title.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_connection/title.svg" alt="tcp_connection">
 </a>
-<a href="../../../../resources/docs/reference/transport/server/tcp_connection/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/transport/server/tcp_connection/index-dark.svg" alt="tcp_connection">
+<a href="../../../../resources/docs/reference/transport/server/tcp_connection/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/transport/server/tcp_connection/title-dark.svg" alt="tcp_connection">
 </a>
 
 **Header:** [include/transport/server/tcp_connection.h](../../../../include/transport/server/tcp_connection.h)
@@ -32,12 +32,12 @@ This struct keeps track of a TCP connection used by an engine. It stores the eng
 [buffer](#field-buffer) ·
 [capacity](#field-capacity)
 
-<a id="api-details"></a>
-<a href="../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-tcp-connection"></a>

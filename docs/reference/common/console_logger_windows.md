@@ -1,9 +1,9 @@
 <a id="console-logger-windows"></a>
-<a href="../../../resources/docs/reference/common/console_logger_windows/index.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/common/console_logger_windows/index.svg" alt="console_logger_windows">
+<a href="../../../resources/docs/reference/common/console_logger_windows/title.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/common/console_logger_windows/title.svg" alt="console_logger_windows">
 </a>
-<a href="../../../resources/docs/reference/common/console_logger_windows/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/common/console_logger_windows/index-dark.svg" alt="console_logger_windows">
+<a href="../../../resources/docs/reference/common/console_logger_windows/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/common/console_logger_windows/title-dark.svg" alt="console_logger_windows">
 </a>
 
 **Header:** [include/common/console_logger_windows.h](../../../include/common/console_logger_windows.h)
@@ -27,12 +27,12 @@ Provides the console logger type.
 [critical(source)](#method-critical) ·
 [critical(message, source)](#method-critical-2)
 
-<a id="api-details"></a>
-<a href="../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-console-logger"></a>

@@ -1,9 +1,9 @@
 <a id="request"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/request/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/request/index.svg" alt="request">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/request/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/request/title.svg" alt="request">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/request/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/request/index-dark.svg" alt="request">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/request/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/request/title-dark.svg" alt="request">
 </a>
 
 **Header:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
@@ -49,12 +49,12 @@ Provides the http 1.1 request implementation.
 [append_body](#method-append-body) ·
 [finish_body](#method-finish-body)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-request"></a>

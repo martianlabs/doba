@@ -1,9 +1,9 @@
 <a id="routing"></a>
-<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index.svg#gh-light-mode-only">
-  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index.svg" alt="routing">
+<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/title.svg#gh-light-mode-only">
+  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/title.svg" alt="routing">
 </a>
-<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/index-dark.svg" alt="routing">
+<a href="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../../resources/docs/reference/protocol/http/v11/headers/rules/routing/title-dark.svg" alt="routing">
 </a>
 
 **Header:** [include/protocol/http/v11/headers/rules/routing.h](../../../../../../../include/protocol/http/v11/headers/rules/routing.h)
@@ -18,12 +18,12 @@ Transversal routing rules that reconcile the request-target with the Host header
 
 [apply](#method-apply)
 
-<a id="api-details"></a>
-<a href="../../../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-routing"></a>

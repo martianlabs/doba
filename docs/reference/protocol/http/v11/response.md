@@ -1,9 +1,9 @@
 <a id="response"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/response/index.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/response/index.svg" alt="response">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/response/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/response/title.svg" alt="response">
 </a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/response/index-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/response/index-dark.svg" alt="response">
+<a href="../../../../../resources/docs/reference/protocol/http/v11/response/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/response/title-dark.svg" alt="response">
 </a>
 
 **Header:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
@@ -86,12 +86,12 @@ Provides the http 1.1 response implementation.
 [gateway_timeout_504](#method-gateway-timeout-504) ·
 [http_version_not_supported_505](#method-http-version-not-supported-505)
 
-<a id="api-details"></a>
-<a href="../../../../../resources/docs/reference/api-details.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details.svg" alt="API details">
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
 </a>
-<a href="../../../../../resources/docs/reference/api-details-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-details-dark.svg" alt="API details">
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
 <a id="type-response"></a>
